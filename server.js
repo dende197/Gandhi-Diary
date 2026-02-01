@@ -761,12 +761,36 @@ async function enrichProfiles(school, accessToken, profiles) {
                             courseDesc = courseDesc.toUpperCase();
 
                             let abbr = "";
+                            // Abbreviazioni corsi più comuni
                             if (courseDesc.includes("SCIENZE APPLICATE")) abbr = "(SA)";
                             else if (courseDesc.includes("SCIENZE UMANE")) abbr = "(SU)";
-                            else if (courseDesc.includes("LICEO CLASSICO")) abbr = "(LS)";
+                            else if (courseDesc.includes("LICEO CLASSICO") || courseDesc.includes("CLASSICO")) abbr = "(LC)";
+                            else if (courseDesc.includes("SCIENTIFICO") && !courseDesc.includes("APPLICATE")) abbr = "(LS)";
+                            else if (courseDesc.includes("LINGUISTICO")) abbr = "(LL)";
+                            else if (courseDesc.includes("ARTISTICO")) abbr = "(LA)";
+                            else if (courseDesc.includes("MUSICALE")) abbr = "(LM)";
+                            else if (courseDesc.includes("COREUTICO")) abbr = "(LCo)";
+                            else if (courseDesc.includes("ECONOMICO") || courseDesc.includes("ECONOMIA")) abbr = "(LE)";
+                            else if (courseDesc.includes("SPORTIVO")) abbr = "(LSp)";
+                            else if (courseDesc.includes("AMMINISTRAZIONE")) abbr = "(AFM)";
+                            else if (courseDesc.includes("TURISMO")) abbr = "(TUR)";
+                            else if (courseDesc.includes("INFORMATICA") || courseDesc.includes("INFORMATIC")) abbr = "(INF)";
+                            else if (courseDesc.includes("ELETTRONICA") || courseDesc.includes("ELETTROTECNICA")) abbr = "(ELE)";
+                            else if (courseDesc.includes("MECCANICA")) abbr = "(MEC)";
+                            else if (courseDesc.includes("COSTRUZIONI")) abbr = "(CAT)";
+                            else if (courseDesc.includes("CHIMICA")) abbr = "(CHI)";
+                            else if (courseDesc.includes("AGRARIA")) abbr = "(AGR)";
+                            else if (courseDesc.includes("ENOGASTRONOMIA") || courseDesc.includes("ALBERGHIERO")) abbr = "(ENO)";
+                            else if (courseDesc.includes("SERVIZI SOCIALI")) abbr = "(SSS)";
+                            else if (courseDesc.includes("GRAFICA")) abbr = "(GRA)";
+                            else if (courseDesc.includes("MODA")) abbr = "(MOD)";
 
-                            if (abbr) cls += " " + abbr;
-                            debugLog(`P${index}: Rilevato corso '${courseDesc}' -> Abbreviazione '${abbr}'`);
+                            if (abbr) {
+                                cls += " " + abbr;
+                                debugLog(`P${index}: Rilevato corso '${courseDesc}' -> Abbreviazione '${abbr}'`);
+                            } else {
+                                debugLog(`P${index}: Corso '${courseDesc}' -> Nessuna abbreviazione trovata`);
+                            }
 
                         } catch (e) {
                             debugLog(`P${index}: Errore estrazione abbreviazione corso`, e.message);
@@ -2056,6 +2080,8 @@ app.get('/api/planner/:user_id', async (req, res) => {
 
     try {
         const userId = decodeURIComponent(req.params.user_id);
+        debugLog(`📅 GET Planner Request for user: ${userId}`);
+
         const { data, error } = await supabase.from("planners")
             .select("*")
             .eq("user_id", userId)
@@ -2064,11 +2090,19 @@ app.get('/api/planner/:user_id', async (req, res) => {
         if (error) throw error;
 
         if (!data || data.length === 0) {
+            debugLog(`📅 Planner not found for user: ${userId}`);
             return res.status(404).json({ success: false, error: "Planner not found" });
         }
 
+        debugLog(`✅ Planner loaded for ${userId}:`, {
+            plannedDays: Object.keys(data[0].planned_tasks || {}).length,
+            stressLevels: Object.keys(data[0].stress_levels || {}).length,
+            updatedAt: data[0].updated_at
+        });
+
         res.json({ success: true, data: data[0] });
     } catch (e) {
+        debugLog(`❌ GET Planner Error: ${e.message}`);
         res.status(500).json({ success: false, error: e.message });
     }
 });
@@ -2093,6 +2127,12 @@ app.put('/api/planner/:user_id', async (req, res) => {
     const userId = decodeURIComponent(req.params.user_id);
     const body = req.body || {};
 
+    debugLog(`📅 PUT Planner Request for user: ${userId}`, {
+        plannedTasksKeys: Object.keys(body.plannedTasks || body.planned_tasks || {}).length,
+        stressLevelsKeys: Object.keys(body.stressLevels || body.stress_levels || {}).length,
+        plannedDetailsKeys: Object.keys(body.plannedDetails || body.planned_details || {}).length
+    });
+
     const payload = {
         user_id: userId,
         planned_tasks: body.plannedTasks || body.planned_tasks || {},
@@ -2111,6 +2151,7 @@ app.put('/api/planner/:user_id', async (req, res) => {
                 .single();
 
             if (!error && data) {
+                debugLog(`✅ Planner saved successfully for ${userId}`);
                 return res.json({
                     success: true,
                     data: {
@@ -2122,9 +2163,9 @@ app.put('/api/planner/:user_id', async (req, res) => {
                     }
                 });
             }
-            debugLog("planner upsert supabase-js error", error?.message);
+            debugLog("⚠️ planner upsert supabase-js error", error?.message);
         } catch (e) {
-            debugLog("planner upsert supabase-js exception", e.message);
+            debugLog("⚠️ planner upsert supabase-js exception", e.message);
         }
     }
 
@@ -2155,6 +2196,76 @@ app.put('/api/planner/:user_id', async (req, res) => {
 });
 
 // ============= AUTH ENDPOINTS =============
+
+// ============= DEBUG ENDPOINT (per visualizzare dati raw del profilo) =============
+
+app.post('/api/debug/profile-raw', async (req, res) => {
+    if (!DEBUG_MODE) {
+        return res.status(403).json({
+            success: false,
+            error: "Debug endpoint disponibile solo con DEBUG_MODE=true"
+        });
+    }
+
+    const { schoolCode, username, password, profileIndex } = req.body;
+    const school = (schoolCode || '').trim().toUpperCase();
+    const user = (username || '').trim().toLowerCase();
+    const idx = parseInt(profileIndex) || 0;
+
+    if (!school || !user || !password) {
+        return res.status(400).json({ success: false, error: "Parametri mancanti" });
+    }
+
+    try {
+        const loginRes = await AdvancedArgo.rawLogin(school, user, password);
+        const profiles = loginRes.profiles || [];
+
+        if (profiles.length === 0) {
+            return res.status(404).json({ success: false, error: "Nessun profilo trovato" });
+        }
+
+        const targetIdx = (idx < 0 || idx >= profiles.length) ? 0 : idx;
+        const profile = profiles[targetIdx];
+
+        // Estrai tutti i dati raw interessanti
+        const rawData = profile.raw || {};
+        const scheda = rawData.scheda || {};
+        const classeObj = scheda.classe || {};
+
+        res.json({
+            success: true,
+            profileIndex: targetIdx,
+            totalProfiles: profiles.length,
+            profile: {
+                name: profile.name,
+                class: profile.class,
+                school: profile.school,
+                idSoggetto: profile.idSoggetto
+            },
+            rawData: {
+                // Dati classe
+                classe: {
+                    desDenominazione: classeObj.desDenominazione,
+                    desSezione: classeObj.desSezione,
+                    desCorso: classeObj.desCorso,
+                    corso: classeObj.corso, // Questo potrebbe essere l'oggetto con "descrizione"
+                    fullClasseObject: classeObj // Tutti i campi
+                },
+                // Altri dati scheda
+                scheda: scheda,
+                // Tutto il raw per debug completo
+                fullRaw: rawData
+            }
+        });
+
+    } catch (e) {
+        res.status(500).json({
+            success: false,
+            error: e.message,
+            stack: e.stack
+        });
+    }
+});
 
 app.post('/api/resolve-profile', async (req, res) => {
     const { schoolCode, username, password, profileIndex } = req.body;
