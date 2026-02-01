@@ -435,17 +435,17 @@ function normalizeClass(raw, strict = false) {
     if (blackList.test(txt)) return null;
 
     // 1) Match esplicito: "3A", "3^A", "3° A", "3AB", "3 A" con word boundaries
-    let m = txt.match(/\b([1-5])[\^°]?\s*([A-Z]{1,2})\b/);
+    // Supporto sezioni multiple (es. SU, SA, DSU) -> ora restituisce tutto (3SU -> 3SU)
+    let m = txt.match(/\b([1-5])[\^°]?\s*([A-Z]{1,3})\b/);
     if (m) {
-        // Per coerenza UI: numero + prima lettera (es. "3AB" -> "3A")
-        return m[1] + m[2][0];
+        return m[1] + m[2];
     }
 
     // Se siamo in strict mode (scansione globale testo), accettiamo solo match sicuri sopra
     if (strict) return null;
 
     // 2) Numero+lettera ovunque (es. "Classe 2 B" -> "2B")
-    m = txt.match(/([1-5])\s*([A-Z])/);
+    m = txt.match(/([1-5])\s*([A-Z]{1,3})/);
     if (m) return m[1] + m[2];
 
     // 3) Prima cifra 1-5 + prima lettera (Ultima spiaggia per campi singoli)
@@ -746,6 +746,32 @@ async function enrichProfiles(school, accessToken, profiles) {
                         // Es: "5" + "A" -> "5A"
                         // Es: "1" + "DSU" -> "1DSU"
                         cls = `${classeObj.desDenominazione}${classeObj.desSezione}`.trim().toUpperCase();
+
+                        // NEW: Aggiungi abbreviazione corso (SA, SU, LS)
+                        try {
+                            // Cerca descrizione corso in vari campi potenziali
+                            // Nota: L'utente indica che nei log appare sotto "Corso": { "descrizione": ... }
+                            // Quindi controlliamo anche oggetti nidificati se necessario, ma proviamo i campi piatti comuni prima
+                            let courseDesc = "";
+                            if (classeObj.desCorso) courseDesc = classeObj.desCorso;
+                            else if (classeObj.corso && classeObj.corso.descrizione) courseDesc = classeObj.corso.descrizione; // Caso probabile da log utente
+                            else if (classeObj.corso) courseDesc = String(classeObj.corso);
+                            else if (d9.desCorso) courseDesc = d9.desCorso;
+
+                            courseDesc = courseDesc.toUpperCase();
+
+                            let abbr = "";
+                            if (courseDesc.includes("SCIENZE APPLICATE")) abbr = "(SA)";
+                            else if (courseDesc.includes("SCIENZE UMANE")) abbr = "(SU)";
+                            else if (courseDesc.includes("LICEO CLASSICO")) abbr = "(LS)";
+
+                            if (abbr) cls += " " + abbr;
+                            debugLog(`P${index}: Rilevato corso '${courseDesc}' -> Abbreviazione '${abbr}'`);
+
+                        } catch (e) {
+                            debugLog(`P${index}: Errore estrazione abbreviazione corso`, e.message);
+                        }
+
                         debugLog(`P${index}: Classe estratta da scheda.classe: ${cls}`);
                     } else if (d9.desClasse) {
                         cls = normalizeClass(d9.desClasse);
@@ -2452,13 +2478,54 @@ app.post('/sync', async (req, res) => {
     }
 });
 
-// ============= START SERVER =============
-const PORT = process.env.PORT || 5001; // ← Cambiata da 5000 a 5001 per macOS AirPlay conflict
+// ============= PLANNER API (PERSISTENCE) =============
+const PLANNER_DIR = path.join(__dirname, 'data', 'planners');
+if (!fs.existsSync(PLANNER_DIR)) {
+    fs.mkdirSync(PLANNER_DIR, { recursive: true });
+}
 
+app.get('/api/planner/:userId', (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const safeId = userId.replace(/[^a-zA-Z0-9_\-:]/g, '_');
+        const filePath = path.join(PLANNER_DIR, `${safeId}.json`);
+
+        if (fs.existsSync(filePath)) {
+            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            return res.json({ success: true, data });
+        } else {
+            return res.json({ success: true, data: null });
+        }
+    } catch (e) {
+        console.error("Planner GET error:", e);
+        return res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.put('/api/planner/:userId', (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const safeId = userId.replace(/[^a-zA-Z0-9_\-:]/g, '_');
+        const filePath = path.join(PLANNER_DIR, `${safeId}.json`);
+        const payload = req.body;
+
+        fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
+        return res.json({ success: true, data: { updatedAt: new Date().toISOString() } });
+    } catch (e) {
+        console.error("Planner PUT error:", e);
+        return res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ============= ERROR HANDLER =============
+app.use((err, req, res, next) => {
+    console.error("Unhandled Error:", err);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+});
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`\n${'='.repeat(70)}`);
     console.log(`🚀 Server Node.js avviato su porta ${PORT}`);
     console.log(`Debug Mode: ${DEBUG_MODE}`);
-    console.log(`Supabase: ${supabase ? '✅ Configurato' : '❌ Non configurato'}`);
-    console.log(`${'='.repeat(70)}\n`);
+    console.log(`Supabase: ${supabase ? '✅ Configurato' : '❌ Non disponibile'}`);
 });

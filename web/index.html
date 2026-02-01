@@ -1441,18 +1441,52 @@
                             existingCalendar.destroy();
                         }
 
+                        // ⭐ Recupera vista salvata o default a 'listWeek'
+                        const savedView=localStorage.getItem('argo_planner_view') || 'listWeek';
+
                         const calendar=new FullCalendar.Calendar(calendarEl, {
 
-                            initialView: 'dayGridMonth',
+                            initialView: savedView,
                             locale: 'it',
                             themeSystem: 'standard',
                             height: 'auto',
-                            headerToolbar: {
-                                left: 'title', center: '', right: 'prev,next'
+                            // ⭐ Nascondi giorni passati (Show only today and future)
+                            validRange: {
+                                start: new Date().toISOString().split('T')[0]
                             }
 
                             ,
-                            events: state.tasks .filter(t=> t.due_date && t.hasValidDate) .map(t=> ({
+                            headerToolbar: {
+                                left: 'prev,next',
+                                center: 'title',
+                                right: 'dayGridMonth,listWeek,timeGridDay'
+                            }
+
+                            ,
+                            views: {
+                                dayGridMonth: {
+                                    buttonText: 'Mese'
+                                }
+
+                                ,
+                                listWeek: {
+                                    buttonText: 'Settimana'
+                                }
+
+                                ,
+                                timeGridDay: {
+                                    buttonText: 'Giorno'
+                                }
+                            }
+
+                            ,
+                            // ⭐ Salva preferenza vista al cambio
+                            datesSet: function(info) {
+                                localStorage.setItem('argo_planner_view', info.view.type);
+                            }
+
+                            ,
+                            events: state.tasks.filter(t=> t.due_date && t.hasValidDate).map(t=> ({
                                     title: `$ {
                                         t.subject
                                     }
@@ -1475,10 +1509,10 @@
                                     }
 
                                 })),
-                        eventClick: function (info) {
+                        eventClick: function(info) {
                             const event=info.event;
 
-                            modalContainer.innerHTML=` <div class="modal-overlay" onclick="closeModal(event)" > <div class="modal-content" > <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" > <h2 style="margin: 0;" >Dettaglio Compito</h2> <button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 700; font-size: 16px; cursor: pointer;" >Chiudi</button> </div> <div style="margin-bottom: 12px;" > <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;" >Materia</div> <div style="font-size: 18px; font-weight: 600; color: white;" >$ {
+                            modalContainer.innerHTML=`<div class="modal-overlay" onclick="closeModal(event)" > <div class="modal-content" > <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" > <h2 style="margin: 0;" >Dettaglio Compito</h2> <button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 700; font-size: 16px; cursor: pointer;" >Chiudi</button> </div> <div style="margin-bottom: 12px;" > <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;" >Materia</div> <div style="font-size: 18px; font-weight: 600; color: white;" >$ {
                                 event.extendedProps.subject
                             }
 
@@ -1492,11 +1526,11 @@
                                 })
                         }
 
-                        </div> </div> </div> </div> `;
+                        </div> </div> </div> </div>`;
                     }
 
                     ,
-                    dateClick: function (info) {
+                    dateClick: function(info) {
                         const tasksForDay=state.tasks.filter(t=> {
                                 if ( !t.due_date) return false;
                                 const taskDate=new Date(t.due_date);
@@ -1513,13 +1547,13 @@
                                     t.text
                                 }
 
-                                `).join('\\n');
+                                `).join('\n');
 
                             alert(`Compiti per $ {
                                     info.dateStr
                                 }
 
-                                :\\n\\n$ {
+                                :\n\n$ {
                                     tasksList
                                 }
 
@@ -1542,7 +1576,7 @@
 
         , 100);
 
-        return ` <div class="view" style="padding: 20px; padding-bottom: 100px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1 style="margin: 0;">Planner</h1><button onclick="performSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="ph ph-arrow-clockwise" style="font-size: 16px; ${state.syncing ? 'animation: spin 1s linear infinite;' : ''}"></i>$ {
+        return `<div class="view" style="padding: 20px; padding-bottom: 100px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1 style="margin: 0;">Planner</h1><button onclick="performSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="ph ph-arrow-clockwise" style="font-size: 16px; ${state.syncing ? 'animation: spin 1s linear infinite;' : ''}"></i>$ {
             state.syncing ? 'Sincronizzazione...': 'Sincronizza'
         }
 
@@ -1573,18 +1607,15 @@
 
                     if (dueDate) {
                         if (daysUntil===0) {
-                            dateLabel='OGGI';
-                            dateColor='var(--red)';
+                            dateLabel='OGGI'; dateColor='var(--red)';
                         }
 
                         else if (daysUntil===1) {
-                            dateLabel='DOMANI';
-                            dateColor='var(--orange)';
+                            dateLabel='DOMANI'; dateColor='var(--orange)';
                         }
 
                         else if (daysUntil < 0) {
-                            dateLabel='SCADUTO';
-                            dateColor='var(--red)';
+                            dateLabel='SCADUTO'; dateColor='var(--red)';
                         }
 
                         else {
@@ -1599,34 +1630,54 @@
                     dateLabel=t.display_date || 'Data non disponibile';
                 }
 
-                return ` <div class="card" style="display:flex; align-items:center; gap:15px; background: rgba(255,255,255,0.03); border-left: 3px solid ${t.done ? 'var(--green)' : dateColor};" > <div style="width: 40px; height: 40px; border-radius: 10px; background: ${t.done ? 'rgba(48, 209, 88, 0.2)' : 'rgba(10, 132, 255, 0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" > $ {
-                    t.done ? '<i class="ph-fill ph-check" style="color: var(--green); font-size: 20px;"></i>' : '<i class="ph ph-calendar" style="color: var(--blue); font-size: 18px;"></i>'
-                }
-
-                </div> <div style="flex:1; min-width: 0;" > <div style="font-size:11px; color:var(--blue); font-weight:700; margin-bottom: 4px;" >$ {
-                    t.subject
-                }
-
-                </div> <div style="color: white; margin-top: 4px; font-size: 15px; font-weight: 500; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}" >$ {
+                // ... (keep rest of mapping) ...
+                return `<div class="card" style="display: flex; align-items: center; gap: 16px; padding: 16px;" > <div onclick="toggleTask('${t.id}')" style="font-size: 24px; color: ${t.done ? 'var(--success)' : 'var(--text-secondary)'}; cursor: pointer;" > <i class="${t.done ? 'ph-fill ph-check-circle' : 'ph ph-circle'}" ></i> </div> <div style="flex: 1; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}" > <div style="font-weight: 600; font-size: 16px;" >$ {
                     t.text
                 }
 
-                </div> <div style="font-size: 12px; color: ${dateColor}; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 6px;" > <i class="ph ph-clock" style="font-size: 14px;" ></i> $ {
+                </div> <div style="font-size: 13px; color: ${dateColor}; display: flex; align-items: center; gap: 4px; margin-top: 2px;" > <i class="ph-fill ph-calendar-blank" ></i> $ {
                     dateLabel
                 }
 
-                $ {
-                    daysUntil !==null && daysUntil >=0 ? `<span style="opacity: 0.7;" >($ {
-                            daysUntil===0 ? 'oggi' : daysUntil===1 ? 'domani' : `tra $ {
-                                daysUntil
-                            }
-
-                            giorni`
-                        })</span>` : ''
+                <span style="width: 4px; height: 4px; background: var(--text-secondary); border-radius: 50%; display: inline-block; margin: 0 4px;" ></span> <span>$ {
+                    t.subject
                 }
 
-                </div> </div> <button onclick="toggleTask('${t.id}')" style="background: none; border: none; color: ${t.done ? 'var(--green)' : 'var(--text-secondary)'}; font-size: 24px; cursor: pointer; padding: 8px;" > <i class="${t.done ? 'ph-fill ph-check-circle' : 'ph ph-circle'}" ></i> </button> </div> `;
+                </span> </div> </div> </div>`;
             }).join('')
+        }
+
+        </div></div>`;
+        }
+
+        return ` <div class="card" style="display:flex; align-items:center; gap:15px; background: rgba(255,255,255,0.03); border-left: 3px solid ${t.done ? 'var(--green)' : dateColor};"><div style="width: 40px; height: 40px; border-radius: 10px; background: ${t.done ? 'rgba(48, 209, 88, 0.2)' : 'rgba(10, 132, 255, 0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">$ {
+            t.done ? '<i class="ph-fill ph-check" style="color: var(--green); font-size: 20px;"></i>': '<i class="ph ph-calendar" style="color: var(--blue); font-size: 18px;"></i>'
+        }
+
+        </div><div style="flex:1; min-width: 0;"><div style="font-size:11px; color:var(--blue); font-weight:700; margin-bottom: 4px;">$ {
+            t.subject
+        }
+
+        </div><div style="color: white; margin-top: 4px; font-size: 15px; font-weight: 500; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}">$ {
+            t.text
+        }
+
+        </div><div style="font-size: 12px; color: ${dateColor}; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 6px;"><i class="ph ph-clock" style="font-size: 14px;"></i>$ {
+            dateLabel
+        }
+
+        $ {
+            daysUntil !==null && daysUntil>=0 ? `<span style="opacity: 0.7;">($ {
+                    daysUntil===0 ? 'oggi' : daysUntil===1 ? 'domani' : `tra $ {
+                        daysUntil
+                    }
+
+                    giorni`
+                })</span>` : ''
+        }
+
+        </div></div><button onclick="toggleTask('${t.id}')" style="background: none; border: none; color: ${t.done ? 'var(--green)' : 'var(--text-secondary)'}; font-size: 24px; cursor: pointer; padding: 8px;"><i class="${t.done ? 'ph-fill ph-check-circle' : 'ph ph-circle'}"></i></button></div>`;
+        }).join('')
         }
 
         </div>`;
