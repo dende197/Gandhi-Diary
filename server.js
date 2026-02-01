@@ -719,6 +719,180 @@ async function enrichProfiles(school, accessToken, profiles) {
             }
         }
 
+        // ============= NUOVE API ALTERNATIVE =============
+
+        // 9) profilo (GET) - Potrebbe restituire dettagli profilo
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo PROFILO...`);
+                let r9 = await axios.get(baseApp + "profilo", { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Profilo Response`, r9.data);
+                const d9 = safeData(r9.data);
+                if (!name) name = buildName(d9);
+                if (!cls) cls = normalizeClass(d9.desClasse || d9.classe);
+            } catch (e) {
+                debugLog(`P${index}: Profilo Error`, e.message);
+            }
+        }
+
+        // 10) orario (POST) - Spesso contiene info classe
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo ORARIO...`);
+                const r10 = await axios.post(baseApp + "orario", { opzioni: "{}" }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Orario Response`, r10.data);
+                const d10 = safeData(r10.data);
+                const orarioData = d10.dati || d10;
+                if (Array.isArray(orarioData) && orarioData.length > 0) {
+                    const first = orarioData[0];
+                    if (!cls) cls = normalizeClass(first.desClasse || first.classe);
+                }
+            } catch (e) {
+                debugLog(`P${index}: Orario Error`, e.message);
+            }
+        }
+
+        // 11) oggi (POST) - Endpoint semplificato
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo OGGI...`);
+                const r11 = await axios.post(baseApp + "oggi", {
+                    datGiorno: new Date().toISOString().split('T')[0]
+                }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Oggi Response`, r11.data);
+                const d11 = safeData(r11.data);
+                if (!name) name = buildName(d11);
+                if (!cls) cls = normalizeClass(d11.desClasse || d11.classe);
+            } catch (e) {
+                debugLog(`P${index}: Oggi Error`, e.message);
+            }
+        }
+
+        // 12) promemoria (POST) - Potrebbe avere info studente
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo PROMEMORIA...`);
+                const r12 = await axios.post(baseApp + "promemoria", { opzioni: "{}" }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Promemoria Response`, r12.data);
+                const d12 = safeData(r12.data);
+                const list = Array.isArray(d12) ? d12 : (d12.dati || []);
+                if (list.length > 0) {
+                    const first = list[0];
+                    if (!name && first.desAlunno) name = first.desAlunno.trim().toUpperCase();
+                    if (!cls) cls = normalizeClass(first.desClasse || first.classe);
+                }
+            } catch (e) {
+                debugLog(`P${index}: Promemoria Error`, e.message);
+            }
+        }
+
+        // 13) registro (GET) - Registro di classe
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo REGISTRO...`);
+                const r13 = await axios.get(baseApp + "registro", { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Registro Response`, r13.data);
+                const d13 = safeData(r13.data);
+                if (!cls) cls = normalizeClass(d13.desClasse || d13.classe);
+            } catch (e) {
+                debugLog(`P${index}: Registro Error`, e.message);
+            }
+        }
+
+        // 14) assenze (POST) - Assenze studente
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo ASSENZE...`);
+                const r14 = await axios.post(baseApp + "assenze", { opzioni: "{}" }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Assenze Response`, r14.data);
+                const d14 = safeData(r14.data);
+                const list = Array.isArray(d14) ? d14 : (d14.dati || []);
+                if (list.length > 0) {
+                    const first = list[0];
+                    if (!name && first.desAlunno) name = first.desAlunno.trim().toUpperCase();
+                    if (!cls) cls = normalizeClass(first.desClasse || first.classe);
+                }
+            } catch (e) {
+                debugLog(`P${index}: Assenze Error`, e.message);
+            }
+        }
+
+        // 15) notedisciplinari (POST) - Note disciplinari
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo NOTE DISCIPLINARI...`);
+                const r15 = await axios.post(baseApp + "notedisciplinari", { opzioni: "{}" }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Note Disciplinari Response`, r15.data);
+                const d15 = safeData(r15.data);
+                const list = Array.isArray(d15) ? d15 : (d15.dati || []);
+                if (list.length > 0) {
+                    const first = list[0];
+                    if (!name && first.desAlunno) name = first.desAlunno.trim().toUpperCase();
+                    if (!cls) cls = normalizeClass(first.desClasse || first.classe);
+                }
+            } catch (e) {
+                debugLog(`P${index}: Note Disciplinari Error`, e.message);
+            }
+        }
+
+        // 16) argomenti (POST) - Argomenti lezione (contiene spesso la classe)
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo ARGOMENTI...`);
+                const r16 = await axios.post(baseApp + "argomenti", { opzioni: "{}" }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Argomenti Response`, r16.data);
+                const d16 = safeData(r16.data);
+                const list = Array.isArray(d16) ? d16 : (d16.dati || []);
+                if (list.length > 0) {
+                    const first = list[0];
+                    if (!cls) cls = normalizeClass(first.desClasse || first.classe);
+                    debugLog(`P${index}: Argomenti - classe estratta: ${cls}`);
+                }
+            } catch (e) {
+                debugLog(`P${index}: Argomenti Error`, e.message);
+            }
+        }
+
+        // 17) bachecaalunno (POST) - Bacheca personale studente
+        if (!name || !cls) {
+            try {
+                debugLog(`P${index}: Tentativo BACHECA ALUNNO...`);
+                const r17 = await axios.post(baseApp + "bachecaalunno", { opzioni: "{}" }, { headers, timeout: 6000 });
+                debugLog(`P${index}: Raw Bacheca Alunno Response`, r17.data);
+                const d17 = safeData(r17.data);
+                const list = Array.isArray(d17) ? d17 : (d17.dati || []);
+                if (list.length > 0) {
+                    const first = list[0];
+                    if (!name && first.destinatario) name = first.destinatario.trim().toUpperCase();
+                    if (!cls) cls = normalizeClass(first.desClasse || first.classe);
+                }
+            } catch (e) {
+                debugLog(`P${index}: Bacheca Alunno Error`, e.message);
+            }
+        }
+
+        // 18) ULTIMA CHANCE: Prova tutti gli endpoint con base /famiglia invece di /appfamiglia
+        if (!name || !cls) {
+            const altEndpoints = ["profilo", "scheda", "curriculum", "alunno", "connotati"];
+            for (const ep of altEndpoints) {
+                if (name && cls) break;
+                try {
+                    debugLog(`P${index}: Tentativo FAMIGLIA/${ep}...`);
+                    const method = ["scheda", "curriculum"].includes(ep) ? "post" : "get";
+                    const rAlt = method === "post"
+                        ? await axios.post(baseFam + ep, { opzioni: "{}" }, { headers, timeout: 5000 })
+                        : await axios.get(baseFam + ep, { headers, timeout: 5000 });
+                    debugLog(`P${index}: Raw Famiglia/${ep} Response`, rAlt.data);
+                    const dAlt = safeData(rAlt.data);
+                    const obj = dAlt.alunno || dAlt;
+                    if (!name) name = buildName(obj);
+                    if (!cls) cls = normalizeClass(obj.desClasse || obj.classe);
+                } catch (e) {
+                    // Silently continue to next endpoint
+                }
+            }
+        }
+
         // Normalizzazione finale
         name = (name || p.name || `STUDENTE ${index + 1}`).trim().toUpperCase();
         cls = (normalizeClass(cls || p.class) || "N/D").trim().toUpperCase();
