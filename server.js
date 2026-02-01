@@ -566,20 +566,90 @@ async function enrichProfiles(school, accessToken, profiles) {
             }
         }
 
-        // 4) dashboard intestazione
+        // 4) dashboard - ESTRAZIONE COMPLETA DA TUTTI I CAMPI
         if (!name || !cls) {
             try {
-                debugLog(`P${index}: Tentativo DASHBOARD...`);
+                debugLog(`P${index}: Tentativo DASHBOARD COMPLETO...`);
                 const payload = {
                     dataultimoaggiornamento: "2024-09-01 00:00:00",
-                    opzioni: JSON.stringify({ intestazione: true })
+                    opzioni: JSON.stringify({
+                        intestazione: true,
+                        votiGiornalieri: true,
+                        compiti: true,
+                        argomenti: true,
+                        promemoria: true
+                    })
                 };
-                const r4 = await axios.post(baseApp + "dashboard/dashboard", payload, { headers, timeout: 6000 });
-                debugLog(`P${index}: Raw Dashboard App Response`, r4.data);
-                const d4 = safeData(r4.data);
-                const intest = d4.intestazione || d4;
-                if (!name) name = buildName(intest);
-                if (!cls) cls = normalizeClass(intest.desClasse || intest.classe);
+                const r4 = await axios.post(baseApp + "dashboard/dashboard", payload, { headers, timeout: 10000 });
+
+                // Log della struttura completa della risposta
+                const fullData = r4.data;
+                debugLog(`P${index}: Dashboard KEYS`, Object.keys(fullData));
+
+                if (fullData.data) {
+                    debugLog(`P${index}: Dashboard DATA KEYS`, Object.keys(fullData.data));
+
+                    // Cerca intestazione
+                    if (fullData.data.intestazione) {
+                        debugLog(`P${index}: INTESTAZIONE TROVATA!`, fullData.data.intestazione);
+                        const intest = fullData.data.intestazione;
+                        if (!name && intest.alunno) name = intest.alunno.trim().toUpperCase();
+                        if (!name && intest.desNominativo) name = intest.desNominativo.trim().toUpperCase();
+                        if (!cls && intest.classe) cls = normalizeClass(intest.classe);
+                        if (!cls && intest.desClasse) cls = normalizeClass(intest.desClasse);
+                    }
+
+                    // Cerca in dati[0]
+                    const dati = fullData.data.dati || [];
+                    if (dati.length > 0) {
+                        const primo = dati[0];
+                        debugLog(`P${index}: DATI[0] KEYS`, Object.keys(primo));
+
+                        // Cerca intestazione nested
+                        if (primo.intestazione) {
+                            debugLog(`P${index}: INTESTAZIONE in DATI[0]`, primo.intestazione);
+                            const intest = primo.intestazione;
+                            if (!name && intest.alunno) name = intest.alunno.trim().toUpperCase();
+                            if (!name && intest.desNominativo) name = intest.desNominativo.trim().toUpperCase();
+                            if (!cls && intest.classe) cls = normalizeClass(intest.classe);
+                        }
+
+                        // Estrai da compiti (spesso contiene desAlunno/desClasse)
+                        const compiti = primo.compiti || [];
+                        if (compiti.length > 0) {
+                            debugLog(`P${index}: Trovati ${compiti.length} compiti, primo:`, compiti[0]);
+                            const c = compiti[0];
+                            if (!name && c.desAlunno) name = c.desAlunno.trim().toUpperCase();
+                            if (!cls && c.desClasse) cls = normalizeClass(c.desClasse);
+                        }
+
+                        // Estrai da votiGiornalieri
+                        const voti = primo.votiGiornalieri || primo.voti || [];
+                        if (voti.length > 0) {
+                            debugLog(`P${index}: Trovati ${voti.length} voti, primo:`, voti[0]);
+                            const v = voti[0];
+                            if (!name && v.desAlunno) name = v.desAlunno.trim().toUpperCase();
+                            if (!cls && v.desClasse) cls = normalizeClass(v.desClasse);
+                        }
+
+                        // Estrai da argomenti
+                        const argomenti = primo.argomenti || [];
+                        if (argomenti.length > 0) {
+                            debugLog(`P${index}: Trovati ${argomenti.length} argomenti, primo:`, argomenti[0]);
+                            const a = argomenti[0];
+                            if (!cls && a.desClasse) cls = normalizeClass(a.desClasse);
+                        }
+
+                        // Cerca desClasse direttamente in dati[0]
+                        if (!cls && primo.desClasse) cls = normalizeClass(primo.desClasse);
+                        if (!name && primo.desAlunno) name = primo.desAlunno.trim().toUpperCase();
+                        if (!name && primo.alunno) name = primo.alunno.trim().toUpperCase();
+                    }
+                }
+
+                // Log del risultato
+                debugLog(`P${index}: Dashboard extraction result`, { name, cls });
+
             } catch (e) {
                 debugLog(`P${index}: Dashboard Error`, e.message);
             }
