@@ -324,16 +324,39 @@ class AdvancedArgo {
                 first: soggetti[0] ? Object.keys(soggetti[0]) : []
             });
 
+            // Log completo del primo soggetto per debug
+            if (soggetti[0]) {
+                debugLog("📋 STRUTTURA COMPLETA PRIMO SOGGETTO", JSON.stringify(soggetti[0], null, 2));
+            }
+
             const profiles = soggetti.map((sog, idx) => {
                 const rawName = (sog.desNominativo || sog.nominativo || '').trim().toUpperCase();
                 const rawClass = (sog.desClasse || sog.classe || sog.codiceClasse || '').trim().toUpperCase();
+
+                // Cerca idSoggetto in vari campi possibili
+                const subjectId = sog.idSoggetto || sog.prgSoggetto || sog.prgAlunno ||
+                    sog.idAlunno || sog.pk || sog.id ||
+                    (sog.alunno && (sog.alunno.pk || sog.alunno.idAlunno || sog.alunno.prgAlunno)) ||
+                    null;
+
+                debugLog(`📌 Profilo ${idx}: idSoggetto candidates`, {
+                    idSoggetto: sog.idSoggetto,
+                    prgSoggetto: sog.prgSoggetto,
+                    prgAlunno: sog.prgAlunno,
+                    idAlunno: sog.idAlunno,
+                    pk: sog.pk,
+                    id: sog.id,
+                    alunno_pk: sog.alunno?.pk,
+                    resolved: subjectId
+                });
+
                 return {
                     index: idx,
                     name: rawName,
                     class: normalizeClass(rawClass) || rawClass || "N/D",
                     school: (sog.codMin || sog.codiceScuola || school || '').trim().toUpperCase(),
                     token: sog.token || '',
-                    idSoggetto: sog.idSoggetto,
+                    idSoggetto: subjectId,
                     raw: sog
                 };
             });
