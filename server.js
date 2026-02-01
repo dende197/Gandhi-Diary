@@ -721,15 +721,38 @@ async function enrichProfiles(school, accessToken, profiles) {
 
         // ============= NUOVE API ALTERNATIVE =============
 
-        // 9) profilo (GET) - Potrebbe restituire dettagli profilo
+        // 9) profilo (GET) - STRATEGIA MIRATA (da screenshot utente)
         if (!name || !cls) {
             try {
                 debugLog(`P${index}: Tentativo PROFILO...`);
                 let r9 = await axios.get(baseApp + "profilo", { headers, timeout: 6000 });
                 debugLog(`P${index}: Raw Profilo Response`, r9.data);
                 const d9 = safeData(r9.data);
-                if (!name) name = buildName(d9);
-                if (!cls) cls = normalizeClass(d9.desClasse || d9.classe);
+
+                // Estrazione Nome da alunno
+                if (!name) {
+                    const al = d9.alunno || d9;
+                    if (al.nominativo) name = al.nominativo;
+                    else if (al.nome && al.cognome) name = `${al.cognome} ${al.nome}`;
+                    if (name) name = name.trim().toUpperCase();
+                }
+
+                // Estrazione Classe da scheda.classe (desDenominazione + desSezione)
+                if (!cls) {
+                    const scheda = d9.scheda || {};
+                    const classeObj = scheda.classe || {};
+
+                    if (classeObj.desDenominazione && classeObj.desSezione) {
+                        // Es: "5" + "A" -> "5A"
+                        // Es: "1" + "DSU" -> "1DSU"
+                        cls = `${classeObj.desDenominazione}${classeObj.desSezione}`.trim().toUpperCase();
+                        debugLog(`P${index}: Classe estratta da scheda.classe: ${cls}`);
+                    } else if (d9.desClasse) {
+                        cls = normalizeClass(d9.desClasse);
+                    } else if (d9.classe) {
+                        cls = normalizeClass(d9.classe);
+                    }
+                }
             } catch (e) {
                 debugLog(`P${index}: Profilo Error`, e.message);
             }
