@@ -779,6 +779,13 @@ function createHeaders(school, accessToken, authToken, subjectId = null) {
     if (subjectId) {
         headers["x-id-soggetto"] = String(subjectId);
         headers["x-prg-soggetto"] = String(subjectId);
+        debugLog("🔑 Headers con Subject ID", {
+            school: headers["x-cod-min"],
+            "x-id-soggetto": headers["x-id-soggetto"],
+            "x-prg-soggetto": headers["x-prg-soggetto"],
+            authToken: headers["x-auth-token"] ? "***REDACTED***" : null,
+            accessToken: headers["Authorization"] ? "***REDACTED***" : null
+        });
     }
     return headers;
 }
@@ -1907,7 +1914,7 @@ app.post('/login', async (req, res) => {
         }
 
         // 4. Dati Scolastici (Parallelo)
-        const headers = createHeaders(school, accessToken, authToken);
+        const headers = createHeaders(school, accessToken, authToken, targetProfile?.idSoggetto);
         const [gradesData, tasksData, announcementsData] = await Promise.all([
             extractGradesMultiStrategy(headers),
             extractHomeworkSafe(headers),
