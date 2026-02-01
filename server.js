@@ -321,33 +321,77 @@ class AdvancedArgo {
 
             debugLog("🔍 SOGGETTI RICEVUTI", {
                 count: soggetti.length,
-                first: soggetti[0] ? Object.keys(soggetti[0]) : []
+                keys: soggetti[0] ? Object.keys(soggetti[0]) : []
             });
 
-            // Log completo del primo soggetto per debug
+            // Log completo - mostra TUTTE le chiavi a tutti i livelli
             if (soggetti[0]) {
-                debugLog("📋 STRUTTURA COMPLETA PRIMO SOGGETTO", JSON.stringify(soggetti[0], null, 2));
+                const s = soggetti[0];
+                debugLog("📋 CHIAVI PRIMO LIVELLO SOGGETTO", Object.keys(s));
+
+                // Log dell'oggetto alunno se esiste
+                if (s.alunno) {
+                    debugLog("👤 ALUNNO OBJECT TROVATO", {
+                        keys: Object.keys(s.alunno),
+                        pk: s.alunno.pk,
+                        prgAlunno: s.alunno.prgAlunno,
+                        desNome: s.alunno.desNome,
+                        desCognome: s.alunno.desCognome,
+                        desNominativo: s.alunno.desNominativo,
+                        desClasse: s.alunno.desClasse,
+                        classe: s.alunno.classe
+                    });
+                } else {
+                    debugLog("⚠️ NESSUN OGGETTO 'alunno' TROVATO nel soggetto");
+                }
+
+                // Mostra il token (troncato per sicurezza)
+                if (s.token) {
+                    debugLog("🎫 TOKEN presente", s.token.substring(0, 30) + "...");
+                }
+
+                // Mostra tutti i campi che potrebbero contenere ID
+                debugLog("🔢 POSSIBILI CAMPI ID", {
+                    idSoggetto: s.idSoggetto,
+                    prgSoggetto: s.prgSoggetto,
+                    prgAlunno: s.prgAlunno,
+                    idAlunno: s.idAlunno,
+                    pk: s.pk,
+                    id: s.id,
+                    codMin: s.codMin,
+                    "alunno.pk": s.alunno?.pk,
+                    "alunno.prgAlunno": s.alunno?.prgAlunno
+                });
             }
 
             const profiles = soggetti.map((sog, idx) => {
-                const rawName = (sog.desNominativo || sog.nominativo || '').trim().toUpperCase();
-                const rawClass = (sog.desClasse || sog.classe || sog.codiceClasse || '').trim().toUpperCase();
+                // Cerca i dati dello studente in più posizioni
+                const alunno = sog.alunno || sog;
 
-                // Cerca idSoggetto in vari campi possibili
+                // Nome: cerca in alunno o direttamente in sog
+                let rawName = '';
+                if (alunno.desNominativo) rawName = alunno.desNominativo;
+                else if (alunno.nominativo) rawName = alunno.nominativo;
+                else if (alunno.desNome && alunno.desCognome) rawName = `${alunno.desCognome} ${alunno.desNome}`;
+                else if (alunno.nome && alunno.cognome) rawName = `${alunno.cognome} ${alunno.nome}`;
+                rawName = rawName.trim().toUpperCase();
+
+                // Classe: cerca in alunno o direttamente in sog
+                let rawClass = alunno.desClasse || alunno.classe || alunno.codiceClasse ||
+                    sog.desClasse || sog.classe || '';
+                rawClass = rawClass.trim().toUpperCase();
+
+                // ID: cerca in vari campi possibili, incluso nested alunno
                 const subjectId = sog.idSoggetto || sog.prgSoggetto || sog.prgAlunno ||
                     sog.idAlunno || sog.pk || sog.id ||
-                    (sog.alunno && (sog.alunno.pk || sog.alunno.idAlunno || sog.alunno.prgAlunno)) ||
+                    alunno.pk || alunno.prgAlunno || alunno.idAlunno || alunno.id ||
                     null;
 
-                debugLog(`📌 Profilo ${idx}: idSoggetto candidates`, {
-                    idSoggetto: sog.idSoggetto,
-                    prgSoggetto: sog.prgSoggetto,
-                    prgAlunno: sog.prgAlunno,
-                    idAlunno: sog.idAlunno,
-                    pk: sog.pk,
-                    id: sog.id,
-                    alunno_pk: sog.alunno?.pk,
-                    resolved: subjectId
+                debugLog(`📌 Profilo ${idx} estratto`, {
+                    name: rawName || "(vuoto)",
+                    class: rawClass || "(vuoto)",
+                    subjectId: subjectId,
+                    tokenPresent: !!sog.token
                 });
 
                 return {
