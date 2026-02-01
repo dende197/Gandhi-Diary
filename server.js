@@ -364,11 +364,11 @@ function normalizeClass(raw, strict = false) {
 
     // Filtro "False Positives" comuni (parole italiane che iniziano con lettere di sezione)
     // Esempio: "4 ORE" non deve diventare "4O"
-    const blackList = /\b(ORE|ANNI|ANNO|OGGETTI|OTTOBRE|ORA|ORDINE|OFFERTA|OPZIONE|ORARIO)\b/i;
+    const blackList = /\b(ORE|ANNI|ANNO|OGGETTI|OTTOBRE|ORA|ORDINE|OFFERTA|OPZIONE|ORARIO|OVVERO|OGNI|OLTRE)\b/i;
     if (blackList.test(txt)) return null;
 
-    // 1) Match esplicito: "3A", "3AB", "3 A", "3  AB" con word boundaries
-    let m = txt.match(/\b([1-5])\s*([A-Z]{1,2})\b/);
+    // 1) Match esplicito: "3A", "3^A", "3° A", "3AB", "3 A" con word boundaries
+    let m = txt.match(/\b([1-5])[\^°]?\s*([A-Z]{1,2})\b/);
     if (m) {
         // Per coerenza UI: numero + prima lettera (es. "3AB" -> "3A")
         return m[1] + m[2][0];
@@ -412,7 +412,7 @@ async function enrichProfiles(school, accessToken, profiles) {
             continue;
         }
 
-        const headers = createHeaders(school, accessToken, authToken);
+        const headers = createHeaders(school, accessToken, authToken, p.idSoggetto);
         let name = null;
         let cls = null;
 
@@ -763,20 +763,29 @@ function extractClassFromCurriculum(currData) {
 }
 
 
-function createHeaders(school, accessToken, authToken) {
-    return {
+function createHeaders(school, accessToken, authToken, subjectId = null) {
+    const headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + accessToken,
         "Accept": "application/json",
         "x-cod-min": school,
         "x-auth-token": authToken,
-        "User-Agent": USER_AGENT
+        "User-Agent": USER_AGENT,
+        // Migliora compatibilità con API/JSF
+        "Accept-Language": "it-IT,it;q=0.9",
+        "X-Requested-With": "XMLHttpRequest"
     };
+    // Header soggetto (richiesto da molte API Argo)
+    if (subjectId) {
+        headers["x-id-soggetto"] = String(subjectId);
+        headers["x-prg-soggetto"] = String(subjectId);
+    }
+    return headers;
 }
 
 // ============= IDENTITY RESOLUTION (MULTI-STRATEGY) =============
 
-async function resolveIdentityForProfile(school, username, password, accessToken, authToken, currentName, currentClass) {
+async function resolveIdentityForProfile(school, username, password, accessToken, authToken, currentName, currentClass, subjectId = null) {
     let name = (currentName || '').trim().toUpperCase();
     let cls = normalizeClass(currentClass) || '';
 
@@ -785,7 +794,7 @@ async function resolveIdentityForProfile(school, username, password, accessToken
         return { name, cls };
     }
 
-    const headers = createHeaders(school, accessToken, authToken);
+    const headers = createHeaders(school, accessToken, authToken, subjectId);
 
     // STRATEGIA 0: Curriculum (classe corrente)
     if (!cls || !CLASS_REGEX.test(cls)) {
@@ -900,18 +909,44 @@ async function resolveClassFromAnagraficaWeb(jar) {
         const client = wrapper(axios.create({ jar, withCredentials: true, timeout: 15000 }));
 
         // 1. Session Warming: Passa dalla home per stabilizzare i cookie JSF
-        await client.get('https://www.portaleargo.it/argoweb/famiglia/index.jsf', {
-            headers: { 'User-Agent': USER_AGENT }
-        }).catch(() => { });
+        const homeUrls = [
+            'https://www.portaleargo.it/argoweb/famiglia/index.jsf',
+            'https://www.portaleargo.it/argoweb/famiglia/common/avvisoScuola.jsf'
+        ];
+        for (const url of homeUrls) {
+            await client.get(url, { headers: { 'User-Agent': USER_AGENT } }).catch(() => { });
+        }
 
-        // 2. Pagina Target: Dati Anagrafici
-        const url = 'https://www.portaleargo.it/argoweb/famiglia/anagrafica-alunno.jsf';
-        const urlHit = url.split('/').pop();
-        debugLog(`🌐 Identity (GOD MODE): Tentativo ${urlHit}...`);
+        // 2. Pagina Target: Analisi multi-pagina per Dati Anagrafici
+        const candidates = [
+            'https://www.portaleargo.it/argoweb/famiglia/anagrafica-alunno.jsf',
+            'https://www.portaleargo.it/argoweb/famiglia/datiAnagrafici.jsf',
+            'https://www.portaleargo.it/argoweb/famiglia/dati_anagrafici.jsf',
+            'https://www.portaleargo.it/argoweb/famiglia/schedaAnagraficaAlunno.jsf'
+        ];
 
-        const res = await client.get(url, {
-            headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html' }
-        });
+        let res = null;
+        for (const url of candidates) {
+            try {
+                const urlHit = url.split('/').pop();
+                debugLog(`🌐 Identity (GOD MODE): Tentativo ${urlHit}...`);
+                const tempRes = await client.get(url, {
+                    headers: {
+                        'User-Agent': USER_AGENT,
+                        'Accept': 'text/html',
+                        'Accept-Language': 'it-IT,it;q=0.9',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                // Semplice controllo se la pagina sembra contenere dati reali
+                if (tempRes.data && (tempRes.data.includes('alunno') || tempRes.data.includes('nominativo'))) {
+                    res = tempRes;
+                    break;
+                }
+            } catch (e) { continue; }
+        }
+
+        if (!res) return { name: null, cls: null };
 
         const $ = cheerio.load(res.data);
         let name = null, cls = null;
@@ -1003,8 +1038,20 @@ async function resolveClassFromAnagraficaWeb(jar) {
 
         // C) Global Text Search (Ultima Spiggia)
         if (!cls) {
-            const bodyText = $('body').text();
-            cls = normalizeClass(bodyText, true); // Strict mode: solo match garantiti
+            const bodyText = $('body').text().replace(/\s+/g, ' ');
+            // Cerchiamo pattern specifici in blocchi di testo
+            const patterns = [
+                /(?:Classe|Sezione|Frequentante la)\s*:\s*([1-5][\^°]?\s*[A-Z]{1,2})/i,
+                /(?:Classe|Sezione|Frequentante la)\s+([1-5][\^°]?\s*[A-Z]{1,2})/i,
+                /\b([1-5])[\^°]?\s*([A-Z])\b/
+            ];
+            for (const p of patterns) {
+                const m = bodyText.match(p);
+                if (m) {
+                    const found = normalizeClass(m[1] + (m[2] ? m[2] : ''));
+                    if (found) { cls = found; break; }
+                }
+            }
         }
 
         if (DEBUG_MODE) debugLog(`✅ GOD MODE Results`, { name, cls });
@@ -1069,8 +1116,18 @@ async function resolveIdentityFromWebUI(jar) {
         }
 
         if (!cls) {
-            const bodyText = $('body').text();
-            cls = normalizeClass(bodyText, true);
+            const bodyText = $('body').text().replace(/\s+/g, ' ');
+            const patterns = [
+                /(?:Classe|Sezione)\s*:\s*([1-5][\^°]?\s*[A-Z]{1,2})/i,
+                /\b([1-5])[\^°]?\s*([A-Z])\b/
+            ];
+            for (const p of patterns) {
+                const m = bodyText.match(p);
+                if (m) {
+                    const found = normalizeClass(m[1] + (m[2] ? m[2] : ''));
+                    if (found) { cls = found; break; }
+                }
+            }
         }
 
         if (name) debugLog(`✅ Identity risolta da WEB UI: ${name} (${cls})`);
@@ -1756,7 +1813,8 @@ app.post('/api/resolve-profile', async (req, res) => {
         const { name, cls } = await resolveIdentityForProfile(
             school, user, password,
             loginRes.access_token, target.token,
-            target.name, target.class
+            target.name, target.class,
+            target.idSoggetto
         );
 
         const finalClass = normalizeClass(cls);
@@ -1999,7 +2057,7 @@ app.post('/sync', async (req, res) => {
             throw e;
         }
 
-        const headers = createHeaders(school, accessToken, authToken);
+        const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
 
         // Fetch in parallelo
         const [grades, tasks, promemoria] = await Promise.all([
@@ -2015,7 +2073,10 @@ app.post('/sync', async (req, res) => {
                 if (profiles.length > 0) {
                     const t = profiles[profileIndex];
                     const resIdent = await resolveIdentityForProfile(
-                        school, user, pwd, accessToken, authToken, t.name, t.class
+                        school, user, pwd,
+                        accessToken, authToken,
+                        t.name, t.class,
+                        t.idSoggetto
                     );
                     sName = resIdent.name;
                     sClass = normalizeClass(resIdent.cls) || resIdent.cls;
