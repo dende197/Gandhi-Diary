@@ -743,53 +743,76 @@ async function enrichProfiles(school, accessToken, profiles) {
                     const classeObj = scheda.classe || {};
 
                     if (classeObj.desDenominazione && classeObj.desSezione) {
-                        // Es: "5" + "A" -> "5A"
-                        // Es: "1" + "DSU" -> "1DSU"
                         cls = `${classeObj.desDenominazione}${classeObj.desSezione}`.trim().toUpperCase();
 
-                        // NEW: Aggiungi abbreviazione corso (SA, SU, LS)
+                        // FIX: Cerca abbreviazione corso in TUTTI i campi possibili
                         try {
-                            // Cerca descrizione corso in vari campi potenziali
-                            // Nota: L'utente indica che nei log appare sotto "Corso": { "descrizione": ... }
-                            // Quindi controlliamo anche oggetti nidificati se necessario, ma proviamo i campi piatti comuni prima
                             let courseDesc = "";
-                            if (classeObj.desCorso) courseDesc = classeObj.desCorso;
-                            else if (classeObj.corso && classeObj.corso.descrizione) courseDesc = classeObj.corso.descrizione; // Caso probabile da log utente
-                            else if (classeObj.corso) courseDesc = String(classeObj.corso);
-                            else if (d9.desCorso) courseDesc = d9.desCorso;
 
-                            courseDesc = courseDesc.toUpperCase();
+                            // 1. Cerca nell'oggetto corso nidificato (Corso.descrizione)
+                            if (classeObj.corso && typeof classeObj.corso === 'object' && classeObj.corso.descrizione) {
+                                courseDesc = classeObj.corso.descrizione;
+                            }
+                            // 2. Cerca come stringa diretta in corso
+                            else if (classeObj.corso && typeof classeObj.corso === 'string') {
+                                courseDesc = classeObj.corso;
+                            }
+                            // 3. Cerca in desCorso
+                            else if (classeObj.desCorso) {
+                                courseDesc = classeObj.desCorso;
+                            }
+                            // 4. Cerca in scheda.desCorso
+                            else if (scheda.desCorso) {
+                                courseDesc = scheda.desCorso;
+                            }
+                            // 5. Cerca in scheda.corso
+                            else if (scheda.corso && typeof scheda.corso === 'object' && scheda.corso.descrizione) {
+                                courseDesc = scheda.corso.descrizione;
+                            }
+                            // 6. Cerca in d9 direttamente
+                            else if (d9.desCorso) {
+                                courseDesc = d9.desCorso;
+                            }
+                            else if (d9.corso && typeof d9.corso === 'object' && d9.corso.descrizione) {
+                                courseDesc = d9.corso.descrizione;
+                            }
+
+                            courseDesc = (courseDesc || "").toUpperCase();
+                            debugLog(`P${index}: Corso descrizione trovata: '${courseDesc}'`);
 
                             let abbr = "";
-                            // Abbreviazioni corsi più comuni
+                            // Abbreviazioni corsi - ordine importante (più specifico prima)
                             if (courseDesc.includes("SCIENZE APPLICATE")) abbr = "(SA)";
                             else if (courseDesc.includes("SCIENZE UMANE")) abbr = "(SU)";
-                            else if (courseDesc.includes("LICEO CLASSICO") || courseDesc.includes("CLASSICO")) abbr = "(LC)";
-                            else if (courseDesc.includes("SCIENTIFICO") && !courseDesc.includes("APPLICATE")) abbr = "(LS)";
+                            else if (courseDesc.includes("LICEO CLASSICO") || (courseDesc.includes("CLASSICO") && !courseDesc.includes("SCIENTIFICO"))) abbr = "(LC)";
+                            else if (courseDesc.includes("LICEO SCIENTIFICO") || (courseDesc.includes("SCIENTIFICO") && !courseDesc.includes("APPLICATE"))) abbr = "(LS)";
                             else if (courseDesc.includes("LINGUISTICO")) abbr = "(LL)";
                             else if (courseDesc.includes("ARTISTICO")) abbr = "(LA)";
                             else if (courseDesc.includes("MUSICALE")) abbr = "(LM)";
                             else if (courseDesc.includes("COREUTICO")) abbr = "(LCo)";
-                            else if (courseDesc.includes("ECONOMICO") || courseDesc.includes("ECONOMIA")) abbr = "(LE)";
+                            else if (courseDesc.includes("ECONOMICO") || courseDesc.includes("ECONOMIA SOCIALE")) abbr = "(LES)";
                             else if (courseDesc.includes("SPORTIVO")) abbr = "(LSp)";
-                            else if (courseDesc.includes("AMMINISTRAZIONE")) abbr = "(AFM)";
+                            else if (courseDesc.includes("AMMINISTRAZIONE") || courseDesc.includes("AFM")) abbr = "(AFM)";
                             else if (courseDesc.includes("TURISMO")) abbr = "(TUR)";
-                            else if (courseDesc.includes("INFORMATICA") || courseDesc.includes("INFORMATIC")) abbr = "(INF)";
+                            else if (courseDesc.includes("INFORMATICA") && courseDesc.includes("TELECOMUNICAZIONI")) abbr = "(ITI)";
+                            else if (courseDesc.includes("INFORMATICA")) abbr = "(INF)";
                             else if (courseDesc.includes("ELETTRONICA") || courseDesc.includes("ELETTROTECNICA")) abbr = "(ELE)";
                             else if (courseDesc.includes("MECCANICA")) abbr = "(MEC)";
-                            else if (courseDesc.includes("COSTRUZIONI")) abbr = "(CAT)";
+                            else if (courseDesc.includes("COSTRUZIONI") || courseDesc.includes("CAT")) abbr = "(CAT)";
                             else if (courseDesc.includes("CHIMICA")) abbr = "(CHI)";
-                            else if (courseDesc.includes("AGRARIA")) abbr = "(AGR)";
+                            else if (courseDesc.includes("AGRARIA") || courseDesc.includes("AGRARIO")) abbr = "(AGR)";
                             else if (courseDesc.includes("ENOGASTRONOMIA") || courseDesc.includes("ALBERGHIERO")) abbr = "(ENO)";
-                            else if (courseDesc.includes("SERVIZI SOCIALI")) abbr = "(SSS)";
+                            else if (courseDesc.includes("SERVIZI SOCIALI") || courseDesc.includes("SOCIO SANITARIO")) abbr = "(SSS)";
                             else if (courseDesc.includes("GRAFICA")) abbr = "(GRA)";
                             else if (courseDesc.includes("MODA")) abbr = "(MOD)";
+                            else if (courseDesc.includes("ODONTOTECNICO")) abbr = "(ODO)";
+                            else if (courseDesc.includes("OTTICO")) abbr = "(OTT)";
 
                             if (abbr) {
                                 cls += " " + abbr;
-                                debugLog(`P${index}: Rilevato corso '${courseDesc}' -> Abbreviazione '${abbr}'`);
-                            } else {
-                                debugLog(`P${index}: Corso '${courseDesc}' -> Nessuna abbreviazione trovata`);
+                                debugLog(`P${index}: ✅ Corso '${courseDesc}' -> Abbreviazione '${abbr}' -> Classe finale: '${cls}'`);
+                            } else if (courseDesc) {
+                                debugLog(`P${index}: ⚠️ Corso '${courseDesc}' -> Nessuna abbreviazione mappata`);
                             }
 
                         } catch (e) {

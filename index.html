@@ -1425,7 +1425,8 @@
             selectedDay: new Date().getDate(),
             stressLevels: {},
             plannedTasks: {},
-            polls: []
+            polls: [],
+            plannerWeekOffset: 0
         };
 
         const app = document.getElementById('app');
@@ -1613,7 +1614,7 @@
 
                     const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0;
                     const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
-                    const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || (new Date(localUpdatedAt).getTime() > new Date(remoteUpdatedAt).getTime()));
+                    const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || (new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()));
 
                     if (!remoteHasData && localHasData) {
                         console.log("🛡️ Remoto vuoto → mantengo locale e ripopolo il server");
@@ -1627,14 +1628,19 @@
                         state.plannedTasks = localPT;
                         state.stressLevels = localSL;
                         debouncedSavePlannerRemote(0);
+                    } else if (remoteIsNewer && remoteHasData) {
+                        console.log("☁️ Remoto più nuovo → scarico dati dal server");
+                        state.plannedTasks = remotePT;
+                        state.stressLevels = remoteSL;
+                        localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                        localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
+                        if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
                     } else if (remoteHasData) {
-                        // Merge prudente: remoto prevale solo dove locale è assente
+                        // In caso di timestamp uguali o incerti, merge prudente
                         state.plannedTasks = { ...localPT, ...remotePT };
                         state.stressLevels = { ...localSL, ...remoteSL };
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                         localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
-                        if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                        console.log("✅ Remoto applicato (merge) → cache locale aggiornata");
                     }
 
                     notifyPlannerChanged();
@@ -2394,7 +2400,7 @@
                 themeSystem: 'standard',
                 firstDay: 1, // Lunedì
                 height: 'auto',
-                validRange: { start: startOfWeek.toISOString().split('T')[0] },
+                validRange: { start: today.toISOString().split('T')[0] },
                 headerToolbar: { left: 'title', center: '', right: 'prev,next' },
                 dayCellContent: function (arg) {
                     // Rimuove eventuali lettere dal numero giorno (es. "1 dom")
@@ -2451,7 +2457,7 @@
         /* === 2) Aggiorna SOLO la sezione “Agenda della settimana” nel Planner === */
         function updateWeeklyAgendaView() {
             if (state.view !== 'planner') return;
-            const el = document.getElementById('weekly-agenda-widget');
+            const el = document.getElementById('weekly-agenda-list');
             if (!el) return;
 
             const plannedWithDates = [];
@@ -2463,10 +2469,13 @@
             });
 
             plannedWithDates.sort((a, b) => new Date(a.plannedDate) - new Date(b.plannedDate));
-            const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 
-            const html = plannedWithDates.length > 0
-                ? plannedWithDates.map(t => {
+            // Filtra solo date da oggi in poi (non mostrare compiti passati)
+            const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
+
+            const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            const html = filtered.length > 0
+                ? filtered.map(t => {
                     const d = new Date(t.plannedDate);
                     const dayLabel = `${dayNamesShort[d.getDay()]} ${d.getDate()}`;
                     const subjectColor = getSubjectColor(t.subject);
@@ -2516,8 +2525,11 @@
             }
         }
 
-        function logout() {
+        async function logout() {
             if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
+                // ✅ Salva planner su server PRIMA di fare logout
+                await hardSavePlanner();
+
                 sessionManager.clear();
                 state.isLoggedIn = false;
                 state.didup.connected = false;
@@ -2528,7 +2540,10 @@
                 state.isOffline = false;
                 state.lastSync = null;
                 state.view = 'login';
-                // ⭐ NON cancellare plannedTasks, stressLevels e posts - persistono tra sessioni
+
+                // ⭐ NON cancellare plannedTasks, stressLevels - restano in localStorage
+                // E verranno recuperati da Supabase al prossimo login
+
                 render();
                 console.log('✅ Logout completato - Planner e Feed preservati');
             }
@@ -3255,10 +3270,13 @@
             });
             plannedWithDates.sort((a, b) => new Date(a.plannedDate) - new Date(b.plannedDate));
 
-            if (!plannedWithDates.length) return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">Nessun compito pianificato.</div>`;
+            // Filtra solo date da oggi in poi
+            const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
+
+            if (!filtered.length) return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">Nessun compito pianificato (o già passati).</div>`;
 
             const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-            return plannedWithDates.map(t => {
+            return filtered.map(t => {
                 const d = new Date(t.plannedDate);
                 const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
                 const subjectColor = getSubjectColor(t.subject);
@@ -3380,15 +3398,32 @@
                 initStressWaveFromState();
             }
         }
+        // MODIFICA: showPlanWeekModal mostra i PROSSIMI 7 giorni a partire da OGGI
         function showPlanWeekModal() {
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
+
+            // ✅ FIX: Inizia da OGGI, non dal lunedì della settimana corrente
             const today = new Date();
-            const dayNames = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+            today.setHours(0, 0, 0, 0);
+
+            // Genera i prossimi 7 giorni a partire da oggi
+            const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            const next7Days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() + i);
+                next7Days.push({
+                    date: d,
+                    dateStr: d.toISOString().split('T')[0],
+                    label: dayLabels[d.getDay()],
+                    dayNum: d.getDate()
+                });
+            }
 
             modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
-                <div class="modal-content glass-panel" style="max-width: 450px; padding: 24px;">
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 24px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="margin:0;">Pianifica Settimana</h2>
                         <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
@@ -3401,17 +3436,18 @@
                                     <div style="font-weight: 700; color: white; margin-bottom: 4px; text-align:left;">${t.text}</div>
                                     <div style="font-size: 11px; color: ${subjectColor}; font-weight:700; text-transform:uppercase; margin-bottom: 12px; text-align:left;">${t.subject}</div>
                                     <div style="display: flex; justify-content: space-between; gap: 4px;">
-                                         ${dayNames.map((label, i) => {
-                    const diff = today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1) + i;
-                    const d = new Date(new Date(today).setDate(diff));
-                    const dateStr = d.toISOString().split('T')[0];
-                    const isFuture = isFutureOrToday(dateStr);
-                    const isPlanned = isFuture && state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(t.id);
+                                         ${next7Days.map(day => {
+                    const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
+                    const isToday = day.dateStr === new Date().toISOString().split('T')[0];
                     return `
-                                                <div data-task-id="${t.id}" data-date="${dateStr}" 
-                                                    ${isFuture ? `onclick="togglePlanDay('${t.id}', '${dateStr}')"` : ''}
-                                                    style="flex:1; height: 32px; border-radius: 8px; background: ${isPlanned ? 'var(--blue)' : 'rgba(255,255,255,0.05)'}; border: 1px solid ${isPlanned ? 'var(--blue)' : 'rgba(255,255,255,0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: ${isFuture ? 'pointer' : 'not-allowed'}; color: ${isPlanned ? 'white' : 'rgba(255,255,255,0.4)'}; opacity: ${isFuture ? '1' : '0.45'}; pointer-events: ${isFuture ? 'auto' : 'none'}; transition: all .3s cubic-bezier(0.16, 1, 0.3, 1);">
-                                                    ${label}
+                                                <div data-task-id="${t.id}" data-date="${day.dateStr}" 
+                                                    onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
+                                                    style="flex: 1; text-align:center; padding: 8px 4px; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+                                                    background: ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.08)'};
+                                                    color: ${isPlanned ? 'black' : 'white'};
+                                                    border: ${isToday ? '2px solid var(--blue)' : '1px solid rgba(255,255,255,0.1)'};">
+                                                    <div style="font-size: 10px; opacity: 0.7;">${day.label}</div>
+                                                    <div style="font-weight: 700; font-size: 14px;">${day.dayNum}</div>
                                                 </div>`;
                 }).join('')}
                                     </div>
@@ -3425,7 +3461,12 @@
 
         function togglePlanDay(taskId, dateStr) {
             if (event) event.stopPropagation();
-            if (!isFutureOrToday(dateStr)) return;
+            // ✅ FIX: Accetta qualsiasi data futura (non solo settimana corrente)
+            const selectedDate = new Date(dateStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) return; // Solo blocca date passate
 
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             const index = state.plannedTasks[dateStr].indexOf(taskId);
@@ -4022,7 +4063,7 @@
             }
         }
 
-        function handleLoginSuccess(data, rawPassword) {
+        async function handleLoginSuccess(data, rawPassword) {
             console.log("✅ Login OK, hydrating state...");
 
             const user = data.session.userName;
@@ -4076,6 +4117,22 @@
                 // Salva con dati validati
                 localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
             }
+
+            // 4. Planner: PRIMA recupera da remoto, poi usa locale come fallback
+            try {
+                await fetchPlannerRemote(); // Questo farà merge intelligente
+            } catch (e) {
+                console.warn("Recupero planner remoto fallito, uso cache locale");
+            }
+
+            // Fallback locale solo se remoto vuoto
+            if (Object.keys(state.plannedTasks || {}).length === 0) {
+                state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
+            }
+            if (Object.keys(state.stressLevels || {}).length === 0) {
+                state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+            }
+            state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
             // 3. Idratazione Dati Scolastici
             if (data.tasks) {
