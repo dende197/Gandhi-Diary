@@ -1987,18 +1987,37 @@ app.post('/login', async (req, res) => {
 
         // 5. Upsert Supabase
         if (supabase) {
+            // 5. Supabase Sync & Retrieval (Fix Persistence)
+            let storedSpecialization = null;
+
             try {
                 const pid = `${school}:${username}:${targetIndex}`;
                 const normalizedClass = normalizeClass(studentClass);
+
+                // A) Fetch existing data first to get stored preferences
+                const { data: existingProfile } = await supabase
+                    .from("profiles")
+                    .select("specialization")
+                    .eq("id", pid)
+                    .single();
+
+                if (existingProfile && existingProfile.specialization) {
+                    storedSpecialization = existingProfile.specialization;
+                }
+
+                // B) Upsert identity (Argo is truth for Name/Class) but keep Specialization
+                // Upserting only provided fields should preserve others if not null, 
+                // but explicit merge is safer for logic flow
                 await supabase.from("profiles").upsert({
                     id: pid,
                     name: studentName,
                     class: normalizedClass || studentClass || "N/D",
                     last_active: new Date().toISOString()
                 }, { onConflict: "id" });
-                debugLog("👤 Profile upsert", { id: pid, name: studentName, class: studentClass });
+
+                debugLog("👤 Profile synced", { id: pid, spec: storedSpecialization });
             } catch (e) {
-                debugLog("⚠️ Supabase upsert error", e.message);
+                debugLog("⚠️ Supabase sync error", e.message);
             }
         }
 
@@ -2015,7 +2034,8 @@ app.post('/login', async (req, res) => {
             student: {
                 name: studentName,
                 class: studentClass || "N/D",
-                school: school
+                school: school,
+                specialization: storedSpecialization // <-- Inject retrieval
             },
             tasks: tasksData,
             voti: gradesData,
