@@ -1986,9 +1986,10 @@ app.post('/login', async (req, res) => {
         ]);
 
         // 5. Upsert Supabase
+        let storedSpecialization = null;
+
         if (supabase) {
             // 5. Supabase Sync & Retrieval (Fix Persistence)
-            let storedSpecialization = null;
 
             try {
                 const pid = `${school}:${username}:${targetIndex}`;
