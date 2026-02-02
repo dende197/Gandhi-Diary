@@ -659,16 +659,33 @@ async function getCurriculum(headers) {
 
 async function getDashboard(headers) {
     try {
-        const res = await axios.get(ENDPOINT + "dashboard", { headers, timeout: 15000 });
+        const startDate = "2024-09-01 00:00:00";
+        const DASHBOARD_OPTIONS = {
+            votiGiornalieri: true,
+            votiScrutinio: true,
+            compiti: true,
+            argomenti: true,
+            promemoria: true,
+            bacheca: true,
+            noteDisciplinari: true,
+            assenze: true,
+            votiPeriodici: true
+        };
+
+        const payload = {
+            dataultimoaggiornamento: startDate,
+            opzioni: JSON.stringify(DASHBOARD_OPTIONS)
+        };
+
+        const res = await axios.post(ENDPOINT + "dashboard/dashboard", payload, {
+            headers,
+            timeout: 25000
+        });
+
         return res.data;
     } catch (e) {
-        try {
-            const baseFam = ENDPOINT.replace('/appfamiglia', '/famiglia');
-            const res2 = await axios.get(baseFam + "dashboard", { headers, timeout: 15000 });
-            return res2.data;
-        } catch (_) {
-            return {};
-        }
+        debugLog("⚠️ Errore Dashboard", e.message);
+        return {};
     }
 }
 
@@ -1060,33 +1077,37 @@ async function extractGradesMultiStrategy(headers) {
     // Strategia 1: Dashboard
     try {
         const dashboardData = await getDashboard(headers);
-        let datiList = dashboardData?.data?.dati || dashboardData?.dati || [];
+        let datiList = [];
 
-        for (const mainData of datiList) {
+        if (dashboardData.data && dashboardData.data.dati) datiList = dashboardData.data.dati;
+        else if (dashboardData.dati) datiList = dashboardData.dati;
+
+        if (datiList.length > 0) {
+            const mainData = datiList[0];
             const votiKeys = ['votiGiornalieri', 'votiPeriodici', 'votiScrutinio', 'voti', 'valutazioni'];
 
             for (const key of votiKeys) {
                 const votiRaw = mainData[key];
                 if (Array.isArray(votiRaw) && votiRaw.length > 0) {
                     for (const v of votiRaw) {
-                        const valore = v.codVoto || v.voto || v.valore || v.desValutazione || '';
-                        const materia = v.desMateria || v.materia || v.materiaDes || 'N/D';
+                        const valore = v.codVoto || v.voto || v.valore;
+                        const materia = v.desMateria || v.materia || 'N/D';
 
                         grades.push({
                             materia: materia,
                             valore: valore,
-                            data: v.datGiorno || v.data || '',
-                            tipo: v.desVoto || v.tipo || v.codVoto || 'N/D',
+                            data: v.datGiorno || v.data,
+                            tipo: v.desVoto || v.tipo || 'N/D',
                             subject: materia,
                             value: valore,
-                            date: v.datGiorno || v.data || '',
+                            date: v.datGiorno || '',
                             id: uuidv4().substring(0, 12)
                         });
                     }
+                    return grades;
                 }
             }
         }
-        if (grades.length > 0) return grades;
     } catch (e) {
         debugLog("⚠️ Grade Strategia 1 fallita", e.message);
     }
@@ -1138,14 +1159,13 @@ async function extractHomeworkSafe(headers) {
         const dashboardData = await getDashboard(headers);
         const rawHomework = {};
 
-        const dati = dashboardData?.data?.dati || dashboardData?.dati || [];
+        const dati = dashboardData?.data?.dati || [];
 
-        for (const blocco of dati) {
-            const registro = blocco.registro || [];
+        if (dati.length > 0) {
+            const registro = dati[0].registro || [];
 
             for (const element of registro) {
                 const compiti = element.compiti || [];
-                const materia = element.materia || 'Generico';
 
                 for (const compito of compiti) {
                     const dataConsegna = compito.dataConsegna;
@@ -1155,11 +1175,8 @@ async function extractHomeworkSafe(headers) {
                         rawHomework[dataConsegna] = { compiti: [], materie: [] };
                     }
 
-                    const testo = compito.desCompito || compito.compito || "";
-                    if (testo) {
-                        rawHomework[dataConsegna].compiti.push(testo);
-                        rawHomework[dataConsegna].materie.push(materia);
-                    }
+                    rawHomework[dataConsegna].compiti.push(compito.compito || '');
+                    rawHomework[dataConsegna].materie.push(element.materia || 'Generico');
                 }
             }
         }
