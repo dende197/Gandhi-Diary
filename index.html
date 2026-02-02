@@ -3733,6 +3733,99 @@
             </div>`;
         }
 
+        function renderChatMessage(m, idx, allMsgs) {
+            const isMe = m.me;
+            const isPending = m.pending;
+            const isFailed = m.failed;
+
+            // Controlla se mostrare timestamp (ogni 5 minuti o primo messaggio)
+            let showTime = idx === 0;
+            if (idx > 0 && allMsgs) {
+                const prevTime = new Date(allMsgs[idx - 1].timestamp);
+                const currTime = new Date(m.timestamp);
+                showTime = (currTime - prevTime) > 5 * 60 * 1000; // 5 minuti
+            }
+
+            const timeStr = new Date(m.timestamp).toLocaleTimeString('it-IT', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                ${showTime ? `
+                    <div style="
+                        text-align: center;
+                        font-size: 11px;
+                        color: rgba(255,255,255,0.4);
+                        padding: 8px 0;
+                        font-weight: 600;
+                    ">${timeStr}</div>
+                ` : ''}
+                
+                <div style="
+                    display: flex;
+                    justify-content: ${isMe ? 'flex-end' : 'flex-start'};
+                    padding: 2px 0;
+                ">
+                    <div style="
+                        max-width: 78%;
+                        padding: 12px 16px;
+                        border-radius: 18px;
+                        ${isMe ? 'border-bottom-right-radius: 6px;' : 'border-bottom-left-radius: 6px;'}
+                        background: ${isMe
+                    ? (isFailed ? 'rgba(255, 69, 58, 0.3)' : 'linear-gradient(135deg, var(--blue), #3b82f6)')
+                    : 'rgba(255, 255, 255, 0.12)'};
+                        color: white;
+                        font-size: 15px;
+                        line-height: 1.45;
+                        word-break: break-word;
+                        ${isPending ? 'opacity: 0.6;' : ''}
+                        ${isFailed ? 'border: 1px solid var(--red);' : ''}
+                        box-shadow: ${isMe ? '0 2px 10px rgba(37, 99, 235, 0.3)' : '0 2px 10px rgba(0,0,0,0.2)'};
+                        position: relative;
+                    ">
+                        ${m.text}
+                        
+                        ${isPending ? `
+                            <span style="
+                                display: block;
+                                font-size: 10px;
+                                opacity: 0.7;
+                                margin-top: 4px;
+                                text-align: right;
+                            ">
+                                <i class="ph ph-clock"></i> Invio...
+                            </span>
+                        ` : ''}
+                        
+                        ${isFailed ? `
+                            <span style="
+                                display: block;
+                                font-size: 10px;
+                                color: #ff6b6b;
+                                margin-top: 4px;
+                                text-align: right;
+                            ">
+                                <i class="ph ph-warning"></i> Non inviato - tocca per riprovare
+                            </span>
+                        ` : ''}
+                        
+                        ${!isPending && !isFailed && isMe ? `
+                            <span style="
+                                display: block;
+                                font-size: 10px;
+                                opacity: 0.6;
+                                margin-top: 4px;
+                                text-align: right;
+                            ">
+                                <i class="ph ph-checks"></i>
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
         function renderChat() {
             setTimeout(scrollChatToBottom, 100);
 
@@ -5201,7 +5294,7 @@
                             return !serverMessages.some(sm =>
                                 sm.text === pm.text &&
                                 sm.me === pm.me &&
-                                Math.abs(new Date(sm.timestamp) - new Date(pm.timestamp)) < 10000
+                                Math.abs(new Date(sm.timestamp) - new Date(pm.timestamp)) < 30000
                             );
                         });
 
@@ -5413,98 +5506,6 @@
             });
         }
 
-        function renderChatMessage(m, idx, allMsgs) {
-            const isMe = m.me;
-            const isPending = m.pending;
-            const isFailed = m.failed;
-
-            // Controlla se mostrare timestamp (ogni 5 minuti o primo messaggio)
-            let showTime = idx === 0;
-            if (idx > 0) {
-                const prevTime = new Date(allMsgs[idx - 1].timestamp);
-                const currTime = new Date(m.timestamp);
-                showTime = (currTime - prevTime) > 5 * 60 * 1000; // 5 minuti
-            }
-
-            const timeStr = new Date(m.timestamp).toLocaleTimeString('it-IT', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            return `
-                ${showTime ? `
-                    <div style="
-                        text-align: center;
-                        font-size: 11px;
-                        color: rgba(255,255,255,0.4);
-                        padding: 8px 0;
-                        font-weight: 600;
-                    ">${timeStr}</div>
-                ` : ''}
-                
-                <div style="
-                    display: flex;
-                    justify-content: ${isMe ? 'flex-end' : 'flex-start'};
-                    padding: 2px 0;
-                ">
-                    <div style="
-                        max-width: 78%;
-                        padding: 12px 16px;
-                        border-radius: 18px;
-                        ${isMe ? 'border-bottom-right-radius: 6px;' : 'border-bottom-left-radius: 6px;'}
-                        background: ${isMe
-                    ? (isFailed ? 'rgba(255, 69, 58, 0.3)' : 'linear-gradient(135deg, var(--blue), #3b82f6)')
-                    : 'rgba(255, 255, 255, 0.12)'};
-                        color: white;
-                        font-size: 15px;
-                        line-height: 1.45;
-                        word-break: break-word;
-                        ${isPending ? 'opacity: 0.6;' : ''}
-                        ${isFailed ? 'border: 1px solid var(--red);' : ''}
-                        box-shadow: ${isMe ? '0 2px 10px rgba(37, 99, 235, 0.3)' : '0 2px 10px rgba(0,0,0,0.2)'};
-                        position: relative;
-                    ">
-                        ${m.text}
-                        
-                        ${isPending ? `
-                            <span style="
-                                display: block;
-                                font-size: 10px;
-                                opacity: 0.7;
-                                margin-top: 4px;
-                                text-align: right;
-                            ">
-                                <i class="ph ph-clock"></i> Invio...
-                            </span>
-                        ` : ''}
-                        
-                        ${isFailed ? `
-                            <span style="
-                                display: block;
-                                font-size: 10px;
-                                color: #ff6b6b;
-                                margin-top: 4px;
-                                text-align: right;
-                            ">
-                                <i class="ph ph-warning"></i> Non inviato - tocca per riprovare
-                            </span>
-                        ` : ''}
-                        
-                        ${!isPending && !isFailed && isMe ? `
-                            <span style="
-                                display: block;
-                                font-size: 10px;
-                                opacity: 0.6;
-                                margin-top: 4px;
-                                text-align: right;
-                            ">
-                                <i class="ph ph-checks"></i>
-                            </span>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-        }
 
 
 
