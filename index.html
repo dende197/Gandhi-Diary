@@ -1418,7 +1418,7 @@
         <div class="boot-card">
             <div class="boot-spinner"></div>
             <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.6.0-gold</span></div>
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.7.0-stable</span></div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1433,8 +1433,11 @@
     </nav>
 
     <script>
-        // v2.6.0-gold (Definitive Persistence Fix + updateChatUI)
-        console.log("🚀 G-Connect v2.6.0-gold initialized");
+        // v2.7.0-stable (Full Persistence & Surgical Sync)
+        console.log("🚀 G-Connect v2.7.0-stable initialized");
+
+        let _chatPoller = null;
+        window.chatChannel = null;
 
         // ⭐ Funzione universale per leggere le date di Argo
         function parseArgoDate(dateString) {
@@ -3760,34 +3763,27 @@
             </div>`;
         }
 
-        function renderChatMessage(m, idx, msgs) {
+        function renderChatMessage(m) {
             const isMe = m.me;
-            const isPending = m.pending;
-            const isFailed = m.failed;
-
-            // Header temporale (ogni 5 min o primo messaggio)
-            let showTime = idx === 0;
-            if (idx > 0 && msgs) {
-                const prev = new Date(msgs[idx - 1].timestamp);
-                const curr = new Date(m.timestamp);
-                showTime = (curr - prev) > 5 * 60 * 1000;
-            }
+            const isPending = m.status === 'pending';
+            const isFailed = m.status === 'failed';
 
             const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('it-IT', {
                 hour: '2-digit', minute: '2-digit'
             }) : '';
 
+            const statusIcon = isPending ? '<i class="ph ph-clock"></i>' :
+                isFailed ? '<i class="ph ph-warning" style="color:var(--red);"></i>' :
+                    (isMe ? '<i class="ph ph-check"></i>' : '');
+
             return `
-            ${showTime ? `<div style="text-align:center; font-size:11px; color:var(--text-muted); padding:12px 0; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">${timeStr}</div>` : ''}
-            
             <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
                 <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}">
                     <div style="word-break: break-word;">${m.text}</div>
                     
                     <div class="msg-status">
                         ${timeStr}
-                        ${isPending ? '<i class="ph ph-clock" style="margin-left:4px;"></i>' : ''}
-                        ${isFailed ? '<i class="ph ph-warning" style="margin-left:4px; color:var(--red);"></i>' : (isMe && !isPending ? '<i class="ph ph-check" style="margin-left:4px;"></i>' : '')}
+                        <span style="margin-left:4px;">${statusIcon}</span>
                     </div>
                 </div>
             </div>`;
@@ -3797,7 +3793,8 @@
             const historyEl = document.getElementById('chat-history');
             if (!historyEl || state.view !== 'chat') return;
 
-            const msgs = state.messages[state.currentChatUser] || [];
+            const threadId = state.currentThreadId;
+            const msgs = state.messages[threadId] || [];
 
             if (msgs.length === 0) {
                 historyEl.innerHTML = `
@@ -3806,24 +3803,29 @@
                             <i class="ph ph-chat-circle-dots"></i>
                         </div>
                         <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
+                        <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
                     </div>
                 `;
-                return;
+            } else {
+                historyEl.innerHTML = msgs.map(renderChatMessage).join('');
             }
 
-            historyEl.innerHTML = msgs.map((m, idx) => renderChatMessage(m, idx, msgs)).join('');
+            requestAnimationFrame(() => {
+                historyEl.scrollTop = historyEl.scrollHeight;
+            });
         }
 
         function renderChat() {
-            setTimeout(scrollChatToBottom, 100);
-
-            const msgs = state.messages[state.currentChatUser] || [];
+            const threadId = state.currentThreadId;
             const otherUser = DIRECTORY.find(u => u.name === state.currentChatUser);
+
+            // Schedule UI update after render
+            setTimeout(updateChatUI, 50);
 
             return `
             <div class="chat-view">
                 <div class="chat-header">
-                    <button onclick="navigate('messages')" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                    <button onclick="exitChat()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
                         <i class="ph ph-caret-left" style="font-size:20px;"></i>
                     </button>
                     
@@ -3831,7 +3833,7 @@
                         ${renderAvatar(state.currentChatUser, 44)}
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white;">${state.currentChatUser}</span>
-                            <span style="font-size:12px; color:var(--text-muted);">
+                            <span style="font-size:12px; color:var(--green); font-weight:600;">
                                 ${otherUser?.status === 'online' ? '🟢 Online' : 'Toccami per info'}
                             </span>
                         </div>
@@ -3843,14 +3845,7 @@
                 </div>
 
                 <div id="chat-history" class="chat-history">
-                    ${msgs.length === 0 ? `
-                        <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
-                            <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
-                                <i class="ph ph-chat-circle-dots"></i>
-                            </div>
-                            <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
-                        </div>
-                    ` : msgs.map((m, idx) => renderChatMessage(m, idx, msgs)).join('')}
+                    <!-- Messaggi iniettati da updateChatUI -->
                 </div>
 
                 <div class="chat-input-bar">
@@ -5092,98 +5087,115 @@
             }
         }
 
-        async function openChat(name, explicitId = null) {
-            let userObj = DIRECTORY.find(u => u.name === name || u.id === explicitId);
+        async function openChat(otherName, otherId = null) {
+            const myId = getUserId();
+            if (!myId || myId === 'guest') return alert('Esegui il login per chattare');
 
-            if (!userObj) {
-                const fallbackId = explicitId || `gen:${name}`;
-                userObj = { name, id: fallbackId, class: 'N/D' };
-                DIRECTORY.push(userObj);
+            if (!otherId) {
+                const dir = DIRECTORY.find(u => u.name === otherName);
+                otherId = dir?.id || `user_${otherName.toLowerCase().replace(/\s+/g, '_')}`;
             }
 
-            state.currentChatUser = userObj.name;
-            state.currentChatId = userObj.id;
-
-            const myId = getUserId();
-            const threadId = await getThreadId(myId, userObj.id);
+            const threadId = await getThreadId(myId, otherId);
+            state.currentChatUser = otherName;
+            state.currentChatId = otherId;
             state.currentThreadId = threadId;
 
-            navigate('chat');
+            if (!state.messages[threadId]) state.messages[threadId] = [];
 
+            state.view = 'chat';
+            render();
+
+            await fetchChatMessages(threadId);
+            startChatPolling();
+            subscribeToChatRealtime(threadId);
+        }
+
+        async function fetchChatMessages(threadId) {
+            if (!threadId) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/messages/thread/${threadId}`);
+                const res = await fetch(`${API_BASE_URL}/api/messages/${threadId}`);
                 const data = await res.json();
                 if (data.success) {
-                    state.messages[userObj.name] = data.data.map(m => ({
+                    const myId = getUserId();
+                    state.messages[threadId] = (data.data || []).map(m => ({
+                        id: m.id,
                         text: m.text,
                         me: m.sender_id === myId,
                         timestamp: m.created_at,
-                        type: m.type,
-                        meta: m.meta
+                        status: 'sent'
                     }));
-                } else {
-                    state.messages[userObj.name] = [];
+                    updateChatUI();
                 }
-            } catch (e) {
-                console.error("Errore fetch chat:", e);
-                state.messages[userObj.name] = [];
-            }
-
-            render();
-
-            setTimeout(() => {
-                const history = document.getElementById('chat-history');
-                if (history) history.scrollTop = history.scrollHeight;
-            }, 50);
+            } catch (e) { console.warn("Fetch messages error:", e); }
         }
 
-        let _chatPoller = null;
+        function exitChat() {
+            stopChatPolling();
+            if (window.chatChannel) {
+                supabase.removeChannel(window.chatChannel);
+                window.chatChannel = null;
+            }
+            state.currentThreadId = null;
+            state.currentChatUser = null;
+            state.currentChatId = null;
+            navigate('messages');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
 
         function startChatPolling() {
-            if (_chatPoller) clearInterval(_chatPoller);
-
+            stopChatPolling();
             _chatPoller = setInterval(async () => {
-                if (!state.currentThreadId || !state.currentChatUser || state.view !== 'chat') return;
-
-                try {
-                    const res = await fetch(`${API_BASE_URL}/api/messages/thread/${state.currentThreadId}`);
-                    const data = await res.json();
-
-                    if (data.success) {
-                        const myId = getUserId();
-                        const key = state.currentChatUser;
-
-                        // Preserva i messaggi pending/failed locali
-                        const pendingMessages = (state.messages[key] || []).filter(m => m.pending || m.failed);
-
-                        // Mappa i messaggi dal server
-                        const serverMessages = (data.data || []).map(m => ({
-                            id: m.id,
-                            text: m.text,
-                            me: m.sender_id === myId,
-                            timestamp: m.created_at,
-                            type: m.type || 'text',
-                            meta: m.meta || {}
-                        }));
-
-                        // Rimuovi pending che ora esistono sul server
-                        const filteredPending = pendingMessages.filter(pm => {
-                            return !serverMessages.some(sm =>
-                                sm.text === pm.text &&
-                                Math.abs(new Date(sm.timestamp) - new Date(pm.timestamp)) < 30000
-                            );
-                        });
-
-                        state.messages[key] = [...serverMessages, ...filteredPending];
-                        state.messages[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                        // Aggiorna solo la parte della chat
-                        updateChatUI();
-                    }
-                } catch (e) {
-                    console.warn("Chat polling error:", e);
-                }
+                if (state.view !== 'chat' || !state.currentThreadId) return;
+                await fetchChatMessages(state.currentThreadId);
             }, 5000);
+        }
+
+        function stopChatPolling() {
+            if (_chatPoller) {
+                clearInterval(_chatPoller);
+                _chatPoller = null;
+            }
+        }
+
+        function subscribeToChatRealtime(threadId) {
+            if (!supabase) return;
+            if (chatChannel) {
+                supabase.removeChannel(chatChannel);
+            }
+            chatChannel = supabase
+                .channel(`chat:${threadId}`)
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `thread_id=eq.${threadId}` },
+                    (payload) => handleRealtimeMessage(payload.new, threadId)
+                )
+                .subscribe();
+        }
+
+        function handleRealtimeMessage(newMsg, threadId) {
+            const myId = getUserId();
+            const exists = state.messages[threadId]?.some(m => m.id === newMsg.id);
+            if (!exists && newMsg.sender_id !== myId) {
+                const msg = {
+                    id: newMsg.id,
+                    text: newMsg.text,
+                    me: false,
+                    timestamp: newMsg.created_at,
+                    status: 'sent'
+                };
+                if (!state.messages[threadId]) state.messages[threadId] = [];
+                state.messages[threadId].push(msg);
+                state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                if (state.view === 'chat' && state.currentThreadId === threadId) {
+                    updateChatUI();
+                }
+            }
         }
 
         function stopChatPolling() {

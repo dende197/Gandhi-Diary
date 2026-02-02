@@ -1777,35 +1777,60 @@ app.get('/api/messages/threads/:userId', async (req, res) => {
     }
 });
 
+app.get('/api/messages/:threadId', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+    try {
+        const { threadId } = req.params;
+        const { data, error } = await supabase
+            .from("chat_messages")
+            .select("*")
+            .eq("thread_id", threadId)
+            .order("created_at", { ascending: true })
+            .limit(500);
+
+        if (error) throw error;
+        res.json({ success: true, data: data || [] });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/messages', async (req, res) => {
     if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
 
     try {
         const msg = req.body;
-
+        // Map fields from both potential frontend versions (threadId vs thread_id)
         const payload = {
-            thread_id: msg.threadId,
-            sender_id: msg.senderId,
-            sender_name: msg.senderName,
-            receiver_id: msg.receiverId,
-            receiver_name: msg.receiverName,
+            thread_id: msg.thread_id || msg.threadId,
+            sender_id: msg.sender_id || msg.senderId,
+            sender_name: msg.sender_name || msg.senderName,
+            receiver_id: msg.receiver_id || msg.receiverId,
+            receiver_name: msg.receiver_name || msg.receiverName,
             text: msg.text,
             type: msg.type || 'text',
             meta: msg.meta || {}
         };
 
-        const { error: insertError } = await supabase.from("chat_messages").insert(payload);
+        const { data: insertedData, error: insertError } = await supabase
+            .from("chat_messages")
+            .insert(payload)
+            .select()
+            .single();
+
         if (insertError) throw insertError;
 
-        const { data, error: fetchError } = await supabase.from("chat_messages")
+        // For v2.7.0 compatibility, we return the inserted message, 
+        // and optionally the whole thread if requested or as fallback
+        const { data: allMessages, error: fetchError } = await supabase.from("chat_messages")
             .select("*")
-            .eq("thread_id", msg.threadId)
+            .eq("thread_id", payload.thread_id)
             .order("created_at", { ascending: true })
             .limit(500);
-        
+
         if (fetchError) throw fetchError;
 
-        res.json({ success: true, data: data || [] });
+        res.json({ success: true, data: allMessages || [], inserted: insertedData });
 
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
