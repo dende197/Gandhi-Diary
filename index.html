@@ -2739,6 +2739,7 @@
                         userId: userId,
                         name: profileData.name || state.user.name,
                         class: profileData.class || state.user.class,
+                        specialization: profileData.specialization || state.user.specialization,
                         avatar: profileData.avatar
                     })
                 });
@@ -2865,16 +2866,31 @@
                             <input type="text" id="edit-user-name" value="${state.user.name || ''}" placeholder="Inserisci il tuo nome" style="width: 100%; height: 54px; border-radius: 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: white; padding: 0 16px; font-size: 16px; font-weight: 600; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'">
                         </div>
                         
-                        <div style="margin-bottom: 28px;">
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 4px;">CLASSE (Automatica)</label>
-                            <div style="width: 100%; height: 54px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); padding: 0 16px; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; cursor: not-allowed; opacity: 0.8;">
-                                <span>${state.user.class || 'N/D'}</span>
-                                <i class="ph-bold ph-lock-simple" style="font-size: 18px; color: var(--text-dim);"></i>
+                        <div style="margin-bottom: 28px; display: flex; gap: 16px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 4px;">CLASSE (Automatica)</label>
+                                <div style="width: 100%; height: 54px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); padding: 0 16px; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; cursor: not-allowed; opacity: 0.8;">
+                                    <span>${state.user.class || 'N/D'}</span>
+                                    <i class="ph-bold ph-lock-simple" style="font-size: 18px; color: var(--text-dim);"></i>
+                                </div>
                             </div>
-                            <p style="font-size: 11px; color: var(--text-dim); margin: 6px 0 0 4px; line-height: 1.4;">
-                                La classe viene risolta automaticamente da DidUP e non può essere modificata manualmente.
-                            </p>
+                            
+                            <div style="flex: 1.2;">
+                                <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 4px;">INDIRIZZO</label>
+                                <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.06); padding: 5px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); height: 54px;">
+                                    ${['LS', 'SA', 'SU'].map(spec => `
+                                        <div onclick="selectSpecialization('${spec}')" id="spec-${spec}" style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; border-radius: 10px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; ${state.user.specialization === spec ? 'background: var(--blue); color: white;' : 'color: rgba(255,255,255,0.5);'}">
+                                            ${spec}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <input type="hidden" id="edit-user-specialization" value="${state.user.specialization || ''}">
+                            </div>
                         </div>
+                        
+                        <p style="font-size: 11px; color: var(--text-dim); margin: -18px 0 24px 4px; line-height: 1.4;">
+                            La classe è automatica, ma puoi indicare il tuo indirizzo di studi.
+                        </p>
                         
                         <button onclick="saveProfileChanges()" class="btn-primary" style="width: 100%; height: 56px; border-radius: 16px; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
                             <i class="ph-bold ph-check-circle" style="font-size: 22px;"></i> Salva Modifiche
@@ -2884,8 +2900,27 @@
             `;
         }
 
+        function selectSpecialization(spec) {
+            const inputs = document.querySelectorAll('#edit-user-specialization');
+            inputs.forEach(input => input.value = spec);
+
+            ['LS', 'SA', 'SU'].forEach(s => {
+                const el = document.getElementById(`spec-${s}`);
+                if (el) {
+                    if (s === spec) {
+                        el.style.background = 'var(--blue)';
+                        el.style.color = 'white';
+                    } else {
+                        el.style.background = 'transparent';
+                        el.style.color = 'rgba(255,255,255,0.5)';
+                    }
+                }
+            });
+        }
+
         async function saveProfileChanges() {
             const newName = document.getElementById('edit-user-name').value.trim();
+            const newSpec = document.getElementById('edit-user-specialization').value;
 
             if (!newName) {
                 alert("Inserisci almeno il nome");
@@ -2897,10 +2932,12 @@
 
                 await saveProfileToServer({
                     name: newName,
+                    specialization: newSpec,
                     avatar: state.user.avatar
                 });
 
                 state.user.name = newName;
+                state.user.specialization = newSpec;
                 localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
                 closeModal();
@@ -4208,17 +4245,22 @@
                     state.user.class = studentClass;
                     console.log("✅ Classe da student object:", studentClass);
                 } else {
-                    console.warn("⚠️ Classe non valida o assente");
-                    state.user.class = null;
+                    state.user.class = studentClass || "N/D";
                 }
 
-                // ✅ FIX: normalizza sempre la classe prima di salvare
-                const normalized = normalizeClassUi(state.user.class);
-                if (normalized) state.user.class = normalized;
-
-                // Salva con dati validati
-                localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+                // Specialization (Fix for persistent profile)
+                if (data.student.specialization) {
+                    state.user.specialization = data.student.specialization;
+                    console.log("✅ Indirizzo ricevuto:", state.user.specialization);
+                }
             }
+
+            // ✅ FIX: normalizza sempre la classe prima di salvare
+            const normalized = normalizeClassUi(state.user.class);
+            if (normalized) state.user.class = normalized;
+
+            // Salva con dati validati
+            localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
             // 4. Planner: Reset e poi Sync
             state.plannedTasks = {};

@@ -1355,7 +1355,7 @@ app.put('/api/profile', async (req, res) => {
     if (!supabase) return res.status(500).json({ success: false, error: "Supabase non configurato" });
 
     try {
-        const { userId, name, class: className, avatar } = req.body;
+        const { userId, name, class: className, avatar, specialization } = req.body;
         if (!userId) return res.status(400).json({ success: false, error: "userId mancante" });
 
         const profileData = {
@@ -1365,6 +1365,7 @@ app.put('/api/profile', async (req, res) => {
 
         if (name) profileData.name = name;
         if (className) profileData.class = className;
+        if (specialization) profileData.specialization = specialization;
         if (avatar) {
             if (!avatar.startsWith('http')) {
                 return res.status(400).json({ success: false, error: "Avatar deve essere URL" });
