@@ -2645,12 +2645,12 @@
                 state.promemoria = [];
                 state.isOffline = false;
                 state.lastSync = null;
+
+                // ✅ RESETTA PLANNER per il prossimo utente
+                state.plannedTasks = {};
+                state.stressLevels = {};
+
                 state.view = 'login';
-
-                // ✅ NON resettare questi - rimangono in state per il prossimo login
-                // state.plannedTasks = {};
-                // state.stressLevels = {};
-
                 render();
                 console.log('✅ Logout completato - Planner preservato su Supabase e localStorage');
             }
@@ -4220,7 +4220,10 @@
                 localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
             }
 
-            // 4. Planner: PRIMA recupera da remoto, poi usa locale come fallback
+            // 4. Planner: Reset e poi Sync
+            state.plannedTasks = {};
+            state.stressLevels = {};
+
             try {
                 await fetchPlannerRemote(); // Questo farà merge intelligente
             } catch (e) {
@@ -4228,13 +4231,15 @@
             }
 
             // Fallback locale solo se remoto vuoto
-            if (Object.keys(state.plannedTasks || {}).length === 0) {
+            if (Object.keys(state.plannedTasks).length === 0) {
                 state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
             }
-            if (Object.keys(state.stressLevels || {}).length === 0) {
+            if (Object.keys(state.stressLevels).length === 0) {
                 state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
             }
             state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
+
+            notifyPlannerChanged();
 
             // 3. Idratazione Dati Scolastici
             if (data.tasks) {

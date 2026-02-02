@@ -653,12 +653,20 @@ async function getCurriculum(headers) {
         const res = await axios.post(ENDPOINT + "curriculum", {}, { headers, timeout: 15000 });
         return res.data;
     } catch (_) {
+        return {};
+    }
+}
+
+async function getDashboard(headers) {
+    try {
+        const res = await axios.get(ENDPOINT + "dashboard", { headers, timeout: 15000 });
+        return res.data;
+    } catch (e) {
         try {
             const baseFam = ENDPOINT.replace('/appfamiglia', '/famiglia');
-            const res2 = await axios.post(baseFam + "curriculum", {}, { headers, timeout: 15000 });
+            const res2 = await axios.get(baseFam + "dashboard", { headers, timeout: 15000 });
             return res2.data;
-        } catch (e) {
-            debugLog("⚠️ Errore Curriculum", e.message);
+        } catch (_) {
             return {};
         }
     }
