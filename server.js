@@ -1684,6 +1684,35 @@ app.get('/api/messages/thread/:thread_id', async (req, res) => {
     }
 });
 
+app.get('/api/messages/threads/:userId', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false });
+    const { userId } = req.params;
+
+    try {
+        const { data, error } = await supabase
+            .from("chat_messages")
+            .select("*")
+            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        // Group by thread_id and keep only latest
+        const threads = [];
+        const seen = new Set();
+        (data || []).forEach(m => {
+            if (!seen.has(m.thread_id)) {
+                seen.add(m.thread_id);
+                threads.push(m);
+            }
+        });
+
+        res.json({ success: true, data: threads });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/messages', async (req, res) => {
     if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
 
@@ -1699,6 +1728,7 @@ app.post('/api/messages', async (req, res) => {
             sender_id: msg.senderId,
             sender_name: msg.senderName,
             receiver_id: msg.receiverId,
+            receiver_name: msg.receiverName,
             text: msg.text
         };
 

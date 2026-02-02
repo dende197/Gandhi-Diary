@@ -1510,6 +1510,7 @@
                         fetchFeed().catch(() => { }),
                         fetchMarket().catch(() => { }),
                         fetchPolls().catch(() => { }),
+                        fetchThreads().catch(() => { }),
                         flushOutbox().catch(() => { })
                     ];
 
@@ -1610,6 +1611,37 @@
                 console.warn("Market offline/errore, uso cache:", e.message);
                 const cached = localStorage.getItem(globalKey('market'));
                 state.marketItems = cached ? JSON.parse(cached).map(normalizeMarketItem) : [];
+            }
+        }
+
+        async function fetchThreads() {
+            const myId = getUserId();
+            if (!myId) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/messages/threads/${myId}`);
+                const data = await res.json();
+                if (data.success) {
+                    (data.data || []).forEach(m => {
+                        const otherName = m.sender_id === myId ? m.receiver_name : m.sender_name;
+                        const otherId = m.sender_id === myId ? m.receiver_id : m.sender_id;
+
+                        if (!DIRECTORY.find(u => u.name === otherName)) {
+                            DIRECTORY.push({ name: otherName, id: otherId, class: 'N/D' });
+                        }
+
+                        if (!state.messages[otherName]) {
+                            state.messages[otherName] = [{
+                                text: m.text,
+                                me: m.sender_id === myId,
+                                timestamp: m.created_at
+                            }];
+                        }
+                    });
+                    render();
+                }
+            } catch (e) {
+                console.warn("Threads fetch error:", e);
             }
         }
 
@@ -2326,6 +2358,7 @@
                 case 'market': html = renderMarket(); break;
                 case 'profile': html = renderProfile(); break;
                 case 'chat': html = renderChat(); break;
+                case 'messages': html = renderMessages(); break;
                 case 'search': html = renderSearch(); break;
                 default: html = renderHome(); break;
             }
@@ -2976,9 +3009,12 @@
             <div class="view page-bg">
                 <!-- Only centered Search -->
                 <div class="home-hero">
-                    <div class="home-search-center">
-                        <button class="search-big" onclick="showSearchModal()" title="Cerca">
+                    <div class="home-search-center" style="display:flex; gap:10px;">
+                        <button class="search-big" onclick="navigate('search')" title="Cerca" style="flex:1;">
                             <i class="ph-bold ph-magnifying-glass" style="font-size:20px;"></i> Cerca
+                        </button>
+                        <button class="search-big" onclick="navigate('messages')" title="Messaggi" style="width:58px; padding:0; justify-content:center; background:rgba(255,255,255,0.12);">
+                            <i class="ph-bold ph-chat-circle-dots" style="font-size:22px;"></i>
                         </button>
                     </div>
                 </div>
@@ -3126,24 +3162,34 @@
             `).join('');
 
             return `
-            <div class="card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; margin-bottom:0;">
-                <div style="height:140px; background:#333; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                    ${item.image ? `<img src="${item.image}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="ph ph-book-open" style="font-size:40px; color:rgba(255,255,255,0.2);"></i>`}
+            <div class="card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; margin-bottom:0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);">
+                <div style="height:140px; background:#1e1e1e; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+                    ${item.image ? `<img src="${item.image}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="ph ph-book-open" style="font-size:40px; color:rgba(255,255,255,0.1);"></i>`}
+                    <div style="position:absolute; top:8px; left:8px; background: rgba(0,0,0,0.6); backdrop-filter:blur(10px); color: var(--green); padding:4px 8px; border-radius:8px; font-weight:800; font-size:14px; border: 1px solid rgba(48, 209, 88, 0.3);">
+                        ${item.price}
+                    </div>
                 </div>
                 <div style="padding:12px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                        <div style="font-weight:700; font-size:16px; color:white; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.title}</div>
-                        <button onclick="togglePinItem(${item.id})" title="Fissa" style="background:none; border:none; color:${item.pinned ? 'var(--yellow)' : 'var(--text-muted)'}; cursor:pointer;"><i class="ph ph-pushpin"></i></button>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                        <div style="font-weight:700; font-size:15px; color:white; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">${item.title}</div>
+                        <button onclick="togglePinItem(${item.id})" title="Fissa" style="background:none; border:none; color:${item.pinned ? 'var(--yellow)' : 'rgba(255,255,255,0.3)'}; cursor:pointer;"><i class="ph-fill ph-pushpin"></i></button>
                     </div>
-                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px; text-align:left;">Venduto da ${item.seller || 'Utente'}</div>
-                    <div style="font-weight:800; color: var(--green); font-size:16px; margin-bottom:12px; text-align:left;">${item.price}</div>
-                    <div style="display:flex; gap:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
-                        <button onclick="toggleItemCommentBox(${item.id})" style="background:none; border:none; color: var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:4px; font-size:12px;"><i class="ph ph-chat-circle"></i> Commenta</button>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; text-align:left;">
+                        Venduto da <span style="color:var(--blue); font-weight:600;">${item.seller || 'Utente'}</span>
                     </div>
+                    
+                    <button onclick="buyItem(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="width:100%; background:var(--green); color:black; border:none; border-radius:12px; height:38px; font-weight:800; font-size:13px; margin-bottom:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="ph-bold ph-shopping-cart-simple"></i> Compra / Offerta
+                    </button>
+
+                    <div style="display:flex; gap:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
+                        <button onclick="toggleItemCommentBox(${item.id})" style="background:none; border:none; color: rgba(255,255,255,0.5); cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="ph ph-chat-circle"></i> ${item.comments?.length || 0} Commenti</button>
+                    </div>
+                    
                     <div id="item-comments-${item.id}" style="margin-top:8px;">${commentsHtml}</div>
                     <div id="item-comment-box-${item.id}" style="display:none; margin-top:8px;">
                         <div style="display:flex; gap:8px;">
-                            <input id="item-comment-input-${item.id}" placeholder="..." style="margin-bottom:0; height:32px; font-size:13px; padding:0 8px;">
+                            <input id="item-comment-input-${item.id}" placeholder="Chiedi info..." style="margin-bottom:0; height:32px; font-size:13px; padding:0 8px; background:rgba(255,255,255,0.05);">
                             <button onclick="addCommentToItem(${item.id})" style="background: var(--blue); color:white; border:none; border-radius: 8px; padding: 0 12px; font-weight:700; height:32px; font-size:12px;">Invia</button>
                         </div>
                     </div>
@@ -3371,6 +3417,40 @@
                     <button onclick="sendMessage()" style="background:var(--blue); width:44px; height:44px; border-radius:50%; border:none; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center;">
                         <i class="ph-fill ph-paper-plane-right" style="font-size:20px;"></i>
                     </button>
+                </div>
+            </div>`;
+        }
+
+        function renderMessages() {
+            const conversations = Object.keys(state.messages).filter(user => state.messages[user].length > 0);
+
+            return `
+            <div class="view" style="padding-top: 0;">
+                <div style="display:flex; align-items:center; gap:10px; margin: 10px 0; padding: 0 12px;">
+                     <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
+                     <h1 style="margin:0; text-align:left;">Messaggi</h1>
+                </div>
+
+                <div style="padding: 12px;">
+                    ${conversations.length > 0 ? conversations.map(user => {
+                const lastMsg = state.messages[user][state.messages[user].length - 1];
+                return `
+                        <div onclick="openChat('${user}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.05);">
+                            ${renderAvatar(user, 50)}
+                            <div style="flex:1; text-align:left; min-width:0;">
+                                <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${user}</div>
+                                <div style="font-size:13px; color:rgba(255,255,255,0.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    ${lastMsg.me ? '<span style="color:var(--blue);">Tu: </span>' : ''}${lastMsg.text}
+                                </div>
+                            </div>
+                            <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
+                        </div>`;
+            }).join('') : `
+                        <div style="text-align:center; padding: 60px 20px; color:rgba(255,255,255,0.3);">
+                            <i class="ph ph-chat-circle-slash" style="font-size:48px; margin-bottom:16px; display:block;"></i>
+                            Non hai ancora conversazioni attive.<br>Cerca qualcuno o rispondi a un annuncio!
+                        </div>
+                    `}
                 </div>
             </div>`;
         }
@@ -4613,6 +4693,33 @@
             }
         }
 
+        async function buyItem(item) {
+            if (!item || !item.seller) return;
+
+            // Per il market, ci serve un ID destinatario. 
+            // Se non è in DIRECTORY, creiamo un oggetto utente temporaneo per getThreadId
+            let seller = DIRECTORY.find(u => u.name === item.seller);
+            if (!seller) {
+                seller = { name: item.seller, id: item.sellerId || `gen:${item.seller}` };
+                // Aggiungi a DIRECTORY per far funzionare filterContent etc se serve
+                DIRECTORY.push(seller);
+            }
+
+            showBoot(`Contatto ${item.seller}...`);
+            await openChat(item.seller);
+            hideBoot();
+
+            // Invia messaggio automatico se la chat è vuota o come trigger
+            const introMsg = `Ciao! Sarei interessato all'articolo "${item.title}" (${item.price}). È ancora disponibile?`;
+            const input = document.getElementById('msg-input');
+            if (input) {
+                input.value = introMsg;
+                // Opzionale: invia subito? Meglio lasciarlo all'utente o inviare automatico.
+                // Facciamo invio automatico per efficienza.
+                await sendMessage();
+            }
+        }
+
         async function sendMessage() {
             const input = document.getElementById('msg-input');
             const txt = input.value;
@@ -4625,6 +4732,7 @@
                     senderId: myId,
                     senderName: myName,
                     receiverId: state.currentChatId,
+                    receiverName: state.currentChatUser,
                     text: txt
                 };
 
