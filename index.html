@@ -3811,7 +3811,7 @@
                     <div style="flex:1; text-align:left;">
                         <div style="font-size:20px; font-weight:800; color:white;">${state.user.name || 'Utente'}</div>
                         <div style="font-size:14px; color:var(--text-muted);">
-                        Classe ${normalizeClassUi(state.user.class) || '-'}
+                        Classe ${(normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : '')}
                     </div>
                 </div>
 
@@ -4339,7 +4339,7 @@
                 id: Date.now(),
                 author: isAnon ? "Studente" : (state.user.name || "Utente"),
                 authorId: getUserId(),
-                class: isAnon ? "Studente" : (state.user.class || "5B"),
+                class: isAnon ? "Studente" : ((state.user.class || "5B") + (state.user.specialization || "")),
                 text: text,
                 likes: 0,
                 liked: false,
