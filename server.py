@@ -168,18 +168,32 @@ SCHOOL_TOKENS = {
     "TECNICO", "PROFESSIONALE"
 }
 
-def is_valid_name(name):
+def is_valid_name(name, username=""):
     """
     Valida che una stringa sia un nome reale (non username). (Bug #2)
     Deve avere almeno 2 parole, tutte alfabetiche, min 2 caratteri ciascuna.
     """
     if not name or not isinstance(name, str):
         return False
-    # ✅ Escludi stringhe che sembrano materie/periodi scolastici (Hotfix "PRIMO QUADRIMESTRE")
-    if looks_like_subject(name):
+        
+    t = name.strip().upper()
+    if username and t == username.upper():
         return False
-    parts = name.strip().upper().split()
-    return len(parts) >= 2 and all(p.isalpha() and len(p) >= 2 for p in parts)
+        
+    # ✅ Escludi stringhe che sembrano materie/periodi scolastici (Hotfix "PRIMO QUADRIMESTRE")
+    if looks_like_subject(t):
+        return False
+        
+    # Scarta boilerplate
+    if any(bp in t for bp in ["PASSWORD", "RECUPERA", "CAMBIA", "LOGOUT", "ESC", "ACCEDI", "REGISTRA", "MENU", "CERCA"]):
+        return False
+    if t in ["NOMINATIVO", "ALUNNO", "STUDENTE", "UTENTE", "SCONOSCIUTO"]:
+        return False
+    if t.startswith("STUDENTE ") or t.startswith("UTENTE "):
+        return False
+
+    parts = t.split()
+    return len(parts) >= 2 and all(len(p) >= 2 for p in parts)
 
 def looks_like_subject(text: str) -> bool:
     """Verifica se una stringa sembra una materia scolastica"""
@@ -401,35 +415,95 @@ def extract_student_from_scheda(scheda_resp):
     
     return name, cls
 
-def resolve_identity_for_profile(school, username, password, access_token, auth_token, current_name, current_class):
+def resolve_identity_for_profile(school, username, password, access_token, auth_token, current_name, current_class, subject_id=None):
     """
-    Completa nome/classe per il profilo selezionato usando /scheda, solo se mancanti.
+    Completa nome/classe per il profilo selezionato usando multiple strategie, inclusa /profilo.
     """
     name = (current_name or '').strip().upper()
     cls  = (current_class or '').strip().upper()
 
-    if name and (cls and CLASS_REGEX.match(cls)):
+    # FAST EXIT: Solo se il nome è VALIDO e la classe è completa
+    if is_valid_name(name, username) and (cls and CLASS_REGEX.match(cls)):
         return name, cls
 
-    try:
-        argo_scheda = create_session(school, username, password, access_token, auth_token)
-        scheda = argo_scheda.get_scheda()
-        # riusa il tuo estrattore già presente
-        from_name, from_class = extract_student_from_scheda(scheda)
-        if not name and from_name:
-            name = from_name.strip().upper()
-        if (not cls or not CLASS_REGEX.match(cls)) and from_class:
-            maybe = str(from_class).strip().upper()
-            if CLASS_REGEX.match(maybe):
-                cls = maybe
-            else:
-                # tenta estrazione dal testo lungo
+    # Se il nome attuale non è valido (es. placeholder o username), lo riricerchiamo
+    if not is_valid_name(name, username):
+        debug_log(f"🕵️ Profilo: Nome attuale '{name}' non valido per username '{username}'. Riricerca...")
+        name = None
+
+    headers = {
+        "User-Agent": "ArgoFamiglia/2.4.1 (Nexus 5; Android 6.0.1; Scale/3.0)",
+        "Authorization": f"Bearer {access_token}",
+        "x-auth-token": auth_token,
+        "x-cod-min": school,
+        "Accept": "application/json"
+    }
+    if subject_id:
+        headers["x-id-soggetto"] = str(subject_id)
+        headers["x-prg-soggetto"] = str(subject_id)
+
+    # STRATEGIA E: /profilo (MOLTO ROBUSTO)
+    if not is_valid_name(name, username) or not (cls and CLASS_REGEX.match(cls)):
+        try:
+            debug_log("🕵️ Identity: Tentativo (Profilo endpoint 9)...")
+            url = "https://www.portaleargo.it/appfamiglia/api/rest/profilo"
+            r9 = requests.get(url, headers=headers, timeout=6)
+            if r9.status_code == 200:
+                d9 = r9.json()
+                if "data" in d9: d9 = d9["data"]
+                
+                if not is_valid_name(name, username):
+                    al = d9.get("alunno") or d9
+                    ext_name = al.get("nominativo") or (f"{al.get('cognome','')} {al.get('nome','')}".strip() if al.get("nome") else None)
+                    if ext_name and is_valid_name(ext_name, username):
+                        name = ext_name.strip().upper()
+                
+                if not (cls and CLASS_REGEX.match(cls)):
+                    scheda = d9.get("scheda") or {}
+                    cl_obj = scheda.get("classe") or {}
+                    if cl_obj.get("desDenominazione") and cl_obj.get("desSezione"):
+                        ext_cls = f"{cl_obj.get('desDenominazione')}{cl_obj.get('desSezione')}".strip().upper()
+                        # Specializzazione
+                        course_desc = (cl_obj.get("corso",{}).get("descrizione") or cl_obj.get("corso") or cl_obj.get("desCorso") or "").upper()
+                        abbr = ""
+                        if "SCIENZE APPLICATE" in course_desc: abbr = "(SA)"
+                        elif "SCIENZE UMANE" in course_desc: abbr = "(SU)"
+                        elif "CLASSICO" in course_desc: abbr = "(LC)"
+                        elif "SCIENTIFICO" in course_desc: abbr = "(LS)"
+                        elif "LINGUISTICO" in course_desc: abbr = "(LL)"
+                        if abbr: ext_cls += f" {abbr}"
+                        cls = ext_cls
+                    elif d9.get("desClasse") or d9.get("classe"):
+                        # Fallback a regex su classe stringa
+                        maybe = (d9.get("desClasse") or d9.get("classe")).strip().upper()
+                        m = re.search(r'\b([1-5][A-Z])\b', maybe)
+                        if m: cls = m.group(1)
+
+            if is_valid_name(name, username) and (cls and CLASS_REGEX.match(cls)):
+                debug_log("✅ Identity risolta con PROFILO")
+                return name, cls
+        except Exception as e:
+            debug_log("⚠️ Fail Profilo endpoint9", str(e))
+
+    # STRATEGIA A: /scheda
+    if not is_valid_name(name, username) or not (cls and CLASS_REGEX.match(cls)):
+        try:
+            debug_log("🕵️ Identity: Tentativo 1 (Scheda)...")
+            argo_scheda = argofamiglia.ArgoFamiglia(school, username, "", access_token=access_token, auth_token=auth_token)
+            scheda = argo_scheda.get_scheda()
+            from_name, from_class = extract_student_from_scheda(scheda)
+            if not is_valid_name(name, username) and from_name:
+                ext_name = from_name.strip().upper()
+                if is_valid_name(ext_name, username): name = ext_name
+            if (not cls or not CLASS_REGEX.match(cls)) and from_class:
+                maybe = str(from_class).strip().upper()
                 m = re.search(r'\b([1-5][A-Z])\b', maybe)
-                if m:
-                    cls = m.group(1)
-        debug_log("✅ Identity resolved via /scheda (selected)", {"name": name, "class": cls})
-    except Exception as e:
-        debug_log("⚠️ resolve_identity_for_profile error", str(e))
+                if m: cls = m.group(1)
+            
+            if is_valid_name(name, username) and (cls and CLASS_REGEX.match(cls)):
+                return name, cls
+        except Exception as e:
+            debug_log("⚠️ resolve_identity_for_profile error", str(e))
 
     return name or None, cls or None
 
@@ -1271,7 +1345,7 @@ def resolve_profile():
         # Risolvi identità solo per questo profilo
         name, cls = resolve_identity_for_profile(
             school, user, pwd, access_token, auth_token,
-            target.get('name'), target.get('class')
+            target.get('name'), target.get('class'), target.get('idSoggetto')
         )
         # Fallback finali
         if not name: name = f"STUDENTE {idx+1}"
@@ -1343,7 +1417,8 @@ def login():
         student_name = (target_profile.get('name') or '').strip().upper()
         student_class = (target_profile.get('class') or '').strip().upper()
         student_name, student_class = resolve_identity_for_profile(
-            school, username, password, access_token, auth_token, student_name, student_class
+            school, username, password, access_token, auth_token, 
+            student_name, student_class, target_profile.get('idSoggetto')
         )
 
         # Fallback ultimissimo
@@ -1563,7 +1638,8 @@ def sync_data():
                     # opzionale: prova a risolvere identità per il profilo selezionato
                     s_name, s_class = resolve_identity_for_profile(
                         school, user, pwd, access_token, auth_token,
-                        profiles[profile_index].get('name'), profiles[profile_index].get('class')
+                        profiles[profile_index].get('name'), profiles[profile_index].get('class'),
+                        profiles[profile_index].get('idSoggetto')
                     )
                 pid = f"{school}:{user}:{profile_index}"
                 update_payload = {"last_active": datetime.now().isoformat()}

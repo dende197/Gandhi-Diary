@@ -1434,6 +1434,7 @@
         const offlineBadge = document.getElementById('offline-badge');
 
         // ⭐ INITIALIZE APP ON LOAD
+        // ⭐ INITIALIZE APP ON LOAD
         document.addEventListener('DOMContentLoaded', async () => {
             showBoot('Avvio G-Connect');
 
@@ -1443,6 +1444,9 @@
 
             try {
                 if (isLoggedIn && savedSession) {
+                    // ✅ FIX: Imposta state.isLoggedIn SUBITO per far funzionare lsKey()
+                    state.isLoggedIn = true;
+
                     // Cache locali immediate
                     const cachedTasks = localStorage.getItem(lsKey('tasks'));
                     if (cachedTasks) {
@@ -1472,9 +1476,17 @@
                     const cachedProm = localStorage.getItem(lsKey('promemoria'));
                     if (cachedProm) { try { state.promemoria = JSON.parse(cachedProm); } catch { } }
 
-                    // Planner cache del profilo
-                    state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-                    state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+                    // ✅ FIX: Carica planner da localStorage SUBITO
+                    const cachedPT = localStorage.getItem(lsKey('planned_tasks'));
+                    const cachedSL = localStorage.getItem(lsKey('stress_levels'));
+
+                    if (cachedPT) {
+                        try { state.plannedTasks = JSON.parse(cachedPT); } catch { state.plannedTasks = {}; }
+                    }
+                    if (cachedSL) {
+                        try { state.stressLevels = JSON.parse(cachedSL); } catch { state.stressLevels = {}; }
+                    }
+
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
                     // Feed/Market cache globali
@@ -1487,26 +1499,28 @@
                     const cachedPolls = localStorage.getItem(globalKey('polls'));
                     if (cachedPolls) { try { state.polls = JSON.parse(cachedPolls); } catch { state.polls = []; } }
 
-                    state.isLoggedIn = true;
                     state.didup.connected = true;
 
-                    // Kickoff fetch NON bloccanti
+                    // ✅ Render SUBITO con dati locali
+                    state.view = desiredHashView || 'home';
+                    render();
+
+                    // ✅ Kickoff fetch NON bloccanti DOPO render
                     const bootFetches = [
                         fetchFeed().catch(() => { }),
                         fetchMarket().catch(() => { }),
-                        // fetchPlannerRemote() verrà chiamato DOPO performSync()
                         fetchPolls().catch(() => { }),
                         flushOutbox().catch(() => { })
                     ];
 
-                    Promise.allSettled(bootFetches).then(() => {
+                    // ✅ performSync caricherà planner dal server se più recente
+                    performSync(savedSession).then(() => {
                         notifyPlannerChanged();
-                    });
+                        render(); // Re-render con dati aggiornati
+                    }).catch(err => console.warn('sync error:', err));
 
-                    state.view = desiredHashView || 'home';
-                    render();
+                    Promise.allSettled(bootFetches);
 
-                    performSync(savedSession).catch(err => console.warn('sync error:', err));
                 } else {
                     state.isLoggedIn = false;
                     state.view = 'login';
@@ -1919,6 +1933,7 @@
                     tasksCount: data.tasks?.length || 0,
                     votiCount: data.voti?.length || 0,
                     promemoriaCount: data.promemoria?.length || data.announcements?.length || 0,
+                    plannerReceived: !!data.planner,
                     error: data.error
                 });
 
@@ -1947,7 +1962,7 @@
                         localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
                     }
 
-                    // ✅ FIX: Anti-wipe sync
+                    // ✅ FIX PLANNER: Merge intelligente con locale
                     if (data.planner) {
                         const remotePT = data.planner.plannedTasks || {};
                         const remoteSL = data.planner.stressLevels || {};
@@ -1957,33 +1972,31 @@
                         const localSL = state.stressLevels || {};
                         const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                        const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0;
-                        const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
+                        const remoteHasData = Object.keys(remotePT).length > 0;
+                        const localHasData = Object.keys(localPT).length > 0;
 
-                        // 🛡️ ANTI-WIPE: Non sovrascrivere locale se remoto è vuoto
-                        if (!remoteHasData && localHasData) {
-                            console.log("🛡️ Sync: remoto vuoto, mantengo planner locale");
-                            // Salva locale su remoto
-                            debouncedSavePlannerRemote(500);
-                        } else if (remoteHasData) {
-                            // Usa dati remoti solo se più recenti o se locale è vuoto
-                            const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
-                                new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+                        const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
+                            new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
 
-                            if (remoteIsNewer || !localHasData) {
-                                console.log("☁️ Sync: uso planner remoto");
-                                state.plannedTasks = remotePT;
-                                state.stressLevels = remoteSL;
-                                localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(remotePT));
-                                localStorage.setItem(lsKey('stress_levels'), JSON.stringify(remoteSL));
-                                if (remoteUpdatedAt) {
-                                    localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                                }
-                            } else {
-                                console.log("🏠 Sync: locale più recente, mantengo e sincronizzo");
-                                debouncedSavePlannerRemote(500);
-                            }
+                        console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer });
+
+                        if (remoteIsNewer && remoteHasData) {
+                            // Server più recente → usa server
+                            state.plannedTasks = remotePT;
+                            state.stressLevels = remoteSL;
+                            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                            localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
+                            if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
+                            console.log("✅ Planner: usati dati server (più recenti)");
+                        } else if (localHasData && !remoteHasData) {
+                            // Locale ha dati, server vuoto → push verso server
+                            console.log("📤 Planner: locale ha dati, server vuoto → sync verso server");
+                            debouncedSavePlannerRemote(100);
+                        } else if (localHasData) {
+                            // Entrambi hanno dati, locale più recente → mantieni locale
+                            console.log("✅ Planner: mantengo dati locali (più recenti)");
                         }
+
                         notifyPlannerChanged();
                     }
 
@@ -2002,15 +2015,11 @@
                     if (sessionData && sessionData.storedUser && sessionData.storedPass) {
                         await performSilentLogin(sessionData.schoolCode, sessionData.storedUser, sessionData.storedPass);
                     } else {
-                        // NON reindirizzare alla login: resta sulla pagina corrente
                         state.isOffline = true;
                         state.didup.connected = false;
                         updateOfflineBadge && updateOfflineBadge();
-                        // niente state.view = 'login'
-                        // niente alert bloccante
                     }
                 } else {
-                    // Altri errori: resta sulla pagina e passa in offline
                     state.isOffline = true;
                     updateOfflineBadge && updateOfflineBadge();
                 }
@@ -2587,13 +2596,19 @@
         async function logout() {
             if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
 
-                // ✅ STEP 1: Salva planner PRIMA di perdere userId
-                const currentUserId = getUserId(); // Salva PRIMA di clear
+                // ✅ STEP 1: Salva userId PRIMA di clear
+                const currentUserId = getUserId();
+                const currentLsPrefix = getActiveProfileKey();
 
                 if (currentUserId && currentUserId !== 'guest') {
                     console.log("💾 Salvataggio planner pre-logout per:", currentUserId);
 
-                    // Forza salvataggio sincrono
+                    // ✅ Salva in localStorage con chiave corrente PRIMA di clear
+                    localStorage.setItem(`${currentLsPrefix}:planned_tasks`, JSON.stringify(state.plannedTasks || {}));
+                    localStorage.setItem(`${currentLsPrefix}:stress_levels`, JSON.stringify(state.stressLevels || {}));
+                    localStorage.setItem(`${currentLsPrefix}:planner_updated_at`, new Date().toISOString());
+
+                    // ✅ Forza salvataggio sincrono su Supabase
                     try {
                         const payload = {
                             plannedTasks: state.plannedTasks || {},
@@ -2602,13 +2617,17 @@
                             updatedAt: new Date().toISOString()
                         };
 
-                        await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
+                        const response = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
 
-                        console.log("✅ Planner salvato pre-logout");
+                        if (response.ok) {
+                            console.log("✅ Planner salvato su Supabase pre-logout");
+                        } else {
+                            console.warn("⚠️ Errore salvataggio pre-logout:", await response.text());
+                        }
                     } catch (e) {
                         console.warn("⚠️ Errore salvataggio pre-logout:", e);
                     }
@@ -2617,7 +2636,7 @@
                 // ✅ STEP 2: Ora cancella sessione
                 sessionManager.clear();
 
-                // ✅ STEP 3: Reset state MA mantieni dati in localStorage
+                // ✅ STEP 3: Reset state MA NON cancellare plannedTasks/stressLevels
                 state.isLoggedIn = false;
                 state.didup.connected = false;
                 state.user = { name: '', class: '' };
@@ -2628,10 +2647,12 @@
                 state.lastSync = null;
                 state.view = 'login';
 
-                // NON cancellare: plannedTasks, stressLevels (rimangono in localStorage per profilo)
+                // ✅ NON resettare questi - rimangono in state per il prossimo login
+                // state.plannedTasks = {};
+                // state.stressLevels = {};
 
                 render();
-                console.log('✅ Logout completato - Planner preservato su Supabase');
+                console.log('✅ Logout completato - Planner preservato su Supabase e localStorage');
             }
         }
 
@@ -2904,12 +2925,9 @@
             const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
             const media = calcolaMedia(state.voti);
             const m = media ? parseFloat(media) : 0;
-            const pct = Math.max(0, Math.min(1, m / 10));
-            const C = { r: 46 };
-            const circumference = Math.PI * C.r;
-            const dash = circumference * pct;
-            const level = state.stressLevels[todayStr] || 0;
-            const gaugeClass = gaugeClassForMedia(m);
+
+            // ✅ Estrai classe normalizzata
+            const displayClass = normalizeClassUi(state.user?.class);
 
             return `
             <div class="view page-bg">
@@ -2929,12 +2947,7 @@
                         <div style="font-size:16px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${state.user?.name || 'Utente'}
                         </div>
-                        ${(() => {
-                    const displayClass = normalizeClassUi(state.user?.class);
-                    return displayClass
-                        ? `<div class="tag-cinqueanna"><i class="ph-bold ph-graduation-cap"></i> Classe ${displayClass}</div>`
-                        : '';
-                })()}
+                        ${displayClass ? `<div class="tag-cinqueanna"><i class="ph-bold ph-graduation-cap"></i> Classe ${displayClass}</div>` : ''}
                     </div>
                     ${state.lastSync ? `<div style="font-size:11px; color: rgba(255,255,255,0.6); display:flex; align-items:center; gap:6px;">
                         <i class="ph ph-clock" style="font-size:14px;"></i>${state.lastSync}
@@ -2943,13 +2956,10 @@
 
                 <!-- Media + Stress (Advanced Canvas Widgets) -->
                 <div class="metrics-grid" style="margin:12px 0;">
-                    <!-- STRESS (Solo sfondo + onda) -->
                     <div class="metric-card stress" onclick="showStressCaptureModal()">
                         <div class="title">Stress</div>
                         <canvas id="stressWaveCanvas"></canvas>
                     </div>
-
-                    <!-- MEDIA -->
                     <div class="metric-card media" onclick="showVotiView()">
                         <div class="title">Media</div>
                         <canvas id="mediaGaugeCanvas" class="media-gauge"></canvas>
