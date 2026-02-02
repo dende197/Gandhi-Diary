@@ -1947,6 +1947,19 @@
                         localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
                     }
 
+                    // ✅ AGGIUNGI: Planner da sync
+                    if (data.planner) {
+                        state.plannedTasks = data.planner.plannedTasks || {};
+                        state.stressLevels = data.planner.stressLevels || {};
+                        localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                        localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
+                        if (data.planner.updatedAt) {
+                            localStorage.setItem(lsKey('planner_updated_at'), data.planner.updatedAt);
+                        }
+                        console.log("✅ Planner caricato da sync");
+                        notifyPlannerChanged();
+                    }
+
                     state.lastSync = new Date().toLocaleTimeString();
                     state.isOffline = false;
                     state.didup.connected = true;

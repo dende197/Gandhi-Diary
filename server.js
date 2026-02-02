@@ -2602,12 +2602,36 @@ app.post('/sync', async (req, res) => {
             }
         }
 
+        // Carica planner dal database
+        let plannerData = null;
+        if (supabase) {
+            try {
+                const pid = `${school}:${user}:${profileIndex}`;
+                const { data: plannerResult } = await supabase
+                    .from('planners')
+                    .select('*')
+                    .eq('user_id', pid)
+                    .single();
+
+                if (plannerResult) {
+                    plannerData = {
+                        plannedTasks: plannerResult.planned_tasks || {},
+                        stressLevels: plannerResult.stress_levels || {},
+                        updatedAt: plannerResult.updated_at
+                    };
+                }
+            } catch (e) {
+                debugLog("⚠️ Planner not found in sync", e.message);
+            }
+        }
+
         res.json({
             success: true,
             tasks,
             voti: grades,
-            promemoria,
-            new_tokens: { authToken, accessToken }
+            promemoria: announcementsData, // Già recuperato sopra
+            new_tokens: { authToken, accessToken },
+            planner: plannerData
         });
 
     } catch (e) {
