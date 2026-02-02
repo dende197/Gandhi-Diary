@@ -399,6 +399,7 @@ class AdvancedArgo {
                     name: rawName,
                     class: normalizeClass(rawClass) || rawClass || "N/D",
                     school: (sog.codMin || sog.codiceScuola || school || '').trim().toUpperCase(),
+                    username: (sog.username || username || '').trim().toLowerCase(),
                     token: sog.token || '',
                     idSoggetto: subjectId,
                     raw: sog
@@ -498,7 +499,8 @@ async function enrichProfiles(school, accessToken, profiles) {
 
     for (const [index, p] of profiles.entries()) {
         const authToken = p.token;
-        const pid = `${school}:${p.username.trim().toLowerCase()}:${index}`;
+        const uname = (p.username || '').trim().toLowerCase();
+        const pid = `${school}:${uname}:${index}`;
 
         let name = (p.name || '').trim().toUpperCase();
         let cls = normalizeClass(p.class) || '';
