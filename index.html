@@ -1553,9 +1553,11 @@
                 text: p?.text ?? "",
                 image: p?.image ?? null,
                 anon: !!(p?.anon ?? false),
-                likes: typeof p?.likes === 'number' ? p.likes : 0,
-                liked: !!(p?.liked ?? false),
-                comments: Array.isArray(p?.comments) ? p.comments : []
+                likes: Array.isArray(p?.likes) ? p.likes : (typeof p?.likes === 'number' ? p.likes : 0),
+                liked: Array.isArray(p?.likes) ? p.likes.includes(getUserId()) : !!(p?.liked ?? false),
+                comments: Array.isArray(p?.comments) ? p.comments : [],
+                type: p?.type ?? 'text',
+                pinned: !!p?.pinned
             };
         }
 
@@ -1566,7 +1568,9 @@
                 price: i?.price ?? "",
                 image: i?.image ?? null,
                 seller: i?.seller ?? i?.seller_name ?? "Utente",
-                sellerId: i?.sellerId ?? i?.seller_id ?? null
+                sellerId: i?.sellerId ?? i?.seller_id ?? null,
+                comments: Array.isArray(i?.comments) ? i.comments : [],
+                pinned: !!i?.pinned
             };
         }
 
@@ -1578,7 +1582,8 @@
                 if (data.success) {
                     state.posts = (data.data || []).map(normalizePost);
                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                    console.log("📝 Feed (server) → cache global & normalized:", state.posts.length);
+                    render(); // ✅ Re-render with fresh server data
+                    console.log("📝 Feed (server) → cache & UI updated:", state.posts.length);
                 } else {
                     throw new Error(data.error || 'failed');
                 }
@@ -1596,7 +1601,8 @@
                 if (data.success) {
                     state.marketItems = (data.data || []).map(normalizeMarketItem);
                     localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
-                    console.log("🛒 Market (server) → cache global & normalized:", state.marketItems.length);
+                    render(); // ✅ Re-render with fresh server data
+                    console.log("🛒 Market (server) → cache & UI updated:", state.marketItems.length);
                 } else {
                     throw new Error(data.error || 'failed');
                 }
@@ -3666,6 +3672,7 @@
                 if (!post.comments) post.comments = [];
                 post.comments.push(comment);
                 input.value = '';
+                localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                 render();
 
                 try {
@@ -3677,6 +3684,7 @@
                     const data = await res.json();
                     if (data.success) {
                         post.comments = data.comments;
+                        localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                         render();
                     }
                 } catch (e) {
@@ -3699,6 +3707,7 @@
                 if (!item.comments) item.comments = [];
                 item.comments.push(comment);
                 input.value = '';
+                localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
                 render();
 
                 try {
@@ -3710,6 +3719,7 @@
                     const data = await res.json();
                     if (data.success) {
                         item.comments = data.comments;
+                        localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
                         render();
                     }
                 } catch (e) {
@@ -4525,6 +4535,7 @@
                         p.likes.push(userId);
                     }
                 }
+                localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                 render();
 
                 try {
@@ -4536,6 +4547,7 @@
                     const data = await res.json();
                     if (data.success) {
                         p.likes = data.likes;
+                        localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                         render();
                     }
                 } catch (e) {
