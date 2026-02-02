@@ -2602,26 +2602,36 @@ app.post('/sync', async (req, res) => {
             }
         }
 
-        // Carica planner dal database
+        // ✅ FIX: Carica planner dal database con maybeSingle
         let plannerData = null;
         if (supabase) {
             try {
                 const pid = `${school}:${user}:${profileIndex}`;
-                const { data: plannerResult } = await supabase
+                debugLog("📅 Sync: Caricamento planner per", pid);
+
+                const { data: plannerResult, error: plannerError } = await supabase
                     .from('planners')
                     .select('*')
                     .eq('user_id', pid)
-                    .single();
+                    .maybeSingle();
 
-                if (plannerResult) {
+                if (plannerError) {
+                    debugLog("⚠️ Planner query error", plannerError.message);
+                } else if (plannerResult) {
                     plannerData = {
                         plannedTasks: plannerResult.planned_tasks || {},
                         stressLevels: plannerResult.stress_levels || {},
                         updatedAt: plannerResult.updated_at
                     };
+                    debugLog("✅ Planner caricato in sync", {
+                        plannedDays: Object.keys(plannerData.plannedTasks).length,
+                        updatedAt: plannerData.updatedAt
+                    });
+                } else {
+                    debugLog("ℹ️ Nessun planner esistente per questo utente");
                 }
             } catch (e) {
-                debugLog("⚠️ Planner not found in sync", e.message);
+                debugLog("⚠️ Planner sync exception", e.message);
             }
         }
 

@@ -1494,7 +1494,7 @@
                     const bootFetches = [
                         fetchFeed().catch(() => { }),
                         fetchMarket().catch(() => { }),
-                        fetchPlannerRemote().catch(() => { }),
+                        // fetchPlannerRemote() verrà chiamato DOPO performSync()
                         fetchPolls().catch(() => { }),
                         flushOutbox().catch(() => { })
                     ];
@@ -1947,16 +1947,43 @@
                         localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
                     }
 
-                    // ✅ AGGIUNGI: Planner da sync
+                    // ✅ FIX: Anti-wipe sync
                     if (data.planner) {
-                        state.plannedTasks = data.planner.plannedTasks || {};
-                        state.stressLevels = data.planner.stressLevels || {};
-                        localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
-                        localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
-                        if (data.planner.updatedAt) {
-                            localStorage.setItem(lsKey('planner_updated_at'), data.planner.updatedAt);
+                        const remotePT = data.planner.plannedTasks || {};
+                        const remoteSL = data.planner.stressLevels || {};
+                        const remoteUpdatedAt = data.planner.updatedAt || null;
+
+                        const localPT = state.plannedTasks || {};
+                        const localSL = state.stressLevels || {};
+                        const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
+
+                        const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0;
+                        const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
+
+                        // 🛡️ ANTI-WIPE: Non sovrascrivere locale se remoto è vuoto
+                        if (!remoteHasData && localHasData) {
+                            console.log("🛡️ Sync: remoto vuoto, mantengo planner locale");
+                            // Salva locale su remoto
+                            debouncedSavePlannerRemote(500);
+                        } else if (remoteHasData) {
+                            // Usa dati remoti solo se più recenti o se locale è vuoto
+                            const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
+                                new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+
+                            if (remoteIsNewer || !localHasData) {
+                                console.log("☁️ Sync: uso planner remoto");
+                                state.plannedTasks = remotePT;
+                                state.stressLevels = remoteSL;
+                                localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(remotePT));
+                                localStorage.setItem(lsKey('stress_levels'), JSON.stringify(remoteSL));
+                                if (remoteUpdatedAt) {
+                                    localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
+                                }
+                            } else {
+                                console.log("🏠 Sync: locale più recente, mantengo e sincronizzo");
+                                debouncedSavePlannerRemote(500);
+                            }
                         }
-                        console.log("✅ Planner caricato da sync");
                         notifyPlannerChanged();
                     }
 
