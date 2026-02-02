@@ -1275,6 +1275,98 @@
             height: 100%;
             object-fit: cover;
         }
+
+        .chat-view {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            padding: 0;
+        }
+
+        .chat-header {
+            padding: 20px;
+            padding-top: calc(var(--safe-top) + 16px);
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .msg-me {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .msg-other {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border-bottom-left-radius: 6px;
+        }
+
+        .chat-input-bar {
+            display: flex;
+            gap: 10px;
+            padding: 12px 16px calc(12px + var(--safe-bottom));
+            background: rgba(0, 0, 0, 0.75);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+        }
+
+        .chat-input {
+            flex: 1;
+            height: 44px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 0 16px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .chat-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: var(--blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.chat-mode #bottom-nav {
+            display: none;
+        }
+
+        body.chat-mode #app {
+            padding-bottom: var(--safe-bottom);
+        }
     </style>
 </head>
 
@@ -1550,7 +1642,8 @@
             stressLevels: {},
             plannedTasks: {},
             polls: [],
-            plannerWeekOffset: 0
+            plannerWeekOffset: 0,
+            threads: []
         };
 
         const app = document.getElementById('app');
@@ -1570,6 +1663,11 @@
                 if (isLoggedIn && savedSession) {
                     // ✅ FIX: Imposta state.isLoggedIn SUBITO per far funzionare lsKey()
                     state.isLoggedIn = true;
+
+                    const cachedThreads = localStorage.getItem(lsKey('threads'));
+                    if (cachedThreads) {
+                        try { state.threads = JSON.parse(cachedThreads); } catch { state.threads = []; }
+                    }
 
                     // Cache locali immediate
                     const cachedTasks = localStorage.getItem(lsKey('tasks'));
@@ -1749,27 +1847,47 @@
                 const res = await fetch(`${API_BASE_URL}/api/messages/threads/${myId}`);
                 const data = await res.json();
                 if (data.success) {
+                    const mapByThread = {};
                     (data.data || []).forEach(m => {
-                        const otherName = m.sender_id === myId ? m.receiver_name : m.sender_name;
-                        const otherId = m.sender_id === myId ? m.receiver_id : m.sender_id;
+                        if (!mapByThread[m.thread_id]) mapByThread[m.thread_id] = m;
+                    });
 
-                        if (!DIRECTORY.find(u => u.name === otherName)) {
-                            DIRECTORY.push({ name: otherName, id: otherId, class: 'N/D' });
-                        }
+                    const threads = Object.values(mapByThread).map(m => {
+                        const isSender = m.sender_id === myId;
+                        const otherId = isSender ? m.receiver_id : m.sender_id;
+                        const otherName = isSender ? m.receiver_name : m.sender_name;
+                        return {
+                            threadId: m.thread_id,
+                            otherId,
+                            otherName: otherName || otherId,
+                            lastText: m.text || '',
+                            lastAt: m.created_at
+                        };
+                    });
 
-                        if (!state.messages[otherName]) {
-                            state.messages[otherName] = [{
-                                text: m.text,
-                                me: m.sender_id === myId,
-                                timestamp: m.created_at
-                            }];
+                    state.threads = threads;
+                    localStorage.setItem(lsKey('threads'), JSON.stringify(threads));
+
+                    threads.forEach(t => {
+                        if (!DIRECTORY.find(u => u.name === t.otherName)) {
+                            DIRECTORY.push({ name: t.otherName, id: t.otherId, class: 'N/D' });
                         }
                     });
+
                     render();
                 }
             } catch (e) {
                 console.warn("Threads fetch error:", e);
             }
+        }
+
+        let _threadsPoller = null;
+
+        function startThreadsPolling() {
+            if (_threadsPoller) clearInterval(_threadsPoller);
+            _threadsPoller = setInterval(() => {
+                if (sessionManager.isLoggedIn()) fetchThreads();
+            }, 12000);
         }
 
         // Carica planner dal server: non sovrascrivere locale se il remoto è vuoto e il locale ha dati
@@ -2490,6 +2608,9 @@
                 default: html = renderHome(); break;
             }
 
+            const isChat = state.view === 'chat' || state.view === 'messages';
+            document.body.classList.toggle('chat-mode', isChat);
+
             root.innerHTML = html;
 
             // Dopo ogni render, se siamo in Home, ridisegna i widget (imposta dimensioni corrette ai canvas)
@@ -2817,6 +2938,7 @@
                 state.stressLevels = {};
 
                 state.view = 'login';
+                if (_threadsPoller) clearInterval(_threadsPoller);
                 render();
                 console.log('✅ Logout completato - Planner preservato su Supabase e localStorage');
             }
@@ -3485,6 +3607,38 @@
             </div>`;
         }
 
+        function renderMessages() {
+            const conversations = state.threads || [];
+
+            return `
+            <div class="view" style="padding-top:0;">
+                <div style="display:flex; align-items:center; gap:10px; margin: 10px 0; padding: 0 12px;">
+                     <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
+                     <h1 style="margin:0; text-align:left;">Messaggi</h1>
+                </div>
+
+                <div style="padding: 12px;">
+                    ${conversations.length > 0 ? conversations.map(t => `
+                        <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.05);">
+                            ${renderAvatar(t.otherName, 50)}
+                            <div style="flex:1; text-align:left; min-width:0;">
+                                <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${t.otherName}</div>
+                                <div style="font-size:13px; color:rgba(255,255,255,0.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    ${t.lastText}
+                                </div>
+                            </div>
+                            <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
+                        </div>
+                    `).join('') : `
+                        <div style="text-align:center; padding: 60px 20px; color:rgba(255,255,255,0.3);">
+                            <i class="ph ph-chat-circle-slash" style="font-size:48px; margin-bottom:16px; display:block;"></i>
+                            Non hai ancora conversazioni attive.
+                        </div>
+                    `}
+                </div>
+            </div>`;
+        }
+
         function renderPostCard(post) {
             const isPoll = post.type === 'poll';
             const commentsHtml = (post.comments || []).map(c => `
@@ -3553,56 +3707,24 @@
         function renderChat() {
             const msgs = state.messages[state.currentChatUser] || [];
             return `
-            <div class="view" style="display:flex; flex-direction:column; height:100dvh; padding:0;">
-                <div style="padding:20px; padding-top:calc(var(--safe-top) + 20px); background:rgba(0,0,0,0.6); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); display:flex; align-items:center; gap:16px; border-bottom:1px solid rgba(255,255,255,0.1);">
+            <div class="chat-view">
+                <div class="chat-header">
                     <button onclick="navigate('messages')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
                     <div style="display:flex; align-items:center; gap:10px;">
                         ${renderAvatar(state.currentChatUser, 40)}
                         <h2 style="margin:0; font-size:18px;">${state.currentChatUser}</h2>
                     </div>
                 </div>
-                <div id="chat-history" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px;">
+
+                <div id="chat-history" class="chat-history">
                     ${msgs.map(renderChatMessage).join('')}
                 </div>
-                <div style="padding:20px; padding-bottom: calc(var(--safe-bottom) + 20px); background:rgba(0,0,0,0.8); display:flex; gap:10px; border-top:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);">
-                    <input id="msg-input" placeholder="Messaggio..." style="margin-bottom:0; height:44px; border-radius:22px; background:rgba(255,255,255,0.05);">
-                    <button onclick="sendMessage()" style="background:var(--blue); width:44px; height:44px; border-radius:50%; border:none; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                        <i class="ph-fill ph-paper-plane-right" style="font-size:20px;"></i>
+
+                <div class="chat-input-bar">
+                    <input id="msg-input" class="chat-input" placeholder="Scrivi un messaggio...">
+                    <button onclick="sendMessage()" class="chat-send-btn">
+                        <i class="ph-fill ph-paper-plane-right" style="font-size:18px;"></i>
                     </button>
-                </div>
-            </div>`;
-        }
-
-        function renderMessages() {
-            const conversations = Object.keys(state.messages).filter(user => state.messages[user].length > 0);
-
-            return `
-            <div class="view" style="padding-top: 0;">
-                <div style="display:flex; align-items:center; gap:10px; margin: 10px 0; padding: 0 12px;">
-                     <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
-                     <h1 style="margin:0; text-align:left;">Messaggi</h1>
-                </div>
-
-                <div style="padding: 12px;">
-                    ${conversations.length > 0 ? conversations.map(user => {
-                const lastMsg = state.messages[user][state.messages[user].length - 1];
-                return `
-                        <div onclick="openChat('${user}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.05);">
-                            ${renderAvatar(user, 50)}
-                            <div style="flex:1; text-align:left; min-width:0;">
-                                <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${user}</div>
-                                <div style="font-size:13px; color:rgba(255,255,255,0.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                    ${lastMsg.me ? '<span style="color:var(--blue);">Tu: </span>' : ''}${lastMsg.text}
-                                </div>
-                            </div>
-                            <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
-                        </div>`;
-            }).join('') : `
-                        <div style="text-align:center; padding: 60px 20px; color:rgba(255,255,255,0.3);">
-                            <i class="ph ph-chat-circle-slash" style="font-size:48px; margin-bottom:16px; display:block;"></i>
-                            Non hai ancora conversazioni attive.<br>Cerca qualcuno o rispondi a un annuncio!
-                        </div>
-                    `}
                 </div>
             </div>`;
         }
@@ -3610,7 +3732,7 @@
         function renderPlanner() {
             setTimeout(() => { initPlannerCalendar(); }, 0);
             return `
-            <div class="view" style="padding-bottom: 40px;">
+                < div class="view" style = "padding-bottom: 40px;" >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h1 style="margin: 0;">Planner</h1>
                     <button onclick="performArgoSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
@@ -3635,7 +3757,7 @@
                 <div id="weekly-agenda-list" class="card glass-panel" style="padding: 16px;">
                     ${renderWeeklyAgenda()}
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderWeeklyAgenda() {
@@ -3651,15 +3773,15 @@
             // Filtra solo date da oggi in poi
             const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
 
-            if (!filtered.length) return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">Nessun compito pianificato (o già passati).</div>`;
+            if (!filtered.length) return `< div style = "text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;" > Nessun compito pianificato(o già passati).</div > `;
 
             const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             return filtered.map(t => {
                 const d = new Date(t.plannedDate);
-                const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
+                const label = `${dayNames[d.getDay()]} ${d.getDate()} `;
                 const subjectColor = getSubjectColor(t.subject);
                 return `
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                < div style = "display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;" >
                     <div style="min-width: 54px; font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase;">${label}</div>
                     <div onclick="toggleTask('${t.id}')" style="width: 22px; height: 22px; border: 2px solid ${t.done ? 'var(--green)' : subjectColor}; background: ${t.done ? 'var(--green)' : 'transparent'}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                         ${t.done ? '<i class="ph-bold ph-check" style="font-size: 14px; color: black;"></i>' : ''}
@@ -3668,7 +3790,7 @@
                         <div style="font-size: 15px; color: white; font-weight: 500; ${t.done ? 'text-decoration: line-through; opacity: 0.4;' : ''}">${t.text}</div>
                         <div style="font-size: 11px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${t.subject}</div>
                     </div>
-                </div>`;
+                </div > `;
             }).join('');
         }
 
@@ -3680,26 +3802,26 @@
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
             modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
-                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-                        <h2 style="margin:0;">Stress Giornaliero</h2>
-                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
-                    </div>
-                    <div class="stress-level-grid">
-                        ${[1, 2, 3, 4, 5].map(lv => `
+                < div class="modal-overlay" onclick = "closeModal(event)" >
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                            <h2 style="margin:0;">Stress Giornaliero</h2>
+                            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
+                        </div>
+                        <div class="stress-level-grid">
+                            ${[1, 2, 3, 4, 5].map(lv => `
                             <div class="stress-pill ${currentLevel === lv ? 'active' : ''}" 
                                 data-stress="${lv}" 
                                 onclick="event.stopPropagation(); setStressLevel(${lv}, true)">
                             ${lv}
                             </div>`).join('')}
+                        </div>
+                        <div style="display:flex; justify-content:center; margin-top: 16px;">
+                            <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
+                        </div>
                     </div>
-                    <div style="display:flex; justify-content:center; margin-top: 16px;">
-                        <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
-                    </div>
-                </div>
-            </div>
-            `;
+            </div >
+                `;
         }
 
         // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
@@ -3718,32 +3840,32 @@
                 const lv = state.stressLevels[iso] || 0;
                 points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
             }
-            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)).join(' ');
+            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
 
             modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
-                <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
-                        <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
+                < div class="modal-overlay" onclick = "closeModal(event)" >
+                    <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
+                            <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
+                        </div>
+                        <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                            <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65" /><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round" />
+                                <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)" />
+                            </svg>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:12px;">
+                            ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
+                        </div>
                     </div>
-                    <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                        <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
-                            <defs>
-                                <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65"/><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0"/>
-                                </linearGradient>
-                            </defs>
-                            <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round"/>
-                            <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)"/>
-                        </svg>
-                    </div>
-                    <div style="display:flex; gap:8px; margin-top:12px;">
-                        ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
-                    </div>
-                </div>
-            </div>
-            `;
+            </div >
+                `;
         }
 
         // setStressLevel(lv, inModal): aggiorna fluido
@@ -3800,14 +3922,14 @@
             }
 
             modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
-                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin:0;">Pianifica Settimana</h2>
-                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 16px; max-height: 500px; overflow-y: auto;">
-                        ${state.tasks.filter(t => !t.done).map(t => {
+                < div class="modal-overlay" onclick = "closeModal(event)" >
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin:0;">Pianifica Settimana</h2>
+                            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 16px; max-height: 500px; overflow-y: auto;">
+                            ${state.tasks.filter(t => !t.done).map(t => {
                 const subjectColor = getSubjectColor(t.subject);
                 return `
                                 <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
@@ -3831,10 +3953,10 @@
                                     </div>
                                 </div>`;
             }).join('')}
+                        </div>
+                        <button onclick="closeModal()" class="btn-primary" style="margin-top: 20px;">Fatto</button>
                     </div>
-                    <button onclick="closeModal()" class="btn-primary" style="margin-top: 20px;">Fatto</button>
-                </div>
-            </div>`;
+            </div > `;
         }
 
         function togglePlanDay(taskId, dateStr) {
@@ -3863,7 +3985,7 @@
 
         function updateWeekDayButton(taskId, dateStr) {
             const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
-            const buttons = document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`);
+            const buttons = document.querySelectorAll(`[data - task - id="${taskId}"][data - date="${dateStr}"]`);
             buttons.forEach(btn => {
                 if (isPlanned) {
                     btn.style.background = 'var(--green)';
@@ -3891,12 +4013,12 @@
         }
 
         function toggleCommentBox(id) {
-            const el = document.getElementById(`comment-box-${id}`);
+            const el = document.getElementById(`comment - box - ${id} `);
             if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
         async function addCommentToPost(id) {
-            const input = document.getElementById(`comment-input-${id}`);
+            const input = document.getElementById(`comment - input - ${id} `);
             if (!input || !input.value.trim()) return;
             const post = state.posts.find(p => p.id === id);
             if (post) {
@@ -3908,7 +4030,7 @@
                 render();
 
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/posts/${id}/comment`, {
+                    const res = await fetch(`${API_BASE_URL} /api/posts / ${id}/comment`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(comment)
@@ -4618,6 +4740,7 @@
                 alert(`✅ Benvenuto ${state.user.name}!`);
                 navigate('home');
                 render();
+                startThreadsPolling();
             });
         }
 
@@ -4967,6 +5090,7 @@
                     text: m.text, me: m.sender_id === myId, timestamp: m.created_at, type: m.type, meta: m.meta
                 }));
                 render();
+                fetchThreads(); // 🔁 aggiorna lista
             }
         }
 
