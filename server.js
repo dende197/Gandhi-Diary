@@ -2612,44 +2612,7 @@ app.post('/sync', async (req, res) => {
     }
 });
 
-// ============= PLANNER API (PERSISTENCE) =============
-const PLANNER_DIR = path.join(__dirname, 'data', 'planners');
-if (!fs.existsSync(PLANNER_DIR)) {
-    fs.mkdirSync(PLANNER_DIR, { recursive: true });
-}
 
-app.get('/api/planner/:userId', (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const safeId = userId.replace(/[^a-zA-Z0-9_\-:]/g, '_');
-        const filePath = path.join(PLANNER_DIR, `${safeId}.json`);
-
-        if (fs.existsSync(filePath)) {
-            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            return res.json({ success: true, data });
-        } else {
-            return res.json({ success: true, data: null });
-        }
-    } catch (e) {
-        console.error("Planner GET error:", e);
-        return res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-app.put('/api/planner/:userId', (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const safeId = userId.replace(/[^a-zA-Z0-9_\-:]/g, '_');
-        const filePath = path.join(PLANNER_DIR, `${safeId}.json`);
-        const payload = req.body;
-
-        fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
-        return res.json({ success: true, data: { updatedAt: new Date().toISOString() } });
-    } catch (e) {
-        console.error("Planner PUT error:", e);
-        return res.status(500).json({ success: false, error: e.message });
-    }
-});
 
 // ============= ERROR HANDLER =============
 app.use((err, req, res, next) => {
