@@ -1418,7 +1418,7 @@
         <div class="boot-card">
             <div class="boot-spinner"></div>
             <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.5.1-stable</span></div>
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.6.0-gold</span></div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1433,8 +1433,8 @@
     </nav>
 
     <script>
-        // v2.5.1-stable (Definitive Persistence Fix)
-        console.log("🚀 G-Connect v2.5.1-stable initialized");
+        // v2.6.0-gold (Definitive Persistence Fix + updateChatUI)
+        console.log("🚀 G-Connect v2.6.0-gold initialized");
 
         // ⭐ Funzione universale per leggere le date di Argo
         function parseArgoDate(dateString) {
@@ -3760,36 +3760,58 @@
             </div>`;
         }
 
-        function renderChatMessage(m, idx, allMsgs) {
+        function renderChatMessage(m, idx, msgs) {
             const isMe = m.me;
             const isPending = m.pending;
             const isFailed = m.failed;
 
             // Header temporale (ogni 5 min o primo messaggio)
             let showTime = idx === 0;
-            if (idx > 0 && allMsgs) {
-                const prev = new Date(allMsgs[idx - 1].timestamp);
+            if (idx > 0 && msgs) {
+                const prev = new Date(msgs[idx - 1].timestamp);
                 const curr = new Date(m.timestamp);
                 showTime = (curr - prev) > 5 * 60 * 1000;
             }
 
-            const timeStr = new Date(m.timestamp).toLocaleTimeString('it-IT', {
+            const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('it-IT', {
                 hour: '2-digit', minute: '2-digit'
-            });
+            }) : '';
 
             return `
             ${showTime ? `<div style="text-align:center; font-size:11px; color:var(--text-muted); padding:12px 0; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">${timeStr}</div>` : ''}
             
             <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
                 <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}">
-                    ${m.text}
+                    <div style="word-break: break-word;">${m.text}</div>
                     
                     <div class="msg-status">
-                        ${isPending ? '<i class="ph ph-clock"></i> Invio...' : ''}
-                        ${isFailed ? '<i class="ph ph-warning"></i> Fallito' : (isMe && !isPending ? '<i class="ph ph-checks"></i>' : '')}
+                        ${timeStr}
+                        ${isPending ? '<i class="ph ph-clock" style="margin-left:4px;"></i>' : ''}
+                        ${isFailed ? '<i class="ph ph-warning" style="margin-left:4px; color:var(--red);"></i>' : (isMe && !isPending ? '<i class="ph ph-check" style="margin-left:4px;"></i>' : '')}
                     </div>
                 </div>
             </div>`;
+        }
+
+        function updateChatUI() {
+            const historyEl = document.getElementById('chat-history');
+            if (!historyEl || state.view !== 'chat') return;
+
+            const msgs = state.messages[state.currentChatUser] || [];
+
+            if (msgs.length === 0) {
+                historyEl.innerHTML = `
+                    <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+                        <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
+                            <i class="ph ph-chat-circle-dots"></i>
+                        </div>
+                        <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            historyEl.innerHTML = msgs.map((m, idx) => renderChatMessage(m, idx, msgs)).join('');
         }
 
         function renderChat() {
@@ -5121,7 +5143,7 @@
             if (_chatPoller) clearInterval(_chatPoller);
 
             _chatPoller = setInterval(async () => {
-                if (!state.currentThreadId || !state.currentChatUser) return;
+                if (!state.currentThreadId || !state.currentChatUser || state.view !== 'chat') return;
 
                 try {
                     const res = await fetch(`${API_BASE_URL}/api/messages/thread/${state.currentThreadId}`);
@@ -5144,22 +5166,19 @@
                             meta: m.meta || {}
                         }));
 
-                        // Rimuovi pending che ora esistono sul server (stesso testo e timestamp vicino)
+                        // Rimuovi pending che ora esistono sul server
                         const filteredPending = pendingMessages.filter(pm => {
                             return !serverMessages.some(sm =>
                                 sm.text === pm.text &&
-                                sm.me === pm.me &&
                                 Math.abs(new Date(sm.timestamp) - new Date(pm.timestamp)) < 30000
                             );
                         });
 
-                        // Merge: server messages + pending locali
                         state.messages[key] = [...serverMessages, ...filteredPending];
-
-                        // Ordina per timestamp
                         state.messages[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                        render();
+                        // Aggiorna solo la parte della chat
+                        updateChatUI();
                     }
                 } catch (e) {
                     console.warn("Chat polling error:", e);
@@ -5254,33 +5273,33 @@
             }
         }
 
-        async function sendChatMessage({ text, type = 'text', meta = {} }) {
+        async function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const text = input?.value?.trim();
+
+            if (!text || !state.currentChatUser || !state.currentThreadId) return;
+
             const myId = getUserId();
             const threadId = state.currentThreadId;
-            const otherId = state.currentChatId;
             const key = state.currentChatUser;
 
-            if (!threadId || !otherId || !text?.trim()) return;
-
-            if (!state.messages[key]) state.messages[key] = [];
-
-            // ID temporaneo univoco per tracciare il messaggio
-            const tempId = "tmp-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9);
-
-            const optimistic = {
-                id: tempId,
+            // 1. Crea messaggio locale (optimistic)
+            const localId = 'local_' + Date.now();
+            const localMsg = {
+                id: localId,
                 text,
                 me: true,
                 timestamp: new Date().toISOString(),
-                type,
-                meta,
                 pending: true,
                 failed: false
             };
 
-            // Aggiungi messaggio ottimistico
-            state.messages[key].push(optimistic);
-            render();
+            // 2. Aggiungi e aggiorna UI subito
+            if (!state.messages[key]) state.messages[key] = [];
+            state.messages[key].push(localMsg);
+
+            input.value = '';
+            updateChatUI();
             scrollChatToBottom();
 
             try {
@@ -5291,68 +5310,45 @@
                         threadId,
                         senderId: myId,
                         senderName: state.user.name || "Io",
-                        receiverId: otherId,
+                        receiverId: state.currentChatId,
                         receiverName: key,
                         text,
-                        type,
-                        meta
+                        type: 'text'
                     })
                 });
 
                 const data = await res.json();
                 if (data.success) {
+                    // Rimuovi locale e aggiorna con server
+                    state.messages[key] = state.messages[key].filter(m => m.id !== localId);
+
                     const serverMessages = (data.data || []).map(m => ({
                         id: m.id,
                         text: m.text,
                         me: m.sender_id === myId,
                         timestamp: m.created_at,
-                        type: m.type || 'text',
-                        meta: m.meta || {}
+                        type: m.type || 'text'
                     }));
 
-                    // Invece di sovrascrivere brutamente, facciamo un merge chirurgico
-                    // Togliamo il messaggio temporaneo specifico
-                    const localMessages = state.messages[key].filter(m => m.id !== tempId);
-
-                    // Solo i pendenti che non siano quello appena inviato
-                    const otherPending = localMessages.filter(m => m.pending || m.failed);
-
-                    // Rimuoviamo da otherPending quelli che ora esistono sul server
-                    const filteredPending = otherPending.filter(pm => {
-                        return !serverMessages.some(sm =>
-                            sm.text === pm.text &&
-                            Math.abs(new Date(sm.timestamp) - new Date(pm.timestamp)) < 15000
-                        );
-                    });
-
-                    state.messages[key] = [...serverMessages, ...filteredPending];
+                    // Merge robusto
+                    const otherPending = state.messages[key].filter(m => m.pending || m.failed);
+                    state.messages[key] = [...serverMessages, ...otherPending];
                     state.messages[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    render();
-                    scrollChatToBottom();
+                    updateChatUI();
                     if (typeof fetchThreads === 'function') fetchThreads();
                 } else {
                     throw new Error(data.error || 'Invio fallito');
                 }
             } catch (e) {
-                console.error("❌ sendChatMessage error:", e);
-                const msgIndex = state.messages[key].findIndex(m => m.id === tempId);
-                if (msgIndex > -1) {
-                    state.messages[key][msgIndex].failed = true;
-                    state.messages[key][msgIndex].pending = false;
+                console.error("❌ sendMessage error:", e);
+                const idx = state.messages[key].findIndex(m => m.id === localId);
+                if (idx > -1) {
+                    state.messages[key][idx].pending = false;
+                    state.messages[key][idx].failed = true;
                 }
-                render();
+                updateChatUI();
             }
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('msg-input');
-            const text = input?.value?.trim();
-            if (!text) return;
-
-            input.value = '';
-
-            await sendChatMessage({ text });
         }
 
         async function respondToOffer(orderId, accept) {
