@@ -1489,24 +1489,7 @@ app.post('/api/posts/:id/comment', async (req, res) => {
     }
 });
 
-app.post('/api/market/:id/comment', async (req, res) => {
-    const { id } = req.params;
-    const { author, text } = req.body;
-    if (!supabase) return res.status(500).json({ success: false });
-
-    try {
-        const { data: item } = await supabase.from("market_items").select("comments").eq("id", id).single();
-        if (!item) return res.status(404).json({ success: false });
-
-        const comments = item.comments || [];
-        comments.push({ author, text, created_at: new Date().toISOString() });
-
-        await supabase.from("market_items").update({ comments }).eq("id", id);
-        res.json({ success: true, comments });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
+// Market CRUD
 
 // Market CRUD
 app.get('/api/market', async (req, res) => {
@@ -1525,6 +1508,9 @@ app.post('/api/market', async (req, res) => {
     const body = req.body || {};
     if (!body.title || !body.price) return res.status(400).json({ success: false, error: "Missing title/price" });
 
+    const images = Array.isArray(body.images) ? body.images : (body.image ? [body.image] : []);
+    const description = body.description || "";
+
     if (supabase) {
         try {
             const payload = {
@@ -1532,7 +1518,9 @@ app.post('/api/market', async (req, res) => {
                 seller_name: body.seller || body.seller_name,
                 title: body.title,
                 price: body.price,
-                image: body.image
+                description,
+                images,
+                status: body.status || 'available'
             };
             await supabase.from("market_items").insert(payload);
             const { data } = await supabase.from("market_items").select("*").order("created_at", { ascending: false }).limit(200);
@@ -1542,11 +1530,87 @@ app.post('/api/market', async (req, res) => {
         }
     }
 
-    const newItem = { ...body, id: Date.now() };
+    const newItem = { ...body, id: Date.now(), description, images, status: body.status || 'available' };
     const items = loadJsonFile(MARKET_FILE);
     items.unshift(newItem);
     saveJsonFile(MARKET_FILE, items);
     res.json({ success: true, data: items });
+});
+
+app.post('/api/market/orders', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+
+    try {
+        const { itemId, sellerId, buyerId, type, offerPrice, threadId } = req.body;
+        if (!itemId || !sellerId || !buyerId || !type) {
+            return res.status(400).json({ success: false, error: "Missing fields" });
+        }
+
+        const status = type === 'purchase' ? 'completed' : 'pending';
+        const payload = {
+            item_id: String(itemId),
+            seller_id: sellerId,
+            buyer_id: buyerId,
+            type,
+            status,
+            offer_price: offerPrice || null,
+            agreed_price: type === 'purchase' ? offerPrice || null : null,
+            thread_id: threadId || null
+        };
+
+        const { data, error } = await supabase.from('market_orders').insert(payload).select().single();
+        if (error) throw error;
+
+        if (type === 'purchase') {
+            await supabase.from('market_items').update({ status: 'sold' }).eq('id', itemId);
+        }
+
+        res.json({ success: true, data });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.get('/api/market/orders/:id', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+    try {
+        const { data, error } = await supabase.from('market_orders').select('*').eq('id', req.params.id).single();
+        if (error) throw error;
+        res.json({ success: true, data });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/market/orders/:id/decision', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+
+    try {
+        const { decision } = req.body; // 'accepted' | 'rejected'
+        if (!['accepted', 'rejected'].includes(decision)) {
+            return res.status(400).json({ success: false, error: "Invalid decision" });
+        }
+
+        const { data, error } = await supabase
+            .from('market_orders')
+            .update({ status: decision, updated_at: new Date().toISOString() })
+            .eq('id', req.params.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        if (decision === 'accepted') {
+            await supabase.from('market_items').update({ status: 'reserved' }).eq('id', data.item_id);
+        }
+        if (decision === 'rejected') {
+            await supabase.from('market_items').update({ status: 'available' }).eq('id', data.item_id);
+        }
+
+        res.json({ success: true, data });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 // Polls CRUD
@@ -1719,17 +1783,15 @@ app.post('/api/messages', async (req, res) => {
     try {
         const msg = req.body;
 
-        if (!msg.threadId || !msg.senderId || !msg.receiverId || !msg.text) {
-            return res.status(400).json({ success: false, error: "Missing fields" });
-        }
-
         const payload = {
             thread_id: msg.threadId,
             sender_id: msg.senderId,
             sender_name: msg.senderName,
             receiver_id: msg.receiverId,
             receiver_name: msg.receiverName,
-            text: msg.text
+            text: msg.text,
+            type: msg.type || 'text',
+            meta: msg.meta || {}
         };
 
         await supabase.from("chat_messages").insert(payload);
