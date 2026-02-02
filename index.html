@@ -3826,7 +3826,7 @@
                 </div>
 
                 <button onclick="logout()" class="btn-primary" style="background:#333; margin-bottom:12px; color:var(--red);">Esci e Disconnetti</button>
-                <button onclick="openArgoLogin()" class="btn-secondary" style="width:100%; height:50px; border-radius:12px; font-weight:700; background:var(--blue); color:white; border:none; cursor:pointer;">Cambia Account DidUP</button>
+                <button onclick="switchProfile()" class="btn-secondary" style="width:100%; height:50px; border-radius:12px; font-weight:700; background:var(--blue); color:white; border:none; cursor:pointer;">Cambia Profilo / Account</button>
             </div>`;
         }
 
@@ -4320,11 +4320,69 @@
             });
         }
 
+        async function switchProfile() {
+            const stored = sessionManager.load();
+
+            // Se abbiamo credenziali salvate, tentiamo il login "a vuoto" per scatenare la scelta profilo
+            if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+                try {
+                    showBoot("Ricerca profili...");
+
+                    // Decodifica (reverse di quello fatto in handleLoginSuccess)
+                    const user = decodeURIComponent(escape(atob(stored.storedUser)));
+                    const pass = decodeURIComponent(escape(atob(stored.storedPass)));
+
+                    // Chiamata Login SENZA profileIndex, per forzare la lista profili se multipli
+                    const payload = {
+                        schoolCode: stored.schoolCode,
+                        username: user,
+                        password: pass,
+                        profileIndex: null
+                    };
+
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    hideBoot();
+
+                    if (response.ok && data.status === 'MULTIPLE_PROFILES') {
+                        // Bingo! Mostriamo il modale di scelta
+                        showProfileSelectionModal(data.profiles, {
+                            schoolCode: stored.schoolCode,
+                            username: user,
+                            password: pass
+                        });
+                    } else if (response.ok && data.success) {
+                        // Solo un profilo? Ricarichiamo quello (refresh)
+                        alert("Hai un solo profilo disponibile su questo account.");
+                        handleLoginSuccess(data, pass);
+                    } else {
+                        // Errore o altro, fallback al login classico
+                        console.warn("Switch fallito, apro login manuale.");
+                        openArgoLogin();
+                    }
+
+                } catch (e) {
+                    hideBoot();
+                    console.error("Errore switch profile:", e);
+                    openArgoLogin();
+                }
+            } else {
+                // Nessuna credenziale salvata, login classico
+                openArgoLogin();
+            }
+        }
+
         // Esposizione Globale
         window.performArgoSync = performArgoSync;
         window.handleLoginSuccess = handleLoginSuccess;
         window.showProfileSelectionModal = showProfileSelectionModal;
         window.selectProfile = selectProfile;
+        window.switchProfile = switchProfile;
 
         async function publishPost() {
             const textEl = document.getElementById('new-post-text');
