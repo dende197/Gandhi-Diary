@@ -3298,7 +3298,12 @@
                 ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:12px; margin-bottom:12px;">` : ''}
 
                 <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; gap:16px;">
-                    <button onclick="toggleLike(${post.id})" style="background:none; border:none; color:${post.liked ? 'var(--red)' : 'var(--text-muted)'}; cursor:pointer; font-size:14px;"><i class="${post.liked ? 'ph-fill' : 'ph'} ph-heart"></i> ${post.likes || 0}</button>
+                    ${(() => {
+                    const userId = getUserId();
+                    const isLiked = Array.isArray(post.likes) ? post.likes.includes(userId) : !!post.liked;
+                    const likesCount = Array.isArray(post.likes) ? post.likes.length : (post.likes || 0);
+                    return `<button onclick="toggleLike(${post.id})" style="background:none; border:none; color:${isLiked ? 'var(--red)' : 'var(--text-muted)'}; cursor:pointer; font-size:14px;"><i class="${isLiked ? 'ph-fill' : 'ph'} ph-heart"></i> ${likesCount}</button>`;
+                })()}
                     <button onclick="toggleCommentBox(${post.id})" style="background:none; border:none; color: var(--text-muted); cursor:pointer; font-size:14px;"><i class="ph ph-chat-circle"></i> Commenta</button>
                 </div>
 
@@ -3652,14 +3657,31 @@
             if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
-        function addCommentToPost(id) {
+        async function addCommentToPost(id) {
             const input = document.getElementById(`comment-input-${id}`);
             if (!input || !input.value.trim()) return;
             const post = state.posts.find(p => p.id === id);
             if (post) {
+                const comment = { author: state.user.name, text: input.value };
                 if (!post.comments) post.comments = [];
-                post.comments.push({ author: state.user.name, text: input.value });
+                post.comments.push(comment);
+                input.value = '';
                 render();
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/posts/${id}/comment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(comment)
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        post.comments = data.comments;
+                        render();
+                    }
+                } catch (e) {
+                    console.error("Comment failed:", e);
+                }
             }
         }
 
@@ -3668,14 +3690,31 @@
             if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
-        function addCommentToItem(id) {
+        async function addCommentToItem(id) {
             const input = document.getElementById(`item-comment-input-${id}`);
             if (!input || !input.value.trim()) return;
             const item = state.marketItems.find(i => i.id === id);
             if (item) {
+                const comment = { author: state.user.name, text: input.value };
                 if (!item.comments) item.comments = [];
-                item.comments.push({ author: state.user.name, text: input.value });
+                item.comments.push(comment);
+                input.value = '';
                 render();
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/market/${id}/comment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(comment)
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        item.comments = data.comments;
+                        render();
+                    }
+                } catch (e) {
+                    console.error("Market comment failed:", e);
+                }
             }
         }
 
@@ -4470,12 +4509,38 @@
             }
         }
 
-        function toggleLike(id) {
+        async function toggleLike(id) {
             const p = state.posts.find(x => x.id === id);
             if (p) {
-                p.liked = !p.liked;
-                p.likes += p.liked ? 1 : -1;
+                const userId = getUserId();
+                if (!Array.isArray(p.likes)) {
+                    // Fallback se stiamo ancora usando il vecchio schema local
+                    p.liked = !p.liked;
+                    p.likes = p.liked ? 1 : 0;
+                } else {
+                    // Nuovo schema: array di ID
+                    if (p.likes.includes(userId)) {
+                        p.likes = p.likes.filter(uid => uid !== userId);
+                    } else {
+                        p.likes.push(userId);
+                    }
+                }
                 render();
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/posts/${id}/like`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        p.likes = data.likes;
+                        render();
+                    }
+                } catch (e) {
+                    console.error("Like error:", e);
+                }
             }
         }
 

@@ -1447,6 +1447,66 @@ app.post('/api/posts', async (req, res) => {
     saveJsonFile(POSTS_FILE, posts.slice(0, 100));
     res.json({ success: true, data: posts });
 });
+app.post('/api/posts/:id/like', async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+    if (!supabase) return res.status(500).json({ success: false });
+
+    try {
+        const { data: post } = await supabase.from("posts").select("likes").eq("id", id).single();
+        if (!post) return res.status(404).json({ success: false });
+
+        let likes = post.likes || [];
+        if (likes.includes(userId)) {
+            likes = likes.filter(uid => uid !== userId);
+        } else {
+            likes.push(userId);
+        }
+
+        await supabase.from("posts").update({ likes }).eq("id", id);
+        res.json({ success: true, likes });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/posts/:id/comment', async (req, res) => {
+    const { id } = req.params;
+    const { author, text } = req.body;
+    if (!supabase) return res.status(500).json({ success: false });
+
+    try {
+        const { data: post } = await supabase.from("posts").select("comments").eq("id", id).single();
+        if (!post) return res.status(404).json({ success: false });
+
+        const comments = post.comments || [];
+        comments.push({ author, text, created_at: new Date().toISOString() });
+
+        await supabase.from("posts").update({ comments }).eq("id", id);
+        res.json({ success: true, comments });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/market/:id/comment', async (req, res) => {
+    const { id } = req.params;
+    const { author, text } = req.body;
+    if (!supabase) return res.status(500).json({ success: false });
+
+    try {
+        const { data: item } = await supabase.from("market_items").select("comments").eq("id", id).single();
+        if (!item) return res.status(404).json({ success: false });
+
+        const comments = item.comments || [];
+        comments.push({ author, text, created_at: new Date().toISOString() });
+
+        await supabase.from("market_items").update({ comments }).eq("id", id);
+        res.json({ success: true, comments });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
 
 // Market CRUD
 app.get('/api/market', async (req, res) => {
