@@ -118,6 +118,26 @@ const SUBJECT_TOKENS = new Set([
     "VALUTAZIONE", "VALUTAZIONI", "ASSENZE", "ASSENZA", "VOTI", "VOTO"
 ]);
 
+// Helper per generare ID deterministici basati sul contenuto
+function generateStableId(baseString) {
+    return crypto.createHash('md5').update(baseString).digest('hex').substring(0, 12);
+}
+
+function safeData(obj) {
+    if (!obj) return obj;
+    try {
+        if (Array.isArray(obj)) return obj.map(v => redact(v));
+        if (typeof obj === 'object') {
+            const newObj = {};
+            for (const [k, v] of Object.entries(obj)) {
+                newObj[k] = SENSITIVE_KEYS.has(k) ? "<redacted>" : redact(v);
+            }
+            return newObj;
+        }
+    } catch (e) { }
+    return obj;
+}
+
 // ============= HELPERS =============
 
 function redact(obj) {
@@ -1077,37 +1097,38 @@ async function extractGradesMultiStrategy(headers) {
     // Strategia 1: Dashboard
     try {
         const dashboardData = await getDashboard(headers);
-        let datiList = [];
+        let datiList = dashboardData?.data?.dati || dashboardData?.dati || [];
 
-        if (dashboardData.data && dashboardData.data.dati) datiList = dashboardData.data.dati;
-        else if (dashboardData.dati) datiList = dashboardData.dati;
-
-        if (datiList.length > 0) {
-            const mainData = datiList[0];
+        for (const mainData of datiList) {
             const votiKeys = ['votiGiornalieri', 'votiPeriodici', 'votiScrutinio', 'voti', 'valutazioni'];
 
             for (const key of votiKeys) {
                 const votiRaw = mainData[key];
                 if (Array.isArray(votiRaw) && votiRaw.length > 0) {
                     for (const v of votiRaw) {
-                        const valore = v.codVoto || v.voto || v.valore;
-                        const materia = v.desMateria || v.materia || 'N/D';
+                        const valore = v.codVoto || v.voto || v.valore || v.desValutazione || '';
+                        const materia = v.desMateria || v.materia || v.materiaDes || 'N/D';
+                        const data = v.datGiorno || v.data || '';
+                        const tipo = v.desVoto || v.tipo || v.codVoto || 'N/D';
+
+                        // ID Stabile basato su materia + valore + data
+                        const stableId = generateStableId(`${materia}-${valore}-${data}`);
 
                         grades.push({
-                            materia: materia,
-                            valore: valore,
-                            data: v.datGiorno || v.data,
-                            tipo: v.desVoto || v.tipo || 'N/D',
+                            materia,
+                            valore,
+                            data,
+                            tipo,
                             subject: materia,
                             value: valore,
-                            date: v.datGiorno || '',
-                            id: uuidv4().substring(0, 12)
+                            date: data,
+                            id: stableId
                         });
                     }
-                    return grades;
                 }
             }
         }
+        if (grades.length > 0) return grades;
     } catch (e) {
         debugLog("⚠️ Grade Strategia 1 fallita", e.message);
     }
@@ -1123,14 +1144,21 @@ async function extractGradesMultiStrategy(headers) {
 
                 if (res.status === 200 && Array.isArray(res.data)) {
                     for (const v of res.data) {
+                        const materia = v.desMateria || 'N/D';
+                        const valore = v.codVoto || '';
+                        const data = v.datGiorno || '';
+
+                        // ID Stabile
+                        const stableId = generateStableId(`${materia}-${valore}-${data}`);
+
                         grades.push({
-                            materia: v.desMateria || 'N/D',
-                            valore: v.codVoto || '',
-                            data: v.datGiorno || '',
-                            subject: v.desMateria || 'N/D',
-                            value: v.codVoto || '',
-                            date: v.datGiorno || '',
-                            id: uuidv4().substring(0, 12)
+                            materia,
+                            valore,
+                            data,
+                            subject: materia,
+                            value: valore,
+                            date: data,
+                            id: stableId
                         });
                     }
                     if (grades.length > 0) {
@@ -1159,13 +1187,14 @@ async function extractHomeworkSafe(headers) {
         const dashboardData = await getDashboard(headers);
         const rawHomework = {};
 
-        const dati = dashboardData?.data?.dati || [];
+        const dati = dashboardData?.data?.dati || dashboardData?.dati || [];
 
-        if (dati.length > 0) {
-            const registro = dati[0].registro || [];
+        for (const blocco of dati) {
+            const registro = blocco.registro || [];
 
             for (const element of registro) {
                 const compiti = element.compiti || [];
+                const materia = element.materia || 'Generico';
 
                 for (const compito of compiti) {
                     const dataConsegna = compito.dataConsegna;
@@ -1175,8 +1204,11 @@ async function extractHomeworkSafe(headers) {
                         rawHomework[dataConsegna] = { compiti: [], materie: [] };
                     }
 
-                    rawHomework[dataConsegna].compiti.push(compito.compito || '');
-                    rawHomework[dataConsegna].materie.push(element.materia || 'Generico');
+                    const testo = compito.desCompito || compito.compito || "";
+                    if (testo) {
+                        rawHomework[dataConsegna].compiti.push(testo);
+                        rawHomework[dataConsegna].materie.push(materia);
+                    }
                 }
             }
         }
@@ -1187,9 +1219,11 @@ async function extractHomeworkSafe(headers) {
 
             compitiList.forEach((desc, i) => {
                 const mat = materieList[i] || "Generico";
+                // ID Stabile basato su testo + materia + data
+                const stableId = generateStableId(`${desc}-${mat}-${dateStr}`);
 
                 tasksData.push({
-                    id: uuidv4().substring(0, 12),
+                    id: stableId,
                     text: desc,
                     subject: mat,
                     due_date: dateStr,
@@ -1220,14 +1254,23 @@ async function extractPromemoria(headers) {
             const items = [...(blocco.bachecaAlunno || []), ...(blocco.promemoria || [])];
 
             for (const i of items) {
+                const titolo = i.desOggetto || i.titolo || 'Avviso';
+                const testo = i.desMessaggio || i.testo || i.desAnnotazioni || '';
+                const autore = i.desMittente || 'Scuola';
+                const data = i.datGiorno || i.data || '';
+
+                // ID Stabile
+                const stableId = generateStableId(`${titolo}-${testo}-${data}`);
+
                 promemoria.push({
-                    titolo: i.desOggetto || i.titolo || 'Avviso',
-                    testo: i.desMessaggio || i.testo || i.desAnnotazioni || '',
-                    autore: i.desMittente || 'Scuola',
-                    data: i.datGiorno || i.data || '',
+                    titolo,
+                    testo,
+                    autore,
+                    data,
                     url: i.urlAllegato || '',
-                    oggetto: i.desOggetto || i.titolo || 'Avviso',
-                    date: i.datGiorno || ''
+                    oggetto: titolo,
+                    date: data,
+                    id: stableId
                 });
             }
         }
