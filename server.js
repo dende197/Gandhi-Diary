@@ -2442,7 +2442,11 @@ app.post('/login', async (req, res) => {
                 userName: username,
                 profileIndex: targetIndex
             },
-            student: { name: studentName, class: normalizeClass(studentClass) || studentClass || "N/D", school: school },
+            student: {
+                name: studentName,
+                class: studentClass || "N/D",
+                school: school
+            },
             tasks: tasksData,
             voti: gradesData,
             promemoria: announcementsData

@@ -1605,7 +1605,7 @@
                 const data = await res.json();
 
                 if (data.success && data.data) {
-                    // ✅ FIX: supporta sia snake_case che camelCase
+                    // ✅ FIX: supporta sia snake_case (Supabase) che camelCase
                     const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                     const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
                     const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
@@ -1616,8 +1616,12 @@
 
                     const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0;
                     const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
-                    const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || (new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()));
-                    const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || (new Date(localUpdatedAt).getTime() > new Date(remoteUpdatedAt).getTime()));
+
+                    // ✅ FIX: definisci ENTRAMBE le variabili
+                    const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+                    const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || new Date(localUpdatedAt).getTime() > new Date(remoteUpdatedAt).getTime());
+
+                    console.log("📊 Planner sync:", { remoteHasData, localHasData, remoteIsNewer, localIsNewer });
 
                     if (!remoteHasData && localHasData) {
                         console.log("🛡️ Remoto vuoto → mantengo locale e ripopolo il server");
@@ -1626,23 +1630,18 @@
                         return;
                     }
 
-                    if (localIsNewer) {
-                        console.log("ℹ️ Locale più nuovo → mantengo locale e sincronizzo remoto");
+                    if (localIsNewer && localHasData) {
+                        console.log("ℹ️ Locale più nuovo → sincronizzo verso remoto");
                         state.plannedTasks = localPT;
                         state.stressLevels = localSL;
                         debouncedSavePlannerRemote(0);
-                    } else if (remoteIsNewer && remoteHasData) {
-                        console.log("☁️ Remoto più nuovo → scarico dati dal server");
+                    } else if (remoteIsNewer || remoteHasData) {
+                        console.log("☁️ Remoto valido → scarico dati");
                         state.plannedTasks = remotePT;
                         state.stressLevels = remoteSL;
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                         localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                         if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                    } else if (remoteHasData) {
-                        state.plannedTasks = { ...localPT, ...remotePT };
-                        state.stressLevels = { ...localSL, ...remoteSL };
-                        localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
-                        localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                     }
 
                     notifyPlannerChanged();
@@ -2193,25 +2192,37 @@
             setTimeout(() => { el.style.display = 'none'; }, 280);
         }
 
-        // ✅ Funzioni di validazione nome/classe (Bug #5)
+        // ✅ Normalizza classe mantenendo l'indirizzo
+        function normalizeClassUi(cls) {
+            if (!cls) return null;
+            const txt = String(cls).toUpperCase().trim();
+
+            // Estrai numero + sezione base (es. "5E")
+            const baseMatch = txt.match(/\b([1-5])\s*([A-Z]{1,2})\b/);
+            if (!baseMatch) return null;
+
+            const base = baseMatch[1] + baseMatch[2]; // "5E"
+
+            // Estrai indirizzo se presente (es. "SA", "SU", "LS")
+            const indirizzoMatch = txt.match(/\(([A-Z]{2,4})\)|\b(SA|SU|LS|LC|LL|LA|LM|AFM|ITI|CAT)\b/i);
+            const indirizzo = indirizzoMatch ? (indirizzoMatch[1] || indirizzoMatch[2]).toUpperCase() : null;
+
+            return indirizzo ? `${base} ${indirizzo}` : base; // "5E SA" o "5E"
+        }
+
+        // ✅ Validazione più permissiva
+        function isValidClass(cls) {
+            if (!cls) return false;
+            const txt = String(cls).toUpperCase().trim();
+            // Accetta: "5E", "5E SA", "5E (SA)", "3ASU", etc.
+            return /^[1-5][A-Z]{1,3}(\s*\(?[A-Z]{2,4}\)?)?$/.test(txt.replace(/\s+/g, ' '));
+        }
+
         function isValidName(name) {
             if (!name || typeof name !== 'string') return false;
             const trimmed = name.trim();
             if (trimmed.length < 2) return false;
-            return /^[a-zA-Z0-9\s'.]+$/.test(trimmed);
-        }
-
-        // ✅ NUOVO: normalizza la classe anche se arriva con suffissi (es. "3A (SA)")
-        function normalizeClassUi(cls) {
-            const txt = String(cls || '').toUpperCase();
-            const m = txt.match(/\b([1-5])\s*([A-Z]{1,3})\b/);
-            return m ? `${m[1]}${m[2]}` : null;
-        }
-
-        // ✅ REGEX più permissiva (supporta 1–3 lettere)
-        function isValidClass(cls) {
-            const c = normalizeClassUi(cls);
-            return !!c && /^[1-5][A-Z]{1,3}$/.test(c);
+            return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
         }
 
         function navigate(v) {
@@ -2535,10 +2546,38 @@
 
         async function logout() {
             if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
-                // ✅ Salva planner su server PRIMA di fare logout
-                await hardSavePlanner();
 
+                // ✅ STEP 1: Salva planner PRIMA di perdere userId
+                const currentUserId = getUserId(); // Salva PRIMA di clear
+
+                if (currentUserId && currentUserId !== 'guest') {
+                    console.log("💾 Salvataggio planner pre-logout per:", currentUserId);
+
+                    // Forza salvataggio sincrono
+                    try {
+                        const payload = {
+                            plannedTasks: state.plannedTasks || {},
+                            stressLevels: state.stressLevels || {},
+                            plannedDetails: {},
+                            updatedAt: new Date().toISOString()
+                        };
+
+                        await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        console.log("✅ Planner salvato pre-logout");
+                    } catch (e) {
+                        console.warn("⚠️ Errore salvataggio pre-logout:", e);
+                    }
+                }
+
+                // ✅ STEP 2: Ora cancella sessione
                 sessionManager.clear();
+
+                // ✅ STEP 3: Reset state MA mantieni dati in localStorage
                 state.isLoggedIn = false;
                 state.didup.connected = false;
                 state.user = { name: '', class: '' };
@@ -2549,11 +2588,10 @@
                 state.lastSync = null;
                 state.view = 'login';
 
-                // ⭐ NON cancellare plannedTasks, stressLevels - restano in localStorage
-                // E verranno recuperati da Supabase al prossimo login
+                // NON cancellare: plannedTasks, stressLevels (rimangono in localStorage per profilo)
 
                 render();
-                console.log('✅ Logout completato - Planner e Feed preservati');
+                console.log('✅ Logout completato - Planner preservato su Supabase');
             }
         }
 
@@ -2854,7 +2892,7 @@
                         ${(() => {
                     const displayClass = normalizeClassUi(state.user?.class);
                     return displayClass
-                        ? `<div class="tag-cinqueanna"><i class="ph-bold ph-graduation-cap"></i> ${displayClass}</div>`
+                        ? `<div class="tag-cinqueanna"><i class="ph-bold ph-graduation-cap"></i> Classe ${displayClass}</div>`
                         : '';
                 })()}
                     </div>
