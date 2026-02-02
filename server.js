@@ -742,6 +742,10 @@ async function enrichProfiles(school, accessToken, profiles) {
                     const scheda = d9.scheda || {};
                     const classeObj = scheda.classe || {};
 
+                    // DEBUG: Log della struttura completa per debugging
+                    debugLog(`P${index}: Profilo - Struttura scheda:`, JSON.stringify(scheda, null, 2));
+                    debugLog(`P${index}: Profilo - Struttura classeObj:`, JSON.stringify(classeObj, null, 2));
+
                     if (classeObj.desDenominazione && classeObj.desSezione) {
                         cls = `${classeObj.desDenominazione}${classeObj.desSezione}`.trim().toUpperCase();
 
@@ -752,29 +756,36 @@ async function enrichProfiles(school, accessToken, profiles) {
                             // 1. Cerca nell'oggetto corso nidificato (Corso.descrizione)
                             if (classeObj.corso && typeof classeObj.corso === 'object' && classeObj.corso.descrizione) {
                                 courseDesc = classeObj.corso.descrizione;
+                                debugLog(`P${index}: Corso trovato in classeObj.corso.descrizione`);
                             }
                             // 2. Cerca come stringa diretta in corso
                             else if (classeObj.corso && typeof classeObj.corso === 'string') {
                                 courseDesc = classeObj.corso;
+                                debugLog(`P${index}: Corso trovato in classeObj.corso (string)`);
                             }
                             // 3. Cerca in desCorso
                             else if (classeObj.desCorso) {
                                 courseDesc = classeObj.desCorso;
+                                debugLog(`P${index}: Corso trovato in classeObj.desCorso`);
                             }
                             // 4. Cerca in scheda.desCorso
                             else if (scheda.desCorso) {
                                 courseDesc = scheda.desCorso;
+                                debugLog(`P${index}: Corso trovato in scheda.desCorso`);
                             }
                             // 5. Cerca in scheda.corso
                             else if (scheda.corso && typeof scheda.corso === 'object' && scheda.corso.descrizione) {
                                 courseDesc = scheda.corso.descrizione;
+                                debugLog(`P${index}: Corso trovato in scheda.corso.descrizione`);
                             }
                             // 6. Cerca in d9 direttamente
                             else if (d9.desCorso) {
                                 courseDesc = d9.desCorso;
+                                debugLog(`P${index}: Corso trovato in d9.desCorso`);
                             }
                             else if (d9.corso && typeof d9.corso === 'object' && d9.corso.descrizione) {
                                 courseDesc = d9.corso.descrizione;
+                                debugLog(`P${index}: Corso trovato in d9.corso.descrizione`);
                             }
 
                             courseDesc = (courseDesc || "").toUpperCase();

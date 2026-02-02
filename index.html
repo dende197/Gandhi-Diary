@@ -1615,6 +1615,7 @@
                     const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0;
                     const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
                     const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || (new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()));
+                    const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || (new Date(localUpdatedAt).getTime() > new Date(remoteUpdatedAt).getTime()));
 
                     if (!remoteHasData && localHasData) {
                         console.log("🛡️ Remoto vuoto → mantengo locale e ripopolo il server");
@@ -2843,9 +2844,9 @@
                         <div style="font-size:16px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${state.user?.name || 'Utente'}
                         </div>
-                        <!-- ✅ Badge 'CinqueAnna' + classe valida opzionale -->
+                        <!-- ✅ Badge classe -->
                         <div class="tag-cinqueanna">
-                            <i class="ph-bold ph-graduation-cap"></i> CinqueAnna${isValidClass(state.user?.class) ? ` • ${String(state.user.class).trim().toUpperCase()}` : ''}
+                            <i class="ph-bold ph-graduation-cap"></i> ${isValidClass(state.user?.class) ? String(state.user.class).trim().toUpperCase() : 'Studente'}
                         </div>
                     </div>
                     ${state.lastSync ? `<div style="font-size:11px; color: rgba(255,255,255,0.6); display:flex; align-items:center; gap:6px;">
