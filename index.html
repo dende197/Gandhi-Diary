@@ -2381,7 +2381,7 @@
             if (shouldRender) render();
         }
         // Router & Loader helpers
-        const allowedViews = ['home', 'market', 'feed', 'planner', 'profile', 'search', 'chat'];
+        const allowedViews = ['home', 'market', 'feed', 'planner', 'profile', 'search', 'chat', 'messages'];
 
         function currentViewFromHash() {
             const v = (location.hash || '').replace('#', '').trim();
@@ -4831,11 +4831,16 @@
             }
         }
 
-        async function openChat(name) {
-            const userObj = DIRECTORY.find(u => u.name === name);
-            if (!userObj) return;
+        async function openChat(name, explicitId = null) {
+            let userObj = DIRECTORY.find(u => u.name === name);
 
-            state.currentChatUser = name;
+            if (!userObj) {
+                const fallbackId = explicitId || `gen:${name}`;
+                userObj = { name, id: fallbackId, class: 'N/D' };
+                DIRECTORY.push(userObj);
+            }
+
+            state.currentChatUser = userObj.name;
             state.currentChatId = userObj.id;
 
             const myId = getUserId();
@@ -4844,12 +4849,11 @@
 
             navigate('chat');
 
-            // Fetch history from server
             try {
                 const res = await fetch(`${API_BASE_URL}/api/messages/thread/${threadId}`);
                 const data = await res.json();
                 if (data.success) {
-                    state.messages[name] = data.data.map(m => ({
+                    state.messages[userObj.name] = data.data.map(m => ({
                         text: m.text,
                         me: m.sender_id === myId,
                         timestamp: m.created_at,
@@ -4864,7 +4868,7 @@
                 }
             } catch (e) {
                 console.error("Errore fetch chat:", e);
-                if (!state.messages[name]) state.messages[name] = [];
+                if (!state.messages[userObj.name]) state.messages[userObj.name] = [];
             }
         }
 
@@ -4900,7 +4904,7 @@
                 item.status = 'sold';
                 render();
 
-                await openChat(item.seller);
+                await openChat(item.seller, item.sellerId || `seller:${item.id}`);
                 await sendChatMessage({
                     text: `✅ Ho acquistato "${item.title}"`,
                     type: 'purchase',
@@ -4922,7 +4926,7 @@
             try {
                 const order = await createMarketOrder({ item, type: 'offer', offerPrice: offer });
 
-                await openChat(item.seller);
+                await openChat(item.seller, item.sellerId || `seller:${item.id}`);
                 await sendChatMessage({
                     text: `💬 Offerta per "${item.title}": ${offer}`,
                     type: 'offer',
