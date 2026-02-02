@@ -1794,13 +1794,16 @@ app.post('/api/messages', async (req, res) => {
             meta: msg.meta || {}
         };
 
-        await supabase.from("chat_messages").insert(payload);
+        const { error: insertError } = await supabase.from("chat_messages").insert(payload);
+        if (insertError) throw insertError;
 
-        const { data } = await supabase.from("chat_messages")
+        const { data, error: fetchError } = await supabase.from("chat_messages")
             .select("*")
             .eq("thread_id", msg.threadId)
             .order("created_at", { ascending: true })
             .limit(500);
+        
+        if (fetchError) throw fetchError;
 
         res.json({ success: true, data: data || [] });
 
