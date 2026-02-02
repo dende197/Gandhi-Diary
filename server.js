@@ -2387,7 +2387,7 @@ app.post('/login', async (req, res) => {
 
         // 5. Identità autoritativa
         let studentName = targetProfile.name;
-        let studentClass = normalizeClass(targetProfile.class) || targetProfile.class;
+        let studentClass = targetProfile.class; // ✅ FIX: Mantieni l'originale con abbreviazione
         const jar = loginRes.jar;
 
         // Fallback HTML se i metodi JSON non hanno risolto il nome reale
@@ -2629,7 +2629,7 @@ app.post('/sync', async (req, res) => {
             success: true,
             tasks,
             voti: grades,
-            promemoria: announcementsData, // Già recuperato sopra
+            promemoria, // ✅ FIX: Usa la variabile corretta
             new_tokens: { authToken, accessToken },
             planner: plannerData
         });
