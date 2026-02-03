@@ -1732,71 +1732,211 @@ app.post('/api/polls/:poll_id/vote', async (req, res) => {
 });
 
 // Chat Messages
-app.get('/api/messages/thread/:thread_id', async (req, res) => {
-    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+// ==============================================================================
+// 💬 G-CONNECT v7.0 RELATIONAL CHAT API (Expert Architecture)
+// ==============================================================================
+
+// 1. Create or Get Conversation (Private)
+app.post('/api/conversations', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase missing" });
+    const { participants } = req.body; // Array of userIDs, e.g. ["school:user:me", "school:user:him"]
+
+    if (!participants || participants.length < 2) {
+        return res.status(400).json({ success: false, error: "Minimum 2 participants required" });
+    }
 
     try {
-        const { data } = await supabase.from("chat_messages")
-            .select("*")
-            .eq("thread_id", req.params.thread_id)
-            .order("created_at", { ascending: true })
-            .limit(500);
+        // A. Check if a private conversation already exists between these exact users
+        // Strategy: Find common conversation_id where both users are participants
+        const userA = participants[0];
+        const userB = participants[1];
 
-        res.json({ success: true, data: data || [] });
+        // Advanced SQL-like query via Supabase is complex, so we do a smart lookup
+        // Get all convos for User A
+        const { data: convosA, error: errA } = await supabase
+            .from('conversation_participants')
+            .select('conversation_id')
+            .eq('user_id', userA);
+
+        if (errA) throw errA;
+
+        let existingConvoId = null;
+
+        // Check if User B is in any of these convos
+        if (convosA && convosA.length > 0) {
+            const ids = convosA.map(c => c.conversation_id);
+            const { data: match, error: errMatch } = await supabase
+                .from('conversation_participants')
+                .select('conversation_id')
+                .eq('user_id', userB)
+                .in('conversation_id', ids)
+                .limit(1);
+
+            if (match && match.length > 0) {
+                existingConvoId = match[0].conversation_id;
+            }
+        }
+
+        if (existingConvoId) {
+            console.log("✅ Conversation already exists:", existingConvoId);
+            return res.json({ success: true, conversationId: existingConvoId, isNew: false });
+        }
+
+        // B. Create new Conversation
+        const { data: stringConvo, error: createErr } = await supabase
+            .from('conversations')
+            .insert({ type: 'private', last_message_at: new Date() })
+            .select()
+            .single();
+
+        if (createErr) throw createErr;
+        const newConvoId = stringConvo.id;
+
+        // C. Add Participants
+        const participantsData = participants.map(uid => ({
+            conversation_id: newConvoId,
+            user_id: uid,
+            joined_at: new Date()
+        }));
+
+        const { error: partErr } = await supabase
+            .from('conversation_participants')
+            .insert(participantsData);
+
+        if (partErr) throw partErr;
+
+        console.log("🆕 API: Created new conversation:", newConvoId);
+        res.json({ success: true, conversationId: newConvoId, isNew: true });
+
+    } catch (e) {
+        console.error("❌ Create conversation error:", e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// 2. Get Messages for Conversation
+app.get('/api/conversations/:id/messages', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false });
+    const { id } = req.params;
+
+    try {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', id)
+            .order('created_at', { ascending: true })
+            .limit(100);
+
+        if (error) throw error;
+        res.json({ success: true, data });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
-app.get('/api/messages/threads/:userId', async (req, res) => {
+// 3. Send Message (v7.0)
+app.post('/api/messages', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase missing" });
+    const { conversationId, senderId, text, type, meta } = req.body;
+
+    try {
+        // Insert message
+        const { data: msg, error: msgErr } = await supabase
+            .from('messages')
+            .insert({
+                conversation_id: conversationId,
+                sender_id: senderId,
+                content: text || '',
+                type: type || 'text',
+                meta: meta || {},
+                created_at: new Date()
+            })
+            .select()
+            .single();
+
+        if (msgErr) throw msgErr;
+
+        // Update conversation 'last_message_at' for sorting
+        await supabase
+            .from('conversations')
+            .update({ last_message_at: new Date() })
+            .eq('id', conversationId);
+
+        res.json({ success: true, data: msg });
+
+    } catch (e) {
+        console.error("❌ Send message error:", e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// 4. List User Conversations (Inbox)
+app.get('/api/conversations/user/:userId', async (req, res) => {
     if (!supabase) return res.status(500).json({ success: false });
     const { userId } = req.params;
 
     try {
-        const { data, error } = await supabase
-            .from("chat_messages")
-            .select("*")
-            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-            .order("created_at", { ascending: false });
+        // Get all items in conversation_participants for this user
+        const { data: myConvos, error: err1 } = await supabase
+            .from('conversation_participants')
+            .select('conversation_id, last_read_at')
+            .eq('user_id', userId);
 
-        if (error) throw error;
+        if (err1) throw err1;
+        if (!myConvos || myConvos.length === 0) return res.json({ success: true, data: [] });
 
-        // Group by thread_id and keep only latest
-        const threads = [];
-        const seen = new Set();
-        (data || []).forEach(m => {
-            if (!seen.has(m.thread_id)) {
-                seen.add(m.thread_id);
-                threads.push(m);
-            }
-        });
+        const convoIds = myConvos.map(c => c.conversation_id);
 
-        res.json({ success: true, data: threads });
+        // Fetch conversation details + last message (via client-side logic optimization or join)
+        // Since Supabase join syntax is tricky in raw client, we do:
+        // Get conversations details
+        const { data: conversations, error: err2 } = await supabase
+            .from('conversations')
+            .select('*')
+            .in('id', convoIds)
+            .order('last_message_at', { ascending: false });
+
+        if (err2) throw err2;
+
+        // Populate "Other Participant" for UI
+        // For each convo, fetch the OTHER participant
+        const enriched = await Promise.all(conversations.map(async (c) => {
+            const { data: parts } = await supabase
+                .from('conversation_participants')
+                .select('user_id')
+                .eq('conversation_id', c.id)
+                .neq('user_id', userId) // Get the other guy
+                .limit(1);
+
+            const otherId = parts && parts.length > 0 ? parts[0].user_id : 'Unknown';
+
+            // Fetch last message content
+            const { data: lastMsg } = await supabase
+                .from('messages')
+                .select('content, created_at, sender_id')
+                .eq('conversation_id', c.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            return {
+                id: c.id,
+                otherId: otherId,
+                lastMessage: lastMsg?.content || 'Inizia a chattare',
+                lastAt: lastMsg?.created_at || c.created_at,
+                senderId: lastMsg?.sender_id
+            };
+        }));
+
+        res.json({ success: true, data: enriched });
     } catch (e) {
+        console.error("❌ List conversations error:", e);
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
-app.get('/api/messages/:threadId', async (req, res) => {
-    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
-    try {
-        const { threadId } = req.params;
-        const { data, error } = await supabase
-            .from("chat_messages")
-            .select("*")
-            .eq("thread_id", threadId)
-            .order("created_at", { ascending: true })
-            .limit(500);
-
-        if (error) throw error;
-        res.json({ success: true, data: data || [] });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-app.post('/api/messages', async (req, res) => {
-    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+// Legacy Chat Endpoints (Deprecated but kept for safety if needed)
+app.get('/api/messages/thread/:thread_id', async (req, res) => {
 
     try {
         const msg = req.body;

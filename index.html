@@ -1692,21 +1692,26 @@
         }
 
         // 🆕 PERSISTENT SESSION MANAGER
+        // 🆕 PERSISTENT SESSION MANAGER (v7.0 Fixed)
         const sessionManager = {
             save(sessionData) {
                 try {
-                    localStorage.setItem('argo_session', JSON.stringify(sessionData));
+                    // Deep merge to ensure we don't lose avatar/class updates
+                    const existing = this.load() || {};
+                    const merged = { ...existing, ...sessionData };
+                    localStorage.setItem('argo_session', JSON.stringify(merged));
                     localStorage.setItem('argo_is_logged_in', 'true');
-                    console.log("✅ Sessione salvata");
+                    console.log("✅ Sessione salvata e unificata");
                 } catch (e) {
                     console.error("❌ Errore salvataggio sessione:", e);
-                    alert("Errore salvataggio dati locali. Prova a disabilitare modalità incognito.");
                 }
             },
             load() {
                 try {
                     const saved = localStorage.getItem('argo_session');
-                    return saved ? JSON.parse(saved) : null;
+                    if (!saved) return null;
+                    const parsed = JSON.parse(saved);
+                    return parsed;
                 } catch (e) {
                     console.error("❌ Errore caricamento sessione:", e);
                     return null;
@@ -1718,14 +1723,15 @@
             clear() {
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
-                console.log("🗑️ Sessione terminata (dati profilo rimangono in localStorage)");
+                localStorage.removeItem('argo_password'); // Security cleanup
+                console.log("🗑️ Sessione terminata");
             }
         };
 
         // STATE MANAGEMENT
         const state = {
             view: 'login',
-            user: { name: 'Andrea', class: '5B', avatar: null }, // ⭐ Verrà sovrascritto da localStorage
+            user: { name: 'Utente', class: 'N/D', avatar: null }, // Default safe
             isLoggedIn: false,
             isOffline: false,
             didup: { connected: false },
@@ -1757,29 +1763,43 @@
         const modalContainer = document.getElementById('modals');
         const offlineBadge = document.getElementById('offline-badge');
 
-        // ⭐ INITIALIZE APP ON LOAD
+        // BOOT LIFECYCLE (v7.0 Persistence Fix)
         document.addEventListener('DOMContentLoaded', async () => {
-            showBoot('Avvio G-Connect');
+            const loadingText = document.querySelector('.boot-title span');
+            if (loadingText) loadingText.textContent = "v7.0 Relational";
 
-            // ⚠️ EMERGENCY SAFETY TIMEOUT (10s)
-            const safetyTimeout = setTimeout(() => {
-                console.warn("⚠️ CRITICAL: Boot lifecycle took too long. Forcing app start.");
-                hideBoot();
-                if (!state.isLoggedIn && state.view !== 'login') {
-                    state.view = 'login';
-                    render();
+            // 1. Immediate Session Restore
+            const isLogged = sessionManager.isLoggedIn();
+            const persistentUser = sessionManager.load();
+
+            if (isLogged && persistentUser) {
+                state.isLoggedIn = true;
+                state.user = persistentUser;
+                // Restore View immediately to avoid "flicker" to login
+                const savedNav = localStorage.getItem(lsKey('nav_state'));
+                if (savedNav) {
+                    try {
+                        const nav = JSON.parse(savedNav);
+                        if (nav && nav.view) {
+                            state.view = nav.view;
+                            state.currentThreadId = nav.currentThreadId;
+                            state.currentChatUser = nav.currentChatUser;
+                            state.currentChatId = nav.currentChatId; // IMPORTANT for new chat API
+                        }
+                    } catch { }
+                } else {
+                    state.view = 'home';
                 }
-            }, 10000);
+                updateOfflineBadge();
+                render(); // First render with restored state
+            } else {
+                state.view = 'login';
+                render();
+            }
 
-            try {
-                const isLoggedIn = sessionManager.isLoggedIn();
-                if (isLoggedIn) {
-                    state.isLoggedIn = true;
-                    state.user = sessionManager.load();
-                }
-
-                // Carica tutte le cache locali (Namespaced per profilo)
-                ['threads', 'tasks', 'planned_tasks', 'user', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels'].forEach(key => {
+            // 2. Load other caches in background
+            setTimeout(() => {
+                ['threads', 'tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels'].forEach(key => {
                     const cached = localStorage.getItem(lsKey(key));
                     if (cached) {
                         try {
@@ -1798,68 +1818,62 @@
                         } catch { }
                     }
                 });
+                render(); // Re-render with tasks/grades
+            }, 50);
 
-                // Caches Globali
-                ['posts', 'market', 'polls'].forEach(key => {
-                    const cached = localStorage.getItem(globalKey(key));
-                    if (cached) {
-                        try { state[key === 'market' ? 'marketItems' : key] = JSON.parse(cached); } catch { }
-                    }
-                });
+            // Caches Globali
+            ['posts', 'market', 'polls'].forEach(key => {
+                const cached = localStorage.getItem(globalKey(key));
+                if (cached) {
+                    try { state[key === 'market' ? 'marketItems' : key] = JSON.parse(cached); } catch { }
+                }
+            });
 
-                if (isLoggedIn) {
-                    const savedNav = localStorage.getItem(lsKey('nav_state'));
-                    if (savedNav) {
-                        try {
-                            const nav = JSON.parse(savedNav);
-                            if (nav && nav.view) {
-                                state.view = nav.view;
-                                state.currentThreadId = nav.currentThreadId;
-                                state.currentChatUser = nav.currentChatUser;
-                                state.currentChatId = nav.currentChatId;
+            if (isLoggedIn) {
+                const savedNav = localStorage.getItem(lsKey('nav_state'));
+                if (savedNav) {
+                    try {
+                        const nav = JSON.parse(savedNav);
+                        if (nav && nav.view) {
+                            state.view = nav.view;
+                            state.currentThreadId = nav.currentThreadId;
+                            state.currentChatUser = nav.currentChatUser;
+                            state.currentChatId = nav.currentChatId;
 
-                                // Se eravamo in una chat, ripristiniamo i messaggi locali e attiviamo sync
-                                if (state.view === 'chat' && state.currentThreadId) {
-                                    loadChatMessages(state.currentThreadId);
-                                    // Sincronizziamo subito la chat attiva
-                                    setTimeout(() => {
-                                        fetchChatMessages(state.currentThreadId);
-                                        subscribeToChatRealtime(state.currentThreadId);
-                                        startChatPolling();
-                                    }, 100);
-                                }
-                            } else {
-                                state.view = 'home';
+                            // Se eravamo in una chat, ripristiniamo i messaggi locali e attiviamo sync
+                            if (state.view === 'chat' && state.currentThreadId) {
+                                loadChatMessages(state.currentThreadId);
+                                // Sincronizziamo subito la chat attiva
+                                setTimeout(() => {
+                                    fetchChatMessages(state.currentThreadId);
+                                    subscribeToChatRealtime(state.currentThreadId);
+                                    startChatPolling();
+                                }, 100);
                             }
-                        } catch { state.view = 'home'; }
-                    } else {
-                        state.view = 'home';
-                    }
-
-                    // Sincronizzazione background non-bloccante
-                    (async () => {
-                        await registerUserOnServer();
-                        await fetchUsersDirectory();
-                        fetchPosts();
-                        fetchMarket();
-                        fetchPolls();
-                        fetchThreads();
-                        fetchMarketOutbox();
-                        performSync();
-                    })();
+                        } else {
+                            state.view = 'home';
+                        }
+                    } catch { state.view = 'home'; }
                 } else {
-                    state.view = 'login';
+                    state.view = 'home';
                 }
 
-                render();
-            } catch (error) {
-                console.error("🛑 CRITICAL BOOT ERROR:", error);
-                state.view = sessionManager.isLoggedIn() ? 'home' : 'login';
-                render();
-            } finally {
-                clearTimeout(safetyTimeout);
-                setTimeout(hideBoot, 400);
+                // Sincronizzazione background non-bloccante
+                (async () => {
+                    await registerUserOnServer();
+                    await fetchUsersDirectory();
+                    fetchPosts();
+                    fetchMarket();
+                    fetchPolls();
+                    fetchThreads();
+                    fetchMarketOutbox();
+                    performSync();
+                })();
             }
+
+            // Cleanup
+            setTimeout(hideBoot, 400);
+
         });
 
         function updateOfflineBadge() {
@@ -1948,40 +1962,27 @@
             if (!myId) return;
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/messages/threads/${myId}`);
+                // v7.0 - Fetch from Relational API
+                const res = await fetch(`${API_BASE_URL}/api/conversations/user/${myId}`);
                 const data = await res.json();
                 if (data.success) {
-                    const mapByThread = {};
-                    (data.data || []).forEach(m => {
-                        if (!mapByThread[m.thread_id]) mapByThread[m.thread_id] = m;
-                    });
-
-                    const threads = Object.values(mapByThread).map(m => {
-                        const isSender = m.sender_id === myId;
-                        const otherId = isSender ? m.receiver_id : m.sender_id;
-                        const otherName = isSender ? m.receiver_name : m.sender_name;
-                        return {
-                            threadId: m.thread_id,
-                            otherId,
-                            otherName: otherName || otherId,
-                            lastText: m.text || '',
-                            lastAt: m.created_at
-                        };
-                    });
-
-                    state.threads = threads;
-                    localStorage.setItem(lsKey('threads'), JSON.stringify(threads));
-
-                    threads.forEach(t => {
-                        if (!DIRECTORY.find(u => u.name === t.otherName)) {
-                            DIRECTORY.push({ name: t.otherName, id: t.otherId, class: 'N/D' });
-                        }
-                    });
-
+                    state.threads = (data.data || []).map(t => ({
+                        threadId: t.id, // Now using UUID conversation_id
+                        otherId: t.otherId,
+                        otherName: DIRECTORY.find(u => u.id === t.otherId)?.name || "Utente",
+                        lastText: t.lastMessage || "",
+                        lastTime: t.lastAt,
+                        senderId: t.senderId,
+                        unread: false // TODO: implement real unread count
+                    }));
                     render();
+                    localStorage.setItem(lsKey('threads'), JSON.stringify(state.threads));
                 }
             } catch (e) {
-                console.warn("Threads fetch error:", e);
+                console.warn("Fetch threads failed:", e);
+                // Fallback cache logic
+                const cached = localStorage.getItem(lsKey('threads'));
+                if (cached) state.threads = JSON.parse(cached);
             }
         }
 
@@ -5158,53 +5159,74 @@
             const myId = getUserId();
             if (!myId || myId === 'guest') return alert('Esegui il login per chattare');
 
-            // Find ID from directory (if not provided)
+            // Find ID if missing
             if (!otherId) {
                 const found = DIRECTORY.find(u => u.name === otherName);
                 if (found) {
                     otherId = found.id;
                 } else {
-                    // Fallback search
                     await fetchUsersDirectory();
                     const foundAfter = DIRECTORY.find(u => u.name === otherName);
                     otherId = foundAfter?.id || `nosync:${otherName.replace(/\s+/g, '_')}`;
                 }
             }
 
-            const threadId = await getThreadId(myId, otherId);
+            // v7.0 - Get/Create Conversation ID from Server
+            let conversationId = null;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/conversations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ participants: [myId, otherId] })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    conversationId = data.conversationId;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (e) {
+                console.error("Chat creation failed:", e);
+                // Fallback to offline/optimistic ID if server fails (temporary)
+                conversationId = `offline:${await getThreadId(myId, otherId)}`;
+            }
+
             state.currentChatUser = otherName;
             state.currentChatId = otherId;
-            state.currentThreadId = threadId;
-            state.msgSearch = ''; // Clear search when opening chat
+            state.currentThreadId = conversationId; // This is now the UUID
+            state.msgSearch = '';
 
-            if (!state.messages[threadId]) {
-                loadChatMessages(threadId); // Carichiamo la cache se presente
+            if (!state.messages[conversationId]) {
+                loadChatMessages(conversationId);
             }
-            if (!state.messages[threadId]) state.messages[threadId] = [];
+            if (!state.messages[conversationId]) state.messages[conversationId] = [];
 
             saveNavigationState();
             navigate('chat');
 
-            await fetchChatMessages(threadId);
+            await fetchChatMessages(conversationId);
             startChatPolling();
-            subscribeToChatRealtime(threadId);
+            subscribeToChatRealtime(conversationId);
         }
 
-        async function fetchChatMessages(threadId) {
-            if (!threadId) return;
+        async function fetchChatMessages(conversationId) {
+            if (!conversationId) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/messages/${threadId}`);
+                // v7.0 - New Endpoint
+                const res = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}/messages`);
                 const data = await res.json();
                 if (data.success) {
                     const myId = getUserId();
-                    state.messages[threadId] = (data.data || []).map(m => ({
+                    state.messages[conversationId] = (data.data || []).map(m => ({
                         id: m.id,
-                        text: m.text,
+                        text: m.content || m.text, // Support both new/old fields
+                        type: m.type || 'text',
+                        meta: m.meta || {},
                         me: m.sender_id === myId,
                         timestamp: m.created_at,
                         status: 'sent'
                     }));
-                    saveChatMessages(threadId);
+                    saveChatMessages(conversationId);
                     updateChatUI();
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
@@ -5456,15 +5478,13 @@
             scrollChatToBottom();
 
             try {
+                // v7.0 - POST to new schema
                 const res = await fetch(`${API_BASE_URL}/api/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        threadId,
+                        conversationId: threadId, // threadId is now conversationId
                         senderId: myId,
-                        senderName: state.user?.name || "Io",
-                        receiverId,
-                        receiverName,
                         text,
                         type,
                         meta
@@ -5473,17 +5493,17 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    // Update the local message with server data (id/timestamp)
+                    // Update local with server ID
                     const idx = state.messages[threadId].findIndex(m => m.id === localId);
                     if (idx > -1) {
-                        const serverMsg = (Array.isArray(data.data) ? data.data[0] : data.data) || {};
+                        const serverMsg = data.data || {};
                         state.messages[threadId][idx] = {
                             ...state.messages[threadId][idx],
                             id: serverMsg.id || localId,
                             status: 'sent',
                             timestamp: serverMsg.created_at || localMsg.timestamp
                         };
-                        saveChatMessages(threadId); // Persistenza post-invio (ID server)
+                        saveChatMessages(threadId);
                     }
                     updateChatUI();
                     if (typeof fetchThreads === 'function') fetchThreads();
