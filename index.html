@@ -3897,7 +3897,7 @@
         function renderPlanner() {
             setTimeout(() => { initPlannerCalendar(); }, 0);
             return `
-                < div class="view" style = "padding-bottom: 40px;" >
+                <div class="view" style="padding-bottom: 40px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h1 style="margin: 0;">Planner</h1>
                     <button onclick="performArgoSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
@@ -3922,7 +3922,7 @@
                 <div id="weekly-agenda-list" class="card glass-panel" style="padding: 16px;">
                     ${renderWeeklyAgenda()}
                 </div>
-            </div > `;
+            </div>`;
         }
 
         function renderWeeklyAgenda() {
@@ -3938,15 +3938,15 @@
             // Filtra solo date da oggi in poi
             const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
 
-            if (!filtered.length) return `< div style = "text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;" > Nessun compito pianificato(o già passati).</div > `;
+            if (!filtered.length) return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">Nessun compito pianificato (o già passati).</div>`;
 
             const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             return filtered.map(t => {
                 const d = new Date(t.plannedDate);
-                const label = `${dayNames[d.getDay()]} ${d.getDate()} `;
+                const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
                 const subjectColor = getSubjectColor(t.subject);
                 return `
-                < div style = "display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;" >
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                     <div style="min-width: 54px; font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase;">${label}</div>
                     <div onclick="toggleTask('${t.id}')" style="width: 22px; height: 22px; border: 2px solid ${t.done ? 'var(--green)' : subjectColor}; background: ${t.done ? 'var(--green)' : 'transparent'}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                         ${t.done ? '<i class="ph-bold ph-check" style="font-size: 14px; color: black;"></i>' : ''}
@@ -3955,7 +3955,7 @@
                         <div style="font-size: 15px; color: white; font-weight: 500; ${t.done ? 'text-decoration: line-through; opacity: 0.4;' : ''}">${t.text}</div>
                         <div style="font-size: 11px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${t.subject}</div>
                     </div>
-                </div > `;
+                </div>`;
             }).join('');
         }
 
@@ -3967,7 +3967,7 @@
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
             modalContainer.innerHTML = `
-                < div class="modal-overlay" onclick = "closeModal(event)" >
+                <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
                             <h2 style="margin:0;">Stress Giornaliero</h2>
@@ -3985,8 +3985,7 @@
                             <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
                         </div>
                     </div>
-            </div >
-                `;
+                </div>`;
         }
 
         // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
@@ -4005,10 +4004,10 @@
                 const lv = state.stressLevels[iso] || 0;
                 points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
             }
-            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
+            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)).join(' ');
 
             modalContainer.innerHTML = `
-                < div class="modal-overlay" onclick = "closeModal(event)" >
+                <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
@@ -4029,8 +4028,7 @@
                             ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
                         </div>
                     </div>
-            </div >
-                `;
+                </div>`;
         }
 
         // setStressLevel(lv, inModal): aggiorna fluido
@@ -4087,7 +4085,7 @@
             }
 
             modalContainer.innerHTML = `
-                < div class="modal-overlay" onclick = "closeModal(event)" >
+                <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 24px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h2 style="margin:0;">Pianifica Settimana</h2>
@@ -4121,7 +4119,7 @@
                         </div>
                         <button onclick="closeModal()" class="btn-primary" style="margin-top: 20px;">Fatto</button>
                     </div>
-            </div > `;
+                </div>`;
         }
 
         function togglePlanDay(taskId, dateStr) {
