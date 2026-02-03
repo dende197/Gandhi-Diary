@@ -1283,15 +1283,15 @@
             flex-direction: column;
             height: 100dvh;
             padding: 0;
-            background: transparent;
+            background: transparent !important;
         }
 
         .chat-header {
             padding: 16px 20px;
             padding-top: calc(var(--safe-top) + 12px);
-            background: var(--glass-panel);
-            backdrop-filter: blur(40px) saturate(140%);
-            -webkit-backdrop-filter: blur(40px) saturate(140%);
+            background: var(--glass-panel) !important;
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
@@ -1311,12 +1311,11 @@
         .message-bubble {
             max-width: 80%;
             padding: 12px 18px;
-            border-radius: 24px;
+            border-radius: 22px;
             font-size: 15px;
-            line-height: 1.5;
+            line-height: 1.45;
             word-break: break-word;
             position: relative;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .msg-me {
@@ -1324,82 +1323,44 @@
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
         }
 
         .msg-other {
             align-self: flex-start;
-            background: var(--glass-panel);
+            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(10px);
             color: white;
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-bottom-left-radius: 4px;
-        }
-
-        .msg-status {
-            font-size: 10px;
-            opacity: 0.6;
-            margin-top: 4px;
-            text-align: right;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 4px;
-        }
-
-        .msg-pending {
-            opacity: 0.7;
-        }
-
-        .msg-failed {
-            background: rgba(255, 69, 58, 0.25) !important;
-            border: 1px solid var(--red) !important;
         }
 
         .chat-input-bar {
             display: flex;
             gap: 12px;
             padding: 14px 16px calc(14px + var(--safe-bottom));
-            background: var(--glass-panel);
-            backdrop-filter: blur(40px) saturate(140%);
-            -webkit-backdrop-filter: blur(40px) saturate(140%);
+            background: var(--glass-panel) !important;
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
             border-top: 1px solid var(--glass-border);
         }
 
         .chat-input {
             flex: 1;
-            height: 48px;
-            border-radius: 24px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--glass-border);
+            height: 44px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
             padding: 0 20px;
-            color: white;
-            font-size: 16px;
-            font-family: inherit;
+            color: white !important;
+            font-size: 15px;
             transition: all 0.3s ease;
         }
 
         .chat-input:focus {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px var(--primary-glow);
-        }
-
-        .chat-send-btn {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px var(--primary-glow);
-            transition: transform 0.2s ease;
-        }
-
-        .chat-send-btn:active {
-            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.12) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            outline: none;
         }
 
         body.chat-mode #bottom-nav {
@@ -1418,7 +1379,7 @@
         <div class="boot-card">
             <div class="boot-spinner"></div>
             <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.8.5-stable</span></div>
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v3.0.0-insta</span></div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1433,8 +1394,8 @@
     </nav>
 
     <script>
-        // v2.8.5-stable (Boot Fix & Real Multi-User Sync)
-        console.log("🚀 G-Connect v2.8.5-stable initialized");
+        // v3.0.0-insta (Instagram-Style Chat & Boot Fix)
+        console.log("🚀 G-Connect v3.0.0-insta initialized");
 
         let _chatPoller = null;
         window.chatChannel = null;
@@ -1701,7 +1662,8 @@
             plannedTasks: {},
             polls: [],
             plannerWeekOffset: 0,
-            threads: []
+            threads: [],
+            msgSearch: ''
         };
 
         const app = document.getElementById('app');
@@ -1713,121 +1675,96 @@
         document.addEventListener('DOMContentLoaded', async () => {
             showBoot('Avvio G-Connect');
 
-            // ⚠️ SAFETY TIMEOUT: nascondi il boot loader dopo 8 secondi massimo
+            // ⚠️ EMERGENCY SAFETY TIMEOUT (10s)
             const safetyTimeout = setTimeout(() => {
-                console.warn("⚠️ Boot timeout - forcing hideBoot");
+                console.warn("⚠️ CRITICAL: Boot lifecycle took too long. Forcing app start.");
                 hideBoot();
-                if (!state.isLoggedIn) {
+                if (!state.isLoggedIn && state.view !== 'login') {
                     state.view = 'login';
                     render();
                 }
-            }, 8000);
-
-            const desiredHashView = currentViewFromHash();
-            const savedSession = sessionManager.load();
-            const isLoggedIn = sessionManager.isLoggedIn();
+            }, 10000);
 
             try {
+                const desiredHashView = currentViewFromHash();
+                const savedSession = sessionManager.load();
+                const isLoggedIn = sessionManager.isLoggedIn();
+
                 if (isLoggedIn && savedSession) {
-                    // ✅ FIX: Imposta state.isLoggedIn SUBITO per far funzionare lsKey()
                     state.isLoggedIn = true;
+
+                    // Instant Local Cache Loading
+                    loadChatMessages();
 
                     const cachedThreads = localStorage.getItem(lsKey('threads'));
                     if (cachedThreads) {
                         try { state.threads = JSON.parse(cachedThreads); } catch { state.threads = []; }
                     }
 
-                    // Cache locali immediate
-                    const cachedTasks = localStorage.getItem(lsKey('tasks'));
-                    if (cachedTasks) {
-                        try {
-                            const parsed = JSON.parse(cachedTasks);
-                            state.tasks = parsed.map(t => {
-                                if (t.due_date) {
-                                    t.dateObj = new Date(t.due_date);
-                                    t.hasValidDate = !isNaN(t.dateObj.getTime());
+                    // Map other caches...
+                    ['tasks', 'user', 'voti', 'promemoria', 'planned_tasks', 'stress_levels', 'reminders'].forEach(key => {
+                        const cached = localStorage.getItem(lsKey(key));
+                        if (cached) {
+                            try {
+                                const parsed = JSON.parse(cached);
+                                if (key === 'tasks') {
+                                    state.tasks = parsed.map(t => {
+                                        if (t.due_date) {
+                                            t.dateObj = new Date(t.due_date);
+                                            t.hasValidDate = !isNaN(t.dateObj.getTime());
+                                        }
+                                        return t;
+                                    });
+                                } else {
+                                    state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : key)] = parsed;
                                 }
-                                return t;
-                            });
-                        } catch { state.tasks = []; }
-                    }
+                            } catch { }
+                        }
+                    });
 
-                    const cachedUser = localStorage.getItem(lsKey('user'));
-                    if (cachedUser) {
-                        try { state.user = JSON.parse(cachedUser); } catch { }
-                    } else if (savedSession.student) {
-                        state.user = savedSession.student;
-                        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-                    }
-
-                    const cachedVoti = localStorage.getItem(lsKey('voti'));
-                    if (cachedVoti) { try { state.voti = JSON.parse(cachedVoti); } catch { } }
-
-                    const cachedProm = localStorage.getItem(lsKey('promemoria'));
-                    if (cachedProm) { try { state.promemoria = JSON.parse(cachedProm); } catch { } }
-
-                    // ✅ FIX: Carica planner da localStorage SUBITO
-                    const cachedPT = localStorage.getItem(lsKey('planned_tasks'));
-                    const cachedSL = localStorage.getItem(lsKey('stress_levels'));
-
-                    if (cachedPT) {
-                        try { state.plannedTasks = JSON.parse(cachedPT); } catch { state.plannedTasks = {}; }
-                    }
-                    if (cachedSL) {
-                        try { state.stressLevels = JSON.parse(cachedSL); } catch { state.stressLevels = {}; }
-                    }
-
-                    state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
-
-                    // Feed/Market cache globali
-                    const cachedPosts = localStorage.getItem(globalKey('posts'));
-                    if (cachedPosts) { try { state.posts = JSON.parse(cachedPosts); } catch { state.posts = []; } }
-                    const cachedMarket = localStorage.getItem(globalKey('market'));
-                    if (cachedMarket) { try { state.marketItems = JSON.parse(cachedMarket); } catch { state.marketItems = []; } }
-
-                    // Sondaggi cache globale
-                    const cachedPolls = localStorage.getItem(globalKey('polls'));
-                    if (cachedPolls) { try { state.polls = JSON.parse(cachedPolls); } catch { state.polls = []; } }
+                    // Global caches
+                    ['posts', 'market', 'polls'].forEach(key => {
+                        const cached = localStorage.getItem(globalKey(key));
+                        if (cached) {
+                            try { state[key === 'market' ? 'marketItems' : key] = JSON.parse(cached); } catch { }
+                        }
+                    });
 
                     state.didup.connected = true;
 
-                    // ✅ FIX: Chat v2.8.5 Initialization
-                    loadChatMessages();
+                    // v3.0 Chat Sync Lifecycle
                     registerUserOnServer().catch(() => { });
                     fetchUsersDirectory().catch(() => { });
 
-                    // ✅ Render SUBITO con dati locali
                     state.view = desiredHashView || 'home';
                     render();
 
-                    // ✅ Kickoff fetch NON bloccanti DOPO render
-                    const bootFetches = [
-                        fetchFeed().catch(() => { }),
-                        fetchMarket().catch(() => { }),
-                        fetchPolls().catch(() => { }),
-                        fetchThreads().catch(() => { }),
-                        flushOutbox().catch(() => { })
-                    ];
-
-                    // ✅ performSync caricherà planner dal server se più recente
-                    performSync(savedSession).then(() => {
-                        notifyPlannerChanged();
-                        render(); // Re-render con dati aggiornati
-                    }).catch(err => console.warn('sync error:', err));
-
-                    Promise.allSettled(bootFetches);
+                    // Non-blocking background fetches
+                    Promise.allSettled([
+                        fetchFeed(),
+                        fetchMarket(),
+                        fetchPolls(),
+                        fetchThreads(),
+                        flushOutbox(),
+                        performSync(savedSession).then(() => {
+                            notifyPlannerChanged();
+                            render();
+                        })
+                    ]).catch(e => console.warn("Background fetch error:", e));
 
                 } else {
                     state.isLoggedIn = false;
                     state.view = 'login';
                     render();
                 }
-            } catch (e) {
-                console.error("Boot error:", e);
-                state.view = isLoggedIn ? (desiredHashView || 'home') : 'login';
+            } catch (error) {
+                console.error("🛑 CRITICAL BOOT ERROR:", error);
+                // Fallback to minimal state to prevent white screen
+                state.view = sessionManager.isLoggedIn() ? 'home' : 'login';
                 render();
             } finally {
-                setTimeout(hideBoot, 300);
+                clearTimeout(safetyTimeout);
+                setTimeout(hideBoot, 400);
             }
         });
 
@@ -3691,30 +3628,65 @@
 
         function renderMessages() {
             const conversations = state.threads || [];
+            const searchVal = (state.msgSearch || '').toLowerCase();
+
+            // Filter conversations by search if active
+            const filteredConv = conversations.filter(t => t.otherName.toLowerCase().includes(searchVal));
+
+            // Also search DIRECTORY for new people
+            const directoryMatches = searchVal.length > 1 ? DIRECTORY.filter(u =>
+                u.name.toLowerCase().includes(searchVal) &&
+                !conversations.some(c => c.otherId === u.id) &&
+                u.id !== getUserId()
+            ) : [];
 
             return `
             <div class="view" style="padding-top:0;">
-                <div style="display:flex; align-items:center; gap:10px; margin: 10px 0; padding: 0 12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin: 10px 0; padding: 0 16px;">
                      <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
-                     <h1 style="margin:0; text-align:left;">Messaggi</h1>
+                     <h1 style="margin:0; text-align:center; flex:1; font-weight:800; font-size:22px;">Messaggi</h1>
+                     <div style="width:24px;"></div>
                 </div>
 
-                <div style="padding: 12px;">
-                    ${conversations.length > 0 ? conversations.map(t => `
-                        <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="padding: 0 16px 12px 16px;">
+                    <div class="search-bar" style="margin-bottom:20px; background:rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius:14px; padding:2px 12px; display:flex; align-items:center;">
+                        <i class="ph ph-magnifying-glass" style="opacity:0.5; margin-right:8px;"></i>
+                        <input type="text" placeholder="Cerca persone..." value="${state.msgSearch || ''}" 
+                            oninput="state.msgSearch = this.value; render();"
+                            style="background:none; border:none; color:white; height:40px; flex:1; outline:none; font-size:15px;">
+                    </div>
+
+                    ${searchVal.length > 1 && directoryMatches.length > 0 ? `
+                        <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Suggeriti</div>
+                        ${directoryMatches.map(u => `
+                            <div onclick="openChat('${u.name}', '${u.id}')" style="display:flex; align-items:center; gap:14px; padding:12px; background: rgba(37, 99, 235, 0.1); border-radius: 18px; margin-bottom: 8px; cursor:pointer; border: 1px solid rgba(37, 99, 235, 0.2);">
+                                ${renderAvatar(u.name, 44)}
+                                <div style="flex:1;">
+                                    <div style="font-weight:700; font-size:15px; color:white;">${u.name}</div>
+                                    <div style="font-size:12px; color:rgba(255,255,255,0.5);">${u.class}</div>
+                                </div>
+                                <i class="ph ph-plus-circle" style="color:var(--primary); font-size:20px;"></i>
+                            </div>
+                        `).join('')}
+                        <div style="height:20px;"></div>
+                    ` : ''}
+
+                    <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Conversazioni</div>
+                    
+                    ${filteredConv.length > 0 ? filteredConv.map(t => `
+                        <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.04); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.03);">
                             ${renderAvatar(t.otherName, 50)}
                             <div style="flex:1; text-align:left; min-width:0;">
                                 <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${t.otherName}</div>
                                 <div style="font-size:13px; color:rgba(255,255,255,0.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                    ${t.lastText}
+                                    ${t.lastText || 'Inizia a chattare...'}
                                 </div>
                             </div>
-                            <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
+                            <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.15);"></i>
                         </div>
                     `).join('') : `
-                        <div style="text-align:center; padding: 60px 20px; color:rgba(255,255,255,0.3);">
-                            <i class="ph ph-chat-circle-slash" style="font-size:48px; margin-bottom:16px; display:block;"></i>
-                            Non hai ancora conversazioni attive.
+                        <div style="text-align:center; padding: 40px 20px; color:rgba(255,255,255,0.2);">
+                             ${searchVal ? 'Nessun risultato trovato.' : 'Non hai ancora conversazioni.'}
                         </div>
                     `}
                 </div>
@@ -3788,25 +3760,23 @@
 
         function renderChatMessage(m) {
             const isMe = m.me;
-            const isPending = m.status === 'pending';
-            const isFailed = m.status === 'failed';
+            const status = m.status || 'sent';
 
             const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('it-IT', {
                 hour: '2-digit', minute: '2-digit'
             }) : '';
 
-            const statusIcon = isPending ? '<i class="ph ph-clock"></i>' :
-                isFailed ? '<i class="ph ph-warning" style="color:var(--red);"></i>' :
-                    (isMe ? '<i class="ph ph-check"></i>' : '');
-
             return `
             <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
-                <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}">
-                    <div style="word-break: break-word;">${escapeHtml(m.text)}</div>
-                    
-                    <div class="msg-status">
+                <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'}">
+                    <div style="margin-bottom: 2px;">${escapeHtml(m.text || '')}</div>
+                    <div class="msg-status" style="font-size: 10px; opacity: 0.6; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
                         ${timeStr}
-                        <span style="margin-left:4px;">${statusIcon}</span>
+                        ${isMe ? (
+                    status === 'pending' ? '<i class="ph ph-circle-notch ph-spin"></i>' :
+                        status === 'failed' ? '<i class="ph ph-warning-circle" style="color:var(--red);"></i>' :
+                            '<i class="ph ph-check"></i>'
+                ) : ''}
                     </div>
                 </div>
             </div>`;
@@ -3853,11 +3823,11 @@
                     </button>
                     
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        ${renderAvatar(state.currentChatUser, 44)}
-                        <div style="display:flex; flex-direction:column;">
-                            <span style="font-weight:700; font-size:17px; color:white;">${state.currentChatUser}</span>
-                            <span style="font-size:12px; color:var(--green); font-weight:600;">
-                                ${otherUser?.status === 'online' ? '🟢 Online' : 'Toccami per info'}
+                        ${renderAvatar(state.currentChatUser, 42)}
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <span style="font-weight:700; font-size:16px; color:white; line-height:1.2;">${state.currentChatUser}</span>
+                            <span style="font-size:11px; color:rgba(255,255,255,0.6); font-weight:500;">
+                                ${otherUser?.status === 'online' ? '🟢 Online ora' : 'Attivo di recente'}
                             </span>
                         </div>
                     </div>
@@ -3886,9 +3856,9 @@
         }
 
         function renderPlanner() {
-            setTimeout(() => { initPlannerCalendar(); }, 0);
+            setTimeout(() => { if (typeof initPlannerCalendar === 'function') initPlannerCalendar(); }, 0);
             return `
-                < div class="view" style = "padding-bottom: 40px;" >
+            <div class="view" style="padding-bottom: 40px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h1 style="margin: 0;">Planner</h1>
                     <button onclick="performArgoSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
@@ -5114,9 +5084,17 @@
             const myId = getUserId();
             if (!myId || myId === 'guest') return alert('Esegui il login per chattare');
 
+            // Find ID from directory (if not provided)
             if (!otherId) {
-                const dir = DIRECTORY.find(u => u.name === otherName);
-                otherId = dir?.id || `user_${otherName.toLowerCase().replace(/\s+/g, '_')}`;
+                const found = DIRECTORY.find(u => u.name === otherName);
+                if (found) {
+                    otherId = found.id;
+                } else {
+                    // Fallback to searching the server briefly if possible
+                    await fetchUsersDirectory();
+                    const foundAfter = DIRECTORY.find(u => u.name === otherName);
+                    otherId = foundAfter?.id || `nosync:${otherName.replace(/\s+/g, '_')}`;
+                }
             }
 
             const threadId = await getThreadId(myId, otherId);
