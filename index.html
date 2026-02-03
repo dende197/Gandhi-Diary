@@ -2232,6 +2232,18 @@
             return d.getTime() >= today.getTime();
         }
 
+        async function fetchPosts() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/posts`);
+                const data = await res.json();
+                if (data.success) {
+                    state.posts = data.data || [];
+                    localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
+                    render();
+                }
+            } catch (e) { console.warn("Fetch posts error:", e); }
+        }
+
 
         async function submitPost(postData) {
             // optimistic: aggiorna subito UI/cache
@@ -5455,7 +5467,7 @@
             const threadId = state.currentThreadId;
             const receiverId = state.currentChatId;
             const receiverName = state.currentChatUser;
-            const myId = getUserId();
+            const myId = await getUserId();
 
             if (!text || !threadId || !receiverId) {
                 console.warn("❌ sendChatMessage: missing params", { text, threadId, receiverId });
@@ -5487,9 +5499,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        conversationId: threadId, // threadId is now conversationId
+                        conversationId: threadId,
                         senderId: myId,
-                        text,
+                        text,       // Legacy compatibility
+                        content: text, // New v7 Schema
                         type,
                         meta
                     })
