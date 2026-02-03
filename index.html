@@ -1553,6 +1553,10 @@
             return `p:${school}:${user}:${idx}`;
         }
 
+        function lsKey(key) {
+            return `${getActiveProfileKey()}:${key}`;
+        }
+
         function globalKey(name) {
             return `global:${name}`;
         }
