@@ -1837,49 +1837,6 @@ app.post('/api/messages', async (req, res) => {
     }
 });
 
-// ============= USER DIRECTORY ROUTES =============
-
-app.get('/api/users', async (req, res) => {
-    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
-
-    try {
-        const { data, error } = await supabase
-            .from('users_directory')
-            .select('*')
-            .order('last_seen', { ascending: false });
-
-        if (error) throw error;
-        res.json({ success: true, data });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-app.post('/api/users/register', async (req, res) => {
-    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
-
-    try {
-        const { id, name, class: userClass, status, avatar } = req.body;
-        if (!id || !name) return res.status(400).json({ success: false, error: "Missing id/name" });
-
-        const { data, error } = await supabase
-            .from('users_directory')
-            .upsert({
-                id,
-                name,
-                class: userClass,
-                status: status || 'online',
-                avatar: avatar || null,
-                last_seen: new Date().toISOString()
-            }, { onConflict: 'id' });
-
-        if (error) throw error;
-        res.json({ success: true, data });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
 // ============= PLANNER ROUTES =============
 
 app.get('/api/planner/:user_id', async (req, res) => {
