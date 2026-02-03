@@ -1842,8 +1842,11 @@ app.post('/api/users/register', async (req, res) => {
 
     try {
         const { userId, name, class: userClass } = req.body;
+        if (!userId || !name) {
+            return res.status(400).json({ success: false, error: "userId and name required" });
+        }
 
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from("users_directory")
             .upsert({
                 id: userId,
@@ -1856,6 +1859,7 @@ app.post('/api/users/register', async (req, res) => {
         if (error) throw error;
         res.json({ success: true });
     } catch (e) {
+        console.error("users/register error:", e);
         res.status(500).json({ success: false, error: e.message });
     }
 });
@@ -1868,11 +1872,12 @@ app.get('/api/users', async (req, res) => {
             .from("users_directory")
             .select("id, name, class, status, last_seen")
             .order("last_seen", { ascending: false })
-            .limit(100);
+            .limit(200);
 
         if (error) throw error;
         res.json({ success: true, data: data || [] });
     } catch (e) {
+        console.error("users/get error:", e);
         res.status(500).json({ success: false, error: e.message });
     }
 });

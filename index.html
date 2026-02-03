@@ -1418,7 +1418,7 @@
         <div class="boot-card">
             <div class="boot-spinner"></div>
             <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.8.0-stable</span></div>
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.8.5-stable</span></div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1433,8 +1433,8 @@
     </nav>
 
     <script>
-        // v2.8.0-stable (Consistency & Real User Directory)
-        console.log("🚀 G-Connect v2.8.0-stable initialized");
+        // v2.8.5-stable (Boot Fix & Real Multi-User Sync)
+        console.log("🚀 G-Connect v2.8.5-stable initialized");
 
         let _chatPoller = null;
         window.chatChannel = null;
@@ -1545,9 +1545,12 @@
         function getUserId() {
             const s = sessionManager.load();
             if (!s) return 'guest';
-            const school = s.schoolCode || 'noschool';
-            const user = (s.userName || s.username || 'nouser').toLowerCase();
+
+            // Standardize format: SCHOOL:USER:INDEX (no spaces, upper/lower consistency)
+            const school = (s.schoolCode || 'noschool').trim().toUpperCase();
+            const user = (s.userName || s.username || 'nouser').trim().toLowerCase().replace(/\s+/g, '_');
             const idx = (s.profileIndex ?? 0);
+
             return `${school}:${user}:${idx}`;
         }
 
@@ -1710,6 +1713,16 @@
         document.addEventListener('DOMContentLoaded', async () => {
             showBoot('Avvio G-Connect');
 
+            // ⚠️ SAFETY TIMEOUT: nascondi il boot loader dopo 8 secondi massimo
+            const safetyTimeout = setTimeout(() => {
+                console.warn("⚠️ Boot timeout - forcing hideBoot");
+                hideBoot();
+                if (!state.isLoggedIn) {
+                    state.view = 'login';
+                    render();
+                }
+            }, 8000);
+
             const desiredHashView = currentViewFromHash();
             const savedSession = sessionManager.load();
             const isLoggedIn = sessionManager.isLoggedIn();
@@ -1778,10 +1791,10 @@
 
                     state.didup.connected = true;
 
-                    // ✅ FIX: Chat v2.8.0 Initialization
+                    // ✅ FIX: Chat v2.8.5 Initialization
                     loadChatMessages();
-                    registerUserInDirectory();
-                    fetchUsersDirectory();
+                    registerUserOnServer().catch(() => { });
+                    fetchUsersDirectory().catch(() => { });
 
                     // ✅ Render SUBITO con dati locali
                     state.view = desiredHashView || 'home';
@@ -5163,16 +5176,12 @@
             }
         }
 
-        async function registerUserInDirectory() {
+        async function registerUserOnServer() {
             if (!sessionManager.isLoggedIn() || state.user?.id === 'guest') return;
 
             const myId = getUserId();
             const myName = state.user?.name || 'Utente';
             const myClass = state.user?.class || 'N/D';
-
-            if (!DIRECTORY.find(u => u.id === myId)) {
-                DIRECTORY.push({ name: myName, id: myId, class: myClass, status: 'online' });
-            }
 
             try {
                 await fetch(`${API_BASE_URL}/api/users/register`, {
@@ -5180,7 +5189,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: myId, name: myName, class: myClass })
                 });
-            } catch (e) { }
+                console.log("✅ User registered on server");
+            } catch (e) { console.warn("registerUserOnServer error:", e); }
         }
 
         async function fetchUsersDirectory() {
@@ -5194,10 +5204,11 @@
                                 name: u.name,
                                 id: u.id,
                                 class: u.class || 'N/D',
-                                status: u.status || 'offline'
+                                status: u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 300000) ? 'online' : 'offline'
                             });
                         }
                     });
+                    console.log("👥 Directory aggiornata:", DIRECTORY.length, "utenti");
                 }
             } catch (e) {
                 console.warn("fetchUsersDirectory error:", e);
