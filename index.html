@@ -1833,7 +1833,7 @@
                 }
             });
 
-            if (isLoggedIn) {
+            if (isLogged) {
                 const savedNav = localStorage.getItem(lsKey('nav_state'));
                 if (savedNav) {
                     try {
@@ -2153,7 +2153,7 @@
         // Save remoto + timestamp locale
         // --- SALVATAGGIO: aggiorna subito timestamp locale e invia updatedAt ---
         async function savePlannerRemote() {
-            const userId = getUserId();
+            const userId = await getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
 
             const plannedDetails = {};
