@@ -42,10 +42,11 @@
             --red: #FF453A;
             --orange: #FF9F0A;
 
-            /* Glass */
-            --glass-base: rgba(255, 255, 255, 0.22);
-            --glass-border: rgba(255, 255, 255, 0.25);
-            --glass-panel: rgba(255, 255, 255, 0.25);
+            /* Glass (v5.0 Premium) */
+            --glass-base: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-header: rgba(10, 10, 10, 0.4);
 
             /* Radius */
             --radius-xl: 36px;
@@ -1355,14 +1356,28 @@
             border: 1px solid var(--red) !important;
         }
 
+        .chat-header {
+            padding: 16px 20px;
+            padding-top: calc(var(--safe-top) + 12px);
+            background: var(--glass-header);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            z-index: 100;
+        }
+
         .chat-input-bar {
             display: flex;
             gap: 12px;
             padding: 14px 16px calc(14px + var(--safe-bottom));
-            background: var(--glass-panel);
-            backdrop-filter: blur(40px) saturate(140%);
-            -webkit-backdrop-filter: blur(40px) saturate(140%);
+            background: var(--glass-header);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border-top: 1px solid var(--glass-border);
+            z-index: 100;
         }
 
         .chat-input {
@@ -1542,13 +1557,23 @@
             return `${getActiveProfileKey()}:${name}`;
         }
 
-        function getUserId() {
+        // --- v5.0 Robust Symmetric Threading ---
+        async function sha256Hex(text) {
+            const enc = new TextEncoder().encode(text);
+            const buf = await crypto.subtle.digest('SHA-256', enc);
+            return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function getUserId() {
+            if (!state.isLoggedIn) return 'guest';
             const s = sessionManager.load();
             if (!s) return 'guest';
-            const school = s.schoolCode || 'noschool';
-            const user = (s.userName || s.username || 'nouser').toLowerCase();
+
+            // ✅ v5.0 Standard: school:user:profile (all lowercase, no spaces)
+            const school = (s.schoolCode || 'S').toString().toLowerCase().trim();
+            const user = (s.userName || s.username || 'U').toString().toLowerCase().trim();
             const idx = (s.profileIndex ?? 0);
-            return `${school}:${user}:${idx}`;
+            return `${school}:${user}:${idx}`.replace(/\s+/g, '');
         }
 
         function globalKey(name) {
@@ -1706,110 +1731,80 @@
         const offlineBadge = document.getElementById('offline-badge');
 
         // ⭐ INITIALIZE APP ON LOAD
-        // ⭐ INITIALIZE APP ON LOAD
         document.addEventListener('DOMContentLoaded', async () => {
             showBoot('Avvio G-Connect');
 
-            const desiredHashView = currentViewFromHash();
-            const savedSession = sessionManager.load();
-            const isLoggedIn = sessionManager.isLoggedIn();
-
-            try {
-                if (isLoggedIn && savedSession) {
-                    // ✅ FIX: Imposta state.isLoggedIn SUBITO per far funzionare lsKey()
-                    state.isLoggedIn = true;
-
-                    const cachedThreads = localStorage.getItem(lsKey('threads'));
-                    if (cachedThreads) {
-                        try { state.threads = JSON.parse(cachedThreads); } catch { state.threads = []; }
-                    }
-
-                    // Cache locali immediate
-                    const cachedTasks = localStorage.getItem(lsKey('tasks'));
-                    if (cachedTasks) {
-                        try {
-                            const parsed = JSON.parse(cachedTasks);
-                            state.tasks = parsed.map(t => {
-                                if (t.due_date) {
-                                    t.dateObj = new Date(t.due_date);
-                                    t.hasValidDate = !isNaN(t.dateObj.getTime());
-                                }
-                                return t;
-                            });
-                        } catch { state.tasks = []; }
-                    }
-
-                    const cachedUser = localStorage.getItem(lsKey('user'));
-                    if (cachedUser) {
-                        try { state.user = JSON.parse(cachedUser); } catch { }
-                    } else if (savedSession.student) {
-                        state.user = savedSession.student;
-                        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-                    }
-
-                    const cachedVoti = localStorage.getItem(lsKey('voti'));
-                    if (cachedVoti) { try { state.voti = JSON.parse(cachedVoti); } catch { } }
-
-                    const cachedProm = localStorage.getItem(lsKey('promemoria'));
-                    if (cachedProm) { try { state.promemoria = JSON.parse(cachedProm); } catch { } }
-
-                    // ✅ FIX: Carica planner da localStorage SUBITO
-                    const cachedPT = localStorage.getItem(lsKey('planned_tasks'));
-                    const cachedSL = localStorage.getItem(lsKey('stress_levels'));
-
-                    if (cachedPT) {
-                        try { state.plannedTasks = JSON.parse(cachedPT); } catch { state.plannedTasks = {}; }
-                    }
-                    if (cachedSL) {
-                        try { state.stressLevels = JSON.parse(cachedSL); } catch { state.stressLevels = {}; }
-                    }
-
-                    state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
-
-                    // Feed/Market cache globali
-                    const cachedPosts = localStorage.getItem(globalKey('posts'));
-                    if (cachedPosts) { try { state.posts = JSON.parse(cachedPosts); } catch { state.posts = []; } }
-                    const cachedMarket = localStorage.getItem(globalKey('market'));
-                    if (cachedMarket) { try { state.marketItems = JSON.parse(cachedMarket); } catch { state.marketItems = []; } }
-
-                    // Sondaggi cache globale
-                    const cachedPolls = localStorage.getItem(globalKey('polls'));
-                    if (cachedPolls) { try { state.polls = JSON.parse(cachedPolls); } catch { state.polls = []; } }
-
-                    state.didup.connected = true;
-
-                    // ✅ Render SUBITO con dati locali
-                    state.view = desiredHashView || 'home';
-                    render();
-
-                    // ✅ Kickoff fetch NON bloccanti DOPO render
-                    const bootFetches = [
-                        fetchFeed().catch(() => { }),
-                        fetchMarket().catch(() => { }),
-                        fetchPolls().catch(() => { }),
-                        fetchThreads().catch(() => { }),
-                        flushOutbox().catch(() => { })
-                    ];
-
-                    // ✅ performSync caricherà planner dal server se più recente
-                    performSync(savedSession).then(() => {
-                        notifyPlannerChanged();
-                        render(); // Re-render con dati aggiornati
-                    }).catch(err => console.warn('sync error:', err));
-
-                    Promise.allSettled(bootFetches);
-
-                } else {
-                    state.isLoggedIn = false;
+            // ⚠️ EMERGENCY SAFETY TIMEOUT (10s)
+            const safetyTimeout = setTimeout(() => {
+                console.warn("⚠️ CRITICAL: Boot lifecycle took too long. Forcing app start.");
+                hideBoot();
+                if (!state.isLoggedIn && state.view !== 'login') {
                     state.view = 'login';
                     render();
                 }
-            } catch (e) {
-                console.error("Boot error:", e);
-                state.view = isLoggedIn ? (desiredHashView || 'home') : 'login';
+            }, 10000);
+
+            try {
+                const isLoggedIn = sessionManager.isLoggedIn();
+                if (isLoggedIn) {
+                    state.isLoggedIn = true;
+                    state.user = sessionManager.load();
+                }
+
+                // Carica tutte le cache locali (Namespaced per profilo)
+                ['threads', 'tasks', 'planned_tasks', 'user', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels'].forEach(key => {
+                    const cached = localStorage.getItem(lsKey(key));
+                    if (cached) {
+                        try {
+                            const parsed = JSON.parse(cached);
+                            if (key === 'tasks') {
+                                state.tasks = (parsed || []).map(t => {
+                                    if (t.due_date) {
+                                        t.dateObj = new Date(t.due_date);
+                                        t.hasValidDate = !isNaN(t.dateObj.getTime());
+                                    }
+                                    return t;
+                                });
+                            } else {
+                                state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : key)] = parsed;
+                            }
+                        } catch { }
+                    }
+                });
+
+                // Caches Globali
+                ['posts', 'market', 'polls'].forEach(key => {
+                    const cached = localStorage.getItem(globalKey(key));
+                    if (cached) {
+                        try { state[key === 'market' ? 'marketItems' : key] = JSON.parse(cached); } catch { }
+                    }
+                });
+
+                if (isLoggedIn) {
+                    state.view = 'home';
+                    // Sincronizzazione background non-bloccante
+                    (async () => {
+                        await registerUserOnServer();
+                        await fetchUsersDirectory();
+                        fetchPosts();
+                        fetchMarket();
+                        fetchPolls();
+                        fetchThreads();
+                        fetchMarketOutbox();
+                        performSync();
+                    })();
+                } else {
+                    state.view = 'login';
+                }
+
+                render();
+            } catch (error) {
+                console.error("🛑 CRITICAL BOOT ERROR:", error);
+                state.view = sessionManager.isLoggedIn() ? 'home' : 'login';
                 render();
             } finally {
-                setTimeout(hideBoot, 300);
+                clearTimeout(safetyTimeout);
+                setTimeout(hideBoot, 400);
             }
         });
 
@@ -3302,6 +3297,7 @@
         window.handleAvatarUpload = handleAvatarUpload;
         window.showEditProfileModal = showEditProfileModal;
         window.saveProfileChanges = saveProfileChanges;
+        window.showUserProfile = showUserProfile;
 
         function renderHome() {
             const todayStr = new Date().toISOString().split('T')[0];
@@ -3604,7 +3600,7 @@
             if (filteredUsers.length > 0) {
                 html += `<h3 style="margin: 20px 0 12px 0; text-align:left; color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Persone</h3>`;
                 html += filteredUsers.map(u => `
-                    <div onclick="openChat('${u.name}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
+                    <div onclick="openChat('${u.name}', '${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
                         <div style="position: relative; margin-right: 12px;">
                             ${renderAvatar(u.name, 44)}
                             ${u.status === 'online' ? `<div style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--green); border: 2px solid black; border-radius: 50%;"></div>` : ''}
@@ -3668,17 +3664,50 @@
 
         function renderMessages() {
             const conversations = state.threads || [];
+            const searchVal = (state.msgSearch || '').toLowerCase();
+
+            const filteredConv = conversations.filter(t => t.otherName.toLowerCase().includes(searchVal));
+            const directoryMatches = searchVal.length > 1 ? DIRECTORY.filter(u =>
+                u.name.toLowerCase().includes(searchVal) &&
+                !conversations.some(c => c.otherId === u.id) &&
+                u.id !== getUserId()
+            ) : [];
 
             return `
             <div class="view" style="padding-top:0;">
-                <div style="display:flex; align-items:center; gap:10px; margin: 10px 0; padding: 0 12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin: 10px 0; padding: 0 16px;">
                      <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
-                     <h1 style="margin:0; text-align:left;">Messaggi</h1>
+                     <h1 style="margin:0; text-align:center; flex:1; font-weight:800; font-size:22px;">Messaggi</h1>
+                     <div style="width:24px;"></div>
                 </div>
 
-                <div style="padding: 12px;">
-                    ${conversations.length > 0 ? conversations.map(t => `
-                        <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.05); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="padding: 0 16px 12px 16px;">
+                    <div class="search-bar" style="margin-bottom:20px; background:rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius:14px; padding:2px 12px; display:flex; align-items:center;">
+                        <i class="ph ph-magnifying-glass" style="opacity:0.5; margin-right:8px;"></i>
+                        <input type="text" placeholder="Cerca persone..." value="${state.msgSearch || ''}" 
+                            oninput="state.msgSearch = this.value; render();"
+                            style="background:none; border:none; color:white; height:40px; flex:1; outline:none; font-size:15px;">
+                    </div>
+
+                    ${searchVal.length > 1 && directoryMatches.length > 0 ? `
+                        <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Suggeriti</div>
+                        ${directoryMatches.map(u => `
+                            <div onclick="openChat('${u.name}', '${u.id}')" style="display:flex; align-items:center; gap:14px; padding:12px; background: rgba(37, 99, 235, 0.1); border-radius: 18px; margin-bottom: 8px; cursor:pointer; border: 1px solid rgba(37, 99, 235, 0.2);">
+                                ${renderAvatar(u.name, 44)}
+                                <div style="flex:1;">
+                                    <div style="font-weight:700; font-size:15px; color:white;">${u.name}</div>
+                                    <div style="font-size:12px; color:rgba(255,255,255,0.5);">${u.class}</div>
+                                </div>
+                                <i class="ph ph-plus-circle" style="color:var(--primary); font-size:20px;"></i>
+                            </div>
+                        `).join('')}
+                        <div style="height:20px;"></div>
+                    ` : ''}
+
+                    <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Conversazioni</div>
+                    
+                    ${filteredConv.length > 0 ? filteredConv.map(t => `
+                        <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.04); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.03);">
                             ${renderAvatar(t.otherName, 50)}
                             <div style="flex:1; text-align:left; min-width:0;">
                                 <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${t.otherName}</div>
@@ -3686,7 +3715,10 @@
                                     ${t.lastText}
                                 </div>
                             </div>
-                            <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                                <div style="font-size:10px; color:rgba(255,255,255,0.3);">${new Date(t.lastTime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
+                                ${t.unread ? `<div style="width:10px; height:10px; background:var(--primary); border-radius:50%;"></div>` : ''}
+                            </div>
                         </div>
                     `).join('') : `
                         <div style="text-align:center; padding: 60px 20px; color:rgba(255,255,255,0.3);">
@@ -3833,7 +3865,7 @@
                         ${renderAvatar(state.currentChatUser, 44)}
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white;">${state.currentChatUser}</span>
-                            <span style="font-size:12px; color:var(--green); font-weight:600;">
+                            <span onclick="showUserProfile('${state.currentChatId}')" style="font-size:12px; color:var(--primary); font-weight:600; cursor:pointer;">
                                 ${otherUser?.status === 'online' ? '🟢 Online' : 'Toccami per info'}
                             </span>
                         </div>
@@ -4559,24 +4591,6 @@
             btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
         }
 
-        function showBoot(msg) {
-            const boot = document.getElementById('boot-overlay');
-            if (boot) {
-                boot.style.display = 'flex';
-                boot.style.opacity = '1';
-                const label = boot.querySelector('.boot-label');
-                if (label) label.innerText = msg;
-            }
-        }
-
-        function hideBoot() {
-            const boot = document.getElementById('boot-overlay');
-            if (boot) {
-                boot.style.opacity = '0';
-                setTimeout(() => boot.style.display = 'none', 300);
-            }
-        }
-
         // ⭐ SELEZIONE PROFILO (Multi-Figlio)
         function showProfileSelectionModal(profiles, credentials) {
             console.log("👥 Mostro modale selezione profili:", profiles);
@@ -5091,15 +5105,24 @@
             const myId = getUserId();
             if (!myId || myId === 'guest') return alert('Esegui il login per chattare');
 
+            // Find ID from directory (if not provided)
             if (!otherId) {
-                const dir = DIRECTORY.find(u => u.name === otherName);
-                otherId = dir?.id || `user_${otherName.toLowerCase().replace(/\s+/g, '_')}`;
+                const found = DIRECTORY.find(u => u.name === otherName);
+                if (found) {
+                    otherId = found.id;
+                } else {
+                    // Fallback search
+                    await fetchUsersDirectory();
+                    const foundAfter = DIRECTORY.find(u => u.name === otherName);
+                    otherId = foundAfter?.id || `nosync:${otherName.replace(/\s+/g, '_')}`;
+                }
             }
 
             const threadId = await getThreadId(myId, otherId);
             state.currentChatUser = otherName;
             state.currentChatId = otherId;
             state.currentThreadId = threadId;
+            state.msgSearch = ''; // Clear search when opening chat
 
             if (!state.messages[threadId]) state.messages[threadId] = [];
 
@@ -5164,6 +5187,42 @@
             }
         }
 
+        // --- Directory Utils ---
+        async function registerUserOnServer() {
+            if (!state.isLoggedIn || !state.user) return;
+            try {
+                const myId = getUserId();
+                await fetch(`${API_BASE_URL}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: myId,
+                        name: state.user.name || (state.user.nome && state.user.cognome ? `${state.user.nome} ${state.user.cognome}` : state.user.username),
+                        class: normalizeClassUi(state.user.class) || 'Studente',
+                        status: 'online'
+                    })
+                });
+            } catch (e) { console.warn("User register error:", e); }
+        }
+
+        async function fetchUsersDirectory() {
+            if (!state.isLoggedIn) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/users`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    data.data.forEach(u => {
+                        const idx = DIRECTORY.findIndex(d => d.id === u.id);
+                        if (idx >= 0) {
+                            DIRECTORY[idx] = { ...DIRECTORY[idx], ...u };
+                        } else {
+                            DIRECTORY.push(u);
+                        }
+                    });
+                }
+            } catch (e) { console.warn("Fetch directory error:", e); }
+        }
+
         function subscribeToChatRealtime(threadId) {
             if (!supabaseClient) return;
             if (chatChannel) {
@@ -5198,11 +5257,22 @@
             }
         }
 
-        function stopChatPolling() {
-            if (_chatPoller) {
-                clearInterval(_chatPoller);
-                _chatPoller = null;
-            }
+        function showUserProfile(userId) {
+            const u = DIRECTORY.find(d => d.id === userId);
+            if (!u) return;
+
+            showModal(`
+                <div style="text-align:center; padding: 20px 0;">
+                    ${renderAvatar(u.name, 80)}
+                    <h2 style="margin: 16px 0 4px 0; color:white;">${u.name}</h2>
+                    <p style="color:var(--text-muted); margin-bottom: 24px;">Classe ${u.class}</p>
+                    
+                    <div style="display:flex; justify-content:center; gap:12px;">
+                        <button onclick="closeModal()" style="padding: 12px 24px; background:rgba(255,255,255,0.1); border-radius:14px; color:white; font-weight:700;">Chiudi</button>
+                        <button onclick="closeModal(); openChat('${u.name}', '${u.id}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>
+                    </div>
+                </div>
+            `);
         }
 
         function scrollChatToBottom() {
@@ -5288,29 +5358,40 @@
         async function sendMessage() {
             const input = document.getElementById('msg-input');
             const text = input?.value?.trim();
+            if (!text) return;
 
-            if (!text || !state.currentChatUser || !state.currentThreadId) return;
+            const success = await sendChatMessage({ text, type: 'text' });
+            if (success) {
+                input.value = '';
+            }
+        }
 
-            const myId = getUserId();
+        async function sendChatMessage({ text, type = 'text', meta = {} }) {
             const threadId = state.currentThreadId;
-            const key = state.currentChatUser;
+            const receiverId = state.currentChatId;
+            const receiverName = state.currentChatUser;
+            const myId = getUserId();
 
-            // 1. Crea messaggio locale (optimistic)
+            if (!text || !threadId || !receiverId) {
+                console.warn("❌ sendChatMessage: missing params", { text, threadId, receiverId });
+                return false;
+            }
+
+            // 1. Optimistic UI
             const localId = 'local_' + Date.now();
             const localMsg = {
                 id: localId,
                 text,
                 me: true,
                 timestamp: new Date().toISOString(),
-                pending: true,
-                failed: false
+                status: 'pending',
+                type,
+                meta
             };
 
-            // 2. Aggiungi e aggiorna UI subito
-            if (!state.messages[key]) state.messages[key] = [];
-            state.messages[key].push(localMsg);
+            if (!state.messages[threadId]) state.messages[threadId] = [];
+            state.messages[threadId].push(localMsg);
 
-            input.value = '';
             updateChatUI();
             scrollChatToBottom();
 
@@ -5321,45 +5402,42 @@
                     body: JSON.stringify({
                         threadId,
                         senderId: myId,
-                        senderName: state.user.name || "Io",
-                        receiverId: state.currentChatId,
-                        receiverName: key,
+                        senderName: state.user?.name || "Io",
+                        receiverId,
+                        receiverName,
                         text,
-                        type: 'text'
+                        type,
+                        meta
                     })
                 });
 
                 const data = await res.json();
                 if (data.success) {
-                    // Rimuovi locale e aggiorna con server
-                    state.messages[key] = state.messages[key].filter(m => m.id !== localId);
-
-                    const serverMessages = (data.data || []).map(m => ({
-                        id: m.id,
-                        text: m.text,
-                        me: m.sender_id === myId,
-                        timestamp: m.created_at,
-                        type: m.type || 'text'
-                    }));
-
-                    // Merge robusto
-                    const otherPending = state.messages[key].filter(m => m.pending || m.failed);
-                    state.messages[key] = [...serverMessages, ...otherPending];
-                    state.messages[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
+                    // Update the local message with server data (id/timestamp)
+                    const idx = state.messages[threadId].findIndex(m => m.id === localId);
+                    if (idx > -1) {
+                        const serverMsg = (Array.isArray(data.data) ? data.data[0] : data.data) || {};
+                        state.messages[threadId][idx] = {
+                            ...state.messages[threadId][idx],
+                            id: serverMsg.id || localId,
+                            status: 'sent',
+                            timestamp: serverMsg.created_at || localMsg.timestamp
+                        };
+                    }
                     updateChatUI();
                     if (typeof fetchThreads === 'function') fetchThreads();
+                    return true;
                 } else {
-                    throw new Error(data.error || 'Invio fallito');
+                    throw new Error(data.error || 'Server error');
                 }
             } catch (e) {
-                console.error("❌ sendMessage error:", e);
-                const idx = state.messages[key].findIndex(m => m.id === localId);
+                console.error("❌ sendChatMessage error:", e);
+                const idx = state.messages[threadId].findIndex(m => m.id === localId);
                 if (idx > -1) {
-                    state.messages[key][idx].pending = false;
-                    state.messages[key][idx].failed = true;
+                    state.messages[threadId][idx].status = 'failed';
                 }
                 updateChatUI();
+                return false;
             }
         }
 
