@@ -1418,7 +1418,7 @@
         <div class="boot-card">
             <div class="boot-spinner"></div>
             <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.7.0-stable</span></div>
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.8.0-stable</span></div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1433,8 +1433,8 @@
     </nav>
 
     <script>
-        // v2.7.0-stable (Full Persistence & Surgical Sync)
-        console.log("🚀 G-Connect v2.7.0-stable initialized");
+        // v2.8.0-stable (Consistency & Real User Directory)
+        console.log("🚀 G-Connect v2.8.0-stable initialized");
 
         let _chatPoller = null;
         window.chatChannel = null;
@@ -1777,6 +1777,11 @@
                     if (cachedPolls) { try { state.polls = JSON.parse(cachedPolls); } catch { state.polls = []; } }
 
                     state.didup.connected = true;
+
+                    // ✅ FIX: Chat v2.8.0 Initialization
+                    loadChatMessages();
+                    registerUserInDirectory();
+                    fetchUsersDirectory();
 
                     // ✅ Render SUBITO con dati locali
                     state.view = desiredHashView || 'home';
@@ -2941,6 +2946,11 @@
 
         async function logout() {
             if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
+                stopChatPolling();
+                state.messages = {};
+                state.currentThreadId = null;
+                state.currentChatUser = null;
+                state.currentChatId = null;
 
                 // ✅ STEP 1: Salva userId PRIMA di clear
                 const currentUserId = getUserId();
@@ -3779,7 +3789,7 @@
             return `
             <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
                 <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}">
-                    <div style="word-break: break-word;">${m.text}</div>
+                    <div style="word-break: break-word;">${escapeHtml(m.text)}</div>
                     
                     <div class="msg-status">
                         ${timeStr}
@@ -3791,19 +3801,19 @@
 
         function updateChatUI() {
             const historyEl = document.getElementById('chat-history');
-            if (!historyEl || state.view !== 'chat') return;
+            if (!historyEl || !state.currentThreadId) return;
 
             const threadId = state.currentThreadId;
             const msgs = state.messages[threadId] || [];
 
             if (msgs.length === 0) {
                 historyEl.innerHTML = `
-                    <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
-                        <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
-                            <i class="ph ph-chat-circle-dots"></i>
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:16px; opacity:0.6;">
+                        <div style="width:80px; height:80px; border-radius:50%; background:var(--glass-panel); display:flex; align-items:center; justify-content:center;">
+                            <i class="ph ph-chat-circle-dots" style="font-size:36px;"></i>
                         </div>
                         <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
-                        <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
+                        <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono salvati in modo sicuro</p>
                     </div>
                 `;
             } else {
@@ -5101,6 +5111,7 @@
             state.currentChatId = otherId;
             state.currentThreadId = threadId;
 
+            // ✅ FIX: Garantisce inizializzazione chiave threadId
             if (!state.messages[threadId]) state.messages[threadId] = [];
 
             state.view = 'chat';
@@ -5125,9 +5136,72 @@
                         timestamp: m.created_at,
                         status: 'sent'
                     }));
+                    saveChatMessages();
                     updateChatUI();
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
+        }
+
+        function saveChatMessages() {
+            if (!sessionManager.isLoggedIn()) return;
+            try {
+                localStorage.setItem(lsKey('chat_messages'), JSON.stringify(state.messages));
+            } catch (e) {
+                console.warn("Errore salvataggio chat:", e);
+            }
+        }
+
+        function loadChatMessages() {
+            if (!sessionManager.isLoggedIn()) return;
+            try {
+                const cached = localStorage.getItem(lsKey('chat_messages'));
+                if (cached) {
+                    state.messages = JSON.parse(cached);
+                }
+            } catch (e) {
+                state.messages = {};
+            }
+        }
+
+        async function registerUserInDirectory() {
+            if (!sessionManager.isLoggedIn() || state.user?.id === 'guest') return;
+
+            const myId = getUserId();
+            const myName = state.user?.name || 'Utente';
+            const myClass = state.user?.class || 'N/D';
+
+            if (!DIRECTORY.find(u => u.id === myId)) {
+                DIRECTORY.push({ name: myName, id: myId, class: myClass, status: 'online' });
+            }
+
+            try {
+                await fetch(`${API_BASE_URL}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: myId, name: myName, class: myClass })
+                });
+            } catch (e) { }
+        }
+
+        async function fetchUsersDirectory() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/users`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    data.data.forEach(u => {
+                        if (!DIRECTORY.find(d => d.id === u.id)) {
+                            DIRECTORY.push({
+                                name: u.name,
+                                id: u.id,
+                                class: u.class || 'N/D',
+                                status: u.status || 'offline'
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn("fetchUsersDirectory error:", e);
+            }
         }
 
         function exitChat() {
@@ -5293,7 +5367,7 @@
 
             const myId = getUserId();
             const threadId = state.currentThreadId;
-            const key = state.currentChatUser;
+            const key = threadId;
 
             // 1. Crea messaggio locale (optimistic)
             const localId = 'local_' + Date.now();
@@ -5302,13 +5376,14 @@
                 text,
                 me: true,
                 timestamp: new Date().toISOString(),
-                pending: true,
-                failed: false
+                status: 'pending'
             };
 
             // 2. Aggiungi e aggiorna UI subito
             if (!state.messages[key]) state.messages[key] = [];
             state.messages[key].push(localMsg);
+
+            saveChatMessages();
 
             input.value = '';
             updateChatUI();
@@ -5323,7 +5398,7 @@
                         senderId: myId,
                         senderName: state.user.name || "Io",
                         receiverId: state.currentChatId,
-                        receiverName: key,
+                        receiverName: state.currentChatUser,
                         text,
                         type: 'text'
                     })
@@ -5339,14 +5414,15 @@
                         text: m.text,
                         me: m.sender_id === myId,
                         timestamp: m.created_at,
-                        type: m.type || 'text'
+                        status: 'sent'
                     }));
 
                     // Merge robusto
-                    const otherPending = state.messages[key].filter(m => m.pending || m.failed);
+                    const otherPending = state.messages[key].filter(m => m.status === 'pending' || m.status === 'failed');
                     state.messages[key] = [...serverMessages, ...otherPending];
                     state.messages[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
+                    saveChatMessages();
                     updateChatUI();
                     if (typeof fetchThreads === 'function') fetchThreads();
                 } else {
@@ -5356,9 +5432,9 @@
                 console.error("❌ sendMessage error:", e);
                 const idx = state.messages[key].findIndex(m => m.id === localId);
                 if (idx > -1) {
-                    state.messages[key][idx].pending = false;
-                    state.messages[key][idx].failed = true;
+                    state.messages[key][idx].status = 'failed';
                 }
+                saveChatMessages();
                 updateChatUI();
             }
         }

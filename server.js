@@ -1837,6 +1837,46 @@ app.post('/api/messages', async (req, res) => {
     }
 });
 
+app.post('/api/users/register', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+
+    try {
+        const { userId, name, class: userClass } = req.body;
+
+        const { data, error } = await supabase
+            .from("users_directory")
+            .upsert({
+                id: userId,
+                name: name,
+                class: userClass || 'N/D',
+                last_seen: new Date().toISOString(),
+                status: 'online'
+            }, { onConflict: 'id' });
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.get('/api/users', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+
+    try {
+        const { data, error } = await supabase
+            .from("users_directory")
+            .select("id, name, class, status, last_seen")
+            .order("last_seen", { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+        res.json({ success: true, data: data || [] });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // ============= PLANNER ROUTES =============
 
 app.get('/api/planner/:user_id', async (req, res) => {
