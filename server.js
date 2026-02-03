@@ -1837,47 +1837,45 @@ app.post('/api/messages', async (req, res) => {
     }
 });
 
-app.post('/api/users/register', async (req, res) => {
-    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
-
-    try {
-        const { userId, name, class: userClass } = req.body;
-        if (!userId || !name) {
-            return res.status(400).json({ success: false, error: "userId and name required" });
-        }
-
-        const { error } = await supabase
-            .from("users_directory")
-            .upsert({
-                id: userId,
-                name: name,
-                class: userClass || 'N/D',
-                last_seen: new Date().toISOString(),
-                status: 'online'
-            }, { onConflict: 'id' });
-
-        if (error) throw error;
-        res.json({ success: true });
-    } catch (e) {
-        console.error("users/register error:", e);
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
+// ============= USER DIRECTORY ROUTES =============
 
 app.get('/api/users', async (req, res) => {
     if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
 
     try {
         const { data, error } = await supabase
-            .from("users_directory")
-            .select("id, name, class, status, last_seen")
-            .order("last_seen", { ascending: false })
-            .limit(200);
+            .from('users_directory')
+            .select('*')
+            .order('last_seen', { ascending: false });
 
         if (error) throw error;
-        res.json({ success: true, data: data || [] });
+        res.json({ success: true, data });
     } catch (e) {
-        console.error("users/get error:", e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/users/register', async (req, res) => {
+    if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
+
+    try {
+        const { id, name, class: userClass, status, avatar } = req.body;
+        if (!id || !name) return res.status(400).json({ success: false, error: "Missing id/name" });
+
+        const { data, error } = await supabase
+            .from('users_directory')
+            .upsert({
+                id,
+                name,
+                class: userClass,
+                status: status || 'online',
+                avatar: avatar || null,
+                last_seen: new Date().toISOString()
+            }, { onConflict: 'id' });
+
+        if (error) throw error;
+        res.json({ success: true, data });
+    } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 });

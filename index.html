@@ -1379,7 +1379,7 @@
         <div class="boot-card">
             <div class="boot-spinner"></div>
             <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v3.0.0-insta</span></div>
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v4.0.0-insta</span></div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1394,8 +1394,8 @@
     </nav>
 
     <script>
-        // v3.0.0-insta (Instagram-Style Chat & Boot Fix)
-        console.log("🚀 G-Connect v3.0.0-insta initialized");
+        // v4.0.0-insta (Rebuilt on Stable Base)
+        console.log("🚀 G-Connect v4.0.0-insta initialized");
 
         let _chatPoller = null;
         window.chatChannel = null;
@@ -1504,15 +1504,15 @@
         }
 
         function getUserId() {
+            if (!state.isLoggedIn) return 'guest';
             const s = sessionManager.load();
             if (!s) return 'guest';
 
-            // Standardize format: SCHOOL:USER:INDEX (no spaces, upper/lower consistency)
-            const school = (s.schoolCode || 'noschool').trim().toUpperCase();
-            const user = (s.userName || s.username || 'nouser').trim().toLowerCase().replace(/\s+/g, '_');
+            // ✅ v4.0 Standard: school:user:profile (all lowercase, no spaces)
+            const school = (s.schoolCode || 'S').toString().toLowerCase().trim();
+            const user = (s.userName || s.username || 'U').toString().toLowerCase().trim();
             const idx = (s.profileIndex ?? 0);
-
-            return `${school}:${user}:${idx}`;
+            return `${school}:${user}:${idx}`.replace(/\s+/g, '');
         }
 
         function globalKey(name) {
@@ -1693,8 +1693,10 @@
                 if (isLoggedIn && savedSession) {
                     state.isLoggedIn = true;
 
-                    // Instant Local Cache Loading
+                    // v4.0 Integration
                     loadChatMessages();
+                    registerUserOnServer().catch(() => { });
+                    fetchUsersDirectory().catch(() => { });
 
                     const cachedThreads = localStorage.getItem(lsKey('threads'));
                     if (cachedThreads) {
@@ -1732,10 +1734,6 @@
 
                     state.didup.connected = true;
 
-                    // v3.0 Chat Sync Lifecycle
-                    registerUserOnServer().catch(() => { });
-                    fetchUsersDirectory().catch(() => { });
-
                     state.view = desiredHashView || 'home';
                     render();
 
@@ -1759,7 +1757,6 @@
                 }
             } catch (error) {
                 console.error("🛑 CRITICAL BOOT ERROR:", error);
-                // Fallback to minimal state to prevent white screen
                 state.view = sessionManager.isLoggedIn() ? 'home' : 'login';
                 render();
             } finally {
@@ -2896,11 +2893,6 @@
 
         async function logout() {
             if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
-                stopChatPolling();
-                state.messages = {};
-                state.currentThreadId = null;
-                state.currentChatUser = null;
-                state.currentChatId = null;
 
                 // ✅ STEP 1: Salva userId PRIMA di clear
                 const currentUserId = getUserId();
@@ -3630,10 +3622,7 @@
             const conversations = state.threads || [];
             const searchVal = (state.msgSearch || '').toLowerCase();
 
-            // Filter conversations by search if active
             const filteredConv = conversations.filter(t => t.otherName.toLowerCase().includes(searchVal));
-
-            // Also search DIRECTORY for new people
             const directoryMatches = searchVal.length > 1 ? DIRECTORY.filter(u =>
                 u.name.toLowerCase().includes(searchVal) &&
                 !conversations.some(c => c.otherId === u.id) &&
@@ -3761,7 +3750,6 @@
         function renderChatMessage(m) {
             const isMe = m.me;
             const status = m.status || 'sent';
-
             const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('it-IT', {
                 hour: '2-digit', minute: '2-digit'
             }) : '';
@@ -3784,19 +3772,19 @@
 
         function updateChatUI() {
             const historyEl = document.getElementById('chat-history');
-            if (!historyEl || !state.currentThreadId) return;
+            if (!historyEl || state.view !== 'chat') return;
 
             const threadId = state.currentThreadId;
             const msgs = state.messages[threadId] || [];
 
             if (msgs.length === 0) {
                 historyEl.innerHTML = `
-                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:16px; opacity:0.6;">
-                        <div style="width:80px; height:80px; border-radius:50%; background:var(--glass-panel); display:flex; align-items:center; justify-content:center;">
-                            <i class="ph ph-chat-circle-dots" style="font-size:36px;"></i>
+                    <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+                        <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
+                            <i class="ph ph-chat-circle-dots"></i>
                         </div>
                         <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
-                        <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono salvati in modo sicuro</p>
+                        <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
                     </div>
                 `;
             } else {
@@ -3823,11 +3811,11 @@
                     </button>
                     
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        ${renderAvatar(state.currentChatUser, 42)}
-                        <div style="display:flex; flex-direction:column; gap:2px;">
-                            <span style="font-weight:700; font-size:16px; color:white; line-height:1.2;">${state.currentChatUser}</span>
-                            <span style="font-size:11px; color:rgba(255,255,255,0.6); font-weight:500;">
-                                ${otherUser?.status === 'online' ? '🟢 Online ora' : 'Attivo di recente'}
+                        ${renderAvatar(state.currentChatUser, 44)}
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="font-weight:700; font-size:17px; color:white;">${state.currentChatUser}</span>
+                            <span style="font-size:12px; color:var(--green); font-weight:600;">
+                                ${otherUser?.status === 'online' ? '🟢 Online' : 'Toccami per info'}
                             </span>
                         </div>
                     </div>
@@ -3856,9 +3844,9 @@
         }
 
         function renderPlanner() {
-            setTimeout(() => { if (typeof initPlannerCalendar === 'function') initPlannerCalendar(); }, 0);
+            setTimeout(() => { initPlannerCalendar(); }, 0);
             return `
-            <div class="view" style="padding-bottom: 40px;">
+                < div class="view" style = "padding-bottom: 40px;" >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h1 style="margin: 0;">Planner</h1>
                     <button onclick="performArgoSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
@@ -5102,7 +5090,7 @@
             state.currentChatId = otherId;
             state.currentThreadId = threadId;
 
-            // ✅ FIX: Garantisce inizializzazione chiave threadId
+            // Ensure state key exists
             if (!state.messages[threadId]) state.messages[threadId] = [];
 
             state.view = 'chat';
@@ -5127,70 +5115,9 @@
                         timestamp: m.created_at,
                         status: 'sent'
                     }));
-                    saveChatMessages();
                     updateChatUI();
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
-        }
-
-        function saveChatMessages() {
-            if (!sessionManager.isLoggedIn()) return;
-            try {
-                localStorage.setItem(lsKey('chat_messages'), JSON.stringify(state.messages));
-            } catch (e) {
-                console.warn("Errore salvataggio chat:", e);
-            }
-        }
-
-        function loadChatMessages() {
-            if (!sessionManager.isLoggedIn()) return;
-            try {
-                const cached = localStorage.getItem(lsKey('chat_messages'));
-                if (cached) {
-                    state.messages = JSON.parse(cached);
-                }
-            } catch (e) {
-                state.messages = {};
-            }
-        }
-
-        async function registerUserOnServer() {
-            if (!sessionManager.isLoggedIn() || state.user?.id === 'guest') return;
-
-            const myId = getUserId();
-            const myName = state.user?.name || 'Utente';
-            const myClass = state.user?.class || 'N/D';
-
-            try {
-                await fetch(`${API_BASE_URL}/api/users/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: myId, name: myName, class: myClass })
-                });
-                console.log("✅ User registered on server");
-            } catch (e) { console.warn("registerUserOnServer error:", e); }
-        }
-
-        async function fetchUsersDirectory() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/users`);
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    data.data.forEach(u => {
-                        if (!DIRECTORY.find(d => d.id === u.id)) {
-                            DIRECTORY.push({
-                                name: u.name,
-                                id: u.id,
-                                class: u.class || 'N/D',
-                                status: u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 300000) ? 'online' : 'offline'
-                            });
-                        }
-                    });
-                    console.log("👥 Directory aggiornata:", DIRECTORY.length, "utenti");
-                }
-            } catch (e) {
-                console.warn("fetchUsersDirectory error:", e);
-            }
         }
 
         function exitChat() {
@@ -5225,6 +5152,42 @@
                 clearInterval(_chatPoller);
                 _chatPoller = null;
             }
+        }
+
+        // --- Directory Utils ---
+        async function registerUserOnServer() {
+            if (!state.isLoggedIn || !state.user) return;
+            try {
+                const myId = getUserId();
+                await fetch(`${API_BASE_URL}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: myId,
+                        name: state.user.nome || state.user.cognome ? `${state.user.nome} ${state.user.cognome}`.trim() : state.user.username,
+                        class: state.user.classe?.desDenominazione || 'Studente',
+                        status: 'online'
+                    })
+                });
+            } catch (e) { console.warn("User register error:", e); }
+        }
+
+        async function fetchUsersDirectory() {
+            if (!state.isLoggedIn) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/users`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    data.data.forEach(u => {
+                        const idx = DIRECTORY.findIndex(d => d.id === u.id);
+                        if (idx >= 0) {
+                            DIRECTORY[idx] = { ...DIRECTORY[idx], ...u };
+                        } else {
+                            DIRECTORY.push(u);
+                        }
+                    });
+                }
+            } catch (e) { console.warn("Fetch directory error:", e); }
         }
 
         function subscribeToChatRealtime(threadId) {
@@ -5356,7 +5319,7 @@
 
             const myId = getUserId();
             const threadId = state.currentThreadId;
-            const key = threadId;
+            const key = state.currentChatUser;
 
             // 1. Crea messaggio locale (optimistic)
             const localId = 'local_' + Date.now();
@@ -5365,14 +5328,13 @@
                 text,
                 me: true,
                 timestamp: new Date().toISOString(),
-                status: 'pending'
+                pending: true,
+                failed: false
             };
 
             // 2. Aggiungi e aggiorna UI subito
             if (!state.messages[key]) state.messages[key] = [];
             state.messages[key].push(localMsg);
-
-            saveChatMessages();
 
             input.value = '';
             updateChatUI();
@@ -5387,7 +5349,7 @@
                         senderId: myId,
                         senderName: state.user.name || "Io",
                         receiverId: state.currentChatId,
-                        receiverName: state.currentChatUser,
+                        receiverName: key,
                         text,
                         type: 'text'
                     })
@@ -5403,15 +5365,14 @@
                         text: m.text,
                         me: m.sender_id === myId,
                         timestamp: m.created_at,
-                        status: 'sent'
+                        type: m.type || 'text'
                     }));
 
                     // Merge robusto
-                    const otherPending = state.messages[key].filter(m => m.status === 'pending' || m.status === 'failed');
+                    const otherPending = state.messages[key].filter(m => m.pending || m.failed);
                     state.messages[key] = [...serverMessages, ...otherPending];
                     state.messages[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    saveChatMessages();
                     updateChatUI();
                     if (typeof fetchThreads === 'function') fetchThreads();
                 } else {
@@ -5421,9 +5382,9 @@
                 console.error("❌ sendMessage error:", e);
                 const idx = state.messages[key].findIndex(m => m.id === localId);
                 if (idx > -1) {
-                    state.messages[key][idx].status = 'failed';
+                    state.messages[key][idx].pending = false;
+                    state.messages[key][idx].failed = true;
                 }
-                saveChatMessages();
                 updateChatUI();
             }
         }
