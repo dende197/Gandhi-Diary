@@ -1553,8 +1553,35 @@
             return `p:${school}:${user}:${idx}`;
         }
 
-        function lsKey(name) {
-            return `${getActiveProfileKey()}:${name}`;
+        function globalKey(name) {
+            return `global:${name}`;
+        }
+
+        // --- Persistence Helpers ---
+        function saveChatMessages(threadId) {
+            if (!threadId || !state.messages[threadId]) return;
+            localStorage.setItem(lsKey(`chat:${threadId}`), JSON.stringify(state.messages[threadId]));
+        }
+
+        function loadChatMessages(threadId) {
+            const cached = localStorage.getItem(lsKey(`chat:${threadId}`));
+            if (cached) {
+                try {
+                    state.messages[threadId] = JSON.parse(cached);
+                    return true;
+                } catch (e) { return false; }
+            }
+            return false;
+        }
+
+        function saveNavigationState() {
+            const nav = {
+                view: state.view,
+                currentThreadId: state.currentThreadId,
+                currentChatUser: state.currentChatUser,
+                currentChatId: state.currentChatId
+            };
+            localStorage.setItem(lsKey('nav_state'), JSON.stringify(nav));
         }
 
         // --- v5.0 Robust Symmetric Threading ---
@@ -1781,7 +1808,34 @@
                 });
 
                 if (isLoggedIn) {
-                    state.view = 'home';
+                    const savedNav = localStorage.getItem(lsKey('nav_state'));
+                    if (savedNav) {
+                        try {
+                            const nav = JSON.parse(savedNav);
+                            if (nav && nav.view) {
+                                state.view = nav.view;
+                                state.currentThreadId = nav.currentThreadId;
+                                state.currentChatUser = nav.currentChatUser;
+                                state.currentChatId = nav.currentChatId;
+
+                                // Se eravamo in una chat, ripristiniamo i messaggi locali e attiviamo sync
+                                if (state.view === 'chat' && state.currentThreadId) {
+                                    loadChatMessages(state.currentThreadId);
+                                    // Sincronizziamo subito la chat attiva
+                                    setTimeout(() => {
+                                        fetchChatMessages(state.currentThreadId);
+                                        subscribeToChatRealtime(state.currentThreadId);
+                                        startChatPolling();
+                                    }, 100);
+                                }
+                            } else {
+                                state.view = 'home';
+                            }
+                        } catch { state.view = 'home'; }
+                    } else {
+                        state.view = 'home';
+                    }
+
                     // Sincronizzazione background non-bloccante
                     (async () => {
                         await registerUserOnServer();
@@ -2477,7 +2531,7 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // ⭐ Recupera stato 'done' persistito
+            // ⭐ Recupera stato 'done' persistido
             const localTasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
 
             // Pre-index locale per “match” (subject + text + due_date)
@@ -2615,6 +2669,7 @@
             } else {
                 if (state.view !== v) {
                     state.view = v;
+                    saveNavigationState();
                     render();
                 }
             }
@@ -5122,10 +5177,13 @@
             state.currentThreadId = threadId;
             state.msgSearch = ''; // Clear search when opening chat
 
+            if (!state.messages[threadId]) {
+                loadChatMessages(threadId); // Carichiamo la cache se presente
+            }
             if (!state.messages[threadId]) state.messages[threadId] = [];
 
-            state.view = 'chat';
-            render();
+            saveNavigationState();
+            navigate('chat');
 
             await fetchChatMessages(threadId);
             startChatPolling();
@@ -5146,6 +5204,7 @@
                         timestamp: m.created_at,
                         status: 'sent'
                     }));
+                    saveChatMessages(threadId);
                     updateChatUI();
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
@@ -5153,13 +5212,14 @@
 
         function exitChat() {
             stopChatPolling();
-            if (window.chatChannel) {
-                supabaseClient.removeChannel(window.chatChannel);
-                window.chatChannel = null;
+            if (chatChannel) {
+                supabaseClient.removeChannel(chatChannel);
+                chatChannel = null;
             }
             state.currentThreadId = null;
             state.currentChatUser = null;
             state.currentChatId = null;
+            saveNavigationState();
             navigate('messages');
         }
 
@@ -5249,6 +5309,7 @@
                 if (!state.messages[threadId]) state.messages[threadId] = [];
                 state.messages[threadId].push(msg);
                 state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                saveChatMessages(threadId); // Persistere messaggio ricevuto
                 if (state.view === 'chat' && state.currentThreadId === threadId) {
                     updateChatUI();
                 }
@@ -5389,6 +5450,7 @@
 
             if (!state.messages[threadId]) state.messages[threadId] = [];
             state.messages[threadId].push(localMsg);
+            saveChatMessages(threadId); // Persistenza ottimistica locale
 
             updateChatUI();
             scrollChatToBottom();
@@ -5421,6 +5483,7 @@
                             status: 'sent',
                             timestamp: serverMsg.created_at || localMsg.timestamp
                         };
+                        saveChatMessages(threadId); // Persistenza post-invio (ID server)
                     }
                     updateChatUI();
                     if (typeof fetchThreads === 'function') fetchThreads();
@@ -5433,6 +5496,7 @@
                 const idx = state.messages[threadId].findIndex(m => m.id === localId);
                 if (idx > -1) {
                     state.messages[threadId][idx].status = 'failed';
+                    saveChatMessages(threadId);
                 }
                 updateChatUI();
                 return false;
