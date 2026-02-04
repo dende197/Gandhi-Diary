@@ -2350,14 +2350,13 @@ app.post('/login', async (req, res) => {
             extractPromemoria(headers)
         ]);
 
-        // 5. Upsert Supabase
+        const pid = `${school}:${username}:${targetIndex}`;
         let storedSpecialization = null;
 
         if (supabase) {
             // 5. Supabase Sync & Retrieval (Fix Persistence)
 
             try {
-                const pid = `${school}:${username}:${targetIndex}`;
                 const normalizedClass = normalizeClass(studentClass);
 
                 // A) Fetch existing data first to get stored preferences
