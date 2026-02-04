@@ -42,7 +42,7 @@ app.use(cors({
         }
     },
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Client-Info", "apikey"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
@@ -1413,7 +1413,8 @@ app.get('/api/posts', async (req, res) => {
             const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
             return res.json({ success: true, data: data || [] });
         } catch (e) {
-            debugLog("⚠️ Posts GET error", e.message);
+            console.error("⚠️ Posts GET error:", e.message);
+            return res.status(500).json({ success: false, error: e.message });
         }
     }
     res.json({ success: true, data: loadJsonFile(POSTS_FILE) });
@@ -1437,7 +1438,8 @@ app.post('/api/posts', async (req, res) => {
             const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
             return res.json({ success: true, data: data || [] });
         } catch (e) {
-            debugLog("⚠️ Posts POST error", e.message);
+            console.error("⚠️ Posts POST error:", e.message);
+            return res.status(500).json({ success: false, error: e.message });
         }
     }
 
@@ -1500,14 +1502,13 @@ app.get('/api/market', async (req, res) => {
                 .from("market_items")
                 .select(`
                     *,
-                    profiles:seller_id (avatar)
+                    profiles!seller_id (avatar)
                 `)
                 .order("created_at", { ascending: false })
                 .limit(200);
 
             if (error) throw error;
 
-            // Map the data to include sellerAvatar at top level
             const enriched = (data || []).map(item => ({
                 ...item,
                 seller_avatar: item.profiles?.avatar || null
@@ -1515,9 +1516,11 @@ app.get('/api/market', async (req, res) => {
 
             return res.json({ success: true, data: enriched });
         } catch (e) {
-            debugLog("⚠️ Market GET error", e.message);
+            console.error("⚠️ Market GET error:", e.message);
+            return res.status(500).json({ success: false, error: e.message });
         }
     }
+    // Fallback locale se Supabase non è configurato
     res.json({ success: true, data: loadJsonFile(MARKET_FILE) });
 });
 
@@ -1543,7 +1546,8 @@ app.post('/api/market', async (req, res) => {
             const { data } = await supabase.from("market_items").select("*").order("created_at", { ascending: false }).limit(200);
             return res.json({ success: true, data: data || [] });
         } catch (e) {
-            debugLog("⚠️ Market POST error", e.message);
+            console.error("⚠️ Market POST error:", e.message);
+            return res.status(500).json({ success: false, error: e.message });
         }
     }
 
