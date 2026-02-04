@@ -1651,16 +1651,21 @@
             return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        // 🔥 FIX-ALL: Identity based on Supabase Auth UUID (Synchronous getter)
         function getUserId() {
-            if (!state.isLoggedIn) return 'guest';
-            const s = sessionManager.load();
-            if (!s) return 'guest';
+            return state.user.id || 'guest';
+        }
 
-            // ✅ Identificativo univoco stabile del profilo (Sincrono)
-            const school = (s.schoolCode || 'S').toString().toLowerCase().trim();
-            const user = (s.userName || s.username || 'U').toString().toLowerCase().trim();
-            const idx = (s.profileIndex ?? 0);
-            return `${school}:${user}:${idx}`.replace(/\s+/g, '');
+        async function getCurrentUser() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return null;
+            // Fetch profile
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            return { ...profile, id: user.id };
         }
 
         function globalKey(name) {
@@ -1791,7 +1796,7 @@
         // STATE MANAGEMENT
         const state = {
             view: 'login',
-            user: { name: 'Utente', class: 'N/D', avatar: null }, // Default safe
+            user: { id: null, name: 'Utente', class: 'N/D', avatar: null }, // Default safe
             isLoggedIn: false,
             isOffline: false,
             didup: { connected: false },
@@ -1823,68 +1828,48 @@
         const modalContainer = document.getElementById('modals');
         const offlineBadge = document.getElementById('offline-badge');
 
-        // BOOT LIFECYCLE (v7.0 Persistence Fix)
+        // BOOT LIFECYCLE (FIX-ALL: Supabase Auth)
         document.addEventListener('DOMContentLoaded', async () => {
             const loadingText = document.querySelector('.boot-title span');
-            if (loadingText) loadingText.textContent = "v7.0 Relational";
+            if (loadingText) loadingText.textContent = "v7.0 Relational Auth";
 
-            // 1. Immediate Session Restore
-            const isLogged = sessionManager.isLoggedIn();
-            const persistentUser = sessionManager.load();
+            const { data: { session } } = await supabaseClient.auth.getSession();
 
-            if (isLogged && persistentUser) {
+            if (session) {
                 state.isLoggedIn = true;
+                const profile = await getCurrentUser();
+                if (profile) {
+                    state.user = {
+                        ...state.user,
+                        ...profile,
+                        id: session.user.id,
+                        name: profile.name || 'Utente',
+                        class: profile.class || 'N/D'
+                    };
+                } else {
+                    state.user.id = session.user.id;
+                }
 
-                // 🔥 FIX BUG 5: Normalizzazione Utente e Profilo
-                state.user = {
-                    ...state.user,
-                    ...persistentUser,
-                    name: persistentUser.name || persistentUser.userName || persistentUser.username || 'Utente',
-                    class: persistentUser.class || persistentUser.classe || 'N/D'
-                };
-
-                console.log("✅ Stato utente ripristinato:", state.user.name);
-
-                // Restore View immediately to avoid "flicker" to login
+                // Restore View
                 const savedNav = localStorage.getItem(lsKey('nav_state'));
                 if (savedNav) {
                     try {
                         const nav = JSON.parse(savedNav);
                         if (nav && nav.view) {
                             state.view = nav.view;
-
-                            // 🔥 FIX: Ripristina stato chat se eravamo in chat
                             if (nav.view === 'chat' && nav.currentThreadId) {
                                 state.currentThreadId = nav.currentThreadId;
                                 state.currentChatUser = nav.currentChatUser;
                                 state.currentChatId = nav.currentChatId;
-                                // Sottoscrivi subito al realtime della chat attiva
-                                subscribeToChatRealtime(nav.currentThreadId);
+                                loadChatMessages(state.currentThreadId);
                             }
                         }
                     } catch { }
                 } else {
-                    // Fallback to Hash if no saved state
                     state.view = currentViewFromHash() || 'home';
                 }
-
-                updateOfflineBadge();
-                render();
-
-                // Sync background (non-bloccante)
-                (async () => {
-                    await registerUserOnServer();
-                    await fetchUsersDirectory();
-                    fetchPosts();
-                    fetchMarket();
-                    fetchPolls();
-                    fetchThreads();
-                    flushOutbox(); // 🔥 FIX: Sostitito fetchMarketOutbox
-                    performSync();
-                })();
             } else {
                 state.view = 'login';
-                render();
             }
 
             // 2. Load Caches
@@ -1915,10 +1900,44 @@
                 }
             });
 
-            // Cleanup
-            setTimeout(hideBoot, 400);
+            updateOfflineBadge();
+            render();
 
+            // 3. Background Sync & Realtime
+            if (state.isLoggedIn) {
+                (async () => {
+                    await fetchUsersDirectory();
+                    fetchPosts();
+                    fetchMarket();
+                    fetchPolls();
+                    fetchThreads();
+                    performSync();
+
+                    if (state.view === 'chat' && state.currentThreadId) {
+                        fetchChatMessages(state.currentThreadId);
+                        subscribeToChatRealtime(state.currentThreadId);
+                    }
+                })();
+            }
+
+            setTimeout(hideBoot, 400);
         });
+
+        // Listen for Auth changes
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                state.isLoggedIn = true;
+                state.user.id = session?.user?.id || null;
+                render();
+            } else if (event === 'SIGNED_OUT') {
+                state.isLoggedIn = false;
+                state.user.id = null;
+                state.view = 'login';
+                render();
+            }
+        });
+
+
 
         function updateOfflineBadge() {
             if (state.isOffline) {
@@ -1929,7 +1948,7 @@
         }
 
         // ✅ Normalize server(Supabase) records to frontend format
-        function normalizePost(p) {
+        function normalizePost(p, myId) {
             return {
                 id: p?.id ?? Date.now(),
                 author: p?.author ?? p?.author_name ?? "Utente",
@@ -1939,7 +1958,7 @@
                 image: p?.image ?? null,
                 anon: !!(p?.anon ?? false),
                 likes: Array.isArray(p?.likes) ? p.likes : (typeof p?.likes === 'number' ? p.likes : 0),
-                liked: Array.isArray(p?.likes) ? p.likes.includes(getUserId()) : !!(p?.liked ?? false),
+                liked: Array.isArray(p?.likes) ? p.likes.includes(myId) : !!(p?.liked ?? false),
                 comments: Array.isArray(p?.comments) ? p.comments : [],
                 type: p?.type ?? 'text',
                 pinned: !!p?.pinned
@@ -1968,7 +1987,7 @@
                 const res = await fetch(`${API_BASE_URL}/api/posts`);
                 const data = await res.json();
                 if (data.success) {
-                    state.posts = (data.data || []).map(normalizePost);
+                    state.posts = (data.data || []).map(p => normalizePost(p, state.user.id));
                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                     render(); // ✅ Re-render with fresh server data
                     console.log("📝 Feed (server) → cache & UI updated:", state.posts.length);
@@ -1978,7 +1997,7 @@
             } catch (e) {
                 console.warn("Feed offline/errore, uso cache:", e.message);
                 const cached = localStorage.getItem(globalKey('posts'));
-                state.posts = cached ? JSON.parse(cached).map(normalizePost) : [];
+                state.posts = cached ? JSON.parse(cached).map(p => normalizePost(p, state.user.id)) : [];
             }
         }
 
@@ -2002,7 +2021,7 @@
         }
 
         async function fetchThreads() {
-            const myId = await getUserId();
+            const myId = getUserId();
             if (!myId) return;
 
             try {
@@ -2043,7 +2062,7 @@
         // --- FETCH: blindato anti-wipe + last-write-wins ---
         // --- FETCH: blindato anti-wipe + last-write-wins ---
         async function fetchPlannerRemote() {
-            const userId = await getUserId();
+            const userId = getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
 
             try {
@@ -2154,7 +2173,7 @@
             const poll = (state.polls && state.polls[0]) || null;
             if (!poll) return '';
 
-            const voterId = getUserId();
+            const voterId = state.user.id;
             const userChoice = poll.voters ? poll.voters[voterId] : null;
             const totalVotes = poll.choices.reduce((s, x) => s + (x.votes || 0), 0);
 
@@ -2193,7 +2212,7 @@
         // Save remoto + timestamp locale
         // --- SALVATAGGIO: aggiorna subito timestamp locale e invia updatedAt ---
         async function savePlannerRemote() {
-            const userId = await getUserId();
+            const userId = getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
 
             const plannedDetails = {};
@@ -3168,7 +3187,7 @@
 
         async function uploadAvatar(base64Image) {
             try {
-                const userId = await getUserId();
+                const userId = getUserId();
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3186,7 +3205,7 @@
 
         async function saveProfileToServer(profileData) {
             try {
-                const userId = await getUserId();
+                const userId = getUserId();
                 const response = await fetch(`${API_BASE_URL}/api/profile`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -3210,7 +3229,7 @@
 
         async function loadProfileFromServer() {
             try {
-                const userId = await getUserId();
+                const userId = getUserId();
                 if (!userId || userId === 'guest') return null;
 
                 const response = await fetch(`${API_BASE_URL}/api/profile/${encodeURIComponent(userId)}`);
@@ -3783,7 +3802,7 @@
             const directoryMatches = searchVal.length > 1 ? DIRECTORY.filter(u =>
                 u.name.toLowerCase().includes(searchVal) &&
                 !conversations.some(c => c.otherId === u.id) &&
-                u.id !== getUserId()
+                u.id !== state.user.id
             ) : [];
 
             return `
@@ -5079,7 +5098,7 @@
             const newPost = {
                 id: Date.now(),
                 author: isAnon ? "Studente" : (state.user.name || "Utente"),
-                authorId: getUserId(),
+                authorId: state.user.id,
                 class: isAnon ? "Studente" : ((state.user.class || "5B") + (state.user.specialization || "")),
                 text: text,
                 likes: 0,
@@ -5101,7 +5120,7 @@
                             question: text,
                             choices: choices,
                             author: state.user.name || "Utente",
-                            authorId: getUserId()
+                            authorId: state.user.id
                         };
                         const res = await fetch(`${API_BASE_URL}/api/polls`, {
                             method: 'POST',
@@ -5158,7 +5177,7 @@
         async function toggleLike(id) {
             const p = state.posts.find(x => x.id === id);
             if (p) {
-                const userId = getUserId();
+                const userId = state.user.id;
                 if (!Array.isArray(p.likes)) {
                     // Fallback se stiamo ancora usando il vecchio schema local
                     p.liked = !p.liked;
@@ -5273,7 +5292,7 @@
                 const res = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}/messages`);
                 const data = await res.json();
                 if (data.success) {
-                    const myId = getUserId(); // 🔥 ORA SINCRONO
+                    const myId = state.user.id; // 🔥 ORA SINCRONO
                     state.messages[conversationId] = (data.data || []).map(m => ({
                         id: m.id,
                         text: m.content || m.text,
@@ -5329,7 +5348,7 @@
         async function registerUserOnServer() {
             if (!state.isLoggedIn || !state.user) return;
             try {
-                const myId = getUserId();
+                const myId = state.user.id;
                 await fetch(`${API_BASE_URL}/api/users/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5344,12 +5363,17 @@
         }
 
         async function fetchUsersDirectory() {
-            if (!state.isLoggedIn) return;
+            if (!state.isLoggedIn || !supabaseClient) return;
             try {
-                const res = await fetch(`${API_BASE_URL}/api/users`);
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    data.data.forEach(u => {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('id, name, class, avatar')
+                    .limit(100);
+
+                if (error) throw error;
+
+                if (data) {
+                    data.forEach(u => {
                         const idx = DIRECTORY.findIndex(d => d.id === u.id);
                         if (idx >= 0) {
                             DIRECTORY[idx] = { ...DIRECTORY[idx], ...u };
@@ -5361,33 +5385,34 @@
             } catch (e) { console.warn("Fetch directory error:", e); }
         }
 
-        function subscribeToChatRealtime(roomId) {
-            if (!supabaseClient) return;
+        async function subscribeToChatRealtime(conversationId) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return;
+
+            // Autentica il socket
+            supabaseClient.realtime.setAuth(session.access_token);
+
             if (chatChannel) {
                 supabaseClient.removeChannel(chatChannel);
             }
 
-            // 🔥 ARCHITETTURA BROADCAST: room:{roomId}:messages
-            chatChannel = supabaseClient.channel(`room:${roomId}:messages`, {
-                config: { broadcast: { self: false } }
-            });
-
-            console.log(`📡 Joining Broadcast Room: room:${roomId}:messages`);
-
-            chatChannel
-                .on('broadcast', { event: 'message_created' }, (payload) => {
-                    console.log("📥 Broadcast Message Received:", payload.payload);
-                    handleRealtimeMessage(payload.payload, roomId);
-                })
-                .subscribe((status) => {
-                    if (status === 'CHANNEL_ERROR') {
-                        console.error("❌ WebSocket Error: bad response from server");
-                    }
-                });
+            chatChannel = supabaseClient
+                .channel(`room:${conversationId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messages',
+                        filter: `conversation_id=eq.${conversationId}`
+                    },
+                    payload => handleRealtimeMessage(payload.new, conversationId)
+                )
+                .subscribe();
         }
 
         async function handleRealtimeMessage(newMsg, threadId) {
-            const myId = await getUserId();
+            const myId = getUserId();
 
             // 🔍 1. Check duplicate by ID (Server)
             const existsByServerId = state.messages[threadId]?.some(m => m.id === newMsg.id);
@@ -5412,7 +5437,6 @@
             }
 
             // B/C. Nuovo messaggio (da me o da altri)
-            // Stabilità del lato basata esclusivamente su sender_id
             const isMe = String(newMsg.sender_id) === String(myId);
 
             const msg = {
@@ -5467,7 +5491,7 @@
         }
 
         async function createMarketOrder({ item, type, offerPrice }) {
-            const buyerId = await getUserId();
+            const buyerId = getUserId();
             const sellerId = item.sellerId;
             const threadId = await getThreadId(buyerId, sellerId);
 
