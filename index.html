@@ -5848,6 +5848,35 @@
             return { ctx, rect, dpr };
         }
 
+        // ============= HELPER FUNCTIONS (v7.0) =============
+        async function postJson(getEndpointUrl, payload) {
+            const url = await getEndpointUrl(); // resolve if Promise
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function searchPeople(term, limit = 20) {
+            const q = (term || '').trim();
+            if (!q) return [];
+            // Usa Supabase Client per ricerca sicura su RLS profiles
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('id, name, class, avatar')
+                .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
+                .limit(limit);
+            if (error) { console.warn("Search error:", error); return []; }
+            return data;
+        }
+
+        function getCurrentUserId() {
+            return getUserId(); // Alias for compatibility
+        }
+
         /* 3A) STRESS: onda animata (livello 0-10) */
         function renderStressWave(level = 5) {
             const canvas = document.getElementById('stressWaveCanvas');
