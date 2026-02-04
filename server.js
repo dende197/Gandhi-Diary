@@ -1495,8 +1495,25 @@ app.post('/api/posts/:id/comment', async (req, res) => {
 app.get('/api/market', async (req, res) => {
     if (supabase) {
         try {
-            const { data } = await supabase.from("market_items").select("*").order("created_at", { ascending: false }).limit(200);
-            return res.json({ success: true, data: data || [] });
+            // Join with profiles to get current seller avatar
+            const { data, error } = await supabase
+                .from("market_items")
+                .select(`
+                    *,
+                    profiles:seller_id (avatar)
+                `)
+                .order("created_at", { ascending: false })
+                .limit(200);
+
+            if (error) throw error;
+
+            // Map the data to include sellerAvatar at top level
+            const enriched = (data || []).map(item => ({
+                ...item,
+                seller_avatar: item.profiles?.avatar || null
+            }));
+
+            return res.json({ success: true, data: enriched });
         } catch (e) {
             debugLog("⚠️ Market GET error", e.message);
         }

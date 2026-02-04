@@ -2014,6 +2014,7 @@
                 status: i?.status ?? 'available',
                 seller: i?.seller ?? i?.seller_name ?? "Utente",
                 sellerId: i?.sellerId ?? i?.seller_id ?? null,
+                sellerAvatar: i?.sellerAvatar ?? i?.seller_avatar ?? null, // 🆕 Added
                 pinned: !!i?.pinned
             };
         }
@@ -3863,7 +3864,7 @@
                     ${searchVal.length > 1 && directoryMatches.length > 0 ? `
                         <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Suggeriti</div>
                         ${directoryMatches.map(u => `
-                            <div onclick="openChat('${u.name}', '${u.id}')" style="display:flex; align-items:center; gap:14px; padding:12px; background: rgba(37, 99, 235, 0.1); border-radius: 18px; margin-bottom: 8px; cursor:pointer; border: 1px solid rgba(37, 99, 235, 0.2);">
+                            <div onclick="openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="display:flex; align-items:center; gap:14px; padding:12px; background: rgba(37, 99, 235, 0.1); border-radius: 18px; margin-bottom: 8px; cursor:pointer; border: 1px solid rgba(37, 99, 235, 0.2);">
                                 ${renderAvatar(u.name, 44)}
                                 <div style="flex:1;">
                                     <div style="font-weight:700; font-size:15px; color:white;">${u.name}</div>
@@ -3878,7 +3879,7 @@
                     <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Conversazioni</div>
                     
                     ${filteredConv.length > 0 ? filteredConv.map(t => `
-                        <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.04); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.03);">
+                        <div onclick="openChat('${t.otherName}', '${t.otherId}', '${t.otherAvatar || ''}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.04); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.03);">
                             ${renderAvatar(t.otherName, 50, t.otherAvatar)}
                             <div style="flex:1; text-align:left; min-width:0;">
                                 <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${t.otherName}</div>
@@ -4033,7 +4034,7 @@
                     </button>
                     
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        ${renderAvatar(state.currentChatUser, 44)}
+                        ${renderAvatar(state.currentChatUser, 44, state.currentChatAvatar)}
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white;">${state.currentChatUser}</span>
                             <span onclick="showUserProfile('${state.currentChatId}')" style="font-size:12px; color:var(--primary); font-weight:600; cursor:pointer;">
@@ -5327,7 +5328,7 @@
             }
         }
 
-        async function openChat(otherName, otherId = null) {
+        async function openChat(otherName, otherId = null, avatarUrl = null) {
             const myId = getUserId();
             if (!myId || myId === 'guest') {
                 alert('Esegui il login per chattare');
@@ -5368,6 +5369,7 @@
 
             state.currentChatUser = otherName;
             state.currentChatId = otherId;
+            state.currentChatAvatar = avatarUrl || state.threads.find(t => t.otherId === otherId)?.otherAvatar || DIRECTORY.find(u => u.id === otherId)?.avatar;
             state.currentThreadId = conversationId;
             state.msgSearch = '';
 
@@ -5573,7 +5575,7 @@
                     
                     <div style="display:flex; justify-content:center; gap:12px;">
                         <button onclick="closeModal()" style="padding: 12px 24px; background:rgba(255,255,255,0.1); border-radius:14px; color:white; font-weight:700;">Chiudi</button>
-                        <button onclick="closeModal(); openChat('${u.name}', '${u.id}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>
+                        <button onclick="closeModal(); openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>
                     </div>
                 </div>
             `);
@@ -5623,7 +5625,7 @@
                 item.status = 'sold';
                 render();
 
-                const chatOk = await openChat(item.seller, item.sellerId || `seller:${item.id}`);
+                const chatOk = await openChat(item.seller, item.sellerId || `seller:${item.id}`, item.sellerAvatar);
                 if (chatOk) {
                     await sendChatMessage({
                         text: `✅ Ho acquistato "${item.title}"`,
@@ -5647,7 +5649,7 @@
             try {
                 const order = await createMarketOrder({ item, type: 'offer', offerPrice: offer });
 
-                const chatOk = await openChat(item.seller, item.sellerId || `seller:${item.id}`);
+                const chatOk = await openChat(item.seller, item.sellerId || `seller:${item.id}`, item.sellerAvatar);
                 if (chatOk) {
                     await sendChatMessage({
                         text: `💬 Offerta per "${item.title}": ${offer}`,
