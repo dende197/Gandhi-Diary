@@ -17,8 +17,62 @@
     <!-- Link CSS rimosso (404 su jsdelivr per FC v6) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-    <!-- 🔥 Supabase Client for Realtime Chat -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 🔥 Supabase Client for Realtime Chat REMOVED - Imported in module -->
+
+    <style>
+        /* Chat Styles */
+        .chat {
+            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-input-area {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            bottom: 0;
+        }
+
+        .msg {
+            display: flex;
+            margin: 8px 0;
+            width: 100%;
+        }
+
+        .msg.left {
+            justify-content: flex-start;
+        }
+
+        .msg.right {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            max-width: 75%;
+            color: white;
+            font-size: 15px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .right .bubble {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .left .bubble {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
 
     <style>
         :root {
@@ -1442,7 +1496,8 @@
     <nav id="bottom-nav">
         <button class="nav-item active" onclick="navigate('home')"><i class="ph-fill ph-house"></i></button>
         <button class="nav-item" onclick="navigate('market')"><i class="ph-fill ph-bag"></i></button>
-        <button class="nav-item" onclick="navigate('feed')"><i class="ph-fill ph-chats-circle"></i></button>
+        <button class="nav-item" onclick="navigate('feed')"><i class="ph-fill ph-newspaper"></i></button>
+        <button class="nav-item" onclick="navigate('chat')"><i class="ph-fill ph-chat-circle-dots"></i></button>
         <button class="nav-item" onclick="navigate('planner')"><i class="ph-fill ph-calendar-check"></i></button>
         <button class="nav-item" onclick="navigate('profile')"><i class="ph-fill ph-user"></i></button>
     </nav>
