@@ -2398,10 +2398,11 @@ app.post('/login', async (req, res) => {
                 profileIndex: targetIndex
             },
             student: {
+                id: pid, // 🔥 FIX: Authoritative ID for frontend
                 name: studentName,
                 class: studentClass || "N/D",
                 school: school,
-                specialization: storedSpecialization // <-- Inject retrieval
+                specialization: storedSpecialization
             },
             tasks: tasksData,
             voti: gradesData,

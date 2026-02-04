@@ -4948,15 +4948,15 @@
             if (data.session) {
                 data.session.storedUser = btoa(unescape(encodeURIComponent(user)));
                 data.session.storedPass = btoa(unescape(encodeURIComponent(pass)));
-                // 🔥 Ensure studentId is in the session (Bug #5 fix)
-                data.session.studentId = data.selectedProfile?.id || (data.student ? `argo:${data.student.id}` : null);
+                // 🔥 Use server-provided student ID or reconstruct it if missing
+                data.session.studentId = data.student?.id || `${data.session.schoolCode}:${data.session.userName}:${data.session.profileIndex}`;
                 sessionManager.save(data.session);
             }
 
             // 2. Idratazione Identità (MIGLIORATA: ID Fallback immediato) (Bug #5)
             state.user = state.user || {};
-            // Set Argo ID as fallback immediately to prevent "guest" status
-            state.user.id = data.selectedProfile?.id || (data.student ? `argo:${data.student.id}` : 'argo:unknown');
+            // 🔥 Priority: Server ID > Session ID > Synthetic ID
+            state.user.id = data.student?.id || data.session?.studentId || (data.session ? `${data.session.schoolCode}:${data.session.userName}:${data.session.profileIndex}` : 'guest');
             if (data.student) {
                 // Nome: valida che non sia username
                 // Nome: Priorità a selectedProfile se disponibile (contiene dati più ricchi se student è fallback)
