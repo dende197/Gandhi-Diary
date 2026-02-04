@@ -1912,6 +1912,21 @@ app.get('/api/conversations/user/:userId', async (req, res) => {
 
             const otherId = parts && parts.length > 0 ? parts[0].user_id : 'Unknown';
 
+            // 🆕 EXPERT FIX: Fetch profile name/avatar from DB to avoid "UTENTE" issues
+            let otherName = 'Utente';
+            let otherAvatar = null;
+            if (otherId !== 'Unknown') {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('name, avatar')
+                    .eq('id', otherId)
+                    .maybeSingle();
+                if (profile) {
+                    otherName = profile.name || otherName;
+                    otherAvatar = profile.avatar;
+                }
+            }
+
             // Fetch last message content
             const { data: lastMsg } = await supabase
                 .from('messages')
@@ -1924,6 +1939,8 @@ app.get('/api/conversations/user/:userId', async (req, res) => {
             return {
                 id: c.id,
                 otherId: otherId,
+                otherName: otherName,   // 🆕 Enriched from DB
+                otherAvatar: otherAvatar, // 🆕 Enriched from DB
                 lastMessage: lastMsg?.content || 'Inizia a chattare',
                 lastAt: lastMsg?.created_at || c.created_at,
                 senderId: lastMsg?.sender_id

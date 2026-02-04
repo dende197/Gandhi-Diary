@@ -2067,13 +2067,14 @@
                 const data = await res.json();
                 if (data.success) {
                     state.threads = (data.data || []).map(t => ({
-                        threadId: t.id, // Now using UUID conversation_id
+                        threadId: t.id,
                         otherId: t.otherId,
-                        otherName: DIRECTORY.find(u => u.id === t.otherId)?.name || "Utente",
+                        otherName: t.otherName || DIRECTORY.find(u => u.id === t.otherId)?.name || "Utente",
+                        otherAvatar: t.otherAvatar, // 🆕 Enriched from DB
                         lastText: t.lastMessage || "",
                         lastTime: t.lastAt,
                         senderId: t.senderId,
-                        unread: false // TODO: implement real unread count
+                        unread: false
                     }));
                     render();
                     localStorage.setItem(lsKey('threads'), JSON.stringify(state.threads));
@@ -3878,7 +3879,7 @@
                     
                     ${filteredConv.length > 0 ? filteredConv.map(t => `
                         <div onclick="openChat('${t.otherName}', '${t.otherId}')" style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.04); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.03);">
-                            ${renderAvatar(t.otherName, 50)}
+                            ${renderAvatar(t.otherName, 50, t.otherAvatar)}
                             <div style="flex:1; text-align:left; min-width:0;">
                                 <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${t.otherName}</div>
                                 <div style="font-size:13px; color:rgba(255,255,255,0.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
