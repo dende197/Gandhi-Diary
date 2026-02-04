@@ -4943,8 +4943,10 @@
                 sessionManager.save(data.session);
             }
 
-            // 2. Idratazione Identità (con validazione) (Bug #5)
+            // 2. Idratazione Identità (MIGLIORATA: ID Fallback immediato) (Bug #5)
             state.user = state.user || {};
+            // Set Argo ID as fallback immediately to prevent "guest" status
+            state.user.id = data.selectedProfile?.id || (data.student ? `argo:${data.student.id}` : 'argo:unknown');
             if (data.student) {
                 // Nome: valida che non sia username
                 // Nome: Priorità a selectedProfile se disponibile (contiene dati più ricchi se student è fallback)
@@ -4985,7 +4987,7 @@
                 const school = (data.session.schoolCode || '').toUpperCase();
                 const userName = data.session.userName.toLowerCase();
                 // Create a deterministic email for the Supabase Auth user
-                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.local`;
+                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
                 // Use the Argo password (obfuscated slightly)
                 const supabasePassword = `Argo_${pass}_!`;
 
@@ -5007,7 +5009,13 @@
                             }
                         }
                     });
-                    if (!upErr) authData = upData;
+                    if (!upErr) {
+                        authData = upData;
+                    } else {
+                        console.warn("⚠️ SignUp failed:", upErr.message);
+                        // Se il signup fallisce perché l'utente esiste ma signIn è fallito (es. password errata), 
+                        // qui non possiamo fare molto, ma almeno non crashiamo.
+                    }
                 }
 
                 if (authData && authData.user) {
