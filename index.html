@@ -1842,6 +1842,7 @@
                 state.user.name = argoSession.name || state.user.name;
                 state.user.class = argoSession.class || state.user.class;
                 state.user.specialization = argoSession.specialization || state.user.specialization;
+                state.user.avatar = argoSession.avatar || state.user.avatar; // 🔥 Added Avatar
                 console.log("💾 Boot: Identità caricata da sessionManager:", state.user.id);
             }
 
@@ -1872,6 +1873,18 @@
                     try {
                         const parsed = JSON.parse(cached);
                         state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : key)] = parsed;
+                    } catch { }
+                }
+            });
+
+            // 🔥 RESTORE: Global Caches (Market, Posts, Polls) - Fix for data loss on refresh
+            ['posts', 'market', 'polls'].forEach(key => {
+                const cached = localStorage.getItem(globalKey(key));
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        if (key === 'market') state.marketItems = parsed.map(normalizeMarketItem);
+                        else state[key] = parsed;
                     } catch { }
                 }
             });
@@ -4931,6 +4944,7 @@
                 data.session.name = data.student?.name || data.selectedProfile?.name;
                 data.session.class = data.student?.class || data.selectedProfile?.class;
                 data.session.specialization = data.student?.specialization || data.selectedProfile?.specialization;
+                data.session.avatar = data.student?.avatar || data.selectedProfile?.avatar; // 🔥 Added Avatar
 
                 sessionManager.save(data.session);
             }
