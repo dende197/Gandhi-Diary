@@ -1879,7 +1879,7 @@
                         const userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
                         const pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
 
-                        const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.local`;
+                        const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
                         const supabasePassword = `Argo_${pass}_!`;
 
                         const { data: arData, error: arErr } = await supabaseClient.auth.signInWithPassword({
@@ -1889,11 +1889,13 @@
 
                         if (!arErr && arData.session) {
                             console.log("✅ Boot: Supabase Auth recovered!");
-                            location.reload(); // Refresh to catch the new session in the first check
+                            location.reload();
                             return;
+                        } else if (arErr) {
+                            console.warn("🩹 Boot: Recovery failed (Auth error)", arErr.message);
                         }
                     } catch (e) {
-                        console.warn("🩹 Boot: Recovery failed", e.message);
+                        console.warn("🩹 Boot: Recovery failed (Exception)", e.message);
                     }
                 }
                 state.view = 'login';
@@ -4009,7 +4011,7 @@
 
         function renderChat() {
             const threadId = state.currentThreadId;
-            const otherUser = DIRECTORY.find(u => u.name === state.currentChatUser);
+            const otherUser = DIRECTORY.find(u => u.id === state.currentChatId);
 
             // Schedule UI update after render
             setTimeout(updateChatUI, 50);
@@ -4308,7 +4310,7 @@
 
         function updateWeekDayButton(taskId, dateStr) {
             const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
-            const buttons = document.querySelectorAll(`[data - task - id="${taskId}"][data - date="${dateStr}"]`);
+            const buttons = document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`);
             buttons.forEach(btn => {
                 if (isPlanned) {
                     btn.style.background = 'var(--green)';
@@ -4336,12 +4338,12 @@
         }
 
         function toggleCommentBox(id) {
-            const el = document.getElementById(`comment - box - ${id} `);
+            const el = document.getElementById(`comment-box-${id}`);
             if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
         async function addCommentToPost(id) {
-            const input = document.getElementById(`comment - input - ${id} `);
+            const input = document.getElementById(`comment-input-${id}`);
             if (!input || !input.value.trim()) return;
             const post = state.posts.find(p => p.id === id);
             if (post) {
@@ -4353,7 +4355,7 @@
                 render();
 
                 try {
-                    const res = await fetch(`${API_BASE_URL} /api/posts / ${id}/comment`, {
+                    const res = await fetch(`${API_BASE_URL}/api/posts/${id}/comment`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(comment)
@@ -5306,7 +5308,10 @@
 
         async function openChat(otherName, otherId = null) {
             const myId = getUserId();
-            if (!myId || myId === 'guest') return alert('Esegui il login per chattare');
+            if (!myId || myId === 'guest') {
+                alert('Esegui il login per chattare');
+                return false;
+            }
 
             // Find ID if missing
             if (!otherId) {
@@ -5342,7 +5347,7 @@
 
             state.currentChatUser = otherName;
             state.currentChatId = otherId;
-            state.currentThreadId = conversationId; // This is now the UUID
+            state.currentThreadId = conversationId;
             state.msgSearch = '';
 
             if (!state.messages[conversationId]) {
@@ -5352,10 +5357,12 @@
 
             saveNavigationState();
             navigate('chat');
+            render();
 
             await fetchChatMessages(conversationId);
             startChatPolling();
             subscribeToChatRealtime(conversationId);
+            return true;
         }
 
         async function fetchChatMessages(conversationId) {
@@ -5595,12 +5602,14 @@
                 item.status = 'sold';
                 render();
 
-                await openChat(item.seller, item.sellerId || `seller:${item.id}`);
-                await sendChatMessage({
-                    text: `✅ Ho acquistato "${item.title}"`,
-                    type: 'purchase',
-                    meta: { orderId: order.id, itemId: item.id, title: item.title, price: item.price }
-                });
+                const chatOk = await openChat(item.seller, item.sellerId || `seller:${item.id}`);
+                if (chatOk) {
+                    await sendChatMessage({
+                        text: `✅ Ho acquistato "${item.title}"`,
+                        type: 'purchase',
+                        meta: { orderId: order.id, itemId: item.id, title: item.title, price: item.price }
+                    });
+                }
             } catch (e) {
                 alert(e.message);
             } finally {
@@ -5617,12 +5626,14 @@
             try {
                 const order = await createMarketOrder({ item, type: 'offer', offerPrice: offer });
 
-                await openChat(item.seller, item.sellerId || `seller:${item.id}`);
-                await sendChatMessage({
-                    text: `💬 Offerta per "${item.title}": ${offer}`,
-                    type: 'offer',
-                    meta: { orderId: order.id, itemId: item.id, title: item.title, price: item.price, offerPrice: offer }
-                });
+                const chatOk = await openChat(item.seller, item.sellerId || `seller:${item.id}`);
+                if (chatOk) {
+                    await sendChatMessage({
+                        text: `💬 Offerta per "${item.title}": ${offer}`,
+                        type: 'offer',
+                        meta: { orderId: order.id, itemId: item.id, title: item.title, price: item.price, offerPrice: offer }
+                    });
+                }
             } catch (e) {
                 alert(e.message);
             } finally {
