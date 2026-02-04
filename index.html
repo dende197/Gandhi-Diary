@@ -5004,7 +5004,8 @@
                 });
 
                 if (authErr) {
-                    console.log("🆕 User not in Supabase, signing up...");
+                    // Try to sign up if sign-in failed (might be a new user)
+                    console.log("🆕 User not in Supabase or Sign-In failed, attempting safe bridge...");
                     const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
                         email: supabaseEmail,
                         password: supabasePassword,
@@ -5015,12 +5016,14 @@
                             }
                         }
                     });
-                    if (!upErr) {
+
+                    if (!upErr && upData && upData.user) {
                         authData = upData;
                     } else {
-                        console.warn("⚠️ SignUp failed:", upErr.message);
-                        // Se il signup fallisce perché l'utente esiste ma signIn è fallito (es. password errata), 
-                        // qui non possiamo fare molto, ma almeno non crashiamo.
+                        // 🔥 EXPERT FIX: If signup fails (e.g. rate limit, or already exists but wrong pass)
+                        // DO NOT block the user. The Argo session is still valid.
+                        console.warn("⚠️ Supabase Bridge (SignUp) skipped/failed:", upErr?.message || "Unknown error");
+                        // We continue with Argo session as primary
                     }
                 }
 

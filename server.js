@@ -42,7 +42,7 @@ app.use(cors({
         }
     },
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Client-Info", "apikey"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Client-Info", "apikey", "x-id-soggetto", "x-prg-soggetto", "x-auth-token"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
@@ -1497,26 +1497,43 @@ app.post('/api/posts/:id/comment', async (req, res) => {
 app.get('/api/market', async (req, res) => {
     if (supabase) {
         try {
-            // Join with profiles to get current seller avatar
-            const { data, error } = await supabase
+            // 🆕 EXPERT FIX: Manual Join to bypass "relationship not found" schema error
+            // Step 1: Fetch market items
+            const { data: items, error: marketErr } = await supabase
                 .from("market_items")
-                .select(`
-                    *,
-                    profiles!seller_id (avatar)
-                `)
+                .select("*")
                 .order("created_at", { ascending: false })
                 .limit(200);
 
-            if (error) throw error;
+            if (marketErr) throw marketErr;
+            if (!items || items.length === 0) return res.json({ success: true, data: [] });
 
-            const enriched = (data || []).map(item => ({
+            // Step 2: Collect unique seller IDs
+            const sellerIds = [...new Set(items.map(i => i.seller_id).filter(id => !!id))];
+
+            // Step 3: Fetch profiles for these sellers
+            let profilesMap = {};
+            if (sellerIds.length > 0) {
+                const { data: profiles, error: profErr } = await supabase
+                    .from("profiles")
+                    .select("id, name, avatar")
+                    .in("id", sellerIds);
+
+                if (!profErr && profiles) {
+                    profiles.forEach(p => { profilesMap[p.id] = p; });
+                }
+            }
+
+            // Step 4: Enrich items with seller profile data manually
+            const enriched = items.map(item => ({
                 ...item,
-                seller_avatar: item.profiles?.avatar || null
+                seller_name: profilesMap[item.seller_id]?.name || item.seller_name || "Utente",
+                seller_avatar: profilesMap[item.seller_id]?.avatar || null
             }));
 
             return res.json({ success: true, data: enriched });
         } catch (e) {
-            console.error("⚠️ Market GET error:", e.message);
+            console.error("⚠️ Market GET error (Manual Join):", e.message);
             return res.status(500).json({ success: false, error: e.message });
         }
     }
