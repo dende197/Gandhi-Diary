@@ -1838,6 +1838,10 @@
             if (argoSession && argoSession.studentId) {
                 state.isLoggedIn = true;
                 state.user.id = argoSession.studentId;
+                // 🔥 NEW: Instant Hydration from local session to avoid "Utente" on refresh
+                state.user.name = argoSession.name || state.user.name;
+                state.user.class = argoSession.class || state.user.class;
+                state.user.specialization = argoSession.specialization || state.user.specialization;
                 console.log("💾 Boot: Identità caricata da sessionManager:", state.user.id);
             }
 
@@ -4922,6 +4926,12 @@
                 data.session.storedPass = btoa(unescape(encodeURIComponent(pass)));
                 // 🔥 Use server-provided student ID or reconstruct it if missing
                 data.session.studentId = data.student?.id || `${data.session.schoolCode}:${data.session.userName}:${data.session.profileIndex}`;
+
+                // 🔥 NEW: Persist full profile info for instant hydration on refresh
+                data.session.name = data.student?.name || data.selectedProfile?.name;
+                data.session.class = data.student?.class || data.selectedProfile?.class;
+                data.session.specialization = data.student?.specialization || data.selectedProfile?.specialization;
+
                 sessionManager.save(data.session);
             }
 

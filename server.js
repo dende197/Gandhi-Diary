@@ -2411,6 +2411,7 @@ app.post('/login', async (req, res) => {
                     id: pid,
                     name: studentName,
                     class: normalizedClass || studentClass || "N/D",
+                    specialization: storedSpecialization || null, // 🔥 FIX: Persist specialization
                     last_active: new Date().toISOString()
                 }, { onConflict: "id" });
 
