@@ -1869,6 +1869,33 @@
                     state.view = currentViewFromHash() || 'home';
                 }
             } else {
+                // v7.0 FIX-ALL: Self-Healing Bridge
+                // If we have an Argo session but NO Supabase session, try to bridge automatically
+                const argoSession = sessionManager.load();
+                if (argoSession && argoSession.storedUser && argoSession.storedPass) {
+                    try {
+                        console.log("🩹 Boot: Attempting Supabase Auth recovery...");
+                        const school = argoSession.schoolCode.toUpperCase();
+                        const userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
+                        const pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
+
+                        const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.local`;
+                        const supabasePassword = `Argo_${pass}_!`;
+
+                        const { data: arData, error: arErr } = await supabaseClient.auth.signInWithPassword({
+                            email: supabaseEmail,
+                            password: supabasePassword
+                        });
+
+                        if (!arErr && arData.session) {
+                            console.log("✅ Boot: Supabase Auth recovered!");
+                            location.reload(); // Refresh to catch the new session in the first check
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn("🩹 Boot: Recovery failed", e.message);
+                    }
+                }
                 state.view = 'login';
             }
 
@@ -3108,6 +3135,7 @@
 
                 // ✅ STEP 2: Ora cancella sessione
                 sessionManager.clear();
+                if (supabaseClient) supabaseClient.auth.signOut();
 
                 // ✅ STEP 3: Reset state MA NON cancellare plannedTasks/stressLevels
                 state.isLoggedIn = false;
@@ -4948,12 +4976,57 @@
                 } else {
                     state.user.class = studentClass || "N/D";
                 }
+            }
 
-                // Specialization (Fix for persistent profile)
-                if (data.student.specialization) {
-                    state.user.specialization = data.student.specialization;
-                    console.log("✅ Indirizzo ricevuto:", state.user.specialization);
+            // 3. Supabase Auth Bridge (FIX-ALL: Centralize identity)
+            try {
+                const school = (data.session.schoolCode || '').toUpperCase();
+                const userName = data.session.userName.toLowerCase();
+                // Create a deterministic email for the Supabase Auth user
+                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.local`;
+                // Use the Argo password (obfuscated slightly)
+                const supabasePassword = `Argo_${pass}_!`;
+
+                console.log("🔗 Bridging to Supabase Auth...");
+                let { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+                    email: supabaseEmail,
+                    password: supabasePassword
+                });
+
+                if (authErr) {
+                    console.log("🆕 User not in Supabase, signing up...");
+                    const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
+                        email: supabaseEmail,
+                        password: supabasePassword,
+                        options: {
+                            data: {
+                                name: state.user.name,
+                                class: state.user.class
+                            }
+                        }
+                    });
+                    if (!upErr) authData = upData;
                 }
+
+                if (authData && authData.user) {
+                    state.user.id = authData.user.id;
+                    console.log("✅ Supabase Auth Linked:", state.user.id);
+
+                    // Sync profile to DB immediately
+                    await supabaseClient.from('profiles').upsert({
+                        id: state.user.id,
+                        name: state.user.name,
+                        class: state.user.class,
+                        last_active: new Date().toISOString()
+                    });
+                }
+            } catch (ex) {
+                console.warn("⚠️ Supabase Bridge failed:", ex.message);
+            }
+            // Specialization (Fix for persistent profile)
+            if (data.student.specialization) {
+                state.user.specialization = data.student.specialization;
+                console.log("✅ Indirizzo ricevuto:", state.user.specialization);
             }
 
             // ✅ FIX: normalizza sempre la classe prima di salvare
