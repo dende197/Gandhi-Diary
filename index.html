@@ -1651,12 +1651,12 @@
             return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        async function getUserId() {
+        function getUserId() {
             if (!state.isLoggedIn) return 'guest';
             const s = sessionManager.load();
             if (!s) return 'guest';
 
-            // ✅ v5.0 Standard: school:user:profile (all lowercase, no spaces)
+            // ✅ Identificativo univoco stabile del profilo (Sincrono)
             const school = (s.schoolCode || 'S').toString().toLowerCase().trim();
             const user = (s.userName || s.username || 'U').toString().toLowerCase().trim();
             const idx = (s.profileIndex ?? 0);
@@ -1835,12 +1835,12 @@
             if (isLogged && persistentUser) {
                 state.isLoggedIn = true;
 
-                // 🔥 FIX BUG 5: Normalizzazione Utente
+                // 🔥 FIX BUG 5: Normalizzazione Utente e Profilo
                 state.user = {
-                    ...state.user, // Default 'Utente'
+                    ...state.user,
                     ...persistentUser,
-                    name: persistentUser.name || persistentUser.userName || persistentUser.username || persistentUser.denominazione || 'Utente',
-                    class: persistentUser.class || persistentUser.classe || persistentUser.desScuola || 'N/D'
+                    name: persistentUser.name || persistentUser.userName || persistentUser.username || 'Utente',
+                    class: persistentUser.class || persistentUser.classe || 'N/D'
                 };
 
                 console.log("✅ Stato utente ripristinato:", state.user.name);
@@ -1858,6 +1858,8 @@
                                 state.currentThreadId = nav.currentThreadId;
                                 state.currentChatUser = nav.currentChatUser;
                                 state.currentChatId = nav.currentChatId;
+                                // Sottoscrivi subito al realtime della chat attiva
+                                subscribeToChatRealtime(nav.currentThreadId);
                             }
                         }
                     } catch { }
@@ -1867,79 +1869,9 @@
                 }
 
                 updateOfflineBadge();
-                render(); // First render with restored state
-
-                // 🔥 FIX BUG 3 & 4: Carica la directory subito in background
-                fetchUsersDirectory();
-                fetchThreads();
-
-            } else {
-                state.view = 'login';
                 render();
-            }
 
-            // 2. Load other caches in background
-            setTimeout(() => {
-                ['threads', 'tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels'].forEach(key => {
-                    const cached = localStorage.getItem(lsKey(key));
-                    if (cached) {
-                        try {
-                            const parsed = JSON.parse(cached);
-                            if (key === 'tasks') {
-                                state.tasks = (parsed || []).map(t => {
-                                    if (t.due_date) {
-                                        t.dateObj = new Date(t.due_date);
-                                        t.hasValidDate = !isNaN(t.dateObj.getTime());
-                                    }
-                                    return t;
-                                });
-                            } else {
-                                state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : key)] = parsed;
-                            }
-                        } catch { }
-                    }
-                });
-                render(); // Re-render with tasks/grades
-            }, 50);
-
-            // Caches Globali
-            ['posts', 'market', 'polls'].forEach(key => {
-                const cached = localStorage.getItem(globalKey(key));
-                if (cached) {
-                    try { state[key === 'market' ? 'marketItems' : key] = JSON.parse(cached); } catch { }
-                }
-            });
-
-            if (isLogged) {
-                const savedNav = localStorage.getItem(lsKey('nav_state'));
-                if (savedNav) {
-                    try {
-                        const nav = JSON.parse(savedNav);
-                        if (nav && nav.view) {
-                            state.view = nav.view;
-                            state.currentThreadId = nav.currentThreadId;
-                            state.currentChatUser = nav.currentChatUser;
-                            state.currentChatId = nav.currentChatId;
-
-                            // Se eravamo in una chat, ripristiniamo i messaggi locali e attiviamo sync
-                            if (state.view === 'chat' && state.currentThreadId) {
-                                loadChatMessages(state.currentThreadId);
-                                // Sincronizziamo subito la chat attiva
-                                setTimeout(() => {
-                                    fetchChatMessages(state.currentThreadId);
-                                    subscribeToChatRealtime(state.currentThreadId);
-                                    startChatPolling();
-                                }, 100);
-                            }
-                        } else {
-                            state.view = 'home';
-                        }
-                    } catch { state.view = 'home'; }
-                } else {
-                    state.view = 'home';
-                }
-
-                // Sincronizzazione background non-bloccante
+                // Sync background (non-bloccante)
                 (async () => {
                     await registerUserOnServer();
                     await fetchUsersDirectory();
@@ -1947,10 +1879,41 @@
                     fetchMarket();
                     fetchPolls();
                     fetchThreads();
-                    fetchMarketOutbox();
+                    flushOutbox(); // 🔥 FIX: Sostitito fetchMarketOutbox
                     performSync();
                 })();
+            } else {
+                state.view = 'login';
+                render();
             }
+
+            // 2. Load Caches
+            ['threads', 'tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels'].forEach(key => {
+                const cached = localStorage.getItem(lsKey(key));
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        if (key === 'tasks') {
+                            state.tasks = (parsed || []).map(t => {
+                                if (t.due_date) {
+                                    t.dateObj = new Date(t.due_date);
+                                    t.hasValidDate = !isNaN(t.dateObj.getTime());
+                                }
+                                return t;
+                            });
+                        } else {
+                            state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : key)] = parsed;
+                        }
+                    } catch { }
+                }
+            });
+
+            ['posts', 'market', 'polls'].forEach(key => {
+                const cached = localStorage.getItem(globalKey(key));
+                if (cached) {
+                    try { state[key === 'market' ? 'marketItems' : key] = JSON.parse(cached); } catch { }
+                }
+            });
 
             // Cleanup
             setTimeout(hideBoot, 400);
@@ -2773,7 +2736,7 @@
             const v = currentViewFromHash() || (state.isLoggedIn ? 'home' : 'login');
             if (state.view !== v) {
                 state.view = v;
-                saveNavigationState(); // 🔥 FIX: Persistenza su cambio hash
+                saveNavigationState(); // 🔥 FIX: Persistenza cambio hash
                 render();
             }
         });
@@ -5306,17 +5269,18 @@
         async function fetchChatMessages(conversationId) {
             if (!conversationId) return;
             try {
-                // v7.0 - New Endpoint
+                // v7.0 - RELATIONAL ENDPOINT
                 const res = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}/messages`);
                 const data = await res.json();
                 if (data.success) {
-                    const myId = getUserId();
+                    const myId = getUserId(); // 🔥 ORA SINCRONO
                     state.messages[conversationId] = (data.data || []).map(m => ({
                         id: m.id,
-                        text: m.content || m.text, // Support both new/old fields
+                        text: m.content || m.text,
                         type: m.type || 'text',
                         meta: m.meta || {},
-                        me: m.sender_id === myId,
+                        me: String(m.sender_id) === String(myId), // Stabilità lato basata su ID
+                        sender_id: m.sender_id,
                         timestamp: m.created_at,
                         status: 'sent'
                     }));
@@ -5397,19 +5361,29 @@
             } catch (e) { console.warn("Fetch directory error:", e); }
         }
 
-        function subscribeToChatRealtime(threadId) {
+        function subscribeToChatRealtime(roomId) {
             if (!supabaseClient) return;
             if (chatChannel) {
                 supabaseClient.removeChannel(chatChannel);
             }
-            // Use 'messages' table and 'conversation_id' filter for v7.0
-            chatChannel = supabaseClient
-                .channel(`chat:${threadId}`)
-                .on('postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${threadId}` },
-                    (payload) => handleRealtimeMessage(payload.new, threadId)
-                )
-                .subscribe();
+
+            // 🔥 ARCHITETTURA BROADCAST: room:{roomId}:messages
+            chatChannel = supabaseClient.channel(`room:${roomId}:messages`, {
+                config: { broadcast: { self: false } }
+            });
+
+            console.log(`📡 Joining Broadcast Room: room:${roomId}:messages`);
+
+            chatChannel
+                .on('broadcast', { event: 'message_created' }, (payload) => {
+                    console.log("📥 Broadcast Message Received:", payload.payload);
+                    handleRealtimeMessage(payload.payload, roomId);
+                })
+                .subscribe((status) => {
+                    if (status === 'CHANNEL_ERROR') {
+                        console.error("❌ WebSocket Error: bad response from server");
+                    }
+                });
         }
 
         async function handleRealtimeMessage(newMsg, threadId) {
@@ -5419,50 +5393,32 @@
             const existsByServerId = state.messages[threadId]?.some(m => m.id === newMsg.id);
 
             // 🔍 2. Check duplicate by Local Pending (Optimistic Match)
-            // Se ho inviato io un messaggio che è ancora "pending" e ha lo stesso testo e sender_id
-            const pendingParamsIndex = state.messages[threadId]?.findIndex(m =>
+            const pendingIdx = state.messages[threadId]?.findIndex(m =>
                 m.status === 'pending' &&
                 m.sender_id === newMsg.sender_id &&
                 (m.text === (newMsg.content || newMsg.text))
             );
 
             // A. Se esiste o se è il mio messaggio (confermato dal server dopo optimistic update)
-            if (existsByServerId || pendingParamsIndex > -1) {
-                // Aggiorna lo stato del messaggio locale esistente (da pending a sent)
-                if (pendingParamsIndex > -1) {
-                    state.messages[threadId][pendingParamsIndex].id = newMsg.id;
-                    state.messages[threadId][pendingParamsIndex].status = 'sent';
-                    state.messages[threadId][pendingParamsIndex].timestamp = newMsg.created_at;
+            if (existsByServerId || pendingIdx > -1) {
+                if (pendingIdx > -1) {
+                    state.messages[threadId][pendingIdx].id = newMsg.id;
+                    state.messages[threadId][pendingIdx].status = 'sent';
+                    state.messages[threadId][pendingIdx].timestamp = newMsg.created_at;
                     saveChatMessages(threadId);
                     if (state.view === 'chat' && state.currentThreadId === threadId) updateChatUI();
                 }
-                return; // Stop, non aggiungere duplicato
-            }
-
-            // B. Se è un messaggio MIO ma non l'ho trovato localmente (es. inviato da altro device)
-            // Lo aggiungo, ma come ME
-            if (newMsg.sender_id === myId) {
-                const msg = {
-                    id: newMsg.id,
-                    text: newMsg.content || newMsg.text, // Supporta nuovo schema v7
-                    me: true,
-                    sender_id: newMsg.sender_id,
-                    timestamp: newMsg.created_at,
-                    status: 'sent'
-                };
-                if (!state.messages[threadId]) state.messages[threadId] = [];
-                state.messages[threadId].push(msg);
-                state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                saveChatMessages(threadId);
-                if (state.view === 'chat' && state.currentThreadId === threadId) updateChatUI();
                 return;
             }
 
-            // C. Messaggio ricevuto da ALTRI
+            // B/C. Nuovo messaggio (da me o da altri)
+            // Stabilità del lato basata esclusivamente su sender_id
+            const isMe = String(newMsg.sender_id) === String(myId);
+
             const msg = {
                 id: newMsg.id,
                 text: newMsg.content || newMsg.text,
-                me: false,
+                me: isMe,
                 sender_id: newMsg.sender_id,
                 timestamp: newMsg.created_at,
                 status: 'sent'
@@ -5470,14 +5426,12 @@
 
             if (!state.messages[threadId]) state.messages[threadId] = [];
             state.messages[threadId].push(msg);
-
             state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            saveChatMessages(threadId); // Persistere messaggio ricevuto
+            saveChatMessages(threadId);
 
             if (state.view === 'chat' && state.currentThreadId === threadId) {
                 updateChatUI();
             } else {
-                // TODO: Notifica toaster o badge non letto
                 updateChatListUnread(threadId);
             }
         }
@@ -5595,7 +5549,7 @@
             const threadId = state.currentThreadId;
             const receiverId = state.currentChatId;
             const receiverName = state.currentChatUser;
-            const myId = await getUserId();
+            const myId = getUserId();
 
             if (!text || !threadId || !receiverId) {
                 console.warn("❌ sendChatMessage: missing params", { text, threadId, receiverId });

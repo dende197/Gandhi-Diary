@@ -1856,6 +1856,27 @@ app.post('/api/messages', async (req, res) => {
 
         if (msgErr) throw msgErr;
 
+        // 🔥 ARCHITETTURA BROADCAST: Invia il messaggio in tempo reale
+        const roomId = conversationId; // Usiamo conversationId come roomId
+        try {
+            const channel = supabase.channel(`room:${roomId}:messages`, {
+                config: { broadcast: { self: true } }
+            });
+            await channel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.send({
+                        type: 'broadcast',
+                        event: 'message_created',
+                        payload: msg
+                    });
+                    // Non serve tenere il canale aperto sul server
+                    supabase.removeChannel(channel);
+                }
+            });
+        } catch (re) {
+            console.warn("⚠️ Realtime Broadcast failed:", re.message);
+        }
+
         // Update conversation 'last_message_at' for sorting
         await supabase
             .from('conversations')
