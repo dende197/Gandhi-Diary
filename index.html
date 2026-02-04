@@ -1837,16 +1837,23 @@
 
             if (session) {
                 state.isLoggedIn = true;
+                // 🔥 Ensure we prioritize the Argo ID if we have one in sessionManager
+                const argoSession = sessionManager.load();
+                if (argoSession && argoSession.studentId) {
+                    state.user.id = argoSession.studentId;
+                }
+
                 const profile = await getCurrentUser();
                 if (profile) {
                     state.user = {
                         ...state.user,
                         ...profile,
-                        id: session.user.id,
-                        name: profile.name || 'Utente',
-                        class: profile.class || 'N/D'
+                        // If profile.id is Argo ID (which it should be now), it will be used
+                        name: profile.name || state.user.name || 'Utente',
+                        class: profile.class || state.user.class || 'N/D'
                     };
-                } else {
+                } else if (session.user.id && !state.user.id) {
+                    // Fallback to UUID ONLY as last resort
                     state.user.id = session.user.id;
                 }
 
@@ -1956,7 +1963,8 @@
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN') {
                 state.isLoggedIn = true;
-                state.user.id = session?.user?.id || null;
+                // 🔥 DON'T overwrite state.user.id here, it should already be an Argo ID 
+                // from handleLoginSuccess or the Boot sequence.
                 render();
             } else if (event === 'SIGNED_OUT') {
                 state.isLoggedIn = false;
@@ -4940,6 +4948,8 @@
             if (data.session) {
                 data.session.storedUser = btoa(unescape(encodeURIComponent(user)));
                 data.session.storedPass = btoa(unescape(encodeURIComponent(pass)));
+                // 🔥 Ensure studentId is in the session (Bug #5 fix)
+                data.session.studentId = data.selectedProfile?.id || (data.student ? `argo:${data.student.id}` : null);
                 sessionManager.save(data.session);
             }
 
@@ -5019,12 +5029,14 @@
                 }
 
                 if (authData && authData.user) {
-                    state.user.id = authData.user.id;
-                    console.log("✅ Supabase Auth Linked:", state.user.id);
+                    // 🔥 CRITICAL: We KEEP the Argo ID in state.user.id for application logic consistency
+                    // but we link it to the Supabase profile.
+                    console.log("✅ Supabase Auth Linked for:", supabaseEmail);
 
-                    // Sync profile to DB immediately
+                    // Sync profile to DB immediately using the ARGO ID as primary key
                     await supabaseClient.from('profiles').upsert({
-                        id: state.user.id,
+                        id: state.user.id, // This is the Argo ID string (e.g. argo:SG20925:cinqueanna:0)
+                        supabase_uid: authData.user.id, // Store UUID as metadata for RLS if needed later
                         name: state.user.name,
                         class: state.user.class,
                         last_active: new Date().toISOString()
