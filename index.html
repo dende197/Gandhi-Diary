@@ -1834,7 +1834,17 @@
 
             if (isLogged && persistentUser) {
                 state.isLoggedIn = true;
-                state.user = persistentUser;
+
+                // 🔥 FIX BUG 5: Normalizzazione Utente
+                state.user = {
+                    ...state.user, // Default 'Utente'
+                    ...persistentUser,
+                    name: persistentUser.name || persistentUser.userName || persistentUser.username || persistentUser.denominazione || 'Utente',
+                    class: persistentUser.class || persistentUser.classe || persistentUser.desScuola || 'N/D'
+                };
+
+                console.log("✅ Stato utente ripristinato:", state.user.name);
+
                 // Restore View immediately to avoid "flicker" to login
                 const savedNav = localStorage.getItem(lsKey('nav_state'));
                 if (savedNav) {
@@ -1842,16 +1852,27 @@
                         const nav = JSON.parse(savedNav);
                         if (nav && nav.view) {
                             state.view = nav.view;
-                            state.currentThreadId = nav.currentThreadId;
-                            state.currentChatUser = nav.currentChatUser;
-                            state.currentChatId = nav.currentChatId; // IMPORTANT for new chat API
+
+                            // 🔥 FIX: Ripristina stato chat se eravamo in chat
+                            if (nav.view === 'chat' && nav.currentThreadId) {
+                                state.currentThreadId = nav.currentThreadId;
+                                state.currentChatUser = nav.currentChatUser;
+                                state.currentChatId = nav.currentChatId;
+                            }
                         }
                     } catch { }
                 } else {
-                    state.view = 'home';
+                    // Fallback to Hash if no saved state
+                    state.view = currentViewFromHash() || 'home';
                 }
+
                 updateOfflineBadge();
                 render(); // First render with restored state
+
+                // 🔥 FIX BUG 3 & 4: Carica la directory subito in background
+                fetchUsersDirectory();
+                fetchThreads();
+
             } else {
                 state.view = 'login';
                 render();
@@ -2752,6 +2773,7 @@
             const v = currentViewFromHash() || (state.isLoggedIn ? 'home' : 'login');
             if (state.view !== v) {
                 state.view = v;
+                saveNavigationState(); // 🔥 FIX: Persistenza su cambio hash
                 render();
             }
         });
@@ -5392,22 +5414,71 @@
 
         async function handleRealtimeMessage(newMsg, threadId) {
             const myId = await getUserId();
-            const exists = state.messages[threadId]?.some(m => m.id === newMsg.id);
-            if (!exists && newMsg.sender_id !== myId) {
+
+            // 🔍 1. Check duplicate by ID (Server)
+            const existsByServerId = state.messages[threadId]?.some(m => m.id === newMsg.id);
+
+            // 🔍 2. Check duplicate by Local Pending (Optimistic Match)
+            // Se ho inviato io un messaggio che è ancora "pending" e ha lo stesso testo e sender_id
+            const pendingParamsIndex = state.messages[threadId]?.findIndex(m =>
+                m.status === 'pending' &&
+                m.sender_id === newMsg.sender_id &&
+                (m.text === (newMsg.content || newMsg.text))
+            );
+
+            // A. Se esiste o se è il mio messaggio (confermato dal server dopo optimistic update)
+            if (existsByServerId || pendingParamsIndex > -1) {
+                // Aggiorna lo stato del messaggio locale esistente (da pending a sent)
+                if (pendingParamsIndex > -1) {
+                    state.messages[threadId][pendingParamsIndex].id = newMsg.id;
+                    state.messages[threadId][pendingParamsIndex].status = 'sent';
+                    state.messages[threadId][pendingParamsIndex].timestamp = newMsg.created_at;
+                    saveChatMessages(threadId);
+                    if (state.view === 'chat' && state.currentThreadId === threadId) updateChatUI();
+                }
+                return; // Stop, non aggiungere duplicato
+            }
+
+            // B. Se è un messaggio MIO ma non l'ho trovato localmente (es. inviato da altro device)
+            // Lo aggiungo, ma come ME
+            if (newMsg.sender_id === myId) {
                 const msg = {
                     id: newMsg.id,
-                    text: newMsg.text,
-                    me: false,
+                    text: newMsg.content || newMsg.text, // Supporta nuovo schema v7
+                    me: true,
+                    sender_id: newMsg.sender_id,
                     timestamp: newMsg.created_at,
                     status: 'sent'
                 };
                 if (!state.messages[threadId]) state.messages[threadId] = [];
                 state.messages[threadId].push(msg);
                 state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                saveChatMessages(threadId); // Persistere messaggio ricevuto
-                if (state.view === 'chat' && state.currentThreadId === threadId) {
-                    updateChatUI();
-                }
+                saveChatMessages(threadId);
+                if (state.view === 'chat' && state.currentThreadId === threadId) updateChatUI();
+                return;
+            }
+
+            // C. Messaggio ricevuto da ALTRI
+            const msg = {
+                id: newMsg.id,
+                text: newMsg.content || newMsg.text,
+                me: false,
+                sender_id: newMsg.sender_id,
+                timestamp: newMsg.created_at,
+                status: 'sent'
+            };
+
+            if (!state.messages[threadId]) state.messages[threadId] = [];
+            state.messages[threadId].push(msg);
+
+            state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            saveChatMessages(threadId); // Persistere messaggio ricevuto
+
+            if (state.view === 'chat' && state.currentThreadId === threadId) {
+                updateChatUI();
+            } else {
+                // TODO: Notifica toaster o badge non letto
+                updateChatListUnread(threadId);
             }
         }
 
@@ -5537,6 +5608,7 @@
                 id: localId,
                 text,
                 me: true,
+                sender_id: myId, // 🔥 FIX BUG 1: Mantieni sender_id per confronto Realtime
                 timestamp: new Date().toISOString(),
                 status: 'pending',
                 type,
