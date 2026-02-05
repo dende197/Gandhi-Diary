@@ -4200,8 +4200,8 @@
                         ${renderAvatar(state.currentChatUser, 44, state.currentChatAvatar)}
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser}</span>
-                            <span onclick="showUserProfile('${state.currentChatId}')" style="font-size:12px; color:var(--primary); font-weight:600; cursor:pointer;">
-                                ${otherUser?.status === 'online' ? '🟢 Online' : 'Toccami per info'}
+                            <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">
+                                ${otherUser ? (otherUser.class ? 'Classe ' + otherUser.class : 'Studente') : 'Offline'}
                             </span>
                         </div>
                     </div>
@@ -5487,6 +5487,9 @@
                 return false;
             }
 
+            // ⚡ FLUIDITY: Show boot immediately to mask network latency
+            showBoot('Apro la chat...');
+
             // Find ID if missing
             if (!otherId) {
                 const found = DIRECTORY.find(u => u.name === otherName);
@@ -5537,6 +5540,8 @@
             await fetchChatMessages(conversationId);
             startChatPolling();
             subscribeToChatRealtime(conversationId);
+
+            hideBoot(); // ⚡ Hide boot when ready
             return true;
         }
 
