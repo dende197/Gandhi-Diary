@@ -1639,7 +1639,8 @@
                 currentThreadId: state.currentThreadId,
                 currentChatUser: state.currentChatUser,
                 currentChatId: state.currentChatId,
-                currentChatAvatar: state.currentChatAvatar // 🔥 Persist avatar too
+                currentChatAvatar: state.currentChatAvatar,
+                currentChatClass: state.currentChatClass // 🔥 PERSIST CLASS
             };
             localStorage.setItem(lsKey('nav_state'), JSON.stringify(nav));
         }
@@ -1903,12 +1904,12 @@
 
             if (hashView && hashView !== 'login') {
                 state.view = hashView;
-                // 🔥 Restore context even if coming from hash
                 if (savedNav && savedNav.view === hashView) {
                     state.currentThreadId = savedNav.currentThreadId;
                     state.currentChatUser = savedNav.currentChatUser;
                     state.currentChatId = savedNav.currentChatId;
                     state.currentChatAvatar = savedNav.currentChatAvatar;
+                    state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
                     loadChatMessages(state.currentThreadId);
                 }
             } else if (savedNav && savedNav.view && savedNav.view !== 'login') {
@@ -1918,6 +1919,7 @@
                     state.currentChatUser = savedNav.currentChatUser;
                     state.currentChatId = savedNav.currentChatId;
                     state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
+                    state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
                     loadChatMessages(state.currentThreadId); // Carica cache
                 }
             } else {
@@ -3007,8 +3009,12 @@
                 }, 0);
             }
 
-            if (state.view === 'chat') startChatPolling();
-            else stopChatPolling();
+            if (state.view === 'chat') {
+                startChatPolling();
+                scrollChatToBottom(false); // 🔥 FORCE SCROLL ON REFRESH/RENDER
+            } else {
+                stopChatPolling();
+            }
 
             updateOfflineBadge();
         }
@@ -4234,7 +4240,7 @@
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser || 'Utente'}</span>
                             <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">
-                                ${otherUser?.class ? 'Classe ' + otherUser.class : (state.currentChatUser ? 'Studente' : '')}
+                                ${state.currentChatClass || (otherUser?.class ? 'Classe ' + otherUser.class : (state.currentChatUser ? 'Studente' : ''))}
                             </span>
                         </div>
                     </div>
@@ -5565,7 +5571,9 @@
 
             state.currentChatUser = otherName;
             state.currentChatId = otherId;
-            state.currentChatAvatar = avatarUrl || state.threads.find(t => t.otherId === otherId)?.otherAvatar || DIRECTORY.find(u => u.id === otherId)?.avatar;
+            const targetUser = DIRECTORY.find(u => u.id === otherId);
+            state.currentChatAvatar = avatarUrl || targetUser?.avatar || state.threads.find(t => t.otherId === otherId)?.otherAvatar;
+            state.currentChatClass = targetUser?.class ? 'Classe ' + targetUser.class : (state.threads.find(t => t.otherId === otherId)?.otherClass || '');
             state.currentThreadId = conversationId;
             state.msgSearch = '';
 
@@ -5702,6 +5710,7 @@
                         if (chatUser) {
                             state.currentChatUser = chatUser.name || state.currentChatUser;
                             state.currentChatAvatar = chatUser.avatar || state.currentChatAvatar;
+                            state.currentChatClass = chatUser.class ? 'Classe ' + chatUser.class : state.currentChatClass;
                             saveNavigationState(); // Persist hydrated values
                             console.log("🔄 Chat context hydrated from DIRECTORY");
                         }
