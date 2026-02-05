@@ -1410,10 +1410,60 @@ app.get('/api/profile/:user_id', async (req, res) => {
 app.get('/api/posts', async (req, res) => {
     if (supabase) {
         try {
-            const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
-            return res.json({ success: true, data: data || [] });
+            // 🆕 EXPERT FIX: Manual Join for Feed to ensure real names/avatars
+            const { data: posts, error: postErr } = await supabase
+                .from("posts")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(100);
+
+            if (postErr) throw postErr;
+            if (!posts || posts.length === 0) return res.json({ success: true, data: [] });
+
+            // Step 2: Collect unique author IDs (from posts and comments)
+            let authorIds = new Set();
+            posts.forEach(p => {
+                if (p.author_id) authorIds.add(p.author_id);
+                if (Array.isArray(p.comments)) {
+                    p.comments.forEach(c => { if (c.author_id) authorIds.add(c.author_id); });
+                }
+            });
+
+            const authorIdsArr = [...authorIds];
+
+            // Step 3: Fetch profiles
+            let profilesMap = {};
+            if (authorIdsArr.length > 0) {
+                const { data: profiles, error: profErr } = await supabase
+                    .from("profiles")
+                    .select("id, name, avatar")
+                    .in("id", authorIdsArr);
+
+                if (!profErr && profiles) {
+                    profiles.forEach(p => { profilesMap[p.id] = p; });
+                }
+            }
+
+            // Step 4: Enrich posts and their comments
+            const enriched = posts.map(p => {
+                // Enrich post comments
+                const comments = (p.comments || []).map(c => ({
+                    ...c,
+                    author: profilesMap[c.author_id]?.name || c.author || "Utente",
+                    author_avatar: profilesMap[c.author_id]?.avatar || null
+                }));
+
+                return {
+                    ...p,
+                    author_name: profilesMap[p.author_id]?.name || p.author_name || "Utente",
+                    author_avatar: profilesMap[p.author_id]?.avatar || null,
+                    comments
+                };
+            });
+
+            return res.json({ success: true, data: enriched });
         } catch (e) {
-            console.error("⚠️ Posts GET error:", e.message);
+            console.error("⚠️ Posts GET error (Manual Join):", e.message);
             return res.status(500).json({ success: false, error: e.message });
         }
     }

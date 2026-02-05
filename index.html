@@ -1494,11 +1494,10 @@
     <div id="modals"></div>
     <div id="offline-badge" class="offline-badge">📡 Offline Mode</div>
 
-    <nav id="bottom-nav">
+    <nav id="bottom-nav" class="nav-bar">
         <button class="nav-item active" onclick="navigate('home')"><i class="ph-fill ph-house"></i></button>
         <button class="nav-item" onclick="navigate('market')"><i class="ph-fill ph-bag"></i></button>
         <button class="nav-item" onclick="navigate('feed')"><i class="ph-fill ph-newspaper"></i></button>
-        <button class="nav-item" onclick="navigate('chat')"><i class="ph-fill ph-chat-circle-dots"></i></button>
         <button class="nav-item" onclick="navigate('planner')"><i class="ph-fill ph-calendar-check"></i></button>
         <button class="nav-item" onclick="navigate('profile')"><i class="ph-fill ph-user"></i></button>
     </nav>
@@ -1841,8 +1840,8 @@
                 // 🔥 NEW: Instant Hydration from local session to avoid "Utente" on refresh
                 state.user.name = argoSession.name || state.user.name;
                 state.user.class = argoSession.class || state.user.class;
-                state.user.specialization = argoSession.specialization || state.user.specialization;
-                state.user.avatar = argoSession.avatar || state.user.avatar; // 🔥 Added Avatar
+                state.user.specialization = argoSession.specialization || argoSession.spec || state.user.specialization || 'SA';
+                state.user.avatar = argoSession.avatar || state.user.avatar; // 🔥 Restored Avatar
                 console.log("💾 Boot: Identità caricata da sessionManager:", state.user.id);
             }
 
@@ -1977,6 +1976,7 @@
                 id: p?.id ?? Date.now(),
                 author: p?.author ?? p?.author_name ?? "Utente",
                 authorId: p?.authorId ?? p?.author_id ?? null,
+                authorAvatar: p?.authorAvatar ?? p?.author_avatar ?? null, // 🆕 Added
                 class: p?.class ?? "5B",
                 text: p?.text ?? "",
                 image: p?.image ?? null,
@@ -3661,6 +3661,7 @@
             const modalContainer = getModalContainer();
             const { item, index } = state.marketModal;
             const images = getMarketImages(item);
+            const isOwner = item.sellerId === state.user.id;
 
             modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
@@ -3668,6 +3669,11 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <h2 style="margin:0;">${item.title}</h2>
                         <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; opacity:0.8;">
+                        ${renderAvatar(item.seller, 24, item.sellerAvatar)}
+                        <span style="font-size:13px; font-weight:600;">Venduto da ${item.seller}</span>
                     </div>
 
                     <div class="market-modal-img">
@@ -3688,10 +3694,14 @@
                         <div style="font-size:14px; color:rgba(255,255,255,0.75); margin-top:8px;">${item.description || 'Nessuna descrizione disponibile.'}</div>
                     </div>
 
+                    ${!isOwner ? `
                     <div style="display:flex; gap:10px; margin-top:16px;">
                         <button onclick="handlePurchase(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="btn-primary" style="flex:1; background: var(--green); color:black;">Acquista</button>
                         <button onclick="handleOffer(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); color:white;">Fai Offerta</button>
-                    </div>
+                    </div>` : `
+                    <div style="margin-top:20px; text-align:center; padding:12px; background:rgba(255,255,255,0.05); border-radius:12px; font-size:13px; color:var(--text-muted);">
+                        Questo è il tuo annuncio. Non puoi acquistarlo.
+                    </div>`}
                 </div>
             </div>`;
         }
@@ -3893,7 +3903,7 @@
             const isPoll = post.type === 'poll';
             const commentsHtml = (post.comments || []).map(c => `
                 <div style="display:flex; align-items:center; gap:8px; padding:8px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 4px;">
-                    ${renderAvatar(c.author || 'Utente', 28)}
+                    ${renderAvatar(c.author || 'Utente', 28, c.author_avatar)}
                     <div style="flex:1; text-align:left;">
                         <div style="font-weight:700; font-size:12px; color:white;">${c.author || 'Utente'}</div>
                         <div style="font-size:12px; color:rgba(255,255,255,0.8);">${c.text}</div>
@@ -3904,7 +3914,7 @@
             return `
             <div class="card">
                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
-                    ${post.anon ? renderAvatar('Anonimo', 40) : renderAvatar(post.author || 'Utente', 40)}
+                    ${post.anon ? renderAvatar('Anonimo', 40) : renderAvatar(post.author || 'Utente', 40, post.authorAvatar)}
                     <div style="flex:1; text-align:left;">
                         <div style="font-weight:700; color:white;">${post.anon ? 'Anonimo' : (post.author || 'Utente')}</div>
                         <div style="font-size:12px; opacity:0.6; color:var(--text-muted);">${post.anon ? 'Studente' : (post.class || '')}</div>
@@ -4023,16 +4033,12 @@
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
                         ${renderAvatar(state.currentChatUser, 44, state.currentChatAvatar)}
                         <div style="display:flex; flex-direction:column;">
-                            <span style="font-weight:700; font-size:17px; color:white;">${state.currentChatUser}</span>
+                            <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser}</span>
                             <span onclick="showUserProfile('${state.currentChatId}')" style="font-size:12px; color:var(--primary); font-weight:600; cursor:pointer;">
                                 ${otherUser?.status === 'online' ? '🟢 Online' : 'Toccami per info'}
                             </span>
                         </div>
                     </div>
-                    
-                    <button style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                        <i class="ph ph-dots-three-vertical" style="font-size:20px;"></i>
-                    </button>
                 </div>
 
                 <div id="chat-history" class="chat-history">
@@ -4040,10 +4046,6 @@
                 </div>
 
                 <div class="chat-input-bar">
-                    <button style="width:48px; height:48px; border-radius:50%; border:none; background:rgba(255,255,255,0.1); color:white; display:flex; align-items:center; justify-content:center;">
-                        <i class="ph ph-plus" style="font-size:20px;"></i>
-                    </button>
-                    
                     <input id="msg-input" class="chat-input" placeholder="Messaggio..." onkeypress="if(event.key==='Enter'){sendMessage();event.preventDefault();}">
                     
                     <button onclick="sendMessage()" class="chat-send-btn">
@@ -5038,6 +5040,8 @@
                         supabase_uid: authData.user.id, // Store UUID as metadata for RLS if needed later
                         name: state.user.name,
                         class: state.user.class,
+                        specialization: state.user.specialization || 'SA', // ✅ Added
+                        avatar: state.user.avatar || null, // ✅ Added
                         last_active: new Date().toISOString()
                     });
                 }
@@ -5566,13 +5570,13 @@
 
             showModal(`
                 <div style="text-align:center; padding: 20px 0;">
-                    ${renderAvatar(u.name, 80)}
+                    ${renderAvatar(u.name, 80, u.avatar)}
                     <h2 style="margin: 16px 0 4px 0; color:white;">${u.name}</h2>
-                    <p style="color:var(--text-muted); margin-bottom: 24px;">Classe ${u.class}</p>
+                    <p style="color:var(--text-muted); margin-bottom: 24px;">Classe ${u.class} - ${u.specialization || u.spec || 'SA'}</p>
                     
                     <div style="display:flex; justify-content:center; gap:12px;">
                         <button onclick="closeModal()" style="padding: 12px 24px; background:rgba(255,255,255,0.1); border-radius:14px; color:white; font-weight:700;">Chiudi</button>
-                        <button onclick="closeModal(); openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>
+                        ${u.id !== state.user.id ? `<button onclick="closeModal(); openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>` : ''}
                     </div>
                 </div>
             `);
