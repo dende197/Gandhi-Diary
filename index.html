@@ -1638,7 +1638,8 @@
                 view: state.view,
                 currentThreadId: state.currentThreadId,
                 currentChatUser: state.currentChatUser,
-                currentChatId: state.currentChatId
+                currentChatId: state.currentChatId,
+                currentChatAvatar: state.currentChatAvatar // 🔥 Persist avatar too
             };
             localStorage.setItem(lsKey('nav_state'), JSON.stringify(nav));
         }
@@ -1908,6 +1909,7 @@
                     state.currentThreadId = savedNav.currentThreadId;
                     state.currentChatUser = savedNav.currentChatUser;
                     state.currentChatId = savedNav.currentChatId;
+                    state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
                     loadChatMessages(state.currentThreadId); // Carica cache
                 }
             } else {
@@ -4201,7 +4203,7 @@
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser}</span>
                             <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">
-                                ${otherUser ? (otherUser.class ? 'Classe ' + otherUser.class : 'Studente') : 'Offline'}
+                                ${otherUser?.class ? 'Classe ' + otherUser.class : (state.currentChatUser ? 'Studente' : '')}
                             </span>
                         </div>
                     </div>
@@ -5653,6 +5655,17 @@
                         state.marketItems = state.marketItems.map(m => normalizeMarketItem(m));
                         localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
                         console.log("🔄 Market items re-normalized after DIRECTORY load");
+                    }
+
+                    // 🔥 HYDRATE CHAT CONTEXT: If in chat view, update user/avatar from DIRECTORY
+                    if (state.view === 'chat' && state.currentChatId) {
+                        const chatUser = DIRECTORY.find(u => u.id === state.currentChatId);
+                        if (chatUser) {
+                            state.currentChatUser = chatUser.name || state.currentChatUser;
+                            state.currentChatAvatar = chatUser.avatar || state.currentChatAvatar;
+                            saveNavigationState(); // Persist hydrated values
+                            console.log("🔄 Chat context hydrated from DIRECTORY");
+                        }
                     }
 
                     render(); // 🔥 Trigger UI update
