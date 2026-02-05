@@ -1411,6 +1411,22 @@
             border: 1px solid var(--red) !important;
         }
 
+        @keyframes msg-appear {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .msg-appear {
+            animation: msg-appear 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
         .chat-header {
             padding: 16px 20px;
             padding-top: calc(var(--safe-top) + 12px);
@@ -4259,13 +4275,13 @@
                     (isMe ? '<i class="ph ph-check"></i>' : '');
 
             return `
-            <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
+            <div data-msg-id="${m.id}" class="msg-appear" style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
                 <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}">
                     <div style="word-break: break-word;">${m.text}</div>
                     
                     <div class="msg-status">
                         ${timeStr}
-                        <span style="margin-left:4px;">${statusIcon}</span>
+                        <span style="margin-left:4px;" class="status-icon">${statusIcon}</span>
                     </div>
                 </div>
             </div>`;
@@ -4279,33 +4295,27 @@
             const msgs = state.messages[threadId] || [];
 
             if (mode === 'full') {
-                // Surgical Header Update
+                // Surgical Header & Progress Bar
                 const headerClassEl = document.querySelector('.chat-header span[style*="font-size:12px"]');
                 const progressLoader = document.querySelector('.progress-loader');
-
                 if (progressLoader) {
                     if (state.chatSyncing || !state.chatReady) progressLoader.classList.add('active');
                     else progressLoader.classList.remove('active');
                 }
-
                 if (headerClassEl) {
                     const dirUser = DIRECTORY.find(u => u.id === state.currentChatId);
                     const threadData = state.threads.find(t => t.otherId === state.currentChatId);
                     const rawClass = state.currentChatClass || dirUser?.class || threadData?.otherClass || '';
                     let displayClass = '';
-                    if (rawClass) {
-                        displayClass = rawClass.startsWith('Classe') ? rawClass : 'Classe ' + rawClass;
-                    } else if (state.currentChatUser && state.currentChatUser !== 'Utente') {
-                        displayClass = 'Studente';
-                    }
-                    if (displayClass && headerClassEl.textContent !== displayClass) {
-                        headerClassEl.textContent = displayClass;
-                    }
+                    if (rawClass) displayClass = rawClass.startsWith('Classe') ? rawClass : 'Classe ' + rawClass;
+                    else if (state.currentChatUser && state.currentChatUser !== 'Utente') displayClass = 'Studente';
+                    if (displayClass && headerClassEl.textContent !== displayClass) headerClassEl.textContent = displayClass;
                 }
 
+                // 🔥 DIFFERENTIAL RECONCILIATION ENGINE
                 if (msgs.length === 0) {
                     historyEl.innerHTML = `
-                        <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+                        <div id="empty-state" style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
                             <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
                                 <i class="ph ph-chat-circle-dots"></i>
                             </div>
@@ -4313,10 +4323,56 @@
                             <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
                         </div>
                     `;
-                } else {
-                    historyEl.innerHTML = msgs.map(renderChatMessage).join('');
+                    return;
                 }
-                scrollChatToBottom();
+
+                // Remove empty state if we have messages
+                const emptyState = document.getElementById('empty-state') || historyEl.querySelector('p')?.closest('div');
+                if (emptyState && msgs.length > 0) emptyState.remove();
+
+                // Build a map of current DOM elements by ID
+                const currentNodes = Array.from(historyEl.children).reduce((acc, node) => {
+                    const id = node.getAttribute('data-msg-id');
+                    if (id) acc[id] = node;
+                    return acc;
+                }, {});
+
+                // Iterate messages and reconcile
+                let lastNode = null;
+                msgs.forEach((m) => {
+                    const existingNode = currentNodes[m.id];
+                    if (existingNode) {
+                        // Surgical Status Sync
+                        const iconEl = existingNode.querySelector('.status-icon');
+                        const isPending = m.status === 'pending';
+                        const isMe = m.me;
+                        const statusIcon = isPending ? '<i class="ph ph-clock"></i>' :
+                            (m.status === 'failed' ? '<i class="ph ph-warning" style="color:var(--red);"></i>' :
+                                (isMe ? '<i class="ph ph-check"></i>' : ''));
+                        if (iconEl && iconEl.innerHTML !== statusIcon) iconEl.innerHTML = statusIcon;
+
+                        const bubble = existingNode.querySelector('.message-bubble');
+                        if (bubble) {
+                            bubble.classList.toggle('msg-pending', m.status === 'pending');
+                            bubble.classList.toggle('msg-failed', m.status === 'failed');
+                        }
+                        lastNode = existingNode;
+                    } else {
+                        // Append new message
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = renderChatMessage(m);
+                        const newNode = tempDiv.firstElementChild;
+
+                        const threshold = 150;
+                        const isNearBottom = historyEl.scrollHeight - historyEl.scrollTop - historyEl.clientHeight < threshold;
+
+                        if (lastNode) lastNode.after(newNode);
+                        else historyEl.prepend(newNode);
+                        lastNode = newNode;
+
+                        if (isNearBottom) scrollChatToBottom();
+                    }
+                });
             }
         }
 
