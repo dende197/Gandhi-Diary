@@ -1855,7 +1855,8 @@
             plannedTasks: {},
             polls: [],
             plannerWeekOffset: 0,
-            threads: []
+            threads: [],
+            chatReady: false // 🔥 INSTAGRAM-STYLE: Flag per indicare che la chat è pronta
         };
 
         const app = document.getElementById('app');
@@ -3003,7 +3004,17 @@
                 } else {
                     isAtBottom = true; // First time chat is opened
                 }
+            }            // 🔥 INSTAGRAM-STYLE RENDER-LOCK: Se la chat è già pronta, NON ri-renderizzare
+            if (state.view === 'chat' && state.chatReady) {
+                // Skip full render, but still update nav state
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    const viewAttr = el.getAttribute('onclick');
+                    if (viewAttr && viewAttr.includes(`'${state.view}'`)) el.classList.add('active');
+                    else el.classList.remove('active');
+                });
+                return; // CRITICAL: Exit early to prevent DOM wipe
             }
+
 
             if (!state.isLoggedIn) {
                 root.innerHTML = renderLogin();
@@ -4299,6 +4310,22 @@
                 displayClass = 'Studente';
             }
 
+            // 🔥 INSTAGRAM-STYLE: Show loading spinner if chat is not ready
+            const chatContent = !state.chatReady ? `
+                <div style="display:flex; justify-content:center; align-items:center; height:100%; flex-direction:column; gap:16px;">
+                    <div style="width:40px; height:40px; border:3px solid rgba(255,255,255,0.2); border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite;"></div>
+                    <span style="color:rgba(255,255,255,0.6); font-size:14px;">Caricamento messaggi...</span>
+                </div>
+            ` : (msgs.length === 0 ? `
+                <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+                    <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
+                        <i class="ph ph-chat-circle-dots"></i>
+                    </div>
+                    <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
+                    <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
+                </div>
+            ` : msgs.map(renderChatMessage).join(''));
+
             return `
             <div class="chat-view">
                 <div class="chat-header">
@@ -4316,15 +4343,7 @@
                 </div>
 
                 <div id="chat-history" class="chat-history">
-                    ${msgs.length === 0 ? `
-                        <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
-                            <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
-                                <i class="ph ph-chat-circle-dots"></i>
-                            </div>
-                            <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
-                            <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
-                        </div>
-                    ` : msgs.map(renderChatMessage).join('')}
+                    ${chatContent}
                 </div>
 
                 <div class="chat-input-bar">
@@ -5605,6 +5624,7 @@
 
             // ⚡ FLUIDITY: Show boot immediately to mask network latency
             showBoot('Apro la chat...');
+            state.chatReady = false; // 🔥 INSTAGRAM-STYLE: Reset per mostrare loading spinner
 
             // Find ID if missing
             if (!otherId) {
@@ -5682,14 +5702,23 @@
                         status: 'sent'
                     }));
                     saveChatMessages(conversationId);
-                    updateChatUI();
-                    scrollChatToBottom(true, false); // 🔥 SMART SCROLL (Solo se vicino al fondo)
+
+                    // 🔥 INSTAGRAM-STYLE: Mark chat as ready and reveal
+                    if (!state.chatReady) {
+                        state.chatReady = true;
+                        updateChatUI();
+                        setTimeout(() => scrollChatToBottom(false, true), 50); // Immediate scroll, no animation
+                    } else {
+                        updateChatUI();
+                        scrollChatToBottom(true, false); // Smart scroll for subsequent fetches
+                    }
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
         }
 
         function exitChat() {
             stopChatPolling();
+            state.chatReady = false; // 🔥 INSTAGRAM-STYLE: Reset per prossimo ingresso
             if (chatChannel) {
                 supabaseClient.removeChannel(chatChannel);
                 chatChannel = null;
