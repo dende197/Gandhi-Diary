@@ -1479,6 +1479,42 @@
         body.chat-mode #app {
             padding-bottom: 0;
         }
+
+        /* 🚀 PROGRESS BAR UI */
+        .progress-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-loader.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            position: absolute;
+            left: -100%;
+            animation: progress-anim 0.8s linear infinite;
+        }
+
+        @keyframes progress-anim {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -1856,7 +1892,8 @@
             polls: [],
             plannerWeekOffset: 0,
             threads: [],
-            chatReady: false // 🔥 INSTAGRAM-STYLE: Flag per indicare che la chat è pronta
+            chatReady: false,
+            chatSyncing: false // 🔥 Flag per il progresso in background
         };
 
         const app = document.getElementById('app');
@@ -2020,7 +2057,7 @@
 
             updateOfflineBadge();
             render();
-            setTimeout(hideBoot, 400);
+            hideBoot(); // 🔥 Instant hide
         });
 
         // Listen for Auth changes (Safe logic)
@@ -4242,6 +4279,30 @@
             const msgs = state.messages[threadId] || [];
 
             if (mode === 'full') {
+                // Surgical Header Update
+                const headerClassEl = document.querySelector('.chat-header span[style*="font-size:12px"]');
+                const progressLoader = document.querySelector('.progress-loader');
+
+                if (progressLoader) {
+                    if (state.chatSyncing || !state.chatReady) progressLoader.classList.add('active');
+                    else progressLoader.classList.remove('active');
+                }
+
+                if (headerClassEl) {
+                    const dirUser = DIRECTORY.find(u => u.id === state.currentChatId);
+                    const threadData = state.threads.find(t => t.otherId === state.currentChatId);
+                    const rawClass = state.currentChatClass || dirUser?.class || threadData?.otherClass || '';
+                    let displayClass = '';
+                    if (rawClass) {
+                        displayClass = rawClass.startsWith('Classe') ? rawClass : 'Classe ' + rawClass;
+                    } else if (state.currentChatUser && state.currentChatUser !== 'Utente') {
+                        displayClass = 'Studente';
+                    }
+                    if (displayClass && headerClassEl.textContent !== displayClass) {
+                        headerClassEl.textContent = displayClass;
+                    }
+                }
+
                 if (msgs.length === 0) {
                     historyEl.innerHTML = `
                         <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
@@ -4312,13 +4373,20 @@
                 displayClass = 'Studente';
             }
 
-            // 🔥 INSTAGRAM-STYLE: Show loading spinner if chat is not ready
-            const chatContent = !state.chatReady ? `
+            // 🔥 INSTAGRAM-STYLE: Instant cache reveal + progress bar
+            const hasCache = msgs.length > 0;
+            const showProgressBar = state.chatSyncing || !state.chatReady;
+
+            const chatContent = (hasCache)
+                ? msgs.map(renderChatMessage).join('')
+                : (!state.chatReady ? `
                 <div style="display:flex; justify-content:center; align-items:center; height:100%; flex-direction:column; gap:16px;">
-                    <div style="width:40px; height:40px; border:3px solid rgba(255,255,255,0.2); border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite;"></div>
-                    <span style="color:rgba(255,255,255,0.6); font-size:14px;">Caricamento messaggi...</span>
+                    <div style="width:100px; height:2px; background:rgba(255,255,255,0.1); border-radius:1px; overflow:hidden;">
+                        <div class="progress-bar"></div>
+                    </div>
+                    <span style="color:rgba(255,255,255,0.6); font-size:12px; font-weight:500;">Sincronizzazione in corso...</span>
                 </div>
-            ` : (msgs.length === 0 ? `
+            ` : `
                 <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
                     <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
                         <i class="ph ph-chat-circle-dots"></i>
@@ -4326,10 +4394,13 @@
                     <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
                     <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
                 </div>
-            ` : msgs.map(renderChatMessage).join(''));
+            `);
 
             return `
             <div class="chat-view">
+                <div class="progress-loader ${showProgressBar ? 'active' : ''}">
+                    <div class="progress-bar"></div>
+                </div>
                 <div class="chat-header">
                     <button onclick="exitChat()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
                         <i class="ph ph-caret-left" style="font-size:20px;"></i>
@@ -5626,7 +5697,7 @@
 
             // ⚡ FLUIDITY: Show boot immediately to mask network latency
             showBoot('Apro la chat...');
-            
+
             // 🔥 CRITICAL FIX: Reset chatReady BEFORE any cache check
             // This ensures render-lock doesn't block the new chat view
             state.chatReady = false;
@@ -5678,7 +5749,7 @@
 
             saveNavigationState();
             navigate('chat');
-            
+
             // 🔥 CRITICAL: Force render NOW, before fetch
             // chatReady is false, so render-lock won't block this
             render();
@@ -5693,6 +5764,8 @@
 
         async function fetchChatMessages(conversationId) {
             if (!conversationId) return;
+            state.chatSyncing = true;
+            updateChatUI(); // Show progress bar
             try {
                 // v7.0 - RELATIONAL ENDPOINT
                 const res = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}/messages`);
@@ -5722,6 +5795,10 @@
                     }
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
+            finally {
+                state.chatSyncing = false;
+                updateChatUI(); // Hide progress bar
+            }
         }
 
         function exitChat() {
