@@ -2458,10 +2458,10 @@ app.post('/login', async (req, res) => {
 
         const pid = `${school}:${username}:${targetIndex}`;
         let storedSpecialization = null;
+        let storedAvatar = null;
 
         if (supabase) {
             // 5. Supabase Sync & Retrieval (Fix Persistence)
-
             try {
                 const normalizedClass = normalizeClass(studentClass);
 
@@ -2472,8 +2472,6 @@ app.post('/login', async (req, res) => {
                     .eq("id", pid)
                     .single();
 
-                let storedSpecialization = null;
-                let storedAvatar = null;
                 if (existingProfile) {
                     storedSpecialization = existingProfile.specialization;
                     storedAvatar = existingProfile.avatar;
@@ -2510,7 +2508,8 @@ app.post('/login', async (req, res) => {
                 name: studentName,
                 class: studentClass || "N/D",
                 school: school,
-                specialization: storedSpecialization
+                specialization: storedSpecialization,
+                avatar: storedAvatar // ✅ Added
             },
             tasks: tasksData,
             voti: gradesData,
@@ -2653,14 +2652,46 @@ app.post('/sync', async (req, res) => {
                 }
 
                 const pid = `${school}:${user}:${profileIndex}`;
-                const payload = { id: pid, last_active: new Date().toISOString() };
 
-                if (sName) payload.name = sName;
-                const sClassNorm = normalizeClass(sClass);
-                if (sClassNorm) payload.class = sClassNorm;
+                // 🔥 FETCH FIRST to avoid erasing avatar/specialization
+                const { data: existingProfile } = await supabase
+                    .from("profiles")
+                    .select("specialization, avatar, name, class")
+                    .eq("id", pid)
+                    .single();
+
+                const storedSpecialization = existingProfile?.specialization || null;
+                const storedAvatar = existingProfile?.avatar || null;
+
+                const payload = {
+                    id: pid,
+                    last_active: new Date().toISOString(),
+                    specialization: storedSpecialization,
+                    avatar: storedAvatar
+                };
+
+                if (sName) {
+                    payload.name = sName;
+                } else if (existingProfile?.name) {
+                    payload.name = existingProfile.name;
+                }
+
+                const sClassNorm = normalizeClass(sClass || existingProfile?.class);
+                if (sClassNorm) {
+                    payload.class = sClassNorm;
+                }
 
                 await supabase.from("profiles").upsert(payload, { onConflict: "id" });
                 debugLog("👤 Sync profile upsert", payload);
+
+                // Attach to response (will be used below)
+                req.enrichedStudent = {
+                    id: pid,
+                    name: payload.name || "Utente",
+                    class: payload.class || "N/D",
+                    specialization: storedSpecialization,
+                    avatar: storedAvatar
+                };
 
             } catch (e) {
                 debugLog("⚠️ Sync Supabase error", e.message);
@@ -2706,7 +2737,8 @@ app.post('/sync', async (req, res) => {
             voti: grades,
             promemoria, // ✅ FIX: Usa la variabile corretta
             new_tokens: { authToken, accessToken },
-            planner: plannerData
+            planner: plannerData,
+            student: req.enrichedStudent || null // ✅ Added enriched student info
         });
 
     } catch (e) {

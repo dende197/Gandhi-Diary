@@ -1786,12 +1786,19 @@
         const sessionManager = {
             save(sessionData) {
                 try {
-                    // Deep merge to ensure we don't lose avatar/class updates
+                    // 🔥 SILENT MERGE: Non sovrascrivere mai Campi Critici con null/undefined
                     const existing = this.load() || {};
-                    const merged = { ...existing, ...sessionData };
+                    const merged = { ...existing };
+
+                    for (const [key, value] of Object.entries(sessionData)) {
+                        if (value !== null && value !== undefined) {
+                            merged[key] = value;
+                        }
+                    }
+
                     localStorage.setItem('argo_session', JSON.stringify(merged));
                     localStorage.setItem('argo_is_logged_in', 'true');
-                    console.log("✅ Sessione salvata e unificata");
+                    console.log("✅ Sessione salvata con merge difensivo");
                 } catch (e) {
                     console.error("❌ Errore salvataggio sessione:", e);
                 }
@@ -1858,17 +1865,33 @@
             const loadingText = document.querySelector('.boot-title span');
             if (loadingText) loadingText.textContent = "Sincronizzazione...";
 
-            // 1. Identità Immediata (Priorità Argo Session)
+            // 1. Identità Immediata (Priorità Argo Session + Identity Cache)
             const argoSession = sessionManager.load();
             if (argoSession && argoSession.studentId) {
                 state.isLoggedIn = true;
                 state.user.id = argoSession.studentId;
-                // 🔥 NEW: Instant Hydration from local session to avoid "Utente" on refresh
-                state.user.name = argoSession.name || state.user.name;
-                state.user.class = argoSession.class || state.user.class;
-                state.user.specialization = argoSession.specialization || argoSession.spec || state.user.specialization || 'SA';
-                state.user.avatar = argoSession.avatar || state.user.avatar; // 🔥 Restored Avatar
-                console.log("💾 Boot: Identità caricata da sessionManager:", state.user.id);
+
+                // 🔥 DUAL HYDRATION: Prova prima dalla specifica identity cache, poi dalla sessione
+                const userCache = localStorage.getItem(lsKey('user'));
+                if (userCache) {
+                    try {
+                        const parsed = JSON.parse(userCache);
+                        state.user = {
+                            ...state.user,
+                            ...parsed,
+                            id: argoSession.studentId // Mantieni l'ID della sessione attiva
+                        };
+                        console.log("💾 Boot: Identità caricata da identity cache");
+                    } catch (e) { }
+                }
+
+                // Merge finale con dati sessione (Argo names/class) MA solo se validi
+                state.user.name = (argoSession.name && isValidName(argoSession.name)) ? argoSession.name : (state.user.name || 'Utente');
+                state.user.class = (argoSession.class && isValidClass(argoSession.class)) ? argoSession.class : (state.user.class || 'N/D');
+                state.user.specialization = argoSession.specialization || state.user.specialization || 'SA';
+                state.user.avatar = argoSession.avatar || state.user.avatar;
+
+                console.log("💾 Boot: Sessione unificata per:", state.user.id);
             }
 
             // 2. Ripristino Vista (Hash > nav_state > home/login)
@@ -2038,7 +2061,7 @@
                 let cAvatar = c.author_avatar || null;
                 const cId = c.author_id;
 
-                if (cId === state.user.id) {
+                if (isMe) {
                     cAuthor = state.user.name || cAuthor;
                     cAvatar = state.user.avatar || cAvatar;
                 } else if (cAuthor === "Utente" || !cAvatar) {
@@ -2593,6 +2616,32 @@
                         notifyPlannerChanged();
                     }
 
+                    if (data.student) {
+                        // 🔥 DEFENSIVE MERGE: In sync non sovrascrivere mai con dati inferiori
+                        const oldUser = { ...state.user };
+                        const incoming = data.student;
+
+                        state.user = {
+                            ...oldUser,
+                            ...incoming,
+                            id: incoming.id || oldUser.id,
+                            name: (incoming.name && isValidName(incoming.name)) ? incoming.name : oldUser.name,
+                            class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : oldUser.class,
+                            specialization: incoming.specialization || oldUser.specialization || 'SA',
+                            avatar: (incoming.avatar && incoming.avatar.startsWith('http')) ? incoming.avatar : oldUser.avatar
+                        };
+
+                        sessionManager.save({
+                            studentId: state.user.id,
+                            name: state.user.name,
+                            class: state.user.class,
+                            specialization: state.user.specialization,
+                            avatar: state.user.avatar
+                        });
+
+                        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+                    }
+
                     state.lastSync = new Date().toLocaleTimeString();
                     state.isOffline = false;
                     state.didup.connected = true;
@@ -2665,16 +2714,29 @@
                     }
 
                     if (data.student) {
-                        // 🔥 DEFENSIVE MERGE: Proteggi Avatar e Specializzazione da dati Argo incompleti
+                        // 🔥 DEFENSIVE MERGE: Proteggi Avatar e Specializzazione da dati Argo o server incompleti
                         const oldUser = { ...state.user };
+                        const incoming = data.student;
+
                         state.user = {
                             ...oldUser,
-                            ...data.student,
-                            name: (data.student.name && isValidName(data.student.name)) ? data.student.name : oldUser.name,
-                            class: (data.student.class && isValidClass(data.student.class)) ? data.student.class : oldUser.class,
-                            specialization: data.student.specialization || oldUser.specialization || 'SA',
-                            avatar: data.student.avatar || oldUser.avatar
+                            ...incoming,
+                            id: incoming.id || oldUser.id,
+                            name: (incoming.name && isValidName(incoming.name)) ? incoming.name : oldUser.name,
+                            class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : oldUser.class,
+                            specialization: incoming.specialization || oldUser.specialization || 'SA',
+                            avatar: (incoming.avatar && incoming.avatar.startsWith('http')) ? incoming.avatar : oldUser.avatar
                         };
+
+                        // Sync back to session manager to keep session data rich
+                        sessionManager.save({
+                            studentId: state.user.id,
+                            name: state.user.name,
+                            class: state.user.class,
+                            specialization: state.user.specialization,
+                            avatar: state.user.avatar
+                        });
+
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
 
@@ -3439,7 +3501,7 @@
                 // Se la modale di modifica profilo è aperta, aggiorna la preview
                 const modalAvatarPreview = document.querySelector('#edit-profile-avatar-preview');
                 if (modalAvatarPreview) {
-                    modalAvatarPreview.innerHTML = renderAvatar(state.user.name, 100);
+                    modalAvatarPreview.innerHTML = renderAvatar(state.user.name, 100, state.user.avatar);
                 }
 
                 render();
@@ -3467,7 +3529,7 @@
                         
                         <div style="text-align: center; margin-bottom: 24px; position: relative; width: 100px; margin-left: auto; margin-right: auto;">
                             <div id="edit-profile-avatar-preview" onclick="document.getElementById('edit-avatar-input').click()" style="cursor: pointer; transition: opacity 0.2s;">
-                                ${renderAvatar(state.user.name, 100)}
+                                ${renderAvatar(state.user.name, 100, state.user.avatar)}
                             </div>
                             <div onclick="document.getElementById('edit-avatar-input').click()" style="position: absolute; bottom: 0; right: 0; background: var(--blue); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #1a202c; cursor: pointer;">
                                 <i class="ph-bold ph-camera" style="color: white; font-size: 16px;"></i>
@@ -3597,7 +3659,7 @@
 
                 <!-- Profile row (clickable to edit) -->
                 <div class="profile-row" onclick="showEditProfileModal()" style="cursor:pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    ${renderAvatar(state.user?.name, 54)}
+                    ${renderAvatar(state.user?.name, 54, state.user?.avatar)}
                     <div class="profile-meta" style="flex:1; min-width:0;">
                         <div style="font-size:16px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${state.user?.name || 'Utente'}
@@ -3885,7 +3947,7 @@
                 html += filteredUsers.map(u => `
                     <div onclick="openChat('${u.name}', '${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
                         <div style="position: relative; margin-right: 12px;">
-                            ${renderAvatar(u.name, 44)}
+                            ${renderAvatar(u.name, 44, u.avatar)}
                             ${u.status === 'online' ? `<div style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--green); border: 2px solid black; border-radius: 50%;"></div>` : ''}
                         </div>
                         <div style="flex: 1; text-align:left;">
@@ -3976,7 +4038,7 @@
                         <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:12px; letter-spacing:0.5px; text-transform:uppercase;">Suggeriti</div>
                         ${directoryMatches.map(u => `
                             <div onclick="openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="display:flex; align-items:center; gap:14px; padding:12px; background: rgba(37, 99, 235, 0.1); border-radius: 18px; margin-bottom: 8px; cursor:pointer; border: 1px solid rgba(37, 99, 235, 0.2);">
-                                ${renderAvatar(u.name, 44)}
+                                ${renderAvatar(u.name, 44, u.avatar)}
                                 <div style="flex:1;">
                                     <div style="font-weight:700; font-size:15px; color:white;">${u.name}</div>
                                     <div style="font-size:12px; color:rgba(255,255,255,0.5);">${u.class}</div>
@@ -4653,7 +4715,7 @@
             <div class="view">
                 <h1>Il Mio Profilo</h1>
                 <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-                    ${renderAvatar(state.user.name, 64)}
+                    ${renderAvatar(state.user.name, 64, state.user.avatar)}
                     <div style="flex:1; text-align:left;">
                         <div style="font-size:20px; font-weight:800; color:white;">${state.user.name || 'Utente'}</div>
                         <div style="font-size:14px; color:var(--text-muted);">
@@ -5301,6 +5363,7 @@
                 liked: false,
                 anon: isAnon,
                 type: isPoll ? 'poll' : 'text',
+                authorAvatar: isAnon ? null : state.user.avatar,
                 image: imgPreview ? imgPreview.src : null,
                 comments: [],
                 pinned: false
