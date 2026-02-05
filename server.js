@@ -1524,7 +1524,7 @@ app.post('/api/posts/:id/like', async (req, res) => {
 
 app.post('/api/posts/:id/comment', async (req, res) => {
     const { id } = req.params;
-    const { author, text } = req.body;
+    const { author, author_id, text } = req.body;
     if (!supabase) return res.status(500).json({ success: false });
 
     try {
@@ -1532,7 +1532,8 @@ app.post('/api/posts/:id/comment', async (req, res) => {
         if (!post) return res.status(404).json({ success: false });
 
         const comments = post.comments || [];
-        comments.push({ author, text, created_at: new Date().toISOString() });
+        // 🔥 FIX: Store author_id for server-side enrichment
+        comments.push({ author, author_id, text, created_at: new Date().toISOString() });
 
         await supabase.from("posts").update({ comments }).eq("id", id);
         res.json({ success: true, comments });

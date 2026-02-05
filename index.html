@@ -1972,18 +1972,27 @@
 
         // ✅ Normalize server(Supabase) records to frontend format
         function normalizePost(p, myId) {
+            // 🔥 FIX: Map comments with their enriched data from server
+            const comments = (p?.comments || []).map(c => ({
+                author: c.author || "Utente",
+                author_id: c.author_id || null,
+                author_avatar: c.author_avatar || null,
+                text: c.text || "",
+                created_at: c.created_at
+            }));
+
             return {
                 id: p?.id ?? Date.now(),
                 author: p?.author ?? p?.author_name ?? "Utente",
                 authorId: p?.authorId ?? p?.author_id ?? null,
-                authorAvatar: p?.authorAvatar ?? p?.author_avatar ?? null, // 🆕 Added
+                authorAvatar: p?.authorAvatar ?? p?.author_avatar ?? null,
                 class: p?.class ?? "5B",
                 text: p?.text ?? "",
                 image: p?.image ?? null,
                 anon: !!(p?.anon ?? false),
                 likes: Array.isArray(p?.likes) ? p.likes : (typeof p?.likes === 'number' ? p.likes : 0),
                 liked: Array.isArray(p?.likes) ? p.likes.includes(myId) : !!(p?.liked ?? false),
-                comments: Array.isArray(p?.comments) ? p.comments : [],
+                comments,
                 type: p?.type ?? 'text',
                 pinned: !!p?.pinned
             };
@@ -4346,7 +4355,12 @@
             if (!input || !input.value.trim()) return;
             const post = state.posts.find(p => p.id === id);
             if (post) {
-                const comment = { author: state.user.name, text: input.value };
+                // 🔥 FIX: Include author_id for server-side enrichment
+                const comment = {
+                    author: state.user.name,
+                    author_id: state.user.id,
+                    text: input.value
+                };
                 if (!post.comments) post.comments = [];
                 post.comments.push(comment);
                 input.value = '';
