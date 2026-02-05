@@ -2201,16 +2201,20 @@
                 const res = await fetch(`${API_BASE_URL}/api/conversations/user/${myId}`);
                 const data = await res.json();
                 if (data.success) {
-                    state.threads = (data.data || []).map(t => ({
-                        threadId: t.id,
-                        otherId: t.otherId,
-                        otherName: t.otherName || DIRECTORY.find(u => u.id === t.otherId)?.name || "Utente",
-                        otherAvatar: t.otherAvatar, // 🆕 Enriched from DB
-                        lastText: t.lastMessage || "",
-                        lastTime: t.lastAt,
-                        senderId: t.senderId,
-                        unread: false
-                    }));
+                    state.threads = (data.data || []).map(t => {
+                        const dirUser = DIRECTORY.find(u => u.id === t.otherId);
+                        return {
+                            threadId: t.id,
+                            otherId: t.otherId,
+                            otherName: t.otherName || dirUser?.name || "Utente",
+                            otherAvatar: t.otherAvatar || dirUser?.avatar,
+                            otherClass: t.otherClass || (dirUser?.class ? 'Classe ' + dirUser.class : ''), // 🔥 DNA FALLBACK PREP
+                            lastText: t.lastMessage || "",
+                            lastTime: t.lastAt,
+                            senderId: t.senderId,
+                            unread: false
+                        };
+                    });
                     render();
                     localStorage.setItem(lsKey('threads'), JSON.stringify(state.threads));
                 }
@@ -2289,7 +2293,12 @@
             }
         }
 
-        // --- POLLS LOGIC ---
+        // 🔥 SCROLL AUTHORITY: Disabilita il ripristino nativo per controllo totale
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
+        /* --- GLOBAL STATE STUDIO --- */
         async function fetchPolls() {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/polls`);
@@ -4253,22 +4262,54 @@
 
         function renderChat() {
             const threadId = state.currentThreadId;
-            const otherUser = DIRECTORY.find(u => u.id === state.currentChatId);
-            const msgs = state.messages[threadId] || [];
+            // 🔥 CLASS DNA FALLBACK: 3-Layer Recovery
+            // 1. Direct State
+            // 2. Directory Lookup
+            // 3. Threads Cache
+            // 4. Name Pattern Parsing "Mario Rossi (5E)"
+
+            let targetClass = state.currentChatClass;
+            const dirUser = DIRECTORY.find(u => u.id === state.currentChatId);
+            const threadData = state.threads.find(t => t.otherId === state.currentChatId);
+
+            if (!targetClass || targetClass === 'N/D') {
+                if (dirUser && dirUser.class) targetClass = 'Classe ' + dirUser.class;
+                else if (threadData && threadData.otherClass) targetClass = threadData.otherClass;
+                else {
+                    // Try extraction from Name
+                    const name = state.currentChatUser || '';
+                    const match = name.match(/\((.*?)\)/);
+                    if (match && isValidClass(match[1])) targetClass = 'Classe ' + match[1];
+                    else targetClass = 'Studente';
+                }
+                // Save discovered class to state for persistence
+                if (targetClass !== 'Studente') {
+                    state.currentChatClass = targetClass;
+                    // Optional: debounceSaveNav() if we want to be aggressive
+                }
+            }
+
+            const otherUser = dirUser; // Keep ref for other props if needed
+
+            // Schedule UI update after render
+            setTimeout(() => updateChatUI('full'), 0); // 🔥 Immediate render, no 50ms lag
 
             return `
             <div class="chat-view">
                 <div class="chat-header">
-                    <button onclick="exitChat()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                        <i class="ph ph-caret-left" style="font-size:20px;"></i>
-                    </button>
-                    
-                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        ${renderAvatar(state.currentChatUser || 'Chat', 44, state.currentChatAvatar)}
+                    <div class="chat-header-left">
+                        <button class="icon-btn" onclick="exitChat()">
+                            <i class="ph ph-arrow-left"></i>
+                        </button>
+                        <div class="avatar-circle" style="width:40px; height:40px; font-size:18px;">
+                            ${(state.currentChatAvatar && state.currentChatAvatar !== 'null')
+                    ? `<img src="${state.currentChatAvatar}" style="width:100%; height:100%; object-fit:cover;">`
+                    : getInitials(state.currentChatUser || 'Utente')}
+                        </div>
                         <div style="display:flex; flex-direction:column;">
                             <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser || 'Utente'}</span>
                             <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">
-                                ${state.currentChatClass || (otherUser?.class ? 'Classe ' + otherUser.class : (state.currentChatUser ? 'Studente' : ''))}
+                                ${targetClass}
                             </span>
                         </div>
                     </div>
