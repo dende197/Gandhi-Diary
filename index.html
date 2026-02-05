@@ -1656,15 +1656,41 @@
         }
 
         async function getCurrentUser() {
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) return null;
-            // Fetch profile
-            const { data: profile } = await supabaseClient
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-            return { ...profile, id: user.id };
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session || !session.user) return null;
+
+                // 🔥 FIX-ALL: Look up the profile using either the Argo PID (id) or the Supabase UID (supabase_uid)
+                // We prioritize the Argo PID from our current state if available
+                const currentPid = state.user.id;
+
+                let profileQueryResult = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentPid)
+                    .single();
+
+                // If not found by ID (Argo PID), try by supabase_uid (UUID)
+                if (!profileQueryResult.data) {
+                    profileQueryResult = await supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .eq('supabase_uid', session.user.id)
+                        .single();
+                }
+
+                if (profileQueryResult.data) {
+                    const p = profileQueryResult.data;
+                    console.log("📥 Identity profile fetched:", p.id);
+                    // 🚨 CRITICAL: We return the profile BUT we must ensure we don't return 
+                    // a 'dummy' ID. The profile.id is already the Argo PID.
+                    return p;
+                }
+                return null;
+            } catch (e) {
+                console.warn("getCurrentUser error:", e.message);
+                return null;
+            }
         }
 
         function globalKey(name) {
@@ -1918,7 +1944,20 @@
             // 5. Sincronizzazione Dati Forzata (User Request)
             if (state.isLoggedIn) {
                 const profile = await getCurrentUser();
-                if (profile) state.user = { ...state.user, ...profile };
+                if (profile) {
+                    // 🔥 DEFENSIVE HYDRATION: Non sovrascrivere mai con dati peggiori
+                    const oldUser = { ...state.user };
+                    state.user = {
+                        ...oldUser,
+                        ...profile,
+                        id: profile.id || oldUser.id, // Mai perdere l'Argo PID
+                        name: (profile.name && isValidName(profile.name)) ? profile.name : oldUser.name,
+                        class: (profile.class && isValidClass(profile.class)) ? profile.class : oldUser.class,
+                        specialization: profile.specialization || oldUser.specialization || 'SA',
+                        avatar: profile.avatar || oldUser.avatar
+                    };
+                    console.log("✅ Boot: State hydrated from Supabase profile");
+                }
 
                 (async () => {
                     await fetchUsersDirectory();
@@ -1976,24 +2015,43 @@
             let author = p?.author ?? p?.author_name ?? "Utente";
             let authorAvatar = p?.authorAvatar ?? p?.author_avatar ?? null;
 
-            if (author === "Utente" || !authorAvatar) {
-                // Se è il post dell'utente corrente, usa i dati di stato
-                if (p?.author_id === state.user.id || p?.authorId === state.user.id) {
-                    author = state.user.name || author;
-                    authorAvatar = state.user.avatar || authorAvatar;
+            // 1. Check if it's ME (current user)
+            const resolvedId = p?.author_id || p?.authorId;
+            const isMe = (resolvedId === state.user.id) ||
+                (author === state.user.name && author !== "Utente");
+
+            if (isMe) {
+                author = state.user.name || author;
+                authorAvatar = state.user.avatar || authorAvatar;
+            }
+            // 2. Secondary Fallback: Check Directory (if server-side join failed)
+            else if (author === "Utente" || !authorAvatar) {
+                const globalUser = (typeof DIRECTORY !== 'undefined') ? DIRECTORY.find(u => u.id === resolvedId) : null;
+                if (globalUser) {
+                    author = globalUser.name || author;
+                    authorAvatar = globalUser.avatar || authorAvatar;
                 }
             }
 
             const comments = (p?.comments || []).map(c => {
                 let cAuthor = c.author || "Utente";
                 let cAvatar = c.author_avatar || null;
-                if (cAuthor === "Utente" && c.author_id === state.user.id) {
-                    cAuthor = state.user.name;
-                    cAvatar = state.user.avatar;
+                const cId = c.author_id;
+
+                if (cId === state.user.id) {
+                    cAuthor = state.user.name || cAuthor;
+                    cAvatar = state.user.avatar || cAvatar;
+                } else if (cAuthor === "Utente" || !cAvatar) {
+                    const gU = (typeof DIRECTORY !== 'undefined') ? DIRECTORY.find(u => u.id === cId) : null;
+                    if (gU) {
+                        cAuthor = gU.name || cAuthor;
+                        cAvatar = gU.avatar || cAvatar;
+                    }
                 }
+
                 return {
                     author: cAuthor,
-                    author_id: c.author_id || null,
+                    author_id: cId || null,
                     author_avatar: cAvatar,
                     text: c.text || "",
                     created_at: c.created_at
@@ -2003,7 +2061,7 @@
             return {
                 id: p?.id ?? Date.now(),
                 author,
-                authorId: p?.authorId ?? p?.author_id ?? null,
+                authorId: resolvedId ?? null,
                 authorAvatar,
                 class: p?.class ?? "5B",
                 text: p?.text ?? "",
@@ -2021,11 +2079,20 @@
             const images = Array.isArray(i?.images) ? i.images : (i?.image ? [i.image] : []);
             let seller = i?.seller ?? i?.seller_name ?? "Utente";
             let sellerAvatar = i?.sellerAvatar ?? i?.seller_avatar ?? null;
+            const sellerId = i?.seller_id || i?.sellerId;
 
             // 🔥 DEFENSIVE: Evita downgrade a "Utente"
-            if (seller === "Utente" && (i?.seller_id === state.user.id || i?.sellerId === state.user.id)) {
+            if (sellerId === state.user.id || (seller === state.user.name && seller !== "Utente")) {
                 seller = state.user.name || seller;
                 sellerAvatar = state.user.avatar || sellerAvatar;
+            }
+            // Fallback via Directory
+            else if (seller === "Utente" || !sellerAvatar) {
+                const globalUser = (typeof DIRECTORY !== 'undefined') ? DIRECTORY.find(u => u.id === sellerId) : null;
+                if (globalUser) {
+                    seller = globalUser.name || seller;
+                    sellerAvatar = globalUser.avatar || sellerAvatar;
+                }
             }
 
             return {
@@ -2037,7 +2104,7 @@
                 image: images[0] || null,
                 status: i?.status ?? 'available',
                 seller,
-                sellerId: i?.sellerId ?? i?.seller_id ?? null,
+                sellerId: sellerId ?? null,
                 sellerAvatar,
                 pinned: !!i?.pinned
             };
