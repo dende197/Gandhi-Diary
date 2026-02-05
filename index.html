@@ -1969,8 +1969,13 @@
                         password: supabasePassword
                     });
 
-                    if (arErr) console.warn("🩹 Boot: Recovery fallito:", arErr.message);
-                    else console.log("✅ Boot: Sessione Supabase ripristinata!");
+                    if (arErr) {
+                        console.warn("🩹 Boot: Recovery fallito:", arErr.message);
+                        // Fallback: Use identity from local cache if Supabase is down
+                        console.log("🩹 Boot: Using local identity fallback...");
+                    } else {
+                        console.log("✅ Boot: Sessione Supabase ripristinata!");
+                    }
                 } catch (e) {
                     console.warn("🩹 Boot: Errore durante recovery:", e.message);
                 }
@@ -2012,6 +2017,9 @@
 
             updateOfflineBadge();
             render();
+            if (state.view === 'chat') {
+                setTimeout(() => scrollChatToBottom(false), 500);
+            }
             setTimeout(hideBoot, 400);
         });
 
@@ -2926,11 +2934,12 @@
         }
 
         // ✅ Validazione più permissiva
+        // ✅ Validazione ultra-permissiva: accetta tutto ciò che inizia con un numero o è una sigla breve
         function isValidClass(cls) {
             if (!cls) return false;
             const txt = String(cls).toUpperCase().trim();
-            // Accetta: "5E", "5E SA", "5E (SA)", "3ASU", etc.
-            return /^[1-5][A-Z]{1,3}(\s*\(?[A-Z]{2,4}\)?)?$/.test(txt.replace(/\s+/g, ' '));
+            if (txt.length < 1 || txt.length > 15) return false;
+            return true; // Accetta tutto quello che passa i limiti di lunghezza
         }
 
         function isValidName(name) {
@@ -2942,15 +2951,18 @@
 
         function navigate(v) {
             if (!allowedViews.includes(v)) v = 'home';
+            const oldView = state.view;
             const targetHash = '#' + v;
-            if (location.hash !== targetHash) {
-                location.hash = targetHash;
-            } else {
-                if (state.view !== v) {
-                    state.view = v;
-                    saveNavigationState();
-                    render();
-                }
+            if (window.location.hash !== targetHash) {
+                window.history.pushState(null, '', targetHash);
+            }
+            state.view = v;
+            saveNavigationState();
+            render();
+
+            // 🔥 SMART SCROLL: Solo se cambiamo vista verso la chat
+            if (v === 'chat' && oldView !== 'chat') {
+                setTimeout(() => scrollChatToBottom(false), 50);
             }
         }
 
@@ -2963,7 +2975,16 @@
             }
         });
 
+        let _renderRequest = null;
         function render() {
+            if (_renderRequest) return;
+            _renderRequest = requestAnimationFrame(() => {
+                _renderCore();
+                _renderRequest = null;
+            });
+        }
+
+        function _renderCore() {
             const root = document.getElementById('app');
             if (!root) return;
 
@@ -2998,7 +3019,7 @@
 
             root.innerHTML = html;
 
-            // Dopo ogni render, se siamo in Home, ridisegna i widget (imposta dimensioni corrette ai canvas)
+            // Dopo ogni render, se siamo in Home, ridisegna i widget
             if (state.view === 'home') {
                 const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
                 setTimeout(() => {
@@ -3011,7 +3032,6 @@
 
             if (state.view === 'chat') {
                 startChatPolling();
-                scrollChatToBottom(false); // 🔥 FORCE SCROLL ON REFRESH/RENDER
             } else {
                 stopChatPolling();
             }
@@ -4212,9 +4232,17 @@
             scrollChatToBottom();
         }
 
-        function scrollChatToBottom(smooth = true) {
+        function scrollChatToBottom(smooth = true, force = true) {
             const historyEl = document.getElementById('chat-history');
             if (!historyEl) return;
+
+            // 🔥 SMART SCROLL: Se non è forzato, scrolla solo se l'utente è già vicino al fondo
+            if (!force) {
+                const threshold = 150;
+                const isNearBottom = historyEl.scrollHeight - historyEl.scrollTop - historyEl.clientHeight < threshold;
+                if (!isNearBottom) return;
+            }
+
             requestAnimationFrame(() => {
                 historyEl.scrollTo({
                     top: historyEl.scrollHeight,
@@ -5614,6 +5642,7 @@
                     }));
                     saveChatMessages(conversationId);
                     updateChatUI();
+                    scrollChatToBottom(true, false); // 🔥 SMART SCROLL (Solo se vicino al fondo)
                 }
             } catch (e) { console.warn("Fetch messages error:", e); }
         }
@@ -5803,6 +5832,7 @@
             if (state.view === 'chat' && state.currentThreadId === threadId) {
                 // ⚡ EXPERT FLUIDITY: Append instead of full render
                 appendMessageToUI(msg);
+                scrollChatToBottom(true, false); // 🔥 SMART SCROLL per messaggi in tempo reale
             } else {
                 updateChatListUnread(threadId);
             }
@@ -5961,6 +5991,7 @@
             // ⚡ EXPERT FLUIDITY: Append instead of full render
             if (state.view === 'chat' && state.currentThreadId === threadId) {
                 appendMessageToUI(localMsg);
+                scrollChatToBottom(true, true); // 🔥 FORCED SCROLL per i propri messaggi
             }
 
             try {
