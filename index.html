@@ -1134,6 +1134,7 @@
         /* ✨ UTILS */
         .text-gradient {
             background: var(--accent-grad);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -1572,8 +1573,10 @@
     <div id="boot-overlay" class="boot-overlay" aria-busy="true">
         <div class="boot-card">
             <div class="boot-spinner"></div>
-            <div class="boot-title">Avvio G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400;">v2.7.0-stable</span></div>
+            <div class="boot-title">G-Connect <span
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400; color:var(--primary);">v3.0.0 [Shield
+                    Edition]</span></div>
+            <div id="boot-status" style="font-size:11px; opacity:0.6; margin-top:8px;">Inizializzazione...</div>
         </div>
     </div>
     <div id="modals"></div>
@@ -1588,8 +1591,21 @@
     </nav>
 
     <script>
-        // v2.7.0-stable (Full Persistence & Surgical Sync)
-        console.log("🚀 G-Connect v2.7.0-stable initialized");
+        // 🚀 G-Connect v3.0.0 [Shield Edition]
+        const APP_VERSION = "3.0.0";
+
+        // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
+        const savedVersion = localStorage.getItem('app_version');
+        if (savedVersion !== APP_VERSION) {
+            localStorage.setItem('app_version', APP_VERSION);
+            console.warn("New version detected. Clearing old memory and reloading...");
+            // Non usiamo location.reload(true) perché è deprecated, ma usiamo un trucco per forzare il refresh
+            if (savedVersion) {
+                window.location.href = window.location.href.split('#')[0] + '?v=' + Date.now() + window.location.hash;
+            }
+        }
+
+        console.log(`🚀 G-Connect v${APP_VERSION} initialized`);
 
         let _chatPoller = null;
         window.chatChannel = null;
@@ -5025,7 +5041,10 @@
                 </div>
 
                 <button onclick="logout()" class="btn-primary" style="background:#333; margin-bottom:12px; color:var(--red);">Esci e Disconnetti</button>
-                <button onclick="switchProfile()" class="btn-secondary" style="width:100%; height:50px; border-radius:12px; font-weight:700; background:var(--blue); color:white; border:none; cursor:pointer;">Cambia Profilo / Account</button>
+                <div style="display:flex; gap:12px; margin-bottom:12px;">
+                    <button onclick="switchProfile()" class="btn-secondary" style="flex:1; height:46px; border-radius:12px; font-weight:700; background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.1); cursor:pointer;">Cambia Profilo</button>
+                    <button onclick="forceAppUpdate()" class="btn-secondary" style="flex:1; height:46px; border-radius:12px; font-weight:700; background:rgba(255, 99, 71, 0.1); color:tomato; border:1px solid rgba(255, 99, 71, 0.2); cursor:pointer;">Svuota Cache</button>
+                </div>
             </div>`;
         }
 
@@ -6076,7 +6095,6 @@
             state.messages[threadId].push(msg);
             state.messages[threadId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             saveChatMessages(threadId);
-
             if (state.view === 'chat' && state.currentThreadId === threadId) {
                 // ⚡ EXPERT FLUIDITY: Append instead of full render
                 appendMessageToUI(msg);
@@ -6084,6 +6102,28 @@
             } else {
                 updateChatListUnread(threadId);
             }
+        }
+
+        function forceAppUpdate() {
+            if (!confirm("Sei sicuro? Questo cancellerà tutti i dati salvati localmente (cache) e forzerà un aggiornamento totale.")) return;
+            showBoot("Pulizia profonda in corso...");
+
+            // Clear everything
+            const keep = ['sb-qjmjidnzgixspssqdffy-auth-token']; // Mantieni solo il login se possibile? No, meglio tutto per sicurezza
+            Object.keys(localStorage).forEach(key => {
+                localStorage.removeItem(key);
+            });
+
+            // Clear caches (Service Workers)
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+
+            setTimeout(() => {
+                window.location.href = window.location.href.split('#')[0] + '?update=' + Date.now();
+            }, 1000);
         }
 
         function showUserProfile(userId) {
