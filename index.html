@@ -1531,6 +1531,39 @@
                 left: 100%;
             }
         }
+
+        .chat-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--glass-header);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+
+        .chat-loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loading-bar-container {
+            width: 140px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
     </style>
 </head>
 
@@ -1974,9 +2007,7 @@
                     state.currentChatId = savedNav.currentChatId;
                     state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
                     state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
-                    if (loadChatMessages(state.currentThreadId)) {
-                        state.chatReady = true; // 🔥 INSTANT REVEAL: Cache exists
-                    }
+                    loadChatMessages(state.currentThreadId);
                 }
             } else {
                 state.view = state.isLoggedIn ? 'home' : 'login';
@@ -4298,6 +4329,12 @@
                 // Surgical Header & Progress Bar
                 const headerClassEl = document.querySelector('.chat-header span[style*="font-size:12px"]');
                 const progressLoader = document.querySelector('.progress-loader');
+                const loadingShield = document.querySelector('.chat-loading-overlay');
+
+                if (loadingShield && state.chatReady) {
+                    loadingShield.classList.add('hidden');
+                }
+
                 if (progressLoader) {
                     if (state.chatSyncing || !state.chatReady) progressLoader.classList.add('active');
                     else progressLoader.classList.remove('active');
@@ -4429,32 +4466,32 @@
                 displayClass = 'Studente';
             }
 
-            // 🔥 INSTAGRAM-STYLE: Instant cache reveal + progress bar
-            const hasCache = msgs.length > 0;
-            const showProgressBar = state.chatSyncing || !state.chatReady;
+            // 🔥 FULL SHIELD LOADING: Obscure everything until ready
+            const isFirstLoad = !state.chatReady;
 
-            const chatContent = (hasCache)
-                ? msgs.map(renderChatMessage).join('')
-                : (!state.chatReady ? `
-                <div style="display:flex; justify-content:center; align-items:center; height:100%; flex-direction:column; gap:16px;">
-                    <div style="width:100px; height:2px; background:rgba(255,255,255,0.1); border-radius:1px; overflow:hidden;">
-                        <div class="progress-bar"></div>
-                    </div>
-                    <span style="color:rgba(255,255,255,0.6); font-size:12px; font-weight:500;">Sincronizzazione in corso...</span>
-                </div>
-            ` : `
-                <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+            const chatContent = msgs.length > 0 ? msgs.map(renderChatMessage).join('') : `
+                <div id="empty-state" style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
                     <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
                         <i class="ph ph-chat-circle-dots"></i>
                     </div>
                     <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
                     <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
                 </div>
-            `);
+            `;
 
             return `
             <div class="chat-view">
-                <div class="progress-loader ${showProgressBar ? 'active' : ''}">
+                <!-- 🛡️ LOADING SHIELD -->
+                <div class="chat-loading-overlay ${state.chatReady ? 'hidden' : ''}">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+                        <span style="font-weight:600; color:white; font-size:15px; letter-spacing: -0.2px;">Caricamento della chat...</span>
+                        <div class="loading-bar-container">
+                            <div class="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-loader ${state.chatSyncing && state.chatReady ? 'active' : ''}">
                     <div class="progress-bar"></div>
                 </div>
                 <div class="chat-header">
