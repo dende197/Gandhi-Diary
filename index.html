@@ -1921,7 +1921,9 @@
                     state.currentChatId = savedNav.currentChatId;
                     state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
                     state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
-                    loadChatMessages(state.currentThreadId); // Carica cache
+                    if (loadChatMessages(state.currentThreadId)) {
+                        state.chatReady = true; // 🔥 INSTANT REVEAL: Cache exists
+                    }
                 }
             } else {
                 state.view = state.isLoggedIn ? 'home' : 'login';
@@ -5667,7 +5669,11 @@
             state.msgSearch = '';
 
             if (!state.messages[conversationId]) {
-                loadChatMessages(conversationId);
+                if (loadChatMessages(conversationId)) {
+                    state.chatReady = true; // 🔥 INSTANT REVEAL: Cache exists, no loading spinner
+                }
+            } else {
+                state.chatReady = true; // 🔥 INSTANT: Messages already in memory
             }
             if (!state.messages[conversationId]) state.messages[conversationId] = [];
 
