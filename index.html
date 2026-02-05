@@ -2017,9 +2017,6 @@
 
             updateOfflineBadge();
             render();
-            if (state.view === 'chat') {
-                setTimeout(() => scrollChatToBottom(false), 500);
-            }
             setTimeout(hideBoot, 400);
         });
 
@@ -2944,11 +2941,11 @@
 
         // ✅ Validazione più permissiva
         // ✅ Validazione ultra-permissiva: accetta tutto ciò che inizia con un numero o è una sigla breve
+        // ✅ Validazione ultra-permissiva per la classe
         function isValidClass(cls) {
             if (!cls) return false;
-            const txt = String(cls).toUpperCase().trim();
-            if (txt.length < 1 || txt.length > 15) return false;
-            return true; // Accetta tutto quello che passa i limiti di lunghezza
+            const s = String(cls).trim().toUpperCase();
+            return s.length >= 1 && s.length <= 20;
         }
 
         function isValidName(name) {
@@ -2969,10 +2966,7 @@
             saveNavigationState();
             render();
 
-            // 🔥 SMART SCROLL: Solo se cambiamo vista verso la chat
-            if (v === 'chat' && oldView !== 'chat') {
-                setTimeout(() => scrollChatToBottom(false), 50);
-            }
+            render();
         }
 
         window.addEventListener('hashchange', () => {
@@ -2996,6 +2990,20 @@
         function _renderCore() {
             const root = document.getElementById('app');
             if (!root) return;
+
+            // 🔥 EXPERT SCROLL PRESERVATION
+            let isAtBottom = false;
+            let lastScrollTop = 0;
+            if (state.view === 'chat') {
+                const historyEl = document.getElementById('chat-history');
+                if (historyEl) {
+                    const threshold = 150;
+                    isAtBottom = historyEl.scrollHeight - historyEl.scrollTop - historyEl.clientHeight < threshold;
+                    lastScrollTop = historyEl.scrollTop;
+                } else {
+                    isAtBottom = true; // First time chat is opened
+                }
+            }
 
             if (!state.isLoggedIn) {
                 root.innerHTML = renderLogin();
@@ -3027,6 +3035,18 @@
             document.body.classList.toggle('chat-mode', isChat);
 
             root.innerHTML = html;
+
+            // 🔥 EXPERT SCROLL RESTORATION
+            if (state.view === 'chat') {
+                const historyEl = document.getElementById('chat-history');
+                if (historyEl) {
+                    if (isAtBottom) {
+                        scrollChatToBottom(false, true);
+                    } else {
+                        historyEl.scrollTop = lastScrollTop;
+                    }
+                }
+            }
 
             // Dopo ogni render, se siamo in Home, ridisegna i widget
             if (state.view === 'home') {
@@ -4262,55 +4282,35 @@
 
         function renderChat() {
             const threadId = state.currentThreadId;
-            // 🔥 CLASS DNA FALLBACK: 3-Layer Recovery
-            // 1. Direct State
-            // 2. Directory Lookup
-            // 3. Threads Cache
-            // 4. Name Pattern Parsing "Mario Rossi (5E)"
+            const msgs = state.messages[threadId] || [];
 
-            let targetClass = state.currentChatClass;
+            // 🔥 CLASS DNA FALLBACK: 4-Layer Recovery
             const dirUser = DIRECTORY.find(u => u.id === state.currentChatId);
             const threadData = state.threads.find(t => t.otherId === state.currentChatId);
 
-            if (!targetClass || targetClass === 'N/D') {
-                if (dirUser && dirUser.class) targetClass = 'Classe ' + dirUser.class;
-                else if (threadData && threadData.otherClass) targetClass = threadData.otherClass;
-                else {
-                    // Try extraction from Name
-                    const name = state.currentChatUser || '';
-                    const match = name.match(/\((.*?)\)/);
-                    if (match && isValidClass(match[1])) targetClass = 'Classe ' + match[1];
-                    else targetClass = 'Studente';
-                }
-                // Save discovered class to state for persistence
-                if (targetClass !== 'Studente') {
-                    state.currentChatClass = targetClass;
-                    // Optional: debounceSaveNav() if we want to be aggressive
-                }
+            const name = state.currentChatUser || dirUser?.name || 'Utente';
+            const avatar = state.currentChatAvatar || dirUser?.avatar || threadData?.otherAvatar || '';
+            const rawClass = state.currentChatClass || dirUser?.class || threadData?.otherClass || '';
+
+            let displayClass = '';
+            if (rawClass) {
+                displayClass = rawClass.startsWith('Classe') ? rawClass : 'Classe ' + rawClass;
+            } else if (name !== 'Utente') {
+                displayClass = 'Studente';
             }
-
-            const otherUser = dirUser; // Keep ref for other props if needed
-
-            // Schedule UI update after render
-            setTimeout(() => updateChatUI('full'), 0); // 🔥 Immediate render, no 50ms lag
 
             return `
             <div class="chat-view">
                 <div class="chat-header">
-                    <div class="chat-header-left">
-                        <button class="icon-btn" onclick="exitChat()">
-                            <i class="ph ph-arrow-left"></i>
-                        </button>
-                        <div class="avatar-circle" style="width:40px; height:40px; font-size:18px;">
-                            ${(state.currentChatAvatar && state.currentChatAvatar !== 'null')
-                    ? `<img src="${state.currentChatAvatar}" style="width:100%; height:100%; object-fit:cover;">`
-                    : getInitials(state.currentChatUser || 'Utente')}
-                        </div>
+                    <button onclick="exitChat()" style="background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <i class="ph ph-caret-left" style="font-size:20px;"></i>
+                    </button>
+                    
+                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                        ${renderAvatar(name, 44, avatar)}
                         <div style="display:flex; flex-direction:column;">
-                            <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser || 'Utente'}</span>
-                            <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">
-                                ${targetClass}
-                            </span>
+                            <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${name}</span>
+                            <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">${displayClass}</span>
                         </div>
                     </div>
                 </div>
@@ -5906,17 +5906,6 @@
             }
         }
 
-        function scrollChatToBottom() {
-            requestAnimationFrame(() => {
-                const history = document.getElementById('chat-history');
-                if (history) {
-                    history.scrollTo({
-                        top: history.scrollHeight,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        }
 
         async function createMarketOrder({ item, type, offerPrice }) {
             const buyerId = getUserId();
