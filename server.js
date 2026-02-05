@@ -2465,25 +2465,27 @@ app.post('/login', async (req, res) => {
             try {
                 const normalizedClass = normalizeClass(studentClass);
 
-                // A) Fetch existing data first to get stored preferences
+                // A) Fetch existing data first to get stored preferences (Avatar, Specialization)
                 const { data: existingProfile } = await supabase
                     .from("profiles")
-                    .select("specialization")
+                    .select("specialization, avatar")
                     .eq("id", pid)
                     .single();
 
-                if (existingProfile && existingProfile.specialization) {
+                let storedSpecialization = null;
+                let storedAvatar = null;
+                if (existingProfile) {
                     storedSpecialization = existingProfile.specialization;
+                    storedAvatar = existingProfile.avatar;
                 }
 
-                // B) Upsert identity (Argo is truth for Name/Class) but keep Specialization
-                // Upserting only provided fields should preserve others if not null, 
-                // but explicit merge is safer for logic flow
+                // B) Upsert identity (Argo is truth for Name/Class) but keep Specialization/Avatar
                 await supabase.from("profiles").upsert({
                     id: pid,
                     name: studentName,
                     class: normalizedClass || studentClass || "N/D",
-                    specialization: storedSpecialization || null, // 🔥 FIX: Persist specialization
+                    specialization: storedSpecialization || null,
+                    avatar: storedAvatar || null,
                     last_active: new Date().toISOString()
                 }, { onConflict: "id" });
 

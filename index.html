@@ -1972,20 +1972,39 @@
 
         // ✅ Normalize server(Supabase) records to frontend format
         function normalizePost(p, myId) {
-            // 🔥 FIX: Map comments with their enriched data from server
-            const comments = (p?.comments || []).map(c => ({
-                author: c.author || "Utente",
-                author_id: c.author_id || null,
-                author_avatar: c.author_avatar || null,
-                text: c.text || "",
-                created_at: c.created_at
-            }));
+            // 🔥 DEFENSIVE: Se il server torna "Utente" ma abbiamo dati migliori in cache, o è l'utente corrente, preserviamo l'identità
+            let author = p?.author ?? p?.author_name ?? "Utente";
+            let authorAvatar = p?.authorAvatar ?? p?.author_avatar ?? null;
+
+            if (author === "Utente" || !authorAvatar) {
+                // Se è il post dell'utente corrente, usa i dati di stato
+                if (p?.author_id === state.user.id || p?.authorId === state.user.id) {
+                    author = state.user.name || author;
+                    authorAvatar = state.user.avatar || authorAvatar;
+                }
+            }
+
+            const comments = (p?.comments || []).map(c => {
+                let cAuthor = c.author || "Utente";
+                let cAvatar = c.author_avatar || null;
+                if (cAuthor === "Utente" && c.author_id === state.user.id) {
+                    cAuthor = state.user.name;
+                    cAvatar = state.user.avatar;
+                }
+                return {
+                    author: cAuthor,
+                    author_id: c.author_id || null,
+                    author_avatar: cAvatar,
+                    text: c.text || "",
+                    created_at: c.created_at
+                };
+            });
 
             return {
                 id: p?.id ?? Date.now(),
-                author: p?.author ?? p?.author_name ?? "Utente",
+                author,
                 authorId: p?.authorId ?? p?.author_id ?? null,
-                authorAvatar: p?.authorAvatar ?? p?.author_avatar ?? null,
+                authorAvatar,
                 class: p?.class ?? "5B",
                 text: p?.text ?? "",
                 image: p?.image ?? null,
@@ -2000,6 +2019,15 @@
 
         function normalizeMarketItem(i) {
             const images = Array.isArray(i?.images) ? i.images : (i?.image ? [i.image] : []);
+            let seller = i?.seller ?? i?.seller_name ?? "Utente";
+            let sellerAvatar = i?.sellerAvatar ?? i?.seller_avatar ?? null;
+
+            // 🔥 DEFENSIVE: Evita downgrade a "Utente"
+            if (seller === "Utente" && (i?.seller_id === state.user.id || i?.sellerId === state.user.id)) {
+                seller = state.user.name || seller;
+                sellerAvatar = state.user.avatar || sellerAvatar;
+            }
+
             return {
                 id: i?.id ?? Date.now(),
                 title: i?.title ?? "",
@@ -2008,9 +2036,9 @@
                 images,
                 image: images[0] || null,
                 status: i?.status ?? 'available',
-                seller: i?.seller ?? i?.seller_name ?? "Utente",
+                seller,
                 sellerId: i?.sellerId ?? i?.seller_id ?? null,
-                sellerAvatar: i?.sellerAvatar ?? i?.seller_avatar ?? null, // 🆕 Added
+                sellerAvatar,
                 pinned: !!i?.pinned
             };
         }
@@ -2570,7 +2598,16 @@
                     }
 
                     if (data.student) {
-                        state.user = data.student;
+                        // 🔥 DEFENSIVE MERGE: Proteggi Avatar e Specializzazione da dati Argo incompleti
+                        const oldUser = { ...state.user };
+                        state.user = {
+                            ...oldUser,
+                            ...data.student,
+                            name: (data.student.name && isValidName(data.student.name)) ? data.student.name : oldUser.name,
+                            class: (data.student.class && isValidClass(data.student.class)) ? data.student.class : oldUser.class,
+                            specialization: data.student.specialization || oldUser.specialization || 'SA',
+                            avatar: data.student.avatar || oldUser.avatar
+                        };
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
 
@@ -3633,6 +3670,7 @@
                 <div class="market-card-body">
                     <div class="market-price">${item.price}</div>
                     <div class="market-title">${item.title}</div>
+                    <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-top:4px;">Venduto da ${item.seller}</div>
                     <div style="margin-top:8px;">
                         <span class="market-status ${statusClass}">${statusText}</span>
                     </div>
@@ -4966,43 +5004,22 @@
             }
 
             // 2. Idratazione Identità (MIGLIORATA: ID Fallback immediato) (Bug #5)
+            // 2. Idratazione Identità (DEFENSIVE: Mantieni dati locali ricchi)
             state.user = state.user || {};
-            // 🔥 Priority: Server ID > Session ID > Synthetic ID
+            const oldUser = { ...state.user };
+
+            // 🔥 Priority ID: Server ID > Session ID > Synthetic ID
             state.user.id = data.student?.id || data.session?.studentId || (data.session ? `${data.session.schoolCode}:${data.session.userName}:${data.session.profileIndex}` : 'guest');
-            if (data.student) {
-                // Nome: valida che non sia username
-                // Nome: Priorità a selectedProfile se disponibile (contiene dati più ricchi se student è fallback)
-                const profileName = data.selectedProfile?.name;
-                const studentName = data.student.name;
 
-                if (profileName && isValidName(profileName)) {
-                    state.user.name = profileName;
-                    console.log("✅ Nome da selectedProfile:", profileName);
-                } else if (isValidName(studentName)) {
-                    state.user.name = studentName;
-                    console.log("✅ Nome da student object:", studentName);
-                } else {
-                    console.warn("⚠️ Nome non valido o assente:", profileName || studentName);
-                    // Fallback finale
-                    if (!state.user.name || !isValidName(state.user.name)) {
-                        state.user.name = "Studente";
-                    }
-                }
+            // 🔥 DEFENSIVE MERGE: Se il server torna dati vuoti/placeholder, tieni quelli locali (Avatar, Spec, Nome)
+            const incoming = data.student || data.selectedProfile || {};
 
-                // Classe: Simile priorità
-                const profileClass = data.selectedProfile?.class;
-                const studentClass = data.student.class;
+            state.user.name = (incoming.name && isValidName(incoming.name)) ? incoming.name : (oldUser.name || "Studente");
+            state.user.class = (incoming.class && isValidClass(incoming.class)) ? incoming.class : (oldUser.class || "N/D");
+            state.user.specialization = incoming.specialization || oldUser.specialization || 'SA';
+            state.user.avatar = incoming.avatar || oldUser.avatar || null;
 
-                if (profileClass && isValidClass(profileClass)) {
-                    state.user.class = profileClass;
-                    console.log("✅ Classe da selectedProfile:", profileClass);
-                } else if (isValidClass(studentClass)) {
-                    state.user.class = studentClass;
-                    console.log("✅ Classe da student object:", studentClass);
-                } else {
-                    state.user.class = studentClass || "N/D";
-                }
-            }
+            localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
             // 3. Supabase Auth Bridge (FIX-ALL: Centralize identity)
             try {
