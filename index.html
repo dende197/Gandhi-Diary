@@ -1763,7 +1763,7 @@
                             const data = await res.json();
                             if (data.success) {
                                 if (kind === 'posts') {
-                                    state.posts = data.data || state.posts;
+                                    state.posts = (data.data || state.posts).map(p => normalizePost(p, state.user.id));
                                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                                 } else {
                                     state.marketItems = data.data || state.marketItems;
@@ -1986,7 +1986,7 @@
                     await fetchUsersDirectory();
                     await performSync(); // 🔥 Forza sincronizzazione Argo -> Supabase
                     fetchThreads();
-                    fetchPosts();
+                    fetchFeed();
                     fetchMarket();
 
                     if (state.view === 'chat' && state.currentThreadId) {
@@ -2444,17 +2444,7 @@
             return d.getTime() >= today.getTime();
         }
 
-        async function fetchPosts() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/posts`);
-                const data = await res.json();
-                if (data.success) {
-                    state.posts = data.data || [];
-                    localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                    render();
-                }
-            } catch (e) { console.warn("Fetch posts error:", e); }
-        }
+        // 🔥 REMOVED: fetchPosts() was a duplicate of fetchFeed(). Use fetchFeed() only.
 
 
         async function submitPost(postData) {
@@ -2471,7 +2461,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    state.posts = data.data || state.posts;
+                    state.posts = (data.data || state.posts).map(p => normalizePost(p, state.user.id));
                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                     console.log("📝 Post pubblicato (server) e cache allineata");
                 } else {
@@ -5646,6 +5636,21 @@
                             DIRECTORY.push(u);
                         }
                     });
+
+                    // 🔥 REACTIVE RE-NORMALIZATION: Re-normalize all posts and market items
+                    // This resolves any "Utente" fallbacks with the newly loaded profile data
+                    if (state.posts.some(p => p.author === 'Utente' || !p.authorAvatar)) {
+                        state.posts = state.posts.map(p => normalizePost(p, state.user.id));
+                        localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
+                        console.log("🔄 Posts re-normalized after DIRECTORY load");
+                    }
+                    if (state.marketItems.some(m => m.seller === 'Utente' || !m.sellerAvatar)) {
+                        state.marketItems = state.marketItems.map(m => normalizeMarketItem(m));
+                        localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
+                        console.log("🔄 Market items re-normalized after DIRECTORY load");
+                    }
+
+                    render(); // 🔥 Trigger UI update
                 }
             } catch (e) { console.warn("Fetch directory error:", e); }
         }
