@@ -5626,7 +5626,10 @@
 
             // ⚡ FLUIDITY: Show boot immediately to mask network latency
             showBoot('Apro la chat...');
-            state.chatReady = false; // 🔥 INSTAGRAM-STYLE: Reset per mostrare loading spinner
+            
+            // 🔥 CRITICAL FIX: Reset chatReady BEFORE any cache check
+            // This ensures render-lock doesn't block the new chat view
+            state.chatReady = false;
 
             // Find ID if missing
             if (!otherId) {
@@ -5669,16 +5672,15 @@
             state.msgSearch = '';
 
             if (!state.messages[conversationId]) {
-                if (loadChatMessages(conversationId)) {
-                    state.chatReady = true; // 🔥 INSTANT REVEAL: Cache exists, no loading spinner
-                }
-            } else {
-                state.chatReady = true; // 🔥 INSTANT: Messages already in memory
+                loadChatMessages(conversationId); // Just load from cache, don't set chatReady yet
             }
             if (!state.messages[conversationId]) state.messages[conversationId] = [];
 
             saveNavigationState();
             navigate('chat');
+            
+            // 🔥 CRITICAL: Force render NOW, before fetch
+            // chatReady is false, so render-lock won't block this
             render();
 
             await fetchChatMessages(conversationId);
