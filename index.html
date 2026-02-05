@@ -1903,6 +1903,14 @@
 
             if (hashView && hashView !== 'login') {
                 state.view = hashView;
+                // 🔥 Restore context even if coming from hash
+                if (savedNav && savedNav.view === hashView) {
+                    state.currentThreadId = savedNav.currentThreadId;
+                    state.currentChatUser = savedNav.currentChatUser;
+                    state.currentChatId = savedNav.currentChatId;
+                    state.currentChatAvatar = savedNav.currentChatAvatar;
+                    loadChatMessages(state.currentThreadId);
+                }
             } else if (savedNav && savedNav.view && savedNav.view !== 'login') {
                 state.view = savedNav.view;
                 if (savedNav.view === 'chat') {
@@ -4158,38 +4166,61 @@
             </div>`;
         }
 
-        function updateChatUI() {
+        function updateChatUI(mode = 'full') {
             const historyEl = document.getElementById('chat-history');
             if (!historyEl || state.view !== 'chat') return;
 
             const threadId = state.currentThreadId;
             const msgs = state.messages[threadId] || [];
 
-            if (msgs.length === 0) {
-                historyEl.innerHTML = `
-                    <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
-                        <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
-                            <i class="ph ph-chat-circle-dots"></i>
+            if (mode === 'full') {
+                if (msgs.length === 0) {
+                    historyEl.innerHTML = `
+                        <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+                            <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
+                                <i class="ph ph-chat-circle-dots"></i>
+                            </div>
+                            <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
+                            <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
                         </div>
-                        <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
-                        <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
-                    </div>
-                `;
-            } else {
-                historyEl.innerHTML = msgs.map(renderChatMessage).join('');
+                    `;
+                } else {
+                    historyEl.innerHTML = msgs.map(renderChatMessage).join('');
+                }
+                scrollChatToBottom();
+            }
+        }
+
+        function appendMessageToUI(msg) {
+            const historyEl = document.getElementById('chat-history');
+            if (!historyEl || state.view !== 'chat') return;
+
+            // Remove empty state if present
+            if (historyEl.querySelector('p')?.textContent === 'Inizia la conversazione!') {
+                historyEl.innerHTML = '';
             }
 
+            const div = document.createElement('div');
+            div.innerHTML = renderChatMessage(msg);
+            historyEl.appendChild(div.firstElementChild);
+            scrollChatToBottom();
+        }
+
+        function scrollChatToBottom(smooth = true) {
+            const historyEl = document.getElementById('chat-history');
+            if (!historyEl) return;
             requestAnimationFrame(() => {
-                historyEl.scrollTop = historyEl.scrollHeight;
+                historyEl.scrollTo({
+                    top: historyEl.scrollHeight,
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
             });
         }
 
         function renderChat() {
             const threadId = state.currentThreadId;
             const otherUser = DIRECTORY.find(u => u.id === state.currentChatId);
-
-            // Schedule UI update after render
-            setTimeout(updateChatUI, 50);
+            const msgs = state.messages[threadId] || [];
 
             return `
             <div class="chat-view">
@@ -4199,9 +4230,9 @@
                     </button>
                     
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        ${renderAvatar(state.currentChatUser, 44, state.currentChatAvatar)}
+                        ${renderAvatar(state.currentChatUser || 'Chat', 44, state.currentChatAvatar)}
                         <div style="display:flex; flex-direction:column;">
-                            <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser}</span>
+                            <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${state.currentChatUser || 'Utente'}</span>
                             <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">
                                 ${otherUser?.class ? 'Classe ' + otherUser.class : (state.currentChatUser ? 'Studente' : '')}
                             </span>
@@ -4210,7 +4241,15 @@
                 </div>
 
                 <div id="chat-history" class="chat-history">
-                    <!-- Messaggi iniettati da updateChatUI -->
+                    ${msgs.length === 0 ? `
+                        <div style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+                            <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
+                                <i class="ph ph-chat-circle-dots"></i>
+                            </div>
+                            <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
+                            <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
+                        </div>
+                    ` : msgs.map(renderChatMessage).join('')}
                 </div>
 
                 <div class="chat-input-bar">
@@ -5715,11 +5754,22 @@
             // A. Se esiste o se è il mio messaggio (confermato dal server dopo optimistic update)
             if (existsByServerId || pendingIdx > -1) {
                 if (pendingIdx > -1) {
-                    state.messages[threadId][pendingIdx].id = newMsg.id;
-                    state.messages[threadId][pendingIdx].status = 'sent';
-                    state.messages[threadId][pendingIdx].timestamp = newMsg.created_at;
+                    const msgObj = state.messages[threadId][pendingIdx];
+                    msgObj.id = newMsg.id;
+                    msgObj.status = 'sent';
+                    msgObj.timestamp = newMsg.created_at;
                     saveChatMessages(threadId);
-                    if (state.view === 'chat' && state.currentThreadId === threadId) updateChatUI();
+
+                    // ⚡ EXPERT FLUIDITY: Surgical status update
+                    if (state.view === 'chat' && state.currentThreadId === threadId) {
+                        const allBubbles = document.querySelectorAll('.message-bubble.msg-me.msg-pending');
+                        const target = Array.from(allBubbles).find(b => b.innerText.includes(msgObj.text));
+                        if (target) {
+                            target.classList.remove('msg-pending');
+                            const statusEl = target.querySelector('.msg-status');
+                            if (statusEl) statusEl.innerHTML = `${new Date(msgObj.timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} <span style="margin-left:4px;"><i class="ph ph-check"></i></span>`;
+                        }
+                    }
                 }
                 return;
             }
@@ -5742,7 +5792,8 @@
             saveChatMessages(threadId);
 
             if (state.view === 'chat' && state.currentThreadId === threadId) {
-                updateChatUI();
+                // ⚡ EXPERT FLUIDITY: Append instead of full render
+                appendMessageToUI(msg);
             } else {
                 updateChatListUnread(threadId);
             }
@@ -5763,7 +5814,16 @@
                         ${u.id !== state.user.id ? `<button onclick="closeModal(); openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>` : ''}
                     </div>
                 </div>
-            `);
+            `, 'profilo');
+        }
+
+        // --- missing fluidity functions ---
+        function updateChatListUnread(threadId) {
+            const thread = state.threads.find(t => t.id === threadId);
+            if (thread) {
+                thread.unread = true;
+                if (state.view === 'messages') render(); // Aggiorna lista se visibile
+            }
         }
 
         function scrollChatToBottom() {
@@ -5889,8 +5949,10 @@
             state.messages[threadId].push(localMsg);
             saveChatMessages(threadId); // Persistenza ottimistica locale
 
-            updateChatUI();
-            scrollChatToBottom();
+            // ⚡ EXPERT FLUIDITY: Append instead of full render
+            if (state.view === 'chat' && state.currentThreadId === threadId) {
+                appendMessageToUI(localMsg);
+            }
 
             try {
                 // v7.0 - POST to new schema
