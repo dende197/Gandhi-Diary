@@ -4463,7 +4463,7 @@
             if (rawClass) {
                 displayClass = rawClass.startsWith('Classe') ? rawClass : 'Classe ' + rawClass;
             } else if (name !== 'Utente') {
-                displayClass = 'Studente';
+                displayClass = 'Studente • Tocca per info';
             }
 
             // 🔥 FULL SHIELD LOADING: Obscure everything until ready
@@ -4499,10 +4499,10 @@
                         <i class="ph ph-caret-left" style="font-size:20px;"></i>
                     </button>
                     
-                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                    <div style="display:flex; align-items:center; gap:12px; flex:1; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">
                         ${renderAvatar(name, 44, avatar)}
                         <div style="display:flex; flex-direction:column;">
-                            <span style="font-weight:700; font-size:17px; color:white; cursor:pointer;" onclick="showUserProfile('${state.currentChatId}')">${name}</span>
+                            <span style="font-weight:700; font-size:17px; color:white;">${name}</span>
                             <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:500;">${displayClass}</span>
                         </div>
                     </div>
@@ -6088,17 +6088,52 @@
 
         function showUserProfile(userId) {
             const u = DIRECTORY.find(d => d.id === userId);
-            if (!u) return;
+            const threadData = state.threads.find(t => t.otherId === userId);
+
+            // Fallback content if directory info is missing but we're in chat
+            const name = u?.name || state.currentChatUser || 'Utente';
+            const avatar = u?.avatar || state.currentChatAvatar || threadData?.otherAvatar || '';
+            const rawClass = u?.class || state.currentChatClass || threadData?.otherClass || '';
+            const role = (rawClass && !isNaN(parseInt(rawClass))) ? 'Studente' : 'Docente/Utente';
 
             showModal(`
-                <div style="text-align:center; padding: 20px 0;">
-                    ${renderAvatar(u.name, 80, u.avatar)}
-                    <h2 style="margin: 16px 0 4px 0; color:white;">${u.name}</h2>
-                    <p style="color:var(--text-muted); margin-bottom: 24px;">Classe ${u.class} - ${u.specialization || u.spec || 'SA'}</p>
+                <div style="text-align:center; padding: 24px 16px;">
+                    <div style="display:inline-block; border: 3px solid var(--primary); padding: 4px; border-radius: 50%; margin-bottom: 20px;">
+                        ${renderAvatar(name, 90, avatar)}
+                    </div>
                     
-                    <div style="display:flex; justify-content:center; gap:12px;">
-                        <button onclick="closeModal()" style="padding: 12px 24px; background:rgba(255,255,255,0.1); border-radius:14px; color:white; font-weight:700;">Chiudi</button>
-                        ${u.id !== state.user.id ? `<button onclick="closeModal(); openChat('${u.name}', '${u.id}', '${u.avatar || ''}')" style="padding: 12px 24px; background:var(--primary); border-radius:14px; color:white; font-weight:700;">Invia Messaggio</button>` : ''}
+                    <h2 style="margin: 0 0 4px 0; color:white; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">${name}</h2>
+                    <div style="display:flex; justify-content:center; gap:8px; margin-bottom: 24px; opacity: 0.8;">
+                        <span style="padding: 4px 12px; background:rgba(255,255,255,0.1); border-radius:20px; font-size:12px; font-weight:600; color:white;">
+                            ${role}
+                        </span>
+                        ${rawClass ? `<span style="padding: 4px 12px; background:var(--primary); border-radius:20px; font-size:12px; font-weight:600; color:white;">Classe ${rawClass}</span>` : ''}
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.03); border-radius:20px; padding: 20px; margin-bottom: 24px; text-align:left; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom: 12px;">
+                            <i class="ph ph-identification-card" style="font-size:24px; color:var(--primary);"></i>
+                            <div>
+                                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Identità</div>
+                                <div style="color:white; font-weight:600;">G-Connect Verified</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <i class="ph ph-graduation-cap" style="font-size:24px; color:var(--primary);"></i>
+                            <div>
+                                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Istituto</div>
+                                <div style="color:white; font-weight:600;">Percorso di studi attivo</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <button onclick="closeModal()" style="width:100%; padding: 14px; background:rgba(255,255,255,0.08); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer;">Chiudi</button>
+                        ${(u?.id || userId) !== state.user.id && state.view !== 'chat' ? `
+                            <button onclick="closeModal(); openChat('${name}', '${u?.id || userId}', '${avatar}')" style="width:100%; padding: 14px; background:var(--primary); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                                Invia Messaggio
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `, 'profilo');
