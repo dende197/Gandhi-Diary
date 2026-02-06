@@ -2342,7 +2342,7 @@
                 const data = await res.json();
                 if (data.success) {
                     state.threads = (data.data || []).map(t => {
-                        const dirUser = DIRECTORY.find(u => u.id === t.otherId);
+                        const dirUser = DIRECTORY.find(u => String(u.id).toLowerCase() === String(t.otherId).toLowerCase());
                         return {
                             threadId: t.id,
                             otherId: t.otherId,
@@ -5549,7 +5549,7 @@
                 data.session.storedUser = btoa(unescape(encodeURIComponent(user)));
                 data.session.storedPass = btoa(unescape(encodeURIComponent(pass)));
                 // 🔥 Use server-provided student ID or reconstruct it if missing
-                data.session.studentId = data.student?.id || `${data.session.schoolCode}:${data.session.userName}:${data.session.profileIndex}`;
+                data.session.studentId = data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex);
 
                 // 🔥 NEW: Persist full profile info for instant hydration on refresh
                 data.session.name = data.student?.name || data.selectedProfile?.name;
@@ -6018,13 +6018,13 @@
                 const res = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}/messages`);
                 const data = await res.json();
                 if (data.success) {
-                    const myId = state.user.id; // 🔥 ORA SINCRONO
+                    const myId = getUserId(); // 🔥 NORMALIZED
                     state.messages[conversationId] = (data.data || []).map(m => ({
                         id: m.id,
                         text: m.content || m.text,
                         type: m.type || 'text',
                         meta: m.meta || {},
-                        me: String(m.sender_id) === String(myId), // Stabilità lato basata su ID
+                        me: String(m.sender_id).toLowerCase() === String(myId).toLowerCase(), // Stabilità lato basata su ID
                         sender_id: m.sender_id,
                         timestamp: m.created_at,
                         status: 'sent'
@@ -6189,7 +6189,7 @@
             // 🔍 2. Check duplicate by Local Pending (Optimistic Match)
             const pendingIdx = state.messages[threadId]?.findIndex(m =>
                 m.status === 'pending' &&
-                m.sender_id === newMsg.sender_id &&
+                String(m.sender_id).toLowerCase() === String(newMsg.sender_id).toLowerCase() &&
                 (m.text === (newMsg.content || newMsg.text))
             );
 
@@ -6217,7 +6217,7 @@
             }
 
             // B/C. Nuovo messaggio (da me o da altri)
-            const isMe = String(newMsg.sender_id) === String(myId);
+            const isMe = String(newMsg.sender_id).toLowerCase() === String(myId).toLowerCase();
 
             const msg = {
                 id: newMsg.id,
