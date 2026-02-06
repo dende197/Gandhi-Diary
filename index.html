@@ -1765,24 +1765,14 @@
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (!session || !session.user) return null;
 
-                // 🔥 FIX-ALL: Look up the profile using either the Argo PID (id) or the Supabase UID (supabase_uid)
-                // We prioritize the Argo PID from our current state if available
-                const currentPid = state.user.id;
+                // 🔥 IDENTITY LOOKUP: Uses the hardened Argo ID as primary key
+                const currentPid = getUserId();
 
                 let profileQueryResult = await supabaseClient
                     .from('profiles')
                     .select('*')
                     .eq('id', currentPid)
                     .single();
-
-                // If not found by ID (Argo PID), try by supabase_uid (UUID)
-                if (!profileQueryResult.data) {
-                    profileQueryResult = await supabaseClient
-                        .from('profiles')
-                        .select('*')
-                        .eq('supabase_uid', session.user.id)
-                        .single();
-                }
 
                 if (profileQueryResult.data) {
                     const p = profileQueryResult.data;
