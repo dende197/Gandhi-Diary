@@ -1800,14 +1800,24 @@
             return `global:${name}`;
         }
 
-        function getSpecializationFullName(spec) {
+        function getSpecializationFullName(spec, rawClass = '') {
+            // 🔥 HEURISTIC: Se manca lo spec, prova a estrarlo dalla classe (es. "4D SA" -> "SA")
+            if (!spec && rawClass) {
+                const match = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|LS|CAT|AFM|ITI)\b/);
+                if (match) spec = match[1];
+            }
+
             const maps = {
                 'SA': 'Scienze Applicate',
                 'LC': 'Liceo Classico',
                 'SU': 'Scienze Umane',
                 'LL': 'Liceo Linguistico',
                 'LS': 'Liceo Scientifico',
-                'EC': 'Economico Sociale'
+                'LS': 'Liceo Scientifico',
+                'EC': 'Economico Sociale',
+                'CAT': 'Costruzioni Ambiente Territorio',
+                'AFM': 'Amministrazione Finanza Marketing',
+                'ITI': 'Istituto Tecnico Industriale'
             };
             return maps[spec] || spec || 'Indirizzo N/D';
         }
@@ -6204,6 +6214,15 @@
             const name = u?.name || 'Utente';
             const avatar = u?.avatar || state.currentChatAvatar || threadData?.otherAvatar || '';
             const rawClass = u?.class || state.currentChatClass || threadData?.otherClass || '';
+
+            // 🔥 PULIZIA CLASSE: Se la classe contiene già l'indirizzo (es. "5D SA"), estrai solo la base ("5D")
+            // per evitare di scriverlo due volte nella UI
+            let cleanClass = rawClass;
+            const indirizzoMatch = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|LS|CAT|AFM|ITI)\b/);
+            if (indirizzoMatch) {
+                cleanClass = rawClass.replace(new RegExp(indirizzoMatch[0], 'i'), '').trim();
+            }
+
             const role = (rawClass && !isNaN(parseInt(rawClass))) ? 'Studente' : 'Docente/Utente';
 
             showModal(`
@@ -6217,7 +6236,7 @@
                         <span style="padding: 4px 12px; background:rgba(255,255,255,0.1); border-radius:20px; font-size:12px; font-weight:600; color:white;">
                             ${role}
                         </span>
-                        ${rawClass ? `<span style="padding: 4px 12px; background:var(--primary); border-radius:20px; font-size:12px; font-weight:600; color:white;">Classe ${rawClass}</span>` : ''}
+                        ${cleanClass ? `<span style="padding: 4px 12px; background:var(--primary); border-radius:20px; font-size:12px; font-weight:600; color:white;">Classe ${cleanClass}</span>` : ''}
                     </div>
 
                     <div style="background:rgba(255,255,255,0.03); border-radius:20px; padding: 20px; margin-bottom: 24px; text-align:left; border: 1px solid rgba(255,255,255,0.05);">
@@ -6225,7 +6244,7 @@
                             <i class="ph ph-book-open" style="font-size:24px; color:var(--primary);"></i>
                             <div>
                                 <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Indirizzo di Studi</div>
-                                <div style="color:white; font-weight:600;">${getSpecializationFullName(u?.specialization)}</div>
+                                <div style="color:white; font-weight:600;">${getSpecializationFullName(u?.specialization, rawClass)}</div>
                             </div>
                         </div>
                     </div>
