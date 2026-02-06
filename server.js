@@ -520,7 +520,7 @@ async function enrichProfiles(school, accessToken, profiles) {
     for (const [index, p] of profiles.entries()) {
         const authToken = p.token;
         const uname = (p.username || '').trim().toLowerCase();
-        const pid = `${school}:${uname}:${index}`;
+        const pid = `p:${school}:${uname}:${index}`.toLowerCase().replace(/\s+/g, '');
 
         let name = (p.name || '').trim().toUpperCase();
         let cls = normalizeClass(p.class) || '';
@@ -2651,7 +2651,7 @@ app.post('/sync', async (req, res) => {
                     sClass = normalizeClass(resIdent.cls) || resIdent.cls;
                 }
 
-                const pid = `${school}:${user}:${profileIndex}`;
+                const pid = `p:${school}:${user}:${profileIndex}`.toLowerCase().replace(/\s+/g, '');
 
                 // 🔥 FETCH FIRST to avoid erasing avatar/specialization
                 const { data: existingProfile } = await supabase
