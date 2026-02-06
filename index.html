@@ -3819,12 +3819,21 @@
 
                 // 🔥 CACHE INVALIDATION: Forza il refresh dei dati per la prossima ricerca
                 state.lastSearchResults = null;
-                // Aggiorna la DIRECTORY locale con i nuovi dati utente
+                // Aggiorna la DIRECTORY locale con i nuovi dati utente (ed elimina possibili cloni per nome)
                 const myId = getUserId();
-                const idx = DIRECTORY.findIndex(d => String(d.id).toLowerCase().replace(/\s+/g, '') === myId);
-                if (idx >= 0) {
-                    DIRECTORY[idx] = { ...DIRECTORY[idx], name: newName, specialization: newSpec, avatar: state.user.avatar };
+                const myName = String(state.user.name || '').toLowerCase().trim();
+
+                // Rimuovi ogni vecchio riferimento per ID o per Nome
+                for (let i = DIRECTORY.length - 1; i >= 0; i--) {
+                    const d = DIRECTORY[i];
+                    const dId = String(d.id).toLowerCase().replace(/\s+/g, '');
+                    const dName = String(d.name || '').toLowerCase().trim();
+                    if (dId === myId || dName === myName) {
+                        DIRECTORY.splice(i, 1);
+                    }
                 }
+                // Inserisci la versione fresca
+                DIRECTORY.push({ ...state.user, id: myId });
 
                 closeModal();
                 render();
@@ -4149,18 +4158,26 @@
                             .limit(20);
 
                         if (!error && data) {
-                            // 🔥 EXPERT DE-DUPLICATION: Raggruppa per ID normalizzato
-                            // Alcuni ID nel DB possono avere spazi o casing diverso (es. "p:S1" vs "p:s1")
+                            // 🔥 EXPERT DE-DUPLICATION: Raggruppa per ID normalizzato E per Nome (Safety Net)
                             const uniqueMap = new Map();
                             data.forEach(profile => {
+                                // 1. Chiave primaria: ID normalizzato
                                 const normId = String(profile.id).toLowerCase().replace(/\s+/g, '');
-                                if (!uniqueMap.has(normId)) {
+                                // 2. Chiave secondaria: Nome normalizzato (per catturare cloni con ID diversi)
+                                const normName = String(profile.name || '').toLowerCase().trim();
+
+                                const existing = uniqueMap.get(normId) || uniqueMap.get(normName);
+
+                                if (!existing) {
                                     uniqueMap.set(normId, profile);
+                                    uniqueMap.set(normName, profile);
                                 } else {
-                                    // Merging: Se abbiamo già un record, preferiamo quello con avatar o specialization
-                                    const existing = uniqueMap.get(normId);
-                                    if (!existing.avatar && profile.avatar) uniqueMap.set(normId, profile);
-                                    if (!existing.specialization && profile.specialization) uniqueMap.set(normId, profile);
+                                    // Merging/Freshening: Preferiamo il record con più dati o più recente
+                                    // Se il nuovo profilo ha la specializzazione e quello vecchio no, vince il nuovo
+                                    if (!existing.specialization && profile.specialization) {
+                                        uniqueMap.set(normId, profile);
+                                        uniqueMap.set(normName, profile);
+                                    }
                                 }
                             });
 
