@@ -4174,25 +4174,19 @@
                             .limit(20);
 
                         if (!error && data) {
-                            // 🔥 EXPERT DE-DUPLICATION: Raggruppa per ID normalizzato E per Nome (Safety Net)
+                            // 🔥 EXPERT DE-DUPLICATION: Raggruppa per ID normalizzato
                             const uniqueMap = new Map();
                             data.forEach(profile => {
-                                // 1. Chiave primaria: ID normalizzato
+                                // Chiave primaria: ID normalizzato
                                 const normId = String(profile.id).toLowerCase().replace(/\s+/g, '');
-                                // 2. Chiave secondaria: Nome normalizzato (per catturare cloni con ID diversi)
-                                const normName = String(profile.name || '').toLowerCase().trim();
-
-                                const existing = uniqueMap.get(normId) || uniqueMap.get(normName);
+                                const existing = uniqueMap.get(normId);
 
                                 if (!existing) {
                                     uniqueMap.set(normId, profile);
-                                    uniqueMap.set(normName, profile);
                                 } else {
-                                    // Merging/Freshening: Preferiamo il record con più dati o più recente
-                                    // Se il nuovo profilo ha la specializzazione e quello vecchio no, vince il nuovo
+                                    // Merging/Freshening: Preferiamo il record con più dati
                                     if (!existing.specialization && profile.specialization) {
                                         uniqueMap.set(normId, profile);
-                                        uniqueMap.set(normName, profile);
                                     }
                                 }
                             });
