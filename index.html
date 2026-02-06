@@ -4109,11 +4109,10 @@
                 }).join('');
             }
 
-            // Sezione Persone
             if (filteredUsers.length > 0) {
                 html += `<h3 style="margin: 20px 0 12px 0; text-align:left; color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Persone</h3>`;
                 html += filteredUsers.map(u => `
-                    <div onclick="openChat('${u.name}', '${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
+                    <div onclick="showUserProfile('${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
                         <div style="position: relative; margin-right: 12px;">
                             ${renderAvatar(u.name, 44, u.avatar)}
                             ${u.status === 'online' ? `<div style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--green); border: 2px solid black; border-radius: 50%;"></div>` : ''}
@@ -4122,7 +4121,7 @@
                             <div style="font-weight: 600; font-size: 15px; color:white;">${u.name}</div>
                             <div style="color: var(--text-muted); font-size: 12px;">Classe ${u.class}</div>
                         </div>
-                        <i class="ph ph-chat-circle" style="font-size: 20px; color: var(--blue); opacity:0.8;"></i>
+                        <i class="ph ph-user-circle" style="font-size: 20px; color: var(--blue); opacity:0.8;"></i>
                     </div>
                 `).join('');
             }
@@ -6168,9 +6167,9 @@
                     
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <button onclick="closeModal()" style="width:100%; padding: 14px; background:rgba(255,255,255,0.08); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer;">Chiudi</button>
-                        ${(u?.id || userId) !== state.user.id && state.view !== 'chat' ? `
+                        ${(u?.id || userId) !== state.user.id ? `
                             <button onclick="closeModal(); openChat('${name}', '${u?.id || userId}', '${avatar}')" style="width:100%; padding: 14px; background:var(--primary); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                                Invia Messaggio
+                                <i class="ph-fill ph-chat-circle-dots" style="margin-right:8px;"></i> Contatta
                             </button>
                         ` : ''}
                     </div>
