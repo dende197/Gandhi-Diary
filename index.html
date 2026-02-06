@@ -1958,6 +1958,7 @@
             polls: [],
             plannerWeekOffset: 0,
             threads: [],
+            lastSearchResults: [], // ⭐ Cache for profile cards
             chatReady: false,
             chatSyncing: false // 🔥 Flag per il progresso in background
         };
@@ -4113,6 +4114,7 @@
 
                         if (!error && data) {
                             liveUsers = data;
+                            state.lastSearchResults = data; // ⭐ Cache results for showUserProfile
                             console.log(`🔍 Live search found ${data.length} users for "${q}"`);
                         } else if (error) {
                             console.warn("Live search error:", error.message);
@@ -5819,6 +5821,24 @@
 
         function getModalContainer() { return document.getElementById('modals'); }
 
+        /**
+         * 🔥 EXPERT MODAL UTILITY
+         * Renders a generic modal with the provided HTML content.
+         */
+        function showModal(html, className = '') {
+            const container = getModalContainer();
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="modal-overlay" onclick="closeModal(event)" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; animation: fadeIn 0.3s ease;">
+                    <div class="modal-content ${className}" onclick="event.stopPropagation()" style="background:#1a1a1a; width:100%; max-width:400px; border-radius:30px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); position:relative; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+                        ${html}
+                    </div>
+                </div>
+            `;
+            container.style.display = 'block';
+        }
+
         function closeModal(e) {
             if (!e || e.target.classList.contains('modal-overlay')) {
                 const modalContainer = getModalContainer();
@@ -6164,11 +6184,12 @@
         }
 
         function showUserProfile(userId) {
-            const u = DIRECTORY.find(d => d.id === userId);
-            const threadData = state.threads.find(t => t.otherId === userId);
+            // 🔥 SEARCH HARDENING: Cerca sia nella DIRECTORY che negli ultimi risultati di ricerca
+            const u = DIRECTORY.find(d => d.id === userId) || (state.lastSearchResults || []).find(d => d.id === userId);
+            const threadData = state.threads ? state.threads.find(t => t.otherId === userId) : null;
 
-            // Fallback content if directory info is missing but we're in chat
-            const name = u?.name || state.currentChatUser || 'Utente';
+            // Fallback content
+            const name = u?.name || 'Utente';
             const avatar = u?.avatar || state.currentChatAvatar || threadData?.otherAvatar || '';
             const rawClass = u?.class || state.currentChatClass || threadData?.otherClass || '';
             const role = (rawClass && !isNaN(parseInt(rawClass))) ? 'Studente' : 'Docente/Utente';
