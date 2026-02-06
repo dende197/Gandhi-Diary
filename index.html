@@ -1801,11 +1801,13 @@
         }
 
         function getSpecializationFullName(spec, rawClass = '') {
-            // 🔥 HEURISTIC: Se manca lo spec, prova a estrarlo dalla classe (es. "4D SA" -> "SA")
-            if (!spec && rawClass) {
-                const match = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|LS|CAT|AFM|ITI)\b/);
-                if (match) spec = match[1];
-            }
+            // 🔥 HEURISTIC & PRIORITY: Estrai codici dalla classe
+            const classMatch = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|CAT|AFM|ITI)\b/);
+            const classCode = classMatch ? classMatch[1] : null;
+
+            // Se abbiamo un codice nella classe, ha la precedenza su quello del DB 
+            // (perché spesso il DB è rimasto a un vecchio fallback 'SA')
+            const code = classCode || spec;
 
             const maps = {
                 'SA': 'Scienze Applicate',
@@ -1813,13 +1815,12 @@
                 'SU': 'Scienze Umane',
                 'LL': 'Liceo Linguistico',
                 'LS': 'Liceo Scientifico',
-                'LS': 'Liceo Scientifico',
                 'EC': 'Economico Sociale',
                 'CAT': 'Costruzioni Ambiente Territorio',
                 'AFM': 'Amministrazione Finanza Marketing',
                 'ITI': 'Istituto Tecnico Industriale'
             };
-            return maps[spec] || spec || 'Indirizzo N/D';
+            return maps[code] || code || 'Indirizzo N/D';
         }
 
         // Hashing for deterministic chat threads
@@ -6206,8 +6207,8 @@
         }
 
         function showUserProfile(userId) {
-            // 🔥 SEARCH HARDENING: Cerca sia nella DIRECTORY che negli ultimi risultati di ricerca
-            const u = DIRECTORY.find(d => d.id === userId) || (state.lastSearchResults || []).find(d => d.id === userId);
+            // 🔥 LIVE-FIRST HYDRATION: Priorità ai risultati della ricerca live (freschi da Supabase)
+            const u = (state.lastSearchResults || []).find(d => d.id === userId) || DIRECTORY.find(d => d.id === userId);
             const threadData = state.threads ? state.threads.find(t => t.otherId === userId) : null;
 
             // Fallback content
