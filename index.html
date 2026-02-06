@@ -1755,7 +1755,9 @@
 
         // 🔥 FIX-ALL: Identity based on Supabase Auth UUID (Synchronous getter)
         function getUserId() {
-            return state.user.id || 'guest';
+            if (!state.user.id) return 'guest';
+            // 🔥 IDENTITY UNIFICATION: Sempre minuscolo e senza spazi
+            return String(state.user.id).toLowerCase().replace(/\s+/g, '');
         }
 
         async function getCurrentUser() {
@@ -1889,7 +1891,7 @@
                             const data = await res.json();
                             if (data.success) {
                                 if (kind === 'posts') {
-                                    state.posts = (data.data || state.posts).map(p => normalizePost(p, state.user.id));
+                                    state.posts = (data.data || state.posts).map(p => normalizePost(p, getUserId()));
                                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                                 } else {
                                     state.marketItems = data.data || state.marketItems;
@@ -2016,10 +2018,12 @@
                 }
 
                 // Merge finale con dati sessione (Argo names/class) MA solo se validi
-                state.user.name = (argoSession.name && isValidName(argoSession.name)) ? argoSession.name : (state.user.name || 'Utente');
-                state.user.class = (argoSession.class && isValidClass(argoSession.class)) ? argoSession.class : (state.user.class || 'N/D');
-                state.user.specialization = argoSession.specialization || state.user.specialization;
-                state.user.avatar = argoSession.avatar || state.user.avatar;
+                // 🔥 PRIORITY FIX: Se abbiamo dati manuali/cacheati (state.user), usiamo quelli.
+                // Usiamo argoSession solo come fallback iniziale o per campi essenziali.
+                state.user.name = state.user.name || (argoSession.name && isValidName(argoSession.name) ? argoSession.name : 'Utente');
+                state.user.class = state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
+                state.user.specialization = state.user.specialization || argoSession.specialization;
+                state.user.avatar = state.user.avatar || argoSession.avatar;
 
                 console.log("💾 Boot: Sessione unificata per:", state.user.id);
             }
@@ -2083,7 +2087,11 @@
             // 4. Controllo Supabase & Recovery Bridge
             const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
 
-            if (!sbSession && state.isLoggedIn && argoSession.storedUser) {
+            if (sbSession) {
+                // 🔥 BOOT HYDRATION: Carica i dati professionali (Specializzazione/Avatar) da Supabase
+                // Questo risolve la perdita di dati al refresh.
+                loadProfileFromServer().catch(e => console.warn("Boot Profile Load failed:", e));
+            } else if (state.isLoggedIn && argoSession.storedUser) {
                 console.log("🩹 Boot: Sessione Supabase assente, avvio recovery silenzioso...");
                 try {
                     const school = argoSession.schoolCode.toUpperCase();
@@ -2103,6 +2111,7 @@
                         console.log("🩹 Boot: Using local identity fallback...");
                     } else {
                         console.log("✅ Boot: Sessione Supabase ripristinata!");
+                        loadProfileFromServer().catch(e => console.warn("Recovery Profile Load failed:", e));
                     }
                 } catch (e) {
                     console.warn("🩹 Boot: Errore durante recovery:", e.message);
@@ -2185,7 +2194,7 @@
 
             // 1. Check if it's ME (current user)
             const resolvedId = p?.author_id || p?.authorId;
-            const isMe = (resolvedId === state.user.id) ||
+            const isMe = (resolvedId === getUserId()) ||
                 (author === state.user.name && author !== "Utente");
 
             if (isMe) {
@@ -2250,7 +2259,7 @@
             const sellerId = i?.seller_id || i?.sellerId;
 
             // 🔥 DEFENSIVE: Evita downgrade a "Utente"
-            if (sellerId === state.user.id || (seller === state.user.name && seller !== "Utente")) {
+            if (sellerId === getUserId() || (seller === state.user.name && seller !== "Utente")) {
                 seller = state.user.name || seller;
                 sellerAvatar = state.user.avatar || sellerAvatar;
             }
@@ -2284,7 +2293,7 @@
                 const res = await fetch(`${API_BASE_URL}/api/posts`);
                 const data = await res.json();
                 if (data.success) {
-                    state.posts = (data.data || []).map(p => normalizePost(p, state.user.id));
+                    state.posts = (data.data || []).map(p => normalizePost(p, getUserId()));
                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                     render(); // ✅ Re-render with fresh server data
                     console.log("📝 Feed (server) → cache & UI updated:", state.posts.length);
@@ -2294,7 +2303,7 @@
             } catch (e) {
                 console.warn("Feed offline/errore, uso cache:", e.message);
                 const cached = localStorage.getItem(globalKey('posts'));
-                state.posts = cached ? JSON.parse(cached).map(p => normalizePost(p, state.user.id)) : [];
+                state.posts = cached ? JSON.parse(cached).map(p => normalizePost(p, getUserId())) : [];
             }
         }
 
@@ -2480,7 +2489,7 @@
             const poll = (state.polls && state.polls[0]) || null;
             if (!poll) return '';
 
-            const voterId = state.user.id;
+            const voterId = getUserId();
             const userChoice = poll.voters ? poll.voters[voterId] : null;
             const totalVotes = poll.choices.reduce((s, x) => s + (x.votes || 0), 0);
 
@@ -2615,7 +2624,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    state.posts = (data.data || state.posts).map(p => normalizePost(p, state.user.id));
+                    state.posts = (data.data || state.posts).map(p => normalizePost(p, getUserId()));
                     localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                     console.log("📝 Post pubblicato (server) e cache allineata");
                 } else {
@@ -3644,6 +3653,11 @@
                         console.log('✅ Avatar loaded from DB:', profile.avatar);
                     }
 
+                    if (profile.specialization) {
+                        state.user.specialization = profile.specialization;
+                        console.log('✅ Specialization loaded from DB:', profile.specialization);
+                    }
+
                     // Aggiorna nome SOLO se locale non valido e remoto è valido
                     if (!isValidName(state.user.name) && profile.name && isValidName(profile.name)) {
                         state.user.name = profile.name;
@@ -4034,7 +4048,7 @@
             const modalContainer = getModalContainer();
             const { item, index } = state.marketModal;
             const images = getMarketImages(item);
-            const isOwner = item.sellerId === state.user.id;
+            const isOwner = item.sellerId === getUserId();
 
             modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
@@ -4132,7 +4146,7 @@
                             .from('profiles')
                             .select('id, name, class, avatar, specialization')
                             .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
-                            .neq('id', state.user?.id || '') // Exclude self
+                            .neq('id', getUserId()) // Exclude self
                             .limit(20);
 
                         if (!error && data) {
@@ -4260,7 +4274,7 @@
 
             const filteredConv = conversations.filter(t => t.otherName.toLowerCase().includes(searchVal));
             const directoryMatches = searchVal.length > 0 ? DIRECTORY.filter(u =>
-                u.id !== state.user.id &&
+                u.id !== getUserId() &&
                 u.name.toLowerCase().includes(searchVal) &&
                 !conversations.some(c => String(c.otherId) === String(u.id))
             ) : [];
@@ -5824,7 +5838,7 @@
         async function toggleLike(id) {
             const p = state.posts.find(x => x.id === id);
             if (p) {
-                const userId = state.user.id;
+                const userId = getUserId();
                 if (!Array.isArray(p.likes)) {
                     // Fallback se stiamo ancora usando il vecchio schema local
                     p.liked = !p.liked;
@@ -6049,7 +6063,7 @@
         async function registerUserOnServer() {
             if (!state.isLoggedIn || !state.user) return;
             try {
-                const myId = state.user.id;
+                const myId = getUserId();
                 await fetch(`${API_BASE_URL}/api/users/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -6086,7 +6100,7 @@
                     // 🔥 REACTIVE RE-NORMALIZATION: Re-normalize all posts and market items
                     // This resolves any "Utente" fallbacks with the newly loaded profile data
                     if (state.posts.some(p => p.author === 'Utente' || !p.authorAvatar)) {
-                        state.posts = state.posts.map(p => normalizePost(p, state.user.id));
+                        state.posts = state.posts.map(p => normalizePost(p, getUserId()));
                         localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
                         console.log("🔄 Posts re-normalized after DIRECTORY load");
                     }
@@ -6268,7 +6282,7 @@
                     
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <button onclick="closeModal()" style="width:100%; padding: 14px; background:rgba(255,255,255,0.08); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer;">Chiudi</button>
-                        ${(u?.id || userId) !== state.user.id ? `
+                        ${(u?.id || userId) !== getUserId() ? `
                             <button onclick="closeModal(); openChat('${name}', '${u?.id || userId}', '${avatar}')" style="width:100%; padding: 14px; background:var(--primary); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                                 <i class="ph-fill ph-chat-circle-dots" style="margin-right:8px;"></i> Contatta
                             </button>
