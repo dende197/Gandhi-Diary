@@ -3817,6 +3817,15 @@
                 state.user.specialization = newSpec;
                 localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
+                // 🔥 CACHE INVALIDATION: Forza il refresh dei dati per la prossima ricerca
+                state.lastSearchResults = null;
+                // Aggiorna la DIRECTORY locale con i nuovi dati utente
+                const myId = getUserId();
+                const idx = DIRECTORY.findIndex(d => String(d.id).toLowerCase().replace(/\s+/g, '') === myId);
+                if (idx >= 0) {
+                    DIRECTORY[idx] = { ...DIRECTORY[idx], name: newName, specialization: newSpec, avatar: state.user.avatar };
+                }
+
                 closeModal();
                 render();
                 hideBoot();
@@ -6078,9 +6087,11 @@
 
                 if (data) {
                     data.forEach(u => {
-                        const idx = DIRECTORY.findIndex(d => d.id === u.id);
+                        // 🔥 FIX: Normalize ID comparison to prevent case-mismatches creating duplicates
+                        const normId = String(u.id).toLowerCase().replace(/\s+/g, '');
+                        const idx = DIRECTORY.findIndex(d => String(d.id).toLowerCase().replace(/\s+/g, '') === normId);
                         if (idx >= 0) {
-                            DIRECTORY[idx] = { ...DIRECTORY[idx], ...u };
+                            DIRECTORY[idx] = { ...DIRECTORY[idx], ...u }; // Merge with fresh data
                         } else {
                             DIRECTORY.push(u);
                         }
@@ -6226,9 +6237,11 @@
         }
 
         function showUserProfile(userId) {
-            // 🔥 LIVE-FIRST HYDRATION: Priorità ai risultati della ricerca live (freschi da Supabase)
-            const u = (state.lastSearchResults || []).find(d => d.id === userId) || DIRECTORY.find(d => d.id === userId);
-            const threadData = state.threads ? state.threads.find(t => t.otherId === userId) : null;
+            // 🔥 NORMALIZED LOOKUP: Use lowercase for case-insensitive matching
+            const normUserId = String(userId).toLowerCase().replace(/\s+/g, '');
+            const u = (state.lastSearchResults || []).find(d => String(d.id).toLowerCase().replace(/\s+/g, '') === normUserId) ||
+                DIRECTORY.find(d => String(d.id).toLowerCase().replace(/\s+/g, '') === normUserId);
+            const threadData = state.threads ? state.threads.find(t => String(t.otherId).toLowerCase().replace(/\s+/g, '') === normUserId) : null;
 
             // Fallback content
             const name = u?.name || 'Utente';
