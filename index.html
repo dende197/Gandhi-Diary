@@ -1754,10 +1754,26 @@
         }
 
         // 🔥 FIX-ALL: Identity based on Supabase Auth UUID (Synchronous getter)
+        // 🔥 CENTRALIZED IDENTITY ENGINE: Sync with server.js
+        function generatePid(school, user, index) {
+            const s = String(school || '').trim().toUpperCase();
+            const u = String(user || '').trim().toLowerCase();
+            const i = String(index !== undefined ? index : 0);
+            return `p:${s}:${u}:${i}`.toLowerCase().replace(/\s+/g, '');
+        }
+
         function getUserId() {
             if (!state.user.id) return 'guest';
-            // 🔥 IDENTITY UNIFICATION: Sempre minuscolo e senza spazi
-            return String(state.user.id).toLowerCase().replace(/\s+/g, '');
+            // Se l'ID non inizia con p:, lo normalizziamo (legacy fallback)
+            let id = String(state.user.id).toLowerCase().replace(/\s+/g, '');
+            if (!id.startsWith('p:')) {
+                // Se abbiamo i dati della sessione, possiamo ricostruirlo correttamente
+                const session = sessionManager.load();
+                if (session && session.schoolCode && session.userName) {
+                    return generatePid(session.schoolCode, session.userName, session.profileIndex || 0);
+                }
+            }
+            return id;
         }
 
         async function getCurrentUser() {
@@ -2775,7 +2791,7 @@
                         };
 
                         sessionManager.save({
-                            studentId: state.user.id,
+                            studentId: getUserId(),
                             name: state.user.name,
                             class: state.user.class,
                             specialization: state.user.specialization,
@@ -2873,7 +2889,7 @@
 
                         // Sync back to session manager to keep session data rich
                         sessionManager.save({
-                            studentId: state.user.id,
+                            studentId: getUserId(),
                             name: state.user.name,
                             class: state.user.class,
                             specialization: state.user.specialization,
@@ -5555,8 +5571,8 @@
             state.user = state.user || {};
             const oldUser = { ...state.user };
 
-            // 🔥 Priority ID: Server ID > Session ID > Synthetic ID
-            state.user.id = data.student?.id || data.session?.studentId || (data.session ? `${data.session.schoolCode}:${data.session.userName}:${data.session.profileIndex}` : 'guest');
+            // 🔥 Priority ID: Server ID > Reconstructed ID
+            state.user.id = data.student?.id || (data.session ? generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex) : 'guest');
 
             // 🔥 DEFENSIVE MERGE: Se il server torna dati vuoti/placeholder, tieni quelli locali (Avatar, Spec, Nome)
             const incoming = data.student || data.selectedProfile || {};

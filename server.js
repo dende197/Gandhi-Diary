@@ -123,6 +123,14 @@ function generateStableId(baseString) {
     return crypto.createHash('md5').update(baseString).digest('hex').substring(0, 12);
 }
 
+// 🔥 CENTRALIZED IDENTITY ENGINE: Garantisce coerenza tra frontend e backend
+function generatePid(school, user, index) {
+    const s = String(school || '').trim().toUpperCase();
+    const u = String(user || '').trim().toLowerCase();
+    const i = String(index !== undefined ? index : 0);
+    return `p:${s}:${u}:${i}`.toLowerCase().replace(/\s+/g, '');
+}
+
 function safeData(obj) {
     if (!obj) return obj;
     try {
@@ -520,7 +528,7 @@ async function enrichProfiles(school, accessToken, profiles) {
     for (const [index, p] of profiles.entries()) {
         const authToken = p.token;
         const uname = (p.username || '').trim().toLowerCase();
-        const pid = `p:${school}:${uname}:${index}`.toLowerCase().replace(/\s+/g, '');
+        const pid = generatePid(school, uname, index);
 
         let name = (p.name || '').trim().toUpperCase();
         let cls = normalizeClass(p.class) || '';
@@ -2456,7 +2464,7 @@ app.post('/login', async (req, res) => {
             extractPromemoria(headers)
         ]);
 
-        const pid = `${school}:${username}:${targetIndex}`;
+        const pid = generatePid(school, username, targetIndex);
         let storedSpecialization = null;
         let storedAvatar = null;
 
@@ -2651,7 +2659,7 @@ app.post('/sync', async (req, res) => {
                     sClass = normalizeClass(resIdent.cls) || resIdent.cls;
                 }
 
-                const pid = `p:${school}:${user}:${profileIndex}`.toLowerCase().replace(/\s+/g, '');
+                const pid = generatePid(school, user, profileIndex);
 
                 // 🔥 FETCH FIRST to avoid erasing avatar/specialization
                 const { data: existingProfile } = await supabase
@@ -2705,7 +2713,7 @@ app.post('/sync', async (req, res) => {
         let plannerData = null;
         if (supabase) {
             try {
-                const pid = `${school}:${user}:${profileIndex}`;
+                const pid = generatePid(school, user, profileIndex);
                 debugLog("📅 Sync: Caricamento planner per", pid);
 
                 const { data: plannerResult, error: plannerError } = await supabase
