@@ -2007,7 +2007,7 @@
                 // Merge finale con dati sessione (Argo names/class) MA solo se validi
                 state.user.name = (argoSession.name && isValidName(argoSession.name)) ? argoSession.name : (state.user.name || 'Utente');
                 state.user.class = (argoSession.class && isValidClass(argoSession.class)) ? argoSession.class : (state.user.class || 'N/D');
-                state.user.specialization = argoSession.specialization || state.user.specialization || 'SA';
+                state.user.specialization = argoSession.specialization || state.user.specialization;
                 state.user.avatar = argoSession.avatar || state.user.avatar;
 
                 console.log("💾 Boot: Sessione unificata per:", state.user.id);
@@ -2110,7 +2110,7 @@
                         id: profile.id || oldUser.id, // Mai perdere l'Argo PID
                         name: (profile.name && isValidName(profile.name)) ? profile.name : oldUser.name,
                         class: (profile.class && isValidClass(profile.class)) ? profile.class : oldUser.class,
-                        specialization: profile.specialization || oldUser.specialization || 'SA',
+                        specialization: profile.specialization || oldUser.specialization,
                         avatar: profile.avatar || oldUser.avatar
                     };
                     console.log("✅ Boot: State hydrated from Supabase profile");
@@ -2760,7 +2760,7 @@
                             id: incoming.id || oldUser.id,
                             name: (incoming.name && isValidName(incoming.name)) ? incoming.name : oldUser.name,
                             class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : oldUser.class,
-                            specialization: incoming.specialization || oldUser.specialization || 'SA',
+                            specialization: incoming.specialization || oldUser.specialization,
                             avatar: (incoming.avatar && incoming.avatar.startsWith('http')) ? incoming.avatar : oldUser.avatar
                         };
 
@@ -2857,7 +2857,7 @@
                             id: incoming.id || oldUser.id,
                             name: (incoming.name && isValidName(incoming.name)) ? incoming.name : oldUser.name,
                             class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : oldUser.class,
-                            specialization: incoming.specialization || oldUser.specialization || 'SA',
+                            specialization: incoming.specialization || oldUser.specialization,
                             avatar: (incoming.avatar && incoming.avatar.startsWith('http')) ? incoming.avatar : oldUser.avatar
                         };
 
@@ -5506,7 +5506,7 @@
 
             state.user.name = (incoming.name && isValidName(incoming.name)) ? incoming.name : (oldUser.name || "Studente");
             state.user.class = (incoming.class && isValidClass(incoming.class)) ? incoming.class : (oldUser.class || "N/D");
-            state.user.specialization = incoming.specialization || oldUser.specialization || 'SA';
+            state.user.specialization = incoming.specialization || oldUser.specialization;
             state.user.avatar = incoming.avatar || oldUser.avatar || null;
 
             localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
@@ -5561,7 +5561,7 @@
                         supabase_uid: authData.user.id, // Store UUID as metadata for RLS if needed later
                         name: state.user.name,
                         class: state.user.class,
-                        specialization: state.user.specialization || 'SA', // ✅ Added
+                        specialization: state.user.specialization, // ✅ Added
                         avatar: state.user.avatar || null, // ✅ Added
                         last_active: new Date().toISOString()
                     });
@@ -6225,7 +6225,7 @@
                             <i class="ph ph-book-open" style="font-size:24px; color:var(--primary);"></i>
                             <div>
                                 <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Indirizzo di Studi</div>
-                                <div style="color:white; font-weight:600;">${getSpecializationFullName(u?.specialization || 'SA')}</div>
+                                <div style="color:white; font-weight:600;">${getSpecializationFullName(u?.specialization)}</div>
                             </div>
                         </div>
                     </div>
