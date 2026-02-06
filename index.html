@@ -1800,6 +1800,18 @@
             return `global:${name}`;
         }
 
+        function getSpecializationFullName(spec) {
+            const maps = {
+                'SA': 'Scienze Applicate',
+                'LC': 'Liceo Classico',
+                'SU': 'Scienze Umane',
+                'LL': 'Liceo Linguistico',
+                'LS': 'Liceo Scientifico',
+                'EC': 'Economico Sociale'
+            };
+            return maps[spec] || spec || 'Indirizzo N/D';
+        }
+
         // Hashing for deterministic chat threads
         async function sha256Hex(input) {
             const enc = new TextEncoder().encode(input);
@@ -4107,7 +4119,7 @@
                     if (supabaseClient) {
                         const { data, error } = await supabaseClient
                             .from('profiles')
-                            .select('id, name, class, avatar')
+                            .select('id, name, class, avatar, specialization')
                             .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
                             .neq('id', state.user?.id || '') // Exclude self
                             .limit(20);
@@ -6209,18 +6221,11 @@
                     </div>
 
                     <div style="background:rgba(255,255,255,0.03); border-radius:20px; padding: 20px; margin-bottom: 24px; text-align:left; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display:flex; align-items:center; gap:12px; margin-bottom: 12px;">
-                            <i class="ph ph-identification-card" style="font-size:24px; color:var(--primary);"></i>
-                            <div>
-                                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Identità</div>
-                                <div style="color:white; font-weight:600;">G-Connect Verified</div>
-                            </div>
-                        </div>
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <i class="ph ph-graduation-cap" style="font-size:24px; color:var(--primary);"></i>
+                            <i class="ph ph-book-open" style="font-size:24px; color:var(--primary);"></i>
                             <div>
-                                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Istituto</div>
-                                <div style="color:white; font-weight:600;">Percorso di studi attivo</div>
+                                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Indirizzo di Studi</div>
+                                <div style="color:white; font-weight:600;">${getSpecializationFullName(u?.specialization || 'SA')}</div>
                             </div>
                         </div>
                     </div>
