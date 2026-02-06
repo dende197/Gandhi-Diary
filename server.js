@@ -2670,10 +2670,13 @@ app.post('/sync', async (req, res) => {
                     avatar: storedAvatar
                 };
 
-                if (sName) {
+                // Solo se il nome è valido (non un username) lo salviamo
+                if (sName && isValidName(sName, user)) {
                     payload.name = sName;
-                } else if (existingProfile?.name) {
+                } else if (existingProfile?.name && isValidName(existingProfile.name, user)) {
                     payload.name = existingProfile.name;
+                } else {
+                    payload.name = null; // Forza a null se è spazzatura
                 }
 
                 const sClassNorm = normalizeClass(sClass || existingProfile?.class);
