@@ -4180,10 +4180,10 @@
             const searchVal = (state.msgSearch || '').toLowerCase();
 
             const filteredConv = conversations.filter(t => t.otherName.toLowerCase().includes(searchVal));
-            const directoryMatches = searchVal.length > 1 ? DIRECTORY.filter(u =>
+            const directoryMatches = searchVal.length > 0 ? DIRECTORY.filter(u =>
+                u.id !== state.user.id &&
                 u.name.toLowerCase().includes(searchVal) &&
-                !conversations.some(c => c.otherId === u.id) &&
-                u.id !== state.user.id
+                !conversations.some(c => String(c.otherId) === String(u.id))
             ) : [];
 
             return `
@@ -5042,7 +5042,6 @@
 
                 <button onclick="logout()" class="btn-primary" style="background:#333; margin-bottom:12px; color:var(--red);">Esci e Disconnetti</button>
                 <div style="display:flex; gap:12px; margin-bottom:12px;">
-                    <button onclick="switchProfile()" class="btn-secondary" style="flex:1; height:46px; border-radius:12px; font-weight:700; background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.1); cursor:pointer;">Cambia Profilo</button>
                     <button onclick="forceAppUpdate()" class="btn-secondary" style="flex:1; height:46px; border-radius:12px; font-weight:700; background:rgba(255, 99, 71, 0.1); color:tomato; border:1px solid rgba(255, 99, 71, 0.2); cursor:pointer;">Svuota Cache</button>
                 </div>
             </div>`;
@@ -5973,7 +5972,7 @@
                 const { data, error } = await supabaseClient
                     .from('profiles')
                     .select('id, name, class, avatar')
-                    .limit(100);
+                    .limit(200);
 
                 if (error) throw error;
 
