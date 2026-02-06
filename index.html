@@ -4070,7 +4070,10 @@
             </div>`;
         }
 
-        function filterContent(q) {
+        // 🔥 EXPERT FIX: Live Supabase query for real users
+        let _searchDebounceTimer = null;
+
+        async function filterContent(q) {
             const list = document.getElementById('search-results');
             if (!list) return;
             if (!q.trim()) {
@@ -4080,57 +4083,82 @@
 
             const query = q.toLowerCase();
 
-            // 1. Filtraggio Studenti
-            const filteredUsers = (typeof DIRECTORY !== 'undefined' ? DIRECTORY : []).filter(u =>
-                u.name.toLowerCase().includes(query) || (u.class && u.class.toLowerCase().includes(query))
-            );
+            // Show loading state immediately
+            list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;"><i class="ph ph-spinner" style="font-size:28px; animation: spin 1s linear infinite;"></i></div>`;
 
-            // 2. Filtraggio Compiti per Materia
-            const filteredTasks = (state.tasks || []).filter(t =>
-                (t.subject && t.subject.toLowerCase().includes(query)) ||
-                (t.text && t.text.toLowerCase().includes(query))
-            );
+            // Debounce: wait 300ms before querying Supabase
+            clearTimeout(_searchDebounceTimer);
+            _searchDebounceTimer = setTimeout(async () => {
+                try {
+                    // 1. 🔥 LIVE SUPABASE QUERY for real users (NOT the stale DIRECTORY)
+                    let liveUsers = [];
+                    if (supabaseClient) {
+                        const { data, error } = await supabaseClient
+                            .from('profiles')
+                            .select('id, name, class, avatar')
+                            .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
+                            .neq('id', state.user?.id || '') // Exclude self
+                            .limit(20);
 
-            let html = '';
+                        if (!error && data) {
+                            liveUsers = data;
+                            console.log(`🔍 Live search found ${data.length} users for "${q}"`);
+                        } else if (error) {
+                            console.warn("Live search error:", error.message);
+                        }
+                    }
 
-            // Sezione Compiti/Materie (Priorità richiesta)
-            if (filteredTasks.length > 0) {
-                html += `<h3 style="margin-bottom: 12px; text-align:left; color:var(--orange); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Compiti e Materie</h3>`;
-                html += filteredTasks.map(t => {
-                    const color = getSubjectColor(t.subject);
-                    return `
-                    <div onclick="navigate('planner')" style="display: flex; align-items: center; padding: 14px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; border-left: 4px solid ${color};">
-                        <div style="flex: 1; text-align:left;">
-                            <div style="font-weight: 700; font-size: 15px; color:white;">${t.text}</div>
-                            <div style="color: ${color}; font-size: 11px; font-weight:800; text-transform:uppercase;">${t.subject}</div>
-                        </div>
-                        <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
-                    </div>`;
-                }).join('');
-            }
+                    // 2. Filtraggio Compiti per Materia (local, instant)
+                    const filteredTasks = (state.tasks || []).filter(t =>
+                        (t.subject && t.subject.toLowerCase().includes(query)) ||
+                        (t.text && t.text.toLowerCase().includes(query))
+                    );
 
-            if (filteredUsers.length > 0) {
-                html += `<h3 style="margin: 20px 0 12px 0; text-align:left; color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Persone</h3>`;
-                html += filteredUsers.map(u => `
-                    <div onclick="showUserProfile('${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
-                        <div style="position: relative; margin-right: 12px;">
-                            ${renderAvatar(u.name, 44, u.avatar)}
-                            ${u.status === 'online' ? `<div style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--green); border: 2px solid black; border-radius: 50%;"></div>` : ''}
-                        </div>
-                        <div style="flex: 1; text-align:left;">
-                            <div style="font-weight: 600; font-size: 15px; color:white;">${u.name}</div>
-                            <div style="color: var(--text-muted); font-size: 12px;">Classe ${u.class}</div>
-                        </div>
-                        <i class="ph ph-user-circle" style="font-size: 20px; color: var(--blue); opacity:0.8;"></i>
-                    </div>
-                `).join('');
-            }
+                    let html = '';
 
-            if (html === '') {
-                html = `<div style="text-align:center; padding: 40px; color: var(--text-muted);">Nessun risultato trovato per "${q}"</div>`;
-            }
+                    // Sezione Compiti/Materie
+                    if (filteredTasks.length > 0) {
+                        html += `<h3 style="margin-bottom: 12px; text-align:left; color:var(--orange); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Compiti e Materie</h3>`;
+                        html += filteredTasks.map(t => {
+                            const color = getSubjectColor(t.subject);
+                            return `
+                            <div onclick="navigate('planner')" style="display: flex; align-items: center; padding: 14px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; border-left: 4px solid ${color};">
+                                <div style="flex: 1; text-align:left;">
+                                    <div style="font-weight: 700; font-size: 15px; color:white;">${t.text}</div>
+                                    <div style="color: ${color}; font-size: 11px; font-weight:800; text-transform:uppercase;">${t.subject}</div>
+                                </div>
+                                <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
+                            </div>`;
+                        }).join('');
+                    }
 
-            list.innerHTML = html;
+                    // Sezione Persone (from LIVE Supabase query)
+                    if (liveUsers.length > 0) {
+                        html += `<h3 style="margin: 20px 0 12px 0; text-align:left; color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Persone</h3>`;
+                        html += liveUsers.map(u => `
+                            <div onclick="showUserProfile('${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
+                                <div style="position: relative; margin-right: 12px;">
+                                    ${renderAvatar(u.name, 44, u.avatar)}
+                                </div>
+                                <div style="flex: 1; text-align:left;">
+                                    <div style="font-weight: 600; font-size: 15px; color:white;">${u.name || 'Utente'}</div>
+                                    <div style="color: var(--text-muted); font-size: 12px;">${u.class ? 'Classe ' + u.class : 'Studente'}</div>
+                                </div>
+                                <i class="ph ph-user-circle" style="font-size: 20px; color: var(--blue); opacity:0.8;"></i>
+                            </div>
+                        `).join('');
+                    }
+
+                    if (html === '') {
+                        html = `<div style="text-align:center; padding: 40px; color: var(--text-muted);">Nessun risultato trovato per "${q}"</div>`;
+                    }
+
+                    list.innerHTML = html;
+                } catch (e) {
+                    console.error("filterContent error:", e);
+                    list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--red);">Errore durante la ricerca</div>`;
+                }
+            }, 300);
         }
 
         function renderFeed() {
