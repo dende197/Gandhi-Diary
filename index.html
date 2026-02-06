@@ -1951,6 +1951,7 @@
             promemoria: [],
             reminders: [],
             syncing: false,
+            searchQuery: '', // ⭐ Persistent search query
             selectedDay: new Date().getDate(),
             stressLevels: {},
             plannedTasks: {},
@@ -3106,9 +3107,13 @@
                 } else {
                     isAtBottom = true; // First time chat is opened
                 }
-            }            // 🔥 INSTAGRAM-STYLE RENDER-LOCK: Se la chat è già pronta, NON ri-renderizzare
-            if (state.view === 'chat' && state.chatReady) {
-                // Skip full render, but still update nav state
+            }            // 🔥 INSTAGRAM-STYLE RENDER-LOCK: Se la chat o la ricerca sono già pronte, NON ri-renderizzare il root
+            const searchInput = document.getElementById('search-input');
+            const shouldLock = (state.view === 'chat' && state.chatReady) ||
+                (state.view === 'search' && searchInput);
+
+            if (shouldLock) {
+                // Skip full render, but still update nav active state in the footer
                 document.querySelectorAll('.nav-item').forEach(el => {
                     const viewAttr = el.getAttribute('onclick');
                     if (viewAttr && viewAttr.includes(`'${state.view}'`)) el.classList.add('active');
@@ -4059,7 +4064,11 @@
                 </div>
                 <div style="position: relative; padding: 0 12px; margin-bottom: 24px;">
                     <i class="ph ph-magnifying-glass" style="position: absolute; left: 26px; top: 12px; color: var(--text-muted); font-size: 20px;"></i>
-                    <input id="search-input" type="text" placeholder="Cerca studenti o materie..." oninput="filterContent(this.value)" style="padding-left: 44px; margin-bottom: 0; background:rgba(255,255,255,0.1); border-radius:18px;">
+                    <input id="search-input" type="text" placeholder="Cerca studenti o materie..." 
+                        oninput="filterContent(this.value)" 
+                        value="${state.searchQuery || ''}"
+                        autofocus
+                        style="padding-left: 44px; margin-bottom: 0; background:rgba(255,255,255,0.1); border-radius:18px;">
                 </div>
                 <div id="search-results" style="padding: 0 12px;">
                     <div style="text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;">
@@ -4074,8 +4083,10 @@
         let _searchDebounceTimer = null;
 
         async function filterContent(q) {
+            state.searchQuery = q; // ⭐ Keep state in sync
             const list = document.getElementById('search-results');
             if (!list) return;
+
             if (!q.trim()) {
                 list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;"><i class="ph ph-sparkle" style="font-size:32px; margin-bottom:12px; display:block;"></i>Inizia a scrivere per cercare...</div>`;
                 return;
