@@ -4136,9 +4136,25 @@
                             .limit(20);
 
                         if (!error && data) {
-                            liveUsers = data;
-                            state.lastSearchResults = data; // ⭐ Cache results for showUserProfile
-                            console.log(`🔍 Live search found ${data.length} users for "${q}"`);
+                            // 🔥 EXPERT DE-DUPLICATION: Raggruppa per ID normalizzato
+                            // Alcuni ID nel DB possono avere spazi o casing diverso (es. "p:S1" vs "p:s1")
+                            const uniqueMap = new Map();
+                            data.forEach(profile => {
+                                const normId = String(profile.id).toLowerCase().replace(/\s+/g, '');
+                                if (!uniqueMap.has(normId)) {
+                                    uniqueMap.set(normId, profile);
+                                } else {
+                                    // Merging: Se abbiamo già un record, preferiamo quello con avatar o specialization
+                                    const existing = uniqueMap.get(normId);
+                                    if (!existing.avatar && profile.avatar) uniqueMap.set(normId, profile);
+                                    if (!existing.specialization && profile.specialization) uniqueMap.set(normId, profile);
+                                }
+                            });
+
+                            const uniqueUsers = Array.from(uniqueMap.values());
+                            liveUsers = uniqueUsers;
+                            state.lastSearchResults = uniqueUsers; // ⭐ Cache grouped results
+                            console.log(`🔍 Live search found ${uniqueUsers.length} unique users (filtered from ${data.length})`);
                         } else if (error) {
                             console.warn("Live search error:", error.message);
                         }
@@ -5568,7 +5584,7 @@
 
                     // Sync profile to DB immediately using the ARGO ID as primary key
                     await supabaseClient.from('profiles').upsert({
-                        id: state.user.id, // This is the Argo ID string (e.g. argo:SG20925:cinqueanna:0)
+                        id: String(state.user.id).toLowerCase().replace(/\s+/g, ''), // 🔥 ID HARDENING: Lower & Trim
                         supabase_uid: authData.user.id, // Store UUID as metadata for RLS if needed later
                         name: state.user.name,
                         class: state.user.class,
