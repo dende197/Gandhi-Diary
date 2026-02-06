@@ -5599,7 +5599,6 @@
                     // Sync profile to DB immediately using the ARGO ID as primary key
                     await supabaseClient.from('profiles').upsert({
                         id: String(state.user.id).toLowerCase().replace(/\s+/g, ''), // 🔥 ID HARDENING: Lower & Trim
-                        supabase_uid: authData.user.id, // Store UUID as metadata for RLS if needed later
                         name: state.user.name,
                         class: state.user.class,
                         specialization: state.user.specialization, // ✅ Added
