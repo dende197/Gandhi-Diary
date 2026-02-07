@@ -3376,11 +3376,9 @@
                 });
         }
 
-        // State per il calendario custom
+        // State per il calendario custom (vista 2 settimane)
         let calendarState = {
-            currentDate: new Date(),
-            currentMonth: new Date().getMonth(),
-            currentYear: new Date().getFullYear()
+            weekOffset: 0 // Settimane rispetto alla corrente
         };
 
         function getSubjectAbbrev(subject) {
@@ -3413,27 +3411,32 @@
             const calendarEl = document.getElementById('calendar');
             if (!calendarEl) return;
 
-            const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-                "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-
-            const firstDay = new Date(calendarState.currentYear, calendarState.currentMonth, 1);
-            const lastDay = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0);
-
-            // Trova il lunedì della settimana che contiene il primo del mese
-            const startPadding = (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1);
-            const startDate = new Date(firstDay);
-            startDate.setDate(firstDay.getDate() - startPadding);
-
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+
+            // Calcola il lunedì della settimana corrente
+            const d = today.getDay();
+            const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
+            const startOfCurrentWeek = new Date(new Date(today).setDate(diffToMonday));
+            startOfCurrentWeek.setHours(0, 0, 0, 0);
+
+            // Data di inizio basata sull'offset (settimane)
+            const startDate = new Date(startOfCurrentWeek);
+            startDate.setDate(startOfCurrentWeek.getDate() + (calendarState.weekOffset * 7));
+
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 13);
+
+            const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+            const weekLabel = `Settimana ${startDate.getDate()} ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} ${monthNames[endDate.getMonth()]}`;
 
             let html = `
                 <div class="custom-calendar">
                     <div class="calendar-header">
-                        <div class="calendar-title">${monthNames[calendarState.currentMonth]} ${calendarState.currentYear}</div>
+                        <div class="calendar-title">${weekLabel}</div>
                         <div class="calendar-nav">
-                            <button onclick="navigateCalendar(-1)" title="Mese precedente"><i class="ph ph-caret-left"></i></button>
-                            <button onclick="navigateCalendar(1)" title="Mese successivo"><i class="ph ph-caret-right"></i></button>
+                            <button onclick="navigateCalendar(-1)" title="Settimana precedente"><i class="ph ph-caret-left"></i></button>
+                            <button onclick="navigateCalendar(1)" title="Settimana successiva"><i class="ph ph-caret-right"></i></button>
                         </div>
                     </div>
                     <div class="weekday-headers">
@@ -3448,18 +3451,16 @@
                     <div class="calendar-days">
             `;
 
-            // Generiamo 6 settimane per coprire tutti i casi (o 42 giorni)
             const tempDate = new Date(startDate);
-            for (let i = 0; i < 42; i++) {
+            for (let i = 0; i < 14; i++) {
                 const dateStr = tempDate.toISOString().split('T')[0];
                 const isToday = tempDate.getTime() === today.getTime();
-                const isOtherMonth = tempDate.getMonth() !== calendarState.currentMonth;
                 const isPast = tempDate < today && !isToday;
 
                 const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
 
                 html += `
-                    <div class="calendar-day ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''} ${isPast ? 'past' : ''}" 
+                    <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
                          onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
                         <div class="day-number">${tempDate.getDate()}</div>
                         <div class="day-events">
@@ -3480,14 +3481,7 @@
         }
 
         function navigateCalendar(dir) {
-            calendarState.currentMonth += dir;
-            if (calendarState.currentMonth > 11) {
-                calendarState.currentMonth = 0;
-                calendarState.currentYear++;
-            } else if (calendarState.currentMonth < 0) {
-                calendarState.currentMonth = 11;
-                calendarState.currentYear--;
-            }
+            calendarState.weekOffset += dir;
             renderCustomCalendar();
         }
 
