@@ -4370,49 +4370,145 @@
 
         function renderPostCard(post) {
             const isPoll = post.type === 'poll';
+            const timeStr = formatTimeAgo(post.created_at || post.timestamp || new Date());
+            const commentsCount = (post.comments || []).length;
+
+            return `
+            <div class="card feed-post" style="background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius:0; padding: 16px 0; display:flex; gap:12px;">
+                <!-- Left: Avatar Tangent -->
+                <div style="flex-shrink:0;">
+                    ${post.anon ? renderAvatar('Anonimo', 44) : renderAvatar(post.author || 'Utente', 44, post.authorAvatar)}
+                </div>
+
+                <!-- Right: Content Content -->
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                        <div style="text-align:left; min-width:0;">
+                            <span style="font-weight:800; color:white; font-size:15px; margin-right:4px;">${post.anon ? 'Anonimo' : (post.author || 'Utente')}</span>
+                            <span style="font-size:14px; color:rgba(255,255,255,0.4);">${post.anon ? '' : (post.class || '')} • ${timeStr}</span>
+                        </div>
+                        <button onclick="togglePinPost(${post.id})" title="Fissa" style="background:none; border:none; color:${post.pinned ? 'var(--yellow)' : 'rgba(255,255,255,0.3)'}; cursor:pointer; padding:0;"><i class="ph-bold ph-pushpin"></i></button>
+                    </div>
+
+                    ${!isPoll ? `<p style="margin: 0 0 10px 0; text-align:left; color:white; font-size:15px; line-height:1.4; white-space: pre-wrap; word-break: break-word;">${post.text}</p>` : renderPoll(post)}
+
+                    ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:16px; margin: 8px 0 12px 0; border: 1px solid rgba(255,255,255,0.1);">` : ''}
+
+                    <div style="display:flex; gap:24px; margin-top:12px;">
+                        ${(() => {
+                    const userId = getUserId();
+                    const isLiked = Array.isArray(post.likes) ? post.likes.includes(userId) : !!post.liked;
+                    const likesCount = Array.isArray(post.likes) ? post.likes.length : (post.likes || 0);
+                    return `<button onclick="toggleLike(${post.id})" style="background:none; border:none; color:${isLiked ? 'var(--red)' : 'rgba(255,255,255,0.4)'}; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; padding:0; font-weight:700;"><i class="${isLiked ? 'ph-fill' : 'ph-bold'} ph-heart" style="font-size:18px;"></i> ${likesCount}</button>`;
+                })()}
+                        
+                        <button onclick="showPostDetail(${post.id})" style="background:none; border:none; color: rgba(255,255,255,0.4); cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; padding:0; font-weight:700;">
+                            <i class="ph-bold ph-chat-circle" style="font-size:18px;"></i> ${commentsCount > 0 ? commentsCount + ' commenti' : 'Commenta'}
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function showPostDetail(postId) {
+            const post = state.posts.find(p => p.id == postId);
+            if (!post) return;
+
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
+
+            const fullDate = formatFullDate(post.created_at || post.timestamp || new Date());
             const commentsHtml = (post.comments || []).map(c => `
-                <div style="display:flex; align-items:center; gap:8px; padding:10px 0; background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 6px;">
-                    ${renderAvatar(c.author || 'Utente', 28, c.author_avatar)}
+                <div style="display:flex; gap:12px; padding:16px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <div style="flex-shrink:0;">${renderAvatar(c.author || 'Utente', 36, c.author_avatar)}</div>
                     <div style="flex:1; text-align:left;">
-                        <div style="font-weight:700; font-size:12px; color:white;">${c.author || 'Utente'}</div>
-                        <div style="font-size:12px; color:rgba(255,255,255,0.9);">${c.text}</div>
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                            <span style="font-weight:800; font-size:14px; color:white;">${c.author || 'Utente'}</span>
+                            <span style="font-size:12px; color:rgba(255,255,255,0.4);">${formatTimeAgo(c.created_at || new Date())}</span>
+                        </div>
+                        <div style="font-size:14px; color:rgba(255,255,255,0.9); line-height:1.4;">${c.text}</div>
                     </div>
                 </div>
             `).join('');
 
-            return `
-            <div class="card feed-post" style="background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); border-radius:0; padding: 20px 0;">
-                <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
-                    ${post.anon ? renderAvatar('Anonimo', 40) : renderAvatar(post.author || 'Utente', 40, post.authorAvatar)}
-                    <div style="flex:1; text-align:left;">
-                        <div style="font-weight:700; color:white;">${post.anon ? 'Anonimo' : (post.author || 'Utente')}</div>
-                        <div style="font-size:12px; opacity:0.6; color:var(--text-muted);">${post.anon ? 'Studente' : (post.class || '')}</div>
+            modalContainer.innerHTML = `
+            <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 600px; padding: 0; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px; overflow:hidden; max-height:90vh; display:flex; flex-direction:column;">
+                    <!-- Sticky Header -->
+                    <div style="position:sticky; top:0; background:rgba(18,18,18,0.8); backdrop-filter:blur(10px); padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-between; z-index:10;">
+                        <span style="font-weight:800; font-size:18px;">Post</span>
+                        <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-x"></i></button>
                     </div>
-                    <button onclick="togglePinPost(${post.id})" title="Fissa" style="background:none; border:none; color:${post.pinned ? 'var(--yellow)' : 'var(--text-muted)'}; cursor:pointer;"><i class="ph ph-pushpin"></i></button>
-                </div>
 
-                ${!isPoll ? `<p style="margin: 0 0 10px 0; text-align:left; color:white;">${post.text}</p>` : renderPoll(post)}
+                    <div style="flex:1; overflow-y:auto; padding:20px;">
+                        <!-- Original Post (Expanded) -->
+                        <div style="display:flex; gap:14px; margin-bottom:12px;">
+                            ${post.anon ? renderAvatar('Anonimo', 48) : renderAvatar(post.author || 'Utente', 48, post.authorAvatar)}
+                            <div style="text-align:left;">
+                                <div style="font-weight:800; color:white; font-size:16px;">${post.anon ? 'Anonimo' : (post.author || 'Utente')}</div>
+                                <div style="font-size:14px; color:rgba(255,255,255,0.4);">${post.anon ? '' : (post.class || '')}</div>
+                            </div>
+                        </div>
+                        <p style="font-size:18px; line-height:1.5; color:white; text-align:left; margin-bottom:16px; white-space:pre-wrap;">${post.text}</p>
+                        ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:16px; margin-bottom:16px; border:1px solid rgba(255,255,255,0.1);">` : ''}
+                        
+                        <div style="font-size:14px; color:rgba(255,255,255,0.4); padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            ${fullDate}
+                        </div>
 
-                ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:12px; margin-bottom:12px;">` : ''}
+                        <!-- Stats Block -->
+                        <div style="display:flex; gap:20px; padding:16px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <span style="font-size:14px; color:rgba(255,255,255,0.5);"><strong style="color:white;">${Array.isArray(post.likes) ? post.likes.length : (post.likes || 0)}</strong> Mi piace</span>
+                            <span style="font-size:14px; color:rgba(255,255,255,0.5);"><strong style="color:white;">${(post.comments || []).length}</strong> Commenti</span>
+                        </div>
 
-                <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; gap:16px;">
-                    ${(() => {
-                    const userId = getUserId();
-                    const isLiked = Array.isArray(post.likes) ? post.likes.includes(userId) : !!post.liked;
-                    const likesCount = Array.isArray(post.likes) ? post.likes.length : (post.likes || 0);
-                    return `<button onclick="toggleLike(${post.id})" style="background:none; border:none; color:${isLiked ? 'var(--red)' : 'var(--text-muted)'}; cursor:pointer; font-size:14px;"><i class="${isLiked ? 'ph-fill' : 'ph'} ph-heart"></i> ${likesCount}</button>`;
-                })()}
-                    <button onclick="toggleCommentBox(${post.id})" style="background:none; border:none; color: var(--text-muted); cursor:pointer; font-size:14px;"><i class="ph ph-chat-circle"></i> Commenta</button>
-                </div>
+                        <!-- Comments List -->
+                        <div style="margin-top:8px;">
+                            ${commentsHtml || '<div style="padding:32px; text-align:center; opacity:0.3; font-size:14px;">Nessun commento ancora...</div>'}
+                        </div>
+                    </div>
 
-                <div id="comments-${post.id}" style="margin-top:10px;">${commentsHtml}</div>
-                <div id="comment-box-${post.id}" style="display:none; margin-top:8px;">
-                    <div style="display:flex; gap:8px;">
-                        <input id="comment-input-${post.id}" placeholder="Scrivi un commento..." style="margin-bottom:0; height:34px; font-size:14px;">
-                        <button onclick="addCommentToPost(${post.id})" style="background: var(--blue); color:white; border:none; border-radius: 10px; padding: 0 12px; font-weight:700; height:34px; font-size:13px;">Invia</button>
+                    <!-- Add Comment Bar -->
+                    <div style="padding:16px 20px; border-top:1px solid rgba(255,255,255,0.05); background:#121212; display:flex; gap:12px; align-items:center;">
+                        <input id="detail-comment-input" placeholder="Pubblica la tua risposta" style="flex:1; margin-bottom:0; background:rgba(255,255,255,0.05); border:none; height:44px; border-radius:22px; padding:0 20px; font-size:15px;">
+                        <button onclick="addCommentToPost(${post.id}, 'detail-comment-input')" style="background:var(--primary); color:white; border:none; border-radius:22px; height:44px; padding:0 24px; font-weight:800; cursor:pointer;">Rispondi</button>
                     </div>
                 </div>
-            </div>`;
+            </div>
+            `;
+        }
+
+        // Updated addCommentToPost to handle different inputs
+        async function addCommentToPost(postId, inputId = null) {
+            const finalInputId = inputId || `comment-input-${postId}`;
+            const input = document.getElementById(finalInputId);
+            const text = input ? input.value.trim() : "";
+            if (!text) return;
+
+            showToast("Invio commento...");
+            try {
+                const author = state.user?.name || 'Utente';
+                const avatar = state.user?.photo_url || '';
+                const result = await callAPI('/api/feed/comment', 'POST', { postId, text, author, avatar });
+
+                if (result.success) {
+                    input.value = "";
+                    // Refresh posts data
+                    const postsRes = await callAPI('/api/feed');
+                    if (postsRes.success) {
+                        state.posts = postsRes.data;
+                        if (inputId === 'detail-comment-input') {
+                            showPostDetail(postId); // Refresh detail view
+                        } else {
+                            render(); // Refresh feed
+                        }
+                    }
+                    showToast("Commento inviato!");
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Errore invio commento");
+            }
         }
 
         function renderPoll(post) {
@@ -4944,45 +5040,6 @@
             render();
         }
 
-        function toggleCommentBox(id) {
-            const el = document.getElementById(`comment-box-${id}`);
-            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-        }
-
-        async function addCommentToPost(id) {
-            const input = document.getElementById(`comment-input-${id}`);
-            if (!input || !input.value.trim()) return;
-            const post = state.posts.find(p => p.id === id);
-            if (post) {
-                // 🔥 FIX: Include author_id for server-side enrichment
-                const comment = {
-                    author: state.user.name,
-                    author_id: state.user.id,
-                    text: input.value
-                };
-                if (!post.comments) post.comments = [];
-                post.comments.push(comment);
-                input.value = '';
-                localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                render();
-
-                try {
-                    const res = await fetch(`${API_BASE_URL}/api/posts/${id}/comment`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(comment)
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        post.comments = data.comments;
-                        localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                        render();
-                    }
-                } catch (e) {
-                    console.error("Comment failed:", e);
-                }
-            }
-        }
 
         function toggleItemCommentBox(id) {
             const el = document.getElementById(`item-comment-box-${id}`);
@@ -6518,7 +6575,6 @@
                 meta: { orderId }
             });
         }
-
 
 
 
