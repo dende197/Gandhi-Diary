@@ -16,8 +16,7 @@
         rel="stylesheet">
     <!-- Link CSS rimosso (404 su jsdelivr per FC v6) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-    <!-- 🔥 Supabase Client for Realtime Chat -->
+    <!-- Custom Calendar - No external library needed -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -185,80 +184,166 @@
             will-change: opacity, transform;
         }
 
-        /* 🗓️ FullCalendar Overrides - Glass Aesthetic */
-        .fc-theme-standard td,
-        .fc-theme-standard th {
-            border: none !important;
+        /* Custom Calendar Styles */
+        .custom-calendar {
+            background: transparent;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
         }
 
-        .fc-scrollgrid,
-        .fc-theme-standard .fc-scrollgrid {
-            border: none !important;
-            border-collapse: separate !important;
-            border-spacing: 8px !important;
-            background: transparent !important;
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            margin-bottom: 16px;
         }
 
-        .fc .fc-scrollgrid-section-header,
-        .fc .fc-scrollgrid-section-body,
-        .fc .fc-scrollgrid-section-footer,
-        .fc .fc-scrollgrid-section-header table,
-        .fc .fc-scrollgrid-section-body table {
-            background: transparent !important;
+        .calendar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
         }
 
-        .fc-view-harness {
-            background: transparent !important;
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
         }
 
-        .fc-col-header-cell {
-            border: none !important;
-        }
-
-        .fc-col-header-cell-cushion {
-            display: inline-block;
-            background: rgba(37, 99, 235, 0.15);
-            /* Glass Primary */
-            padding: 10px 18px !important;
-            border-radius: 24px;
-            color: #fff !important;
-            text-transform: uppercase;
-            font-size: 10px !important;
-            font-weight: 800;
-            letter-spacing: 1.2px;
-            margin: 14px 0 !important;
-            border: 1px solid rgba(37, 99, 235, 0.3);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        .calendar-nav button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.2s ease;
         }
 
-        .fc-col-header-cell-cushion:hover {
-            background: rgba(37, 99, 235, 0.25);
-            transform: translateY(-1px);
+        .calendar-nav button:hover {
+            background: rgba(255, 255, 255, 0.15);
         }
 
-        .fc-toolbar-title {
-            color: var(--text-main) !important;
-            font-size: 19px !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.02em;
-            margin-left: 8px !important;
+        .weekday-headers {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 12px;
         }
 
-        .fc-daygrid-day-frame {
-            border-radius: 24px;
-            overflow: hidden;
-            margin: 0;
-            min-height: 80px !important;
+        .weekday-header {
+            text-align: center;
+            padding: 8px 0;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .calendar-day {
+            min-height: 70px;
+            padding: 8px;
             background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            /* 🚀 PERF: Specific transitions only */
-            transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            will-change: transform, background;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-day:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .calendar-day.today {
+            background: rgba(10, 132, 255, 0.15);
+            border: 1px solid rgba(10, 132, 255, 0.4);
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.past {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .day-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .calendar-day.today .day-number {
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .day-events {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .event-badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 6px;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-badge.done {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+        .more-events {
+            font-size: 9px;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        margin: 0;
+        min-height: 80px !important;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        /* 🚀 PERF: Specific transitions only */
+        transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        will-change: transform,
+        background;
         }
 
         .fc-daygrid-day:hover .fc-daygrid-day-frame {
@@ -1206,36 +1291,7 @@
             border: 1px solid rgba(34, 197, 94, 0.3);
         }
 
-        /* FullCalendar Overrides */
-        .fc {
-            color: var(--text-muted);
-        }
-
-        .fc-toolbar-title {
-            color: var(--text-main) !important;
-            font-size: 18px !important;
-        }
-
-        .fc-daygrid-day-number {
-            color: var(--text-muted) !important;
-        }
-
-        .fc-col-header-cell-cushion {
-            color: var(--text-dim) !important;
-            text-transform: uppercase;
-            font-size: 12px;
-        }
-
-        .fc .fc-button-primary {
-            background: var(--glass-highlight);
-            border: none;
-            backdrop-filter: blur(10px);
-        }
-
-        .fc .fc-button-active {
-            background: var(--primary) !important;
-            color: white !important;
-        }
+        /* Custom Calendar Overrides Removed FC */
 
         .offline-badge {
             position: fixed;
@@ -3398,76 +3454,125 @@
                 });
         }
 
+        // State per il calendario custom
+        let calendarState = {
+            currentDate: new Date(),
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear()
+        };
+
+        function getSubjectAbbrev(subject) {
+            if (!subject) return 'GEN';
+            const abbrevs = {
+                'ITALIANO': 'ITA', 'MATEMATICA': 'MAT', 'INGLESE': 'ING',
+                'STORIA': 'STO', 'GEOGRAFIA': 'GEO', 'FILOSOFIA': 'FIL',
+                'Fisica': 'FIS', 'SCIENZE': 'SCI', 'BIOLOGIA': 'BIO',
+                'CHIMICA': 'CHI', 'ARTE': 'ART', 'DISEGNO': 'DIS',
+                'RELIGIONE': 'REL', 'ED. FISICA': 'EDF', 'INFORMATICA': 'INF'
+            };
+            const key = subject.toUpperCase().trim();
+            if (abbrevs[key]) return abbrevs[key];
+            for (let [full, short] of Object.entries(abbrevs)) {
+                if (key.includes(full)) return short;
+            }
+            return key.substring(0, 3).toUpperCase();
+        }
+
         function initPlannerCalendar() {
+            renderCustomCalendar();
+        }
+
+        // Sincronizzazione per eventi esterni
+        function syncCalendarEvents() {
+            renderCustomCalendar();
+        }
+
+        function renderCustomCalendar() {
             const calendarEl = document.getElementById('calendar');
             if (!calendarEl) return;
 
-            // Se già creato, aggiorna solo gli eventi per evitare qualsiasi scatto
-            if (calendarEl._fullCalendar) {
-                const cal = calendarEl._fullCalendar;
-                syncCalendarEvents(cal);
-                cal.updateSize();
-                return;
+            const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+            const firstDay = new Date(calendarState.currentYear, calendarState.currentMonth, 1);
+            const lastDay = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0);
+
+            // Trova il lunedì della settimana che contiene il primo del mese
+            const startPadding = (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1);
+            const startDate = new Date(firstDay);
+            startDate.setDate(firstDay.getDate() - startPadding);
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let html = `
+                <div class="custom-calendar">
+                    <div class="calendar-header">
+                        <div class="calendar-title">${monthNames[calendarState.currentMonth]} ${calendarState.currentYear}</div>
+                        <div class="calendar-nav">
+                            <button onclick="navigateCalendar(-1)" title="Mese precedente"><i class="ph ph-caret-left"></i></button>
+                            <button onclick="navigateCalendar(1)" title="Mese successivo"><i class="ph ph-caret-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="weekday-headers">
+                        <div class="weekday-header">Lun</div>
+                        <div class="weekday-header">Mar</div>
+                        <div class="weekday-header">Mer</div>
+                        <div class="weekday-header">Gio</div>
+                        <div class="weekday-header">Ven</div>
+                        <div class="weekday-header">Sab</div>
+                        <div class="weekday-header">Dom</div>
+                    </div>
+                    <div class="calendar-days">
+            `;
+
+            // Generiamo 6 settimane per coprire tutti i casi (o 42 giorni)
+            const tempDate = new Date(startDate);
+            for (let i = 0; i < 42; i++) {
+                const dateStr = tempDate.toISOString().split('T')[0];
+                const isToday = tempDate.getTime() === today.getTime();
+                const isOtherMonth = tempDate.getMonth() !== calendarState.currentMonth;
+                const isPast = tempDate < today && !isToday;
+
+                const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
+
+                html += `
+                    <div class="calendar-day ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''} ${isPast ? 'past' : ''}" 
+                         onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
+                        <div class="day-number">${tempDate.getDate()}</div>
+                        <div class="day-events">
+                            ${dayTasks.slice(0, 3).map(t => {
+                    const color = getSubjectColor(t.subject);
+                    const abbrev = getSubjectAbbrev(t.subject);
+                    return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
+                }).join('')}
+                            ${dayTasks.length > 3 ? `<div class="more-events">+${dayTasks.length - 3}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                tempDate.setDate(tempDate.getDate() + 1);
             }
 
-            // Calcola Monday di questa settimana e fine della prossima (range visivo 2 settimane)
-            const today = new Date();
-            const d = today.getDay(); // 0=Sun, 1=Mon...
-            const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
-            const startOfWeek = new Date(new Date(today).setDate(diffToMonday));
-            startOfWeek.setHours(0, 0, 0, 0);
-
-            // Crea una vista dayGrid di 2 settimane
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridTwoWeeks',
-                views: {
-                    dayGridTwoWeeks: {
-                        type: 'dayGrid',
-                        duration: { weeks: 2 }
-                    }
-                },
-                locale: 'it',
-                themeSystem: 'standard',
-                firstDay: 1, // Lunedì
-                height: 'auto',
-                // 🚀 SENIOR FIX: Remove validRange for today so it can be clicked
-                headerToolbar: { left: 'title', center: '', right: 'prev,next' },
-                dayCellContent: function (arg) {
-                    return arg.dayNumberText.replace(/[a-z]/gi, '').trim();
-                },
-                events: buildCalendarEventsFromState(),
-                dateClick: function (info) {
-                    renderDayDetailModal(info.dateStr);
-                },
-                eventClick: function (info) {
-                    // Preveniamo glitch se clicchiamo su un evento
-                    renderDayDetailModal(info.event.startStr || info.event.start.toISOString().split('T')[0]);
-                }
-            });
-
-            calendar.render();
-            calendarEl._fullCalendar = calendar;
+            html += `</div></div>`;
+            calendarEl.innerHTML = html;
         }
 
-        // Per sincronizzare il calendario dopo azioni esterne
-        function syncCalendarEvents(calendar) {
-            if (!calendar) return;
-            const evts = buildCalendarEventsFromState();
-            // 🚀 PERF FIX: Check if events actually changed to avoid redundant re-renders
-            const currentEvts = calendar.getEvents().map(e => ({
-                id: e.id,
-                title: e.title,
-                start: e.startStr
-            }));
-
-            if (JSON.stringify(currentEvts) === JSON.stringify(evts.map(e => ({ id: e.id, title: e.title, start: e.start })))) {
-                return;
+        function navigateCalendar(dir) {
+            calendarState.currentMonth += dir;
+            if (calendarState.currentMonth > 11) {
+                calendarState.currentMonth = 0;
+                calendarState.currentYear++;
+            } else if (calendarState.currentMonth < 0) {
+                calendarState.currentMonth = 11;
+                calendarState.currentYear--;
             }
+            renderCustomCalendar();
+        }
 
-            calendar.batchRendering(() => {
-                calendar.removeAllEvents();
-                evts.forEach(e => calendar.addEvent(e));
-            });
+        function handleDayClick(dateStr) {
+            if (typeof renderDayDetailModal === 'function') {
+                renderDayDetailModal(dateStr);
+            }
         }
 
         // ==============================================================================
