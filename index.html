@@ -208,16 +208,24 @@
 
         .fc-col-header-cell-cushion {
             display: inline-block;
-            background: rgba(255, 255, 255, 0.04);
-            padding: 8px 16px !important;
-            border-radius: 20px;
-            color: rgba(255, 255, 255, 0.45) !important;
+            background: rgba(37, 99, 235, 0.15);
+            /* Glass Primary */
+            padding: 10px 18px !important;
+            border-radius: 24px;
+            color: #fff !important;
             text-transform: uppercase;
             font-size: 10px !important;
             font-weight: 800;
-            letter-spacing: 1px;
-            margin: 12px 0 !important;
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            letter-spacing: 1.2px;
+            margin: 14px 0 !important;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .fc-col-header-cell-cushion:hover {
+            background: rgba(37, 99, 235, 0.25);
+            transform: translateY(-1px);
         }
 
         .fc-toolbar-title {
@@ -229,19 +237,22 @@
         }
 
         .fc-daygrid-day-frame {
-            border-radius: 20px;
+            border-radius: 24px;
             overflow: hidden;
             margin: 0;
-            min-height: 74px !important;
+            min-height: 80px !important;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.04);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .fc-daygrid-day:hover .fc-daygrid-day-frame {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.12);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(10, 132, 255, 0.3);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+            z-index: 10;
         }
 
         .fc-daygrid-day-number {
@@ -275,19 +286,20 @@
         .fc-event,
         .fc-daygrid-event {
             /* 🌈 Glass legibility fix: semi-transparent colored background */
-            background: color-mix(in srgb, var(--fc-event-bg-color), transparent 82%) !important;
+            background: color-mix(in srgb, var(--fc-event-bg-color), transparent 85%) !important;
             border: none !important;
             border-left: 4px solid var(--fc-event-bg-color) !important;
-            border-radius: 8px !important;
-            padding: 5px 10px !important;
-            font-size: 12px !important;
-            line-height: 1.3 !important;
-            font-weight: 700 !important;
+            border-radius: 6px !important;
+            padding: 4px 8px !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+            font-weight: 800 !important;
             color: #fff !important;
-            margin: 3px 6px !important;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+            margin: 2px 6px !important;
+            box-shadow: none !important;
             text-shadow: none !important;
             transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
         }
 
         .fc-daygrid-event:hover {
@@ -3358,11 +3370,13 @@
                 .filter(t => t.due_date && t.hasValidDate)
                 .map(t => {
                     const color = getSubjectColor(t.subject || 'Generico');
+                    // 🚀 SENIOR FIX: Truncate subject to 4 chars for extreme legibility
+                    const sub = (t.subject || 'GEN').substring(0, 4).toUpperCase();
                     return {
-                        title: `${t.subject}: ${t.text.substring(0, 48)}${t.text.length > 48 ? '...' : ''}`,
-                        start: t.due_date, // ISO yyyy-mm-dd
+                        title: `${sub}: ${t.text}`,
+                        start: t.due_date,
                         color: t.done ? '#30D158' : color,
-                        textColor: t.done ? '#000' : '#fff',
+                        textColor: '#fff',
                         extendedProps: { fullText: t.text, subject: t.subject }
                     };
                 });
@@ -3400,43 +3414,18 @@
                 themeSystem: 'standard',
                 firstDay: 1, // Lunedì
                 height: 'auto',
-                validRange: { start: today.toISOString().split('T')[0] },
+                // 🚀 SENIOR FIX: Remove validRange for today so it can be clicked
                 headerToolbar: { left: 'title', center: '', right: 'prev,next' },
                 dayCellContent: function (arg) {
-                    // Rimuove eventuali lettere dal numero giorno (es. "1 dom")
                     return arg.dayNumberText.replace(/[a-z]/gi, '').trim();
                 },
                 events: buildCalendarEventsFromState(),
+                dateClick: function (info) {
+                    renderDayDetailModal(info.dateStr);
+                },
                 eventClick: function (info) {
-                    // Modale dettaglio compito nello stile app
-                    const event = info.event;
-                    const container = getModalContainer();
-                    if (!container) return;
-                    container.innerHTML = `
-                        <div class="modal-overlay" onclick="closeModal(event)">
-                            <div class="modal-content glass-panel">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                                    <h2 style="margin:0;">Dettaglio Compito</h2>
-                                    <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size:24px;"></i>
-                                </div>
-                                <div style="margin-bottom:12px;">
-                                    <div style="font-size:11px; color: var(--blue); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Materia</div>
-                                    <div style="font-size:18px; font-weight:600; color:white;">${event.extendedProps.subject}</div>
-                                </div>
-                                <div style="margin-bottom:12px;">
-                                    <div style="font-size:11px; color: var(--blue); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Descrizione</div>
-                                    <div style="font-size:16px; color:white; line-height:1.5;">${event.extendedProps.fullText}</div>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; color: var(--blue); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Scadenza</div>
-                                    <div style="font-size:16px; color:white; display:flex; align-items:center; gap:6px;">
-                                        <i class="ph ph-calendar"></i>
-                                        ${new Date(event.start).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    // Preveniamo glitch se clicchiamo su un evento
+                    renderDayDetailModal(info.event.startStr || info.event.start.toISOString().split('T')[0]);
                 }
             });
 
@@ -3444,7 +3433,7 @@
             calendarEl._fullCalendar = calendar;
         }
 
-        // Aggiorna rapidamente tutti gli eventi senza ricreare il calendario
+        // Per sincronizzare il calendario dopo azioni esterne
         function syncCalendarEvents(calendar) {
             if (!calendar) return;
             const evts = buildCalendarEventsFromState();
@@ -3452,6 +3441,95 @@
                 calendar.removeAllEvents();
                 evts.forEach(e => calendar.addEvent(e));
             });
+        }
+
+        // ==============================================================================
+        // 🗓️ NEW SENIOR PLANNER: DAY DETAIL MODAL
+        // ==============================================================================
+        function renderDayDetailModal(dateStr) {
+            const container = getModalContainer();
+            if (!container) return;
+
+            const date = new Date(dateStr);
+            const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+
+            // Filtra compiti per questo giorno
+            const tasksForDay = (state.tasks || []).filter(t => t.due_date === dateStr);
+            const plannedIds = state.plannedTasks[dateStr] || [];
+
+            container.innerHTML = `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal-content glass-panel" style="max-width:440px; padding:24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
+                            <div>
+                                <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Pianificazione Giorno</div>
+                                <h2 style="margin:0; font-size:22px; text-transform:capitalize;">${formattedDate}</h2>
+                            </div>
+                            <button onclick="closeModal()" style="background:rgba(255,255,255,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; cursor:pointer;">
+                                <i class="ph ph-x" style="font-size:20px;"></i>
+                            </button>
+                        </div>
+
+                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto; padding-right:4px;">
+                            ${tasksForDay.length === 0 ? `
+                                <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+                                    <i class="ph ph-calendar-blank" style="font-size:48px; opacity:0.2; margin-bottom:12px;"></i>
+                                    <div style="font-weight:600;">Nessun compito per oggi</div>
+                                </div>
+                            ` : tasksForDay.map(t => {
+                const isPlanned = plannedIds.includes(t.id);
+                const color = getSubjectColor(t.subject);
+                return `
+                                    <div class="glass-list-item" style="padding:16px; border-radius:18px; display:flex; gap:14px; align-items:center; border:1px solid ${isPlanned ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255,255,255,0.05)'}; background:${isPlanned ? 'rgba(48, 209, 88, 0.05)' : 'rgba(255,255,255,0.02)'};">
+                                        <div style="width:4px; height:32px; background:${color}; border-radius:4px;"></div>
+                                        <div style="flex:1;">
+                                            <div style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">${t.subject}</div>
+                                            <div style="font-size:15px; font-weight:600; color:white; line-height:1.4;">${t.text}</div>
+                                        </div>
+                                        <button onclick="togglePlanInModal('${dateStr}', '${t.id}')" style="background:${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.1)'}; border:none; width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                            <i class="ph-fill ${isPlanned ? 'ph-check-circle' : 'ph-plus-circle'}" style="font-size:24px; color:${isPlanned ? 'black' : 'white'};"></i>
+                                        </button>
+                                    </div>
+                                `;
+            }).join('')}
+                        </div>
+
+                        ${tasksForDay.length > 0 ? `
+                        <div style="margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <button onclick="closeModal()" class="btn btn-primary" style="width:100%; height:50px; border-radius:16px; font-weight:800; letter-spacing:0.5px;">OK, CHIUDI</button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function togglePlanInModal(dateStr, taskId) {
+            // Utilizziamo la logica esistente ma aggiorniamo il modale
+            if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+            const index = state.plannedTasks[dateStr].indexOf(taskId);
+
+            if (index > -1) {
+                state.plannedTasks[dateStr].splice(index, 1);
+            } else {
+                state.plannedTasks[dateStr].push(taskId);
+            }
+
+            // Persistenza
+            saveTasks();
+            savePlannerRemote();
+
+            // Aggiorna UI Calendario
+            const calendarEl = document.getElementById('calendar');
+            if (calendarEl && calendarEl._fullCalendar) {
+                syncCalendarEvents(calendarEl._fullCalendar);
+            }
+
+            // Riaffresca il contenuto del modale per mostrare il check
+            renderDayDetailModal(dateStr);
+
+            // Feedback Home
+            notifyPlannerChanged();
         }
 
         /* === 2) Aggiorna SOLO la sezione “Agenda della settimana” nel Planner === */
@@ -3614,16 +3692,16 @@
 
         function getSubjectColor(subject) {
             const s = (subject || '').toLowerCase();
-            if (s.includes('ita')) return '#FF3B30'; // Red
-            if (s.includes('mat')) return '#007AFF'; // Blue
-            if (s.includes('ing')) return '#5856D6'; // Indigo
-            if (s.includes('storia') || s.includes('geo')) return '#FF9500'; // Orange
-            if (s.includes('scienza') || s.includes('biol')) return '#34C759'; // Green
-            if (s.includes('fisica')) return '#AF52DE'; // Purple
-            if (s.includes('arte')) return '#FF2D55'; // Pink
-            if (s.includes('ed')) return '#5AC8FA'; // Light Blue
-            if (s.includes('rel')) return '#FFCC00'; // Yellow
-            return '#60a5fa'; // Default fallback color
+            if (s.includes('ita')) return '#FF2D55'; // Vibrant Red
+            if (s.includes('mat')) return '#0A84FF'; // Vibrant Blue
+            if (s.includes('ing')) return '#BF5AF2'; // Vibrant Purple
+            if (s.includes('storia') || s.includes('geo')) return '#FF9F0A'; // Vibrant Orange
+            if (s.includes('scienza') || s.includes('biol')) return '#30D158'; // Vibrant Green
+            if (s.includes('fisica')) return '#64D2FF'; // Cyan
+            if (s.includes('arte')) return '#FF375F'; // Pink/Rose
+            if (s.includes('ed')) return '#FFD60A'; // Yellow
+            if (s.includes('rel')) return '#64D2FF'; // Calm Blue
+            return '#0A84FF'; // Default fallback (iOS Blue)
         }
 
         function renderAvatar(displayName, size = 44, avatarUrl = null) {
