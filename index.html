@@ -1407,10 +1407,8 @@
         .chat-header {
             padding: 16px 20px;
             padding-top: calc(var(--safe-top) + 12px);
-            background: var(--glass-header);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-bottom: 1px solid var(--glass-border);
+            background: #1c1c1e;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             gap: 14px;
@@ -1421,10 +1419,8 @@
             display: flex;
             gap: 12px;
             padding: 14px 16px calc(14px + var(--safe-bottom));
-            background: var(--glass-header);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-top: 1px solid var(--glass-border);
+            background: #1c1c1e;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 100;
         }
 
@@ -1515,9 +1511,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: var(--glass-header);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: #121212;
             z-index: 200;
             display: flex;
             flex-direction: column;
@@ -1961,6 +1955,7 @@
             searchQuery: '', // ⭐ Persistent search query
             selectedDay: new Date().getDate(),
             stressLevels: {},
+            stressVents: {},
             plannedTasks: {},
             polls: [],
             plannerWeekOffset: 0,
@@ -2041,12 +2036,12 @@
             }
 
             // 3. Load Caches (Threads, Tasks, etc.)
-            ['threads', 'tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels'].forEach(key => {
+            ['threads', 'tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels', 'stress_vents'].forEach(key => {
                 const cached = localStorage.getItem(lsKey(key));
                 if (cached) {
                     try {
                         const parsed = JSON.parse(cached);
-                        state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : key)] = parsed;
+                        state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : (key === 'stress_vents' ? 'stressVents' : key))] = parsed;
                     } catch { }
                 }
             });
@@ -2366,14 +2361,18 @@
                     // ✅ FIX: supporta sia snake_case (Supabase) che camelCase
                     const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                     const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
+                    const remoteSV = data.data.stressVents || data.data.stress_vents || {};
                     const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
 
                     const localPT = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
                     const localSL = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+                    const localSV = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
+                    state.stressLevels = { ...state.stressLevels, ...localSL };
+                    state.stressVents = { ...state.stressVents, ...localSV };
                     const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                    const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0;
-                    const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
+                    const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0 || Object.keys(remoteSV).length > 0;
+                    const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0 || Object.keys(localSV).length > 0;
 
                     // ✅ FIX: definisci ENTRAMBE le variabili
                     const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
@@ -2928,6 +2927,7 @@
                     localStorage.setItem(lsKey('tasks'), JSON.stringify(tasksToSave));
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels || {}));
+                    localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents || {}));
 
                     console.log("💾 Salvato profilo:", tasksToSave.length, "tasks");
                 } catch (e) {
@@ -4319,7 +4319,7 @@
                 <div style="padding: 0 16px;">
                     ${conversations.length > 0 ? conversations.map(t => `
                         <div onclick="openChat('${t.otherName}', '${t.otherId}', '${t.otherAvatar || ''}')" 
-                            style="display:flex; align-items:center; gap:14px; padding:16px; background: rgba(255,255,255,0.06); border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.08); backdrop-filter:none; -webkit-backdrop-filter:none;">
+                            style="display:flex; align-items:center; gap:14px; padding:16px; background: #1a1a1a; border-radius: 20px; margin-bottom: 12px; cursor:pointer; border: 1px solid rgba(255,255,255,0.08);">
                             ${renderAvatar(t.otherName, 50, t.otherAvatar)}
                             <div style="flex:1; text-align:left; min-width:0;">
                                 <div style="font-weight:700; font-size:16px; color:white; margin-bottom:2px;">${t.otherName}</div>
@@ -4355,7 +4355,7 @@
             `).join('');
 
             return `
-            <div class="card" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); backdrop-filter:none; -webkit-backdrop-filter:none; border-radius:24px;">
+            <div class="card" style="background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius:24px;">
                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
                     ${post.anon ? renderAvatar('Anonimo', 40) : renderAvatar(post.author || 'Utente', 40, post.authorAvatar)}
                     <div style="flex:1; text-align:left;">
@@ -5644,6 +5644,7 @@
             }
             if (Object.keys(state.stressLevels).length === 0) {
                 state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+                state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
             }
             state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
@@ -5666,6 +5667,7 @@
             // 4. PlannerLocali
             state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
             state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+            state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
             state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
             state.isLoggedIn = true;
@@ -6886,12 +6888,12 @@
             const endMax = 2 * Math.PI;
             const lineW = 12;
 
-            // Idempotency: don't restart if target hasn't changed meaningfully
-            const lastTarget = Number(valueEl.dataset.target) || 0;
-            if (Math.abs(lastTarget - target) < 0.01 && __mediaGaugeRAF) return;
-            valueEl.dataset.target = String(target);
+            // Idempotency: use global state to avoid stacked loops
+            if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
 
-            let current = Math.max(0, Math.min(10, Number(valueEl.dataset.current) || 0));
+            // If target is the same and we are already animating or finished, skip re-init
+            if (state.__mediaGauge.target === target && __mediaGaugeRAF) return;
+            state.__mediaGauge.target = target;
 
             function arcGradient(val) {
                 const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
@@ -6925,10 +6927,10 @@
                 ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
 
                 // progress
-                const progress = (current / 10);
+                const progress = (state.__mediaGauge.current / 10);
                 const end = start + progress * Math.PI;
                 ctx.lineWidth = lineW;
-                ctx.strokeStyle = arcGradient(current);
+                ctx.strokeStyle = arcGradient(state.__mediaGauge.current);
                 ctx.shadowColor = 'rgba(0,0,0,0.15)';
                 ctx.shadowBlur = 4;
                 ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
@@ -6940,19 +6942,18 @@
                 ctx.shadowBlur = 6;
                 ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
 
-                valueEl.textContent = (Math.round(current * 100) / 100).toFixed(2);
-                valueEl.style.color = current >= 6 ? 'var(--green)' : (current >= 5 ? 'var(--orange)' : 'var(--red)');
-                valueEl.dataset.current = String(current);
+                valueEl.textContent = (Math.round(state.__mediaGauge.current * 100) / 100).toFixed(2);
+                valueEl.style.color = state.__mediaGauge.current >= 6 ? 'var(--green)' : (state.__mediaGauge.current >= 5 ? 'var(--orange)' : 'var(--red)');
 
-                const diff = target - current;
+                const diff = target - state.__mediaGauge.current;
                 if (Math.abs(diff) < 0.001) {
-                    current = target;
+                    state.__mediaGauge.current = target;
                     valueEl.textContent = target.toFixed(2);
                     __mediaGaugeRAF = null;
                     return;
                 }
 
-                current += diff * 0.05; // 0.05 for slower, premium easing
+                state.__mediaGauge.current += diff * 0.05; // Fluid easing
                 __mediaGaugeRAF = requestAnimationFrame(draw);
             }
             __mediaGaugeRAF = requestAnimationFrame(draw);
@@ -6972,7 +6973,7 @@
         window.addEventListener('resize', () => {
             if (state.view !== 'home') return;
             initStressWaveFromState();
-            const currentMedia = Number(document.getElementById('mediaValue')?.dataset.current || '0') || 0;
+            const currentMedia = state.__mediaGauge?.current || 0;
             renderMediaGauge(currentMedia);
         });
 
@@ -7004,9 +7005,26 @@
             const currentLevel = state.stressLevels?.[todayStr] ?? 5;
             const currentVent = state.stressVents?.[todayStr] ?? '';
 
+            // Generate History HTML
+            const historyDays = [];
+            const today = new Date();
+            for (let i = 0; i < 30; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const iso = d.toISOString().slice(0, 10);
+                if (state.stressLevels?.[iso] || state.stressVents?.[iso]) {
+                    historyDays.push({
+                        date: iso,
+                        level: state.stressLevels?.[iso] || 5,
+                        vent: state.stressVents?.[iso] || '',
+                        displayDate: d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                    });
+                }
+            }
+
             modalContainer.innerHTML = `
     <div class="modal-overlay" onclick="closeModal(event)">
-      <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 500px; padding: 24px; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px;">
+      <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 550px; padding: 24px; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px; max-height:90vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
           <h2 style="margin:0; font-size:22px; font-weight:800; color:white;">Analisi Stress</h2>
           <button onclick="closeModal()" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.06); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
@@ -7017,9 +7035,9 @@
         <!-- Selettore Livello -->
         <div style="margin-bottom:24px;">
             <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Come ti senti oggi?</div>
-            <div style="display:flex; justify-content:space-between; gap:8px;">
+            <div style="display:flex; justify-content:space-between; gap:6px;">
                 ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lv => `
-                    <button onclick="updateStressAndModal(${lv})" 
+                    <button onclick="updateStressAndModal(${lv})"
                         style="flex:1; height:40px; border-radius:10px; border:none; font-weight:800; font-size:14px; cursor:pointer; transition:all 0.2s;
                         background: ${currentLevel === lv ? 'var(--primary)' : 'rgba(255,255,255,0.06)'};
                         color: ${currentLevel === lv ? 'white' : 'rgba(255,255,255,0.4)'};">
@@ -7032,21 +7050,35 @@
         <!-- Sfogo del giorno -->
         <div style="margin-bottom:24px;">
             <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Sfogo del giorno</div>
-            <textarea id="dailyVentInput" placeholder="Scrivi qui i tuoi pensieri..." 
-                oninput="saveDailyVent(this.value)"
+            <textarea id="dailyVentInput" placeholder="Scrivi qui i tuoi pensieri..."
+                onblur="saveDailyVent(this.value)"
                 style="width:100%; height:80px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:12px; color:white; font-size:14px; outline:none; font-family:inherit; resize:none;">${currentVent}</textarea>
         </div>
 
         <!-- Grafico Settimanale -->
         <div style="margin-bottom:24px;">
-            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Andamento Settimanale</div>
+            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Trend</div>
             <div style="background:rgba(255,255,255,0.03); border-radius:20px; padding:16px; border:1px solid rgba(255,255,255,0.04);">
-                <canvas id="weeklyDetailedChart" style="width:100%; height:140px;"></canvas>
+                <canvas id="weeklyDetailedChart" style="width:100%; height:120px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Storico (Scrollable) -->
+        <div style="margin-bottom:24px;">
+            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Storico Recente</div>
+            <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:8px; scrollbar-width:none;">
+                ${historyDays.length > 0 ? historyDays.map(h => `
+                    <div style="min-width:140px; background:rgba(255,255,255,0.04); border-radius:16px; padding:12px; border:1px solid rgba(255,255,255,0.06);">
+                        <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.3); margin-bottom:4px;">${h.displayDate}</div>
+                        <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:4px;">Livello ${h.level}</div>
+                        <div style="font-size:12px; color:rgba(255,255,255,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${h.vent || 'Nessuno sfogo'}</div>
+                    </div>
+                `).join('') : '<div style="opacity:0.3; font-size:13px;">Nessun dato precedente</div>'}
             </div>
         </div>
 
         <button onclick="closeModal()" class="btn-primary" style="width:100%; height:50px; border-radius:16px; font-weight:800; border:none; cursor:pointer;">
-            Salva e Chiudi
+            Chiudi
         </button>
       </div>
     </div>
