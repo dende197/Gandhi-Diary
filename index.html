@@ -191,14 +191,23 @@
             border: none !important;
         }
 
-        .fc-scrollgrid {
+        .fc-scrollgrid,
+        .fc-theme-standard .fc-scrollgrid {
             border: none !important;
             border-collapse: separate !important;
             border-spacing: 8px !important;
             background: transparent !important;
         }
 
-        .fc .fc-scrollgrid-section-header {
+        .fc .fc-scrollgrid-section-header,
+        .fc .fc-scrollgrid-section-body,
+        .fc .fc-scrollgrid-section-footer,
+        .fc .fc-scrollgrid-section-header table,
+        .fc .fc-scrollgrid-section-body table {
+            background: transparent !important;
+        }
+
+        .fc-view-harness {
             background: transparent !important;
         }
 
@@ -243,8 +252,13 @@
             min-height: 80px !important;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.04);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            /* 🚀 PERF: Specific transitions only */
+            transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            will-change: transform, background;
         }
 
         .fc-daygrid-day:hover .fc-daygrid-day-frame {
@@ -286,20 +300,22 @@
         .fc-event,
         .fc-daygrid-event {
             /* 🌈 Glass legibility fix: semi-transparent colored background */
-            background: color-mix(in srgb, var(--fc-event-bg-color), transparent 85%) !important;
+            background: color-mix(in srgb, var(--fc-event-bg-color), transparent 82%) !important;
             border: none !important;
-            border-left: 4px solid var(--fc-event-bg-color) !important;
+            border-left: 5px solid var(--fc-event-bg-color) !important;
             border-radius: 6px !important;
-            padding: 4px 8px !important;
+            padding: 5px 10px !important;
             font-size: 11px !important;
             line-height: 1.2 !important;
-            font-weight: 800 !important;
+            font-weight: 900 !important;
+            /* Thicker for better contrast */
             color: #fff !important;
-            margin: 2px 6px !important;
-            box-shadow: none !important;
-            text-shadow: none !important;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(4px);
+            margin: 3px 8px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+            /* Better legibility */
+            transition: background 0.2s ease, transform 0.2s ease;
+            backdrop-filter: blur(8px);
         }
 
         .fc-daygrid-event:hover {
@@ -3437,6 +3453,17 @@
         function syncCalendarEvents(calendar) {
             if (!calendar) return;
             const evts = buildCalendarEventsFromState();
+            // 🚀 PERF FIX: Check if events actually changed to avoid redundant re-renders
+            const currentEvts = calendar.getEvents().map(e => ({
+                id: e.id,
+                title: e.title,
+                start: e.startStr
+            }));
+
+            if (JSON.stringify(currentEvts) === JSON.stringify(evts.map(e => ({ id: e.id, title: e.title, start: e.start })))) {
+                return;
+            }
+
             calendar.batchRendering(() => {
                 calendar.removeAllEvents();
                 evts.forEach(e => calendar.addEvent(e));
@@ -3691,17 +3718,27 @@
         }
 
         function getSubjectColor(subject) {
-            const s = (subject || '').toLowerCase();
-            if (s.includes('ita')) return '#FF2D55'; // Vibrant Red
-            if (s.includes('mat')) return '#0A84FF'; // Vibrant Blue
-            if (s.includes('ing')) return '#BF5AF2'; // Vibrant Purple
-            if (s.includes('storia') || s.includes('geo')) return '#FF9F0A'; // Vibrant Orange
-            if (s.includes('scienza') || s.includes('biol')) return '#30D158'; // Vibrant Green
-            if (s.includes('fisica')) return '#64D2FF'; // Cyan
-            if (s.includes('arte')) return '#FF375F'; // Pink/Rose
-            if (s.includes('ed')) return '#FFD60A'; // Yellow
-            if (s.includes('rel')) return '#64D2FF'; // Calm Blue
-            return '#0A84FF'; // Default fallback (iOS Blue)
+            const s = (subject || '').trim();
+            if (!s) return '#0A84FF';
+
+            const lower = s.toLowerCase();
+            if (lower.includes('ita')) return '#FF2D55';
+            if (lower.includes('mat')) return '#0A84FF';
+            if (lower.includes('ing')) return '#BF5AF2';
+            if (lower.includes('storia') || lower.includes('geo')) return '#FF9F0A';
+            if (lower.includes('scienza') || lower.includes('biol')) return '#30D158';
+            if (lower.includes('fisica')) return '#64D2FF';
+            if (lower.includes('arte')) return '#FF375F';
+            if (lower.includes('ed')) return '#FFD60A';
+            if (lower.includes('rel')) return '#64D2FF';
+
+            // 🚀 SENIOR FIX: Hash-based color for UNIQUE identification
+            let hash = 0;
+            for (let i = 0; i < s.length; i++) {
+                hash = s.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash % 360);
+            return `hsl(${h}, 85%, 65%)`; // Vibrant, distinct Colors
         }
 
         function renderAvatar(displayName, size = 44, avatarUrl = null) {
