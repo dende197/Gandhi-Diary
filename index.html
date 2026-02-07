@@ -3882,28 +3882,37 @@
             <div class="view page-bg">
                 <!-- Only centered Search -->
                 <div class="home-hero">
-                    <div class="home-search-center" style="display:flex; gap:10px;">
-                        <button class="search-big" onclick="navigate('search')" title="Cerca" style="flex:1;">
-                            <i class="ph-bold ph-magnifying-glass" style="font-size:20px;"></i> Cerca
-                        </button>
-                        <button class="search-big" onclick="navigate('messages')" title="Messaggi" style="width:58px; padding:0; justify-content:center; background:rgba(255,255,255,0.12);">
-                            <i class="ph-bold ph-chat-circle-dots" style="font-size:22px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Profile row (clickable to edit) -->
-                <div class="profile-row" onclick="showEditProfileModal()" style="cursor:pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                    ${renderAvatar(state.user?.name, 54, state.user?.avatar)}
-                    <div class="profile-meta" style="flex:1; min-width:0;">
-                        <div style="font-size:16px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            ${state.user?.name || 'Utente'}
+                <!-- Professional Header: Profile + Actions -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 24px 20px 10px 20px;">
+                    <!-- Profile Section (Left) -->
+                    <div onclick="showEditProfileModal()" style="display:flex; align-items:center; gap:14px; cursor:pointer; flex: 1; min-width: 0;">
+                        <div style="position:relative;">
+                            ${renderAvatar(state.user?.name, 52, state.user?.avatar)}
+                            <div style="position:absolute; bottom:-2px; right:-2px; background:var(--bg-tone); border-radius:50%; padding:2px;">
+                                <div style="width:12px; height:12px; background:var(--green); border-radius:50%; border:2px solid var(--bg-tone);"></div>
+                            </div>
                         </div>
-                        ${displayClass ? `<div class="tag-cinqueanna"><i class="ph-bold ph-graduation-cap"></i> Classe ${displayClass}</div>` : ''}
+                        <div style="display:flex; flex-direction:column; min-width:0;">
+                            <div style="font-size:19px; font-weight:800; color:#fff; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                ${state.user?.name || 'Utente'}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                ${displayClass ? `<span style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.6);">${displayClass}</span>` : ''}
+                                ${state.lastSync ? `<span style="font-size:11px; color:rgba(255,255,255,0.4);">• ${state.lastSync}</span>` : ''}
+                            </div>
+                        </div>
                     </div>
-                    ${state.lastSync ? `<div style="font-size:11px; color: rgba(255,255,255,0.6); display:flex; align-items:center; gap:6px;">
-                        <i class="ph ph-clock" style="font-size:14px;"></i>${state.lastSync}
-                    </div>` : ''}
+
+                    <!-- Action Icons (Right) -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button onclick="navigate('search')" style="width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.05); color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s ease;" onmousedown="this.style.transform='scale(0.94)'" onmouseup="this.style.transform='scale(1)'">
+                            <i class="ph-bold ph-magnifying-glass" style="font-size:20px;"></i>
+                        </button>
+                        <button onclick="navigate('messages')" style="width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.05); color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; transition:all 0.2s ease;" onmousedown="this.style.transform='scale(0.94)'" onmouseup="this.style.transform='scale(1)'">
+                            <i class="ph-bold ph-chat-circle-dots" style="font-size:20px;"></i>
+                            ${state.threads.some(t => t.unread) ? `<div style="position:absolute; top:8px; right:8px; width:8px; height:8px; background:var(--red); border-radius:50%; box-shadow:0 0 0 2px rgba(0,0,0,0.4);"></div>` : ''}
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Media + Stress (Advanced Canvas Widgets) -->
