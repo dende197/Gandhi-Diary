@@ -12,7 +12,7 @@
         href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <!-- Custom Calendar - No external library needed -->
 
     <style>
         :root {
@@ -66,72 +66,151 @@
             scrollbar-width: none;
         }
 
-        /* FullCalendar Customization */
-        .fc {
-            --fc-button-bg-color: transparent;
-            --fc-button-border-color: rgba(255, 255, 255, 0.1);
-            --fc-button-active-bg-color: var(--blue);
-            --fc-border-color: rgba(255, 255, 255, 0.05);
-            --fc-page-bg-color: transparent;
-            --fc-today-bg-color: rgba(10, 132, 255, 0.1);
+        /* Custom Calendar Styles */
+        .custom-calendar {
+            background: transparent;
+            border-radius: 20px;
+            overflow: hidden;
         }
 
-        .fc .fc-toolbar-title {
-            font-size: 1.2rem;
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            margin-bottom: 16px;
+        }
+
+        .calendar-title {
+            font-size: 18px;
             font-weight: 700;
+            color: var(--text-primary);
         }
 
-        .fc .fc-button-primary:not(:disabled):active,
-        .fc .fc-button-primary:not(:disabled).fc-button-active {
-            background-color: var(--blue);
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
         }
 
-        /* 🎯 Surgical Transparency Fix: Apply ONLY to structural layers */
-        .fc-scrollgrid,
-        .fc-scrollgrid-section,
-        .fc-col-header,
-        .fc-daygrid-body {
-            background: transparent !important;
+        .calendar-nav button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
 
-        .fc-theme-standard td,
-        .fc-theme-standard th {
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .calendar-nav button:hover {
+            background: rgba(255, 255, 255, 0.15);
         }
 
-        /* 🌟 Glassmorphism Weekday Headers */
-        .fc-col-header-cell-cushion {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
-            padding: 8px 14px;
-            color: var(--text-secondary);
+        .weekday-headers {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .weekday-header {
+            text-align: center;
+            padding: 8px 0;
+            font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
-            text-decoration: none !important;
         }
 
-        /* 📅 Day Numbers: High Visibility */
-        .fc-daygrid-day-number {
-            color: var(--text-main) !important;
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .calendar-day {
+            min-height: 70px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-day:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .calendar-day.today {
+            background: rgba(10, 132, 255, 0.15);
+            border: 1px solid rgba(10, 132, 255, 0.4);
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.past {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .day-number {
             font-size: 14px;
             font-weight: 600;
-            padding: 10px !important;
+            color: var(--text-primary);
+            margin-bottom: 4px;
         }
 
-        /* 📌 Events: Fully Visible */
-        .fc-event {
-            display: block !important;
-            color: white !important;
-            border-radius: 10px;
-            padding: 2px 4px;
-            border: none;
-            font-size: 10px;
+        .calendar-day.today .day-number {
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .day-events {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .event-badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 6px;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-badge.done {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+        .more-events {
+            font-size: 9px;
+            color: var(--text-secondary);
             font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
         }
 
         .view {
@@ -1458,222 +1537,364 @@
         }
 
 
-        function renderPlanner() {
-            setTimeout(()=> {
-                    const calendarEl=document.getElementById('calendar');
-
-                    if (calendarEl) {
-                        // Rimuovi il calendario esistente se presente
-                        const existingCalendar=calendarEl._fullCalendar;
-
-                        if (existingCalendar) {
-                            existingCalendar.destroy();
-                        }
-
-                        // ⭐ Recupera vista salvata o default a 'listWeek'
-                        const savedView=localStorage.getItem('argo_planner_view') || 'listWeek';
-
-                        const calendar=new FullCalendar.Calendar(calendarEl, {
-
-                            initialView: savedView,
-                            locale: 'it',
-                            themeSystem: 'standard',
-                            height: 'auto',
-                            // ⭐ Nascondi giorni passati (Show only today and future)
-                            validRange: {
-                                start: new Date().toISOString().split('T')[0]
-                            }
-
-                            ,
-                            headerToolbar: {
-                                left: 'prev,next',
-                                center: 'title',
-                                right: 'dayGridMonth,listWeek,timeGridDay'
-                            }
-
-                            ,
-                            views: {
-                                dayGridMonth: {
-                                    buttonText: 'Mese'
-                                }
-
-                                ,
-                                listWeek: {
-                                    buttonText: 'Settimana'
-                                }
-
-                                ,
-                                timeGridDay: {
-                                    buttonText: 'Giorno'
-                                }
-                            }
-
-                            ,
-                            // ⭐ Salva preferenza vista al cambio
-                            datesSet: function(info) {
-                                localStorage.setItem('argo_planner_view', info.view.type);
-                            }
-
-                            ,
-                            events: state.tasks.filter(t=> t.due_date && t.hasValidDate).map(t=> ({
-                                    title: `$ {
-                                        t.subject
-                                    }
-
-                                    : $ {
-                                        t.text.substring(0, 30)
-                                    }
-
-                                    $ {
-                                        t.text.length > 30 ? '...' : ''
-                                    }
-
-                                    `,
-                                    start: t.due_date,
-                                    color: t.done ? '#30D158' : '#0A84FF',
-                                    textColor: t.done ? '#000' : '#fff',
-                                    extendedProps: {
-                                        fullText: t.text,
-                                        subject: t.subject
-                                    }
-
-                                })),
-                        eventClick: function(info) {
-                            const event=info.event;
-
-                            modalContainer.innerHTML=`<div class="modal-overlay" onclick="closeModal(event)" > <div class="modal-content" > <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" > <h2 style="margin: 0;" >Dettaglio Compito</h2> <button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 700; font-size: 16px; cursor: pointer;" >Chiudi</button> </div> <div style="margin-bottom: 12px;" > <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;" >Materia</div> <div style="font-size: 18px; font-weight: 600; color: white;" >$ {
-                                event.extendedProps.subject
-                            }
-
-                            </div> </div> <div style="margin-bottom: 12px;" > <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;" >Descrizione</div> <div style="font-size: 16px; color: white; line-height: 1.5;" >$ {
-                                event.extendedProps.fullText
-                            }
-
-                            </div> </div> <div> <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;" >Scadenza</div> <div style="font-size: 16px; color: white; display: flex; align-items: center; gap: 6px;" > <i class="ph ph-calendar" ></i> $ {
-                                new Date(event.start).toLocaleDateString('it-IT', {
-                                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-                                })
-                        }
-
-                        </div> </div> </div> </div>`;
-                    }
-
-                    ,
-                    dateClick: function(info) {
-                        const tasksForDay=state.tasks.filter(t=> {
-                                if ( !t.due_date) return false;
-                                const taskDate=new Date(t.due_date);
-                                const clickedDate=new Date(info.dateStr);
-                                return taskDate.toDateString()===clickedDate.toDateString();
-                            });
-
-                        if (tasksForDay.length > 0) {
-                            const tasksList=tasksForDay.map(t=> `• $ {
-                                    t.subject
-                                }
-
-                                : $ {
-                                    t.text
-                                }
-
-                                `).join('\n');
-
-                            alert(`Compiti per $ {
-                                    info.dateStr
-                                }
-
-                                :\n\n$ {
-                                    tasksList
-                                }
-
-                                `);
-                        }
-
-                        else {
-                            alert(`Nessun compito per $ {
-                                    info.dateStr
-                                }
-
-                                `);
-                        }
-                    }
-                });
-            calendar.render();
-            calendarEl._fullCalendar=calendar;
-        }
+        // 📅 CUSTOM CALENDAR IMPLEMENTATION - No FullCalendar library
+        let calendarState= {
+            currentDate: new Date(),
+                viewMonth: new Date().getMonth(),
+                viewYear: new Date().getFullYear()
         }
 
-        , 100);
+        ;
 
-        return `<div class="view" style="padding: 20px; padding-bottom: 100px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1 style="margin: 0;">Planner</h1><button onclick="performSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="ph ph-arrow-clockwise" style="font-size: 16px; ${state.syncing ? 'animation: spin 1s linear infinite;' : ''}"></i>$ {
-            state.syncing ? 'Sincronizzazione...': 'Sincronizza'
-        }
+        function getSubjectColor(subject) {
+            if ( !subject) return '#0A84FF';
 
-        </button></div>$ {
-            state.lastSync ? `<div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;"><i class="ph ph-check-circle" style="color: var(--green);"></i>Ultima sincronizzazione: $ {
-                state.lastSync
+            const colors= {
+                'ITALIANO': '#FF6B6B', 'ITA': '#FF6B6B',
+                    'MATEMATICA': '#4ECDC4', 'MAT': '#4ECDC4',
+                    'INGLESE': '#45B7D1', 'ING': '#45B7D1',
+                    'STORIA': '#96CEB4', 'STO': '#96CEB4',
+                    'GEOGRAFIA': '#FFEAA7', 'GEO': '#FFEAA7',
+                    'SCIENZE': '#74B9FF', 'SCI': '#74B9FF',
+                    'FISICA': '#A29BFE', 'FIS': '#A29BFE',
+                    'CHIMICA': '#FD79A8', 'CHI': '#FD79A8',
+                    'FILOSOFIA': '#E17055', 'FIL': '#E17055',
+                    'ARTE': '#FDCB6E', 'ART': '#FDCB6E',
+                    'MUSICA': '#E84393', 'MUS': '#E84393',
+                    'ED.FISICA': '#00B894', 'EDF': '#00B894',
+                    'RELIGIONE': '#636E72', 'REL': '#636E72',
+                    'LATINO': '#D63031', 'LAT': '#D63031',
+                    'GRECO': '#6C5CE7', 'GRE': '#6C5CE7'
             }
 
-            </div>` : ''
+            ;
+            const key=subject.toUpperCase().trim();
+            if (colors[key]) return colors[key];
+            // Genera colore basato su hash per materie non in lista
+            let hash=0;
+
+            for (let i=0; i < key.length; i++) {
+                hash=key.charCodeAt(i)+((hash << 5) - hash);
+            }
+
+            const hue=Math.abs(hash % 360);
+
+            return `hsl($ {
+                    hue
+                }
+
+                , 70%, 55%)`;
         }
 
-        <div style="background: #1C1C1E; border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 1px solid #2C2C2E;"><div id="calendar"></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;"><div class="card" onclick="showVotiView()" style="margin-bottom:0; background: rgba(48, 209, 88, 0.1); border: 1px solid #30D158; cursor:pointer;"><i class="ph-fill ph-graduation-cap" style="color:#30D158; font-size: 24px;"></i><div style="font-size: 20px; font-weight: 800; margin-top: 5px; color: white;">$ {
-            state.voti.length
+        function getSubjectAbbrev(subject) {
+            if ( !subject) return '???';
+
+            const abbrevs= {
+                'ITALIANO': 'ITA', 'MATEMATICA': 'MAT', 'INGLESE': 'ING',
+                    'STORIA': 'STO', 'GEOGRAFIA': 'GEO', 'SCIENZE': 'SCI',
+                    'FISICA': 'FIS', 'CHIMICA': 'CHI', 'FILOSOFIA': 'FIL',
+                    'ARTE': 'ART', 'MUSICA': 'MUS', 'ED.FISICA': 'EDF',
+                    'RELIGIONE': 'REL', 'LATINO': 'LAT', 'GRECO': 'GRE',
+                    'EDUCAZIONE FISICA': 'EDF', 'EDUCAZIONE CIVICA': 'EDC'
+            }
+
+            ;
+            const key=subject.toUpperCase().trim();
+            if (abbrevs[key]) return abbrevs[key];
+            return subject.substring(0, 3).toUpperCase();
         }
 
-        </div><div style="font-size: 12px; opacity: 0.7; color: var(--text-secondary);">Voti Registrati</div></div><div class="card" onclick="showBachecaModal()" style="margin-bottom:0; background: rgba(255, 159, 10, 0.1); border: 1px solid #FF9F0A; cursor:pointer;"><i class="ph-fill ph-megaphone" style="color:#FF9F0A; font-size: 24px;"></i><div style="font-size: 20px; font-weight: 800; margin-top: 5px; color: white;">$ {
-            state.promemoria.length
-        }
+        function renderCustomCalendar(containerId) {
+            const container=document.getElementById(containerId);
+            if ( !container) return;
 
-        </div><div style="font-size: 12px; opacity: 0.7; color: var(--text-secondary);">Avvisi Bacheca</div></div></div><h3>Scadenze</h3><div id="tasks-list">$ {
-            state.tasks.map(t=> {
-                    const dueDate=t.dateObj && !isNaN(t.dateObj.getTime()) ? t.dateObj : null;
-                    const today=new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const daysUntil=dueDate ? Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)) : null;
-                    let dateLabel='';
-                    let dateColor='var(--text-secondary)';
+            const today=new Date();
+            today.setHours(0, 0, 0, 0);
 
-                    if (dueDate) {
-                        if (daysUntil===0) {
-                            dateLabel='OGGI'; dateColor='var(--red)';
-                        }
+            const year=calendarState.viewYear;
+            const month=calendarState.viewMonth;
+            const firstDay=new Date(year, month, 1);
+            const lastDay=new Date(year, month + 1, 0);
+            const startingDay=(firstDay.getDay() + 6) % 7; // Monday = 0
+            const totalDays=lastDay.getDate();
 
-                        else if (daysUntil===1) {
-                            dateLabel='DOMANI'; dateColor='var(--orange)';
-                        }
+            const monthNames=['Gennaio',
+            'Febbraio',
+            'Marzo',
+            'Aprile',
+            'Maggio',
+            'Giugno',
+            'Luglio',
+            'Agosto',
+            'Settembre',
+            'Ottobre',
+            'Novembre',
+            'Dicembre'];
+            const weekdays=['Lun',
+            'Mar',
+            'Mer',
+            'Gio',
+            'Ven',
+            'Sab',
+            'Dom'];
 
-                        else if (daysUntil < 0) {
-                            dateLabel='SCADUTO'; dateColor='var(--red)';
-                        }
+            // Group tasks by date
+            const tasksByDate= {}
 
-                        else {
-                            dateLabel=dueDate.toLocaleDateString('it-IT', {
-                                day: 'numeric', month: 'short'
-                            });
-                        dateColor=daysUntil <=3 ? 'var(--orange)' : 'var(--blue)';
+            ;
+
+            state.tasks.forEach(t=> {
+                    if (t.due_date) {
+                        const dateKey=t.due_date.split('T')[0];
+                        if ( !tasksByDate[dateKey]) tasksByDate[dateKey]=[];
+                        tasksByDate[dateKey].push(t);
                     }
+                });
+
+            let html=` <div class="custom-calendar"><div class="calendar-header"><div class="calendar-nav"><button onclick="navigateCalendar(-1)" title="Mese precedente"><i class="ph ph-caret-left"></i></button></div><div class="calendar-title">$ {
+                monthNames[month]
+            }
+
+            $ {
+                year
+            }
+
+            </div><div class="calendar-nav"><button onclick="navigateCalendar(1)" title="Mese successivo"><i class="ph ph-caret-right"></i></button></div></div><div class="weekday-headers">$ {
+                weekdays.map(d=> `<div class="weekday-header" >$ {
+                        d
+                    }
+
+                    </div>`).join('')
+            }
+
+            </div><div class="calendar-days">`;
+
+            // Giorni del mese precedente
+            const prevMonth=new Date(year, month, 0);
+            const prevMonthDays=prevMonth.getDate();
+
+            for (let i=startingDay - 1; i >=0; i--) {
+                const dayNum=prevMonthDays - i;
+
+                html+=`<div class="calendar-day other-month past"><div class="day-number">$ {
+                    dayNum
                 }
 
-                else {
-                    dateLabel=t.display_date || 'Data non disponibile';
+                </div></div>`;
+            }
+
+            // Giorni del mese corrente
+            for (let day=1; day <=totalDays; day++) {
+                const currentDate=new Date(year, month, day);
+                currentDate.setHours(0, 0, 0, 0);
+
+                const dateStr=`$ {
+                    year
                 }
 
-                // ... (keep rest of mapping) ...
-                return `<div class="card" style="display: flex; align-items: center; gap: 16px; padding: 16px;" > <div onclick="toggleTask('${t.id}')" style="font-size: 24px; color: ${t.done ? 'var(--success)' : 'var(--text-secondary)'}; cursor: pointer;" > <i class="${t.done ? 'ph-fill ph-check-circle' : 'ph ph-circle'}" ></i> </div> <div style="flex: 1; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}" > <div style="font-weight: 600; font-size: 16px;" >$ {
-                    t.text
+                -$ {
+                    String(month + 1).padStart(2, '0')
                 }
 
-                </div> <div style="font-size: 13px; color: ${dateColor}; display: flex; align-items: center; gap: 4px; margin-top: 2px;" > <i class="ph-fill ph-calendar-blank" ></i> $ {
-                    dateLabel
+                -$ {
+                    String(day).padStart(2, '0')
                 }
 
-                <span style="width: 4px; height: 4px; background: var(--text-secondary); border-radius: 50%; display: inline-block; margin: 0 4px;" ></span> <span>$ {
-                    t.subject
+                `;
+                const isToday=currentDate.getTime()===today.getTime();
+                const isPast=currentDate < today;
+                const dayTasks=tasksByDate[dateStr] || [];
+
+                let classes='calendar-day';
+                if (isToday) classes+=' today';
+                if (isPast && !isToday) classes+=' past';
+
+                html+=`<div class="${classes}" onclick="handleDayClick('${dateStr}', ${isPast && !isToday})"><div class="day-number">$ {
+                    day
                 }
 
-                </span> </div> </div> </div>`;
-            }).join('')
+                </div><div class="day-events">`;
+
+                // Mostra max 3 eventi
+                const displayTasks=dayTasks.slice(0, 3);
+
+                displayTasks.forEach(t=> {
+                        const color=getSubjectColor(t.subject);
+                        const abbrev=getSubjectAbbrev(t.subject);
+                        const doneClass=t.done ? 'done' : '';
+
+                        html +=`<div class="event-badge ${doneClass}" style="background: ${color};" title="${t.subject}: ${t.text}" >$ {
+                            abbrev
+                        }
+
+                        </div>`;
+                    });
+
+                if (dayTasks.length > 3) {
+                    html+=`<div class="more-events">+$ {
+                        dayTasks.length - 3
+                    }
+
+                    altri</div>`;
+                }
+
+                html+=`</div></div>`;
+            }
+
+            // Giorni del mese successivo
+            const remainingCells=42 - (startingDay + totalDays);
+
+            for (let i=1; i <=remainingCells && (startingDay + totalDays + i - 1) < 42; i++) {
+                html+=`<div class="calendar-day other-month"><div class="day-number">$ {
+                    i
+                }
+
+                </div></div>`;
+            }
+
+            html+=`</div></div>`;
+            container.innerHTML=html;
+        }
+
+        function navigateCalendar(direction) {
+            calendarState.viewMonth+=direction;
+
+            if (calendarState.viewMonth > 11) {
+                calendarState.viewMonth=0;
+                calendarState.viewYear++;
+            }
+
+            else if (calendarState.viewMonth < 0) {
+                calendarState.viewMonth=11;
+                calendarState.viewYear--;
+            }
+
+            renderCustomCalendar('calendar');
+        }
+
+        function handleDayClick(dateStr, isPast) {
+            if (isPast) return; // Non permettere click su giorni passati
+
+            const tasksForDay=state.tasks.filter(t=> {
+                    if ( !t.due_date) return false;
+                    return t.due_date.split('T')[0]===dateStr;
+                });
+
+            const formattedDate=new Date(dateStr).toLocaleDateString('it-IT', {
+                weekday: 'long', day: 'numeric', month: 'long'
+            });
+
+        if (tasksForDay.length > 0) {
+            modalContainer.innerHTML=` <div class="modal-overlay" onclick="closeModal(event)"><div class="modal-content"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h2 style="margin: 0; text-transform: capitalize;">$ {
+                formattedDate
+            }
+
+            </h2><button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 700; font-size: 16px; cursor: pointer;">Chiudi</button></div><div style="display: flex; flex-direction: column; gap: 12px;">$ {
+                tasksForDay.map(t=> {
+                        const color=getSubjectColor(t.subject);
+
+                        return ` <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; border-left: 4px solid ${color};" > <div style="font-size: 11px; color: ${color}; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;" >$ {
+                            t.subject
+                        }
+
+                        </div> <div style="font-size: 15px; color: white; line-height: 1.4; ${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}" >$ {
+                            t.text
+                        }
+
+                        </div> </div> `;
+                    }).join('')
+            }
+
+            </div></div></div>`;
+        }
+
+        else {
+            modalContainer.innerHTML=` <div class="modal-overlay" onclick="closeModal(event)"><div class="modal-content"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h2 style="margin: 0; text-transform: capitalize;">$ {
+                formattedDate
+            }
+
+            </h2><button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 700; font-size: 16px; cursor: pointer;">Chiudi</button></div><div style="text-align: center; padding: 30px; opacity: 0.6;"><i class="ph ph-calendar-blank" style="font-size: 48px; margin-bottom: 12px;"></i><div>Nessun compito per questo giorno</div></div></div></div>`;
+        }
+        }
+
+        function renderPlanner() {
+
+            // Render custom calendar dopo un breve delay per assicurarsi che il DOM sia pronto
+            setTimeout(()=> {
+                    renderCustomCalendar('calendar');
+                }
+
+                , 50);
+
+            return `<div class="view" style="padding: 20px; padding-bottom: 100px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1 style="margin: 0;">Planner</h1><button onclick="performSync()" style="background: var(--blue); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="ph ph-arrow-clockwise" style="font-size: 16px; ${state.syncing ? 'animation: spin 1s linear infinite;' : ''}"></i>$ {
+                state.syncing ? 'Sincronizzazione...': 'Sincronizza'
+            }
+
+            </button></div>$ {
+                state.lastSync ? `<div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; display: flex; align-items: center; gap: 6px;"><i class="ph ph-check-circle" style="color: var(--green);"></i>Ultima sincronizzazione: $ {
+                    state.lastSync
+                }
+
+                </div>` : ''
+            }
+
+            <div style="background: #1C1C1E; border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 1px solid #2C2C2E;"><div id="calendar"></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;"><div class="card" onclick="showVotiView()" style="margin-bottom:0; background: rgba(48, 209, 88, 0.1); border: 1px solid #30D158; cursor:pointer;"><i class="ph-fill ph-graduation-cap" style="color:#30D158; font-size: 24px;"></i><div style="font-size: 20px; font-weight: 800; margin-top: 5px; color: white;">$ {
+                state.voti.length
+            }
+
+            </div><div style="font-size: 12px; opacity: 0.7; color: var(--text-secondary);">Voti Registrati</div></div><div class="card" onclick="showBachecaModal()" style="margin-bottom:0; background: rgba(255, 159, 10, 0.1); border: 1px solid #FF9F0A; cursor:pointer;"><i class="ph-fill ph-megaphone" style="color:#FF9F0A; font-size: 24px;"></i><div style="font-size: 20px; font-weight: 800; margin-top: 5px; color: white;">$ {
+                state.promemoria.length
+            }
+
+            </div><div style="font-size: 12px; opacity: 0.7; color: var(--text-secondary);">Avvisi Bacheca</div></div></div><h3>Scadenze</h3><div id="tasks-list">$ {
+                state.tasks.map(t=> {
+                        const dueDate=t.dateObj && !isNaN(t.dateObj.getTime()) ? t.dateObj : null;
+                        const today=new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const daysUntil=dueDate ? Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)) : null;
+                        let dateLabel='';
+                        let dateColor='var(--text-secondary)';
+
+                        if (dueDate) {
+                            if (daysUntil===0) {
+                                dateLabel='OGGI'; dateColor='var(--red)';
+                            }
+
+                            else if (daysUntil===1) {
+                                dateLabel='DOMANI'; dateColor='var(--orange)';
+                            }
+
+                            else if (daysUntil < 0) {
+                                dateLabel='SCADUTO'; dateColor='var(--red)';
+                            }
+
+                            else {
+                                dateLabel=dueDate.toLocaleDateString('it-IT', {
+                                    day: 'numeric', month: 'short'
+                                });
+                            dateColor=daysUntil <=3 ? 'var(--orange)' : 'var(--blue)';
+                        }
+                    }
+
+                    else {
+                        dateLabel=t.display_date || 'Data non disponibile';
+                    }
+
+                    // ... (keep rest of mapping) ...
+                    return `<div class="card" style="display: flex; align-items: center; gap: 16px; padding: 16px;" > <div onclick="toggleTask('${t.id}')" style="font-size: 24px; color: ${t.done ? 'var(--success)' : 'var(--text-secondary)'}; cursor: pointer;" > <i class="${t.done ? 'ph-fill ph-check-circle' : 'ph ph-circle'}" ></i> </div> <div style="flex: 1; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}" > <div style="font-weight: 600; font-size: 16px;" >$ {
+                        t.text
+                    }
+
+                    </div> <div style="font-size: 13px; color: ${dateColor}; display: flex; align-items: center; gap: 4px; margin-top: 2px;" > <i class="ph-fill ph-calendar-blank" ></i> $ {
+                        dateLabel
+                    }
+
+                    <span style="width: 4px; height: 4px; background: var(--text-secondary); border-radius: 50%; display: inline-block; margin: 0 4px;" ></span> <span>$ {
+                        t.subject
+                    }
+
+                    </span> </div> </div> </div>`;
+                }).join('')
         }
 
         </div></div>`;
