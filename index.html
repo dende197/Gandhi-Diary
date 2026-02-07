@@ -2251,7 +2251,8 @@
                 liked: Array.isArray(p?.likes) ? p.likes.includes(myId) : !!(p?.liked ?? false),
                 comments,
                 type: p?.type ?? 'text',
-                pinned: !!p?.pinned
+                pinned: !!p?.pinned,
+                created_at: p?.created_at || p?.timestamp
             };
         }
 
@@ -2286,7 +2287,8 @@
                 seller,
                 sellerId: sellerId ?? null,
                 sellerAvatar,
-                pinned: !!i?.pinned
+                pinned: !!i?.pinned,
+                created_at: i?.created_at || i?.timestamp
             };
         }
 
@@ -4850,16 +4852,19 @@
         // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
         function formatTimeAgo(dateInput) {
             if (!dateInput) return 'ora';
-            const date = typeof dateInput === 'string' ? new Date(dateInput.replace(' ', 'T')) : new Date(dateInput);
+            const date = new Date(dateInput);
             if (isNaN(date.getTime())) return '';
 
-            const now = new Date();
-            const diff = now.getTime() - date.getTime();
+            const diff = Date.now() - date.getTime();
 
-            if (diff < 60000) return "ora"; // < 1m
-            if (diff < 3600000) return Math.floor(diff / 60000) + "m"; // < 1h
-            if (diff < 86400000) return Math.floor(diff / 3600000) + "h"; // < 1d
-            return Math.floor(diff / 86400000) + "d";
+            // Threshold optimization: use milliseconds directly
+            if (diff < 60000) return "ora";
+            const mins = Math.floor(diff / 60000);
+            if (mins < 60) return mins + "m";
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return hours + "h";
+            const days = Math.floor(hours / 24);
+            return days + "d";
         }
 
         function formatFullDate(dateInput) {
