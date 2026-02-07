@@ -357,8 +357,8 @@
         }
 
         .view {
-            contain: layout style;
             min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px);
+            /* Remove contain:layout to avoid scroll-click deadlocks in complex flex layouts */
         }
 
         /* 3) Pannelli glass: blocca qualsiasi “auto-darkening” involontario */
@@ -4306,13 +4306,7 @@
                 <div style="position:relative; margin-bottom:12px;">
                     <i class="ph ph-magnifying-glass" style="position:absolute; left:12px; top:10px; color: var(--text-muted); font-size:18px;"></i>
                     <input type="text" placeholder="Cerca persone o post..." value="${state.feed.search}" 
-                        oninput="state.feed.search = this.value; const list = document.getElementById('feed-posts-container'); if(list) { 
-                            let filtered = state.posts;
-                            if(state.feed.classFilter !== 'Tutte') filtered = filtered.filter(p => p.class === state.feed.classFilter);
-                            const q = state.feed.search.toLowerCase();
-                            filtered = filtered.filter(p => !q || (p.author||'').toLowerCase().includes(q) || p.text.toLowerCase().includes(q));
-                            list.innerHTML = filtered.length ? filtered.map(renderPostCard).join('') : '<div style=&quot;text-align:center; opacity:0.5; padding:32px;&quot;>Nessun post</div>'; 
-                        }" 
+                        oninput="updateFeedSearch(this.value)" 
                         style="padding-left:38px; margin-bottom:0; height:38px; background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:white;">
                 </div>
 
@@ -4854,6 +4848,22 @@
         }
 
         // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
+        function formatTimeAgo(dateInput) {
+            if (!dateInput) return 'ora';
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) return 'ora';
+            const diffInMinutes = Math.floor(diffInSeconds / 60);
+            if (diffInMinutes < 60) return `${diffInMinutes}m`;
+            const diffInHours = Math.floor(diffInMinutes / 60);
+            if (diffInHours < 24) return `${diffInHours}h`;
+            const diffInDays = Math.floor(diffInHours / 24);
+            return `${diffInDays}d`;
+        }
         function showStressDetailsModal() {
             const days = 14;
             const today = new Date();
