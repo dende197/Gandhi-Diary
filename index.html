@@ -3485,10 +3485,12 @@
                     <div class="calendar-days">
             `;
 
+            const todayISO = today.toISOString().split('T')[0];
+
             const tempDate = new Date(startDate);
             for (let i = 0; i < 14; i++) {
                 const dateStr = tempDate.toISOString().split('T')[0];
-                const isToday = tempDate.getTime() === today.getTime();
+                const isToday = dateStr === todayISO;
                 const isPast = tempDate < today && !isToday;
 
                 const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
@@ -5204,11 +5206,25 @@
                             <h2 style="margin:0;">Pianifica Settimana</h2>
                             <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 16px; max-height: 500px; overflow-y: auto;">
+                        <div style="display: flex; flex-direction: column; gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
+                            <!-- CUSTOM QUEST SECTION -->
+                            <div style="background: rgba(255,255,255,0.08); padding: 16px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 4px;">
+                                <div style="font-size: 11px; font-weight: 800; color: var(--blue); text-transform: uppercase; margin-bottom: 8px;">Crea Quest Settimanale</div>
+                                <div style="display: flex; gap: 8px;">
+                                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 42px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom:0;">
+                                    <select id="quest-date-select" style="width: 80px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 8px; font-weight:700;">
+                                        ${next7Days.map(d => `<option value="${d.dateStr}">${d.label} ${d.dayNum}</option>`).join('')}
+                                    </select>
+                                    <button onclick="addCustomQuestFromInput()" style="width: 42px; height: 42px; background: var(--blue); color:white; border:none; border-radius: 12px; cursor:pointer;">
+                                        <i class="ph-bold ph-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
                             ${state.tasks.filter(t => !t.done).map(t => {
                 const subjectColor = getSubjectColor(t.subject);
                 return `
-                                <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
                                     <div style="font-weight: 700; color: white; margin-bottom: 4px; text-align:left;">${t.text}</div>
                                     <div style="font-size: 11px; color: ${subjectColor}; font-weight:700; text-transform:uppercase; margin-bottom: 12px; text-align:left;">${t.subject}</div>
                                     <div style="display: flex; justify-content: space-between; gap: 4px;">
@@ -5218,7 +5234,7 @@
                     return `
                                                 <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                                     onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
-                                                    style="flex: 1; text-align:center; padding: 8px 4px; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+                                                    style="flex: 1; text-align:center; padding: 10px 4px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
                                                     background: ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.08)'};
                                                     color: ${isPlanned ? 'black' : 'white'};
                                                     border: ${isToday ? '2px solid var(--blue)' : '1px solid rgba(255,255,255,0.1)'};">
@@ -5237,12 +5253,12 @@
 
         function togglePlanDay(taskId, dateStr) {
             if (event) event.stopPropagation();
-            // ✅ FIX: Accetta qualsiasi data futura (non solo settimana corrente)
             const selectedDate = new Date(dateStr);
+            selectedDate.setHours(0, 0, 0, 0);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            if (selectedDate < today) return; // Solo blocca date passate
+            if (selectedDate < today) return;
 
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             const index = state.plannedTasks[dateStr].indexOf(taskId);
@@ -5273,6 +5289,29 @@
                     btn.style.color = 'white';
                 }
             });
+        }
+
+        function addCustomQuestFromInput() {
+            const text = document.getElementById('quest-text-input').value.trim();
+            const dateStr = document.getElementById('quest-date-select').value;
+            if (!text) return;
+
+            const quest = {
+                id: 'quest-' + Date.now(),
+                text: text,
+                subject: 'QUEST',
+                due_date: dateStr,
+                done: false
+            };
+
+            state.tasks.push(quest);
+            if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+            state.plannedTasks[dateStr].push(quest.id);
+
+            saveTasks();
+            savePlannerRemote();
+            debouncedSavePlannerRemote();
+            showPlanWeekModal(); // Re-render to show quest and clear input
         }
 
         /* Feed & Market Interactions */
