@@ -5256,12 +5256,9 @@
 
         function togglePlanDay(taskId, dateStr) {
             if (event) event.stopPropagation();
-            const selectedDate = new Date(dateStr);
-            selectedDate.setHours(0, 0, 0, 0);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (selectedDate < today) return;
+            // ✅ FIX: Usa confronto stringa timezone-safe
+            const todayStr = getLocalDateStr();
+            if (dateStr < todayStr) return; // Solo i giorni passati sono bloccati, oggi è OK
 
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             const index = state.plannedTasks[dateStr].indexOf(taskId);
@@ -5295,9 +5292,16 @@
         }
 
         function addCustomQuestFromInput() {
-            const text = document.getElementById('quest-text-input').value.trim();
-            const dateStr = document.getElementById('quest-date-select').value;
-            if (!text) return;
+            const textInput = document.getElementById('quest-text-input');
+            const dateSelect = document.getElementById('quest-date-select');
+            if (!textInput || !dateSelect) return;
+
+            const text = textInput.value.trim();
+            const dateStr = dateSelect.value;
+            if (!text) {
+                showToast('Inserisci un compito!');
+                return;
+            }
 
             const quest = {
                 id: 'quest-' + Date.now(),
@@ -5311,10 +5315,19 @@
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             state.plannedTasks[dateStr].push(quest.id);
 
+            // ✅ Salva immediatamente
             saveTasks();
             savePlannerRemote();
-            debouncedSavePlannerRemote();
-            showPlanWeekModal(); // Re-render to show quest and clear input
+
+            // ✅ Feedback visivo immediato
+            showToast('Compito aggiunto!');
+
+            // ✅ Aggiorna UI: svuota input e rigener modal
+            textInput.value = '';
+            showPlanWeekModal();
+
+            // ✅ Aggiorna calendario e home in background
+            notifyPlannerChanged();
         }
 
         /* Feed & Market Interactions */
