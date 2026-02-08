@@ -2692,10 +2692,63 @@
         // Autosave/verify periodico
         setInterval(() => { debouncedSavePlannerRemote(0); if (typeof saveTasksSnapshotRemote === 'function') saveTasksSnapshotRemote(); verifyAndRepairPlanner(); }, 45000);
 
+        // ✅ Helper Senior: Rileva data locale YYYY-MM-DD senza bug di timezone
+        function getLocalDateStr() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function isFutureOrToday(dateStr) {
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
-            return d.getTime() >= today.getTime();
+            const today = getLocalDateStr();
+            return dateStr >= today;
+        }
+
+        function showToast(message) {
+            const existing = document.getElementById('g-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'g-toast';
+            toast.style = `
+                position: fixed;
+                bottom: 110px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--blue);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 50px;
+                font-weight: 700;
+                font-size: 14px;
+                z-index: 9999;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            `;
+            toast.innerHTML = `<i class="ph-bold ph-check-circle" style="margin-right:8px;"></i>${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(20px)';
+                toast.style.transition = 'all 0.4s ease-in';
+                setTimeout(() => toast.remove(), 400);
+            }, 1800);
+        }
+
+        // Aggiungi keyframes se mancano
+        if (!document.getElementById('toast-style')) {
+            const s = document.createElement('style');
+            s.id = 'toast-style';
+            s.innerHTML = `
+                @keyframes toastPop {
+                    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+            `;
+            document.head.appendChild(s);
         }
 
         // 🔥 REMOVED: fetchPosts() was a duplicate of fetchFeed(). Use fetchFeed() only.
@@ -3445,16 +3498,16 @@
             const calendarEl = document.getElementById('calendar');
             if (!calendarEl) return;
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const todayISO = getLocalDateStr();
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
 
             // Calcola il lunedì della settimana corrente
-            const d = today.getDay();
-            const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
-            const startOfCurrentWeek = new Date(new Date(today).setDate(diffToMonday));
+            const d = todayDate.getDay();
+            const diffToMonday = todayDate.getDate() - (d === 0 ? 6 : d - 1);
+            const startOfCurrentWeek = new Date(new Date(todayDate).setDate(diffToMonday));
             startOfCurrentWeek.setHours(0, 0, 0, 0);
 
-            // Data di inizio basata sull'offset (settimane)
             const startDate = new Date(startOfCurrentWeek);
             startDate.setDate(startOfCurrentWeek.getDate() + (calendarState.weekOffset * 7));
 
@@ -3482,16 +3535,13 @@
                         <div class="weekday-header">Sab</div>
                         <div class="weekday-header">Dom</div>
                     </div>
-                    <div class="calendar-days">
-            `;
-
-            const todayISO = today.toISOString().split('T')[0];
+                    <div class="calendar-days">`;
 
             const tempDate = new Date(startDate);
             for (let i = 0; i < 14; i++) {
                 const dateStr = tempDate.toISOString().split('T')[0];
                 const isToday = dateStr === todayISO;
-                const isPast = tempDate < today && !isToday;
+                const isPast = dateStr < todayISO;
 
                 const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
 
@@ -3507,8 +3557,7 @@
                 }).join('')}
                             ${dayTasks.length > 3 ? `<div class="more-events">+${dayTasks.length - 3}</div>` : ''}
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 tempDate.setDate(tempDate.getDate() + 1);
             }
 
@@ -3542,7 +3591,7 @@
             const plannedIds = state.plannedTasks[dateStr] || [];
 
             container.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
+                < div class="modal-overlay" onclick = "closeModal(event)" >
                     <div class="modal-content glass-panel" style="max-width:440px; padding:24px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
                             <div>
@@ -3584,8 +3633,8 @@
                         </div>
                         ` : ''}
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         }
 
         function togglePlanInModal(dateStr, taskId) {
@@ -3639,10 +3688,10 @@
             const html = filtered.length > 0
                 ? filtered.map(t => {
                     const d = new Date(t.plannedDate);
-                    const dayLabel = `${dayNamesShort[d.getDay()]} ${d.getDate()}`;
+                    const dayLabel = `${dayNamesShort[d.getDay()]} ${d.getDate()} `;
                     const subjectColor = getSubjectColor(t.subject);
                     return `
-                                <div class="glass-list-item" style="display:flex; align-items:center; gap:12px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+                < div class="glass-list-item" style = "display:flex; align-items:center; gap:12px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;" >
                                     <div style="min-width:50px; font-size:11px; font-weight:800; color: var(--orange); text-transform: uppercase;">${dayLabel}</div>
                                     <div 
                                         class="task-checkbox ${t.done ? 'checked' : ''}"
@@ -3657,10 +3706,10 @@
                                         </div>
                                         <div style="font-size:10px; color:${subjectColor}; font-weight:700; text-transform:uppercase;">${t.subject}</div>
                                     </div>
-                                </div>
-                            `;
+                                </div >
+                `;
                 }).join('')
-                : `<div style="text-align:center; opacity:0.5; font-size:13px; padding:10px;">Nessun compito pianificato.</div>`;
+                : `< div style = "text-align:center; opacity:0.5; font-size:13px; padding:10px;" > Nessun compito pianificato.</div > `;
 
             el.style.opacity = '0';
             el.style.transition = 'opacity 0.15s ease-out';
@@ -3679,7 +3728,10 @@
             // lista "Agenda della settimana" in Planner
             if (typeof updateWeeklyAgendaView === 'function') updateWeeklyAgendaView();
 
-            // colori/stato eventi calendario
+            // ✅ FIX SENIOR: Aggiorna ANCHE il calendario custom (non solo FullCalendar)
+            if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+
+            // colori/stato eventi calendario (FullCalendar legacy)
             const calendarEl = document.getElementById('calendar');
             if (calendarEl && calendarEl._fullCalendar) {
                 syncCalendarEvents(calendarEl._fullCalendar);
@@ -3698,9 +3750,9 @@
                     console.log("💾 Salvataggio planner pre-logout per:", currentUserId);
 
                     // ✅ Salva in localStorage con chiave corrente PRIMA di clear
-                    localStorage.setItem(`${currentLsPrefix}:planned_tasks`, JSON.stringify(state.plannedTasks || {}));
-                    localStorage.setItem(`${currentLsPrefix}:stress_levels`, JSON.stringify(state.stressLevels || {}));
-                    localStorage.setItem(`${currentLsPrefix}:planner_updated_at`, new Date().toISOString());
+                    localStorage.setItem(`${currentLsPrefix}: planned_tasks`, JSON.stringify(state.plannedTasks || {}));
+                    localStorage.setItem(`${currentLsPrefix}: stress_levels`, JSON.stringify(state.stressLevels || {}));
+                    localStorage.setItem(`${currentLsPrefix}: planner_updated_at`, new Date().toISOString());
 
                     // ✅ Forza salvataggio sincrono su Supabase
                     try {
@@ -3711,7 +3763,7 @@
                             updatedAt: new Date().toISOString()
                         };
 
-                        const response = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
+                        const response = await fetch(`${API_BASE_URL} /api/planner / ${encodeURIComponent(currentUserId)} `, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -3758,7 +3810,7 @@
             const hasSession = savedSession && sessionManager.isLoggedIn();
 
             return `
-            <div class="view" style="height: 100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding: 24px;">
+                < div class="view" style = "height: 100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding: 24px;" >
                 <h1 style="margin-bottom:40px;">📚 G-Connect</h1>
                 <p style="color:var(--text-secondary); margin-bottom:30px; text-align:center;">Accedi con le tue credenziali DidUP</p>
                 <button class="btn-primary" onclick="openArgoLogin()" style="max-width:300px; cursor:pointer;">Accedi</button>
@@ -3770,8 +3822,9 @@
                             Disconnetti e accedi con altro account
                         </button>
                     </div>
-                ` : ''}
-            </div>`;
+                ` : ''
+                }
+            </div > `;
         }
 
         function getSubjectColor(subject) {
@@ -3795,7 +3848,7 @@
                 hash = s.charCodeAt(i) + ((hash << 5) - hash);
             }
             const h = Math.abs(hash % 360);
-            return `hsl(${h}, 85%, 65%)`; // Vibrant, distinct Colors
+            return `hsl(${h}, 85 %, 65 %)`; // Vibrant, distinct Colors
         }
 
         function renderAvatar(displayName, size = 44, avatarUrl = null) {
@@ -3804,15 +3857,15 @@
 
             // Se c'è un URL avatar valido (http), mostra immagine
             if (img && img.startsWith('http')) {
-                return `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:1.5px solid rgba(255,255,255,0.2);box-shadow:0 4px 12px rgba(37,99,235,0.2);flex-shrink:0;background:#1e293b;">
-                    <img src="${img}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:linear-gradient(135deg,var(--blue),#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${size * 0.45}px;color:white;\\'>${(displayName || 'U')[0]?.toUpperCase()}</div>'">
+                return `< div style = "width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:1.5px solid rgba(255,255,255,0.2);box-shadow:0 4px 12px rgba(37,99,235,0.2);flex-shrink:0;background:#1e293b;" >
+                <img src="${img}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:linear-gradient(135deg,var(--blue),#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${size * 0.45}px;color:white;\\'>${(displayName || 'U')[0]?.toUpperCase()}</div>'">
                 </div>`;
             }
 
             // Fallback: lettera iniziale
             const name = (displayName || 'Utente').trim();
             const letter = name ? name[0].toUpperCase() : '?';
-            return `<div style="width:${size}px; height:${size}px; background: linear-gradient(135deg, var(--blue), #4f46e5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: ${size * 0.45}px; color: white; border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); flex-shrink: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${letter}</div>`;
+            return `< div style = "width:${size}px; height:${size}px; background: linear-gradient(135deg, var(--blue), #4f46e5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: ${size * 0.45}px; color: white; border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); flex-shrink: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" > ${letter}</div > `;
         }
 
         // ============= AVATAR MANAGEMENT FUNCTIONS =============
@@ -3820,7 +3873,7 @@
         async function uploadAvatar(base64Image) {
             try {
                 const userId = getUserId();
-                const response = await fetch(`${API_BASE_URL}/api/upload`, {
+                const response = await fetch(`${API_BASE_URL} /api/upload`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: base64Image, userId: userId })
@@ -3838,7 +3891,7 @@
         async function saveProfileToServer(profileData) {
             try {
                 const userId = getUserId();
-                const response = await fetch(`${API_BASE_URL}/api/profile`, {
+                const response = await fetch(`${API_BASE_URL} /api/profile`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3864,7 +3917,7 @@
                 const userId = getUserId();
                 if (!userId || userId === 'guest') return null;
 
-                const response = await fetch(`${API_BASE_URL}/api/profile/${encodeURIComponent(userId)}`);
+                const response = await fetch(`${API_BASE_URL} /api/profile / ${encodeURIComponent(userId)} `);
                 const data = await response.json();
 
                 if (data.success && data.data) {
@@ -3955,13 +4008,13 @@
             if (!modalContainer) return;
 
             modalContainer.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
+                < div class="modal-overlay" onclick = "closeModal(event)" >
                     <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 440px; padding: 24px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                             <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Modifica Profilo</h2>
                             <button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 700; cursor: pointer; font-size: 16px;">Annulla</button>
                         </div>
-                        
+
                         <div style="text-align: center; margin-bottom: 24px; position: relative; width: 100px; margin-left: auto; margin-right: auto;">
                             <div id="edit-profile-avatar-preview" onclick="document.getElementById('edit-avatar-input').click()" style="cursor: pointer; transition: opacity 0.2s;">
                                 ${renderAvatar(state.user.name, 100, state.user.avatar)}
@@ -3969,14 +4022,14 @@
                             <div onclick="document.getElementById('edit-avatar-input').click()" style="position: absolute; bottom: 0; right: 0; background: var(--blue); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #1a202c; cursor: pointer;">
                                 <i class="ph-bold ph-camera" style="color: white; font-size: 16px;"></i>
                             </div>
-                            <input type="file" id="edit-avatar-input" accept="image/*" onchange="handleAvatarUpload(event)" style="display: none;"/>
+                            <input type="file" id="edit-avatar-input" accept="image/*" onchange="handleAvatarUpload(event)" style="display: none;" />
                         </div>
-                        
+
                         <div style="margin-bottom: 20px;">
                             <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 4px;">NOME E COGNOME</label>
                             <input type="text" id="edit-user-name" value="${state.user.name || ''}" placeholder="Inserisci il tuo nome" style="width: 100%; height: 54px; border-radius: 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: white; padding: 0 16px; font-size: 16px; font-weight: 600; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'">
                         </div>
-                        
+
                         <div style="margin-bottom: 28px; display: flex; gap: 16px;">
                             <div style="flex: 1;">
                                 <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 4px;">CLASSE (Automatica)</label>
@@ -3985,7 +4038,7 @@
                                     <i class="ph-bold ph-lock-simple" style="font-size: 18px; color: var(--text-dim);"></i>
                                 </div>
                             </div>
-                            
+
                             <div style="flex: 1.2;">
                                 <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 4px;">INDIRIZZO</label>
                                 <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.06); padding: 5px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); height: 54px;">
@@ -3998,17 +4051,17 @@
                                 <input type="hidden" id="edit-user-specialization" value="${state.user.specialization || ''}">
                             </div>
                         </div>
-                        
+
                         <p style="font-size: 11px; color: var(--text-dim); margin: -18px 0 24px 4px; line-height: 1.4;">
                             La classe è automatica, ma puoi indicare il tuo indirizzo di studi.
                         </p>
-                        
+
                         <button onclick="saveProfileChanges()" class="btn-primary" style="width: 100%; height: 56px; border-radius: 16px; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
                             <i class="ph-bold ph-check-circle" style="font-size: 22px;"></i> Salva Modifiche
                         </button>
                     </div>
-                </div>
-            `;
+                </div >
+                `;
         }
 
         function selectSpecialization(spec) {
@@ -4016,7 +4069,7 @@
             inputs.forEach(input => input.value = spec);
 
             ['LS', 'SA', 'SU'].forEach(s => {
-                const el = document.getElementById(`spec-${s}`);
+                const el = document.getElementById(`spec - ${s} `);
                 if (el) {
                     if (s === spec) {
                         el.style.background = 'var(--blue)';
@@ -4097,7 +4150,7 @@
             const displayClass = normalizeClassUi(state.user?.class);
 
             return `
-            <div class="view page-bg">
+                < div class="view page-bg" >
                 <!-- Professional Header: Profile + Actions -->
                 <div style="display:flex; justify-content:space-between; align-items:center; padding: 20px 0 10px 0;">
                     <!-- Profile Section (Left) -->
@@ -4128,7 +4181,7 @@
                     </div>
                 </div>
 
-                <!-- 2️⃣ New Search Bar (Home) -->
+                <!--2️⃣ New Search Bar(Home)-- >
                 <div style="padding: 10px 0 15px 0;">
                     <div onclick="navigate('search')" style="display:flex; align-items:center; gap:12px; padding:12px 18px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:16px; color:rgba(255,255,255,0.5); cursor:pointer;">
                         <i class="ph-bold ph-magnifying-glass" style="font-size:18px;"></i>
@@ -4136,7 +4189,7 @@
                     </div>
                 </div>
 
-                <!-- Media + Stress (Advanced Canvas Widgets) -->
+                <!--Media + Stress(Advanced Canvas Widgets)-- >
                 <div class="metrics-grid" style="margin:5px 0 15px 0;">
                     <div class="metric-card stress" onclick="showDetailedStressModal(event)" style="display:flex; flex-direction:column; justify-content:space-between; padding: 16px; cursor:pointer;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -4159,7 +4212,7 @@
                     </div>
                 </div>
 
-                <!-- Organizza Oggi -->
+                <!--Organizza Oggi-- >
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
                     <h2 style="margin:0; text-align:left;">Organizza Oggi</h2>
                     <button onclick="showPlanWeekModal()" class="btn-secondary" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); padding:10px 14px; border-radius: 12px; color: white; font-weight:700; display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
@@ -4186,7 +4239,7 @@
                     </div>
                 </div>
 
-                <!-- Circolari in fondo -->
+                <!--Circolari in fondo-- >
                 <div style="margin-top: 18px;">
                     <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 12px;">
                         <h2 class="circolari-title">Ultime Circolari</h2>
@@ -4210,7 +4263,7 @@
                         `).join('')}
                     </div>
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderCirculars() {
@@ -4220,14 +4273,14 @@
                 { id: 126, title: "Circolare n. 126 - Saldo viaggio d'istruzione", url: "https://www.liceogandhi.edu.it/categoria/storico-circolari/" },
             ];
             return news.map(n => `
-                <div onclick="window.open('${n.url}','_blank')" class="card" style="min-width: 260px; height: 150px; padding: 18px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; margin-bottom:0;">
+                < div onclick = "window.open('${n.url}','_blank')" class="card" style = "min-width: 260px; height: 150px; padding: 18px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; margin-bottom:0;" >
                     <div style="display:flex; align-items:center; gap:8px;">
                         <i class="ph-fill ph-file-pdf" style="color: var(--red); font-size:18px;"></i>
                         <span style="color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 700; text-transform: uppercase;">CIRCOLARE</span>
                     </div>
                     <div style="font-size: 16px; font-weight: 700; line-height: 1.3; color:white; text-align:left;">${n.title}</div>
                     <div style="font-size: 12px; color: var(--blue); font-weight: 700;">Apri documento <i class="ph-bold ph-arrow-up-right" style="font-size:10px;"></i></div>
-                </div>`).join('');
+                </div > `).join('');
         }
 
         function renderTodayPlannerWidget() {
@@ -4238,12 +4291,12 @@
             return plannedTasks.map(t => {
                 const subjectColor = getSubjectColor(t.subject);
                 return `
-                <div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(255,255,255,0.05); border-radius: 12px; border-left: 3px solid ${subjectColor}; margin-bottom: 8px;">
+                < div style = "display:flex; align-items:center; gap:12px; padding:10px; background: rgba(255,255,255,0.05); border-radius: 12px; border-left: 3px solid ${subjectColor}; margin-bottom: 8px;" >
                     <div style="flex:1; min-width:0;">
                         <div style="font-weight:600; font-size:13px; color:white; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.text}</div>
                         <div style="font-size:10px; color:${subjectColor}; font-weight:700; text-transform:uppercase; text-align:left;">${t.subject}</div>
                     </div>
-                </div>`;
+                </div > `;
             }).join('');
         }
 
@@ -4254,7 +4307,7 @@
             const list = [...pinned, ...normal];
 
             return `
-            <div class="view page-bg">
+                < div class="view page-bg" >
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <h1>Market</h1>
                     <button onclick="openNewItemModal()" style="background:var(--green); color:black; padding:8px 16px; border-radius:20px; border:none; font-weight:800; cursor:pointer;">+ Vendi</button>
@@ -4262,26 +4315,27 @@
                 <div class="market-grid">
                     ${list.map(renderMarketCard).join('')}
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderMarketCard(item) {
             const statusClass = item.status || 'available';
             const statusText = statusClass === 'sold' ? 'Venduto' : (statusClass === 'reserved' ? 'Riservato' : 'Disponibile');
             return `
-            <div class="market-card" onclick="openMarketItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                <div class="market-card-img">
-                    ${item.image ? `<img src="${item.image}">` : `<i class="ph ph-image" style="font-size:36px; color:rgba(255,255,255,0.1);"></i>`}
+                < div class="market-card" onclick = "openMarketItemModal(${JSON.stringify(item).replace(/" / g, '&quot;')
+                }) ">
+            < div class="market-card-img" >
+                ${item.image ? `<img src="${item.image}">` : `<i class="ph ph-image" style="font-size:36px; color:rgba(255,255,255,0.1);"></i>`}
+                </div >
+            <div class="market-card-body">
+                <div class="market-price">${item.price}</div>
+                <div class="market-title">${item.title}</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-top:4px;">Venduto da ${item.seller}</div>
+                <div style="margin-top:8px;">
+                    <span class="market-status ${statusClass}">${statusText}</span>
                 </div>
-                <div class="market-card-body">
-                    <div class="market-price">${item.price}</div>
-                    <div class="market-title">${item.title}</div>
-                    <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-top:4px;">Venduto da ${item.seller}</div>
-                    <div style="margin-top:8px;">
-                        <span class="market-status ${statusClass}">${statusText}</span>
-                    </div>
-                </div>
-            </div>`;
+            </div>
+            </div > `;
         }
 
         function getMarketImages(item) {
@@ -4317,7 +4371,7 @@
             const isOwner = item.sellerId === getUserId();
 
             modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
+            < div class="modal-overlay" onclick = "closeModal(event)" >
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:520px; padding:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <h2 style="margin:0;">${item.title}</h2>
@@ -4356,12 +4410,12 @@
                         Questo è il tuo annuncio. Non puoi acquistarlo.
                     </div>`}
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderSearch() {
             return `
-            <div class="view" style="padding-top: 0;">
+            < div class="view" style = "padding-top: 0;" >
                 <div style="display:flex; align-items:center; gap:10px; margin: 10px 0; padding: 0;">
                      <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
                      <h1 style="margin:0; text-align:left;">Ricerca Globale</h1>
@@ -4380,7 +4434,7 @@
                         Inizia a scrivere per cercare...
                     </div>
                 </div>
-            </div>`;
+            </div > `;
         }
 
         // 🔥 EXPERT FIX: Live Supabase query for real users
@@ -4392,14 +4446,14 @@
             if (!list) return;
 
             if (!q.trim()) {
-                list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;"><i class="ph ph-sparkle" style="font-size:32px; margin-bottom:12px; display:block;"></i>Inizia a scrivere per cercare...</div>`;
+                list.innerHTML = `< div style = "text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;" > <i class="ph ph-sparkle" style="font-size:32px; margin-bottom:12px; display:block;"></i>Inizia a scrivere per cercare...</div > `;
                 return;
             }
 
             const query = q.toLowerCase();
 
             // Show loading state immediately
-            list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;"><i class="ph ph-spinner" style="font-size:28px; animation: spin 1s linear infinite;"></i></div>`;
+            list.innerHTML = `< div style = "text-align:center; padding: 40px; color: var(--text-muted); opacity:0.6;" > <i class="ph ph-spinner" style="font-size:28px; animation: spin 1s linear infinite;"></i></div > `;
 
             // Debounce: wait 300ms before querying Supabase
             clearTimeout(_searchDebounceTimer);
@@ -4411,7 +4465,7 @@
                         const { data, error } = await supabaseClient
                             .from('profiles')
                             .select('id, name, class, avatar, specialization')
-                            .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
+                            .or(`name.ilike.% ${q}%, class.ilike.% ${q}% `)
                             .neq('id', getUserId()) // Exclude self
                             .limit(20);
 
@@ -4436,7 +4490,7 @@
                             const uniqueUsers = Array.from(uniqueMap.values());
                             liveUsers = uniqueUsers;
                             state.lastSearchResults = uniqueUsers; // ⭐ Cache grouped results
-                            console.log(`🔍 Live search found ${uniqueUsers.length} unique users (filtered from ${data.length})`);
+                            console.log(`🔍 Live search found ${uniqueUsers.length} unique users(filtered from ${data.length})`);
                         } else if (error) {
                             console.warn("Live search error:", error.message);
                         }
@@ -4452,25 +4506,25 @@
 
                     // Sezione Compiti/Materie
                     if (filteredTasks.length > 0) {
-                        html += `<h3 style="margin-bottom: 12px; text-align:left; color:var(--orange); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Compiti e Materie</h3>`;
+                        html += `< h3 style = "margin-bottom: 12px; text-align:left; color:var(--orange); font-size:12px; text-transform:uppercase; letter-spacing:1px;" > Compiti e Materie</h3 > `;
                         html += filteredTasks.map(t => {
                             const color = getSubjectColor(t.subject);
                             return `
-                            <div onclick="navigate('planner')" style="display: flex; align-items: center; padding: 14px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; border-left: 4px solid ${color};">
+            < div onclick = "navigate('planner')" style = "display: flex; align-items: center; padding: 14px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; border-left: 4px solid ${color};" >
                                 <div style="flex: 1; text-align:left;">
                                     <div style="font-weight: 700; font-size: 15px; color:white;">${t.text}</div>
                                     <div style="color: ${color}; font-size: 11px; font-weight:800; text-transform:uppercase;">${t.subject}</div>
                                 </div>
                                 <i class="ph ph-caret-right" style="color:rgba(255,255,255,0.2);"></i>
-                            </div>`;
+                            </div > `;
                         }).join('');
                     }
 
                     // Sezione Persone (from LIVE Supabase query)
                     if (liveUsers.length > 0) {
-                        html += `<h3 style="margin: 20px 0 12px 0; text-align:left; color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Persone</h3>`;
+                        html += `< h3 style = "margin: 20px 0 12px 0; text-align:left; color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:1px;" > Persone</h3 > `;
                         html += liveUsers.map(u => `
-                            <div onclick="showUserProfile('${u.id}')" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;">
+            < div onclick = "showUserProfile('${u.id}')" style = "display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px; margin-bottom: 10px; cursor:pointer;" >
                                 <div style="position: relative; margin-right: 12px;">
                                     ${renderAvatar(u.name, 44, u.avatar)}
                                 </div>
@@ -4479,18 +4533,18 @@
                                     <div style="color: var(--text-muted); font-size: 12px;">${u.class ? 'Classe ' + u.class : 'Studente'}</div>
                                 </div>
                                 <i class="ph ph-user-circle" style="font-size: 20px; color: var(--blue); opacity:0.8;"></i>
-                            </div>
-                        `).join('');
+                            </div >
+            `).join('');
                     }
 
                     if (html === '') {
-                        html = `<div style="text-align:center; padding: 40px; color: var(--text-muted);">Nessun risultato trovato per "${q}"</div>`;
+                        html = `< div style = "text-align:center; padding: 40px; color: var(--text-muted);" > Nessun risultato trovato per "${q}"</div > `;
                     }
 
                     list.innerHTML = html;
                 } catch (e) {
                     console.error("filterContent error:", e);
-                    list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--red);">Errore durante la ricerca</div>`;
+                    list.innerHTML = `< div style = "text-align:center; padding: 40px; color: var(--red);" > Errore durante la ricerca</div > `;
                 }
             }, 300);
         }
@@ -4498,7 +4552,7 @@
         function renderFeed() {
             const classes = ['Tutte', ...new Set(state.posts.map(p => p.class || '5B'))];
             return `
-            <div class="view page-bg">
+            < div class="view page-bg" >
                 <div style="display:flex; justify-content:space-between; align-items:center; padding: 20px 0 10px 0;">
                     <h1 style="margin:0;">Feed</h1>
                     <button onclick="openNewPostModal()" style="background:var(--blue); color:white; padding:8px 16px; border-radius: 20px; border:none; font-weight:700; cursor:pointer;">+ Post/Sondaggio</button>
@@ -4519,10 +4573,10 @@
 
                 ${renderPollWidget()}
 
-                <div id="feed-posts-container">
-                    ${getFilteredPostsHtml()}
-                </div>
-            </div>`;
+        <div id="feed-posts-container">
+            ${getFilteredPostsHtml()}
+        </div>
+            </div > `;
         }
 
         function getFilteredPostsHtml() {
@@ -4539,7 +4593,7 @@
                 displayPosts = displayPosts.filter(p => (p.author || '').toLowerCase().includes(q) || p.text.toLowerCase().includes(q));
             }
 
-            return displayPosts.length ? displayPosts.map(renderPostCard).join('') : `<div style="text-align:center; opacity:0.5; padding:32px;">Nessun post trovato</div>`;
+            return displayPosts.length ? displayPosts.map(renderPostCard).join('') : `< div style = "text-align:center; opacity:0.5; padding:32px;" > Nessun post trovato</div > `;
         }
 
         function surgicalRefreshFeedList() {
@@ -4551,7 +4605,7 @@
             if (classesContainer) {
                 const classes = ['Tutte', ...new Set(state.posts.map(p => p.class || '5B'))];
                 classesContainer.innerHTML = classes.map(c => `
-                    <button onclick="setFeedClass('${c}')" style="padding:6px 16px; border-radius:16px; border:1px solid ${state.feed.classFilter === c ? 'var(--blue)' : 'rgba(255,255,255,0.2)'}; background:${state.feed.classFilter === c ? 'var(--blue)' : 'transparent'}; color:white; font-weight:700; cursor:pointer; font-size: 13px; white-space:nowrap;">${c}</button>
+            < button onclick = "setFeedClass('${c}')" style = "padding:6px 16px; border-radius:16px; border:1px solid ${state.feed.classFilter === c ? 'var(--blue)' : 'rgba(255,255,255,0.2)'}; background:${state.feed.classFilter === c ? 'var(--blue)' : 'transparent'}; color:white; font-weight:700; cursor:pointer; font-size: 13px; white-space:nowrap;" > ${c}</button >
                 `).join('');
             }
         }
@@ -4561,7 +4615,7 @@
             const searchVal = ''; // DISABLED SEARCH AS REQUESTED
 
             return `
-            <div class="view" style="padding-top:0;">
+                < div class="view" style = "padding-top:0;" >
                 <div style="display:flex; align-items:center; justify-content:space-between; padding: 20px 0 15px 0;">
                      <button onclick="navigate('home')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;"><i class="ph ph-arrow-left"></i></button>
                      <h1 style="margin:0; text-align:center; flex:1; font-weight:800; font-size:20px;">I tuoi messaggi</h1>
@@ -4591,7 +4645,7 @@
                         </div>
                     `}
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderPostCard(post) {
@@ -4600,40 +4654,40 @@
             const commentsCount = (post.comments || []).length;
 
             return `
-            <div class="card feed-post" style="background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius:0; padding: 16px 0; display:flex; gap:12px;">
-                <!-- Left: Avatar Tangent -->
+            < div class="card feed-post" style = "background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius:0; padding: 16px 0; display:flex; gap:12px;" >
+                < !--Left: Avatar Tangent-- >
                 <div style="flex-shrink:0;">
                     ${post.anon ? renderAvatar('Anonimo', 44) : renderAvatar(post.author || 'Utente', 44, post.authorAvatar)}
                 </div>
 
-                <!-- Right: Content Content -->
-                <div style="flex:1; min-width:0;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                        <div style="text-align:left; min-width:0;">
-                            <span style="font-weight:800; color:white; font-size:15px; margin-right:4px;">${post.anon ? 'Anonimo' : (post.author || 'Utente')}</span>
-                            <span style="font-size:14px; color:rgba(255,255,255,0.4);">${post.anon ? '' : (post.class || '')} • ${timeStr}</span>
-                        </div>
-                        <button onclick="togglePinPost(${post.id})" title="Fissa" style="background:none; border:none; color:${post.pinned ? 'var(--yellow)' : 'rgba(255,255,255,0.3)'}; cursor:pointer; padding:0;"><i class="ph-bold ph-pushpin"></i></button>
+                <!--Right: Content Content-- >
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                    <div style="text-align:left; min-width:0;">
+                        <span style="font-weight:800; color:white; font-size:15px; margin-right:4px;">${post.anon ? 'Anonimo' : (post.author || 'Utente')}</span>
+                        <span style="font-size:14px; color:rgba(255,255,255,0.4);">${post.anon ? '' : (post.class || '')} • ${timeStr}</span>
                     </div>
+                    <button onclick="togglePinPost(${post.id})" title="Fissa" style="background:none; border:none; color:${post.pinned ? 'var(--yellow)' : 'rgba(255,255,255,0.3)'}; cursor:pointer; padding:0;"><i class="ph-bold ph-pushpin"></i></button>
+                </div>
 
-                    ${!isPoll ? `<p style="margin: 0 0 10px 0; text-align:left; color:white; font-size:15px; line-height:1.4; white-space: pre-wrap; word-break: break-word;">${post.text}</p>` : renderPoll(post)}
+                ${!isPoll ? `<p style="margin: 0 0 10px 0; text-align:left; color:white; font-size:15px; line-height:1.4; white-space: pre-wrap; word-break: break-word;">${post.text}</p>` : renderPoll(post)}
 
-                    ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:16px; margin: 8px 0 12px 0; border: 1px solid rgba(255,255,255,0.1);">` : ''}
+                ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:16px; margin: 8px 0 12px 0; border: 1px solid rgba(255,255,255,0.1);">` : ''}
 
-                    <div style="display:flex; gap:24px; margin-top:12px;">
-                        ${(() => {
+                <div style="display:flex; gap:24px; margin-top:12px;">
+                    ${(() => {
                     const userId = getUserId();
                     const isLiked = Array.isArray(post.likes) ? post.likes.includes(userId) : !!post.liked;
                     const likesCount = Array.isArray(post.likes) ? post.likes.length : (post.likes || 0);
                     return `<button onclick="toggleLike(${post.id})" style="background:none; border:none; color:${isLiked ? 'var(--red)' : 'rgba(255,255,255,0.4)'}; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; padding:0; font-weight:700;"><i class="${isLiked ? 'ph-fill' : 'ph-bold'} ph-heart" style="font-size:18px;"></i> ${likesCount}</button>`;
                 })()}
-                        
-                        <button onclick="showPostDetail(${post.id})" style="background:none; border:none; color: rgba(255,255,255,0.4); cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; padding:0; font-weight:700;">
-                            <i class="ph-bold ph-chat-circle" style="font-size:18px;"></i> ${commentsCount > 0 ? commentsCount + ' commenti' : 'Commenta'}
-                        </button>
-                    </div>
+
+                    <button onclick="showPostDetail(${post.id})" style="background:none; border:none; color: rgba(255,255,255,0.4); cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; padding:0; font-weight:700;">
+                        <i class="ph-bold ph-chat-circle" style="font-size:18px;"></i> ${commentsCount > 0 ? commentsCount + ' commenti' : 'Commenta'}
+                    </button>
                 </div>
-            </div>`;
+            </div>
+            </div > `;
         }
 
         function showPostDetail(postId) {
@@ -4645,7 +4699,7 @@
 
             const fullDate = formatFullDate(post.created_at || post.timestamp || new Date());
             const commentsHtml = (post.comments || []).map(c => `
-                <div style="display:flex; gap:12px; padding:16px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            < div style = "display:flex; gap:12px; padding:16px 0; border-bottom:1px solid rgba(255,255,255,0.05);" >
                     <div style="flex-shrink:0;">${renderAvatar(c.author || 'Utente', 36, c.author_avatar)}</div>
                     <div style="flex:1; text-align:left;">
                         <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
@@ -4654,11 +4708,11 @@
                         </div>
                         <div style="font-size:14px; color:rgba(255,255,255,0.9); line-height:1.4;">${c.text}</div>
                     </div>
-                </div>
+                </div >
             `).join('');
 
             modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
+            < div class="modal-overlay" onclick = "closeModal(event)" >
                 <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 600px; padding: 0; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px; overflow:hidden; max-height:90vh; display:flex; flex-direction:column;">
                     <!-- Sticky Header -->
                     <div style="position:sticky; top:0; background:rgba(18,18,18,0.8); backdrop-filter:blur(10px); padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-between; z-index:10;">
@@ -4677,7 +4731,7 @@
                         </div>
                         <p style="font-size:18px; line-height:1.5; color:white; text-align:left; margin-bottom:16px; white-space:pre-wrap;">${post.text}</p>
                         ${post.image ? `<img src="${post.image}" style="width:100%; border-radius:16px; margin-bottom:16px; border:1px solid rgba(255,255,255,0.1);">` : ''}
-                        
+
                         <div style="font-size:14px; color:rgba(255,255,255,0.4); padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.05);">
                             ${fullDate}
                         </div>
@@ -4697,16 +4751,16 @@
                     <!-- Add Comment Bar -->
                     <div style="padding:16px 20px; border-top:1px solid rgba(255,255,255,0.05); background:#121212; display:flex; gap:12px; align-items:center;">
                         <input id="detail-comment-input" placeholder="Pubblica la tua risposta" style="flex:1; margin-bottom:0; background:rgba(255,255,255,0.05); border:none; height:44px; border-radius:22px; padding:0 20px; font-size:15px;">
-                        <button onclick="addCommentToPost(${post.id}, 'detail-comment-input')" style="background:var(--primary); color:white; border:none; border-radius:22px; height:44px; padding:0 24px; font-weight:800; cursor:pointer;">Rispondi</button>
+                            <button onclick="addCommentToPost(${post.id}, 'detail-comment-input')" style="background:var(--primary); color:white; border:none; border-radius:22px; height:44px; padding:0 24px; font-weight:800; cursor:pointer;">Rispondi</button>
                     </div>
                 </div>
-            </div>
+            </div >
             `;
         }
 
         // Updated addCommentToPost to handle different inputs
         async function addCommentToPost(postId, inputId = null) {
-            const finalInputId = inputId || `comment-input-${postId}`;
+            const finalInputId = inputId || `comment - input - ${postId} `;
             const input = document.getElementById(finalInputId);
             const text = input ? input.value.trim() : "";
             if (!text) return;
@@ -4742,7 +4796,7 @@
             const votes = post.pollVotes || {};
             const total = Object.values(votes).reduce((a, b) => a + b, 0);
             return `
-            <div style="margin-bottom:12px; text-align:left;">
+            < div style = "margin-bottom:12px; text-align:left;" >
                 <h3 style="margin:0 0 10px 0; font-size:16px; text-align:left; color:white;">${post.text}</h3>
                 ${options.map(opt => {
                 const v = votes[opt] || 0;
@@ -4751,8 +4805,9 @@
                    <div onclick="votePoll(${post.id}, '${opt}')" style="padding:10px 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; margin-bottom:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background: transparent;">
                        <span style="color:white; font-size:14px;">${opt}</span><span style="color:var(--text-muted); font-size:13px;">${pct}%</span>
                    </div>`;
-            }).join('')}
-            </div>`;
+            }).join('')
+                }
+            </div > `;
         }
 
         function renderChatMessage(m) {
@@ -4769,16 +4824,16 @@
                     (isMe ? '<i class="ph ph-check"></i>' : '');
 
             return `
-            <div data-msg-id="${m.id}" class="msg-appear" style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;">
+            < div data - msg - id="${m.id}" class="msg-appear" style = "display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; padding:2px 0;" >
                 <div class="message-bubble ${isMe ? 'msg-me' : 'msg-other'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}">
                     <div style="word-break: break-word;">${m.text}</div>
-                    
+
                     <div class="msg-status">
                         ${timeStr}
                         <span style="margin-left:4px;" class="status-icon">${statusIcon}</span>
                     </div>
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function updateChatUI(mode = 'full') {
@@ -4815,14 +4870,14 @@
                 // 🔥 DIFFERENTIAL RECONCILIATION ENGINE
                 if (msgs.length === 0) {
                     historyEl.innerHTML = `
-                        <div id="empty-state" style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+            < div id = "empty-state" style = "text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;" >
                             <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
                                 <i class="ph ph-chat-circle-dots"></i>
                             </div>
                             <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
                             <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
-                        </div>
-                    `;
+                        </div >
+            `;
                     return;
                 }
 
@@ -4933,18 +4988,18 @@
             const isFirstLoad = !state.chatReady;
 
             const chatContent = msgs.length > 0 ? msgs.map(renderChatMessage).join('') : `
-                <div id="empty-state" style="text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;">
+            < div id = "empty-state" style = "text-align:center; padding:100px 20px; color:var(--text-dim); display:flex; flex-direction:column; align-items:center; gap:16px;" >
                     <div style="width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px;">
                         <i class="ph ph-chat-circle-dots"></i>
                     </div>
                     <p style="margin:0; font-size:15px; font-weight:500;">Inizia la conversazione!</p>
                     <p style="margin:0; font-size:12px; opacity:0.6;">I messaggi sono sicuri e salvati su Supabase</p>
-                </div>
+                </div >
             `;
 
             return `
-            <div class="chat-view">
-                <!-- 🛡️ LOADING SHIELD -->
+            < div class="chat-view" >
+                < !-- 🛡️ LOADING SHIELD-- >
                 <div class="chat-loading-overlay ${state.chatReady ? 'hidden' : ''}">
                     <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
                         <span style="font-weight:600; color:white; font-size:15px; letter-spacing: -0.2px;">Caricamento della chat...</span>
@@ -4982,13 +5037,13 @@
                         <i class="ph-fill ph-paper-plane-right" style="font-size:20px;"></i>
                     </button>
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderPlanner() {
             setTimeout(() => { initPlannerCalendar(); }, 0);
             return `
-                <div class="view" style="padding-bottom: 40px;">
+            < div class="view" style = "padding-bottom: 40px;" >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h1 style="margin: 0;">Planner</h1>
                 </div>
@@ -5009,7 +5064,7 @@
                 <div id="weekly-agenda-list" class="card glass-panel" style="padding: 16px;">
                     ${renderWeeklyAgenda()}
                 </div>
-            </div>`;
+            </div > `;
         }
 
         function renderWeeklyAgenda() {
@@ -5025,15 +5080,15 @@
             // Filtra solo date da oggi in poi
             const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
 
-            if (!filtered.length) return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">Nessun compito pianificato (o già passati).</div>`;
+            if (!filtered.length) return `< div style = "text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;" > Nessun compito pianificato(o già passati).</div > `;
 
             const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             return filtered.map(t => {
                 const d = new Date(t.plannedDate);
-                const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
+                const label = `${dayNames[d.getDay()]} ${d.getDate()} `;
                 const subjectColor = getSubjectColor(t.subject);
                 return `
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+            < div style = "display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;" >
                     <div style="min-width: 54px; font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase;">${label}</div>
                     <div onclick="toggleTask('${t.id}')" style="width: 22px; height: 22px; border: 2px solid ${t.done ? 'var(--green)' : subjectColor}; background: ${t.done ? 'var(--green)' : 'transparent'}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                         ${t.done ? '<i class="ph-bold ph-check" style="font-size: 14px; color: black;"></i>' : ''}
@@ -5042,7 +5097,7 @@
                         <div style="font-size: 15px; color: white; font-weight: 500; ${t.done ? 'text-decoration: line-through; opacity: 0.4;' : ''}">${t.text}</div>
                         <div style="font-size: 11px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${t.subject}</div>
                     </div>
-                </div>`;
+                </div > `;
             }).join('');
         }
 
@@ -5054,25 +5109,25 @@
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
             modalContainer.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-                            <h2 style="margin:0;">Stress Giornaliero</h2>
-                            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
-                        </div>
-                        <div class="stress-level-grid">
-                            ${[1, 2, 3, 4, 5].map(lv => `
+            < div class="modal-overlay" onclick = "closeModal(event)" >
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                        <h2 style="margin:0;">Stress Giornaliero</h2>
+                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
+                    </div>
+                    <div class="stress-level-grid">
+                        ${[1, 2, 3, 4, 5].map(lv => `
                             <div class="stress-pill ${currentLevel === lv ? 'active' : ''}" 
                                 data-stress="${lv}" 
                                 onclick="event.stopPropagation(); setStressLevel(${lv}, true)">
                             ${lv}
                             </div>`).join('')}
-                        </div>
-                        <div style="display:flex; justify-content:center; margin-top: 16px;">
-                            <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
-                        </div>
                     </div>
-                </div>`;
+                    <div style="display:flex; justify-content:center; margin-top: 16px;">
+                        <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
+                    </div>
+                </div>
+                </div > `;
         }
 
         // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
@@ -5102,7 +5157,7 @@
             const month = months[date.getMonth()];
             const year = date.getFullYear();
             const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-            return `${day} ${month} ${year} • ${time}`;
+            return `${day} ${month} ${year} • ${time} `;
         }
         function showStressDetailsModal() {
             const days = 14;
@@ -5119,31 +5174,31 @@
                 const lv = state.stressLevels[iso] || 0;
                 points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
             }
-            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)).join(' ');
+            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
 
             modalContainer.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                            <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
-                            <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
-                        </div>
-                        <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                            <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
-                                <defs>
-                                    <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65" /><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0" />
-                                    </linearGradient>
-                                </defs>
-                                <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round" />
-                                <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)" />
-                            </svg>
-                        </div>
-                        <div style="display:flex; gap:8px; margin-top:12px;">
-                            ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
-                        </div>
+            < div class="modal-overlay" onclick = "closeModal(event)" >
+                <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
+                        <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
                     </div>
-                </div>`;
+                    <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65" /><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0" />
+                                </linearGradient>
+                            </defs>
+                            <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round" />
+                            <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)" />
+                        </svg>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                        ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
+                    </div>
+                </div>
+                </div > `;
         }
 
         // setStressLevel(lv, inModal): aggiorna fluido
@@ -5181,19 +5236,18 @@
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
 
-            // ✅ FIX: Inizia da OGGI, non dal lunedì della settimana corrente
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const todayStr = getLocalDateStr();
+            const todayDate = new Date();
 
-            // Genera i prossimi 7 giorni a partire da oggi
             const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             const next7Days = [];
             for (let i = 0; i < 7; i++) {
-                const d = new Date(today);
-                d.setDate(today.getDate() + i);
+                const d = new Date(todayDate);
+                d.setDate(todayDate.getDate() + i);
+                const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
                 next7Days.push({
                     date: d,
-                    dateStr: d.toISOString().split('T')[0],
+                    dateStr: ds,
                     label: dayLabels[d.getDay()],
                     dayNum: d.getDate()
                 });
@@ -5211,8 +5265,8 @@
                             <div style="background: rgba(255,255,255,0.08); padding: 16px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 4px;">
                                 <div style="font-size: 11px; font-weight: 800; color: var(--blue); text-transform: uppercase; margin-bottom: 8px;">Crea Quest Settimanale</div>
                                 <div style="display: flex; gap: 8px;">
-                                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 42px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom:0;">
-                                    <select id="quest-date-select" style="width: 80px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 8px; font-weight:700;">
+                                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 42px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 12px;">
+                                    <select id="quest-date-select" style="width: 100px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 8px; font-weight:700;">
                                         ${next7Days.map(d => `<option value="${d.dateStr}">${d.label} ${d.dayNum}</option>`).join('')}
                                     </select>
                                     <button onclick="addCustomQuestFromInput()" style="width: 42px; height: 42px; background: var(--blue); color:white; border:none; border-radius: 12px; cursor:pointer;">
@@ -5230,7 +5284,7 @@
                                     <div style="display: flex; justify-content: space-between; gap: 4px;">
                                          ${next7Days.map(day => {
                     const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
-                    const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+                    const isToday = day.dateStr === todayStr;
                     return `
                                                 <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                                     onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
@@ -5253,12 +5307,8 @@
 
         function togglePlanDay(taskId, dateStr) {
             if (event) event.stopPropagation();
-            const selectedDate = new Date(dateStr);
-            selectedDate.setHours(0, 0, 0, 0);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (selectedDate < today) return;
+            const today = getLocalDateStr();
+            if (dateStr < today) return;
 
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             const index = state.plannedTasks[dateStr].indexOf(taskId);
@@ -5311,7 +5361,11 @@
             saveTasks();
             savePlannerRemote();
             debouncedSavePlannerRemote();
-            showPlanWeekModal(); // Re-render to show quest and clear input
+
+            // ✅ Feedback & UI Live Update
+            showToast("Compito aggiunto!");
+            notifyPlannerChanged(); // Aggiorna Home e agenda in background
+            showPlanWeekModal(); // Rigenera modal per svuotare input e mostrare task
         }
 
         /* Feed & Market Interactions */
@@ -5329,12 +5383,12 @@
 
 
         function toggleItemCommentBox(id) {
-            const el = document.getElementById(`item-comment-box-${id}`);
+            const el = document.getElementById(`item - comment - box - ${id} `);
             if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
         async function addCommentToItem(id) {
-            const input = document.getElementById(`item-comment-input-${id}`);
+            const input = document.getElementById(`item - comment - input - ${id} `);
             if (!input || !input.value.trim()) return;
             const item = state.marketItems.find(i => i.id === id);
             if (item) {
@@ -5346,7 +5400,7 @@
                 render();
 
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/market/${id}/comment`, {
+                    const res = await fetch(`${API_BASE_URL} /api/market / ${id}/comment`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(comment)
