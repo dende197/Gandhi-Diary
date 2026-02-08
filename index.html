@@ -2692,6 +2692,38 @@
         // Autosave/verify periodico
         setInterval(() => { debouncedSavePlannerRemote(0); if (typeof saveTasksSnapshotRemote === 'function') saveTasksSnapshotRemote(); verifyAndRepairPlanner(); }, 45000);
 
+        function showToast(message) {
+            const existing = document.getElementById('g-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'g-toast';
+            toast.style = `
+                position: fixed;
+                bottom: 110px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--blue);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 50px;
+                font-weight: 700;
+                font-size: 14px;
+                z-index: 9999;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            `;
+            toast.innerHTML = '<i class="ph-bold ph-check-circle" style="margin-right:8px;"></i>' + message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(20px)';
+                toast.style.transition = 'all 0.4s ease-in';
+                setTimeout(() => toast.remove(), 400);
+            }, 1800);
+        }
+
         function isFutureOrToday(dateStr) {
             const todayStr = getLocalDateStr();
             return dateStr >= todayStr;
