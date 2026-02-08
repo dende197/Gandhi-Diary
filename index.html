@@ -3679,6 +3679,9 @@
             // lista "Agenda della settimana" in Planner
             if (typeof updateWeeklyAgendaView === 'function') updateWeeklyAgendaView();
 
+            // ✅ Aggiorna il calendario custom
+            if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+
             // colori/stato eventi calendario
             const calendarEl = document.getElementById('calendar');
             if (calendarEl && calendarEl._fullCalendar) {
