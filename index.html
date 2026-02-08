@@ -6,7 +6,6 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>G-Connect</title>
-    <meta name="color-scheme" content="only dark">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Forza coerenza della system bar su Android/Samsung per entrambe le modalità -->
@@ -77,7 +76,6 @@
 
     <style>
         :root {
-            color-scheme: only dark;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
             --safe-right: env(safe-area-inset-right, 0px);
@@ -398,12 +396,10 @@
         }
 
 
-        /* 1) BULLETPROOF DARK MODE: Tell browser this page is ALWAYS dark */
+        /* 1) Comunica al browser che la pagina è già dark: evita auto-darkening */
         html {
-            color-scheme: only dark;
-            forced-color-adjust: none;
-            -webkit-text-size-adjust: 100%;
-            background-color: #020617 !important;
+            color-scheme: dark;
+            background: #000;
         }
 
         /* 2) Gradiente globale più ricco di blu, sempre attivo */
@@ -412,7 +408,7 @@
             position: fixed;
             inset: 0;
             z-index: -1;
-            background: linear-gradient(135deg, #020617 0%, #0a1128 55%, #1e3a8a 100%) !important;
+            background: linear-gradient(135deg, #020617 0%, #0a1128 55%, #1e3a8a 100%);
             background-attachment: fixed;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
@@ -423,8 +419,7 @@
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             min-height: 100dvh;
-            background-color: #020617 !important;
-            color: #ffffff !important;
+            color: var(--text-main);
             font-family: 'Rubik', 'Urbanist', -apple-system, system-ui, sans-serif;
         }
 
@@ -432,7 +427,7 @@
             height: auto;
             overflow: visible;
             width: 100%;
-            background-color: transparent;
+            /* Using 100% instead of 100vw to avoid scrollbar-induced decentering on desktop */
             padding-top: var(--safe-top);
             padding-bottom: calc(140px + var(--safe-bottom));
             transition: opacity 0.15s ease-out;
@@ -474,33 +469,10 @@
 
         /* 4) Rafforza un po’ i border/contrast quando il sistema è in dark */
         @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #020617;
-                color: white;
-            }
 
             .card,
             .glass-panel {
                 background: #0f0f0f;
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-        }
-
-        @media (prefers-color-scheme: light) {
-
-            html,
-            body {
-                background-color: #020617 !important;
-                color: #ffffff !important;
-            }
-
-            body::before {
-                background: linear-gradient(135deg, #020617 0%, #0a1128 55%, #1e3a8a 100%) !important;
-            }
-
-            .card,
-            .glass-panel {
-                background: #0f0f0f !important;
                 border-color: rgba(255, 255, 255, 0.1);
             }
         }
