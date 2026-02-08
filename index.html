@@ -2680,6 +2680,8 @@
             try {
                 const localPT = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
                 const localSL = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+                const localGauge = JSON.parse(localStorage.getItem(lsKey('gauge_state')) || 'null');
+                if (localGauge && !state.__mediaGauge) state.__mediaGauge = localGauge;
                 if ((Object.keys(state.plannedTasks || {}).length === 0) && Object.keys(localPT).length > 0) {
                     state.plannedTasks = localPT; notifyPlannerChanged();
                     console.log("🔁 Ripristino plannedTasks da cache");
@@ -3068,6 +3070,9 @@
                     localStorage.setItem(lsKey('tasks'), JSON.stringify(tasksToSave));
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels || {}));
+                    if (state.__mediaGauge) {
+                        localStorage.setItem(lsKey('gauge_state'), JSON.stringify(state.__mediaGauge));
+                    }
                     localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents || {}));
 
                     console.log("💾 Salvato profilo:", tasksToSave.length, "tasks");
@@ -7312,7 +7317,6 @@
             renderStressWave(level);
         }
 
-        /* 3B) MEDIA: gauge semicircolare animato (valore 0-10) */
         function renderMediaGauge(target = 0) {
             const canvas = document.getElementById('mediaGaugeCanvas');
             const valueEl = document.getElementById('mediaValue');
@@ -7320,82 +7324,79 @@
 
             const { ctx, rect } = setupCanvas(canvas);
             const W = rect.width, H = rect.height;
-
             const cx = W / 2, cy = H * 0.95;
             const radius = Math.min(W, H * 2) / 2.3;
             const start = Math.PI;
             const endMax = 2 * Math.PI;
             const lineW = 12;
 
-            // Idempotency: use global state to avoid stacked loops
             if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
-
-            // If target is the same and we are already animating or finished, skip re-init
-            if (state.__mediaGauge.target === target && __mediaGaugeRAF) return;
-            state.__mediaGauge.target = target;
 
             function arcGradient(val) {
                 const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-                if (val >= 6) {
-                    g.addColorStop(0, '#30D158');
-                    g.addColorStop(1, '#61e26c');
-                } else if (val >= 5) {
-                    g.addColorStop(0, '#FF9F0A');
-                    g.addColorStop(1, '#ffb340');
-                } else {
-                    g.addColorStop(0, '#FF453A');
-                    g.addColorStop(1, '#ff6b63');
-                }
+                if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
+                else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
+                else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
                 return g;
             }
 
-            if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
-
-            function draw() {
-                if (!document.getElementById('mediaGaugeCanvas')) {
-                    cancelAnimationFrame(__mediaGaugeRAF);
-                    __mediaGaugeRAF = null;
-                    return;
-                }
+            function drawFrame(currentVal) {
                 ctx.clearRect(0, 0, W, H);
-
-                // fondo ghost
                 ctx.lineWidth = lineW;
                 ctx.lineCap = 'round';
                 ctx.strokeStyle = 'rgba(255,255,255,0.06)';
                 ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
 
-                // progress
-                const progress = (state.__mediaGauge.current / 10);
+                const progress = (currentVal / 10);
                 const end = start + progress * Math.PI;
-                ctx.lineWidth = lineW;
-                ctx.strokeStyle = arcGradient(state.__mediaGauge.current);
+                ctx.strokeStyle = arcGradient(currentVal);
                 ctx.shadowColor = 'rgba(0,0,0,0.15)';
                 ctx.shadowBlur = 4;
                 ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
 
-                // knob
                 const knobX = cx + radius * Math.cos(end);
                 const knobY = cy + radius * Math.sin(end);
                 ctx.fillStyle = '#ffffff';
                 ctx.shadowBlur = 6;
                 ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
 
-                valueEl.textContent = (Math.round(state.__mediaGauge.current * 100) / 100).toFixed(2);
-                valueEl.style.color = state.__mediaGauge.current >= 6 ? 'var(--green)' : (state.__mediaGauge.current >= 5 ? 'var(--orange)' : 'var(--red)');
+                valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
+                valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
+            }
 
-                const diff = target - state.__mediaGauge.current;
-                if (Math.abs(diff) < 0.001) {
-                    state.__mediaGauge.current = target;
-                    valueEl.textContent = target.toFixed(2);
+            // Se siamo già a target, disegna frame fisso e stop
+            if (state.__mediaGauge.target === target && Math.abs(state.__mediaGauge.current - target) < 0.005) {
+                state.__mediaGauge.current = target;
+                drawFrame(target);
+                if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
+                __mediaGaugeRAF = null;
+                return;
+            }
+
+            state.__mediaGauge.target = target;
+            if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
+
+            function animate() {
+                if (!document.getElementById('mediaGaugeCanvas')) {
                     __mediaGaugeRAF = null;
                     return;
                 }
-
-                state.__mediaGauge.current += diff * 0.05; // Fluid easing
-                __mediaGaugeRAF = requestAnimationFrame(draw);
+                const diff = target - state.__mediaGauge.current;
+                if (Math.abs(diff) < 0.005) {
+                    state.__mediaGauge.current = target;
+                    drawFrame(target);
+                    __mediaGaugeRAF = null;
+                    saveTasks(); // Persisti lo stato finale
+                    return;
+                }
+                state.__mediaGauge.current += diff * 0.08;
+                drawFrame(state.__mediaGauge.current);
+                __mediaGaugeRAF = requestAnimationFrame(animate);
             }
-            __mediaGaugeRAF = requestAnimationFrame(draw);
+
+            // Disegna subito il primo frame per evitare flicker (blank canvas)
+            drawFrame(state.__mediaGauge.current);
+            __mediaGaugeRAF = requestAnimationFrame(animate);
         }
 
         /* 3C) API semplici per aggiornare i widget in runtime */
