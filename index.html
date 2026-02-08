@@ -5551,30 +5551,33 @@
 
         function renderProfile() {
             return `
-            <div class="view">
-                <h1>Il Mio Profilo</h1>
-                <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-                    ${renderAvatar(state.user.name, 64, state.user.avatar)}
-                    <div style="flex:1; text-align:left;">
-                        <div style="font-size:20px; font-weight:800; color:white;">${state.user.name || 'Utente'}</div>
-                        <div style="font-size:14px; color:var(--text-muted);">
+            <div class="view" style="padding-bottom: 40px; display: flex; flex-direction: column; align-items: center;">
+                <div style="display: flex; justify-content: center; align-items: center; padding-top: 20px; margin-bottom: 20px; width: 100%;">
+                    <h1 style="margin: 0; text-align: center;">Il Mio Profilo</h1>
+                </div>
+
+                <div class="card" style="padding:20px; display:flex; flex-direction: column; align-items:center; gap:16px; margin-bottom:16px; width: 100%;">
+                    ${renderAvatar(state.user.name, 80, state.user.avatar)}
+                    <div style="text-align:center;">
+                        <div style="font-size:22px; font-weight:800; color:white; margin-bottom: 4px;">${state.user.name || 'Utente'}</div>
+                        <div style="font-size:15px; color:var(--text-muted); font-weight: 600;">
                         Classe ${(normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : '')}
                         </div>
                     </div>
                 </div>
 
-                <div class="card" style="padding:16px; margin-bottom:16px;">
+                <div class="card" style="padding:16px; margin-bottom:16px; width: 100%; text-align: center;">
                     <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:12px;">Connessione DidUP</div>
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap: 8px; margin-bottom:12px;">
                         <span style="font-size:14px; color:white;">Stato:</span>
                         <span style="font-size:14px; font-weight:700; color:${state.didup.connected ? 'var(--green)' : 'var(--red)'};">${state.didup.connected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
                     </div>
                     ${state.lastSync ? `<div style="font-size:12px; color:var(--text-muted);">Ultima sincronizzazione: ${state.lastSync}</div>` : ''}
                 </div>
 
-                <button onclick="logout()" class="btn-primary" style="background:#333; margin-bottom:12px; color:var(--red);">Esci e Disconnetti</button>
-                <div style="display:flex; gap:12px; margin-bottom:12px;">
-                    <button onclick="forceAppUpdate()" class="btn-secondary" style="flex:1; height:46px; border-radius:12px; font-weight:700; background:rgba(255, 99, 71, 0.1); color:tomato; border:1px solid rgba(255, 99, 71, 0.2); cursor:pointer;">Svuota Cache</button>
+                <div style="width: 100%; display: flex; flex-direction: column; gap: 12px;">
+                    <button onclick="logout()" class="btn-primary" style="background:rgba(255,255,255,0.05); color:var(--red); border: 1px solid rgba(255, 69, 58, 0.2);">Esci e Disconnetti</button>
+                    <button onclick="forceAppUpdate()" class="btn-secondary" style="height:46px; border-radius:12px; font-weight:700; background:rgba(255, 99, 71, 0.1); color:tomato; border:1px solid rgba(255, 99, 71, 0.2); cursor:pointer;">Svuota Cache</button>
                 </div>
             </div>`;
         }
