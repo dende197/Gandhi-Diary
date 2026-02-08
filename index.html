@@ -397,44 +397,11 @@
 
 
         /* 1) Comunica al browser che la pagina è già dark: evita auto-darkening */
-        html {
-            color-scheme: dark;
-            background: #000;
-        }
-
-        /* 2) Gradiente globale più ricco di blu, sempre attivo */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: linear-gradient(135deg, #020617 0%, #0a1128 55%, #1e3a8a 100%);
-            background-attachment: fixed;
-            transform: translateZ(0);
-            -webkit-transform: translateZ(0);
-        }
-
-        body {
-            overflow-y: auto;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-            min-height: 100dvh;
-            color: var(--text-main);
-            font-family: 'Rubik', 'Urbanist', -apple-system, system-ui, sans-serif;
-        }
-
-        #app {
-            height: auto;
-            overflow: visible;
-            width: 100%;
-            /* Using 100% instead of 100vw to avoid scrollbar-induced decentering on desktop */
-            padding-top: var(--safe-top);
-            padding-bottom: calc(140px + var(--safe-bottom));
-            transition: opacity 0.15s ease-out;
-        }
-
-        /* 🚀 HIDE GLOBAL SCROLLBAR */
-        * {
+        /* 🚀 GLOBAL RESET & SCROLL LOCK */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
             scrollbar-width: none !important;
             -ms-overflow-style: none !important;
         }
@@ -445,10 +412,28 @@
             height: 0 !important;
         }
 
+        html,
+        html,
+        body {
+            width: 100%;
+            overflow-x: hidden;
+            overscroll-behavior-x: none;
+            position: relative;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            color-scheme: dark;
+            background: #000;
+        }
+
         .view {
             min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 96px);
-            padding: 0 4px;
-            /* Remove contain:layout to avoid scroll-click deadlocks in complex flex layouts */
+            padding: 0 4px !important;
+            width: 100%;
+            overflow-x: hidden;
+            overscroll-behavior-x: none;
         }
 
         /* 3) Pannelli glass: blocca qualsiasi “auto-darkening” involontario */
