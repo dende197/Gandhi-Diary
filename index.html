@@ -4473,8 +4473,37 @@
         }
 
         function renderFeed() {
-            let displayPosts = [...state.posts];
+            const classes = ['Tutte', ...new Set(state.posts.map(p => p.class || '5B'))];
+            return `
+            <div class="view">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 16px 0 12px 0;">
+                    <h1 style="margin:0;">Feed</h1>
+                    <button onclick="openNewPostModal()" style="background:var(--blue); color:white; padding:8px 16px; border-radius: 20px; border:none; font-weight:700; cursor:pointer;">+ Post/Sondaggio</button>
+                </div>
 
+                <div style="position:relative; margin-bottom:12px;">
+                    <i class="ph ph-magnifying-glass" style="position:absolute; left:12px; top:10px; color: var(--text-muted); font-size:18px;"></i>
+                    <input id="feed-search-input" type="text" placeholder="Cerca persone o post..." value="${state.feed.search || ''}" 
+                        oninput="updateFeedSearch(this.value)" 
+                        style="padding-left:38px; margin-bottom:0; height:38px; background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:white;">
+                </div>
+
+                <div id="feed-classes-container" style="display:flex; gap:8px; overflow-x:auto; margin-bottom: 20px; padding-bottom:6px; scrollbar-width:none;">
+                    ${classes.map(c => `
+                        <button onclick="setFeedClass('${c}')" style="padding:6px 16px; border-radius:16px; border:1px solid ${state.feed.classFilter === c ? 'var(--blue)' : 'rgba(255,255,255,0.2)'}; background:${state.feed.classFilter === c ? 'var(--blue)' : 'transparent'}; color:white; font-weight:700; cursor:pointer; font-size: 13px; white-space:nowrap;">${c}</button>
+                    `).join('')}
+                </div>
+
+                ${renderPollWidget()}
+
+                <div id="feed-posts-container">
+                    ${getFilteredPostsHtml()}
+                </div>
+            </div>`;
+        }
+
+        function getFilteredPostsHtml() {
+            let displayPosts = [...state.posts];
             // Pinned first
             const pinned = displayPosts.filter(p => p.pinned);
             const normal = displayPosts.filter(p => !p.pinned);
@@ -4487,34 +4516,21 @@
                 displayPosts = displayPosts.filter(p => (p.author || '').toLowerCase().includes(q) || p.text.toLowerCase().includes(q));
             }
 
-            const classes = ['Tutte', ...new Set(state.posts.map(p => p.class || '5B'))];
+            return displayPosts.length ? displayPosts.map(renderPostCard).join('') : `<div style="text-align:center; opacity:0.5; padding:32px;">Nessun post trovato</div>`;
+        }
 
-            return `
-            <div class="view">
-                <div style="display:flex; justify-content:space-between; align-items:center; padding: 16px 0 12px 0;">
-                    <h1 style="margin:0;">Feed</h1>
-                    <button onclick="openNewPostModal()" style="background:var(--blue); color:white; padding:8px 16px; border-radius: 20px; border:none; font-weight:700; cursor:pointer;">+ Post/Sondaggio</button>
-                </div>
+        function surgicalRefreshFeedList() {
+            const postsContainer = document.getElementById('feed-posts-container');
+            const classesContainer = document.getElementById('feed-classes-container');
 
-                <div style="position:relative; margin-bottom:12px;">
-                    <i class="ph ph-magnifying-glass" style="position:absolute; left:12px; top:10px; color: var(--text-muted); font-size:18px;"></i>
-                    <input id="feed-search-input" type="text" placeholder="Cerca persone o post..." value="${state.feed.search}" 
-                        oninput="updateFeedSearch(this.value)" 
-                        style="padding-left:38px; margin-bottom:0; height:38px; background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:white;">
-                </div>
+            if (postsContainer) postsContainer.innerHTML = getFilteredPostsHtml();
 
-                <div style="display:flex; gap:8px; overflow-x:auto; margin-bottom: 20px; padding-bottom:6px; scrollbar-width:none;">
-                    ${classes.map(c => `
-                        <button onclick="setFeedClass('${c}')" style="padding:6px 16px; border-radius:16px; border:1px solid ${state.feed.classFilter === c ? 'var(--blue)' : 'rgba(255,255,255,0.2)'}; background:${state.feed.classFilter === c ? 'var(--blue)' : 'transparent'}; color:white; font-weight:700; cursor:pointer; font-size: 13px; white-space:nowrap;">${c}</button>
-                    `).join('')}
-                </div>
-
-                ${renderPollWidget()}
-
-                <div id="feed-posts-container">
-                    ${displayPosts.length ? displayPosts.map(renderPostCard).join('') : `<div style="text-align:center; opacity:0.5; padding:32px;">Nessun post</div>`}
-                </div>
-            </div>`;
+            if (classesContainer) {
+                const classes = ['Tutte', ...new Set(state.posts.map(p => p.class || '5B'))];
+                classesContainer.innerHTML = classes.map(c => `
+                    <button onclick="setFeedClass('${c}')" style="padding:6px 16px; border-radius:16px; border:1px solid ${state.feed.classFilter === c ? 'var(--blue)' : 'rgba(255,255,255,0.2)'}; background:${state.feed.classFilter === c ? 'var(--blue)' : 'transparent'}; color:white; font-weight:700; cursor:pointer; font-size: 13px; white-space:nowrap;">${c}</button>
+                `).join('');
+            }
         }
 
         function renderMessages() {
@@ -6840,28 +6856,12 @@
 
         function updateFeedSearch(value) {
             state.feed.search = value;
-            const activeId = document.activeElement.id;
-            const start = document.activeElement.selectionStart;
-            const end = document.activeElement.selectionEnd;
-
-            render();
-
-            if (activeId) {
-                setTimeout(() => {
-                    const el = document.getElementById(activeId);
-                    if (el) {
-                        el.focus();
-                        if (start !== null && start !== undefined && el.setSelectionRange) {
-                            el.setSelectionRange(start, end);
-                        }
-                    }
-                }, 10);
-            }
+            surgicalRefreshFeedList();
         }
 
         function setFeedClass(c) {
             state.feed.classFilter = c;
-            render();
+            surgicalRefreshFeedList();
         }
 
         function showOrganizeStudyModal() {
