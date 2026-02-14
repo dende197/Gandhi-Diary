@@ -5410,7 +5410,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             const maxRetries = 3;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiKey}`;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${state.geminiKey}`;
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -5538,12 +5538,20 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 const currentLvl = state.prepLevels[s] || 3;
                 return `
-                            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
-                                <span style="font-size:13px; color:white; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:12px;">${s}</span>
-                                <div style="display:flex; gap:6px; flex-shrink:0; align-items:center;">
-                                    ${[1, 2, 3, 4, 5].map(lvl => `
-                                        <div onclick="setPrepLevel('${safeS}', ${lvl})" style="width:32px; height:32px; border-radius:8px; background:${currentLvl >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${currentLvl >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.1)'}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:${currentLvl >= lvl ? 'white' : 'rgba(255,255,255,0.3)'};">${lvl}</div>
-                                    `).join('')}
+                            <div style="display:flex; flex-direction:column; gap:8px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:13px; color:white; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:12px;">${s}</span>
+                                    <span style="font-size:12px; font-weight:800; color:var(--blue); min-width:60px; text-align:right;">Lv. ${currentLvl} / 5</span>
+                                </div>
+                                <div style="display:flex; gap:12px; align-items:center; margin-top:4px;">
+                                    <input type="range" min="1" max="5" step="1" value="${currentLvl}" 
+                                        onchange="setPrepLevel('${safeS}', parseInt(this.value))"
+                                        style="flex:1; height:6px; -webkit-appearance:none; background:rgba(255,255,255,0.1); border-radius:10px; outline:none;">
+                                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                                        ${[1, 2, 3, 4, 5].map(lvl => `
+                                            <div onclick="setPrepLevel('${safeS}', ${lvl})" style="width:28px; height:28px; border-radius:6px; background:${currentLvl >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.06)'}; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:${currentLvl >= lvl ? 'white' : 'rgba(255,255,255,0.2)'}; cursor:pointer;">${lvl}</div>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             </div>`;
             }).join('')}
