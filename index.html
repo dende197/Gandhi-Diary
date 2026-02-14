@@ -1659,10 +1659,9 @@
     <div id="offline-badge" class="offline-badge">📡 Offline Mode</div>
 
     <nav id="bottom-nav" class="nav-bar" style="justify-content: space-around;">
-        <button class="nav-item active" onclick="navigate('planner')"><i class="ph-fill ph-calendar-check"></i></button>
+        <button class="nav-item active" onclick="navigate('home')"><i class="ph-fill ph-house"></i></button>
+        <button class="nav-item" onclick="navigate('planner')"><i class="ph-fill ph-calendar-check"></i></button>
         <button class="nav-item" onclick="navigate('voti')"><i class="ph-fill ph-chart-line-up"></i></button>
-        <button class="nav-item" onclick="navigate('market')"><i class="ph-fill ph-shopping-bag"></i></button>
-        <button class="nav-item" onclick="navigate('profile')"><i class="ph-fill ph-user-circle"></i></button>
     </nav>
 
     <script>
@@ -3196,7 +3195,7 @@
             if (shouldRender) render();
         }
         // Router & Loader helpers
-        const allowedViews = ['home', 'planner', 'voti'];
+        const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile'];
 
         function currentViewFromHash() {
             const v = (location.hash || '').replace('#', '').trim();
@@ -3265,8 +3264,6 @@
             state.view = v;
             saveNavigationState();
             render();
-
-            render();
         }
 
         window.addEventListener('hashchange', () => {
@@ -3306,17 +3303,39 @@
             // View Switcher logic
             let html = '';
             switch (state.view) {
+                case 'home': html = renderHome(); break;
                 case 'planner': html = renderPlanner(); break;
                 case 'voti': html = renderGradesView(); break;
                 case 'market': html = renderMarket(); break;
                 case 'ai_assistant': html = renderAIAssistantView(); break;
                 case 'academic_profile': html = renderAcademicProfile(); break;
                 case 'profile': html = renderProfile(); break;
-                default: html = renderPlanner(); break;
+                default: html = renderHome(); break;
             }
 
             root.innerHTML = html;
             updateOfflineBadge();
+
+            // Post-render hooks for canvas widgets and charts
+            if (state.view === 'home') {
+                const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
+                setTimeout(() => {
+                    initStressWaveFromState();
+                    if (typeof renderMediaGauge === 'function') {
+                        renderMediaGauge(mediaVal);
+                    }
+                }, 0);
+            }
+            if (state.view === 'planner') {
+                setTimeout(() => renderCustomCalendar(), 0);
+            }
+            if (state.view === 'voti') {
+                setTimeout(() => {
+                    if (typeof initGradesCharts === 'function') {
+                        initGradesCharts();
+                    }
+                }, 0);
+            }
         }
 
         function updatePlanTaskUI(taskId, isPlanned) {
@@ -4087,8 +4106,123 @@
         window.showUserProfile = showUserProfile;
 
         function renderHome() {
-            // Social home is retired. Redirect to Planner.
-            return renderPlanner();
+            const todayStr = new Date().toISOString().split('T')[0];
+            const plannedIds = state.plannedTasks[todayStr] || [];
+            const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
+            const media = calcolaMedia(state.voti);
+            const m = media ? parseFloat(media) : 0;
+
+            // Estrai classe normalizzata
+            const displayClass = normalizeClassUi(state.user?.class);
+
+            return `
+            <div class="view page-bg">
+                <!-- Professional Header: Profile + Actions -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 20px 0 10px 0;">
+                    <!-- Profile Section (Left) -->
+                    <div onclick="showEditProfileModal()" style="display:flex; align-items:center; gap:14px; cursor:pointer; flex: 1; min-width: 0;">
+                        <div style="position:relative; flex-shrink: 0;">
+                            ${renderAvatar(state.user?.name, 52, state.user?.avatar)}
+                            <div style="position:absolute; bottom:-2px; right:-2px; background:#000; border-radius:50%; padding:2px;">
+                                <div style="width:12px; height:12px; background:var(--green); border-radius:50%; border:2px solid #000;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; min-width:0; flex: 1;">
+                            <div style="font-size:19px; font-weight:800; color:#fff; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                ${state.user?.name || 'Utente'}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px; min-width: 0;">
+                                ${displayClass ? `<span style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${displayClass}</span>` : ''}
+                                ${state.lastSync ? `<span style="font-size:11px; color:rgba(255,255,255,0.4); flex-shrink: 0;">• ${state.lastSync}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Icons (Right) -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button onclick="navigate('ai_assistant')" style="width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 4px 12px rgba(124,58,237,0.3);">
+                            <i class="ph-bold ph-magic-wand" style="font-size:20px;"></i>
+                        </button>
+                        <button onclick="navigate('profile')" style="width:42px; height:42px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <i class="ph-bold ph-gear" style="font-size:20px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Media + Stress (Advanced Canvas Widgets) -->
+                <div class="metrics-grid" style="margin:5px 0 15px 0;">
+                    <div class="metric-card stress" onclick="showDetailedStressModal(event)" style="display:flex; flex-direction:column; justify-content:space-between; padding: 16px; cursor:pointer;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div class="title" style="position:static; margin-bottom:0;">Stress</div>
+                            <div style="font-size:11px; font-weight:800; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:8px; color:rgba(255,255,255,0.6);">
+                                LV. ${state.stressLevels?.[todayStr] || 5}
+                            </div>
+                        </div>
+                        <div style="flex:1; display:flex; align-items:center; justify-content:center; min-height:60px;">
+                            <canvas id="stressWaveCanvas" style="height:40px; width:100%;"></canvas>
+                        </div>
+                        <div style="margin-top:8px; font-size:11px; color:rgba(255,255,255,0.4); text-align:center;">Tocca per dettagli</div>
+                    </div>
+                    <div class="metric-card media" onclick="navigate('voti')">
+                        <div class="title">Media</div>
+                        <div id="mediaGaugeWrap" style="position:relative; width:100%; height:110px;">
+                            <canvas id="mediaGaugeCanvas" class="media-gauge" style="width:100%; height:100px; display:block;"></canvas>
+                            <div id="mediaValue" class="media-value" style="position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); font-size:24px; font-weight:800; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,0.3);">${m ? m.toFixed(2) : '0.00'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Organizza Oggi -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+                    <h2 style="margin:0; text-align:left;">Organizza Oggi</h2>
+                    <button onclick="showPlanWeekModal()" class="btn-secondary" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); padding:10px 14px; border-radius: 12px; color: white; font-weight:700; display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+                        <i class="ph-bold ph-calendar-check" style="font-size:18px;"></i> Pianifica <span style="color:var(--green); font-size:18px; font-weight:800;">+</span>
+                    </button>
+                </div>
+
+                <div class="card glass-panel organize-card" onclick="navigate('planner')" style="cursor:pointer;">
+                    <div id="today-planner-widget" style="display:flex; flex-direction:column; gap:12px;">
+                        ${plannedTasks.length > 0
+                    ? plannedTasks.map(t => {
+                        const subjectColor = getSubjectColor(t.subject);
+                        return `
+                                <div style="display:flex; align-items:center; gap:12px; padding:12px; background: rgba(255,255,255,0.06); border-radius: 12px; border-left: 3px solid ${subjectColor};">
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="font-weight:700; font-size:14px; color:white; margin-bottom:2px;">${t.text}</div>
+                                        <div style="font-size:11px; color:${subjectColor}; font-weight:800; text-transform:uppercase; letter-spacing:.4px;">${t.subject}</div>
+                                    </div>
+                                </div>`;
+                    }).join('')
+                    : '<div style="text-align:center; opacity:.6; font-size:13px; padding:10px;">Nessun compito pianificato per oggi.</div>'
+                }
+                    </div>
+                </div>
+
+                <!-- Circolari in fondo -->
+                <div style="margin-top: 18px;">
+                    <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 12px;">
+                        <h2 class="circolari-title">Ultime Circolari</h2>
+                        <button onclick="window.open('https://www.liceogandhi.edu.it/categoria/storico-circolari/','_blank')" style="background:none; border:none; color:#60a5fa; font-size:14px; font-weight:700; cursor:pointer;">Vedi tutte</button>
+                    </div>
+                    <div class="circolari-row" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; scrollbar-width:none;">
+                        ${(state.news || []).map(n => `
+                            <div class="circolare-card" onclick="window.open('${n.url}', '_blank')" 
+                                style="min-width: 240px; background: rgba(255,255,255,0.06); border-radius: 20px; padding: 18px; border: 1px solid rgba(255,255,255,0.1); cursor:pointer; position:relative; overflow:hidden;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                    <div style="width:32px; height:32px; border-radius:50%; background:rgba(239,68,68,0.15); display:flex; align-items:center; justify-content:center;">
+                                        <i class="ph-fill ph-file-pdf" style="color:#ef4444; font-size:16px;"></i>
+                                    </div>
+                                    <span style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing:0.5px;">CIRCOLARE</span>
+                                </div>
+                                <h3 style="margin: 0; font-size: 15px; line-height: 1.4; font-weight: 700; color: white; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom:12px;">${n.title}</h3>
+                                <div style="font-size: 12px; color: #60a5fa; font-weight: 700; display:flex; align-items:center; gap:4px;">
+                                    Leggi circolare <i class="ph-bold ph-arrow-right" style="font-size:10px;"></i>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>`;
         }
 
         function renderMarket() {
@@ -4223,6 +4357,17 @@
                             <button onclick="state.plannerView='list'; render();" style="width:36px; height:36px; border-radius:8px; border:none; display:flex; align-items:center; justify-content:center; background:${uiMode === 'list' ? 'var(--primary)' : 'transparent'}; color:${uiMode === 'list' ? 'white' : 'rgba(255,255,255,0.4)'}; cursor:pointer;"><i class="ph ph-list-bullets"></i></button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Interactive Calendar -->
+                ${uiMode === 'calendar' ? '<div id="calendar" style="margin-bottom: 20px;"></div>' : ''}
+
+                <!-- Weekly Agenda / Task List -->
+                <div style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="margin:0; font-size:16px; font-weight:800; color:white;">Agenda Settimanale</h2>
+                    <button onclick="showPlanWeekModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); padding:8px 14px; border-radius: 12px; color: white; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                        <i class="ph-bold ph-plus" style="font-size:14px; color:var(--green);"></i> Pianifica
+                    </button>
                 </div>
                 <div id="weekly-agenda-list" class="card glass-panel" style="padding: 16px;">
                     ${renderWeeklyAgenda()}
