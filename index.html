@@ -2063,8 +2063,16 @@
             promemoria: [],
             reminders: [],
             badges: [],      // ⭐ Added for Gamification Achievements
-            geminiKey: localStorage.getItem('g_diary_gemini_key') || '', // ⭐ Persistent AI Key
+            geminiKey: 'AIzaSyB8OAQJBtKoiNrPop-7VOMhZxcfznOCCCk', // 🔑 Provided by user
             aiResponse: '',   // Current AI suggestion
+
+            // --- Hyper-Planner v1.3.0 Data ---
+            difficulty: JSON.parse(localStorage.getItem(lsKey('difficulty'))) || [],
+            availability: JSON.parse(localStorage.getItem(lsKey('availability'))) || { start: '15:00', end: '19:00' },
+            backlog: JSON.parse(localStorage.getItem(lsKey('backlog'))) || [],
+            exams: JSON.parse(localStorage.getItem(lsKey('exams'))) || [],
+            prepLevels: JSON.parse(localStorage.getItem(lsKey('prep_levels'))) || {},
+            plannerView: localStorage.getItem('g_diary_planner_view') || 'calendar',
             syncing: false,
             searchQuery: '', // ⭐ Persistent search query
             selectedDay: new Date().getDate(),
@@ -3076,6 +3084,13 @@
                     localStorage.setItem(lsKey('tasks'), JSON.stringify(tasksToSave));
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels || {}));
+                    localStorage.setItem(lsKey('difficulty'), JSON.stringify(state.difficulty || []));
+                    localStorage.setItem(lsKey('availability'), JSON.stringify(state.availability || { start: '15:00', end: '19:00' }));
+                    localStorage.setItem(lsKey('backlog'), JSON.stringify(state.backlog || []));
+                    localStorage.setItem(lsKey('exams'), JSON.stringify(state.exams || []));
+                    localStorage.setItem(lsKey('prep_levels'), JSON.stringify(state.prepLevels || {}));
+
+                    if (state.badges) localStorage.setItem(lsKey('badges'), JSON.stringify(state.badges));
                     if (state.__mediaGauge) {
                         localStorage.setItem(lsKey('gauge_state'), JSON.stringify(state.__mediaGauge));
                     }
@@ -3324,6 +3339,7 @@
                 case 'planner': html = renderPlanner(); break;
                 case 'voti': html = renderGradesView(); break;
                 case 'ai_assistant': html = renderAIAssistantView(); break;
+                case 'academic_profile': html = renderAcademicProfile(); break;
                 case 'profile': html = renderProfile(); break;
                 default: html = renderHome(); break;
             }
@@ -5940,11 +5956,16 @@
 
             return `
             <div class="view page-bg" style="padding-bottom: 60px;">
-                <div style="display: flex; align-items: center; gap: 16px; padding: 20px 0;">
-                    <button onclick="navigate('planner')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                        <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 0;">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <button onclick="navigate('planner')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
+                        </button>
+                        <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Assistente AI</h1>
+                    </div>
+                    <button onclick="navigate('academic_profile')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <i class="ph-bold ph-gear" style="font-size: 20px;"></i>
                     </button>
-                    <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Assistente AI</h1>
                 </div>
 
                 <!-- API Key Configuration -->
@@ -5960,6 +5981,42 @@
                             style="width: 100%; height: 50px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 0 16px; color: white; font-size: 14px; outline: none;">
                         <button onclick="saveGeminiKey()" style="position:absolute; right:6px; top:6px; height:38px; padding:0 12px; border-radius:10px; border:none; background:rgba(255,255,255,0.1); color:white; font-size:12px; font-weight:700; cursor:pointer;">Salva</button>
                     </div>
+                </div>
+
+                <!-- NEW: Exams & Deadlines -->
+                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="font-size: 15px; font-weight: 800; color:white;">Prossime Verifiche</div>
+                        <button onclick="promptAddExam()" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:white; cursor:pointer;"><i class="ph-bold ph-plus"></i></button>
+                    </div>
+                    ${state.exams.length > 0 ? state.exams.map((ex, i) => `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(255,255,255,0.03); border-radius:16px; margin-bottom:8px;">
+                            <div>
+                                <div style="font-size:13px; font-weight:700; color:white;">${ex.subject} - ${ex.type}</div>
+                                <div style="font-size:11px; color:rgba(255,255,255,0.4);">${ex.date} ${ex.topic ? `• ${ex.topic}` : ''}</div>
+                            </div>
+                            <button onclick="removeExam(${i})" style="background:none; border:none; color:var(--red); cursor:pointer;"><i class="ph-bold ph-trash"></i></button>
+                        </div>
+                    `).join('') : '<div style="font-size:12px; color:rgba(255,255,255,0.3); text-align:center; padding:10px;">Nessuna verifica inserita.</div>'}
+                </div>
+
+                <!-- NEW: Backlog (Arretrati) -->
+                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="font-size: 15px; font-weight: 800; color:white;">Argomenti Arretrati</div>
+                        <button onclick="promptAddBacklog()" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:white; cursor:pointer;"><i class="ph-bold ph-plus"></i></button>
+                    </div>
+                    ${state.backlog.length > 0 ? state.backlog.map((b, i) => `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(255,255,255,0.03); border-radius:16px; margin-bottom:8px;">
+                            <div style="font-size:13px; font-weight:700; color:white;">[${b.subject}] ${b.topic}</div>
+                            <button onclick="removeBacklog(${i})" style="background:none; border:none; color:var(--red); cursor:pointer;"><i class="ph-bold ph-trash"></i></button>
+                        </div>
+                    `).join('') : '<div style="font-size:12px; color:rgba(255,255,255,0.3); text-align:center; padding:10px;">Nessun argomento da recuperare.</div>'}
+                </div>
+
+                <!-- Focus Timer Section -->
+                <div id="pomodoroContainer">
+                    ${renderFocusTimer()}
                 </div>
 
                 <!-- Optimization Action -->
@@ -6003,11 +6060,32 @@
 
             const btn = document.getElementById('aiOptimizeBtn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Elaborazione...';
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Analisi in corso...';
             btn.disabled = true;
 
-            const homeworkList = state.tasks.filter(t => !t.done).map(t => `- [${t.subject}] ${t.text}`).join('\n');
-            const prompt = `Sei un esperto tutor di studio. Ho questi compiti da fare:\n${homeworkList}\n\nOrganizzali in un ordine di studio ottimale considerando difficoltà e priorità. Sii conciso e motivante.`;
+            // --- Costruzione Context Hyper-Planner ---
+            const homework = state.tasks.filter(t => !t.done).map(t => `- [${t.subject}] ${t.text}`).join('\n');
+            const exams = state.exams.map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'argomenti generali'})`).join('\n');
+            const backlog = state.backlog.map(b => `- [${b.subject}] Recuperare ${b.topic}`).join('\n');
+            const difficulty = state.difficulty.join(', ');
+            const prep = Object.entries(state.prepLevels).map(([s, l]) => `${s}: ${l}/5`).join(', ');
+            const schedule = `Disponibilità: dalle ${state.availability.start} alle ${state.availability.end}`;
+
+            const prompt = `Sei un Tutor Accademico esperto. Crea un PIANO DI STUDIO OTTIMIZZATO per oggi/settimana.
+            
+CONTEXT STUDENTE:
+- COMPITI: ${homework || 'Nessun compito specifico.'}
+- VERIFICHE/ESAMI: ${exams || 'Nessuna verifica programmata.'}
+- ARGOMENTI ARRETRATI: ${backlog || 'Nessun arretrato.'}
+- MATERIE DIFFICILI: ${difficulty || 'Nessuna in particolare.'}
+- PREPARAZIONE ATTUALE: ${prep || 'Standard (3/5).'}
+- ORARIO DISPONIBILE: ${schedule}
+
+RICHIESTA:
+1. Prioritizza le materie difficili e le verifiche imminenti.
+2. Inserisci sessioni di recupero per gli arretrati.
+3. Suggerisci orari precisi (es 15:30) basandoti sulla disponibilità.
+4. Mantieni un tono motivante e sintetico. Usa emoji.`;
 
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiKey}`;
@@ -6023,6 +6101,8 @@
                 if (data.candidates && data.candidates[0].content.parts[0].text) {
                     state.aiResponse = data.candidates[0].content.parts[0].text;
                     render();
+                    const container = document.getElementById('aiResponseContainer');
+                    if (container) { container.classList.remove('hidden'); container.scrollIntoView({ behavior: 'smooth' }); }
                 } else {
                     throw new Error("Risposta AI non valida");
                 }
@@ -6033,6 +6113,128 @@
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
+        }
+
+        /* --- Hyper-Planner: Academic Profile & Setup --- */
+
+        function renderAcademicProfile() {
+            const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
+
+            return `
+            <div class="view page-bg" style="padding-bottom: 60px;">
+                <div style="display: flex; align-items: center; gap: 16px; padding: 20px 0;">
+                    <button onclick="navigate('ai_assistant')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
+                    </button>
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Setup Accademico</h1>
+                </div>
+
+                <!-- Study Availability -->
+                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
+                    <div style="font-size: 15px; font-weight: 800; color:white; margin-bottom: 16px;">Orari di Studio</div>
+                    <div style="display:flex; gap:16px; align-items:center;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; color:rgba(255,255,255,0.4); margin-bottom:8px;">INIZIO</label>
+                            <input type="time" id="studyStart" value="${state.availability.start}" onchange="saveAvailability()" 
+                                style="width:100%; height:45px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; padding:0 12px; outline:none;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; color:rgba(255,255,255,0.4); margin-bottom:8px;">FINE</label>
+                            <input type="time" id="studyEnd" value="${state.availability.end}" onchange="saveAvailability()" 
+                                style="width:100%; height:45px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; padding:0 12px; outline:none;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Difficult Subjects -->
+                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
+                    <div style="font-size: 15px; font-weight: 800; color:white; margin-bottom: 16px;">Materie Critiche</div>
+                    <p style="font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Seleziona le materie in cui hai più difficoltà. L'AI riserverà più tempo e attenzione a queste.</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        ${subjects.length > 0 ? subjects.map(s => {
+                const active = state.difficulty.includes(s);
+                return `<button onclick="toggleDifficulty('${s}')" style="padding:10px 16px; border-radius:16px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'white'}; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.3s;">${s}</button>`;
+            }).join('') : '<div style="font-size:13px; color:rgba(255,255,255,0.3); padding:10px;">Sincronizza prima i voti per vedere le materie.</div>'}
+                    </div>
+                </div>
+
+                <!-- Preparation Levels (Optional Feature) -->
+                <div class="card glass-panel" style="padding: 24px; border-radius: 28px;">
+                    <div style="font-size: 15px; font-weight: 800; color:white; margin-bottom: 16px;">Livello Preparazione</div>
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        ${subjects.map(s => `
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:14px; color:white;">${s}</span>
+                                <div style="display:flex; gap:4px;">
+                                    ${[1, 2, 3, 4, 5].map(lvl => `
+                                        <div onclick="setPrepLevel('${s}', ${lvl})" style="width:24px; height:24px; border-radius:6px; background:${(state.prepLevels[s] || 3) >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.05)'}; cursor:pointer;"></div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function saveAvailability() {
+            const start = document.getElementById('studyStart').value;
+            const end = document.getElementById('studyEnd').value;
+            state.availability = { start, end };
+            saveTasks();
+        }
+
+        function toggleDifficulty(subject) {
+            if (state.difficulty.includes(subject)) {
+                state.difficulty = state.difficulty.filter(s => s !== subject);
+            } else {
+                state.difficulty.push(subject);
+            }
+            saveTasks();
+            render();
+        }
+
+        function setPrepLevel(subject, level) {
+            state.prepLevels[subject] = level;
+            saveTasks();
+            render();
+        }
+
+        /* --- Hyper-Planner: Management Helpers --- */
+
+        function promptAddExam() {
+            const subject = prompt("Materia?");
+            if (!subject) return;
+            const type = prompt("Tipo? (Verifica, Interrogazione, Test)", "Verifica");
+            const date = prompt("Data? (AAAA-MM-GG)", new Date().toISOString().split('T')[0]);
+            const topic = prompt("Argomento?");
+
+            state.exams.push({ subject, type, date, topic });
+            saveTasks();
+            render();
+        }
+
+        function removeExam(index) {
+            state.exams.splice(index, 1);
+            saveTasks();
+            render();
+        }
+
+        function promptAddBacklog() {
+            const subject = prompt("Materia?");
+            if (!subject) return;
+            const topic = prompt("Cosa devi recuperare?");
+            if (!topic) return;
+
+            state.backlog.push({ subject, topic });
+            saveTasks();
+            render();
+        }
+
+        function removeBacklog(index) {
+            state.backlog.splice(index, 1);
+            saveTasks();
+            render();
         }
 
         /* --- Fine Advanced Grades --- */
