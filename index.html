@@ -5441,7 +5441,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
                     if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
                         const aiText = data.candidates[0].content.parts[0].text;
-                        const hasPlan = /\d{1,2}[:.:]\\d{2}/.test(aiText);
+                        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
                         state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
                         state.aiResponse = aiText;
                     } else if (data?.error) {
@@ -5525,7 +5525,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 const active = state.difficulty.includes(s);
                 const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:16px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'white'}; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.3s;">${s}</button>`;
-            }).join('') : '<div style="font-size:13px; color:rgba(255,255,255,0.3); padding:10px;">Sincronizza prima i voti per vedere le materie.</div>'
+            }).join('') : '<div style="font-size:13px; color:rgba(255,255,255,0.3); padding:10px;">Sincronizza prima i voti per vedere le materie.</div>'}
                     </div>
                 </div>
 
@@ -5535,9 +5535,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <p style="font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Tocca i quadrati per impostare il tuo livello (1-5) per ogni materia.</p>
                     <div style="display:flex; flex-direction:column; gap:14px;">
                         ${subjects.map(s => {
-                            const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                            const currentLvl = state.prepLevels[s] || 3;
-                            return `
+                const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const currentLvl = state.prepLevels[s] || 3;
+                return `
                             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
                                 <span style="font-size:13px; color:white; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:12px;">${s}</span>
                                 <div style="display:flex; gap:6px; flex-shrink:0; align-items:center;">
@@ -5546,7 +5546,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                                     `).join('')}
                                 </div>
                             </div>`;
-                        }).join('')}
+            }).join('')}
                     </div>
                 </div>
             </div>`;
