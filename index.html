@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>G-Connect</title>
+    <title>G-Diary</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Forza coerenza della system bar su Android/Samsung per entrambe le modalità -->
@@ -1649,8 +1649,8 @@
     <div id="boot-overlay" class="boot-overlay" aria-busy="true">
         <div class="boot-card">
             <div class="boot-spinner"></div>
-            <div class="boot-title">G-Connect <span
-                    style="font-size: 10px; opacity: 0.5; font-weight: 400; color:var(--primary);">v3.0.0 [Shield
+            <div class="boot-title">G-Diary <span
+                    style="font-size: 10px; opacity: 0.5; font-weight: 400; color:var(--primary);">v1.0.0 [Personal
                     Edition]</span></div>
             <div id="boot-status" style="font-size:11px; opacity:0.6; margin-top:8px;">Inizializzazione...</div>
         </div>
@@ -1658,17 +1658,15 @@
     <div id="modals"></div>
     <div id="offline-badge" class="offline-badge">📡 Offline Mode</div>
 
-    <nav id="bottom-nav" class="nav-bar">
+    <nav id="bottom-nav" class="nav-bar" style="justify-content: space-around;">
         <button class="nav-item active" onclick="navigate('home')"><i class="ph-fill ph-house"></i></button>
-        <button class="nav-item" onclick="navigate('market')"><i class="ph-fill ph-bag"></i></button>
-        <button class="nav-item" onclick="navigate('feed')"><i class="ph-fill ph-newspaper"></i></button>
         <button class="nav-item" onclick="navigate('planner')"><i class="ph-fill ph-calendar-check"></i></button>
-        <button class="nav-item" onclick="navigate('profile')"><i class="ph-fill ph-user"></i></button>
+        <button class="nav-item" onclick="navigate('voti')"><i class="ph-fill ph-chart-line-up"></i></button>
     </nav>
 
     <script>
-        // 🚀 G-Connect v3.0.0 [Shield Edition]
-        const APP_VERSION = "3.0.0";
+        // 🚀 G-Diary v1.1.0 [Analytics Update]
+        const APP_VERSION = "1.1.0-personal";
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
@@ -1681,7 +1679,7 @@
             }
         }
 
-        console.log(`🚀 G-Connect v${APP_VERSION} initialized`);
+        console.log(`🚀 G-Diary v${APP_VERSION} initialized`);
 
         let _chatPoller = null;
         window.chatChannel = null;
@@ -2060,6 +2058,7 @@
             grades: [],
             announcements: [],
             voti: [],        // ⭐ Added based on user request
+            goals: {},       // ⭐ Added for Analytics Goal Tracking
             promemoria: [],
             reminders: [],
             syncing: false,
@@ -3074,6 +3073,8 @@
                         localStorage.setItem(lsKey('gauge_state'), JSON.stringify(state.__mediaGauge));
                     }
                     localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents || {}));
+                    localStorage.setItem(lsKey('goals'), JSON.stringify(state.goals || {}));
+                    localStorage.setItem(lsKey('threads'), JSON.stringify(state.threads || []));
 
                     console.log("💾 Salvato profilo:", tasksToSave.length, "tasks");
                 } catch (e) {
@@ -3174,7 +3175,7 @@
             if (shouldRender) render();
         }
         // Router & Loader helpers
-        const allowedViews = ['home', 'market', 'feed', 'planner', 'profile', 'search', 'chat', 'messages'];
+        const allowedViews = ['home', 'planner', 'voti'];
 
         function currentViewFromHash() {
             const v = (location.hash || '').replace('#', '').trim();
@@ -3251,7 +3252,7 @@
             const v = currentViewFromHash() || (state.isLoggedIn ? 'home' : 'login');
             if (state.view !== v) {
                 state.view = v;
-                saveNavigationState(); // 🔥 FIX: Persistenza cambio hash
+                saveNavigationState();
                 render();
             }
         });
@@ -3313,13 +3314,9 @@
             let html = '';
             switch (state.view) {
                 case 'home': html = renderHome(); break;
-                case 'feed': html = renderFeed(); break;
                 case 'planner': html = renderPlanner(); break;
-                case 'market': html = renderMarket(); break;
+                case 'voti': html = renderGradesView(); break;
                 case 'profile': html = renderProfile(); break;
-                case 'chat': html = renderChat(); break;
-                case 'messages': html = renderMessages(); break;
-                case 'search': html = renderSearch(); break;
                 default: html = renderHome(); break;
             }
 
@@ -3347,6 +3344,15 @@
                     initStressWaveFromState();
                     if (typeof renderMediaGauge === 'function') {
                         renderMediaGauge(mediaVal);
+                    }
+                }, 0);
+            }
+
+            // Se siamo in Voti, inizializza i grafici
+            if (state.view === 'voti') {
+                setTimeout(() => {
+                    if (typeof initGradesCharts === 'function') {
+                        initGradesCharts();
                     }
                 }, 0);
             }
@@ -3800,7 +3806,7 @@
 
             return `
             <div class="view" style="height: 100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding: 24px;">
-                <h1 style="margin-bottom:40px;">📚 G-Connect</h1>
+                <h1 style="margin-bottom:40px;">📚 G-Diary</h1>
                 <p style="color:var(--text-secondary); margin-bottom:30px; text-align:center;">Accedi con le tue credenziali DidUP</p>
                 <button class="btn-primary" onclick="openArgoLogin()" style="max-width:300px; cursor:pointer;">Accedi</button>
                 ${hasSession ? `
@@ -4162,20 +4168,11 @@
 
                     <!-- Action Icons (Right) -->
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <button onclick="navigate('messages')" style="width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.05); color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; transition:all 0.2s ease;" onmousedown="this.style.transform='scale(0.94)'" onmouseup="this.style.transform='scale(1)'">
-                            <i class="ph-bold ph-chat-circle-dots" style="font-size:20px;"></i>
-                            ${state.threads.some(t => t.unread) ? `<div style="position:absolute; top:8px; right:8px; width:8px; height:8px; background:var(--red); border-radius:50%; box-shadow:0 0 0 2px rgba(0,0,0,0.4);"></div>` : ''}
-                        </button>
+                        <!-- Messages removed for personal edition -->
                     </div>
                 </div>
 
-                <!-- 2️⃣ New Search Bar (Home) -->
-                <div style="padding: 10px 0 15px 0;">
-                    <div onclick="navigate('search')" style="display:flex; align-items:center; gap:12px; padding:12px 18px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:16px; color:rgba(255,255,255,0.5); cursor:pointer;">
-                        <i class="ph-bold ph-magnifying-glass" style="font-size:18px;"></i>
-                        <span style="font-size:15px; font-weight:500;">Cerca studenti o materie...</span>
-                    </div>
-                </div>
+                <!-- Search Bar Removed for Personal Edition -->
 
                 <!-- Media + Stress (Advanced Canvas Widgets) -->
                 <div class="metrics-grid" style="margin:5px 0 15px 0;">
@@ -4191,7 +4188,7 @@
                         </div>
                         <div style="margin-top:8px; font-size:11px; color:rgba(255,255,255,0.4); text-align:center;">Tocca per dettagli</div>
                     </div>
-                    <div class="metric-card media" onclick="showVotiView()">
+                    <div class="metric-card media" onclick="navigate('voti')">
                         <div class="title">Media</div>
                         <div id="mediaGaugeWrap" style="position:relative; width:100%; height:110px;">
                             <canvas id="mediaGaugeCanvas" class="media-gauge" style="width:100%; height:100px; display:block;"></canvas>
@@ -5581,6 +5578,269 @@
                 </div>
             </div>`;
         }
+
+        /* --- Advanced Grades & Analytics (v1.1) --- */
+
+        function getVotiData() {
+            // ⭐ Consolida i dati da diverse possibili fonti (legacy sync vs argo argo)
+            return (state.voti && state.voti.length > 0) ? state.voti :
+                ((state.grades && state.grades.length > 0) ? state.grades : []);
+        }
+
+        function renderGradesView() {
+            if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
+
+            const votiData = getVotiData();
+            const media = parseFloat(calcolaMedia(votiData)) || 0;
+            const goal = state.goals?.overall || 8.0;
+            const gap = goal - media;
+
+            // Raggruppa per materia
+            const subjectsMap = {};
+            votiData.forEach(v => {
+                const sub = v.materia || v.subject || 'Altro';
+                if (!subjectsMap[sub]) subjectsMap[sub] = [];
+                subjectsMap[sub].push(v);
+            });
+
+            const subjects = Object.entries(subjectsMap).map(([name, list]) => {
+                const subMedia = parseFloat(calcolaMedia(list)) || 0;
+                // Prendi gli ultimi 3 voti per il mini-trend
+                const trend = list.slice(-3).map(v => (v.valore || v.value || '0').toString().replace(',', '.'));
+                return { name, media: subMedia, count: list.length, trend };
+            }).sort((a, b) => b.media - a.media);
+
+            return `
+            <div class="view page-bg" style="padding-bottom: 60px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 0 10px 0;">
+                    <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Media & Analisi</h1>
+                    <button onclick="performSync()" style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <i class="ph-bold ph-arrow-clockwise"></i>
+                    </button>
+                </div>
+
+                <!-- 1. Media Generale & Goal Card -->
+                <div class="card" style="background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); padding: 24px; border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3);">
+                    <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.5px;">LA TUA MEDIA ATTUALE</div>
+                    <div style="font-size: 68px; font-weight: 800; color: white; line-height: 1; text-shadow: 0 0 30px rgba(10,132,255,0.4);">${media.toFixed(2)}</div>
+                    
+                    <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.08); margin: 8px 0;"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; padding: 0 10px;">
+                        <div style="text-align: left; cursor:pointer;" onclick="promptSetGoal('overall')">
+                            <div style="font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase;">OBIETTIVO</div>
+                            <div style="font-size: 19px; font-weight: 800; color: var(--blue); display:flex; align-items:center; gap:6px;">
+                                ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 14px; opacity: 0.5;"></i>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase;">MANCANZA</div>
+                            <div style="font-size: 19px; font-weight: 800; color: ${gap <= 0 ? 'var(--green)' : 'var(--orange)'};">
+                                ${gap > 0 ? '+' : ''}${gap.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Goal Progress Bar -->
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-top: 4px;">
+                        <div style="width: ${Math.min(100, (media / goal) * 100)}%; height: 100%; background: ${media >= goal ? 'var(--green)' : 'var(--blue)'}; box-shadow: 0 0 15px ${media >= goal ? 'var(--green)' : 'var(--blue)'}80; transition: width 1s ease-out;"></div>
+                    </div>
+                </div>
+
+                <!-- 2. Historical Trend Chart -->
+                <div class="card glass-panel" style="padding: 20px; border-radius: 24px; margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div style="font-size: 15px; font-weight: 800; color: white;">Andamento Temporale</div>
+                        <div style="font-size: 10px; font-weight: 800; background: rgba(255,255,255,0.06); padding: 5px 10px; border-radius: 10px; color: rgba(255,255,255,0.5);">FULL HISTORY</div>
+                    </div>
+                    <div style="height: 180px; width: 100%; position: relative;">
+                        <canvas id="gradesTrendCanvas" style="width: 100%; height: 180px;"></canvas>
+                    </div>
+                </div>
+
+                <!-- 3. Subject Breakdown Header -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 0 4px;">
+                    <h2 style="margin: 0; font-size: 19px; font-weight: 800;">Analisi per Materia</h2>
+                    <span style="font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4);">${subjects.length} Materie</span>
+                </div>
+
+                <!-- 4. Subject List -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${subjects.map(s => `
+                        <div class="card glass-panel" onclick="state.activeSubject = '${s.name}'; render();" style="padding: 16px; display: flex; align-items: center; gap: 16px; margin-bottom: 0; border-radius: 20px; cursor:pointer;">
+                            <div style="width: 52px; height: 52px; border-radius: 16px; background: ${s.media >= 6 ? 'rgba(48, 209, 88, 0.12)' : 'rgba(255, 69, 58, 0.12)'}; border: 1px solid ${s.media >= 6 ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255, 69, 58, 0.2)'}; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'};">
+                                ${s.media.toFixed(1)}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 800; font-size: 16px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">${s.name}</div>
+                                <div style="font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 700; display:flex; gap:8px;">
+                                    <span>${s.count} voti</span>
+                                    <span style="color:rgba(255,255,255,0.15);">|</span>
+                                    <span style="display:flex; gap:4px;">
+                                        ${s.trend.map(v => `<span style="color: ${parseFloat(v) >= 6 ? 'var(--green)' : 'var(--red)'}; opacity: 0.8;">${v}</span>`).join('')}
+                                    </span>
+                                </div>
+                            </div>
+                            <i class="ph-bold ph-caret-right" style="color: rgba(255,255,255,0.15); font-size: 18px;"></i>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+
+        function promptSetGoal(type) {
+            const currentGoal = state.goals?.[type] || 8.0;
+            const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
+            if (res !== null) {
+                const val = parseFloat(res.replace(',', '.'));
+                if (!isNaN(val) && val > 0 && val <= 10) {
+                    if (!state.goals) state.goals = {};
+                    state.goals[type] = val;
+                    saveTasks(); // Persist standard
+                    render();
+                } else {
+                    alert("Inserisci un valore valido tra 1 e 10");
+                }
+            }
+        }
+
+        function initGradesCharts() {
+            const canvas = document.getElementById('gradesTrendCanvas');
+            if (!canvas) return;
+
+            const { ctx, rect } = setupCanvas(canvas);
+            const W = rect.width, H = rect.height;
+
+            let votiData = [...getVotiData()];
+            if (state.activeSubject) {
+                votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
+            }
+            votiData.sort((a, b) => {
+                const da = new Date(a.data || a.date);
+                const db = new Date(b.data || b.date);
+                return da - db;
+            });
+
+            if (votiData.length < 2) {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '700 13px Rubik';
+                ctx.textAlign = 'center';
+                ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
+                return;
+            }
+
+            // Calcola media mobile progressiva
+            let sum = 0;
+            const points = votiData.map((v, i) => {
+                const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
+                sum += val;
+                return sum / (i + 1);
+            });
+
+            const padding = 20;
+            const stepX = (W - padding * 2) / (points.length - 1);
+            const minV = Math.min(...points, 4);
+            const maxV = Math.max(...points, 10);
+
+            function getY(val) {
+                const range = maxV - minV;
+                const perc = (val - minV) / range;
+                return (H - padding) - perc * (H - padding * 2);
+            }
+
+            // Area Gradient
+            const areaGrad = ctx.createLinearGradient(0, 0, 0, H);
+            areaGrad.addColorStop(0, 'rgba(10, 132, 255, 0.25)');
+            areaGrad.addColorStop(1, 'rgba(10, 132, 255, 0)');
+
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(points[0]));
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(padding + i * stepX, getY(points[i]));
+            }
+            ctx.lineTo(padding + (points.length - 1) * stepX, H);
+            ctx.lineTo(padding, H);
+            ctx.closePath();
+            ctx.fillStyle = areaGrad;
+            ctx.fill();
+
+            // Linea
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(points[0]));
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(padding + i * stepX, getY(points[i]));
+            }
+            ctx.strokeStyle = '#0a84ff';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(10,132,255,0.4)';
+            ctx.stroke();
+
+            // Punti
+            points.forEach((p, i) => {
+                const x = padding + i * stepX;
+                const y = getY(p);
+                ctx.fillStyle = '#0a84ff';
+                ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        function renderSubjectDetailView(subjectName) {
+            const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => new Date(b.data || b.date) - new Date(a.data || a.date));
+            const media = parseFloat(calcolaMedia(votiData)) || 0;
+
+            return `
+            <div class="view page-bg" style="padding-bottom: 40px;">
+                <div style="display: flex; align-items: center; gap: 16px; padding: 20px 0;">
+                    <button onclick="state.activeSubject = null; render();" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
+                    </button>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${subjectName}</h1>
+                </div>
+
+                <!-- Subject Summary -->
+                <div class="card" style="background: rgba(255,255,255,0.03); padding: 20px; border: 1px solid rgba(255,255,255,0.06); border-radius: 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase;">MEDIA MATERIA</div>
+                        <div style="font-size: 36px; font-weight: 800; color: ${media >= 6 ? 'var(--green)' : 'var(--red)'};">${media.toFixed(2)}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase;">TOTALI</div>
+                        <div style="font-size: 24px; font-weight: 800; color: white;">${votiData.length}</div>
+                    </div>
+                </div>
+
+                <!-- Subject Trend Chart -->
+                <div class="card glass-panel" style="padding: 20px; border-radius: 24px; margin-bottom: 24px;">
+                    <div style="font-size: 14px; font-weight: 800; color: white; margin-bottom: 16px;">Variazione Voti</div>
+                    <canvas id="gradesTrendCanvas" style="width: 100%; height: 160px;"></canvas>
+                </div>
+
+                <!-- Grade List -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${votiData.map(v => {
+                const val = (v.valore || v.value || '').toString();
+                const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
+                return `
+                            <div class="card glass-panel" style="padding: 16px; display:flex; align-items:center; gap:16px; margin-bottom:0; border-radius:20px;">
+                                <div style="width: 48px; height: 48px; border-radius: 12px; background: ${color}15; border: 1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size: 20px; font-weight: 800; color: ${color};">${val}</div>
+                                <div style="flex: 1; text-align: left;">
+                                    <div style="font-weight: 700; font-size: 15px; color: white;">${v.tipo || v.type || 'Voto'}</div>
+                                    <div style="font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 600;">${v.data || v.date || ''}</div>
+                                </div>
+                            </div>`;
+            }).join('')}
+                </div>
+            </div>`;
+        }
+
+        /* --- Fine Advanced Grades --- */
 
         /* --- Modals --- */
 
