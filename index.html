@@ -5410,7 +5410,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             const maxRetries = 3;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.geminiKey}`;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiKey}`;
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
