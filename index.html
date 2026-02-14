@@ -2063,6 +2063,7 @@
             badges: [],      // ⭐ Added for Gamification Achievements
             geminiKey: 'AIzaSyB8OAQJBtKoiNrPop-7VOMhZxcfznOCCCk', // 🔑 Provided by user
             aiResponse: '',   // Current AI suggestion
+            aiChatHistory: JSON.parse(localStorage.getItem(lsKey('ai_chat'))) || [], // [{role:'user'|'ai', text, ts}]
 
             // --- Hyper-Planner v1.3.0 Data ---
             difficulty: JSON.parse(localStorage.getItem(lsKey('difficulty'))) || [],
@@ -5271,166 +5272,187 @@
         }
 
         function renderAIAssistantView() {
-            const hasKey = !!state.geminiKey;
+            const chat = state.aiChatHistory || [];
 
             return `
-            <div class="view page-bg" style="padding-bottom: 60px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 0;">
-                    <div style="display:flex; align-items:center; gap:16px;">
+            <div class="view page-bg" style="padding-bottom: 80px; display:flex; flex-direction:column; height: calc(100dvh - 100px);">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0; flex-shrink:0;">
+                    <div style="display:flex; align-items:center; gap:12px;">
                         <button onclick="navigate('planner')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
                             <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
                         </button>
-                        <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Assistente AI</h1>
+                        <h1 style="margin: 0; font-size: 20px; font-weight: 800;">🤖 Assistente AI</h1>
                     </div>
-                    <button onclick="navigate('academic_profile')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                        <i class="ph-bold ph-gear" style="font-size: 20px;"></i>
-                    </button>
-                </div>
-
-                <!-- API Key Configuration -->
-                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <div style="font-size: 14px; font-weight: 800; color:white;">Configurazione Gemini</div>
-                        <i class="ph-bold ph-shield-check" style="color: ${hasKey ? 'var(--green)' : 'var(--orange)'}; font-size: 20px;"></i>
-                    </div>
-                    <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 16px; line-height: 1.5;">G-Diary usa <b>Gemini 1.5 Flash</b> per organizzare i tuoi compiti in modo efficiente. Serve una API Key gratuita da <a href="https://aistudio.google.com/" target="_blank" style="color:var(--blue);">Google AI Studio</a>.</p>
-                    
-                    <div style="position:relative;">
-                        <input type="password" id="geminiApiKeyInput" value="${state.geminiKey}" placeholder="Incolla qui la tua API Key..." 
-                            style="width: 100%; height: 50px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 0 16px; color: white; font-size: 14px; outline: none;">
-                        <button onclick="saveGeminiKey()" style="position:absolute; right:6px; top:6px; height:38px; padding:0 12px; border-radius:10px; border:none; background:rgba(255,255,255,0.1); color:white; font-size:12px; font-weight:700; cursor:pointer;">Salva</button>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="navigate('academic_profile')" style="width:36px; height:36px; border-radius:12px; background:rgba(255,255,255,0.08); border:none; color:rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Setup Accademico">
+                            <i class="ph-bold ph-gear" style="font-size:16px;"></i>
+                        </button>
+                        <button onclick="clearAIChat()" style="width:36px; height:36px; border-radius:12px; background:rgba(255,69,58,0.1); border:1px solid rgba(255,69,58,0.2); color:var(--red); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Cancella chat">
+                            <i class="ph-bold ph-trash" style="font-size:14px;"></i>
+                        </button>
                     </div>
                 </div>
 
-                <!-- NEW: Exams & Deadlines -->
-                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <div style="font-size: 15px; font-weight: 800; color:white;">Prossime Verifiche</div>
-                        <button onclick="promptAddExam()" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:white; cursor:pointer;"><i class="ph-bold ph-plus"></i></button>
-                    </div>
-                    ${state.exams.length > 0 ? state.exams.map((ex, i) => `
-                        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(255,255,255,0.03); border-radius:16px; margin-bottom:8px;">
-                            <div>
-                                <div style="font-size:13px; font-weight:700; color:white;">${ex.subject} - ${ex.type}</div>
-                                <div style="font-size:11px; color:rgba(255,255,255,0.4);">${ex.date} ${ex.topic ? `• ${ex.topic}` : ''}</div>
+                <!-- Chat Messages Area -->
+                <div id="aiChatMessages" style="flex:1; overflow-y:auto; padding: 8px 0; display:flex; flex-direction:column; gap:12px;">
+                    ${chat.length === 0 ? `
+                        <div style="text-align:center; padding:40px 20px;">
+                            <div style="font-size:48px; margin-bottom:16px;">🎓</div>
+                            <div style="font-size:18px; font-weight:800; color:white; margin-bottom:8px;">Ciao! Sono il tuo Tutor AI</div>
+                            <div style="font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; max-width:300px; margin:0 auto;">
+                                Raccontami delle tue materie, verifiche e difficoltà. Ti creerò un piano di studio personalizzato!
                             </div>
-                            <button onclick="removeExam(${i})" style="background:none; border:none; color:var(--red); cursor:pointer;"><i class="ph-bold ph-trash"></i></button>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:20px;">
+                                <button onclick="sendAIChatQuick('Organizza il mio studio per questa settimana')" style="padding:8px 14px; border-radius:20px; background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3); color:#a78bfa; font-size:12px; font-weight:600; cursor:pointer;">📅 Piano settimanale</button>
+                                <button onclick="sendAIChatQuick('Ho una verifica, aiutami a prepararmi')" style="padding:8px 14px; border-radius:20px; background:rgba(37,99,235,0.15); border:1px solid rgba(37,99,235,0.3); color:#60a5fa; font-size:12px; font-weight:600; cursor:pointer;">📝 Prepara verifica</button>
+                                <button onclick="sendAIChatQuick('Quali materie dovrei studiare prima?')" style="padding:8px 14px; border-radius:20px; background:rgba(48,209,88,0.15); border:1px solid rgba(48,209,88,0.3); color:#30D158; font-size:12px; font-weight:600; cursor:pointer;">🎯 Consiglia priorità</button>
+                            </div>
                         </div>
-                    `).join('') : '<div style="font-size:12px; color:rgba(255,255,255,0.3); text-align:center; padding:10px;">Nessuna verifica inserita.</div>'}
-                </div>
-
-                <!-- NEW: Backlog (Arretrati) -->
-                <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <div style="font-size: 15px; font-weight: 800; color:white;">Argomenti Arretrati</div>
-                        <button onclick="promptAddBacklog()" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:white; cursor:pointer;"><i class="ph-bold ph-plus"></i></button>
-                    </div>
-                    ${state.backlog.length > 0 ? state.backlog.map((b, i) => `
-                        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:rgba(255,255,255,0.03); border-radius:16px; margin-bottom:8px;">
-                            <div style="font-size:13px; font-weight:700; color:white;">[${b.subject}] ${b.topic}</div>
-                            <button onclick="removeBacklog(${i})" style="background:none; border:none; color:var(--red); cursor:pointer;"><i class="ph-bold ph-trash"></i></button>
+                    ` : chat.map(msg => `
+                        <div style="display:flex; ${msg.role === 'user' ? 'justify-content:flex-end' : 'justify-content:flex-start'}; padding: 0 4px;">
+                            <div style="max-width:85%; padding:14px 18px; border-radius:${msg.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px'}; background:${msg.role === 'user' ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' : 'rgba(255,255,255,0.08)'}; ${msg.role === 'user' ? 'box-shadow: 0 4px 12px rgba(124,58,237,0.3);' : 'border: 1px solid rgba(255,255,255,0.08);'}">
+                                <div style="font-size:14px; color:${msg.role === 'user' ? 'white' : 'rgba(255,255,255,0.85)'}; line-height:1.6; white-space:pre-wrap;">${msg.text}</div>
+                                <div style="font-size:10px; color:rgba(255,255,255,0.3); margin-top:6px; text-align:${msg.role === 'user' ? 'right' : 'left'};">${msg.ts || ''}</div>
+                                ${msg.role === 'ai' && msg.hasPlan ? `
+                                    <button onclick="applyAIPlanFromChat(${chat.indexOf(msg)})" style="margin-top:10px; width:100%; padding:10px; border-radius:12px; border:none; background:rgba(48,209,88,0.15); color:var(--green); font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                        <i class="ph-bold ph-check-circle"></i> Applica al Planner
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
-                    `).join('') : '<div style="font-size:12px; color:rgba(255,255,255,0.3); text-align:center; padding:10px;">Nessun argomento da recuperare.</div>'}
+                    `).join('')}
                 </div>
 
-                <!-- Focus Timer Section -->
-                <div id="pomodoroContainer">
-                    ${renderFocusTimer()}
-                </div>
-
-                <!-- Optimization Action -->
-                <div class="card" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); padding: 24px; border-radius: 28px; display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 24px; box-shadow: 0 15px 35px rgba(124,58,237,0.4);">
-                    <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase;">OTTIMIZZAZIONE STUDIO</div>
-                    <h2 style="margin:0; color:white; font-size:20px; font-weight:800; text-align:center;">Organizza ${state.tasks.length} Compiti</h2>
-                    <button id="aiOptimizeBtn" onclick="callGeminiAI()" 
-                        style="width: 100%; height: 50px; background: white; color: #4f46e5; border-radius: 16px; border:none; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition: transform 0.2s;">
-                        <i class="ph-bold ph-lightning"></i> Ottimizza Ora
-                    </button>
-                </div>
-
-                <!-- AI Response Area -->
-                <div id="aiResponseContainer" class="${state.aiResponse ? '' : 'hidden'} card glass-panel" style="padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.03);">
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; color:var(--blue);">
-                        <i class="ph-bold ph-stars" style="font-size: 20px;"></i>
-                        <span style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Piano di Studio Suggerito</span>
-                    </div>
-                    <div id="aiTextBody" style="font-size: 14px; color: rgba(255,255,255,0.8); line-height: 1.6; white-space: pre-wrap;">
-                        ${state.aiResponse}
+                <!-- Chat Input Area -->
+                <div style="flex-shrink:0; padding:12px 0; border-top:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex; gap:8px; align-items:flex-end;">
+                        <button onclick="showAddExamModal()" style="width:42px; height:42px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" title="Aggiungi verifica">
+                            <i class="ph-bold ph-exam" style="font-size:18px;"></i>
+                        </button>
+                        <div style="flex:1; position:relative;">
+                            <textarea id="aiChatInput" rows="1" placeholder="Scrivi al tuo tutor AI..." 
+                                style="width:100%; min-height:42px; max-height:120px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:10px 14px; color:white; font-size:14px; outline:none; resize:none; font-family:inherit;"
+                                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
+                                oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
+                        </div>
+                        <button onclick="sendAIChat()" id="aiSendBtn" style="width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, #7c3aed, #4f46e5); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 4px 12px rgba(124,58,237,0.3);">
+                            <i class="ph-bold ph-paper-plane-tilt" style="font-size:18px;"></i>
+                        </button>
                     </div>
                 </div>
             </div>`;
         }
 
-        function saveGeminiKey() {
-            const val = document.getElementById('geminiApiKeyInput').value.trim();
-            if (val) {
-                state.geminiKey = val;
-                localStorage.setItem('g_diary_gemini_key', val);
-                showToast("Chiave salvata! 🛡️");
-                render();
-            }
+        function sendAIChatQuick(text) {
+            const input = document.getElementById('aiChatInput');
+            if (input) input.value = text;
+            sendAIChat();
         }
 
-        async function callGeminiAI() {
-            if (!state.geminiKey) {
-                showToast("Inserisci prima la API Key! 🔑", "#ff453a");
-                return;
-            }
+        function clearAIChat() {
+            state.aiChatHistory = [];
+            localStorage.setItem(lsKey('ai_chat'), '[]');
+            state.aiResponse = '';
+            render();
+        }
 
-            const btn = document.getElementById('aiOptimizeBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Analisi in corso...';
-            btn.disabled = true;
+        async function sendAIChat() {
+            const input = document.getElementById('aiChatInput');
+            const text = (input?.value || '').trim();
+            if (!text) return;
 
-            // --- Costruzione Context Hyper-Planner ---
-            const homework = state.tasks.filter(t => !t.done).map(t => `- [${t.subject}] ${t.text}`).join('\n');
-            const exams = state.exams.map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'argomenti generali'})`).join('\n');
-            const backlog = state.backlog.map(b => `- [${b.subject}] Recuperare ${b.topic}`).join('\n');
-            const difficulty = state.difficulty.join(', ');
-            const prep = Object.entries(state.prepLevels).map(([s, l]) => `${s}: ${l}/5`).join(', ');
-            const schedule = `Disponibilità: dalle ${state.availability.start} alle ${state.availability.end}`;
+            // Add user message
+            const now = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            state.aiChatHistory.push({ role: 'user', text, ts: now });
+            input.value = '';
+            input.style.height = 'auto';
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
 
-            const prompt = `Sei un Tutor Accademico esperto. Crea un PIANO DI STUDIO OTTIMIZZATO per oggi/settimana.
-            
-CONTEXT STUDENTE:
-- COMPITI: ${homework || 'Nessun compito specifico.'}
-- VERIFICHE/ESAMI: ${exams || 'Nessuna verifica programmata.'}
-- ARGOMENTI ARRETRATI: ${backlog || 'Nessun arretrato.'}
-- MATERIE DIFFICILI: ${difficulty || 'Nessuna in particolare.'}
-- PREPARAZIONE ATTUALE: ${prep || 'Standard (3/5).'}
-- ORARIO DISPONIBILE: ${schedule}
+            // Build context
+            const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
+            const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
+            const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
+            const difficulty = (state.difficulty || []).join(', ');
+            const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
 
-RICHIESTA:
-1. Prioritizza le materie difficili e le verifiche imminenti.
-2. Inserisci sessioni di recupero per gli arretrati.
-3. Suggerisci orari precisi (es 15:30) basandoti sulla disponibilità.
-4. Mantieni un tono motivante e sintetico. Usa emoji.`;
+            const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
+
+CONTEXT STUDENTE (aggiornato):
+- COMPITI ATTIVI: ${homework || 'Nessuno.'}
+- VERIFICHE: ${exams || 'Nessuna.'}
+- ARRETRATI: ${backlog || 'Nessuno.'}
+- MATERIE DIFFICILI: ${difficulty || 'Nessuna.'}
+- ${schedule}
+- DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+
+QUANDO SUGGERISCI UN PIANO DI STUDIO:
+- Usa orari precisi (es. 15:30-16:15)
+- Indica materia e argomento per ogni slot
+- Includi pause
+- Prioritizza verifiche imminenti e materie difficili`;
+
+            // Build conversation for Gemini
+            const contents = [
+                { role: 'user', parts: [{ text: systemContext }] },
+                { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
+            ];
+            state.aiChatHistory.forEach(msg => {
+                contents.push({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.text }]
+                });
+            });
 
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.geminiKey}`;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
+                    body: JSON.stringify({ contents })
                 });
 
                 const data = await response.json();
-                if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    state.aiResponse = data.candidates[0].content.parts[0].text;
-                    render();
-                    const container = document.getElementById('aiResponseContainer');
-                    if (container) { container.classList.remove('hidden'); container.scrollIntoView({ behavior: 'smooth' }); }
+                if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    const aiText = data.candidates[0].content.parts[0].text;
+                    const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText); // Detect if response has time slots
+                    state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+                    state.aiResponse = aiText;
+                } else if (data?.error) {
+                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
                 } else {
-                    throw new Error("Risposta AI non valida");
+                    state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
                 }
             } catch (error) {
-                console.error("AI Error:", error);
-                showToast("Errore AI: controlla la Key o i dati", "#ff453a");
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                console.error('AI Chat Error:', error);
+                state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+            }
+
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
+        }
+
+        function applyAIPlanFromChat(msgIndex) {
+            const msg = state.aiChatHistory[msgIndex];
+            if (!msg || msg.role !== 'ai') return;
+            state.aiResponse = msg.text;
+            showToast('✅ Piano applicato! Vai al Planner per vederlo.', 'var(--green)');
+        }
+
+        function saveGeminiKey() {
+            const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
+            if (val) {
+                state.geminiKey = val;
+                localStorage.setItem('g_diary_gemini_key', val);
+                showToast('Chiave salvata! 🛡️');
+                render();
             }
         }
 
@@ -5521,16 +5543,110 @@ RICHIESTA:
 
         /* --- Hyper-Planner: Management Helpers --- */
 
-        function promptAddExam() {
-            const subject = prompt("Materia?");
-            if (!subject) return;
-            const type = prompt("Tipo? (Verifica, Interrogazione, Test)", "Verifica");
-            const date = prompt("Data? (AAAA-MM-GG)", new Date().toISOString().split('T')[0]);
-            const topic = prompt("Argomento?");
+        function promptAddExam() { showAddExamModal(); }
+
+        function showAddExamModal() {
+            const container = getModalContainer();
+            if (!container) return;
+            const subjects = getAllSubjects();
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            container.innerHTML = `
+            <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h2 style="margin:0; font-size:18px; font-weight:800;">📝 Nuova Verifica</h2>
+                        <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700; cursor:pointer;">Chiudi</button>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Materia</label>
+                            <select id="examSubject" style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none; appearance:none; -webkit-appearance:none;">
+                                ${subjects.map(s => `<option value="${s}" style="background:#1a1a2e;">${s}</option>`).join('')}
+                                <option value="__custom" style="background:#1a1a2e;">+ Altra materia...</option>
+                            </select>
+                        </div>
+
+                        <div id="examCustomSubjectWrap" style="display:none;">
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Nome Materia</label>
+                            <input type="text" id="examCustomSubject" placeholder="Scrivi il nome..." style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Tipo</label>
+                            <select id="examType" style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none; appearance:none; -webkit-appearance:none;">
+                                <option value="Verifica" style="background:#1a1a2e;">Verifica scritta</option>
+                                <option value="Interrogazione" style="background:#1a1a2e;">Interrogazione</option>
+                                <option value="Test" style="background:#1a1a2e;">Test / Quiz</option>
+                                <option value="Compito in classe" style="background:#1a1a2e;">Compito in classe</option>
+                                <option value="Presentazione" style="background:#1a1a2e;">Presentazione</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Data</label>
+                            <input type="date" id="examDate" value="${todayStr}" min="${todayStr}" style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Argomento (opzionale)</label>
+                            <input type="text" id="examTopic" placeholder="Es: Cap. 5-7, L'Illuminismo..." style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
+                        </div>
+
+                        <button onclick="submitExamForm()" style="width:100%; height:50px; background:linear-gradient(135deg, #7c3aed, #4f46e5); color:white; border:none; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:4px;">
+                            <i class="ph-bold ph-check-circle"></i> Aggiungi Verifica
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+
+            // Handle custom subject toggle
+            document.getElementById('examSubject').addEventListener('change', function () {
+                document.getElementById('examCustomSubjectWrap').style.display = this.value === '__custom' ? 'block' : 'none';
+            });
+        }
+
+        function getAllSubjects() {
+            const fromGrades = getVotiData().map(v => v.materia || v.subject).filter(Boolean);
+            const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
+            const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
+            const all = [...new Set([...fromGrades, ...fromTasks, ...fromExams])];
+            if (all.length === 0) {
+                return ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'];
+            }
+            return all.sort();
+        }
+
+        function submitExamForm() {
+            let subject = document.getElementById('examSubject').value;
+            if (subject === '__custom') {
+                subject = (document.getElementById('examCustomSubject').value || '').trim();
+                if (!subject) { showToast('Inserisci il nome della materia', '#ff453a'); return; }
+            }
+            const type = document.getElementById('examType').value;
+            const date = document.getElementById('examDate').value;
+            const topic = (document.getElementById('examTopic').value || '').trim();
+
+            if (!date) { showToast('Seleziona una data', '#ff453a'); return; }
 
             state.exams.push({ subject, type, date, topic });
+
+            // Also add to calendar tasks
+            const examTask = {
+                id: 'exam_' + Date.now(),
+                text: `${type}: ${topic || subject}`,
+                subject: subject,
+                due_date: date,
+                done: false,
+                isExam: true
+            };
+            state.tasks.push(examTask);
+
             saveTasks();
+            closeModal();
             render();
+            showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
         }
 
         function removeExam(index) {
@@ -5539,15 +5655,52 @@ RICHIESTA:
             render();
         }
 
-        function promptAddBacklog() {
-            const subject = prompt("Materia?");
-            if (!subject) return;
-            const topic = prompt("Cosa devi recuperare?");
-            if (!topic) return;
+        function promptAddBacklog() { showAddBacklogModal(); }
+
+        function showAddBacklogModal() {
+            const container = getModalContainer();
+            if (!container) return;
+            const subjects = getAllSubjects();
+
+            container.innerHTML = `
+            <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h2 style="margin:0; font-size:18px; font-weight:800;">📚 Argomento Arretrato</h2>
+                        <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700; cursor:pointer;">Chiudi</button>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Materia</label>
+                            <select id="backlogSubject" style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none; appearance:none; -webkit-appearance:none;">
+                                ${subjects.map(s => `<option value="${s}" style="background:#1a1a2e;">${s}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Cosa devi recuperare?</label>
+                            <input type="text" id="backlogTopic" placeholder="Es: Equazioni di 2° grado, Canto V Inferno..." style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
+                        </div>
+
+                        <button onclick="submitBacklogForm()" style="width:100%; height:50px; background:linear-gradient(135deg, #2563eb, #0A84FF); color:white; border:none; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="ph-bold ph-check-circle"></i> Aggiungi Arretrato
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function submitBacklogForm() {
+            const subject = document.getElementById('backlogSubject').value;
+            const topic = (document.getElementById('backlogTopic').value || '').trim();
+            if (!topic) { showToast('Inserisci l\'argomento da recuperare', '#ff453a'); return; }
 
             state.backlog.push({ subject, topic });
             saveTasks();
+            closeModal();
             render();
+            showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
         }
 
         function removeBacklog(index) {
