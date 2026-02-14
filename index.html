@@ -5407,28 +5407,57 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 });
             });
 
-            try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.geminiKey}`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents })
-                });
+            const maxRetries = 3;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.geminiKey}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents })
+                    });
 
-                const data = await response.json();
-                if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    const aiText = data.candidates[0].content.parts[0].text;
-                    const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText); // Detect if response has time slots
-                    state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-                    state.aiResponse = aiText;
-                } else if (data?.error) {
-                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
-                } else {
-                    state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+                    const data = await response.json();
+
+                    // Check for rate limit (429) or quota errors - retry
+                    if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
+                        if (attempt < maxRetries) {
+                            const waitSec = attempt * 15; // 15s, 30s, 45s
+                            state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
+                            render();
+                            setTimeout(() => {
+                                const chatDiv = document.getElementById('aiChatMessages');
+                                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+                            }, 50);
+                            await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+                            // Remove the retry message before next attempt
+                            state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
+                            continue;
+                        } else {
+                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
+                            break;
+                        }
+                    }
+
+                    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        const aiText = data.candidates[0].content.parts[0].text;
+                        const hasPlan = /\d{1,2}[:.:]\\d{2}/.test(aiText);
+                        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+                        state.aiResponse = aiText;
+                    } else if (data?.error) {
+                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+                    } else {
+                        state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+                    }
+                    break; // Success or non-retryable error, exit loop
+                } catch (error) {
+                    console.error('AI Chat Error:', error);
+                    if (attempt === maxRetries) {
+                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    }
                 }
-            } catch (error) {
-                console.error('AI Chat Error:', error);
-                state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
             }
 
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
@@ -5494,25 +5523,30 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
                         ${subjects.length > 0 ? subjects.map(s => {
                 const active = state.difficulty.includes(s);
-                return `<button onclick="toggleDifficulty('${s}')" style="padding:10px 16px; border-radius:16px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'white'}; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.3s;">${s}</button>`;
-            }).join('') : '<div style="font-size:13px; color:rgba(255,255,255,0.3); padding:10px;">Sincronizza prima i voti per vedere le materie.</div>'}
+                const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:16px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.1)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'white'}; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.3s;">${s}</button>`;
+            }).join('') : '<div style="font-size:13px; color:rgba(255,255,255,0.3); padding:10px;">Sincronizza prima i voti per vedere le materie.</div>'
                     </div>
                 </div>
 
                 <!-- Preparation Levels (Optional Feature) -->
                 <div class="card glass-panel" style="padding: 24px; border-radius: 28px;">
                     <div style="font-size: 15px; font-weight: 800; color:white; margin-bottom: 16px;">Livello Preparazione</div>
-                    <div style="display:flex; flex-direction:column; gap:16px;">
-                        ${subjects.map(s => `
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-size:14px; color:white;">${s}</span>
-                                <div style="display:flex; gap:4px;">
+                    <p style="font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Tocca i quadrati per impostare il tuo livello (1-5) per ogni materia.</p>
+                    <div style="display:flex; flex-direction:column; gap:14px;">
+                        ${subjects.map(s => {
+                            const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            const currentLvl = state.prepLevels[s] || 3;
+                            return `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
+                                <span style="font-size:13px; color:white; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:12px;">${s}</span>
+                                <div style="display:flex; gap:6px; flex-shrink:0; align-items:center;">
                                     ${[1, 2, 3, 4, 5].map(lvl => `
-                                        <div onclick="setPrepLevel('${s}', ${lvl})" style="width:24px; height:24px; border-radius:6px; background:${(state.prepLevels[s] || 3) >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.05)'}; cursor:pointer;"></div>
+                                        <div onclick="setPrepLevel('${safeS}', ${lvl})" style="width:32px; height:32px; border-radius:8px; background:${currentLvl >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${currentLvl >= lvl ? 'var(--blue)' : 'rgba(255,255,255,0.1)'}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:${currentLvl >= lvl ? 'white' : 'rgba(255,255,255,0.3)'};">${lvl}</div>
                                     `).join('')}
                                 </div>
-                            </div>
-                        `).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
             </div>`;
