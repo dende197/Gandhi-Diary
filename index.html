@@ -5507,8 +5507,47 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         function applyAIPlanFromChat(msgIndex) {
             const msg = state.aiChatHistory[msgIndex];
             if (!msg || msg.role !== 'ai') return;
-            state.aiResponse = msg.text;
-            showToast('✅ Piano applicato! Vai al Planner per vederlo.', 'var(--green)');
+
+            const text = msg.text;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const lines = text.split('\n');
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                // Match patterns like: "15:30-16:15 Materia - Argomento" or "15:30 Materia"
+                const timeMatch = line.match(/(\d{1,2}[:.]\d{2})/);
+                if (timeMatch) {
+                    const time = timeMatch[1];
+                    // Clean line from time and bullet points
+                    let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
+                    if (clean && clean.length > 2) {
+                        const parts = clean.split(/[ \-–—]/);
+                        const subject = parts[0];
+                        const topic = parts.slice(1).join(' ').trim() || 'Studio';
+
+                        const newTask = {
+                            id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            subject: subject.charAt(0).toUpperCase() + subject.slice(1),
+                            text: `[AI] ${time}: ${topic}`,
+                            due_date: todayStr,
+                            done: false,
+                            created_at: new Date().toISOString()
+                        };
+                        state.tasks.push(newTask);
+                        addedCount++;
+                    }
+                }
+            });
+
+            if (addedCount > 0) {
+                saveTasks();
+                if (typeof savePlannerRemote === 'function') savePlannerRemote();
+                showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
+                // Give a bit of time for the toast before navigating
+                setTimeout(() => navigate('planner'), 800);
+            } else {
+                showToast('⚠️ Non ho trovato orari chiari nel messaggio. Prova a chiedere un piano orario!', 'var(--orange)');
+            }
         }
 
         function saveGeminiKey() {
@@ -7063,7 +7102,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         window.showPlanWeekModal = showPlanWeekModal;
         window.closeModal = closeModal;
         window.setStressLevel = setStressLevel;
-        window.togglePollCreatorUI = togglePollCreatorUI;
+
         window.addPollOption = addPollOption;
         window.publishPost = publishPost;
         window.navigate = navigate;
