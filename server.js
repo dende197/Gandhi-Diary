@@ -49,7 +49,8 @@ app.use(cors({
 // ============= AI CHAT PROXY =============
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
-    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+    // La chiave è ora gestita lato server. Priorità alla variabile d'ambiente, fallback alla chiave fornita.
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyB3fbLJyMWJcRMX0hCCAMA_K-qvCoebvSM';
 
     if (!GEMINI_KEY) {
         return res.status(500).json({ error: "Backend error: GEMINI_API_KEY non configurata sul server." });
