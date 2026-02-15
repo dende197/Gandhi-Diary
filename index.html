@@ -3189,9 +3189,11 @@
                 };
             });
 
-            // ✅ PERSISTENCE FIX: Mantieni i compiti locali con subject 'QUEST' (aggiunti manualmente)
-            // Questo evita che vengano cancellati ad ogni sync/refresh se non presenti su Argo/Supabase.
-            const localQuests = localIndex ? Array.from(localIndex.values()).filter(t => t.subject === 'QUEST') : [];
+            // ✅ PERSISTENCE FIX: Mantieni i compiti locali (AI o manuali) non presenti su Argo
+            // Questo evita che vengano cancellati ad ogni sync/refresh.
+            const localQuests = localIndex ? Array.from(localIndex.values()).filter(t =>
+                (t.id && (t.id.startsWith('ai_') || t.id.startsWith('t_'))) || t.subject === 'QUEST'
+            ) : [];
 
             // Unisci QUEST locali con i nuovi task formattati
             // Usa un set per evitare duplicati se per caso lo stesso QUEST è già in formatted
