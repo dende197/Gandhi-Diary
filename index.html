@@ -2544,10 +2544,12 @@
                     console.log("📊 Planner sync:", { remoteHasData, localHasData, remoteIsNewer, localIsNewer });
 
                     if (remoteIsNewer && remoteHasData) {
-                        console.log("☁️ Remoto più nuovo e valido → scarico dati");
-                        state.plannedTasks = remotePT;
-                        state.stressLevels = remoteSL;
-                        state.stressVents = remoteSV;
+                        console.log("☁️ Remoto più nuovo e valido → merge dati stimato");
+                        // Deep Merge: non sovrascrivere mai se abbiamo dati locali diversi
+                        state.plannedTasks = mergePlannerData(state.plannedTasks, remotePT);
+                        state.stressLevels = { ...remoteSL, ...state.stressLevels };
+                        state.stressVents = { ...remoteSV, ...state.stressVents };
+
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                         localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                         localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
@@ -2927,13 +2929,14 @@
                         console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer });
 
                         if (remoteIsNewer && remoteHasData) {
-                            // Server più recente → usa server
-                            state.plannedTasks = remotePT;
-                            state.stressLevels = remoteSL;
+                            // Deep Merge invece di sovrascrittura totale
+                            state.plannedTasks = mergePlannerData(state.plannedTasks, remotePT);
+                            state.stressLevels = { ...remoteSL, ...state.stressLevels };
+
                             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                             localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                             if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                            console.log("✅ Planner: usati dati server (più recenti)");
+                            console.log("✅ Planner: merge difensivo con dati server (più recenti)");
                         } else if (localHasData && !remoteHasData) {
                             // Locale ha dati, server vuoto → push verso server
                             console.log("📤 Planner: locale ha dati, server vuoto → sync verso server");
@@ -3202,6 +3205,7 @@
                 if (!mergedTasks.some(mt => mt.id === qo.id)) {
                     // 🔥 RE-HYDRATE: Ensure Date object is local-midnight even after JSON loading
                     qo.dateObj = parseArgoDate(qo.due_date || qo.display_date || qo.dateObj);
+                    qo.hasValidDate = !isNaN(qo.dateObj.getTime()); // ⭐ FIX: Forza flag validità per AI/Manual
                     mergedTasks.push(qo);
                 }
             }
@@ -3747,6 +3751,18 @@
         }
 
         /* === 3) Notifica centralizzata per aggiornare tutto in tempo reale === */
+        // Helper per merge non distruttivo del planner
+        function mergePlannerData(local, remote) {
+            const result = { ...remote, ...local }; // Priorità a locale se chiavi collidono
+            for (const date in remote) {
+                if (local[date]) {
+                    // Unione IDs senza duplicati
+                    result[date] = [...new Set([...local[date], ...remote[date]])];
+                }
+            }
+            return result;
+        }
+
         function notifyPlannerChanged() {
             // badge sul bottone Organizza Oggi e Dashboard
             if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
