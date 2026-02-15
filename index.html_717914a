@@ -1683,27 +1683,27 @@
 
 
         // ⭐ Funzione universale per leggere le date di Argo
-        function parseArgoDate(dateStr) {
-            if (!dateStr) return new Date(0);
-            if (dateStr instanceof Date) return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate(), 12, 0, 0);
+        function parseArgoDate(dateString) {
+            if (!dateString) return new Date(0);
+            if (dateString instanceof Date) return dateString;
 
-            if (typeof dateStr === 'string') {
-                // 1. Handle YYYY-MM-DD (safe local parsing at NOON)
-                const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                if (isoMatch) {
-                    return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]), 12, 0, 0);
-                }
-                // 2. Handle DD/MM/YYYY
-                const itaMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-                if (itaMatch) {
-                    return new Date(parseInt(itaMatch[3]), parseInt(itaMatch[2]) - 1, parseInt(itaMatch[1]), 12, 0, 0);
-                }
+            // Handle YYYY-MM-DD
+            const isoMatch = typeof dateString === 'string' && dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]), 0, 0, 0);
             }
 
-            // Fallback: forced local NOON
-            const d = new Date(dateStr);
+            // Handle DD/MM/YYYY
+            const itaMatch = typeof dateString === 'string' && dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (itaMatch) {
+                return new Date(parseInt(itaMatch[3]), parseInt(itaMatch[2]) - 1, parseInt(itaMatch[1]), 0, 0, 0);
+            }
+
+            // Fallback
+            const d = new Date(dateString);
             if (!isNaN(d.getTime())) {
-                return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+                // Return a "clean" local midnight date
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
             }
             return new Date();
         }
@@ -1721,7 +1721,7 @@
         function stableTaskId(raw) {
             const subject = (raw.subject || raw.materia || 'Generico').trim().toLowerCase();
             const text = (raw.text || raw.desCompito || 'Nessuna descrizione').trim().toLowerCase();
-            const rawDate = raw.due_date || raw.datConsegna || raw.datCompito || raw.dataProva || raw.datGiorno || raw.date || '';
+            const rawDate = raw.datCompito || raw.due_date || raw.dataProva || raw.datGiorno || raw.date || '';
             const d = parseArgoDate(rawDate);
             const iso = !isNaN(d.getTime()) ? getLocalDateString(d) : '';
             const key = `${subject}||${text}||${iso}`;
@@ -1748,7 +1748,7 @@
             return 'gauge-bad';
         }
 
-        let DIRECTORY = [
+        const DIRECTORY = [
             { name: 'Alessandro Russo', id: 'demo:alessandro:0', class: '5B', status: 'online' },
             { name: 'Sofia Bianchi', id: 'demo:sofia:0', class: '3A', status: 'offline' },
             { name: 'Luca Esposito', id: 'demo:luca:0', class: '4C', status: 'online' },
@@ -2399,32 +2399,6 @@
                 pinned: !!i?.pinned,
                 created_at: i?.created_at || i?.timestamp
             };
-        }
-        async function fetchUsersDirectory() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/users`);
-                const data = await res.json();
-                if (data.success && data.data) {
-                    DIRECTORY = data.data;
-                    console.log("📂 Directory synchronized:", DIRECTORY.length);
-                }
-            } catch (e) {
-                console.warn("Directory sync failed:", e.message);
-            }
-        }
-
-        function addPollOption() {
-            const container = document.getElementById('pollOptionsContainer');
-            if (!container) return;
-            const idx = container.children.length;
-            const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.gap = '8px';
-            div.innerHTML = `
-                <input type="text" class="poll-option-input" placeholder="Opzione ${idx + 1}" style="flex:1; height:40px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:0 12px;">
-                <button onclick="this.parentElement.remove()" style="width:40px; height:40px; border-radius:12px; border:none; background:rgba(255,69,58,0.1); color:var(--red); cursor:pointer;"><i class="ph ph-trash"></i></button>
-            `;
-            container.appendChild(div);
         }
 
         // ⭐ PERSISTENCE HELPERS (New API)
@@ -3166,7 +3140,7 @@
 
             // Costruisci nuovi task formattati con ID STABILI
             const formatted = newTasks.map(t => {
-                const rawDate = t.due_date || t.datConsegna || t.datCompito || t.dataProva || t.datGiorno || t.date;
+                const rawDate = t.datCompito || t.due_date || t.dataProva || t.datGiorno || t.date;
                 const dateObj = parseArgoDate(rawDate);
                 const isoDate = !isNaN(dateObj.getTime()) ? getLocalDateString(dateObj) : '';
 
@@ -3201,8 +3175,6 @@
             const mergedTasks = [...formatted];
             for (const qo of localQuests) {
                 if (!mergedTasks.some(mt => mt.id === qo.id)) {
-                    // 🔥 RE-HYDRATE: Ensure Date object is local-midnight even after JSON loading
-                    qo.dateObj = parseArgoDate(qo.due_date || qo.display_date || qo.dateObj);
                     mergedTasks.push(qo);
                 }
             }

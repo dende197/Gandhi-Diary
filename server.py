@@ -786,33 +786,27 @@ def extract_homework_safe(argo_instance):
     tasks_data = []
     try:
         dashboard_data = argo_instance.get_full_dashboard()
-        raw_homework = {}
         if 'data' in dashboard_data and 'dati' in dashboard_data['data']:
-            dati = dashboard_data['data']['dati']
-            if dati and len(dati) > 0:
-                registro = dati[0].get('registro', [])
+            for blocco in dashboard_data['data']['dati']:
+                registro = blocco.get('registro', [])
+                dat_giorno = blocco.get('datGiorno') # Fallback if specific delivery date missing
+                
                 for element in registro:
-                     for compito in element.get("compiti", []):
-                        data_consegna = compito.get("dataConsegna")
-                        if data_consegna not in raw_homework:
-                            raw_homework[data_consegna] = {"compiti": [], "materie": []}
-                        raw_homework[data_consegna]["compiti"].append(compito.get("compito"))
-                        raw_homework[data_consegna]["materie"].append(element.get("materia"))
-
-        for date_str, details in raw_homework.items():
-            compiti_list = details.get('compiti', [])
-            materie_list = details.get('materie', [])
-            for i, desc in enumerate(compiti_list):
-                mat = materie_list[i] if i < len(materie_list) else "Generico"
-                tasks_data.append({
-                    "id": str(uuid.uuid4())[:12],
-                    "text": desc,
-                    "subject": mat,
-                    "due_date": date_str,
-                    "datCompito": date_str,
-                    "materia": mat,
-                    "done": False
-                })
+                    materia = element.get("materia", "Generico")
+                    for compito in element.get("compiti", []):
+                        # Use dataConsegna if available, otherwise fallback to the lesson's day
+                        due_date = compito.get("dataConsegna") or compito.get("datConsegna") or dat_giorno
+                        
+                        if due_date:
+                            tasks_data.append({
+                                "id": str(uuid.uuid4())[:12],
+                                "text": compito.get("compito", "Nessuna descrizione"),
+                                "subject": materia,
+                                "due_date": due_date,
+                                "datCompito": due_date,
+                                "materia": materia,
+                                "done": False
+                            })
     except Exception as e:
         debug_log(f"⚠️ Errore compiti", str(e))
     return tasks_data
