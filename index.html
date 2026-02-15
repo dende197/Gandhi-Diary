@@ -4405,10 +4405,12 @@
 
                 <!-- Weekly Agenda / Task List -->
                 <div style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <h2 style="margin:0; font-size:16px; font-weight:800; color:white;">Agenda Settimanale</h2>
+                    <h2 style="margin:0; font-size:16px; font-weight:800; color:white;">${state.plannerMode === 'registro' ? 'Scadenze Registro' : 'Agenda Studio'}</h2>
+                    ${state.plannerMode === 'studio' ? `
                     <button onclick="showPlanWeekModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); padding:8px 14px; border-radius: 12px; color: white; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
                         <i class="ph-bold ph-plus" style="font-size:14px; color:var(--green);"></i> Pianifica
                     </button>
+                    ` : ''}
                 </div>
                 <div id="weekly-agenda-list" class="card glass-panel" style="padding: 16px;">
                     ${renderWeeklyAgenda()}
@@ -4443,7 +4445,7 @@
             list.sort((a, b) => new Date(a.displayDate) - new Date(b.displayDate));
 
             if (!list.length) {
-                const msg = state.plannerMode === 'registro' ? 'Nessun compito in scadenza questa settimana.' : 'Nessun compito pianificato nello Studio.';
+                const msg = state.plannerMode === 'registro' ? 'Nessun compito in scadenza questa settimana.' : 'Nessun compito pianificato nello Studio. Usa "Pianifica" o chiedi all\'AI!';
                 return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">${msg}</div>`;
             }
 
