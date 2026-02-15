@@ -23,10 +23,8 @@ from urllib.parse import unquote
 
 def register_planner_routes(app: Flask):
 
-    @app.route("/api/planner/<path:user_id>", methods=["GET", "PUT", "OPTIONS"])
+    @app.route("/api/planner/<path:user_id>", methods=["GET", "PUT"])
     def planner_manager(user_id):
-        if request.method == "OPTIONS":
-            return jsonify({"success": True}), 200
             
         user_id = unquote(user_id)
         

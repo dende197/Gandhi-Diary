@@ -16,14 +16,11 @@ from planner_routes import register_planner_routes
 # CREA UNA SOLA ISTANZA DI FLASK
 app = Flask(__name__)
 
-# ✅ FIX 1: CORS PER TUTTE LE ROTTE (Limitato a domini sicuri)
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "")
-_allowed = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
-# Se non settato, consenti solo la tua PWA (modifica se necessario)
+# ✅ FIX 1: CORS PER TUTTE LE ROTTE (Configurazione permissiva per Render/GitHub Pages)
 CORS(app,
-     resources={r"/*": {"origins": _allowed or ["https://dende197.github.io"]}},
+     resources={r"/*": {"origins": "*"}},
      supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "apikey"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # REGISTRA LE ROUTE DEL PLANNER SULL'ISTANZA 'app'

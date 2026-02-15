@@ -2543,13 +2543,6 @@
 
                     console.log("📊 Planner sync:", { remoteHasData, localHasData, remoteIsNewer, localIsNewer });
 
-                    if (!remoteHasData && localHasData) {
-                        console.log("🛡️ Remoto vuoto → mantengo locale e ripopolo il server");
-                        debouncedSavePlannerRemote(0);
-                        notifyPlannerChanged();
-                        return;
-                    }
-
                     if (remoteIsNewer && remoteHasData) {
                         console.log("☁️ Remoto più nuovo e valido → scarico dati");
                         state.plannedTasks = remotePT;
@@ -2559,13 +2552,13 @@
                         localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                         localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
                         if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                    } else if (localIsNewer || (localHasData && !remoteHasData)) {
+                    } else if (localHasData && (!remoteHasData || localIsNewer)) {
                         console.log("ℹ️ Locale più nuovo o remoto vuoto → sincronizzo verso remoto");
-                        // Carica da cache se la memoria è stata per qualche motivo resettata
+                        // Forza push se locale ha dati e server no, o se locale è più nuovo
                         state.plannedTasks = localPT;
                         state.stressLevels = localSL;
                         state.stressVents = localSV;
-                        debouncedSavePlannerRemote(0);
+                        savePlannerRemote(); // Esecuzione immediata per sicurezza
                     }
 
                     notifyPlannerChanged();
@@ -5276,13 +5269,21 @@
             }
         ];
 
+        let __lastAchievementsVotiHash = "";
         function checkAchievements() {
             const votiData = getVotiData();
             if (votiData.length === 0) return;
 
+            // Idempotenza: non processare se i voti non sono cambiati
+            const currentHash = JSON.stringify(votiData.map(v => v.id + v.voto));
+            if (__lastAchievementsVotiHash === currentHash) return;
+            __lastAchievementsVotiHash = currentHash;
+
             let newlyUnlocked = false;
             ACHIEVEMENTS.forEach(ach => {
-                if (!state.badges.includes(ach.id) && ach.condition(votiData)) {
+                const alreadyHas = state.badges && state.badges.includes(ach.id);
+                if (!alreadyHas && ach.condition(votiData)) {
+                    if (!state.badges) state.badges = [];
                     state.badges.push(ach.id);
                     newlyUnlocked = true;
                     showToast(`Nuovo Achievement: ${ach.title}! ${ach.icon}`);
@@ -7181,6 +7182,13 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         window.closeModal = closeModal;
         window.setStressLevel = setStressLevel;
 
+        function togglePollCreatorUI() {
+            const ui = document.getElementById('poll-creator-ui');
+            if (ui) {
+                ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
+            }
+        }
+        window.togglePollCreatorUI = togglePollCreatorUI;
         window.addPollOption = addPollOption;
         window.publishPost = publishPost;
         window.navigate = navigate;
@@ -7476,7 +7484,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             });
         }
 
-        window.showStressCaptureModal = showStressCaptureModal;
+        window.showStressCaptureModal = showDetailedStressModal;
         window.drawWeeklyStressChart = drawWeeklyStressChart;
     </script>
 </body>
