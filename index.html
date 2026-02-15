@@ -2055,6 +2055,8 @@
             feed: { search: '', classFilter: 'Tutte' },
             tasks: [], // ⭐ Inizializza vuoto, carica da localStorage
             plannedTasks: {},
+            plannerMode: 'registro', // 'registro' (Argo) o 'studio' (User/AI)
+            plannerView: 'calendar', // 'calendar' o 'list'
             stressLevels: {},
             stressVents: {},
             tempStress: { level: 5, vent: '' }, // Initial state for stress card
@@ -3461,7 +3463,6 @@
             }
             return key.substring(0, 3).toUpperCase();
         }
-
         function initPlannerCalendar() {
             renderCustomCalendar();
         }
@@ -3523,7 +3524,15 @@
                 const isToday = dateStr === todayISO;
                 const isPast = tempDate < today && !isToday;
 
-                const dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
+                let dayTasks = [];
+                if (state.plannerMode === 'registro') {
+                    // Badge based on DUE DATE
+                    dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
+                } else {
+                    // Badge based on PLANNED DATE
+                    const plannedIds = state.plannedTasks[dateStr] || [];
+                    dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id));
+                }
 
                 html += `
                     <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
@@ -4373,6 +4382,24 @@
                     </div>
                 </div>
 
+                <!-- Semantic Tab Switcher -->
+                <div style="display:flex; gap:12px; margin-bottom:20px; background:rgba(255,255,255,0.03); padding:6px; border-radius:16px;">
+                    <button onclick="state.plannerMode='registro'; render();" 
+                        style="flex:1; height:44px; border-radius:12px; border:none; font-weight:800; font-size:13px; cursor:pointer; transition:all 0.2s;
+                        background:${state.plannerMode === 'registro' ? 'rgba(0, 122, 255, 0.15)' : 'transparent'};
+                        color:${state.plannerMode === 'registro' ? '#007AFF' : 'rgba(255,255,255,0.4)'};
+                        border:${state.plannerMode === 'registro' ? '1px solid rgba(0, 122, 255, 0.3)' : '1px solid transparent'};">
+                        <i class="ph-bold ph-notebook" style="margin-right:6px;"></i> Registro
+                    </button>
+                    <button onclick="state.plannerMode='studio'; render();" 
+                        style="flex:1; height:44px; border-radius:12px; border:none; font-weight:800; font-size:13px; cursor:pointer; transition:all 0.2s;
+                        background:${state.plannerMode === 'studio' ? 'rgba(255, 45, 85, 0.15)' : 'transparent'};
+                        color:${state.plannerMode === 'studio' ? '#FF2D55' : 'rgba(255,255,255,0.4)'};
+                        border:${state.plannerMode === 'studio' ? '1px solid rgba(255, 45, 85, 0.3)' : '1px solid transparent'};">
+                        <i class="ph-bold ph-target" style="margin-right:6px;"></i> Studio
+                    </button>
+                </div>
+
                 <!-- Interactive Calendar -->
                 ${uiMode === 'calendar' ? '<div id="calendar" style="margin-bottom: 20px;"></div>' : ''}
 
@@ -4390,28 +4417,44 @@
         }
 
         function renderWeeklyAgenda() {
-            const plannedWithDates = [];
-            Object.entries(state.plannedTasks).forEach(([dateStr, taskIds]) => {
-                taskIds.forEach(id => {
-                    const task = state.tasks.find(t => t.id === id);
-                    if (task) plannedWithDates.push({ ...task, plannedDate: dateStr });
+            const list = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (state.plannerMode === 'registro') {
+                // Registro Mode: Show tasks by DUE DATE
+                state.tasks.forEach(t => {
+                    if (t.due_date && isFutureOrToday(t.due_date)) {
+                        list.push({ ...t, displayDate: t.due_date });
+                    }
                 });
-            });
-            plannedWithDates.sort((a, b) => new Date(a.plannedDate) - new Date(b.plannedDate));
+            } else {
+                // Studio Mode: Show tasks by PLANNED DATE
+                Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
+                    if (isFutureOrToday(dateStr)) {
+                        ids.forEach(id => {
+                            const t = state.tasks.find(tk => tk.id === id);
+                            if (t) list.push({ ...t, displayDate: dateStr });
+                        });
+                    }
+                });
+            }
 
-            // Filtra solo date da oggi in poi
-            const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
+            list.sort((a, b) => new Date(a.displayDate) - new Date(b.displayDate));
 
-            if (!filtered.length) return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">Nessun compito pianificato (o già passati).</div>`;
+            if (!list.length) {
+                const msg = state.plannerMode === 'registro' ? 'Nessun compito in scadenza questa settimana.' : 'Nessun compito pianificato nello Studio.';
+                return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">${msg}</div>`;
+            }
 
             const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-            return filtered.map(t => {
-                const d = new Date(t.plannedDate);
+            return list.map(t => {
+                const d = new Date(t.displayDate);
                 const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
                 const subjectColor = getSubjectColor(t.subject);
                 return `
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
-                    <div style="min-width: 54px; font-size: 11px; font-weight: 800; color: var(--orange); text-transform: uppercase;">${label}</div>
+                    <div style="min-width: 54px; font-size: 11px; font-weight: 800; color: ${state.plannerMode === 'registro' ? '#007AFF' : '#FF2D55'}; text-transform: uppercase;">${label}</div>
                     <div onclick="toggleTask('${t.id}')" style="width: 22px; height: 22px; border: 2px solid ${t.done ? 'var(--green)' : subjectColor}; background: ${t.done ? 'var(--green)' : 'transparent'}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                         ${t.done ? '<i class="ph-bold ph-check" style="font-size: 14px; color: black;"></i>' : ''}
                     </div>
@@ -5504,6 +5547,11 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                             created_at: new Date().toISOString()
                         };
                         state.tasks.push(newTask);
+
+                        // Auto-plan for today in Studio mode
+                        if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                        state.plannedTasks[todayStr].push(newTask.id);
+
                         addedCount++;
                     }
                 }
