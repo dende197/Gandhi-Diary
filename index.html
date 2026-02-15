@@ -3526,8 +3526,8 @@
 
                 let dayTasks = [];
                 if (state.plannerMode === 'registro') {
-                    // Badge based on DUE DATE - ONLY school tasks
-                    dayTasks = (state.tasks || []).filter(t => t.id.startsWith('t_') && t.due_date === dateStr);
+                    // Badge based on DUE DATE - Show all except AI and manual quests
+                    dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
                 } else {
                     // Badge based on PLANNED DATE
                     const plannedIds = state.plannedTasks[dateStr] || [];
@@ -3576,16 +3576,25 @@
             const date = new Date(dateStr);
             const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-            // Filtra compiti per questo giorno
-            const tasksForDay = (state.tasks || []).filter(t => t.due_date === dateStr);
-            const plannedIds = state.plannedTasks[dateStr] || [];
-
+            // Strict Semantic Filtering for Modal
+            let tasksForDay = [];
+            if (state.plannerMode === 'registro') {
+                // Show school tasks due this day
+                tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
+            } else {
+                // Show ONLY tasks planned for this day
+                const plannedIds = state.plannedTasks[dateStr] || [];
+                tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id));
+            }
+            const isRegistro = state.plannerMode === 'registro';
             container.innerHTML = `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" style="max-width:440px; padding:24px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
                             <div>
-                                <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Pianificazione Giorno</div>
+                                <div style="font-size:11px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+                                    ${isRegistro ? 'Scadenze Registro' : 'Organizzazione Studio'}
+                                </div>
                                 <h2 style="margin:0; font-size:22px; text-transform:capitalize;">${formattedDate}</h2>
                             </div>
                             <button onclick="closeModal()" style="background:rgba(255,255,255,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; cursor:pointer;">
@@ -3600,17 +3609,16 @@
                                     <div style="font-weight:600;">Nessun compito per oggi</div>
                                 </div>
                             ` : tasksForDay.map(t => {
-                const isPlanned = plannedIds.includes(t.id);
                 const color = getSubjectColor(t.subject);
                 return `
-                                    <div class="glass-list-item" style="padding:16px; border-radius:18px; display:flex; gap:14px; align-items:center; border:1px solid ${isPlanned ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255,255,255,0.05)'}; background:${isPlanned ? 'rgba(48, 209, 88, 0.05)' : 'rgba(255,255,255,0.02)'};">
+                                    <div class="glass-list-item" style="padding:16px; border-radius:18px; display:flex; gap:14px; align-items:center; border:1px solid ${t.done ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255,255,255,0.05)'}; background:${t.done ? 'rgba(48, 209, 88, 0.05)' : 'rgba(255,255,255,0.02)'};">
                                         <div style="width:4px; height:32px; background:${color}; border-radius:4px;"></div>
                                         <div style="flex:1;">
                                             <div style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">${t.subject}</div>
-                                            <div style="font-size:15px; font-weight:600; color:white; line-height:1.4;">${t.text}</div>
+                                            <div style="font-size:15px; font-weight:600; color:white; line-height:1.4; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.text}</div>
                                         </div>
-                                        <button onclick="togglePlanInModal('${dateStr}', '${t.id}')" style="background:${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.1)'}; border:none; width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
-                                            <i class="ph-fill ${isPlanned ? 'ph-check-circle' : 'ph-plus-circle'}" style="font-size:24px; color:${isPlanned ? 'black' : 'white'};"></i>
+                                        <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.1)'}; border:none; width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                            <i class="ph-bold ph-check" style="font-size:20px; color:${t.done ? 'black' : 'white'};"></i>
                                         </button>
                                     </div>
                                 `;
@@ -4424,9 +4432,9 @@
             today.setHours(0, 0, 0, 0);
 
             if (state.plannerMode === 'registro') {
-                // Registro Mode: ONLY show school tasks (id starts with 't_')
+                // Registro Mode: Show all non-AI/non-manual tasks matching due date
                 state.tasks.forEach(t => {
-                    if (t.id.startsWith('t_') && t.due_date && isFutureOrToday(t.due_date)) {
+                    if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date && isFutureOrToday(t.due_date)) {
                         list.push({ ...t, displayDate: t.due_date });
                     }
                 });
@@ -4617,14 +4625,14 @@
             const contentEl = document.getElementById('plan-week-modal-content');
             if (!contentEl) return;
 
-            const todayStr = getLocalDateStr();
+            const todayStr = getLocalDateString();
             const todayDate = new Date();
             const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             const next7Days = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(todayDate);
                 d.setDate(todayDate.getDate() + i);
-                const ds = getLocalDateStr(d);
+                const ds = getLocalDateString(d);
                 next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
             }
 
@@ -4679,7 +4687,7 @@
         function togglePlanDay(taskId, dateStr) {
             if (event) event.stopPropagation();
             // ✅ FIX: Usa confronto stringa timezone-safe
-            const todayStr = getLocalDateStr();
+            const todayStr = getLocalDateString();
             if (dateStr < todayStr) return; // Solo i giorni passati sono bloccati, oggi è OK
 
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
