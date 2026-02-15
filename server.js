@@ -25,22 +25,9 @@ app.get('/', (req, res) => {
     });
 });
 
-// ============= CORS (CORRETTO) =============
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "";
-const _allowed = ALLOWED_ORIGINS
-    .split(",")
-    .map(o => o.trim())
-    .filter(o => o.length > 0);
-
+// ============= CORS (CONFIGURAZIONE PERMISSIVA PER RENDER/GITHUB PAGES) =============
 app.use(cors({
-    origin: function (origin, callback) {
-        const allowed = _allowed.length > 0 ? _allowed : ["https://dende197.github.io"];
-        if (!origin || allowed.includes(origin) || allowed.includes("*")) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: "*",
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Client-Info", "apikey", "x-id-soggetto", "x-prg-soggetto", "x-auth-token"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
@@ -49,8 +36,8 @@ app.use(cors({
 // ============= AI CHAT PROXY =============
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
-    // La chiave è ora gestita lato server. Priorità alla variabile d'ambiente, fallback alla chiave fornita.
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyB3fbLJyMWJcRMX0hCCAMA_K-qvCoebvSM';
+    // Nuova chiave fornita dall'utente (AIzaSyABSi1NqIheBR_pU9PtvToXuPUOsdOH__Q)
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyABSi1NqIheBR_pU9PtvToXuPUOsdOH__Q';
 
     if (!GEMINI_KEY) {
         return res.status(500).json({ error: "Backend error: GEMINI_API_KEY non configurata sul server." });
@@ -1230,13 +1217,14 @@ async function extractHomeworkSafe(headers) {
 
         for (const blocco of dati) {
             const registro = blocco.registro || [];
+            const datGiorno = blocco.datGiorno; // Fallback se manca dataConsegna specifica
 
             for (const element of registro) {
                 const compiti = element.compiti || [];
                 const materia = element.materia || 'Generico';
 
                 for (const compito of compiti) {
-                    const dataConsegna = compito.dataConsegna;
+                    const dataConsegna = compito.dataConsegna || compito.datConsegna || datGiorno;
                     if (!dataConsegna) continue;
 
                     if (!rawHomework[dataConsegna]) {
