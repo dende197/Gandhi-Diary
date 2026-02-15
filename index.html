@@ -136,28 +136,32 @@
         }
 
         /* === CUSTOM APPLE SCROLLBAR === */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+        }
+
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 3px;
+            height: 3px;
             background: transparent;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            /* Subtle thumb */
+            background: rgba(255, 255, 255, 0.12);
             border-radius: 10px;
-            visibility: hidden;
-            /* Hide by default */
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        /* Show on hover of the scrollable element (requires structure support) 
-           For now, we make it subtle but visible when scrolling usually happens */
-        *:hover::-webkit-scrollbar-thumb {
-            visibility: visible;
+        *:hover::-webkit-scrollbar-thumb,
+        *:active::-webkit-scrollbar-thumb {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.18);
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.25);
         }
 
         /* === UTILITIES === */
@@ -1062,7 +1066,7 @@
             border: 1px solid var(--blue);
         }
 
-        }
+
 
         /* === COMPONENTS === */
 
@@ -4266,8 +4270,37 @@
         function showProfileActions() {
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
-            function renderSettings() {
-                return `
+            modalContainer.innerHTML = `
+            <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 400px; padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Account</h2>
+                        <button onclick="closeModal()" style="background: none; border: none; color: var(--blue); font-weight: 600; cursor: pointer; font-size: 16px;">Chiudi</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 14px; margin-bottom: 20px;">
+                        ${renderAvatar(state.user.name, 48)}
+                        <div>
+                            <div style="font-size: 17px; font-weight: 600; color: var(--text-primary);">${state.user.name}</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);">${state.user.class || 'Studente'}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button onclick="closeModal(); showEditProfileModal();" style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; color: var(--text-primary); font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px;">
+                            <i class="ph-bold ph-user" style="font-size: 18px; color: var(--blue);"></i> Modifica Profilo
+                        </button>
+                        <button onclick="closeModal(); navigate('profile');" style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; color: var(--text-primary); font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px;">
+                            <i class="ph-bold ph-gear" style="font-size: 18px; color: var(--text-secondary);"></i> Impostazioni
+                        </button>
+                        <button onclick="logout()" style="width: 100%; padding: 14px 16px; background: rgba(255,63,49,0.08); border: 1px solid rgba(255,63,49,0.12); border-radius: 12px; color: var(--red); font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px;">
+                            <i class="ph-bold ph-sign-out" style="font-size: 18px;"></i> Esci
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderSettings() {
+            return `
             <div class="view" style="padding-top: 60px;">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Impostazioni</h1>
@@ -4319,64 +4352,64 @@
                 
                 <div style="margin-top: 30px; text-align: center;">
                     <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">G-Connect v5.0 (Liquid Glass)</p>
-                    <p style="font-size: 11px; color: var(--text-dim);">Developed with ❤️ for Students</p>
+                    <p style="font-size: 11px; color: var(--text-dim);">Made for Students</p>
                 </div>
             </div>
             `;
+        }
+        async function saveProfileChanges() {
+            const newNameInput = document.getElementById('edit-user-name');
+            if (!newNameInput) return;
+            const newName = newNameInput.value.trim();
+            if (!newName) {
+                alert("Inserisci almeno il nome");
+                return;
             }
-            async function saveProfileChanges() {
-                const newNameInput = document.getElementById('edit-user-name');
-                if (!newNameInput) return;
-                const newName = newNameInput.value.trim();
-                if (!newName) {
-                    alert("Inserisci almeno il nome");
-                    return;
-                }
-                try {
-                    showBoot("Salvataggio profilo...");
-                    await saveProfileToServer({ name: newName });
-                    state.user.name = newName;
-                    localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+            try {
+                showBoot("Salvataggio profilo...");
+                await saveProfileToServer({ name: newName });
+                state.user.name = newName;
+                localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
-                    // 🔥 Sync with DIRECTORY for global search
-                    const myId = getUserId();
-                    const myName = String(state.user.name || '').toLowerCase().trim();
-                    for (let i = DIRECTORY.length - 1; i >= 0; i--) {
-                        const d = DIRECTORY[i];
-                        if (String(d.id).toLowerCase() === myId.toLowerCase() || String(d.name || '').toLowerCase().trim() === myName) {
-                            DIRECTORY.splice(i, 1);
-                        }
+                // 🔥 Sync with DIRECTORY for global search
+                const myId = getUserId();
+                const myName = String(state.user.name || '').toLowerCase().trim();
+                for (let i = DIRECTORY.length - 1; i >= 0; i--) {
+                    const d = DIRECTORY[i];
+                    if (String(d.id).toLowerCase() === myId.toLowerCase() || String(d.name || '').toLowerCase().trim() === myName) {
+                        DIRECTORY.splice(i, 1);
                     }
-                    DIRECTORY.push({ ...state.user, id: myId });
-
-                    state.lastSearchResults = null;
-                    closeModal();
-                    render();
-                    hideBoot();
-                } catch (error) {
-                    hideBoot();
-                    alert("❌ Errore durante il salvataggio: " + error.message);
                 }
+                DIRECTORY.push({ ...state.user, id: myId });
+
+                state.lastSearchResults = null;
+                closeModal();
+                render();
+                hideBoot();
+            } catch (error) {
+                hideBoot();
+                alert("❌ Errore durante il salvataggio: " + error.message);
             }
+        }
 
-            // Expose functions globally for dynamic HTML events
-            window.showEditProfileModal = showEditProfileModal;
-            window.showProfileActions = showProfileActions;
-            window.saveProfileChanges = saveProfileChanges;
+        // Expose functions globally for dynamic HTML events
+        window.showEditProfileModal = showEditProfileModal;
+        window.showProfileActions = showProfileActions;
+        window.saveProfileChanges = saveProfileChanges;
 
-            function renderHome() {
-                const todayStr = getLocalDateString();
-                const plannedIds = state.plannedTasks[todayStr] || [];
-                const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
-                const media = calcolaMedia(state.voti);
+        function renderHome() {
+            const todayStr = getLocalDateString();
+            const plannedIds = state.plannedTasks[todayStr] || [];
+            const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
+            const media = calcolaMedia(state.voti);
 
-                // Welcome Greeting Logic
-                const h = new Date().getHours();
-                let greeting = "Buonasera";
-                if (h < 12) greeting = "Buongiorno";
-                else if (h < 18) greeting = "Buon pomeriggio";
+            // Welcome Greeting Logic
+            const h = new Date().getHours();
+            let greeting = "Buonasera";
+            if (h < 12) greeting = "Buongiorno";
+            else if (h < 18) greeting = "Buon pomeriggio";
 
-                return `
+            return `
             <div class="view" style="padding-top: 60px;">
                 <!-- Header -->
                 <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 30px; padding: 0 4px;">
@@ -4480,15 +4513,15 @@
                     </div>
                 </div>
             </div>`;
-            }
+        }
 
-            function renderMarket() {
-                const items = [...state.marketItems];
-                const pinned = items.filter(i => i.pinned);
-                const normal = items.filter(i => !i.pinned);
-                const list = [...pinned, ...normal];
+        function renderMarket() {
+            const items = [...state.marketItems];
+            const pinned = items.filter(i => i.pinned);
+            const normal = items.filter(i => !i.pinned);
+            const list = [...pinned, ...normal];
 
-                return `
+            return `
             <div class="view page-bg">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <h1>Market</h1>
@@ -4498,12 +4531,12 @@
                     ${list.map(renderMarketCard).join('')}
                 </div>
             </div>`;
-            }
+        }
 
-            function renderMarketCard(item) {
-                const statusClass = item.status || 'available';
-                const statusText = statusClass === 'sold' ? 'Venduto' : (statusClass === 'reserved' ? 'Riservato' : 'Disponibile');
-                return `
+        function renderMarketCard(item) {
+            const statusClass = item.status || 'available';
+            const statusText = statusClass === 'sold' ? 'Venduto' : (statusClass === 'reserved' ? 'Riservato' : 'Disponibile');
+            return `
             <div class="market-card" onclick="openMarketItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})">
                 <div class="market-card-img">
                     ${item.image ? `<img src="${item.image}">` : `<i class="ph ph-image" style="font-size:36px; color:rgba(255,255,255,0.1);"></i>`}
@@ -4517,41 +4550,41 @@
                     </div>
                 </div>
             </div>`;
-            }
+        }
 
-            function getMarketImages(item) {
-                const imgs = Array.isArray(item?.images) ? item.images : (item?.image ? [item.image] : []);
-                return imgs.length ? imgs : [];
-            }
+        function getMarketImages(item) {
+            const imgs = Array.isArray(item?.images) ? item.images : (item?.image ? [item.image] : []);
+            return imgs.length ? imgs : [];
+        }
 
-            function openMarketItemModal(item) {
-                state.marketModal = { item, index: 0 };
-                renderMarketItemModal();
-            }
+        function openMarketItemModal(item) {
+            state.marketModal = { item, index: 0 };
+            renderMarketItemModal();
+        }
 
-            function setMarketModalImage(index) {
-                const modal = state.marketModal;
-                if (!modal) return;
-                const images = getMarketImages(modal.item);
-                if (!images.length) return;
+        function setMarketModalImage(index) {
+            const modal = state.marketModal;
+            if (!modal) return;
+            const images = getMarketImages(modal.item);
+            if (!images.length) return;
 
-                modal.index = Math.max(0, Math.min(images.length - 1, index));
+            modal.index = Math.max(0, Math.min(images.length - 1, index));
 
-                const mainImg = document.getElementById('market-modal-main-img');
-                if (mainImg) mainImg.src = images[modal.index];
+            const mainImg = document.getElementById('market-modal-main-img');
+            if (mainImg) mainImg.src = images[modal.index];
 
-                document.querySelectorAll('.market-thumb').forEach((el, idx) => {
-                    el.classList.toggle('active', idx === modal.index);
-                });
-            }
+            document.querySelectorAll('.market-thumb').forEach((el, idx) => {
+                el.classList.toggle('active', idx === modal.index);
+            });
+        }
 
-            function renderMarketItemModal() {
-                const modalContainer = getModalContainer();
-                const { item, index } = state.marketModal;
-                const images = getMarketImages(item);
-                const isOwner = item.sellerId === getUserId();
+        function renderMarketItemModal() {
+            const modalContainer = getModalContainer();
+            const { item, index } = state.marketModal;
+            const images = getMarketImages(item);
+            const isOwner = item.sellerId === getUserId();
 
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:520px; padding:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -4592,21 +4625,21 @@
                     </div>`}
                 </div>
             </div>`;
-            }
+        }
 
 
 
 
 
-            function renderPlanner() {
-                const uiMode = state.plannerView || 'calendar'; // 'calendar' o 'list'
+        function renderPlanner() {
+            const uiMode = state.plannerView || 'calendar'; // 'calendar' o 'list'
 
-                return `
+            return `
             <div class="view" style="padding-bottom: 80px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0;">
                     <h1 style="margin:0;">Planner</h1>
                     <div style="display:flex; gap:8px;">
-                        <button onclick="navigate('ai_assistant')" style="height:40px; padding:0 16px; border-radius:12px; border:none; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; font-weight:800; font-size:13px; display:flex; align-items:center; gap:8px; box-shadow: 0 4px 15px rgba(124,58,237,0.3); cursor:pointer;">
+                        <button onclick="navigate('ai_assistant')" style="height:40px; padding:0 16px; border-radius:12px; border:none; background: var(--blue); color:white; font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer;">
                             <i class="ph-bold ph-magic-wand"></i> AI
                         </button>
                         <div style="background:rgba(255,255,255,0.06); border-radius:12px; padding:4px; display:flex; gap:4px;">
@@ -4650,45 +4683,45 @@
                     ${renderWeeklyAgenda()}
                 </div>
             </div>`;
+        }
+
+        function renderWeeklyAgenda() {
+            const list = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (state.plannerMode === 'registro') {
+                // Registro Mode: Show all non-AI/non-manual tasks matching due date
+                state.tasks.forEach(t => {
+                    if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date && isFutureOrToday(t.due_date)) {
+                        list.push({ ...t, displayDate: t.due_date });
+                    }
+                });
+            } else {
+                // Studio Mode: ONLY show planned items
+                Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
+                    if (isFutureOrToday(dateStr)) {
+                        ids.forEach(id => {
+                            const t = state.tasks.find(tk => tk.id === id);
+                            if (t) list.push({ ...t, displayDate: dateStr });
+                        });
+                    }
+                });
             }
 
-            function renderWeeklyAgenda() {
-                const list = [];
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+            list.sort((a, b) => parseArgoDate(a.displayDate) - parseArgoDate(b.displayDate));
 
-                if (state.plannerMode === 'registro') {
-                    // Registro Mode: Show all non-AI/non-manual tasks matching due date
-                    state.tasks.forEach(t => {
-                        if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date && isFutureOrToday(t.due_date)) {
-                            list.push({ ...t, displayDate: t.due_date });
-                        }
-                    });
-                } else {
-                    // Studio Mode: ONLY show planned items
-                    Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
-                        if (isFutureOrToday(dateStr)) {
-                            ids.forEach(id => {
-                                const t = state.tasks.find(tk => tk.id === id);
-                                if (t) list.push({ ...t, displayDate: dateStr });
-                            });
-                        }
-                    });
-                }
+            if (!list.length) {
+                const msg = state.plannerMode === 'registro' ? 'Nessun compito in scadenza questa settimana.' : 'Nessun compito pianificato nello Studio. Usa "Pianifica" o chiedi all\'AI!';
+                return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">${msg}</div>`;
+            }
 
-                list.sort((a, b) => parseArgoDate(a.displayDate) - parseArgoDate(b.displayDate));
-
-                if (!list.length) {
-                    const msg = state.plannerMode === 'registro' ? 'Nessun compito in scadenza questa settimana.' : 'Nessun compito pianificato nello Studio. Usa "Pianifica" o chiedi all\'AI!';
-                    return `<div style="text-align: center; opacity: 0.5; font-size: 14px; padding: 20px; color:white;">${msg}</div>`;
-                }
-
-                const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-                return list.map(t => {
-                    const d = parseArgoDate(t.displayDate);
-                    const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
-                    const subjectColor = getSubjectColor(t.subject);
-                    return `
+            const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            return list.map(t => {
+                const d = parseArgoDate(t.displayDate);
+                const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
+                const subjectColor = getSubjectColor(t.subject);
+                return `
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                     <div style="min-width: 54px; font-size: 11px; font-weight: 800; color: ${state.plannerMode === 'registro' ? '#007AFF' : '#FF2D55'}; text-transform: uppercase;">${label}</div>
                     <div onclick="toggleTask('${t.id}')" style="width: 22px; height: 22px; border: 2px solid ${t.done ? 'var(--green)' : subjectColor}; background: ${t.done ? 'var(--green)' : 'transparent'}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
@@ -4699,17 +4732,17 @@
                         <div style="font-size: 11px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${t.subject}</div>
                     </div>
                 </div>`;
-                }).join('');
-            }
+            }).join('');
+        }
 
-            // Stress Modal fluida (mantieni selezione senza ri-render)
-            // Stress selection modal: make buttons definitely clickable
-            function showStressModal() {
-                const todayStr = getLocalDateString();
-                const currentLevel = state.stressLevels[todayStr] || 0;
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
-                modalContainer.innerHTML = `
+        // Stress Modal fluida (mantieni selezione senza ri-render)
+        // Stress selection modal: make buttons definitely clickable
+        function showStressModal() {
+            const todayStr = getLocalDateString();
+            const currentLevel = state.stressLevels[todayStr] || 0;
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
+            modalContainer.innerHTML = `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
@@ -4729,56 +4762,56 @@
                         </div>
                     </div>
                 </div>`;
+        }
+
+        // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
+        function formatTimeAgo(dateInput) {
+            if (!dateInput) return 'ora';
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+
+            const diff = Date.now() - date.getTime();
+
+            // Threshold optimization: use milliseconds directly
+            if (diff < 60000) return "ora";
+            const mins = Math.floor(diff / 60000);
+            if (mins < 60) return mins + "m";
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return hours + "h";
+            const days = Math.floor(hours / 24);
+            return days + "d";
+        }
+
+        function formatFullDate(dateInput) {
+            if (!dateInput) return '';
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            const months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            return `${day} ${month} ${year} • ${time} `;
+        }
+
+        function showStressDetailsModal() {
+            const days = 14;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const points = [];
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
+
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const iso = getLocalDateString(d);
+                const lv = state.stressLevels[iso] || 0;
+                points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
             }
+            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)).join(' ');
 
-            // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
-            function formatTimeAgo(dateInput) {
-                if (!dateInput) return 'ora';
-                const date = new Date(dateInput);
-                if (isNaN(date.getTime())) return '';
-
-                const diff = Date.now() - date.getTime();
-
-                // Threshold optimization: use milliseconds directly
-                if (diff < 60000) return "ora";
-                const mins = Math.floor(diff / 60000);
-                if (mins < 60) return mins + "m";
-                const hours = Math.floor(mins / 60);
-                if (hours < 24) return hours + "h";
-                const days = Math.floor(hours / 24);
-                return days + "d";
-            }
-
-            function formatFullDate(dateInput) {
-                if (!dateInput) return '';
-                const date = new Date(dateInput);
-                if (isNaN(date.getTime())) return '';
-                const months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-                const day = date.getDate();
-                const month = months[date.getMonth()];
-                const year = date.getFullYear();
-                const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-                return `${day} ${month} ${year} • ${time} `;
-            }
-
-            function showStressDetailsModal() {
-                const days = 14;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const points = [];
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
-
-                for (let i = days - 1; i >= 0; i--) {
-                    const d = new Date(today);
-                    d.setDate(today.getDate() - i);
-                    const iso = getLocalDateString(d);
-                    const lv = state.stressLevels[iso] || 0;
-                    points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
-                }
-                const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)).join(' ');
-
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -4801,68 +4834,68 @@
                         </div>
                     </div>
                 </div>`;
+        }
+
+        // setStressLevel(lv, inModal): aggiorna fluido
+        function setStressLevel(lv, inModal = false) {
+            const todayStr = getLocalDateString();
+            state.stressLevels[todayStr] = lv;
+            saveTasks();
+            savePlannerRemote();
+            debouncedSavePlannerRemote();
+
+            if (inModal) {
+                document.querySelectorAll('.stress-pill').forEach(p => {
+                    p.classList.toggle('active', Number(p.getAttribute('data-stress')) === lv);
+                });
             }
 
-            // setStressLevel(lv, inModal): aggiorna fluido
-            function setStressLevel(lv, inModal = false) {
-                const todayStr = getLocalDateString();
-                state.stressLevels[todayStr] = lv;
-                saveTasks();
-                savePlannerRemote();
-                debouncedSavePlannerRemote();
-
-                if (inModal) {
-                    document.querySelectorAll('.stress-pill').forEach(p => {
-                        p.classList.toggle('active', Number(p.getAttribute('data-stress')) === lv);
-                    });
-                }
-
-                // Aggiorna badge in Home
-                const stressBadge = document.querySelector('.stress-card');
-                if (stressBadge) {
-                    const existingBadge = stressBadge.querySelector('[data-stress-badge]');
-                    if (existingBadge) existingBadge.remove();
-                    const badge = document.createElement('div');
-                    badge.setAttribute('data-stress-badge', '');
-                    badge.style = "position:absolute; bottom:10px; right:12px; background: rgba(255,255,255,0.18); color:#fff; font-size:11px; font-weight:800; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.28);";
-                    badge.textContent = String(lv);
-                    stressBadge.appendChild(badge);
-                }
-                // Trigger animazione onda live
-                if (typeof initStressWaveFromState === 'function') {
-                    initStressWaveFromState();
-                }
+            // Aggiorna badge in Home
+            const stressBadge = document.querySelector('.stress-card');
+            if (stressBadge) {
+                const existingBadge = stressBadge.querySelector('[data-stress-badge]');
+                if (existingBadge) existingBadge.remove();
+                const badge = document.createElement('div');
+                badge.setAttribute('data-stress-badge', '');
+                badge.style = "position:absolute; bottom:10px; right:12px; background: rgba(255,255,255,0.18); color:#fff; font-size:11px; font-weight:800; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.28);";
+                badge.textContent = String(lv);
+                stressBadge.appendChild(badge);
             }
-            // MODIFICA: showPlanWeekModal mostra i PROSSIMI 7 giorni a partire da OGGI
-            function showPlanWeekModal() {
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
+            // Trigger animazione onda live
+            if (typeof initStressWaveFromState === 'function') {
+                initStressWaveFromState();
+            }
+        }
+        // MODIFICA: showPlanWeekModal mostra i PROSSIMI 7 giorni a partire da OGGI
+        function showPlanWeekModal() {
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
 
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
                         <!-- Content injected by refreshPlanWeekModalContent -->
                     </div>
                 </div>`;
-                refreshPlanWeekModalContent();
+            refreshPlanWeekModalContent();
+        }
+
+        function refreshPlanWeekModalContent() {
+            const contentEl = document.getElementById('plan-week-modal-content');
+            if (!contentEl) return;
+
+            const todayStr = getLocalDateString();
+            const todayDate = new Date();
+            const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            const next7Days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(todayDate);
+                d.setDate(todayDate.getDate() + i);
+                const ds = getLocalDateString(d);
+                next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
             }
 
-            function refreshPlanWeekModalContent() {
-                const contentEl = document.getElementById('plan-week-modal-content');
-                if (!contentEl) return;
-
-                const todayStr = getLocalDateString();
-                const todayDate = new Date();
-                const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-                const next7Days = [];
-                for (let i = 0; i < 7; i++) {
-                    const d = new Date(todayDate);
-                    d.setDate(todayDate.getDate() + i);
-                    const ds = getLocalDateString(d);
-                    next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
-                }
-
-                contentEl.innerHTML = `
+            contentEl.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin:0;">Pianifica Settimana</h2>
                     <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
@@ -4883,16 +4916,16 @@
                     </div>
 
                     ${state.tasks.filter(t => !t.done).map(t => {
-                    const subjectColor = getSubjectColor(t.subject);
-                    return `
+                const subjectColor = getSubjectColor(t.subject);
+                return `
                         <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
                             <div style="font-weight: 700; color: white; margin-bottom: 4px; text-align:left;">${t.text}</div>
                             <div style="font-size: 11px; color: ${subjectColor}; font-weight:700; text-transform:uppercase; margin-bottom: 12px; text-align:left;">${t.subject}</div>
                             <div style="display: flex; justify-content: space-between; gap: 4px;">
                                  ${next7Days.map(day => {
-                        const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
-                        const isToday = day.dateStr === todayStr;
-                        return `
+                    const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
+                    const isToday = day.dateStr === todayStr;
+                    return `
                                             <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                                 onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
                                                 style="flex: 1; text-align:center; padding: 10px 4px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
@@ -4902,99 +4935,99 @@
                                                 <div style="font-size: 10px; opacity: 0.7;">${day.label}</div>
                                                 <div style="font-weight: 700; font-size: 14px;">${day.dayNum}</div>
                                             </div>`;
-                    }).join('')}
+                }).join('')}
                             </div>
                         </div>`;
-                }).join('')}
+            }).join('')}
                 </div>
                 <button onclick="closeModal()" class="btn-primary" style="margin-top: 20px;">Fatto</button>`;
+        }
+
+        function togglePlanDay(taskId, dateStr) {
+            if (event) event.stopPropagation();
+            // ✅ FIX: Usa confronto stringa timezone-safe
+            const todayStr = getLocalDateString();
+            if (dateStr < todayStr) return; // Solo i giorni passati sono bloccati, oggi è OK
+
+            if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+            const index = state.plannedTasks[dateStr].indexOf(taskId);
+            if (index > -1) {
+                state.plannedTasks[dateStr].splice(index, 1);
+            } else {
+                state.plannedTasks[dateStr].push(taskId);
             }
 
-            function togglePlanDay(taskId, dateStr) {
-                if (event) event.stopPropagation();
-                // ✅ FIX: Usa confronto stringa timezone-safe
-                const todayStr = getLocalDateString();
-                if (dateStr < todayStr) return; // Solo i giorni passati sono bloccati, oggi è OK
+            saveTasks();
+            savePlannerRemote();
+            debouncedSavePlannerRemote();
+            updateWeekDayButton(taskId, dateStr);
+            notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
+        }
 
-                if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
-                const index = state.plannedTasks[dateStr].indexOf(taskId);
-                if (index > -1) {
-                    state.plannedTasks[dateStr].splice(index, 1);
+        function updateWeekDayButton(taskId, dateStr) {
+            const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
+            const buttons = document.querySelectorAll(`[data - task - id= "${taskId}"][data - date="${dateStr}"]`);
+            buttons.forEach(btn => {
+                if (isPlanned) {
+                    btn.style.background = 'var(--green)';
+                    btn.style.borderColor = 'var(--green)';
+                    btn.style.color = 'black';
                 } else {
-                    state.plannedTasks[dateStr].push(taskId);
+                    btn.style.background = 'rgba(255,255,255,0.08)';
+                    btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                    btn.style.color = 'white';
                 }
+            });
+        }
 
-                saveTasks();
-                savePlannerRemote();
-                debouncedSavePlannerRemote();
-                updateWeekDayButton(taskId, dateStr);
-                notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
+        function addCustomQuestFromInput() {
+            const textInput = document.getElementById('quest-text-input');
+            const dateSelect = document.getElementById('quest-date-select');
+            if (!textInput || !dateSelect) return;
+
+            const text = textInput.value.trim();
+            const dateStr = dateSelect.value;
+            if (!text) {
+                showToast('Inserisci un compito!');
+                return;
             }
 
-            function updateWeekDayButton(taskId, dateStr) {
-                const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
-                const buttons = document.querySelectorAll(`[data - task - id= "${taskId}"][data - date="${dateStr}"]`);
-                buttons.forEach(btn => {
-                    if (isPlanned) {
-                        btn.style.background = 'var(--green)';
-                        btn.style.borderColor = 'var(--green)';
-                        btn.style.color = 'black';
-                    } else {
-                        btn.style.background = 'rgba(255,255,255,0.08)';
-                        btn.style.borderColor = 'rgba(255,255,255,0.1)';
-                        btn.style.color = 'white';
-                    }
-                });
-            }
+            const quest = {
+                id: 'quest-' + Date.now(),
+                text: text,
+                subject: 'QUEST',
+                due_date: dateStr,
+                done: false
+            };
 
-            function addCustomQuestFromInput() {
-                const textInput = document.getElementById('quest-text-input');
-                const dateSelect = document.getElementById('quest-date-select');
-                if (!textInput || !dateSelect) return;
+            state.tasks.push(quest);
+            if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+            state.plannedTasks[dateStr].push(quest.id);
 
-                const text = textInput.value.trim();
-                const dateStr = dateSelect.value;
-                if (!text) {
-                    showToast('Inserisci un compito!');
-                    return;
-                }
+            // ✅ Salva immediatamente
+            saveTasks();
+            savePlannerRemote();
 
-                const quest = {
-                    id: 'quest-' + Date.now(),
-                    text: text,
-                    subject: 'QUEST',
-                    due_date: dateStr,
-                    done: false
-                };
+            // ✅ Feedback visivo immediato
+            showToast('Compito aggiunto!');
 
-                state.tasks.push(quest);
-                if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
-                state.plannedTasks[dateStr].push(quest.id);
+            // ✅ Aggiorna UI: svuota input e rigenera solo il contenuto
+            textInput.value = '';
+            refreshPlanWeekModalContent();
 
-                // ✅ Salva immediatamente
-                saveTasks();
-                savePlannerRemote();
+            // ✅ Aggiorna calendario e home in background
+            notifyPlannerChanged();
+        }
 
-                // ✅ Feedback visivo immediato
-                showToast('Compito aggiunto!');
+        /* Feed & Market Interactions */
 
-                // ✅ Aggiorna UI: svuota input e rigenera solo il contenuto
-                textInput.value = '';
-                refreshPlanWeekModalContent();
+        function selectDay(day) {
+            state.selectedDay = day;
+            render();
+        }
 
-                // ✅ Aggiorna calendario e home in background
-                notifyPlannerChanged();
-            }
-
-            /* Feed & Market Interactions */
-
-            function selectDay(day) {
-                state.selectedDay = day;
-                render();
-            }
-
-            function showVotiView() {
-                modalContainer.innerHTML = `
+        function showVotiView() {
+            modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
                 <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                     <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
@@ -5006,23 +5039,23 @@
                     </div>
                 </div>
             </div>`;
-            }
+        }
 
-            function renderVoti() {
-                const votiData = (state.voti && state.voti.length > 0) ? state.voti :
-                    ((state.grades && state.grades.length > 0) ? state.grades : []);
+        function renderVoti() {
+            const votiData = (state.voti && state.voti.length > 0) ? state.voti :
+                ((state.grades && state.grades.length > 0) ? state.grades : []);
 
-                if (votiData.length === 0) {
-                    return `
+            if (votiData.length === 0) {
+                return `
                 <div style="text-align:center; padding: 48px 24px; color: var(--text-muted);">
                     <i class="ph ph-graduation-cap" style="font-size: 56px; opacity: 0.2; margin-bottom: 16px; display: block;"></i>
                     <p style="margin-bottom:20px; font-size:16px;">Nessun voto registrato.</p>
                     <button onclick="performArgoSync()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto;">Sincronizza DidUP</button>
                 </div>`;
-                }
+            }
 
-                const media = calcolaMedia(votiData);
-                return `
+            const media = calcolaMedia(votiData);
+            return `
             <div class="view">
                 <div class="card" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(79, 70, 229, 0.4)); border: 1px solid var(--blue); padding: 24px; text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">Media Generale</div>
@@ -5031,10 +5064,10 @@
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     ${votiData.map(v => {
-                    const val = (v.valore || v.value || '').toString();
-                    const mat = v.materia || v.subject || 'Materia';
-                    const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
-                    return `
+                const val = (v.valore || v.value || '').toString();
+                const mat = v.materia || v.subject || 'Materia';
+                const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
+                return `
                         <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${color}15; border:1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:${color};">${val}</div>
                             <div style="flex:1; text-align:left;">
@@ -5042,19 +5075,19 @@
                                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
                             </div>
                         </div>`;
-                }).join('')}
+            }).join('')}
                 </div>
             </div>`;
-            }
+        }
 
-            function showBachecaModal() {
-                // ⭐ Prova prima promemoria, poi announcements
-                const dataBacheca = state.promemoria && state.promemoria.length > 0 ? state.promemoria :
-                    (state.announcements && state.announcements.length > 0 ? state.announcements : []);
+        function showBachecaModal() {
+            // ⭐ Prova prima promemoria, poi announcements
+            const dataBacheca = state.promemoria && state.promemoria.length > 0 ? state.promemoria :
+                (state.announcements && state.announcements.length > 0 ? state.announcements : []);
 
-                console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
+            console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
 
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
                 <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                     <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
@@ -5063,7 +5096,7 @@
                     </div>
                     <div style="padding: 20px; display:flex; flex-direction:column; gap:12px;">
                         ${dataBacheca.length === 0 ?
-                        `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                    `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
                         <i class="ph ph-megaphone" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
                         Nessun avviso in bacheca<br>
                         <span style="font-size: 12px; margin-top: 8px; display: block;">Gli avvisi verranno caricati dopo la sincronizzazione con DidUP</span>
@@ -5071,14 +5104,14 @@
                             <i class="ph ph-arrow-clockwise"></i> Sincronizza Ora
                         </button>
                     </div>` :
-                        dataBacheca.map(item => {
-                            const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
-                            const autore = item.autore || item.docente || 'Docente';
-                            const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
-                            const testo = item.testo || item.text || item.descrizione || item.description || '';
-                            const url = item.url || item.allegato || null;
+                    dataBacheca.map(item => {
+                        const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
+                        const autore = item.autore || item.docente || 'Docente';
+                        const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
+                        const testo = item.testo || item.text || item.descrizione || item.description || '';
+                        const url = item.url || item.allegato || null;
 
-                            return `
+                        return `
                                 <div class="glass-list-item" style="border-left: 4px solid var(--orange); background: rgba(255, 159, 10, 0.08);">
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                                         <div style="padding:4px 8px; background: rgba(255, 159, 10, 0.2); border-radius:6px; display:flex; gap:6px; align-items:center;">
@@ -5096,15 +5129,15 @@
                                     </a>` : ''}
                                 </div>
                             `;
-                        }).join('')
-                    }
+                    }).join('')
+                }
                     </div>
                 </div>
             </div>`;
-            }
+        }
 
-            function renderProfile() {
-                return `
+        function renderProfile() {
+            return `
             <div class="view" style="padding-bottom: 40px; display: flex; flex-direction: column; align-items: center;">
                 <div style="display: flex; justify-content: center; align-items: center; padding-top: 20px; margin-bottom: 20px; width: 100%;">
                     <h1 style="margin: 0; text-align: center;">Il Mio Profilo</h1>
@@ -5134,40 +5167,40 @@
                     <button onclick="forceAppUpdate()" class="btn-secondary" style="height:46px; border-radius:12px; font-weight:700; background:rgba(255, 99, 71, 0.1); color:tomato; border:1px solid rgba(255, 99, 71, 0.2); cursor:pointer;">Svuota Cache</button>
                 </div>
             </div>`;
-            }
+        }
 
-            /* --- Advanced Grades & Analytics (v1.1) --- */
+        /* --- Advanced Grades & Analytics (v1.1) --- */
 
-            function getVotiData() {
-                // ⭐ Consolida i dati da diverse possibili fonti (legacy sync vs argo argo)
-                return (state.voti && state.voti.length > 0) ? state.voti :
-                    ((state.grades && state.grades.length > 0) ? state.grades : []);
-            }
+        function getVotiData() {
+            // ⭐ Consolida i dati da diverse possibili fonti (legacy sync vs argo argo)
+            return (state.voti && state.voti.length > 0) ? state.voti :
+                ((state.grades && state.grades.length > 0) ? state.grades : []);
+        }
 
-            function renderGradesView() {
-                if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
+        function renderGradesView() {
+            if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
-                const votiData = getVotiData();
-                const media = parseFloat(calcolaMedia(votiData)) || 0;
-                const goal = state.goals?.overall || 8.0;
-                const gap = goal - media;
+            const votiData = getVotiData();
+            const media = parseFloat(calcolaMedia(votiData)) || 0;
+            const goal = state.goals?.overall || 8.0;
+            const gap = goal - media;
 
-                // Raggruppa per materia
-                const subjectsMap = {};
-                votiData.forEach(v => {
-                    const sub = v.materia || v.subject || 'Altro';
-                    if (!subjectsMap[sub]) subjectsMap[sub] = [];
-                    subjectsMap[sub].push(v);
-                });
+            // Raggruppa per materia
+            const subjectsMap = {};
+            votiData.forEach(v => {
+                const sub = v.materia || v.subject || 'Altro';
+                if (!subjectsMap[sub]) subjectsMap[sub] = [];
+                subjectsMap[sub].push(v);
+            });
 
-                const subjects = Object.entries(subjectsMap).map(([name, list]) => {
-                    const subMedia = parseFloat(calcolaMedia(list)) || 0;
-                    // Prendi gli ultimi 3 voti per il mini-trend
-                    const trend = list.slice(-3).map(v => (v.valore || v.value || '0').toString().replace(',', '.'));
-                    return { name, media: subMedia, count: list.length, trend };
-                }).sort((a, b) => b.media - a.media);
+            const subjects = Object.entries(subjectsMap).map(([name, list]) => {
+                const subMedia = parseFloat(calcolaMedia(list)) || 0;
+                // Prendi gli ultimi 3 voti per il mini-trend
+                const trend = list.slice(-3).map(v => (v.valore || v.value || '0').toString().replace(',', '.'));
+                return { name, media: subMedia, count: list.length, trend };
+            }).sort((a, b) => b.media - a.media);
 
-                return `
+            return `
             <div class="view page-bg" style="padding-bottom: 60px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 0 10px 0;">
                     <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Media & Analisi</h1>
@@ -5212,15 +5245,15 @@
                     </div>
                     <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
                         ${ACHIEVEMENTS.map(ach => {
-                    const unlocked = state.badges.includes(ach.id);
-                    return `
+                const unlocked = state.badges.includes(ach.id);
+                return `
                             <div style="min-width: 90px; text-align: center; opacity: ${unlocked ? 1 : 0.3}; filter: ${unlocked ? 'none' : 'grayscale(1)'}; transition: all 0.5s ease;">
                                 <div style="width: 60px; height: 60px; margin: 0 auto 8px; border-radius: 20px; background: ${unlocked ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'}; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid ${unlocked ? 'rgba(255,255,255,0.1)' : 'transparent'}; box-shadow: ${unlocked ? '0 8px 20px rgba(0,0,0,0.2)' : 'none'};">
                                     ${ach.icon}
                                 </div>
                                 <div style="font-size: 10px; font-weight: 800; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;">${ach.title}</div>
                             </div>`;
-                }).join('')}
+            }).join('')}
                     </div>
                 </div>
 
@@ -5263,139 +5296,139 @@
                     `).join('')}
                 </div>
             </div>`;
-            }
+        }
 
-            function promptSetGoal(type) {
-                const currentGoal = state.goals?.[type] || 8.0;
-                const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
-                if (res !== null) {
-                    const val = parseFloat(res.replace(',', '.'));
-                    if (!isNaN(val) && val > 0 && val <= 10) {
-                        if (!state.goals) state.goals = {};
-                        state.goals[type] = val;
-                        saveTasks(); // Persist standard
-                        render();
-                    } else {
-                        alert("Inserisci un valore valido tra 1 e 10");
-                    }
+        function promptSetGoal(type) {
+            const currentGoal = state.goals?.[type] || 8.0;
+            const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
+            if (res !== null) {
+                const val = parseFloat(res.replace(',', '.'));
+                if (!isNaN(val) && val > 0 && val <= 10) {
+                    if (!state.goals) state.goals = {};
+                    state.goals[type] = val;
+                    saveTasks(); // Persist standard
+                    render();
+                } else {
+                    alert("Inserisci un valore valido tra 1 e 10");
                 }
             }
+        }
 
-            function initGradesCharts() {
-                const canvas = document.getElementById('gradesTrendCanvas');
-                if (!canvas) return;
+        function initGradesCharts() {
+            const canvas = document.getElementById('gradesTrendCanvas');
+            if (!canvas) return;
 
-                const { ctx, rect } = setupCanvas(canvas);
-                const W = rect.width, H = rect.height;
+            const { ctx, rect } = setupCanvas(canvas);
+            const W = rect.width, H = rect.height;
 
-                let votiData = [...getVotiData()];
-                if (state.activeSubject) {
-                    votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
-                }
-                // Sort by absolute time
-                votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
+            let votiData = [...getVotiData()];
+            if (state.activeSubject) {
+                votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
+            }
+            // Sort by absolute time
+            votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
 
-                if (votiData.length < 2) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    ctx.font = '700 13px Rubik';
-                    ctx.textAlign = 'center';
-                    ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
-                    return;
-                }
-
-                // High Precision: Calculate progressive moving average
-                let sum = 0;
-                const points = votiData.map((v, i) => {
-                    const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-                    sum += val;
-                    return {
-                        val: sum / (i + 1),
-                        raw: val,
-                        date: v.data || v.date
-                    };
-                });
-
-                const padding = 30;
-                const scrollX = 0; // Future: horizontal scrolling for many points
-                const stepX = (W - padding * 2) / (points.length - 1);
-
-                const values = points.map(p => p.val);
-                const minV = Math.max(0, Math.min(...values) - 0.5);
-                const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
-
-                function getY(val) {
-                    const range = maxV - minV;
-                    const perc = (val - minV) / range;
-                    return (H - padding) - perc * (H - padding * 2);
-                }
-
-                // Area Gradient (Premium look)
-                const areaGrad = ctx.createLinearGradient(0, 0, 0, H);
-                areaGrad.addColorStop(0, 'rgba(10, 132, 255, 0.2)');
-                areaGrad.addColorStop(1, 'rgba(10, 132, 255, 0)');
-
-                ctx.beginPath();
-                ctx.moveTo(padding, getY(points[0].val));
-
-                // Bezier Curve Smoothing
-                for (let i = 0; i < points.length - 1; i++) {
-                    const x1 = padding + i * stepX;
-                    const y1 = getY(points[i].val);
-                    const x2 = padding + (i + 1) * stepX;
-                    const y2 = getY(points[i + 1].val);
-                    const cpX = (x1 + x2) / 2;
-                    ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
-                }
-
-                ctx.lineTo(padding + (points.length - 1) * stepX, H);
-                ctx.lineTo(padding, H);
-                ctx.closePath();
-                ctx.fillStyle = areaGrad;
-                ctx.fill();
-
-                // Linea (Neon Effect)
-                ctx.beginPath();
-                ctx.moveTo(padding, getY(points[0].val));
-                for (let i = 0; i < points.length - 1; i++) {
-                    const x1 = padding + i * stepX;
-                    const y1 = getY(points[i].val);
-                    const x2 = padding + (i + 1) * stepX;
-                    const y2 = getY(points[i + 1].val);
-                    const cpX = (x1 + x2) / 2;
-                    ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
-                }
-
-                ctx.strokeStyle = '#0a84ff';
-                ctx.lineWidth = 4;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = 'rgba(10,132,255,0.5)';
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-
-                // Interactive points
-                points.forEach((p, i) => {
-                    const x = padding + i * stepX;
-                    const y = getY(p.val);
-
-                    // Outer glow
-                    ctx.fillStyle = 'rgba(10, 132, 255, 0.3)';
-                    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
-
-                    // Point core
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-                });
+            if (votiData.length < 2) {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '700 13px Rubik';
+                ctx.textAlign = 'center';
+                ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
+                return;
             }
 
-            function renderSubjectDetailView(subjectName) {
-                const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
-                const media = parseFloat(calcolaMedia(votiData)) || 0;
-                const goal = state.goals?.[subjectName] || 8.0;
-                const gap = goal - media;
+            // High Precision: Calculate progressive moving average
+            let sum = 0;
+            const points = votiData.map((v, i) => {
+                const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
+                sum += val;
+                return {
+                    val: sum / (i + 1),
+                    raw: val,
+                    date: v.data || v.date
+                };
+            });
 
-                return `
+            const padding = 30;
+            const scrollX = 0; // Future: horizontal scrolling for many points
+            const stepX = (W - padding * 2) / (points.length - 1);
+
+            const values = points.map(p => p.val);
+            const minV = Math.max(0, Math.min(...values) - 0.5);
+            const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
+
+            function getY(val) {
+                const range = maxV - minV;
+                const perc = (val - minV) / range;
+                return (H - padding) - perc * (H - padding * 2);
+            }
+
+            // Area Gradient (Premium look)
+            const areaGrad = ctx.createLinearGradient(0, 0, 0, H);
+            areaGrad.addColorStop(0, 'rgba(10, 132, 255, 0.2)');
+            areaGrad.addColorStop(1, 'rgba(10, 132, 255, 0)');
+
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(points[0].val));
+
+            // Bezier Curve Smoothing
+            for (let i = 0; i < points.length - 1; i++) {
+                const x1 = padding + i * stepX;
+                const y1 = getY(points[i].val);
+                const x2 = padding + (i + 1) * stepX;
+                const y2 = getY(points[i + 1].val);
+                const cpX = (x1 + x2) / 2;
+                ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
+            }
+
+            ctx.lineTo(padding + (points.length - 1) * stepX, H);
+            ctx.lineTo(padding, H);
+            ctx.closePath();
+            ctx.fillStyle = areaGrad;
+            ctx.fill();
+
+            // Linea (Neon Effect)
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(points[0].val));
+            for (let i = 0; i < points.length - 1; i++) {
+                const x1 = padding + i * stepX;
+                const y1 = getY(points[i].val);
+                const x2 = padding + (i + 1) * stepX;
+                const y2 = getY(points[i + 1].val);
+                const cpX = (x1 + x2) / 2;
+                ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
+            }
+
+            ctx.strokeStyle = '#0a84ff';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(10,132,255,0.5)';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Interactive points
+            points.forEach((p, i) => {
+                const x = padding + i * stepX;
+                const y = getY(p.val);
+
+                // Outer glow
+                ctx.fillStyle = 'rgba(10, 132, 255, 0.3)';
+                ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+
+                // Point core
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+            });
+        }
+
+        function renderSubjectDetailView(subjectName) {
+            const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
+            const media = parseFloat(calcolaMedia(votiData)) || 0;
+            const goal = state.goals?.[subjectName] || 8.0;
+            const gap = goal - media;
+
+            return `
             <div class="view page-bg" style="padding-bottom: 40px;">
                 <div style="display: flex; align-items: center; gap: 16px; padding: 20px 0;">
                     <button onclick="state.activeSubject = null; render();" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
@@ -5438,9 +5471,9 @@
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <div style="font-size: 13px; font-weight: 800; color: rgba(255,255,255,0.3); text-transform: uppercase; padding-left: 4px;">Tutti i voti</div>
                     ${votiData.map(v => {
-                    const val = (v.valore || v.value || '').toString();
-                    const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
-                    return `
+                const val = (v.valore || v.value || '').toString();
+                const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
+                return `
                             <div class="card glass-panel" style="padding: 16px; display:flex; align-items:center; gap:16px; margin-bottom:0; border-radius:20px;">
                                 <div style="width: 48px; height: 48px; border-radius: 12px; background: ${color}15; border: 1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size: 20px; font-weight: 800; color: ${color};">${val}</div>
                                 <div style="flex: 1; text-align: left;">
@@ -5448,67 +5481,67 @@
                                     <div style="font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 600;">${v.data || v.date || ''}</div>
                                 </div>
                             </div>`;
-                }).join('')}
+            }).join('')}
                 </div>
             </div>`;
-            }
+        }
 
-            /* --- Gamification & Badges --- */
+        /* --- Gamification & Badges --- */
 
-            const ACHIEVEMENTS = [
-                { id: 'first_10', title: 'Cacciatore di 10', icon: '🎯', desc: 'Prendi il tuo primo 10', condition: (voti) => voti.some(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')) >= 10) },
-                { id: 'gold_media', title: 'Media d\'Oro', icon: '🏆', desc: 'Raggiungi una media generale ≥ 8.5', condition: (voti) => parseFloat(calcolaMedia(voti)) >= 8.5 },
-                { id: 'constant', title: 'Costante', icon: '🔥', desc: 'Accumula almeno 15 voti', condition: (voti) => voti.length >= 15 },
-                {
-                    id: 'subject_master', title: 'Maestro', icon: '🧠', desc: 'Media ≥ 9.0 in una materia', condition: (voti) => {
-                        const map = {};
-                        voti.forEach(v => { const m = v.materia || v.subject; if (!map[m]) map[m] = []; map[m].push(v); });
-                        return Object.values(map).some(list => parseFloat(calcolaMedia(list)) >= 9.0);
-                    }
-                }
-            ];
-
-            let __lastAchievementsVotiHash = "";
-            function checkAchievements() {
-                const votiData = getVotiData();
-                if (votiData.length === 0) return;
-
-                // Idempotenza: non processare se i voti non sono cambiati
-                const currentHash = JSON.stringify(votiData.map(v => v.id + v.voto));
-                if (__lastAchievementsVotiHash === currentHash) return;
-                __lastAchievementsVotiHash = currentHash;
-
-                let newlyUnlocked = false;
-                ACHIEVEMENTS.forEach(ach => {
-                    const alreadyHas = state.badges && state.badges.includes(ach.id);
-                    if (!alreadyHas && ach.condition(votiData)) {
-                        if (!state.badges) state.badges = [];
-                        state.badges.push(ach.id);
-                        newlyUnlocked = true;
-                        showToast(`Nuovo Achievement: ${ach.title}! ${ach.icon}`);
-                    }
-                });
-
-                if (newlyUnlocked) {
-                    saveTasks();
-                    render();
+        const ACHIEVEMENTS = [
+            { id: 'first_10', title: 'Cacciatore di 10', icon: '🎯', desc: 'Prendi il tuo primo 10', condition: (voti) => voti.some(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')) >= 10) },
+            { id: 'gold_media', title: 'Media d\'Oro', icon: '🏆', desc: 'Raggiungi una media generale ≥ 8.5', condition: (voti) => parseFloat(calcolaMedia(voti)) >= 8.5 },
+            { id: 'constant', title: 'Costante', icon: '🔥', desc: 'Accumula almeno 15 voti', condition: (voti) => voti.length >= 15 },
+            {
+                id: 'subject_master', title: 'Maestro', icon: '🧠', desc: 'Media ≥ 9.0 in una materia', condition: (voti) => {
+                    const map = {};
+                    voti.forEach(v => { const m = v.materia || v.subject; if (!map[m]) map[m] = []; map[m].push(v); });
+                    return Object.values(map).some(list => parseFloat(calcolaMedia(list)) >= 9.0);
                 }
             }
+        ];
 
-            /* --- AI Assistant (v1.0) --- */
+        let __lastAchievementsVotiHash = "";
+        function checkAchievements() {
+            const votiData = getVotiData();
+            if (votiData.length === 0) return;
 
-            // Pomodoro / Focus Timer
-            let pomodoroState = { running: false, timeLeft: 25 * 60, mode: 'focus', interval: null };
+            // Idempotenza: non processare se i voti non sono cambiati
+            const currentHash = JSON.stringify(votiData.map(v => v.id + v.voto));
+            if (__lastAchievementsVotiHash === currentHash) return;
+            __lastAchievementsVotiHash = currentHash;
 
-            function renderFocusTimer() {
-                const mins = Math.floor(pomodoroState.timeLeft / 60);
-                const secs = pomodoroState.timeLeft % 60;
-                const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                const isFocus = pomodoroState.mode === 'focus';
-                const modeLabel = isFocus ? 'Focus' : 'Pausa';
-                const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
+            let newlyUnlocked = false;
+            ACHIEVEMENTS.forEach(ach => {
+                const alreadyHas = state.badges && state.badges.includes(ach.id);
+                if (!alreadyHas && ach.condition(votiData)) {
+                    if (!state.badges) state.badges = [];
+                    state.badges.push(ach.id);
+                    newlyUnlocked = true;
+                    showToast(`Nuovo Achievement: ${ach.title}! ${ach.icon}`);
+                }
+            });
 
-                return `
+            if (newlyUnlocked) {
+                saveTasks();
+                render();
+            }
+        }
+
+        /* --- AI Assistant (v1.0) --- */
+
+        // Pomodoro / Focus Timer
+        let pomodoroState = { running: false, timeLeft: 25 * 60, mode: 'focus', interval: null };
+
+        function renderFocusTimer() {
+            const mins = Math.floor(pomodoroState.timeLeft / 60);
+            const secs = pomodoroState.timeLeft % 60;
+            const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            const isFocus = pomodoroState.mode === 'focus';
+            const modeLabel = isFocus ? 'Focus' : 'Pausa';
+            const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
+
+            return `
             <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
@@ -5524,50 +5557,50 @@
                     </button>
                 </div>
             </div>`;
-            }
+        }
 
-            function togglePomodoro() {
-                if (pomodoroState.running) {
-                    clearInterval(pomodoroState.interval);
-                    pomodoroState.running = false;
-                } else {
-                    pomodoroState.running = true;
-                    pomodoroState.interval = setInterval(() => {
-                        pomodoroState.timeLeft--;
-                        if (pomodoroState.timeLeft <= 0) {
-                            clearInterval(pomodoroState.interval);
-                            pomodoroState.running = false;
-                            if (pomodoroState.mode === 'focus') {
-                                pomodoroState.mode = 'break';
-                                pomodoroState.timeLeft = 5 * 60;
-                                showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
-                            } else {
-                                pomodoroState.mode = 'focus';
-                                pomodoroState.timeLeft = 25 * 60;
-                                showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
-                            }
-                        }
-                        const container = document.getElementById('pomodoroContainer');
-                        if (container) container.innerHTML = renderFocusTimer();
-                    }, 1000);
-                }
-                const container = document.getElementById('pomodoroContainer');
-                if (container) container.innerHTML = renderFocusTimer();
-            }
-
-            function resetPomodoro() {
+        function togglePomodoro() {
+            if (pomodoroState.running) {
                 clearInterval(pomodoroState.interval);
                 pomodoroState.running = false;
-                pomodoroState.mode = 'focus';
-                pomodoroState.timeLeft = 25 * 60;
-                const container = document.getElementById('pomodoroContainer');
-                if (container) container.innerHTML = renderFocusTimer();
+            } else {
+                pomodoroState.running = true;
+                pomodoroState.interval = setInterval(() => {
+                    pomodoroState.timeLeft--;
+                    if (pomodoroState.timeLeft <= 0) {
+                        clearInterval(pomodoroState.interval);
+                        pomodoroState.running = false;
+                        if (pomodoroState.mode === 'focus') {
+                            pomodoroState.mode = 'break';
+                            pomodoroState.timeLeft = 5 * 60;
+                            showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
+                        } else {
+                            pomodoroState.mode = 'focus';
+                            pomodoroState.timeLeft = 25 * 60;
+                            showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
+                        }
+                    }
+                    const container = document.getElementById('pomodoroContainer');
+                    if (container) container.innerHTML = renderFocusTimer();
+                }, 1000);
             }
+            const container = document.getElementById('pomodoroContainer');
+            if (container) container.innerHTML = renderFocusTimer();
+        }
 
-            function renderAIAssistantView() {
-                const chat = state.aiChatHistory || [];
+        function resetPomodoro() {
+            clearInterval(pomodoroState.interval);
+            pomodoroState.running = false;
+            pomodoroState.mode = 'focus';
+            pomodoroState.timeLeft = 25 * 60;
+            const container = document.getElementById('pomodoroContainer');
+            if (container) container.innerHTML = renderFocusTimer();
+        }
 
-                return `
+        function renderAIAssistantView() {
+            const chat = state.aiChatHistory || [];
+
+            return `
             <div class="view page-bg" style="padding-bottom: 80px; display:flex; flex-direction:column; height: calc(100dvh - 100px);">
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0; flex-shrink:0;">
                     <div style="display:flex; align-items:center; gap:12px;">
@@ -5628,51 +5661,51 @@
                                 onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
                                 oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
                         </div>
-                        <button onclick="sendAIChat()" id="aiSendBtn" style="width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, #7c3aed, #4f46e5); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 4px 12px rgba(124,58,237,0.3);">
+                        <button onclick="sendAIChat()" id="aiSendBtn" style="width:42px; height:42px; border-radius:14px; background:var(--blue); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
                             <i class="ph-bold ph-paper-plane-tilt" style="font-size:18px;"></i>
                         </button>
                     </div>
                 </div>
             </div>`;
-            }
+        }
 
-            function sendAIChatQuick(text) {
-                const input = document.getElementById('aiChatInput');
-                if (input) input.value = text;
-                sendAIChat();
-            }
+        function sendAIChatQuick(text) {
+            const input = document.getElementById('aiChatInput');
+            if (input) input.value = text;
+            sendAIChat();
+        }
 
-            function clearAIChat() {
-                state.aiChatHistory = [];
-                localStorage.setItem(lsKey('ai_chat'), '[]');
-                state.aiResponse = '';
-                render();
-            }
+        function clearAIChat() {
+            state.aiChatHistory = [];
+            localStorage.setItem(lsKey('ai_chat'), '[]');
+            state.aiResponse = '';
+            render();
+        }
 
-            async function sendAIChat() {
-                const input = document.getElementById('aiChatInput');
-                const text = (input?.value || '').trim();
-                if (!text) return;
+        async function sendAIChat() {
+            const input = document.getElementById('aiChatInput');
+            const text = (input?.value || '').trim();
+            if (!text) return;
 
-                // Add user message
-                const now = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-                state.aiChatHistory.push({ role: 'user', text, ts: now });
-                input.value = '';
-                input.style.height = 'auto';
-                render();
-                setTimeout(() => {
-                    const chatDiv = document.getElementById('aiChatMessages');
-                    if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-                }, 50);
+            // Add user message
+            const now = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            state.aiChatHistory.push({ role: 'user', text, ts: now });
+            input.value = '';
+            input.style.height = 'auto';
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
 
-                // Build context
-                const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
-                const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-                const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
-                const difficulty = (state.difficulty || []).join(', ');
-                const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
+            // Build context
+            const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
+            const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
+            const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
+            const difficulty = (state.difficulty || []).join(', ');
+            const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
 
-                const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
+            const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
 
 CONTEXT STUDENTE (aggiornato):
 - COMPITI ATTIVI: ${homework || 'Nessuno.'}
@@ -5688,164 +5721,164 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 - Includi pause
 - Prioritizza verifiche imminenti e materie difficili`;
 
-                // Build conversation for Gemini
-                const contents = [
-                    { role: 'user', parts: [{ text: systemContext }] },
-                    { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
-                ];
-                state.aiChatHistory.forEach(msg => {
-                    contents.push({
-                        role: msg.role === 'user' ? 'user' : 'model',
-                        parts: [{ text: msg.text }]
+            // Build conversation for Gemini
+            const contents = [
+                { role: 'user', parts: [{ text: systemContext }] },
+                { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
+            ];
+            state.aiChatHistory.forEach(msg => {
+                contents.push({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.text }]
+                });
+            });
+
+            const maxRetries = 3;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages: contents })
                     });
-                });
 
-                const maxRetries = 3;
-                for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                    try {
-                        const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ messages: contents })
-                        });
+                    const data = await response.json();
 
-                        const data = await response.json();
-
-                        // Check for rate limit (429) or quota errors - retry
-                        if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
-                            if (attempt < maxRetries) {
-                                const waitSec = attempt * 15; // 15s, 30s, 45s
-                                state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
-                                render();
-                                setTimeout(() => {
-                                    const chatDiv = document.getElementById('aiChatMessages');
-                                    if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-                                }, 50);
-                                await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
-                                // Remove the retry message before next attempt
-                                state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
-                                continue;
-                            } else {
-                                state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
-                                break;
-                            }
-                        }
-
-                        if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-                            const aiText = data.candidates[0].content.parts[0].text;
-                            const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
-                            state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-                            state.aiResponse = aiText;
-                        } else if (data?.error) {
-                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+                    // Check for rate limit (429) or quota errors - retry
+                    if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
+                        if (attempt < maxRetries) {
+                            const waitSec = attempt * 15; // 15s, 30s, 45s
+                            state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
+                            render();
+                            setTimeout(() => {
+                                const chatDiv = document.getElementById('aiChatMessages');
+                                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+                            }, 50);
+                            await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+                            // Remove the retry message before next attempt
+                            state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
+                            continue;
                         } else {
-                            state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
-                        }
-                        break; // Success or non-retryable error, exit loop
-                    } catch (error) {
-                        console.error('AI Chat Error:', error);
-                        if (attempt === maxRetries) {
-                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
-                        } else {
-                            await new Promise(resolve => setTimeout(resolve, 5000));
+                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
+                            break;
                         }
                     }
-                }
 
-                localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+                    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        const aiText = data.candidates[0].content.parts[0].text;
+                        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
+                        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+                        state.aiResponse = aiText;
+                    } else if (data?.error) {
+                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+                    } else {
+                        state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+                    }
+                    break; // Success or non-retryable error, exit loop
+                } catch (error) {
+                    console.error('AI Chat Error:', error);
+                    if (attempt === maxRetries) {
+                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    }
+                }
+            }
+
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
+        }
+
+        function applyAIPlanFromChat(msgIndex) {
+            const msg = state.aiChatHistory[msgIndex];
+            if (!msg || msg.role !== 'ai') return;
+
+            const text = msg.text;
+            const todayStr = getLocalDateString();
+            const lines = text.split('\n');
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                // Match patterns like: "15:30-16:15 Materia - Argomento" or "15:30 Materia"
+                const timeMatch = line.match(/(\d{1,2}[:.:]\d{2})/);
+                if (timeMatch) {
+                    const time = timeMatch[1];
+                    // Clean line from time and bullet points
+                    let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
+                    if (clean && clean.length > 2) {
+                        const parts = clean.split(/[ \-–—]/);
+                        const subject = parts[0];
+                        const topic = parts.slice(1).join(' ').trim() || 'Studio';
+
+                        const todayStr = getLocalDateString();
+
+                        // Deduplication: check if a similar task already exists for today/subject
+                        const existing = state.tasks.find(et =>
+                            et.due_date === todayStr &&
+                            et.subject.toLowerCase() === subject.toLowerCase() &&
+                            (et.id.startsWith('t_') || et.subject === 'QUEST')
+                        );
+
+                        if (existing) {
+                            // Use existing task
+                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                            if (!state.plannedTasks[todayStr].includes(existing.id)) {
+                                state.plannedTasks[todayStr].push(existing.id);
+                            }
+                        } else {
+                            // Create new AI task
+                            const newTask = {
+                                id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                                subject: subject.charAt(0).toUpperCase() + subject.slice(1),
+                                text: `[AI] ${time}: ${topic}`,
+                                due_date: todayStr,
+                                done: false,
+                                created_at: new Date().toISOString()
+                            };
+                            state.tasks.push(newTask);
+
+                            // Auto-plan for today in Studio mode
+                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                            state.plannedTasks[todayStr].push(newTask.id);
+                        }
+
+                        addedCount++;
+                    }
+                }
+            });
+
+            if (addedCount > 0) {
+                saveTasks();
+                if (typeof savePlannerRemote === 'function') savePlannerRemote();
+                showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
+                // Give a bit of time for the toast before navigating
+                setTimeout(() => navigate('planner'), 800);
+            } else {
+                showToast('⚠️ Non ho trovato orari chiari nel messaggio. Prova a chiedere un piano orario!', 'var(--orange)');
+            }
+        }
+
+        function saveGeminiKey() {
+            const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
+            if (val) {
+                state.geminiKey = val;
+                localStorage.setItem('g_diary_gemini_key', val);
+                showToast('Chiave salvata! 🛡️');
                 render();
-                setTimeout(() => {
-                    const chatDiv = document.getElementById('aiChatMessages');
-                    if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-                }, 50);
             }
+        }
 
-            function applyAIPlanFromChat(msgIndex) {
-                const msg = state.aiChatHistory[msgIndex];
-                if (!msg || msg.role !== 'ai') return;
+        /* --- Hyper-Planner: Academic Profile & Setup --- */
 
-                const text = msg.text;
-                const todayStr = getLocalDateString();
-                const lines = text.split('\n');
-                let addedCount = 0;
+        function renderAcademicProfile() {
+            const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
-                lines.forEach(line => {
-                    // Match patterns like: "15:30-16:15 Materia - Argomento" or "15:30 Materia"
-                    const timeMatch = line.match(/(\d{1,2}[:.:]\d{2})/);
-                    if (timeMatch) {
-                        const time = timeMatch[1];
-                        // Clean line from time and bullet points
-                        let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
-                        if (clean && clean.length > 2) {
-                            const parts = clean.split(/[ \-–—]/);
-                            const subject = parts[0];
-                            const topic = parts.slice(1).join(' ').trim() || 'Studio';
-
-                            const todayStr = getLocalDateString();
-
-                            // Deduplication: check if a similar task already exists for today/subject
-                            const existing = state.tasks.find(et =>
-                                et.due_date === todayStr &&
-                                et.subject.toLowerCase() === subject.toLowerCase() &&
-                                (et.id.startsWith('t_') || et.subject === 'QUEST')
-                            );
-
-                            if (existing) {
-                                // Use existing task
-                                if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                                if (!state.plannedTasks[todayStr].includes(existing.id)) {
-                                    state.plannedTasks[todayStr].push(existing.id);
-                                }
-                            } else {
-                                // Create new AI task
-                                const newTask = {
-                                    id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                                    subject: subject.charAt(0).toUpperCase() + subject.slice(1),
-                                    text: `[AI] ${time}: ${topic}`,
-                                    due_date: todayStr,
-                                    done: false,
-                                    created_at: new Date().toISOString()
-                                };
-                                state.tasks.push(newTask);
-
-                                // Auto-plan for today in Studio mode
-                                if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                                state.plannedTasks[todayStr].push(newTask.id);
-                            }
-
-                            addedCount++;
-                        }
-                    }
-                });
-
-                if (addedCount > 0) {
-                    saveTasks();
-                    if (typeof savePlannerRemote === 'function') savePlannerRemote();
-                    showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
-                    // Give a bit of time for the toast before navigating
-                    setTimeout(() => navigate('planner'), 800);
-                } else {
-                    showToast('⚠️ Non ho trovato orari chiari nel messaggio. Prova a chiedere un piano orario!', 'var(--orange)');
-                }
-            }
-
-            function saveGeminiKey() {
-                const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
-                if (val) {
-                    state.geminiKey = val;
-                    localStorage.setItem('g_diary_gemini_key', val);
-                    showToast('Chiave salvata! 🛡️');
-                    render();
-                }
-            }
-
-            /* --- Hyper-Planner: Academic Profile & Setup --- */
-
-            function renderAcademicProfile() {
-                const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
-
-                return `
+            return `
             <div class="view" style="padding-top: 60px;">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Profilo Accademico</h1>
@@ -5875,70 +5908,70 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Seleziona le materie in cui hai più difficoltà.</p>
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
                         ${subjects.length > 0 ? subjects.map(s => {
-                    const active = state.difficulty.includes(s);
-                    const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
-                }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
+                const active = state.difficulty.includes(s);
+                const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
+            }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
                     </div>
                 </div>
             </div>`;
+        }
+        function getAllSubjects() {
+            const fromGrades = getVotiData().map(v => v.materia || v.subject).filter(Boolean);
+            const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
+            const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
+            const all = [...new Set([...fromGrades, ...fromTasks, ...fromExams])];
+            if (all.length === 0) {
+                return ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'];
             }
-            function getAllSubjects() {
-                const fromGrades = getVotiData().map(v => v.materia || v.subject).filter(Boolean);
-                const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
-                const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
-                const all = [...new Set([...fromGrades, ...fromTasks, ...fromExams])];
-                if (all.length === 0) {
-                    return ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'];
-                }
-                return all.sort();
+            return all.sort();
+        }
+
+        function submitExamForm() {
+            let subject = document.getElementById('examSubject').value;
+            if (subject === '__custom') {
+                subject = (document.getElementById('examCustomSubject').value || '').trim();
+                if (!subject) { showToast('Inserisci il nome della materia', '#ff453a'); return; }
             }
+            const type = document.getElementById('examType').value;
+            const date = document.getElementById('examDate').value;
+            const topic = (document.getElementById('examTopic').value || '').trim();
 
-            function submitExamForm() {
-                let subject = document.getElementById('examSubject').value;
-                if (subject === '__custom') {
-                    subject = (document.getElementById('examCustomSubject').value || '').trim();
-                    if (!subject) { showToast('Inserisci il nome della materia', '#ff453a'); return; }
-                }
-                const type = document.getElementById('examType').value;
-                const date = document.getElementById('examDate').value;
-                const topic = (document.getElementById('examTopic').value || '').trim();
+            if (!date) { showToast('Seleziona una data', '#ff453a'); return; }
 
-                if (!date) { showToast('Seleziona una data', '#ff453a'); return; }
+            state.exams.push({ subject, type, date, topic });
 
-                state.exams.push({ subject, type, date, topic });
+            // Also add to calendar tasks
+            const examTask = {
+                id: 'exam_' + Date.now(),
+                text: `${type}: ${topic || subject}`,
+                subject: subject,
+                due_date: date,
+                done: false,
+                isExam: true
+            };
+            state.tasks.push(examTask);
 
-                // Also add to calendar tasks
-                const examTask = {
-                    id: 'exam_' + Date.now(),
-                    text: `${type}: ${topic || subject}`,
-                    subject: subject,
-                    due_date: date,
-                    done: false,
-                    isExam: true
-                };
-                state.tasks.push(examTask);
+            saveTasks();
+            closeModal();
+            render();
+            showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
+        }
 
-                saveTasks();
-                closeModal();
-                render();
-                showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
-            }
+        function removeExam(index) {
+            state.exams.splice(index, 1);
+            saveTasks();
+            render();
+        }
 
-            function removeExam(index) {
-                state.exams.splice(index, 1);
-                saveTasks();
-                render();
-            }
+        function promptAddBacklog() { showAddBacklogModal(); }
 
-            function promptAddBacklog() { showAddBacklogModal(); }
+        function showAddBacklogModal() {
+            const container = getModalContainer();
+            if (!container) return;
+            const subjects = getAllSubjects();
 
-            function showAddBacklogModal() {
-                const container = getModalContainer();
-                if (!container) return;
-                const subjects = getAllSubjects();
-
-                container.innerHTML = `
+            container.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -5959,42 +5992,42 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                             <input type="text" id="backlogTopic" placeholder="Es: Equazioni di 2° grado, Canto V Inferno..." style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
                         </div>
 
-                        <button onclick="submitBacklogForm()" style="width:100%; height:50px; background:linear-gradient(135deg, #2563eb, #0A84FF); color:white; border:none; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <button onclick="submitBacklogForm()" style="width:100%; height:50px; background:var(--blue); color:white; border:none; border-radius:14px; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
                             <i class="ph-bold ph-check-circle"></i> Aggiungi Arretrato
                         </button>
                     </div>
                 </div>
             </div>`;
-            }
+        }
 
-            function submitBacklogForm() {
-                const subject = document.getElementById('backlogSubject').value;
-                const topic = (document.getElementById('backlogTopic').value || '').trim();
-                if (!topic) { showToast('Inserisci l\'argomento da recuperare', '#ff453a'); return; }
+        function submitBacklogForm() {
+            const subject = document.getElementById('backlogSubject').value;
+            const topic = (document.getElementById('backlogTopic').value || '').trim();
+            if (!topic) { showToast('Inserisci l\'argomento da recuperare', '#ff453a'); return; }
 
-                state.backlog.push({ subject, topic });
-                saveTasks();
-                closeModal();
-                render();
-                showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
-            }
+            state.backlog.push({ subject, topic });
+            saveTasks();
+            closeModal();
+            render();
+            showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
+        }
 
-            function removeBacklog(index) {
-                state.backlog.splice(index, 1);
-                saveTasks();
-                render();
-            }
+        function removeBacklog(index) {
+            state.backlog.splice(index, 1);
+            saveTasks();
+            render();
+        }
 
-            /* --- Fine Advanced Grades --- */
+        /* --- Fine Advanced Grades --- */
 
-            /* --- Verifiche & Recuperei (Liquid Glass) --- */
-            function renderVerifiche() {
-                const exams = state.exams || [];
-                // Sort by date
-                exams.sort((a, b) => new Date(a.date) - new Date(b.date));
+        /* --- Verifiche & Recuperei (Liquid Glass) --- */
+        function renderVerifiche() {
+            const exams = state.exams || [];
+            // Sort by date
+            exams.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                if (exams.length === 0) {
-                    return `
+            if (exams.length === 0) {
+                return `
                     <div class="view" style="padding-top: 60px;">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Verifiche</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
@@ -6008,9 +6041,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                             </button>
                         </div>
                     </div>`;
-                }
+            }
 
-                return `
+            return `
                 <div class="view" style="padding-top: 60px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
@@ -6024,13 +6057,13 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         ${exams.map((e, index) => {
-                    const dateObj = new Date(e.date);
-                    const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'short' });
-                    const dayNum = dateObj.getDate();
-                    const monthName = dateObj.toLocaleDateString('it-IT', { month: 'short' });
-                    const color = getSubjectColor(e.subject);
+                const dateObj = new Date(e.date);
+                const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'short' });
+                const dayNum = dateObj.getDate();
+                const monthName = dateObj.toLocaleDateString('it-IT', { month: 'short' });
+                const color = getSubjectColor(e.subject);
 
-                    return `
+                return `
                             <div class="glass-panel" style="padding: 20px; display: flex; align-items: flex-start; gap: 16px;">
                                 <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(255,255,255,0.05);">
                                     <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${monthName}</span>
@@ -6053,16 +6086,16 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                                 </div>
                             </div>
                             `;
-                }).join('')}
+            }).join('')}
                     </div>
                 </div>`;
-            }
+        }
 
-            function renderRecoveries() {
-                const backlog = state.backlog || [];
+        function renderRecoveries() {
+            const backlog = state.backlog || [];
 
-                if (backlog.length === 0) {
-                    return `
+            if (backlog.length === 0) {
+                return `
                     <div class="view" style="padding-top: 60px;">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Arretrati</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
@@ -6076,9 +6109,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                             </button>
                         </div>
                     </div>`;
-                }
+            }
 
-                return `
+            return `
                 <div class="view" style="padding-top: 60px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
@@ -6104,15 +6137,15 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         `).join('')}
                     </div>
                 </div>`;
-            }
+        }
 
-            /* --- Modals --- */
+        /* --- Modals --- */
 
 
-            function openArgoLogin() {
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
-                modalContainer.innerHTML = `
+        function openArgoLogin() {
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
+            modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
                 <div class="modal-content" style="max-width:380px;">
                     <div style="text-align:center; margin-bottom:20px;">
@@ -6134,43 +6167,43 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
                 </div>
             </div>`;
-                checkServerHealth();
-            }
-            async function checkServerHealth(attempt = 1) {
-                const statusEl = document.getElementById('server-status');
-                if (!statusEl) return;
+            checkServerHealth();
+        }
+        async function checkServerHealth(attempt = 1) {
+            const statusEl = document.getElementById('server-status');
+            if (!statusEl) return;
 
-                try {
-                    const controller = new AbortController();
-                    const id = setTimeout(() => controller.abort(), 3500);
+            try {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), 3500);
 
-                    const res = await fetch(`${API_BASE_URL}/health`, {
-                        method: 'GET',
-                        signal: controller.signal
-                    });
-                    clearTimeout(id);
+                const res = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                clearTimeout(id);
 
-                    if (res.ok) {
-                        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
-                        statusEl.style.color = "var(--green)";
-                    } else {
-                        throw new Error("Server error");
-                    }
-                } catch (e) {
-                    if (attempt < 15) {
-                        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
-                        setTimeout(() => checkServerHealth(attempt + 1), 2500);
-                    } else {
-                        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Offline (uso dati cached)`;
-                        statusEl.style.color = "var(--red)";
-                    }
+                if (res.ok) {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
+                    statusEl.style.color = "var(--green)";
+                } else {
+                    throw new Error("Server error");
+                }
+            } catch (e) {
+                if (attempt < 15) {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
+                    setTimeout(() => checkServerHealth(attempt + 1), 2500);
+                } else {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Offline (uso dati cached)`;
+                    statusEl.style.color = "var(--red)";
                 }
             }
+        }
 
-            let _marketImages = [];
+        let _marketImages = [];
 
-            function openNewItemModal() {
-                modalContainer.innerHTML = `
+        function openNewItemModal() {
+            modalContainer.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" style="max-width:500px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
@@ -6190,62 +6223,62 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <div id="image-preview" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;"></div>
                 </div>
             </div>`;
-            }
+        }
 
-            function handleMarketImagePreview(input) {
-                _marketImages = [];
-                const preview = document.getElementById('image-preview');
-                preview.innerHTML = '';
+        function handleMarketImagePreview(input) {
+            _marketImages = [];
+            const preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
 
-                if (!input.files || !input.files.length) return;
+            if (!input.files || !input.files.length) return;
 
-                Array.from(input.files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        _marketImages.push(e.target.result);
-                        preview.innerHTML += `<img src="${e.target.result}" style="width:64px; height:64px; border-radius:10px; object-fit:cover;">`;
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    _marketImages.push(e.target.result);
+                    preview.innerHTML += `<img src="${e.target.result}" style="width:64px; height:64px; border-radius:10px; object-fit:cover;">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
 
-            function handleImagePreview(input) {
-                if (input.files && input.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        document.getElementById('image-preview').innerHTML = `<img src="${e.target.result}" style="max-height:100px; border-radius:8px;">`;
-                    }
-                    reader.readAsDataURL(input.files[0]);
+        function handleImagePreview(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('image-preview').innerHTML = `<img src="${e.target.result}" style="max-height:100px; border-radius:8px;">`;
                 }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // ⭐ Credenziali Temporanee (per sopravvivere alla modale se il DOM cambia)
+        let tempCreds = { school: '', user: '', pass: '' };
+
+        // ⭐ HELPERS LOGIN
+        function setLoginBtnText(txt) {
+            const btn = document.getElementById('login-btn') ||
+                document.querySelector('.login-btn') ||
+                document.querySelector('#loginBtn') ||
+                document.querySelector('button[onclick*="performArgoSync"]') ||
+                document.querySelector('button[type="submit"]');
+
+            if (!btn) {
+                console.warn('setLoginBtnText: nessun bottone trovato, skip');
+                return;
             }
 
-            // ⭐ Credenziali Temporanee (per sopravvivere alla modale se il DOM cambia)
-            let tempCreds = { school: '', user: '', pass: '' };
+            btn.innerText = txt;
+            btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
+        }
 
-            // ⭐ HELPERS LOGIN
-            function setLoginBtnText(txt) {
-                const btn = document.getElementById('login-btn') ||
-                    document.querySelector('.login-btn') ||
-                    document.querySelector('#loginBtn') ||
-                    document.querySelector('button[onclick*="performArgoSync"]') ||
-                    document.querySelector('button[type="submit"]');
+        // ⭐ SELEZIONE PROFILO (Multi-Figlio)
+        function showProfileSelectionModal(profiles, credentials) {
+            console.log("👥 Mostro modale selezione profili:", profiles);
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
 
-                if (!btn) {
-                    console.warn('setLoginBtnText: nessun bottone trovato, skip');
-                    return;
-                }
-
-                btn.innerText = txt;
-                btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
-            }
-
-            // ⭐ SELEZIONE PROFILO (Multi-Figlio)
-            function showProfileSelectionModal(profiles, credentials) {
-                console.log("👥 Mostro modale selezione profili:", profiles);
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
-
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
                 <div class="modal-overlay active">
                     <div class="modal-content glass-panel" style="max-width: 480px; padding: 32px;">
                         <div style="text-align: center; margin-bottom: 24px;">
@@ -6271,29 +6304,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     </div>
                 </div>
             `;
-            }
-            ainer.querySelector('.profiles-list');
-            list.addEventListener('click', async (ev) => {
-                const btn = ev.target.closest('.btn-profile');
-                if (!btn) return;
-
-                // Disabilita UI
-                const allBtns = list.querySelectorAll('.btn-profile');
-                allBtns.forEach(b => {
-                    b.disabled = true;
-                    b.style.opacity = '0.5';
-                    b.style.pointerEvents = 'none';
-                });
-
-                btn.style.opacity = '1';
-                btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
-
-                await selectProfile(parseInt(btn.dataset.index, 10), credentials);
-            }, { once: true });
-
-            // 🆕 Risolvi i nomi veri in background
-            resolveProfileNamesAsync(profiles, credentials, container);
         }
+
 
         // 🆕 Risoluzione nomi profili asincrona
         async function resolveProfileNamesAsync(profiles, credentials, container) {
