@@ -1684,25 +1684,27 @@
 
         // ⭐ Funzione universale per leggere le date di Argo
         function parseArgoDate(dateString) {
-            if (!dateString) return new Date(0); // Fallback per date invalide
+            if (!dateString) return new Date(0);
+            if (dateString instanceof Date) return dateString;
 
-            // Try parsing as YYYY-MM-DD (e.g., from API or ISO)
-            if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                return new Date(dateString + 'T00:00:00');
+            // Handle YYYY-MM-DD
+            const isoMatch = typeof dateString === 'string' && dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]), 0, 0, 0);
             }
 
-            // Try parsing as DD/MM/YYYY (e.g., from Argo HTML)
-            if (typeof dateString === 'string' && dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                const [day, month, year] = dateString.split('/');
-                return new Date(`${year}-${month}-${day}T00:00:00`);
+            // Handle DD/MM/YYYY
+            const itaMatch = typeof dateString === 'string' && dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (itaMatch) {
+                return new Date(parseInt(itaMatch[3]), parseInt(itaMatch[2]) - 1, parseInt(itaMatch[1]), 0, 0, 0);
             }
 
-            // Fallback for other formats or if it's already a Date object
-            try {
-                const date = new Date(dateString);
-                if (!isNaN(date.getTime())) return date;
-            } catch (e) { }
-
+            // Fallback
+            const d = new Date(dateString);
+            if (!isNaN(d.getTime())) {
+                // Return a "clean" local midnight date
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+            }
             return new Date();
         }
 
@@ -3573,7 +3575,7 @@
             const container = getModalContainer();
             if (!container) return;
 
-            const date = new Date(dateStr);
+            const date = parseArgoDate(dateStr);
             const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
             // Strict Semantic Filtering for Modal
@@ -4450,7 +4452,7 @@
                 });
             }
 
-            list.sort((a, b) => new Date(a.displayDate) - new Date(b.displayDate));
+            list.sort((a, b) => parseArgoDate(a.displayDate) - parseArgoDate(b.displayDate));
 
             if (!list.length) {
                 const msg = state.plannerMode === 'registro' ? 'Nessun compito in scadenza questa settimana.' : 'Nessun compito pianificato nello Studio. Usa "Pianifica" o chiedi all\'AI!';
@@ -4459,7 +4461,7 @@
 
             const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             return list.map(t => {
-                const d = new Date(t.displayDate);
+                const d = parseArgoDate(t.displayDate);
                 const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
                 const subjectColor = getSubjectColor(t.subject);
                 return `
@@ -5067,7 +5069,7 @@
                 votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
             }
             // Sort by absolute time
-            votiData.sort((a, b) => new Date(a.data || a.date) - new Date(b.data || b.date));
+            votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
 
             if (votiData.length < 2) {
                 ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -5164,7 +5166,7 @@
         }
 
         function renderSubjectDetailView(subjectName) {
-            const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => new Date(b.data || b.date) - new Date(a.data || a.date));
+            const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
             const media = parseFloat(calcolaMedia(votiData)) || 0;
             const goal = state.goals?.[subjectName] || 8.0;
             const gap = goal - media;
