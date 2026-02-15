@@ -3526,8 +3526,8 @@
 
                 let dayTasks = [];
                 if (state.plannerMode === 'registro') {
-                    // Badge based on DUE DATE
-                    dayTasks = (state.tasks || []).filter(t => t.due_date === dateStr);
+                    // Badge based on DUE DATE - ONLY school tasks
+                    dayTasks = (state.tasks || []).filter(t => t.id.startsWith('t_') && t.due_date === dateStr);
                 } else {
                     // Badge based on PLANNED DATE
                     const plannedIds = state.plannedTasks[dateStr] || [];
@@ -4424,14 +4424,14 @@
             today.setHours(0, 0, 0, 0);
 
             if (state.plannerMode === 'registro') {
-                // Registro Mode: Show tasks by DUE DATE
+                // Registro Mode: ONLY show school tasks (id starts with 't_')
                 state.tasks.forEach(t => {
-                    if (t.due_date && isFutureOrToday(t.due_date)) {
+                    if (t.id.startsWith('t_') && t.due_date && isFutureOrToday(t.due_date)) {
                         list.push({ ...t, displayDate: t.due_date });
                     }
                 });
             } else {
-                // Studio Mode: Show tasks by PLANNED DATE
+                // Studio Mode: ONLY show planned items
                 Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
                     if (isFutureOrToday(dateStr)) {
                         ids.forEach(id => {
@@ -5540,19 +5540,37 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         const subject = parts[0];
                         const topic = parts.slice(1).join(' ').trim() || 'Studio';
 
-                        const newTask = {
-                            id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                            subject: subject.charAt(0).toUpperCase() + subject.slice(1),
-                            text: `[AI] ${time}: ${topic}`,
-                            due_date: todayStr,
-                            done: false,
-                            created_at: new Date().toISOString()
-                        };
-                        state.tasks.push(newTask);
+                        const todayStr = getLocalDateString();
 
-                        // Auto-plan for today in Studio mode
-                        if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                        state.plannedTasks[todayStr].push(newTask.id);
+                        // Deduplication: check if a similar task already exists for today/subject
+                        const existing = state.tasks.find(et =>
+                            et.due_date === todayStr &&
+                            et.subject.toLowerCase() === subject.toLowerCase() &&
+                            (et.id.startsWith('t_') || et.subject === 'QUEST')
+                        );
+
+                        if (existing) {
+                            // Use existing task
+                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                            if (!state.plannedTasks[todayStr].includes(existing.id)) {
+                                state.plannedTasks[todayStr].push(existing.id);
+                            }
+                        } else {
+                            // Create new AI task
+                            const newTask = {
+                                id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                                subject: subject.charAt(0).toUpperCase() + subject.slice(1),
+                                text: `[AI] ${time}: ${topic}`,
+                                due_date: todayStr,
+                                done: false,
+                                created_at: new Date().toISOString()
+                            };
+                            state.tasks.push(newTask);
+
+                            // Auto-plan for today in Studio mode
+                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                            state.plannedTasks[todayStr].push(newTask.id);
+                        }
 
                         addedCount++;
                     }
