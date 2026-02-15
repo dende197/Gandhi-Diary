@@ -46,6 +46,36 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
+// ============= AI CHAT PROXY =============
+app.post('/api/ai/chat', async (req, res) => {
+    const { messages } = req.body;
+    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+
+    if (!GEMINI_KEY) {
+        return res.status(500).json({ error: "Backend error: GEMINI_API_KEY non configurata sul server." });
+    }
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
+        const response = await axios.post(url, {
+            contents: messages,
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 2048,
+            }
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error("AI Proxy Error:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json(error.response?.data || { error: error.message });
+    }
+});
+
 // ============= DEBUG MODE (CORRETTO - Era un bug!) =============
 // ❌ PYTHON: DEBUG_MODE = ... or True  (SEMPRE TRUE!)
 // ✅ NODE.JS:

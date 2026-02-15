@@ -1721,7 +1721,7 @@
             const text = (raw.text || raw.desCompito || 'Nessuna descrizione').trim().toLowerCase();
             const rawDate = raw.datCompito || raw.due_date || raw.dataProva || raw.datGiorno || raw.date || '';
             const d = parseArgoDate(rawDate);
-            const iso = !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+            const iso = !isNaN(d.getTime()) ? getLocalDateString(d) : '';
             const key = `${subject}||${text}||${iso}`;
             return 't_' + djb2(key);
         }
@@ -2032,6 +2032,20 @@
         };
 
         // STATE MANAGEMENT
+        // ==============================================================================
+        // 🛠️ DATE HELPERS (Local Time Safe)
+        // ==============================================================================
+        /**
+         * Returns YYYY-MM-DD in local time instead of UTC to avoid "previous day" shift at midnight.
+         */
+        function getLocalDateString(date = new Date()) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         const state = {
             view: 'login',
             user: { id: null, name: 'Utente', class: 'N/D', avatar: null }, // Default safe
@@ -2061,7 +2075,6 @@
             promemoria: [],
             reminders: [],
             badges: [],      // ⭐ Added for Gamification Achievements
-            geminiKey: localStorage.getItem(lsKey('gemini_key')) || '', // 🔒 Key must be provided by user via UI
             aiResponse: '',   // Current AI suggestion
             aiChatHistory: JSON.parse(localStorage.getItem(lsKey('ai_chat'))) || [], // [{role:'user'|'ai', text, ts}]
 
@@ -2737,7 +2750,7 @@
         }
 
         function isFutureOrToday(dateStr) {
-            const todayStr = getLocalDateStr();
+            const todayStr = getLocalDateString();
             return dateStr >= todayStr;
         }
 
@@ -3125,7 +3138,7 @@
             const formatted = newTasks.map(t => {
                 const rawDate = t.datCompito || t.due_date || t.dataProva || t.datGiorno || t.date;
                 const dateObj = parseArgoDate(rawDate);
-                const isoDate = !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '';
+                const isoDate = !isNaN(dateObj.getTime()) ? getLocalDateString(dateObj) : '';
 
                 const text = t.text || t.desCompito || "Nessuna descrizione";
                 const subject = t.subject || t.materia || 'Generico';
@@ -3381,7 +3394,7 @@
 
             const plannerWidget = document.getElementById('today-planner-widget');
             if (plannerWidget) {
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = getLocalDateString();
                 const todayPlanned = state.plannedTasks[todayStr] || [];
                 const plannedTasks = state.tasks.filter(t => todayPlanned.includes(t.id));
 
@@ -3502,11 +3515,11 @@
                     <div class="calendar-days">
             `;
 
-            const todayISO = today.toISOString().split('T')[0];
+            const todayISO = getLocalDateString(today);
 
             const tempDate = new Date(startDate);
             for (let i = 0; i < 14; i++) {
-                const dateStr = tempDate.toISOString().split('T')[0];
+                const dateStr = getLocalDateString(tempDate);
                 const isToday = dateStr === todayISO;
                 const isPast = tempDate < today && !isToday;
 
@@ -4107,7 +4120,7 @@
         window.showUserProfile = showUserProfile;
 
         function renderHome() {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             const plannedIds = state.plannedTasks[todayStr] || [];
             const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
             const media = calcolaMedia(state.voti);
@@ -4413,7 +4426,7 @@
         // Stress Modal fluida (mantieni selezione senza ri-render)
         // Stress selection modal: make buttons definitely clickable
         function showStressModal() {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             const currentLevel = state.stressLevels[todayStr] || 0;
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
@@ -4469,13 +4482,6 @@
             return `${day} ${month} ${year} • ${time} `;
         }
 
-        function getLocalDateStr(date = new Date()) {
-            const d = new Date(date);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year} -${month} -${day} `;
-        }
         function showStressDetailsModal() {
             const days = 14;
             const today = new Date();
@@ -4487,7 +4493,7 @@
             for (let i = days - 1; i >= 0; i--) {
                 const d = new Date(today);
                 d.setDate(today.getDate() - i);
-                const iso = d.toISOString().split('T')[0];
+                const iso = getLocalDateString(d);
                 const lv = state.stressLevels[iso] || 0;
                 points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
             }
@@ -4520,7 +4526,7 @@
 
         // setStressLevel(lv, inModal): aggiorna fluido
         function setStressLevel(lv, inModal = false) {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             state.stressLevels[todayStr] = lv;
             saveTasks();
             savePlannerRemote();
@@ -5272,43 +5278,7 @@
         }
 
         function renderAIAssistantView() {
-            const hasKey = !!state.geminiKey;
             const chat = state.aiChatHistory || [];
-
-            if (!hasKey) {
-                return `
-                <div class="view page-bg" style="padding-bottom: 80px;">
-                    <div style="display: flex; align-items: center; gap: 16px; padding: 20px 0;">
-                        <button onclick="navigate('home')" style="width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,0.08); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                            <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
-                        </button>
-                        <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Assistente AI</h1>
-                    </div>
-
-                    <div class="card glass-panel" style="padding: 30px; border-radius: 28px; text-align: center; margin-top: 20px;">
-                        <div style="width: 70px; height: 70px; background: rgba(124, 58, 237, 0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                            <i class="ph-fill ph-key" style="font-size: 32px; color: #7c3aed;"></i>
-                        </div>
-                        <h2 style="font-size: 20px; font-weight: 800; color: white; margin-bottom: 12px;">Configurazione AI</h2>
-                        <p style="font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; margin-bottom: 24px;">
-                            Per parlare con il tuo tutor AI, inserisci la tua API Key di Google Gemini. È gratuita e sicura.
-                        </p>
-                        
-                        <div style="background: rgba(255,159,10,0.1); border: 1px solid rgba(255,159,10,0.2); padding: 12px; border-radius: 12px; margin-bottom: 24px;">
-                            <p style="font-size: 11px; color: var(--orange); font-weight: 700; margin: 0;">⚠️ La chiave precedente è stata revocata per motivi di sicurezza.</p>
-                        </div>
-
-                        <input type="password" id="geminiApiKeyInput" placeholder="Incolla qui la tua API Key..." 
-                            style="width: 100%; height: 50px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: white; padding: 0 20px; margin-bottom: 16px; outline: none; text-align: center;">
-                        
-                        <button onclick="saveGeminiKey()" style="width: 100%; height: 50px; border-radius: 16px; background: var(--blue); border: none; color: white; font-weight: 800; font-size: 15px; cursor: pointer; margin-bottom: 16px;">
-                            Attiva Assistente AI
-                        </button>
-                        
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 12px; color: var(--blue); text-decoration: none; font-weight: 700;">Ottieni una chiave gratuita <i class="ph-bold ph-arrow-square-out"></i></a>
-                    </div>
-                </div>`;
-            }
 
             return `
             <div class="view page-bg" style="padding-bottom: 80px; display:flex; flex-direction:column; height: calc(100dvh - 100px);">
@@ -5446,11 +5416,11 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             const maxRetries = 3;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${state.geminiKey}`;
+                    const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents })
+                        body: JSON.stringify({ messages: contents })
                     });
 
                     const data = await response.json();
@@ -5509,7 +5479,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             if (!msg || msg.role !== 'ai') return;
 
             const text = msg.text;
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             const lines = text.split('\n');
             let addedCount = 0;
 
@@ -5666,7 +5636,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             const container = getModalContainer();
             if (!container) return;
             const subjects = getAllSubjects();
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
 
             container.innerHTML = `
             <div class="modal-overlay" onclick="closeModal(event)">
@@ -6681,7 +6651,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
 
         function showOrganizeStudyModal() {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             const plannedIds = state.plannedTasks[todayStr] || [];
 
             // Show ALL pending tasks (not just today's)
@@ -6785,7 +6755,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         function togglePlanTask(id) {
             if (event) event.stopPropagation();
 
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
 
             const index = state.plannedTasks[todayStr].indexOf(id);
