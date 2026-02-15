@@ -1683,27 +1683,27 @@
 
 
         // ⭐ Funzione universale per leggere le date di Argo
-        function parseArgoDate(dateString) {
-            if (!dateString) return new Date(0);
-            if (dateString instanceof Date) return dateString;
+        function parseArgoDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            if (dateStr instanceof Date) return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
 
-            // Handle YYYY-MM-DD
-            const isoMatch = typeof dateString === 'string' && dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (isoMatch) {
-                return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]), 0, 0, 0);
+            if (typeof dateStr === 'string') {
+                // 1. Handle YYYY-MM-DD (safe local parsing)
+                const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (isoMatch) {
+                    return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+                }
+                // 2. Handle DD/MM/YYYY
+                const itaMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (itaMatch) {
+                    return new Date(parseInt(itaMatch[3]), parseInt(itaMatch[2]) - 1, parseInt(itaMatch[1]));
+                }
             }
 
-            // Handle DD/MM/YYYY
-            const itaMatch = typeof dateString === 'string' && dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-            if (itaMatch) {
-                return new Date(parseInt(itaMatch[3]), parseInt(itaMatch[2]) - 1, parseInt(itaMatch[1]), 0, 0, 0);
-            }
-
-            // Fallback
-            const d = new Date(dateString);
+            // Fallback: forced local midnight
+            const d = new Date(dateStr);
             if (!isNaN(d.getTime())) {
-                // Return a "clean" local midnight date
-                return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate());
             }
             return new Date();
         }
@@ -1721,7 +1721,7 @@
         function stableTaskId(raw) {
             const subject = (raw.subject || raw.materia || 'Generico').trim().toLowerCase();
             const text = (raw.text || raw.desCompito || 'Nessuna descrizione').trim().toLowerCase();
-            const rawDate = raw.datCompito || raw.due_date || raw.dataProva || raw.datGiorno || raw.date || '';
+            const rawDate = raw.due_date || raw.datConsegna || raw.datCompito || raw.dataProva || raw.datGiorno || raw.date || '';
             const d = parseArgoDate(rawDate);
             const iso = !isNaN(d.getTime()) ? getLocalDateString(d) : '';
             const key = `${subject}||${text}||${iso}`;
@@ -3140,7 +3140,7 @@
 
             // Costruisci nuovi task formattati con ID STABILI
             const formatted = newTasks.map(t => {
-                const rawDate = t.datCompito || t.due_date || t.dataProva || t.datGiorno || t.date;
+                const rawDate = t.due_date || t.datConsegna || t.datCompito || t.dataProva || t.datGiorno || t.date;
                 const dateObj = parseArgoDate(rawDate);
                 const isoDate = !isNaN(dateObj.getTime()) ? getLocalDateString(dateObj) : '';
 
@@ -3175,6 +3175,8 @@
             const mergedTasks = [...formatted];
             for (const qo of localQuests) {
                 if (!mergedTasks.some(mt => mt.id === qo.id)) {
+                    // 🔥 RE-HYDRATE: Ensure Date object is local-midnight even after JSON loading
+                    qo.dateObj = parseArgoDate(qo.due_date || qo.display_date || qo.dateObj);
                     mergedTasks.push(qo);
                 }
             }
