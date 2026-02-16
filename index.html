@@ -1615,6 +1615,15 @@
 </div>
 
 <script>
+    // 🛡️ EMERGENCY RECOVERY BRIDGE
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+        console.error('🔥 GLOBAL CRASH:', msg, 'at', lineNo + ':' + columnNo);
+        const debugMsg = `ERRORE FATALE: ${msg}\nLinea: ${lineNo}\nPer favore, ricarica o contatta il supporto.`;
+        if (typeof showToast === 'function') showToast(debugMsg);
+        else alert(debugMsg);
+        return false;
+    };
+
     // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
     const APP_VERSION = "1.1.8-ai-polish";
 
@@ -2164,7 +2173,16 @@
         }
     });
 
-
+    // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack)
+    window.performLogin = (...args) => typeof performLogin === 'function' && performLogin(...args);
+    window.performSync = (...args) => typeof performSync === 'function' && performSync(...args);
+    window.navigate = (...args) => typeof navigate === 'function' && navigate(...args);
+    window.render = (...args) => typeof render === 'function' && render(...args);
+    window.showQuickAddTaskModal = (...args) => typeof showQuickAddTaskModal === 'function' && showQuickAddTaskModal(...args);
+    window.closeModal = (...args) => typeof closeModal === 'function' && closeModal(...args);
+    window.openArgoLogin = (...args) => typeof openArgoLogin === 'function' && openArgoLogin(...args);
+    window.performArgoSync = (...args) => typeof performArgoSync === 'function' && performArgoSync(...args);
+    window.selectProfile = (...args) => typeof selectProfile === 'function' && selectProfile(...args);
 
     function updateOfflineBadge() {
         if (state.isOffline) {
@@ -2366,164 +2384,12 @@
     // Social and Market submission removed
 
     async function performLogin(school, user, pass) {
-        if (!school || !user || !pass) {
-            showToast('Inserisci tutti i dati!');
-            return;
-        }
-
-        showBoot('Accesso in corso...');
-
-        try {
-            // Usa endpoint alla radice come definito in server.js
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    school: school,
-                    username: user,
-                    password: pass
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Salva sessione
-                // GESTIONE MULTI-PROFILO
-                if (data.status === 'MULTIPLE_PROFILES' && data.profiles) {
-                    hideBoot();
-                    // Salva temporaneamente le credenziali
-                    state.tempLogin = { school, user, pass };
-                    showProfileSelector(data.profiles);
-                    return;
-                }
-
-                finishLogin(data);
-            } else {
-                hideBoot();
-                showToast(data.message || 'Errore durante l\'accesso');
-            }
-        } catch (error) {
-            console.error(error);
-            hideBoot();
-            showToast('Errore di connessione al server');
-        }
+        console.log("🔗 Redireziono performLogin -> performArgoSync");
+        // Mocking DOM values for performArgoSync to consume if called programmatically
+        const creds = { schoolCode: school, username: user, password: pass };
+        return await performArgoSync(null, creds);
     }
 
-    function showProfileSelector(profiles) {
-        showModal(`
-            <div style="padding: 24px;">
-                <h3 style="margin-top:0; margin-bottom:16px; text-align:center;">Seleziona Profilo</h3>
-                <div style="display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto;">
-                    ${profiles.map((p, idx) => `
-                        <div onclick="performProfileLogin(${p.index})" style="padding:16px; background:rgba(255,255,255,0.05); border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
-                            <div style="width:40px; height:40px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
-                                ${(p.name || 'S')[0]}
-                            </div>
-                            <div>
-                                <div style="font-weight:bold; font-size:16px;">${p.name || 'Studente'}</div>
-                                <div style="font-size:13px; opacity:0.7;">${p.school} — Classe ${p.class || 'N/D'}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <button onclick="closeModal()" style="width:100%; margin-top:16px; padding:12px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">Annulla</button>
-            </div>
-        `);
-    }
-
-    async function performProfileLogin(index) {
-        if (!state.tempLogin) return;
-        closeModal();
-        showBoot('Accesso al profilo...');
-
-        try {
-            const { school, user, pass } = state.tempLogin;
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    school, username: user, password: pass,
-                    selectedProfileIndex: index
-                })
-            });
-            const data = await response.json();
-            if (data.success) {
-                finishLogin(data);
-            } else {
-                hideBoot();
-                showToast(data.error || 'Errore selezione profilo');
-            }
-        } catch (e) {
-            hideBoot();
-            showToast('Errore di rete');
-        }
-    }
-
-    async function finishLogin(data) {
-        state.isLoggedIn = true;
-        state.user = data.user || {};
-        if (data.token) localStorage.setItem(lsKey('auth_token'), data.token);
-        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-        state.tempLogin = null;
-        await performSync();
-        closeModal();
-        hideBoot();
-        showToast('Accesso effettuato! 🚀');
-        render();
-    }
-
-    function showProfileSelector(profiles) {
-        showModal(`
-            <div style="padding: 24px;">
-                <h3 style="margin-top:0; margin-bottom:16px; text-align:center;">Seleziona Profilo</h3>
-                <div style="display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto;">
-                    ${profiles.map((p, idx) => `
-                        <div onclick="performProfileLogin(${p.index})" style="padding:16px; background:rgba(255,255,255,0.05); border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
-                            <div style="width:40px; height:40px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
-                                ${(p.name || 'S')[0]}
-                            </div>
-                            <div>
-                                <div style="font-weight:bold; font-size:16px;">${p.name || 'Studente'}</div>
-                                <div style="font-size:13px; opacity:0.7;">${p.school} — Classe ${p.class || 'N/D'}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <button onclick="closeModal()" style="width:100%; margin-top:16px; padding:12px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">Annulla</button>
-            </div>
-        `);
-    }
-
-    async function performProfileLogin(index) {
-        if (!state.tempLogin) return;
-        closeModal();
-        showBoot('Accesso al profilo...');
-
-        try {
-            const { school, user, pass } = state.tempLogin;
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    school, username: user, password: pass,
-                    selectedProfileIndex: index
-                })
-            });
-            const data = await response.json();
-            if (data.success) {
-                finishLogin(data);
-            } else {
-                hideBoot();
-                showToast(data.error || 'Errore selezione profilo');
-            }
-        } catch (e) {
-            hideBoot();
-            showToast('Errore di rete');
-        }
-    }
 
     async function finishLogin(data) {
         state.isLoggedIn = true;
@@ -4358,7 +4224,7 @@
 
     function updateWeekDayButton(taskId, dateStr) {
         const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
-        const buttons = document.querySelectorAll(`[data - task - id= "${taskId}"][data - date="${dateStr}"]`);
+        const buttons = document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`);
         buttons.forEach(btn => {
             if (isPlanned) {
                 btn.style.background = 'var(--green)';
@@ -5589,7 +5455,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <input id="argo-school" placeholder="Codice Scuola" value="${localStorage.getItem('argo_school') || ''}">
                     <input id="argo-user" placeholder="Nome Utente">
                     <input type="password" id="argo-pass" placeholder="Password">
-                    <button id="login-btn" onclick="performLogin(document.getElementById('argo-school').value, document.getElementById('argo-user').value, document.getElementById('argo-pass').value)" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
+                    <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
                     <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
                </div>
            </div>`;
