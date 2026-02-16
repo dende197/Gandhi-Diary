@@ -26,22 +26,23 @@
            ============================================ */
 
         :root {
-            --bg-body: #0f1115;
-            --bg-card: #1a1d23;
-            --bg-card-hover: #22262d;
-            --bg-input: #111419;
+            --bg-body: #000000;
+            /* Pure Black */
+            --bg-card: #0a0a0a;
+            /* Deep Black Card */
+            --bg-card-hover: #121212;
+            --bg-input: #080808;
 
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-dim: #64748b;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-dim: #71717a;
 
             --accent: #6366f1;
-            /* Indigo/Violet */
-            --accent-glow: rgba(99, 102, 241, 0.3);
+            /* Indigo */
+            --accent-glow: rgba(99, 102, 241, 0.4);
             --accent-warm: #f59e0b;
-            /* Amber */
 
             --blue: #3b82f6;
             --green: #10b981;
@@ -49,17 +50,18 @@
             --red: #ef4444;
             --purple: #8b5cf6;
 
-            --card-border: 1px solid rgba(255, 255, 255, 0.05);
-            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            --glass-bg: rgba(26, 29, 35, 0.7);
-            --glass-blur: blur(12px);
+            --card-border: 1px solid rgba(255, 255, 255, 0.08);
+            /* Liquid Glass Border */
+            --card-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+            --glass-bg: rgba(10, 10, 10, 0.6);
+            --glass-blur: blur(20px);
 
-            --radius-xl: 18px;
-            --radius-l: 14px;
-            --radius-m: 10px;
-            --radius-s: 6px;
+            --radius-xl: 22px;
+            --radius-l: 16px;
+            --radius-m: 12px;
+            --radius-s: 8px;
 
-            --top-nav-height: 64px;
+            --top-nav-height: 72px;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
@@ -113,27 +115,27 @@
 
         #custom-scrollbar {
             position: fixed;
-            right: 4px;
-            top: 4px;
-            bottom: 4px;
+            right: 6px;
+            top: 6px;
+            bottom: 6px;
             width: 5px;
             z-index: 10000;
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.4s ease;
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
 
         #scroll-thumb {
             width: 100%;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 10px;
             position: absolute;
             top: 0;
-            min-height: 40px;
-            transition: height 0.1s ease;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            min-height: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
         }
 
         .show-scrollbar {
@@ -1128,130 +1130,7 @@
             }
         }
 
-        /* === MARKET === */
-        .market-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .market-card {
-            background: var(--bg-glass);
-            backdrop-filter: var(--glass-blur);
-            border: var(--glass-border);
-            border-radius: var(--radius-l);
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .market-card:active {
-            transform: scale(0.98);
-        }
-
-        .market-card-img {
-            height: 140px;
-            background: rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .market-card-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .market-card-body {
-            padding: 12px;
-        }
-
-        .market-price {
-            font-weight: 600;
-            color: var(--green);
-            font-size: 15px;
-        }
-
-        .market-title {
-            font-weight: 500;
-            color: var(--text-primary);
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        .market-status {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            padding: 3px 8px;
-            border-radius: 999px;
-            display: inline-flex;
-            gap: 4px;
-            align-items: center;
-        }
-
-        .market-status.sold {
-            background: rgba(255, 69, 58, 0.1);
-            color: var(--red);
-            border: 1px solid rgba(255, 69, 58, 0.15);
-        }
-
-        .market-status.available {
-            background: rgba(48, 209, 88, 0.08);
-            color: var(--green);
-            border: 1px solid rgba(48, 209, 88, 0.15);
-        }
-
-        .market-status.reserved {
-            background: rgba(255, 159, 10, 0.1);
-            color: var(--orange);
-            border: 1px solid rgba(255, 159, 10, 0.15);
-        }
-
-        .market-modal-img {
-            width: 100%;
-            height: 260px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: var(--radius-m);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .market-modal-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .market-thumb-row {
-            display: flex;
-            gap: 6px;
-            overflow-x: auto;
-            padding-top: 8px;
-        }
-
-        .market-thumb {
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius-s);
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            cursor: pointer;
-        }
-
-        .market-thumb.active {
-            border-color: var(--blue);
-        }
-
-        .market-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        /* Social and Market styles removed for Pure Planner refocus */
 
         /* === CHAT === */
         .chat {
@@ -1944,10 +1823,7 @@
     // STATE MANAGEMENT
     // ==============================================================================
     // 🛠️ DATE HELPERS (Local Time Safe)
-    // ==============================================================================
-    /**
-     * Returns YYYY-MM-DD in local time instead of UTC to avoid "previous day" shift at midnight.
-     */
+    // ===================================
     function getLocalDateString(date = new Date()) {
         const d = new Date(date);
         const year = d.getFullYear();
@@ -1958,54 +1834,29 @@
 
     const state = {
         view: 'login',
-        user: { id: null, name: 'Utente', class: 'N/D', avatar: null }, // Default safe
+        user: { id: null, name: 'Utente', class: 'N/D', avatar: null },
         isLoggedIn: false,
         isOffline: false,
-        didup: { connected: false },
-        feed: { search: '', classFilter: 'Tutte' },
-        tasks: [], // ⭐ Inizializza vuoto, carica da localStorage
+        tasks: [],
         plannedTasks: {},
-        plannerMode: 'registro', // 'registro' (Argo) o 'studio' (User/AI)
-        plannerView: 'calendar', // 'calendar' o 'list'
+        plannerMode: 'registro',
+        plannerView: localStorage.getItem('g_diary_planner_view') || 'calendar',
         stressLevels: {},
         stressVents: {},
-        tempStress: { level: 5, vent: '' }, // Initial state for stress card
-        __mediaGauge: { current: 0, target: 0 }, // For media gauge animation
-        posts: [], // Loaded from API
-        marketItems: [], // Loaded from API
-        messages: { 'Alessandro Russo': [{ text: 'Ciao Andrea! ', me: false }] },
-        news: [
-            { id: 128, title: 'Circolare n.  128 - Assemblea d\'Istituto 7 Febbraio', date: 'OGGI', url: 'https://www.liceogandhi.edu.it/categoria/storico-circolari/' },
-            { id: 127, title: 'Circolare n. 127 - Variazione Calendario Scrutini', date: 'IERI', url: 'https://www.liceogandhi.edu.it/categoria/storico-circolari/' },
-            { id: 126, title: 'Circolare n. 126 - Saldo viaggio d\'istruzione', date: '2 GG FA', url: 'https://www.liceogandhi.edu.it/categoria/storico-circolari/' }
-        ],
-        grades: [],
+        voti: [],
+        goals: {},
+        news: [],
         announcements: [],
-        voti: [],        // ⭐ Added based on user request
-        goals: {},       // ⭐ Added for Analytics Goal Tracking
-        activeSubject: null, // Track currently viewed subject
         promemoria: [],
         reminders: [],
-        badges: [],      // ⭐ Added for Gamification Achievements
-        aiResponse: '',   // Current AI suggestion
-        aiChatHistory: JSON.parse(localStorage.getItem(lsKey('ai_chat'))) || [], // [{role:'user'|'ai', text, ts}]
-
-        // --- Hyper-Planner v1.3.0 Data ---
         difficulty: JSON.parse(localStorage.getItem(lsKey('difficulty'))) || [],
         availability: JSON.parse(localStorage.getItem(lsKey('availability'))) || { start: '15:00', end: '19:00' },
         backlog: JSON.parse(localStorage.getItem(lsKey('backlog'))) || [],
         exams: JSON.parse(localStorage.getItem(lsKey('exams'))) || [],
         prepLevels: JSON.parse(localStorage.getItem(lsKey('prep_levels'))) || {},
-        plannerView: localStorage.getItem('g_diary_planner_view') || 'calendar',
-        syncing: false,
-        searchQuery: '', // ⭐ Persistent search query
-        selectedDay: new Date().getDate(),
-        polls: [],
-        plannerWeekOffset: 0,
-        threads: [],
-        lastSearchResults: [], // ⭐ Cache for profile cards
-        chatReady: false,
-        chatSyncing: false // 🔥 Flag per il progresso in background
+        aiChatHistory: JSON.parse(localStorage.getItem(lsKey('ai_chat'))) || [],
+        messages: {},
+        plannerWeekOffset: 0
     };
 
     const app = document.getElementById('app');
@@ -2078,8 +1929,8 @@
             state.view = state.isLoggedIn ? 'home' : 'login';
         }
 
-        // 3. Load Caches (Threads, Tasks, etc.)
-        ['threads', 'tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'market_outbox', 'stress_levels', 'stress_vents', 'badges'].forEach(key => {
+        // 3. Load Caches
+        ['tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'stress_levels', 'stress_vents'].forEach(key => {
             const cached = localStorage.getItem(lsKey(key));
             if (cached) {
                 try {
@@ -2089,17 +1940,7 @@
             }
         });
 
-        // 🔥 RESTORE: Global Caches (Market, Posts, Polls) - Fix for data loss on refresh
-        ['posts', 'market', 'polls'].forEach(key => {
-            const cached = localStorage.getItem(globalKey(key));
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    if (key === 'market') state.marketItems = parsed.map(normalizeMarketItem);
-                    else state[key] = parsed;
-                } catch { }
-            }
-        });
+        // Global caches removed (Social/Market)
 
         // Primo render immediato (Evita il flash del login se loggato)
         render();
@@ -2158,15 +1999,7 @@
 
             (async () => {
                 await fetchUsersDirectory();
-                await performSync(); // 🔥 Forza sincronizzazione Argo -> Supabase
-                fetchThreads();
-                fetchFeed();
-                fetchMarket();
-
-                if (state.view === 'chat' && state.currentThreadId) {
-                    fetchChatMessages(state.currentThreadId);
-                    subscribeToChatRealtime(state.currentThreadId);
-                }
+                await performSync();
             })();
         } else {
             state.view = 'login';
@@ -3294,11 +3127,9 @@
         return `
             <nav id="top-nav">
                 <div class="nav-content">
-                    <div class="profile-trigger" onclick="showProfileActions()">
+                    <div class="profile-trigger" onclick="navigate('profile')">
                         ${renderAvatar(state.user.name, 36)}
-                        <span class="profile-label">
-                            ${state.user.name.split(' ')[0]}
-                        </span>
+                        <span class="profile-label">${state.user.name.split(' ')[0]}</span>
                     </div>
                     <div class="nav-links">
                         <button class="nav-item ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')">
@@ -3310,12 +3141,12 @@
                         <button class="nav-item ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')">
                             <i class="ph ph-chart-line-up"></i> Voti
                         </button>
-                        <button class="nav-item ${['chat_list', 'market'].includes(state.view) ? 'active' : ''}" onclick="navigate('market')">
-                            <i class="ph ph-shopping-bag"></i> Social
+                        <button class="nav-item ${['ai_assistant'].includes(state.view) ? 'active' : ''}" onclick="navigate('ai_assistant')">
+                            <i class="ph ph-sparkle"></i> AI
                         </button>
                     </div>
-                    <div style="font-size: 12px; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">
-                        ${dateStr}
+                    <div onclick="navigate('academic_profile')" style="font-size: 18px; color: var(--text-dim); cursor: pointer;">
+                        <i class="ph ph-gear-six"></i>
                     </div>
                 </div>
             </nav>`;
@@ -4198,128 +4029,7 @@
         </div>`;
     }
 
-    function renderMarket() {
-        const items = [...state.marketItems];
-        const list = [...items].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-
-        return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <div>
-                    <h1 style="font-size: 28px; font-weight: 800;">Marketplace</h1>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Compra e vendi tra studenti</p>
-                </div>
-                <button class="btn-primary" onclick="openNewItemModal()" style="height: 44px; padding: 0 16px;">
-                    <i class="ph-bold ph-plus"></i> Vendi
-                </button>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; padding-bottom: 40px;">
-                ${list.map(renderMarketCard).join('')}
-            </div>
-        </div>`;
-    }
-
-    function renderMarketCard(item) {
-        const statusClass = item.status || 'available';
-        const isSold = statusClass === 'sold';
-        return `
-        <div class="card" onclick="openMarketItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s;">
-            <div style="aspect-ratio: 1/1; background: var(--bg-body); display: flex; align-items: center; justify-content: center; position: relative;">
-                ${item.image ? `<img src="${item.image}" style="width: 100%; height: 100%; object-fit: cover;">` : `<i class="ph ph-image" style="font-size: 40px; color: var(--text-dim);"></i>`}
-                <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 4px 8px; border-radius: 8px; color: white; font-weight: 800; font-size: 14px;">
-                    ${item.price}
-                </div>
-                ${isSold ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; text-transform: uppercase;">Sold</div>` : ''}
-            </div>
-            <div style="padding: 12px;">
-                <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
-                <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-                    ${renderAvatar(item.seller, 16, item.sellerAvatar)}
-                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.seller}</span>
-                </div>
-            </div>
-        </div>`;
-    }
-
-    function getMarketImages(item) {
-        const imgs = Array.isArray(item?.images) ? item.images : (item?.image ? [item.image] : []);
-        return imgs.length ? imgs : [];
-    }
-
-    function openMarketItemModal(item) {
-        state.marketModal = { item, index: 0 };
-        renderMarketItemModal();
-    }
-
-    function setMarketModalImage(index) {
-        const modal = state.marketModal;
-        if (!modal) return;
-        const images = getMarketImages(modal.item);
-        if (!images.length) return;
-
-        modal.index = Math.max(0, Math.min(images.length - 1, index));
-
-        const mainImg = document.getElementById('market-modal-main-img');
-        if (mainImg) mainImg.src = images[modal.index];
-
-        document.querySelectorAll('.market-thumb').forEach((el, idx) => {
-            el.classList.toggle('active', idx === modal.index);
-        });
-    }
-
-    function renderMarketItemModal() {
-        const modalContainer = getModalContainer();
-        const { item, index } = state.marketModal;
-        const images = getMarketImages(item);
-        const isOwner = item.sellerId === getUserId();
-
-        modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
-            <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 500px; padding: 0; overflow: hidden; animation: slideUp 0.3s ease-out;">
-                <!-- Modern Image Gallery -->
-                <div style="position: relative; aspect-ratio: 4/3; background: var(--bg-body);">
-                    ${images.length ? `<img id="market-modal-main-img" src="${images[index]}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-dim);"><i class="ph ph-image" style="font-size: 64px;"></i></div>`}
-                    
-                    <button onclick="closeModal()" style="position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 12px; background: rgba(0,0,0,0.5); border: none; color: white; cursor: pointer; backdrop-filter: blur(8px);"><i class="ph ph-x" style="font-size: 18px;"></i></button>
-                    
-                    ${images.length > 1 ? `
-                    <div style="position: absolute; bottom: 16px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px;">
-                        ${images.map((_, i) => `<div class="market-dot ${i === index ? 'active' : ''}" style="width: 6px; height: 6px; border-radius: 3px; background: ${i === index ? 'white' : 'rgba(255,255,255,0.5)'};"></div>`).join('')}
-                    </div>` : ''}
-                </div>
-
-                <div style="padding: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
-                        <div>
-                            <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: var(--text-primary);">${item.title}</h2>
-                            <div style="font-size: 14px; color: var(--text-dim); margin-top: 4px; display: flex; align-items: center; gap: 6px;">
-                                ${renderAvatar(item.seller, 20)}
-                                <span>Venduto da <b>${item.seller}</b></span>
-                            </div>
-                        </div>
-                        <div style="font-size: 24px; font-weight: 900; color: var(--accent);">${item.price}</div>
-                    </div>
-
-                    <div style="margin: 20px 0; font-size: 15px; color: var(--text-secondary); line-height: 1.6; max-height: 120px; overflow-y: auto;">
-                        ${item.description || 'Nessuna descrizione fornita per questo articolo.'}
-                    </div>
-
-                    <div style="display: flex; gap: 12px; margin-top: 24px;">
-                        ${isOwner ? `
-                        <button class="btn-primary" onclick="deleteMarketItem('${item.id}'); closeModal();" style="flex: 1; background: rgba(239, 68, 68, 0.1); color: var(--red); box-shadow: none;">
-                            <i class="ph ph-trash"></i> Elimina Annuncio
-                        </button>
-                        ` : `
-                        <button class="btn-primary" onclick="startTradeChat('${item.sellerId}', '${item.seller}', '${item.title.replace(/'/g, "\\'")}'); closeModal();" style="flex: 1;">
-                            <i class="ph-bold ph-chat-circle-dots"></i> Contatta il venditore
-                        </button>
-                        `}
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    }
+    /* View helper functions */
 
 
 
@@ -4439,23 +4149,23 @@
             </div>`;
         } else {
             return `
-            <div style="display: flex; flex-direction: column; gap: 0;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${list.map(t => {
                 const subjColor = getSubjectColor(t.subject);
                 return `
-                    <div class="studio-entry">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div class="studio-entry" style="position: relative; background: var(--bg-card); border-radius: var(--radius-m); padding: 16px; border: var(--card-border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div style="display: flex; align-items: center;">
-                                <span class="subject-badge" style="background: ${subjColor};"></span>
+                                <span class="subject-badge" style="background: ${subjColor}; margin-right: 8px;"></span>
                                 <span style="font-size: 12px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">${t.subject}</span>
                             </div>
-                            <span style="font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(99, 102, 241, 0.1); padding: 2px 8px; border-radius: 10px;">PROGEtto</span>
+                            <span style="font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(99, 102, 241, 0.1); padding: 2px 8px; border-radius: 10px;">STUDIO</span>
                         </div>
-                        <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${t.description || 'Studio Personale'}</div>
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Sessione di studio pianificata</div>
-                        <div style="position: absolute; right: 20px; bottom: 16px;">
-                             <div onclick="toggleTaskCompletion('${t.id}')" style="width: 20px; height: 20px; border-radius: 4px; border: 1.5px solid ${t.completed ? 'var(--blue)' : 'var(--text-dim)'}; background: ${t.completed ? 'var(--blue)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                                ${t.completed ? '<i class="ph-bold ph-check" style="font-size: 12px; color: white;"></i>' : ''}
+                        <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${t.description || t.text || 'Studio Personale'}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Sessione di studio pianificata per il ${new Date(t.displayDate).toLocaleDateString()}</div>
+                        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                             <div onclick="toggleTaskCompletion('${t.id}')" style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid ${t.completed ? 'var(--accent)' : 'var(--text-dim)'}; background: ${t.completed ? 'var(--accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                ${t.completed ? '<i class="ph-bold ph-check" style="font-size: 14px; color: white;"></i>' : ''}
                             </div>
                         </div>
                     </div>`;
@@ -4464,33 +4174,32 @@
         }
     }
 
-    // Stress Modal fluida (mantieni selezione senza ri-render)
-    // Stress selection modal: make buttons definitely clickable
     function showStressModal() {
         const todayStr = getLocalDateString();
         const currentLevel = state.stressLevels[todayStr] || 0;
         const modalContainer = getModalContainer();
         if (!modalContainer) return;
+
         modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick = "closeModal(event)">
-                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-                        <h2 style="margin:0;">Stress Giornaliero</h2>
-                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
-                   </div>
-                    <div class="stress-level-grid">
-                        ${[1, 2, 3, 4, 5].map(lv => `
-                            <div class="stress-pill ${currentLevel === lv ? 'active' : ''}" 
-                                data-stress="${lv}" 
-                                onclick="event.stopPropagation(); setStressLevel(${lv}, true)">
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                    <h2 style="margin:0;">Stress Giornaliero</h2>
+                    <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
+                </div>
+                <div class="stress-level-grid">
+                    ${[1, 2, 3, 4, 5].map(lv => `
+                        <div class="stress-pill ${currentLevel === lv ? 'active' : ''}" 
+                            data-stress="${lv}" 
+                            onclick="setStressLevel(${lv}, true)">
                             ${lv}
-                           </div>`).join('')}
-                   </div>
-                    <div style="display:flex; justify-content:center; margin-top: 16px;">
-                        <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
-                   </div>
-               </div>
-               </div> `;
+                        </div>`).join('')}
+                </div>
+                <div style="display:flex; justify-content:center; margin-top: 16px;">
+                    <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
+                </div>
+            </div>
+        </div>`;
     }
 
     // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
@@ -4541,28 +4250,28 @@
         const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
 
         modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick = "closeModal(event)">
-                <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
-                        <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
-                   </div>
-                    <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                        <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
-                            <defs>
-                                <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65" /><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0" />
-                               </linearGradient>
-                           </defs>
-                            <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round" />
-                            <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)" />
-                       </svg>
-                   </div>
-                    <div style="display:flex; gap:8px; margin-top:12px;">
-                        ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
-                   </div>
-               </div>
-               </div> `;
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
+                    <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
+                </div>
+                <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65" /><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0" />
+                            </linearGradient>
+                        </defs>
+                        <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round" />
+                        <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)" />
+                    </svg>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
+                </div>
+            </div>
+        </div>`;
     }
 
     // setStressLevel(lv, inModal): aggiorna fluido
@@ -4601,11 +4310,10 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick = "closeModal(event)">
-                <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
-                    <!-- Content injected by refreshPlanWeekModalContent -->
-               </div>
-               </div> `;
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
+            </div>
+        </div>`;
         refreshPlanWeekModalContent();
     }
 
@@ -4625,10 +4333,10 @@
         }
 
         contentEl.innerHTML = `
-            <div style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        < div style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" >
                     <h2 style="margin:0;">Pianifica Settimana</h2>
                     <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
-               </div>
+               </div >
                 <div style="display: flex; flex-direction: column; gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
                     <!-- CUSTOM QUEST SECTION -->
                     <div style="background: rgba(255,255,255,0.08); padding: 16px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 4px;">
@@ -4757,17 +4465,17 @@
 
     function showVotiView() {
         modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick = "closeModal(event)">
-                <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
-                    <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
-                        <h2 style="margin:0;">Voti DidUP</h2>
-                        <button onclick="closeModal()" style="background:none; border:none; color:var(--blue); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
-                   </div>
-                    <div style="padding: 20px;">
-                        ${renderVoti()}
-                   </div>
-               </div>
-           </div> `;
+        < div class="modal-overlay" onclick = "closeModal(event)" >
+            <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
+                <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
+                    <h2 style="margin:0;">Voti DidUP</h2>
+                    <button onclick="closeModal()" style="background:none; border:none; color:var(--blue); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
+                </div>
+                <div style="padding: 20px;">
+                    ${renderVoti()}
+                </div>
+            </div>
+           </div > `;
     }
 
     function renderVoti() {
@@ -4776,16 +4484,16 @@
 
         if (votiData.length === 0) {
             return `
-            <div style = "text-align:center; padding: 48px 24px; color: var(--text-muted);">
+        < div style = "text-align:center; padding: 48px 24px; color: var(--text-muted);" >
                     <i class="ph ph-graduation-cap" style="font-size: 56px; opacity: 0.2; margin-bottom: 16px; display: block;"></i>
                     <p style="margin-bottom:20px; font-size:16px;">Nessun voto registrato.</p>
                     <button onclick="performArgoSync()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto;">Sincronizza DidUP</button>
-               </div> `;
+               </div > `;
         }
 
         const media = calcolaMedia(votiData);
         return `
-            <div class="view">
+        < div class="view" >
                 <div class="card" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(79, 70, 229, 0.4)); border: 1px solid var(--blue); padding: 24px; text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">Media Generale</div>
                     <div style="font-size: 56px; font-weight: 800; color: white;">${media || '--'}</div>
@@ -4806,7 +4514,7 @@
                        </div>`;
         }).join('')}
                </div>
-           </div> `;
+           </div > `;
     }
 
     function showBachecaModal() {
@@ -4817,14 +4525,14 @@
         console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
 
         modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick = "closeModal(event)">
-                <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
-                    <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
-                        <h2 style="margin:0;">Bacheca & Avvisi</h2>
-                        <button onclick="closeModal()" style="background:none; border:none; color:var(--orange); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
-                   </div>
-                    <div style="padding: 20px; display:flex; flex-direction:column; gap:12px;">
-                        ${dataBacheca.length === 0 ?
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
+                <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
+                    <h2 style="margin:0;">Bacheca & Avvisi</h2>
+                    <button onclick="closeModal()" style="background:none; border:none; color:var(--orange); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
+                </div>
+                <div style="padding: 20px; display:flex; flex-direction:column; gap:12px;">
+                    ${dataBacheca.length === 0 ?
                 `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
                         <i class="ph ph-megaphone" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
                         Nessun avviso in bacheca<br>
@@ -4860,14 +4568,14 @@
                             `;
                 }).join('')
             }
-                   </div>
-               </div>
-           </div> `;
+                </div>
+            </div>
+           </div > `;
     }
 
     function renderProfile() {
         return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
             <div style="margin-bottom: 24px;">
                 <h1 style="font-size: 28px; font-weight: 800;">Il Mio Account</h1>
                 <p style="color: var(--text-secondary); font-size: 14px;">Gestisci le tue impostazioni e preferenze</p>
@@ -4925,7 +4633,7 @@
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
                 </button>
             </div>
-        </div>`;
+        </div > `;
     }
 
     /* --- Advanced Grades & Analytics (v1.1) --- */
@@ -5155,7 +4863,7 @@
                 <button class="btn-icon-only" onclick="state.activeSubject = null; render();" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
                     <i class="ph-bold ph-arrow-left"></i>
                 </button>
-                <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Grade Detail</h1>
+                <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Dettaglio Materia</h1>
             </div>
 
             <div class="card" style="border-left: 6px solid ${subjColor}; padding: 24px; margin-bottom: 32px;">
@@ -5197,7 +4905,7 @@
                     </div>`;
         }).join('')}
             </div>
-        </div > `;
+        </div>`;
     }
 
     /* --- Gamification & Badges --- */
@@ -5260,17 +4968,17 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
                     <div style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; background:${modeColor}; color:white;">${modeLabel}</div>
-               </div>
+                </div>
                 <div style="font-size:48px; font-weight:800; color:white; font-family:monospace; margin:16px 0; letter-spacing:4px;">${display}</div>
                 <div style="display:flex; gap:12px; justify-content:center;">
                     <button onclick="togglePomodoro()" style="padding:12px 28px; border-radius:14px; border:none; background:${pomodoroState.running ? 'var(--red)' : modeColor}; color:white; font-weight:800; font-size:15px; cursor:pointer; min-width:120px;">
                         ${pomodoroState.running ? '⏸ Pausa' : '▶ Avvia'}
-                   </button>
+                    </button>
                     <button onclick="resetPomodoro()" style="padding:12px 20px; border-radius:14px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:white; font-weight:700; font-size:14px; cursor:pointer;">
                         ↺ Reset
-                   </button>
-               </div>
-           </div > `;
+                    </button>
+                </div>
+            </div>`;
     }
 
     function togglePomodoro() {
@@ -5372,7 +5080,7 @@
             <!-- Input Area -->
             <div style="flex-shrink: 0; padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: flex-end;">
                 <div style="flex: 1; position: relative; background: var(--bg-card); border-radius: 18px; border: 1px solid rgba(255,255,255,0.06); padding: 4px;">
-                     <textarea id="aiChatInput" rows="1" placeholder="Fai una domanda..." 
+                    <textarea id="aiChatInput" rows="1" placeholder="Fai una domanda..."
                         style="width: 100%; min-height: 44px; max-height: 120px; background: transparent; border: none; color: white; padding: 10px 14px; font-size: 15px; outline: none; resize: none; font-family: inherit;"
                         onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
                         oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
