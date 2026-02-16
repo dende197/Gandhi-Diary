@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
     <title>G-Diary</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -339,9 +339,22 @@
                 --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             }
 
+            html,
+            body {
+                overflow-x: hidden;
+                position: relative;
+                width: 100%;
+                height: 100%;
+                -webkit-text-size-adjust: 100%;
+                touch-action: manipulation;
+                /* Optimize for smooth scrolling */
+                -webkit-overflow-scrolling: touch;
+            }
+
             .dashboard-grid {
                 grid-template-columns: 1fr;
                 gap: 16px;
+                padding-bottom: 40px;
             }
 
             .glass-panel,
@@ -354,11 +367,52 @@
             }
 
             .view {
-                padding: 20px 16px 100px 16px;
+                padding: 16px 12px 100px 12px;
             }
 
             h1 {
                 font-size: 26px !important;
+            }
+
+            /* 🚀 GIANT TOUCH TARGETS FOR SMARTPHONES */
+            button,
+            .btn-primary,
+            .btn-secondary,
+            .nav-item,
+            .section-action {
+                min-height: 52px !important;
+                padding: 12px 20px !important;
+                cursor: pointer;
+                transition: transform 0.1s ease;
+            }
+
+            /* Prevent auto-zoom on inputs */
+            input,
+            select,
+            textarea {
+                font-size: 16px !important;
+                padding: 12px !important;
+            }
+
+            /* Active state feedback - VIBRANT */
+            button:active,
+            .card:active,
+            .app-card:active,
+            .nav-item:active {
+                transform: scale(0.94) !important;
+                filter: brightness(1.2);
+            }
+
+            /* Fix stress wave visibility */
+            .metric-card {
+                min-height: 120px !important;
+                position: relative;
+                overflow: hidden;
+            }
+
+            #stressWaveCanvas {
+                height: 50px !important;
+                pointer-events: none;
             }
         }
 
@@ -2224,7 +2278,9 @@
     }
 
     function isFutureOrToday(dateStr) {
+        if (!dateStr) return false;
         const todayStr = getLocalDateString();
+        // Use string comparison for YYYY-MM-DD equality or superiority
         return dateStr >= todayStr;
     }
 
@@ -2601,8 +2657,9 @@
         }
 
         // Filtra e ordina (mantieni solo quelli futuri o oggi, inclusi i QUEST)
+        // ✅ FIX: Use string-based comparison to avoid hours/timezone artifacts
         const nextTasks = mergedTasks
-            .filter(t => t.hasValidDate && t.dateObj >= today)
+            .filter(t => t.hasValidDate && isFutureOrToday(t.due_date))
             .sort((a, b) => a.dateObj - b.dateObj);
 
         // Migrazione plannedTasks: mappa oldId -> newId usando la stessa chiave
@@ -2695,14 +2752,18 @@
 
     function navigate(v) {
         if (!allowedViews.includes(v)) v = 'home';
-        const oldView = state.view;
         const targetHash = '#' + v;
         if (window.location.hash !== targetHash) {
             window.history.pushState(null, '', targetHash);
         }
         state.view = v;
         saveNavigationState();
+
+        // Force immediate render call
         render();
+
+        // Ensure scroll to top on navigation to avoid feeling lost
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
     window.addEventListener('hashchange', () => {
@@ -2751,22 +2812,22 @@
         root.innerHTML = html;
         updateOfflineBadge();
 
-        // Post-render hooks
-        if (state.view === 'home') {
-            const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
-            setTimeout(() => {
-                initStressWaveFromState();
-                if (typeof renderMediaGauge === 'function') renderMediaGauge(mediaVal);
-            }, 0);
-        }
-        if (state.view === 'planner') {
-            setTimeout(() => renderCustomCalendar(), 0);
-        }
-        if (state.view === 'voti') {
-            setTimeout(() => {
-                if (typeof initGradesCharts === 'function') initGradesCharts();
-            }, 0);
-        }
+        // 🚀 Post-render hooks with DOUBLE RAF for Mobile Stability
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (state.view === 'home') {
+                    const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
+                    initStressWaveFromState();
+                    if (typeof renderMediaGauge === 'function') renderMediaGauge(mediaVal);
+                }
+                if (state.view === 'planner') {
+                    renderCustomCalendar();
+                }
+                if (state.view === 'voti' && typeof initGradesCharts === 'function') {
+                    initGradesCharts();
+                }
+            });
+        });
     }
 
     function renderNav() {
@@ -3708,12 +3769,15 @@
 
         if (state.plannerMode === 'registro') {
             state.tasks.forEach(t => {
+                // Fix: Include tasks that have a valid due_date, even if slightly in the past but relevant to current view
+                // OR better: use exactly the same logic as the calendar but at an aggregate level
                 if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date && isFutureOrToday(t.due_date)) {
                     list.push({ ...t, displayDate: t.due_date });
                 }
             });
         } else {
             Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
+                // Ensure planned tasks for today/future are shown
                 if (isFutureOrToday(dateStr)) {
                     ids.forEach(id => {
                         const t = state.tasks.find(tk => tk.id === id);
