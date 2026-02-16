@@ -2178,36 +2178,7 @@
     });
 
     // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version)
-    // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version v2)
-    // 1. Capture implementations FIRST (Hoisting saves us)
-    //    We explicitly grab the hoisted function references before overwriting window[name]
-    window.performLogin_impl = performLogin;
-    window.performSync_impl = performSync;
-    window.navigate_impl = navigate;
-    window.render_impl = render;
-    window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
-    window.closeModal_impl = closeModal;
-    window.openArgoLogin_impl = openArgoLogin;
-    window.performArgoSync_impl = performArgoSync;
-    window.selectProfile_impl = selectProfile;
-    window.switchProfile_impl = switchProfile;
-    window.handleLoginSuccess_impl = handleLoginSuccess;
-    window.checkServerHealth_impl = checkServerHealth;
-    window.showProfileSelectionModal_impl = showProfileSelectionModal;
-
-    // 2. NOW expose the safety wrappers
-    const safeExpose = (name) => {
-        const original = window[name + "_impl"];
-        window[name] = (...args) => {
-            const impl = window[name + "_impl"];
-            if (typeof impl === 'function') {
-                return impl(...args);
-            }
-            console.warn(`🚀 ${name} non ancora pronto o ricorsivo...`);
-        };
-    };
-
-    ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
+    // 🚀 GLOBAL EXPOSURE (Moved to end of file to ensure all functions are defined)
 
     function updateOfflineBadge() {
         if (state.isOffline) {
@@ -2355,6 +2326,22 @@
             document.body.appendChild(el);
         }
         return el;
+    }
+
+    // ⭐ Helper Restore: closeModal
+    function closeModal(event) {
+        if (event) event.stopPropagation();
+        const container = document.getElementById('modal-container');
+        if (container) {
+            // Animazione uscita
+            const overlay = container.querySelector('.modal-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => { container.innerHTML = ''; }, 200);
+            } else {
+                container.innerHTML = '';
+            }
+        }
     }
 
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hardSavePlanner(); });
@@ -7021,21 +7008,6 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         });
     }
 
-    // --- GLOBAL EXPOSURE (CRITICAL FOR BUTTONS) ---
-    window.performLogin = performLogin;
-    window.performSync = performArgoSync; // Unified
-    window.testBackendConnection = checkServerHealth; // Unified
-    window.showQuickAddTaskModal = showQuickAddTaskModal;
-    window.showPlanWeekModal = showPlanWeekModal;
-    window.showVotiView = showVotiView;
-    window.navigate = navigate;
-    window.logout = logout;
-    window.openArgoLogin = openArgoLogin;
-    window.checkServerHealth = checkServerHealth;
-    window.handleLoginSuccess = handleLoginSuccess;
-    window.showProfileSelectionModal = showProfileSelectionModal;
-    window.selectProfile = selectProfile;
-    window.switchProfile = switchProfile;
     // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
     function initCustomScrollbar() {
         const scroller = document.getElementById('custom-scrollbar');
@@ -7089,6 +7061,42 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     } else {
         initCustomScrollbar();
     }
+
+    // 🚀 LATE GLOBAL EXPOSURE (Final Stability Fix)
+    // Moves capture to end of file to guarantee all functions (hoisted or not) are defined.
+
+    // 1. Capture implementations
+    window.performLogin_impl = performLogin;
+    window.performSync_impl = performSync;
+    window.navigate_impl = navigate;
+    window.render_impl = render;
+    window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
+    window.closeModal_impl = closeModal;
+    window.openArgoLogin_impl = openArgoLogin;
+    window.performArgoSync_impl = performArgoSync;
+    window.selectProfile_impl = selectProfile;
+    window.switchProfile_impl = switchProfile;
+    window.handleLoginSuccess_impl = handleLoginSuccess;
+    window.checkServerHealth_impl = checkServerHealth;
+    window.showProfileSelectionModal_impl = showProfileSelectionModal;
+
+    // 2. Expose safety wrappers
+    const safeExpose = (name) => {
+        window[name] = (...args) => {
+            const impl = window[name + "_impl"];
+            if (typeof impl === 'function') {
+                return impl(...args);
+            }
+            console.warn(`🚀 ${name} non ancora pronto...`);
+        };
+    };
+
+    ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
+
+    // Initial Render
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("🚀 DOM Ready - Starting App...");
+    });
 </script>
 </body>
 
