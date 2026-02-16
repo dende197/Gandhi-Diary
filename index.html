@@ -3231,7 +3231,7 @@
         const isRegistro = state.plannerMode === 'registro';
         container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" style="max-width:440px; padding:24px;">
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:24px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
                             <div>
                                 <div style="font-size:11px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
@@ -4308,7 +4308,7 @@
     function showVotiView() {
         modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
-            <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Voti DidUP</h2>
                     <button onclick="closeModal()" style="background:none; border:none; color:var(--blue); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
@@ -5459,7 +5459,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         if (!modalContainer) return;
         modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
-            <div class="modal-content" style="max-width:380px;">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;">
                 <div style="text-align:center; margin-bottom:20px;">
                     <div style="width:60px; height:60px; background:#106690; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
                        <i class="ph-fill ph-book-bookmark" style="font-size:30px; color:white;"></i>
@@ -5591,7 +5591,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         container.innerHTML = `
         <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
-            <div class="modal-content glass-panel" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <div style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div style="width: 64px; height: 64px; background: rgba(10, 132, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
                         <i class="ph-fill ph-users" style="font-size: 32px; color: var(--blue);"></i>
@@ -6297,7 +6297,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         modalContainer.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" style="max-width: 450px; padding: 30px;">
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 30px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                             <h2 style="margin:0; font-size: 24px;">Cosa fai oggi?</h2>
                             <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 28px; opacity: 0.6;"></i>
@@ -6343,7 +6343,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         modalContainer.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; position: sticky; top: 0; background: #1e1e1e; padding: 10px; border-radius: 12px; z-index: 5;">
                             <h2 style="margin:0;">Compiti per Materia</h2>
                             <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
