@@ -2391,22 +2391,16 @@
 
             if (data.success) {
                 // Salva sessione
-                state.isLoggedIn = true;
-                state.user = data.user; // { name, class, ... }
-
-                // Salva token e user in locale
-                if (data.token) {
-                    localStorage.setItem(lsKey('auth_token'), data.token);
+                // GESTIONE MULTI-PROFILO
+                if (data.status === 'MULTIPLE_PROFILES' && data.profiles) {
+                    hideBoot();
+                    // Salva temporaneamente le credenziali
+                    state.tempLogin = { school, user, pass };
+                    showProfileSelector(data.profiles);
+                    return;
                 }
-                localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
-                // Avvia sync completa
-                await performSync();
-
-                closeModal();
-                hideBoot();
-                showToast('Accesso effettuato! 🚀');
-                render();
+                finishLogin(data);
             } else {
                 hideBoot();
                 showToast(data.message || 'Errore durante l\'accesso');
@@ -2416,6 +2410,132 @@
             hideBoot();
             showToast('Errore di connessione al server');
         }
+    }
+
+    function showProfileSelector(profiles) {
+        showModal(`
+            <div style="padding: 24px;">
+                <h3 style="margin-top:0; margin-bottom:16px; text-align:center;">Seleziona Profilo</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto;">
+                    ${profiles.map((p, idx) => `
+                        <div onclick="performProfileLogin(${p.index})" style="padding:16px; background:rgba(255,255,255,0.05); border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
+                            <div style="width:40px; height:40px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
+                                ${(p.name || 'S')[0]}
+                            </div>
+                            <div>
+                                <div style="font-weight:bold; font-size:16px;">${p.name || 'Studente'}</div>
+                                <div style="font-size:13px; opacity:0.7;">${p.school} — Classe ${p.class || 'N/D'}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="closeModal()" style="width:100%; margin-top:16px; padding:12px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">Annulla</button>
+            </div>
+        `);
+    }
+
+    async function performProfileLogin(index) {
+        if (!state.tempLogin) return;
+        closeModal();
+        showBoot('Accesso al profilo...');
+
+        try {
+            const { school, user, pass } = state.tempLogin;
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    school, username: user, password: pass,
+                    selectedProfileIndex: index
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                finishLogin(data);
+            } else {
+                hideBoot();
+                showToast(data.error || 'Errore selezione profilo');
+            }
+        } catch (e) {
+            hideBoot();
+            showToast('Errore di rete');
+        }
+    }
+
+    async function finishLogin(data) {
+        state.isLoggedIn = true;
+        state.user = data.user || {};
+        if (data.token) localStorage.setItem(lsKey('auth_token'), data.token);
+        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+        state.tempLogin = null;
+        await performSync();
+        closeModal();
+        hideBoot();
+        showToast('Accesso effettuato! 🚀');
+        render();
+    }
+
+    function showProfileSelector(profiles) {
+        showModal(`
+            <div style="padding: 24px;">
+                <h3 style="margin-top:0; margin-bottom:16px; text-align:center;">Seleziona Profilo</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto;">
+                    ${profiles.map((p, idx) => `
+                        <div onclick="performProfileLogin(${p.index})" style="padding:16px; background:rgba(255,255,255,0.05); border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
+                            <div style="width:40px; height:40px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
+                                ${(p.name || 'S')[0]}
+                            </div>
+                            <div>
+                                <div style="font-weight:bold; font-size:16px;">${p.name || 'Studente'}</div>
+                                <div style="font-size:13px; opacity:0.7;">${p.school} — Classe ${p.class || 'N/D'}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="closeModal()" style="width:100%; margin-top:16px; padding:12px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">Annulla</button>
+            </div>
+        `);
+    }
+
+    async function performProfileLogin(index) {
+        if (!state.tempLogin) return;
+        closeModal();
+        showBoot('Accesso al profilo...');
+
+        try {
+            const { school, user, pass } = state.tempLogin;
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    school, username: user, password: pass,
+                    selectedProfileIndex: index
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                finishLogin(data);
+            } else {
+                hideBoot();
+                showToast(data.error || 'Errore selezione profilo');
+            }
+        } catch (e) {
+            hideBoot();
+            showToast('Errore di rete');
+        }
+    }
+
+    async function finishLogin(data) {
+        state.isLoggedIn = true;
+        state.user = data.user || {};
+        if (data.token) localStorage.setItem(lsKey('auth_token'), data.token);
+        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+        state.tempLogin = null;
+        await performSync();
+        closeModal();
+        hideBoot();
+        showToast('Accesso effettuato! 🚀');
+        render();
     }
 
     async function performSync(sessionData) {
@@ -3755,7 +3875,7 @@
         <div class="view" style="animation: slideUp 0.4s ease-out;">
 
             <!-- HERO -->
-            <div style="position: relative; padding: 42px 32px 36px; border-radius: 24px; margin-bottom: 24px;
+            <div style="position: relative; padding: 48px 32px 42px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
                 border: 1px solid rgba(255,255,255,0.1);
                 box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
@@ -7196,6 +7316,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
     window.showStressCaptureModal = showDetailedStressModal;
     window.drawWeeklyStressChart = drawWeeklyStressChart;
+    window.showProfileSelector = showProfileSelector;
+    window.performProfileLogin = performProfileLogin;
 
     // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
     function initCustomScrollbar() {
