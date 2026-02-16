@@ -1568,6 +1568,7 @@
     </style>
 </head>
 
+<div id="offline-badge" class="offline-badge">Disconnesso</div>
 <div id="nav-container"></div>
 
 <div class="main-container">
@@ -1582,8 +1583,8 @@
     // Scrollbar auto-hide removed for simpler 8px design.
 
 
-    // 🚀 G-Diary v1.1.0 [Analytics Update]
-    const APP_VERSION = "1.1.1-scroller";
+    // 🚀 G-Diary v1.1.2 [Master Fix]
+    const APP_VERSION = "1.1.2-master-fix";
 
     // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
     const savedVersion = localStorage.getItem('app_version');
@@ -1955,7 +1956,8 @@
         prepLevels: JSON.parse(localStorage.getItem(lsKey('prep_levels'))) || {},
         aiChatHistory: JSON.parse(localStorage.getItem(lsKey('ai_chat'))) || [],
         messages: {},
-        plannerWeekOffset: 0
+        plannerWeekOffset: 0,
+        didup: { connected: false }
     };
 
     const app = document.getElementById('app');
@@ -3705,7 +3707,7 @@
                     <i class="ph-fill ph-sparkle" style="font-size:22px; color:var(--purple); display:block; margin-bottom:5px;"></i>
                     <span style="font-size:10px; font-weight:700; color:var(--text-secondary);">AI Tutor</span>
                 </div>
-                <div onclick="showPlannerModal('${todayStr}')" style="cursor:pointer; text-align:center; padding:14px 6px; border-radius:16px;
+                <div onclick="showPlanWeekModal()" style="cursor:pointer; text-align:center; padding:14px 6px; border-radius:16px;
                     background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); transition:transform 0.15s;">
                     <i class="ph-fill ph-plus-circle" style="font-size:22px; color:var(--green); display:block; margin-bottom:5px;"></i>
                     <span style="font-size:10px; font-weight:700; color:var(--text-secondary);">Aggiungi</span>
@@ -3748,7 +3750,7 @@
                     <h2 style="font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;">
                         <i class="ph-fill ph-target" style="color:var(--accent);"></i> Focus di Oggi
                     </h2>
-                    <span onclick="showPlannerModal('${todayStr}')" style="cursor:pointer; color:var(--accent); font-size:11px; font-weight:700;
+                    <span onclick="showPlanWeekModal()" style="cursor:pointer; color:var(--accent); font-size:11px; font-weight:700;
                         padding:6px 12px; border-radius:20px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.2);">
                         GESTISCI
                     </span>
@@ -3758,7 +3760,7 @@
                         ${plannedTasks.map((t, i) => {
             const sc = getSubjectColor(t.subject);
             return `
-                            <div onclick="toggleTaskCompletion('${t.id}')" style="cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px; border-radius:14px;
+                            <div onclick="toggleTask('${t.id}')" style="cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px; border-radius:14px;
                                 background:rgba(26,26,30,0.6); border:1px solid rgba(255,255,255,0.06); border-left:3px solid ${sc};
                                 animation:slideUp ${0.3 + i * 0.08}s ease-out; transition:transform 0.15s;">
                                 <div style="width:20px; height:20px; border-radius:6px; flex-shrink:0;
@@ -3779,8 +3781,8 @@
                         background:rgba(26,26,30,0.5); border:1px solid rgba(255,255,255,0.06);">
                         <i class="ph ph-sun-horizon" style="font-size:36px; color:var(--accent); opacity:0.4; margin-bottom:10px; display:block;"></i>
                         <div style="font-size:13px; font-weight:500; color:var(--text-dim); margin-bottom:12px;">Nessun compito pianificato per oggi</div>
-                        <button class="btn-primary" onclick="showPlannerModal('${todayStr}')" style="height:38px; padding:0 18px; font-size:12px; border-radius:20px;">
-                            <i class="ph ph-plus"></i> Pianifica ora
+                        <button class="btn-primary" onclick="showPlanWeekModal()" style="height:38px; padding:0 18px; font-size:12px; border-radius:20px;">
+                            <i class="ph-bold ph-plus" style="margin-right:6px;"></i> Aggiungi Attività
                         </button>
                     </div>
                 `}
@@ -3977,8 +3979,8 @@
                         <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${t.description || t.text || 'Studio Personale'}</div>
                         <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Sessione di studio pianificata per il ${new Date(t.displayDate).toLocaleDateString()}</div>
                         <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
-                             <div onclick="toggleTaskCompletion('${t.id}')" style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid ${t.completed ? 'var(--accent)' : 'var(--text-dim)'}; background: ${t.completed ? 'var(--accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                                ${t.completed ? '<i class="ph-bold ph-check" style="font-size: 14px; color: white;"></i>' : ''}
+                             <div onclick="toggleTask('${t.id}')" style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid ${t.done ? 'var(--accent)' : 'var(--text-dim)'}; background: ${t.done ? 'var(--accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                ${t.done ? '<i class="ph-bold ph-check" style="font-size: 14px; color: white;"></i>' : ''}
                             </div>
                         </div>
                     </div>`;
@@ -5585,6 +5587,11 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
     }
 
+    async function selectProfileAndLogin(idx, school, user, pass) {
+        // Wrapper per passare credenziali esplicite
+        await selectProfile(idx, { schoolCode: school, username: user, password: pass });
+    }
+
     async function selectProfile(profileIndex, credentials) {
         closeModal();
         showBoot('Sincronizzazione profilo...');
@@ -6533,14 +6540,11 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
         }
     }
-    window.togglePollCreatorUI = togglePollCreatorUI;
-    window.addPollOption = addPollOption;
     window.publishPost = publishPost;
     window.navigate = navigate;
     window.showBoot = showBoot;
     window.hideBoot = hideBoot;
-    window.submitPollVote = submitPollVote;
-    window.fetchPolls = fetchPolls;
+    window.showDetailedStressModal = showDetailedStressModal;
     window.initHomeWidgets = initHomeWidgets;
 
     // Mostra loader anche al ritorno da refresh / bfcache
