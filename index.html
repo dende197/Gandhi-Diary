@@ -1615,12 +1615,21 @@
 </div>
 
 <script>
-    // 🛡️ EMERGENCY RECOVERY BRIDGE
+    let errorAlreadyShown = false;
     window.onerror = function (msg, url, lineNo, columnNo, error) {
+        if (errorAlreadyShown) return true;
+        errorAlreadyShown = true;
+
+        if (msg.includes('ResizeObserver')) return true;
+
         console.error('🔥 GLOBAL CRASH:', msg, 'at', lineNo + ':' + columnNo);
         const debugMsg = `ERRORE FATALE: ${msg}\nLinea: ${lineNo}\nPer favore, ricarica o contatta il supporto.`;
-        if (typeof showToast === 'function') showToast(debugMsg);
-        else alert(debugMsg);
+
+        if (typeof showToast === 'function') {
+            try { showToast(debugMsg); } catch (e) { console.warn("showToast failed during crash handling"); }
+        } else {
+            alert(debugMsg);
+        }
         return false;
     };
 
@@ -2169,11 +2178,14 @@
     });
 
     // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version)
+    // Usiamo una logica di bridging che non ricorra se impl non è pronta
     const safeExpose = (name) => {
         window[name] = (...args) => {
             const impl = window[name + "_impl"];
-            if (typeof impl === 'function') return impl(...args);
-            console.warn(`🚀 ${name} non ancora pronto...`);
+            if (typeof impl === 'function' && impl !== window[name]) {
+                return impl(...args);
+            }
+            console.warn(`🚀 ${name} non ancora pronto o ricorsivo...`);
         };
     };
 
@@ -6698,7 +6710,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
         }
     }
-    window.publishPost = publishPost;
+    // window.publishPost = publishPost; // ❌ Removed orphaned reference
     window.navigate = navigate;
     window.showBoot = showBoot;
     window.hideBoot = hideBoot;
