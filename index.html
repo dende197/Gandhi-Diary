@@ -187,8 +187,10 @@
             top: 0;
             width: 100%;
             height: var(--top-nav-height);
-            background: var(--bg-body);
-            border-bottom: var(--card-border);
+            background: rgba(18, 18, 20, 0.75);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -334,56 +336,59 @@
 
         @media (max-width: 768px) {
             :root {
-                --glass-blur: blur(8px);
-                /* Reduced for performance */
+                --glass-blur: blur(12px);
                 --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             }
 
             html,
             body {
                 overflow-x: hidden;
-                position: relative;
-                width: 100%;
-                height: 100%;
                 -webkit-text-size-adjust: 100%;
-                touch-action: manipulation;
-                /* Optimize for smooth scrolling */
+            }
+
+            /* Smooth native scrolling */
+            #app {
                 -webkit-overflow-scrolling: touch;
             }
 
             .dashboard-grid {
                 grid-template-columns: 1fr;
                 gap: 16px;
-                padding-bottom: 40px;
             }
 
-            .glass-panel,
-            .metric-card.stress,
-            .metric-card.media {
-                backdrop-filter: none !important;
-                /* Disable expensive filter on mobile */
-                -webkit-backdrop-filter: none !important;
-                background: rgba(30, 30, 34, 0.9) !important;
+            /* KEEP liquid glass on mobile — just lighter */
+            .glass-panel {
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
             }
 
             .view {
-                padding: 16px 12px 100px 12px;
+                padding: 16px 14px 100px 14px;
             }
 
             h1 {
                 font-size: 26px !important;
             }
 
-            /* 🚀 GIANT TOUCH TARGETS FOR SMARTPHONES */
-            button,
+            /* Nav items — proper touch targets without breaking layout */
+            .nav-item {
+                padding: 10px 12px;
+                font-size: 12px;
+                gap: 4px;
+            }
+
+            .nav-item i {
+                font-size: 16px;
+            }
+
+            .nav-links {
+                gap: 4px;
+            }
+
+            /* Primary/secondary action buttons ONLY */
             .btn-primary,
-            .btn-secondary,
-            .nav-item,
-            .section-action {
-                min-height: 52px !important;
-                padding: 12px 20px !important;
-                cursor: pointer;
-                transition: transform 0.1s ease;
+            .btn-secondary {
+                min-height: 46px;
             }
 
             /* Prevent auto-zoom on inputs */
@@ -391,21 +396,19 @@
             select,
             textarea {
                 font-size: 16px !important;
-                padding: 12px !important;
             }
 
-            /* Active state feedback - VIBRANT */
-            button:active,
-            .card:active,
-            .app-card:active,
-            .nav-item:active {
-                transform: scale(0.94) !important;
-                filter: brightness(1.2);
+            /* Active feedback — subtle and clean */
+            .btn-primary:active,
+            .btn-secondary:active,
+            .nav-item:active,
+            .card:active {
+                transform: scale(0.97);
+                transition: transform 0.08s ease;
             }
 
-            /* Fix stress wave visibility */
+            /* Stress wave canvas */
             .metric-card {
-                min-height: 120px !important;
                 position: relative;
                 overflow: hidden;
             }
@@ -413,6 +416,45 @@
             #stressWaveCanvas {
                 height: 50px !important;
                 pointer-events: none;
+            }
+
+            /* Rounded glassy navbar on mobile */
+            #top-nav {
+                height: 60px;
+                background: rgba(18, 18, 20, 0.8);
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            }
+
+            /* Fix planner toggle and calendar buttons — NO forced sizes */
+            .calendar-nav button {
+                width: 36px;
+                height: 36px;
+                min-height: unset;
+                padding: 0;
+            }
+
+            /* Section action links */
+            .section-action {
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+
+            /* Home hero card animations */
+            .home-glass-card {
+                backdrop-filter: blur(12px) saturate(150%);
+                -webkit-backdrop-filter: blur(12px) saturate(150%);
+                background: rgba(26, 26, 30, 0.65);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                padding: 20px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            .home-glass-card:active {
+                transform: scale(0.98);
             }
         }
 
@@ -3609,95 +3651,189 @@
         const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
         const media = calcolaMedia(state.voti);
         const h = new Date().getHours();
-        let greeting = "Good Evening";
-        if (h < 12) greeting = "Good Morning";
-        else if (h < 18) greeting = "Good Afternoon";
+        let greeting = "Buona Sera";
+        if (h < 12) greeting = "Buongiorno";
+        else if (h < 18) greeting = "Buon Pomeriggio";
+
+        const upcomingTasks = state.tasks
+            .filter(t => t.due_date && isFutureOrToday(t.due_date) && !t.id.startsWith('ai_'))
+            .sort((a, b) => (a.dateObj || 0) - (b.dateObj || 0))
+            .slice(0, 5);
+
+        const stressVal = state.stressLevels?.[todayStr] || '-';
+        const stressNum = Number(stressVal) || 0;
+        const stressColor = stressVal === '-' ? 'var(--text-dim)' : (stressNum <= 3 ? 'var(--green)' : stressNum <= 6 ? 'var(--orange)' : 'var(--red)');
 
         return `
         <div class="view" style="animation: slideUp 0.4s ease-out;">
-            <!-- Welcome Header -->
-            <div style="margin-bottom: 32px;">
-                <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px;">
-                    ${greeting}, ${state.user.name.split(' ')[0]} 👋
-                </h1>
-                <p style="color: var(--text-secondary); font-size: 15px;">
-                    Ecco cosa sta succedendo oggi, ${new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}.
-                </p>
+
+            <!-- HERO -->
+            <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
+                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
+                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                overflow: hidden;">
+                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <p style="font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+                        ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                    <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; line-height: 1.2;">
+                        ${greeting}, ${state.user.name.split(' ')[0]}
+                    </h1>
+                    <p style="color: var(--text-secondary); font-size: 14px;">
+                        ${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
+                    </p>
+                </div>
             </div>
 
-            <div class="dashboard-grid">
-                <!-- FOCUS SECTION -->
-                <div class="card" style="grid-row: span 2; display: flex; flex-direction: column;">
-                    <div class="section-header">
-                        <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                            <i class="ph-fill ph-target" style="color: var(--accent);"></i> Focus di Oggi
-                        </h2>
-                        <span class="section-action" onclick="showPlannerModal('${todayStr}')" style="background: rgba(99, 102, 241, 0.1); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">GESTISCI</span>
-                    </div>
-
-                    <div style="margin-top: 20px; flex: 1;">
-                        ${plannedTasks.length > 0 ? `
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                ${plannedTasks.map(t => `
-                                    <div class="focus-item">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${t.subject}</div>
-                                            <div style="font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.description || 'Studio Personale'}</div>
-                                        </div>
-                                        <div onclick="toggleTaskCompletion('${t.id}')" style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid ${t.completed ? 'var(--accent)' : 'var(--text-dim)'}; background: ${t.completed ? 'var(--accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
-                                            ${t.completed ? '<i class="ph-bold ph-check" style="font-size: 14px; color: white;"></i>' : ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : `
-                            <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-dim); text-align: center; padding: 20px;">
-                                <i class="ph ph-calendar-blank" style="font-size: 48px; opacity: 0.2; margin-bottom: 12px;"></i>
-                                <div style="font-size: 14px; font-weight: 500;">Nessun compito pianificato per oggi</div>
-                                <button class="btn-primary" onclick="showPlannerModal('${todayStr}')" style="margin-top: 16px; height: 36px; padding: 0 16px; font-size: 12px;">Pianifica ora</button>
-                            </div>
-                        `}
-                    </div>
+            <!-- QUICK ACTIONS -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px;">
+                <div onclick="navigate('planner')" style="cursor:pointer; text-align:center; padding:14px 6px; border-radius:16px;
+                    background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); transition:transform 0.15s;">
+                    <i class="ph-fill ph-calendar-check" style="font-size:22px; color:var(--accent); display:block; margin-bottom:5px;"></i>
+                    <span style="font-size:10px; font-weight:700; color:var(--text-secondary);">Planner</span>
                 </div>
+                <div onclick="navigate('voti')" style="cursor:pointer; text-align:center; padding:14px 6px; border-radius:16px;
+                    background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2); transition:transform 0.15s;">
+                    <i class="ph-fill ph-chart-line-up" style="font-size:22px; color:var(--blue); display:block; margin-bottom:5px;"></i>
+                    <span style="font-size:10px; font-weight:700; color:var(--text-secondary);">Voti</span>
+                </div>
+                <div onclick="navigate('ai_assistant')" style="cursor:pointer; text-align:center; padding:14px 6px; border-radius:16px;
+                    background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.2); transition:transform 0.15s;">
+                    <i class="ph-fill ph-sparkle" style="font-size:22px; color:var(--purple); display:block; margin-bottom:5px;"></i>
+                    <span style="font-size:10px; font-weight:700; color:var(--text-secondary);">AI Tutor</span>
+                </div>
+                <div onclick="showPlannerModal('${todayStr}')" style="cursor:pointer; text-align:center; padding:14px 6px; border-radius:16px;
+                    background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); transition:transform 0.15s;">
+                    <i class="ph-fill ph-plus-circle" style="font-size:22px; color:var(--green); display:block; margin-bottom:5px;"></i>
+                    <span style="font-size:10px; font-weight:700; color:var(--text-secondary);">Aggiungi</span>
+                </div>
+            </div>
 
-                <!-- METRICS SECTION -->
-                <div class="metric-card" onclick="showDetailedStressModal()" style="cursor: pointer; border-left: 4px solid var(--red);">
+            <!-- METRICS -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                <div class="metric-card" onclick="showDetailedStressModal()" style="cursor:pointer; border-radius:20px;
+                    background: linear-gradient(145deg, rgba(26,26,30,0.8), rgba(20,20,24,0.9));
+                    border:1px solid rgba(255,255,255,0.08);
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
                     <div>
-                        <div class="title">LIVELLO STRESS</div>
-                        <div style="font-size: 32px; font-weight: 800; color: var(--text-primary); margin-top: 8px;">
-                            ${state.stressLevels?.[todayStr] || '-'}<span style="font-size: 14px; color: var(--text-dim); margin-left: 2px;">/10</span>
+                        <div class="title" style="margin-bottom:4px;">STRESS</div>
+                        <div style="font-size:34px; font-weight:800; color:${stressColor}; line-height:1;">
+                            ${stressVal}<span style="font-size:13px; color:var(--text-dim);">/10</span>
                         </div>
                     </div>
-                    <canvas id="stressWaveCanvas" style="width: 100%; position: absolute; bottom: 0; left: 0;"></canvas>
+                    <canvas id="stressWaveCanvas" style="width:100%; height:40px; position:absolute; bottom:0; left:0; pointer-events:none;"></canvas>
                 </div>
-
-                <div class="metric-card" onclick="navigate('voti')" style="cursor: pointer; border-left: 4px solid var(--blue);">
+                <div class="metric-card" onclick="navigate('voti')" style="cursor:pointer; border-radius:20px;
+                    background: linear-gradient(145deg, rgba(26,26,30,0.8), rgba(20,20,24,0.9));
+                    border:1px solid rgba(255,255,255,0.08);
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
                     <div>
-                        <div class="title">MEDIA VOTI</div>
-                        <div style="font-size: 32px; font-weight: 800; color: var(--text-primary); margin-top: 8px;">
+                        <div class="title" style="margin-bottom:4px;">MEDIA</div>
+                        <div style="font-size:34px; font-weight:800; color:${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'}; line-height:1;">
                             ${media || '-'}
                         </div>
                     </div>
-                    <div style="height: 6px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-top: 10px;">
-                        <div style="width: ${(media / 10) * 100}%; height: 100%; background: var(--blue); box-shadow: 0 0 10px var(--blue);"></div>
+                    <div style="position:absolute; bottom:16px; left:20px; right:20px; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                        <div style="width:${(media / 10) * 100}%; height:100%; border-radius:3px; background:linear-gradient(90deg, var(--blue), var(--purple)); box-shadow:0 0 12px rgba(99,102,241,0.4);"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- BULLETIN BOARD -->
-            <div style="margin-top: 40px;">
-                <div class="section-header">
-                    <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                        <i class="ph-fill ph-megaphone" style="color: var(--accent-warm);"></i> Bacheca Didattica
+            <!-- FOCUS DI OGGI -->
+            <div style="margin-bottom: 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h2 style="font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                        <i class="ph-fill ph-target" style="color:var(--accent);"></i> Focus di Oggi
                     </h2>
-                    <span class="section-action" onclick="window.open('https://www.liceogandhi.edu.it/','_blank')">Sito Web</span>
+                    <span onclick="showPlannerModal('${todayStr}')" style="cursor:pointer; color:var(--accent); font-size:11px; font-weight:700;
+                        padding:6px 12px; border-radius:20px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.2);">
+                        GESTISCI
+                    </span>
                 </div>
-                <div class="circolari-row">
-                    ${(state.news || []).slice(0, 4).map(n => `
-                        <div class="circolare-card" onclick="window.open('${n.url}','_blank')">
-                            <div style="font-size: 10px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Circolare</div>
-                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${n.title}</div>
-                            <div style="font-size: 12px; color: var(--text-dim); margin-top: auto;">${new Date(n.date).toLocaleDateString('it-IT')}</div>
+                ${plannedTasks.length > 0 ? `
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        ${plannedTasks.map((t, i) => {
+            const sc = getSubjectColor(t.subject);
+            return `
+                            <div onclick="toggleTaskCompletion('${t.id}')" style="cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px; border-radius:14px;
+                                background:rgba(26,26,30,0.6); border:1px solid rgba(255,255,255,0.06); border-left:3px solid ${sc};
+                                animation:slideUp ${0.3 + i * 0.08}s ease-out; transition:transform 0.15s;">
+                                <div style="width:20px; height:20px; border-radius:6px; flex-shrink:0;
+                                    border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'};
+                                    background:${t.done ? 'var(--green)' : 'transparent'};
+                                    display:flex; align-items:center; justify-content:center;">
+                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size:11px; color:white;"></i>' : ''}
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:13px; font-weight:600; color:var(--text-primary); ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.text || t.subject}</div>
+                                    <div style="font-size:10px; color:${sc}; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">${t.subject}</div>
+                                </div>
+                            </div>`;
+        }).join('')}
+                    </div>
+                ` : `
+                    <div style="text-align:center; padding:28px 20px; border-radius:18px;
+                        background:rgba(26,26,30,0.5); border:1px solid rgba(255,255,255,0.06);">
+                        <i class="ph ph-sun-horizon" style="font-size:36px; color:var(--accent); opacity:0.4; margin-bottom:10px; display:block;"></i>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-dim); margin-bottom:12px;">Nessun compito pianificato per oggi</div>
+                        <button class="btn-primary" onclick="showPlannerModal('${todayStr}')" style="height:38px; padding:0 18px; font-size:12px; border-radius:20px;">
+                            <i class="ph ph-plus"></i> Pianifica ora
+                        </button>
+                    </div>
+                `}
+            </div>
+
+            <!-- PROSSIME SCADENZE -->
+            ${upcomingTasks.length > 0 ? `
+            <div style="margin-bottom:24px;">
+                <h2 style="font-size:17px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                    <i class="ph-fill ph-clock" style="color:var(--orange);"></i> Prossime Scadenze
+                </h2>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${upcomingTasks.map((t, i) => {
+            const d = parseArgoDate(t.due_date);
+            const sc = getSubjectColor(t.subject);
+            return `
+                        <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px;
+                            background:rgba(26,26,30,0.5); border:1px solid rgba(255,255,255,0.05);
+                            animation:slideUp ${0.4 + i * 0.06}s ease-out;">
+                            <div style="min-width:40px; text-align:center; padding:5px 6px; border-radius:10px; background:rgba(255,255,255,0.04);">
+                                <div style="font-size:14px; font-weight:800; color:var(--text-primary); line-height:1;">${d.getDate()}</div>
+                                <div style="font-size:9px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">${d.toLocaleDateString('it-IT', { month: 'short' })}</div>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:13px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</div>
+                                <div style="font-size:10px; color:${sc}; font-weight:700; margin-top:2px;">${t.subject}</div>
+                            </div>
+                        </div>`;
+        }).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- BACHECA -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h2 style="font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                        <i class="ph-fill ph-megaphone" style="color:var(--accent-warm);"></i> Bacheca
+                    </h2>
+                    <span onclick="window.open('https://www.liceogandhi.edu.it/','_blank')" style="cursor:pointer; color:var(--accent-warm); font-size:11px; font-weight:700;
+                        padding:6px 12px; border-radius:20px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2);">
+                        SITO WEB
+                    </span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
+                    ${(state.news || []).slice(0, 4).map((n, i) => `
+                        <div onclick="window.open('${n.url}','_blank')" style="cursor:pointer; padding:14px; border-radius:14px;
+                            background:rgba(26,26,30,0.6); border:1px solid rgba(255,255,255,0.06);
+                            display:flex; flex-direction:column; gap:6px;
+                            animation:slideUp ${0.5 + i * 0.06}s ease-out; transition:transform 0.15s, border-color 0.2s;">
+                            <div style="font-size:10px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Circolare</div>
+                            <div style="font-size:12px; font-weight:600; color:var(--text-primary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${n.title}</div>
+                            <div style="font-size:10px; color:var(--text-dim); margin-top:auto;">${new Date(n.date).toLocaleDateString('it-IT')}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -3705,7 +3841,6 @@
         </div>`;
     }
 
-    /* View helper functions */
 
 
 
@@ -3714,7 +3849,7 @@
         const uiMode = state.plannerView || 'calendar';
 
         return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <div>
                     <h1 style="font-size: 28px; font-weight: 800;">Planner</h1>
@@ -3746,7 +3881,7 @@
                 </button>
             </div>
 
-            ${uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : ''}
+            ${ uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : '' }
 
             <div class="section-header" style="margin: 32px 0 16px 0;">
                 <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
@@ -3759,7 +3894,7 @@
             <div id="weekly-agenda-list">
                 ${renderWeeklyAgenda()}
             </div>
-        </div>`;
+        </div > `;
     }
 
     function renderWeeklyAgenda() {
@@ -3791,21 +3926,22 @@
 
         if (!list.length) {
             return `
-            <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px;">
+        < div class="card" style = "text-align: center; color: var(--text-dim); padding: 50px 20px;" >
                 <i class="ph ph-sparkle" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px;"></i>
                 <div style="font-size: 14px; font-weight: 500;">Tutto in ordine! Nessuna attività prevista.</div>
-            </div>`;
+            </div > `;
         }
 
         if (state.plannerMode === 'registro') {
             return `
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                ${list.map(t => {
-                const d = parseArgoDate(t.displayDate);
-                const day = d.toLocaleDateString('it-IT', { day: '2-digit' });
-                const month = d.toLocaleDateString('it-IT', { month: 'short' });
-                const subjColor = getSubjectColor(t.subject);
-                return `
+        < div style = "display: flex; flex-direction: column; gap: 8px;" >
+            ${
+                list.map(t => {
+                    const d = parseArgoDate(t.displayDate);
+                    const day = d.toLocaleDateString('it-IT', { day: '2-digit' });
+                    const month = d.toLocaleDateString('it-IT', { month: 'short' });
+                    const subjColor = getSubjectColor(t.subject);
+                    return `
                     <div class="registro-card" style="display: flex;">
                         <div class="registro-date-box">
                             <span style="font-size: 18px; font-weight: 800; color: var(--text-primary);">${day}</span>
@@ -3824,14 +3960,16 @@
                             </div>
                         </div>
                     </div>`;
-            }).join('')}
-            </div>`;
+                }).join('')
+    }
+            </div > `;
         } else {
             return `
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                ${list.map(t => {
-                const subjColor = getSubjectColor(t.subject);
-                return `
+        < div style = "display: flex; flex-direction: column; gap: 12px;" >
+            ${
+                list.map(t => {
+                    const subjColor = getSubjectColor(t.subject);
+                    return `
                     <div class="studio-entry" style="position: relative; background: var(--bg-card); border-radius: var(--radius-m); padding: 16px; border: var(--card-border);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div style="display: flex; align-items: center;">
@@ -3848,8 +3986,9 @@
                             </div>
                         </div>
                     </div>`;
-            }).join('')}
-            </div>`;
+                }).join('')
+    }
+            </div > `;
         }
     }
 
@@ -3860,7 +3999,7 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        < div class="modal-overlay" onclick = "closeModal(event)" >
             <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
                     <h2 style="margin:0;">Stress Giornaliero</h2>
@@ -3878,7 +4017,7 @@
                     <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
                 </div>
             </div>
-        </div>`;
+        </div > `;
     }
 
     // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
@@ -3908,7 +4047,7 @@
         const month = months[date.getMonth()];
         const year = date.getFullYear();
         const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-        return `${day} ${month} ${year} • ${time} `;
+        return `${ day } ${ month } ${ year } • ${ time } `;
     }
 
     function showStressDetailsModal() {
@@ -3926,10 +4065,10 @@
             const lv = state.stressLevels[iso] || 0;
             points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
         }
-        const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
+        const path = points.map((p, idx) => (idx === 0 ? `M ${ p.x.toFixed(1) } ${ p.y.toFixed(1) } ` : `L ${ p.x.toFixed(1) } ${ p.y.toFixed(1) } `)).join(' ');
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        < div class="modal-overlay" onclick = "closeModal(event)" >
             <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
@@ -3950,7 +4089,7 @@
                     ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
                 </div>
             </div>
-        </div>`;
+        </div > `;
     }
 
     // setStressLevel(lv, inModal): aggiorna fluido
@@ -3989,10 +4128,10 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        < div class="modal-overlay" onclick = "closeModal(event)" >
             <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
             </div>
-        </div>`;
+        </div > `;
         refreshPlanWeekModalContent();
     }
 
@@ -4204,7 +4343,7 @@
         console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        < div class="modal-overlay" onclick = "closeModal(event)" >
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Bacheca & Avvisi</h2>
@@ -4212,7 +4351,7 @@
                 </div>
                 <div style="padding: 20px; display:flex; flex-direction:column; gap:12px;">
                     ${dataBacheca.length === 0 ?
-                `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                        `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
                         <i class="ph ph-megaphone" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
                         Nessun avviso in bacheca<br>
                         <span style="font-size: 12px; margin-top: 8px; display: block;">Gli avvisi verranno caricati dopo la sincronizzazione con DidUP</span>
@@ -4220,14 +4359,14 @@
                             <i class="ph ph-arrow-clockwise"></i> Sincronizza Ora
                        </button>
                    </div>` :
-                dataBacheca.map(item => {
-                    const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
-                    const autore = item.autore || item.docente || 'Docente';
-                    const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
-                    const testo = item.testo || item.text || item.descrizione || item.description || '';
-                    const url = item.url || item.allegato || null;
+                        dataBacheca.map(item => {
+                            const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
+                            const autore = item.autore || item.docente || 'Docente';
+                            const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
+                            const testo = item.testo || item.text || item.descrizione || item.description || '';
+                            const url = item.url || item.allegato || null;
 
-                    return `
+                            return `
                                 <div class="glass-list-item" style="border-left: 4px solid var(--orange); background: rgba(255, 159, 10, 0.08);">
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                                         <div style="padding:4px 8px; background: rgba(255, 159, 10, 0.2); border-radius:6px; display:flex; gap:6px; align-items:center;">
@@ -4245,8 +4384,8 @@
                                    </a>` : ''}
                                </div>
                             `;
-                }).join('')
-            }
+                        }).join('')
+                    }
                 </div>
             </div>
            </div > `;
@@ -4344,7 +4483,7 @@
         }).sort((a, b) => b.media - a.media);
 
         return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div>
                     <h1 style="font-size: 28px; font-weight: 800;">Media & Analisi</h1>
@@ -4355,7 +4494,7 @@
                 </button>
             </div>
 
-            <!-- Global Media Card -->
+            <!--Global Media Card-- >
             <div class="card" style="background: linear-gradient(135deg, var(--accent) 0%, #4338ca 100%); padding: 32px; border: none; margin-bottom: 32px; box-shadow: 0 20px 40px var(--accent-glow);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
@@ -4403,7 +4542,7 @@
                     </div>`;
         }).join('')}
             </div>
-        </div>`;
+        </div > `;
     }
 
     function promptSetGoal(type) {
@@ -4537,7 +4676,7 @@
         const subjColor = getSubjectColor(subjectName);
 
         return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
                 <button class="btn-icon-only" onclick="state.activeSubject = null; render();" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
                     <i class="ph-bold ph-arrow-left"></i>
@@ -4584,7 +4723,7 @@
                     </div>`;
         }).join('')}
             </div>
-        </div>`;
+        </div > `;
     }
 
     /* --- Gamification & Badges --- */
@@ -4619,7 +4758,7 @@
                 if (!state.badges) state.badges = [];
                 state.badges.push(ach.id);
                 newlyUnlocked = true;
-                showToast(`Nuovo Achievement: ${ach.title} !${ach.icon} `);
+                showToast(`Nuovo Achievement: ${ ach.title } !${ ach.icon } `);
             }
         });
 
@@ -4637,13 +4776,13 @@
     function renderFocusTimer() {
         const mins = Math.floor(pomodoroState.timeLeft / 60);
         const secs = pomodoroState.timeLeft % 60;
-        const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
+        const display = `${ String(mins).padStart(2, '0') }:${ String(secs).padStart(2, '0') } `;
         const isFocus = pomodoroState.mode === 'focus';
         const modeLabel = isFocus ? 'Focus' : 'Pausa';
         const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
 
         return `
-        <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;">
+        < div class="card glass-panel" style = "padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;" >
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
                     <div style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; background:${modeColor}; color:white;">${modeLabel}</div>
@@ -4657,7 +4796,7 @@
                         ↺ Reset
                     </button>
                 </div>
-            </div>`;
+            </div > `;
     }
 
     function togglePomodoro() {
@@ -4702,8 +4841,8 @@
         const chat = state.aiChatHistory || [];
 
         return `
-        <div class="view" style="display: flex; flex-direction: column; height: calc(100dvh - 100px); animation: fadeInUp 0.4s ease-out;">
-            <!-- Modern Gradient Header -->
+        < div class="view" style = "display: flex; flex-direction: column; height: calc(100dvh - 100px); animation: fadeInUp 0.4s ease-out;" >
+            < !--Modern Gradient Header-- >
             <div style="flex-shrink: 0; padding: 16px 0; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; color: white;">
@@ -4721,7 +4860,7 @@
                  </div>
             </div>
 
-            <!-- Chat Area -->
+            <!--Chat Area-- >
             <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 16px;">
                 ${chat.length === 0 ? `
                 <div style="text-align: center; padding: 60px 20px; animation: slideUp 0.5s ease-out;">
@@ -4756,19 +4895,19 @@
                 `).join('')}
             </div>
 
-            <!-- Input Area -->
-            <div style="flex-shrink: 0; padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: flex-end;">
-                <div style="flex: 1; position: relative; background: var(--bg-card); border-radius: 18px; border: 1px solid rgba(255,255,255,0.06); padding: 4px;">
-                    <textarea id="aiChatInput" rows="1" placeholder="Fai una domanda..."
-                        style="width: 100%; min-height: 44px; max-height: 120px; background: transparent; border: none; color: white; padding: 10px 14px; font-size: 15px; outline: none; resize: none; font-family: inherit;"
-                        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
-                        oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
-                </div>
-                <button onclick="sendAIChat()" class="btn-primary" style="width: 52px; height: 52px; padding: 0; border-radius: 18px; flex-shrink: 0;">
-                    <i class="ph-bold ph-paper-plane-tilt" style="font-size: 20px;"></i>
-                </button>
+            <!--Input Area-- >
+        <div style="flex-shrink: 0; padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: flex-end;">
+            <div style="flex: 1; position: relative; background: var(--bg-card); border-radius: 18px; border: 1px solid rgba(255,255,255,0.06); padding: 4px;">
+                <textarea id="aiChatInput" rows="1" placeholder="Fai una domanda..."
+                    style="width: 100%; min-height: 44px; max-height: 120px; background: transparent; border: none; color: white; padding: 10px 14px; font-size: 15px; outline: none; resize: none; font-family: inherit;"
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
+                    oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
             </div>
-        </div>`;
+            <button onclick="sendAIChat()" class="btn-primary" style="width: 52px; height: 52px; padding: 0; border-radius: 18px; flex-shrink: 0;">
+                <i class="ph-bold ph-paper-plane-tilt" style="font-size: 20px;"></i>
+            </button>
+        </div>
+        </div > `;
     }
 
     function sendAIChatQuick(text) {
@@ -4801,21 +4940,21 @@
         }, 50);
 
         // Build context
-        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
-        const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-        const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic} `).join('\n');
+        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${ t.subject }] ${ t.text } (scad: ${ t.due_date || 'N/D'})`).join('\n');
+        const exams = (state.exams || []).map(ex => `- ${ ex.type } di ${ ex.subject } il ${ ex.date } (${ ex.topic || 'gen.' })`).join('\n');
+        const backlog = (state.backlog || []).map(b => `- [${ b.subject }] ${ b.topic } `).join('\n');
         const difficulty = (state.difficulty || []).join(', ');
-        const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'} `;
+        const schedule = `Disponibilità: dalle ${ state.availability?.start || '15:00' } alle ${ state.availability?.end || '19:00' } `;
 
         const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
 
 CONTEXT STUDENTE(aggiornato):
-    - COMPITI ATTIVI: ${homework || 'Nessuno.'}
-    - VERIFICHE: ${exams || 'Nessuna.'}
-    - ARRETRATI: ${backlog || 'Nessuno.'}
-    - MATERIE DIFFICILI: ${difficulty || 'Nessuna.'}
-    - ${schedule}
-    - DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+    - COMPITI ATTIVI: ${ homework || 'Nessuno.' }
+    - VERIFICHE: ${ exams || 'Nessuna.' }
+    - ARRETRATI: ${ backlog || 'Nessuno.' }
+    - MATERIE DIFFICILI: ${ difficulty || 'Nessuna.' }
+    - ${ schedule }
+    - DATA ODIERNA: ${ new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }
 
 QUANDO SUGGERISCI UN PIANO DI STUDIO:
     - Usa orari precisi(es. 15: 30 - 16: 15)
@@ -4839,61 +4978,61 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: contents })
-                });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: contents })
+    });
 
-                const data = await response.json();
+    const data = await response.json();
 
-                // Check for rate limit (429) or quota errors - retry
-                if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
-                    if (attempt < maxRetries) {
-                        const waitSec = attempt * 15; // 15s, 30s, 45s
-                        state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
-                        render();
-                        setTimeout(() => {
-                            const chatDiv = document.getElementById('aiChatMessages');
-                            if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-                        }, 50);
-                        await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
-                        // Remove the retry message before next attempt
-                        state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
-                        continue;
-                    } else {
-                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
-                        break;
-                    }
-                }
+    // Check for rate limit (429) or quota errors - retry
+    if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
+        if (attempt < maxRetries) {
+            const waitSec = attempt * 15; // 15s, 30s, 45s
+            state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
+            await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+            // Remove the retry message before next attempt
+            state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
+            continue;
+        } else {
+            state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
+            break;
+        }
+    }
 
-                if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    const aiText = data.candidates[0].content.parts[0].text;
-                    const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
-                    state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-                    state.aiResponse = aiText;
-                } else if (data?.error) {
-                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
-                } else {
-                    state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
-                }
-                break; // Success or non-retryable error, exit loop
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const aiText = data.candidates[0].content.parts[0].text;
+        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
+        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+        state.aiResponse = aiText;
+    } else if (data?.error) {
+        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+    } else {
+        state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+    }
+    break; // Success or non-retryable error, exit loop
             } catch (error) {
-                console.error('AI Chat Error:', error);
-                if (attempt === maxRetries) {
-                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                }
-            }
+        console.error('AI Chat Error:', error);
+        if (attempt === maxRetries) {
+            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
         }
 
-        localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-        render();
-        setTimeout(() => {
-            const chatDiv = document.getElementById('aiChatMessages');
-            if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-        }, 50);
+    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+    render();
+    setTimeout(() => {
+        const chatDiv = document.getElementById('aiChatMessages');
+        if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+    }, 50);
     }
 
     function applyAIPlanFromChat(msgIndex) {
