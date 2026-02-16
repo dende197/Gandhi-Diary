@@ -2927,9 +2927,6 @@
                         <button class="nav-item ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')">
                             <i class="ph ph-chart-line-up"></i> Voti
                         </button>
-                        <button class="nav-item ${['ai_assistant'].includes(state.view) ? 'active' : ''}" onclick="navigate('ai_assistant')">
-                            <i class="ph ph-sparkle"></i> AI
-                        </button>
                     </div>
                     <div onclick="navigate('profile')" style="font-size: 16px; color: var(--text-dim); cursor: pointer; padding: 6px;">
                         <i class="ph ph-dots-three-outline-vertical"></i>
@@ -3757,76 +3754,17 @@
             </div>
 
             <!-- FOCUS DI OGGI -->
+            <!-- AGGIUNGI COMPITO RAPIDO -->
             <div style="margin-bottom: 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                    <h2 style="font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;">
-                        <i class="ph-fill ph-target" style="color:var(--accent);"></i> Focus di Oggi
-                    </h2>
-                    <span onclick="showPlanWeekModal()" style="cursor:pointer; color:var(--accent); font-size:11px; font-weight:700;
-                        padding:6px 12px; border-radius:20px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.2);">
-                        GESTISCI
-                    </span>
-                </div>
-                ${plannedTasks.length > 0 ? `
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        ${plannedTasks.map((t, i) => {
-            const sc = getSubjectColor(t.subject);
-            return `
-                            <div onclick="toggleTask('${t.id}')" style="cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px; border-radius:14px;
-                                background:rgba(26,26,30,0.6); border:1px solid rgba(255,255,255,0.06); border-left:3px solid ${sc};
-                                animation:slideUp ${0.3 + i * 0.08}s ease-out; transition:transform 0.15s;">
-                                <div style="width:20px; height:20px; border-radius:6px; flex-shrink:0;
-                                    border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'};
-                                    background:${t.done ? 'var(--green)' : 'transparent'};
-                                    display:flex; align-items:center; justify-content:center;">
-                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size:11px; color:white;"></i>' : ''}
-                                </div>
-                                <div style="flex:1; min-width:0;">
-                                    <div style="font-size:13px; font-weight:600; color:var(--text-primary); ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.text || t.subject}</div>
-                                    <div style="font-size:10px; color:${sc}; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">${t.subject}</div>
-                                </div>
-                            </div>`;
-        }).join('')}
-                    </div>
-                ` : `
-                    <div style="text-align:center; padding:28px 20px; border-radius:18px;
-                        background:rgba(26,26,30,0.5); border:1px solid rgba(255,255,255,0.06);">
-                        <i class="ph ph-sun-horizon" style="font-size:36px; color:var(--accent); opacity:0.4; margin-bottom:10px; display:block;"></i>
-                        <div style="font-size:13px; font-weight:500; color:var(--text-dim); margin-bottom:12px;">Nessun compito pianificato per oggi</div>
-                        <button class="btn-primary" onclick="showPlanWeekModal()" style="height:38px; padding:0 18px; font-size:12px; border-radius:20px;">
-                            <i class="ph-bold ph-plus" style="margin-right:6px;"></i> Aggiungi Attività
-                        </button>
-                    </div>
-                `}
+                <button onclick="showQuickAddTaskModal()" style="width:100%; padding:18px; border-radius:18px;
+                    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
+                    border: 1px solid rgba(99,102,241,0.25); color: white; cursor: pointer;
+                    display:flex; align-items:center; justify-content:center; gap:10px;
+                    font-size:15px; font-weight:700; transition: all 0.2s;">
+                    <i class="ph-bold ph-plus-circle" style="font-size:20px; color:var(--accent);"></i>
+                    Aggiungi Compito
+                </button>
             </div>
-
-            <!-- PROSSIME SCADENZE -->
-            ${upcomingTasks.length > 0 ? `
-            <div style="margin-bottom:24px;">
-                <h2 style="font-size:17px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-                    <i class="ph-fill ph-clock" style="color:var(--orange);"></i> Prossime Scadenze
-                </h2>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    ${upcomingTasks.map((t, i) => {
-            const d = parseArgoDate(t.due_date);
-            const sc = getSubjectColor(t.subject);
-            return `
-                        <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px;
-                            background:rgba(26,26,30,0.5); border:1px solid rgba(255,255,255,0.05);
-                            animation:slideUp ${0.4 + i * 0.06}s ease-out;">
-                            <div style="min-width:40px; text-align:center; padding:5px 6px; border-radius:10px; background:rgba(255,255,255,0.04);">
-                                <div style="font-size:14px; font-weight:800; color:var(--text-primary); line-height:1;">${d.getDate()}</div>
-                                <div style="font-size:9px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">${d.toLocaleDateString('it-IT', { month: 'short' })}</div>
-                            </div>
-                            <div style="flex:1; min-width:0;">
-                                <div style="font-size:13px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</div>
-                                <div style="font-size:10px; color:${sc}; font-weight:700; margin-top:2px;">${t.subject}</div>
-                            </div>
-                        </div>`;
-        }).join('')}
-                </div>
-            </div>
-            ` : ''}
 
             <!-- BACHECA -->
             <div>
@@ -3862,18 +3800,30 @@
 
         return `
         <div class="view" style="animation: slideUp 0.4s ease-out;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <div>
-                    <h1 style="font-size: 28px; font-weight: 800;">Planner</h1>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Organizza lo studio e le scadenze</p>
-                </div>
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 40px; padding: 0 16px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;">
-                        <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
-                    </button>
-                    <div style="background: var(--bg-card); border-radius: 20px; padding: 4px; display: flex; border: var(--card-border);">
-                        <button onclick="state.plannerView='calendar'; render();" style="width: 32px; height: 32px; border-radius: 16px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-calendar"></i></button>
-                        <button onclick="state.plannerView='list'; render();" style="width: 32px; height: 32px; border-radius: 16px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-list-bullets"></i></button>
+
+            <!-- HERO GRADIENT (same as Home) -->
+            <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
+                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
+                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                overflow: hidden;">
+                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">Planner</h1>
+                            <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+                                <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
+                            </button>
+                            <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1);">
+                                <button onclick="state.plannerView='calendar'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-calendar"></i></button>
+                                <button onclick="state.plannerView='list'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-list-bullets"></i></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3900,7 +3850,10 @@
                     <i class="${state.plannerMode === 'registro' ? 'ph-fill ph-clock' : 'ph-fill ph-calendar-star'}" style="color: var(--accent);"></i>
                     ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Mio Schedule Studio'}
                 </h2>
-                ${state.plannerMode === 'studio' ? `<span class="section-action" onclick="showPlanWeekModal()" style="font-weight: 700;">+ Aggiungi Blocco</span>` : ''}
+                <div style="display: flex; gap: 8px;">
+                    ${state.plannerMode === 'registro' ? `<span class="section-action" onclick="showAddRegistroTaskModal()" style="font-weight: 700; display:flex; align-items:center; gap:4px;"><i class="ph-bold ph-plus" style="font-size:12px;"></i> Aggiungi</span>` : ''}
+                    ${state.plannerMode === 'studio' ? `<span class="section-action" onclick="showPlanWeekModal()" style="font-weight: 700;">+ Aggiungi Blocco</span>` : ''}
+                </div>
             </div>
 
             <div id="weekly-agenda-list">
@@ -4494,14 +4447,26 @@
 
         return `
         <div class="view" style="animation: slideUp 0.4s ease-out;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <div>
-                    <h1 style="font-size: 28px; font-weight: 800;">Media & Analisi</h1>
-                    <p style="color: var(--text-secondary); font-size: 14px;">Monitoraggio del rendimento scolastico</p>
+
+            <!-- HERO GRADIENT (same as Home) -->
+            <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
+                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
+                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                overflow: hidden;">
+                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">Media & Analisi</h1>
+                            <p style="color: var(--text-secondary); font-size: 13px;">Monitoraggio del rendimento</p>
+                        </div>
+                        <button onclick="performSync()" style="width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: white; cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                            <i class="ph-bold ph-arrow-clockwise"></i>
+                        </button>
+                    </div>
                 </div>
-                <button class="btn-icon-only" onclick="performSync()" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
-                    <i class="ph-bold ph-arrow-clockwise"></i>
-                </button>
             </div>
 
             <!--Global Media Card-->
@@ -4842,13 +4807,13 @@
                             <span style="display: block; font-size: 20px; margin-bottom: 8px;">📝</span>
                             Prepariamoci
                         </button>
+                        <button onclick="showCompetencyInputModal()" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">🎯</span>
+                            Competenze & Priorità
+                        </button>
                         <button onclick="sendAIChatQuick('Dammi un consiglio sulla produttività 🚀')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
                             <span style="display: block; font-size: 20px; margin-bottom: 8px;">🚀</span>
                             Produttività
-                        </button>
-                        <button onclick="sendAIChatQuick('Svuota la chat 🗑️')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-secondary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
-                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">🗑️</span>
-                            Reset Chat
                         </button>
                     </div>
                 </div>
@@ -6178,6 +6143,235 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     function setFeedClass(c) {
         state.feed.classFilter = c;
         surgicalRefreshFeedList();
+    }
+
+    // === QUICK ADD TASK (from Home — goes to Piano di Studio) ===
+    function showQuickAddTaskModal() {
+        const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+        const subjectOptions = subjects.length > 0
+            ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+            : '<option value="Generale">Generale</option>';
+
+        showModal(`
+            <div class="modal-content glass-panel" style="max-width: 420px; padding: 28px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Aggiungi Compito</h2>
+                    <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px; opacity: 0.6;"></i>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Verrà aggiunto al calendario del Piano di Studio.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Descrizione</label>
+                        <input id="quickTaskText" type="text" placeholder="Es. Studiare cap. 5 Storia" 
+                            style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Materia</label>
+                        <select id="quickTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none;">
+                            ${subjectOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Data</label>
+                        <input id="quickTaskDate" type="date" value="${getLocalDateString()}"
+                            style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none;" />
+                    </div>
+                </div>
+
+                <button onclick="submitQuickTask()" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                    <i class="ph-bold ph-plus" style="margin-right: 6px;"></i> Aggiungi al Planner
+                </button>
+            </div>
+        `);
+    }
+
+    function submitQuickTask() {
+        const text = document.getElementById('quickTaskText')?.value?.trim();
+        const subject = document.getElementById('quickTaskSubject')?.value || 'Generale';
+        const dateVal = document.getElementById('quickTaskDate')?.value;
+        if (!text) { showToast('Inserisci una descrizione!'); return; }
+
+        const taskId = 'manual_' + Date.now();
+        const newTask = {
+            id: taskId,
+            text: text,
+            subject: subject,
+            done: false,
+            due_date: dateVal,
+            dateObj: new Date(dateVal)
+        };
+        state.tasks.push(newTask);
+
+        // Add to planned tasks for the selected date
+        if (!state.plannedTasks[dateVal]) state.plannedTasks[dateVal] = [];
+        state.plannedTasks[dateVal].push(taskId);
+
+        saveTasks();
+        savePlannerRemote();
+        closeModal();
+        showToast('Compito aggiunto! ✅');
+        render();
+    }
+
+    // === ADD REGISTRO TASK (verifica/orale/compito in classe) ===
+    function showAddRegistroTaskModal() {
+        const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+        const subjectOptions = subjects.length > 0
+            ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+            : '<option value="Generale">Generale</option>';
+
+        showModal(`
+            <div class="modal-content glass-panel" style="max-width: 420px; padding: 28px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Nuova Scadenza</h2>
+                    <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px; opacity: 0.6;"></i>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Aggiungi una verifica, interrogazione o compito in classe.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Tipo</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                            <button id="tipo-verifica" onclick="selectRegistroTipo('Verifica')" class="tipo-btn active" style="padding: 10px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(99,102,241,0.15); color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer;">Verifica</button>
+                            <button id="tipo-orale" onclick="selectRegistroTipo('Interrogazione')" class="tipo-btn" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Orale</button>
+                            <button id="tipo-compito" onclick="selectRegistroTipo('Compito in classe')" class="tipo-btn" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Compito</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Materia</label>
+                        <select id="registroTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none;">
+                            ${subjectOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Argomenti</label>
+                        <textarea id="registroTaskArgs" placeholder="Es. Capitoli 3-5, Equazioni 2° grado" rows="2"
+                            style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; resize: vertical;"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Data</label>
+                        <input id="registroTaskDate" type="date" value="${getLocalDateString()}"
+                            style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none;" />
+                    </div>
+                </div>
+
+                <button onclick="submitRegistroTask()" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
+                    <i class="ph-bold ph-plus" style="margin-right: 6px;"></i> Aggiungi al Registro
+                </button>
+            </div>
+        `);
+        window._registroTipo = 'Verifica';
+    }
+
+    function selectRegistroTipo(tipo) {
+        window._registroTipo = tipo;
+        const btns = document.querySelectorAll('.tipo-btn');
+        btns.forEach(b => {
+            b.style.border = '1px solid rgba(255,255,255,0.1)';
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-dim)';
+        });
+        const map = { 'Verifica': 'tipo-verifica', 'Interrogazione': 'tipo-orale', 'Compito in classe': 'tipo-compito' };
+        const active = document.getElementById(map[tipo]);
+        if (active) {
+            active.style.border = '1px solid var(--accent)';
+            active.style.background = 'rgba(99,102,241,0.15)';
+            active.style.color = 'var(--accent)';
+        }
+    }
+
+    function submitRegistroTask() {
+        const subject = document.getElementById('registroTaskSubject')?.value || 'Generale';
+        const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
+        const dateVal = document.getElementById('registroTaskDate')?.value;
+        const tipo = window._registroTipo || 'Verifica';
+
+        const text = args ? `${tipo}: ${args}` : tipo;
+        const taskId = 'registro_' + Date.now();
+        const newTask = {
+            id: taskId,
+            text: text,
+            subject: subject,
+            done: false,
+            due_date: dateVal,
+            dateObj: new Date(dateVal)
+        };
+        state.tasks.push(newTask);
+        saveTasks();
+        savePlannerRemote();
+        closeModal();
+        showToast(`${tipo} aggiunta! 📝`);
+        render();
+    }
+
+    // === COMPETENCY INPUT MODAL (AI) ===
+    function showCompetencyInputModal() {
+        const votiData = getVotiData();
+        const subjectsMap = {};
+        votiData.forEach(v => {
+            const sub = v.materia || v.subject || 'Altro';
+            if (!subjectsMap[sub]) subjectsMap[sub] = [];
+            subjectsMap[sub].push(v);
+        });
+
+        const subjectsList = Object.entries(subjectsMap).map(([name, list]) => {
+            const media = parseFloat(calcolaMedia(list)) || 0;
+            const color = getSubjectColor(name);
+            const priority = media < 6 ? '🔴 Recupero' : media < 7 ? '🟡 Migliorabile' : '🟢 Buona';
+            return { name, media, color, priority, count: list.length };
+        }).sort((a, b) => a.media - b.media);
+
+        showModal(`
+            <div class="modal-content glass-panel" style="max-width: 460px; padding: 28px; max-height: 85vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; font-size: 22px; font-weight: 800;">🎯 Competenze & Priorità</h2>
+                    <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px; opacity: 0.6;"></i>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Basato sui tuoi voti. Seleziona le materie su cui vuoi lavorare e l'AI ti creerà un piano personalizzato.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                    ${subjectsList.map(s => `
+                        <label style="display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: all 0.15s;"
+                            onclick="this.querySelector('input').click()">
+                            <input type="checkbox" value="${s.name}" class="competency-check" style="display:none;" ${s.media < 6.5 ? 'checked' : ''} />
+                            <div style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid ${s.media < 6.5 ? 'var(--accent)' : 'rgba(255,255,255,0.15)'}; background: ${s.media < 6.5 ? 'var(--accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                ${s.media < 6.5 ? '<i class="ph-bold ph-check" style="font-size:11px; color:white;"></i>' : ''}
+                            </div>
+                            <span class="subject-badge" style="background: ${s.color}; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"></span>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 14px; font-weight: 600; color: white;">${s.name}</div>
+                                <div style="font-size: 11px; color: var(--text-dim);">Media: ${s.media.toFixed(1)} · ${s.priority}</div>
+                            </div>
+                        </label>
+                    `).join('')}
+                    ${subjectsList.length === 0 ? '<div style="text-align:center; padding:20px; color:var(--text-dim); font-size:13px;">Nessun voto disponibile. Sincronizza prima i voti.</div>' : ''}
+                </div>
+
+                <button onclick="submitCompetencyRequest()" style="width: 100%; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
+                    <i class="ph-bold ph-sparkle" style="margin-right: 6px;"></i> Chiedi un Piano all'AI
+                </button>
+            </div>
+        `);
+    }
+
+    function submitCompetencyRequest() {
+        const checked = [...document.querySelectorAll('.competency-check:checked')].map(c => c.value);
+        if (checked.length === 0) { showToast('Seleziona almeno una materia!'); return; }
+
+        const votiData = getVotiData();
+        const details = checked.map(name => {
+            const list = votiData.filter(v => (v.materia || v.subject) === name);
+            const media = parseFloat(calcolaMedia(list)) || 0;
+            return `${name} (media: ${media.toFixed(1)}, ${list.length} voti)`;
+        }).join(', ');
+
+        closeModal();
+        const prompt = `Sono uno studente e ho bisogno di un piano di recupero/miglioramento per le seguenti materie: ${details}. Dammi un piano di studio settimanale con priorità sulle materie più deboli, suggerendo argomenti chiave da ripassare e strategie di studio efficaci. Organizza tutto per priorità dal più urgente al meno urgente.`;
+
+        const input = document.getElementById('aiChatInput');
+        if (input) input.value = prompt;
+        sendAIChat();
     }
 
     function showOrganizeStudyModal() {
