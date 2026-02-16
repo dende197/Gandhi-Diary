@@ -27,12 +27,12 @@
            ============================================ */
 
         :root {
-            --bg-body: #121214;
-            /* Softer Dark Gray */
-            --bg-card: #1a1a1c;
-            /* Deep Grey Card */
-            --bg-card-hover: #222224;
-            --bg-input: #0f0f11;
+            --bg-body: #050506;
+            /* Deep Black */
+            --bg-card: #0d0d0f;
+            /* Almost Black Card */
+            --bg-card-hover: #121214;
+            --bg-input: #0a0a0c;
 
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
@@ -51,10 +51,10 @@
             --red: #ef4444;
             --purple: #8b5cf6;
 
-            --card-border: 1px solid rgba(255, 255, 255, 0.08);
-            /* Liquid Glass Border */
-            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            --glass-bg: rgba(26, 26, 28, 0.7);
+            --card-border: 1px solid rgba(255, 255, 255, 0.03);
+            /* Minimalist Border */
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+            --glass-bg: rgba(13, 13, 15, 0.7);
             --glass-blur: blur(20px);
 
             --radius-xl: 22px;
@@ -3764,8 +3764,8 @@
             <!-- HERO -->
             <div style="position: relative; padding: 48px 32px 42px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.1);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.03);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.02);
                 overflow: hidden;">
                 <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
                 <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
@@ -3787,7 +3787,7 @@
             <!-- METRICS -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
                 <div class="metric-card" onclick="showDetailedStressModal()" style="cursor:pointer; border-radius:20px;
-                    background: linear-gradient(145deg, rgba(26,26,30,0.8), rgba(20,20,24,0.9));
+                    background: linear-gradient(145deg, rgba(10,10,12,0.8), rgba(5,5,7,0.9));
                     border:1px solid rgba(255,255,255,0.08);
                     box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
                     <div>
@@ -3799,7 +3799,7 @@
                     <canvas id="stressWaveCanvas" style="width:100%; height:40px; position:absolute; bottom:0; left:0; pointer-events:none;"></canvas>
                 </div>
                 <div class="metric-card" onclick="navigate('voti')" style="cursor:pointer; border-radius:20px;
-                    background: linear-gradient(145deg, rgba(26,26,30,0.8), rgba(20,20,24,0.9));
+                    background: linear-gradient(145deg, rgba(10,10,12,0.8), rgba(5,5,7,0.9));
                     border:1px solid rgba(255,255,255,0.08);
                     box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
                     <div>
@@ -3841,7 +3841,7 @@
                 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
                     ${(state.news || []).slice(0, 4).map((n, i) => `
                         <div onclick="window.open('${n.url}','_blank')" style="cursor:pointer; padding:14px; border-radius:14px;
-                            background:rgba(26,26,30,0.6); border:1px solid rgba(255,255,255,0.06);
+                            background:rgba(10,10,12,0.6); border:1px solid rgba(255,255,255,0.02);
                             display:flex; flex-direction:column; gap:6px;
                             animation:slideUp ${0.5 + i * 0.06}s ease-out; transition:transform 0.15s, border-color 0.2s;">
                             <div style="font-size:10px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Circolare</div>
@@ -3865,8 +3865,8 @@
             <!-- HERO GRADIENT (same as Home) -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.1);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.03);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.02);
                 overflow: hidden;">
                 <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
                 <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
@@ -3880,7 +3880,7 @@
                             <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
                                 <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
                             </button>
-                            <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.03);">
                                 <button onclick="state.plannerView='calendar'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-calendar"></i></button>
                                 <button onclick="state.plannerView='list'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-list-bullets"></i></button>
                             </div>
@@ -4197,7 +4197,7 @@
                     ${state.tasks.filter(t => !t.done).map(t => {
             const subjectColor = getSubjectColor(t.subject);
             return `
-                        <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.03);">
                             <div style="font-weight: 700; color: white; margin-bottom: 4px; text-align:left;">${t.text}</div>
                             <div style="font-size: 11px; color: ${subjectColor}; font-weight:700; text-transform:uppercase; margin-bottom: 12px; text-align:left;">${t.subject}</div>
                             <div style="display: flex; justify-content: space-between; gap: 4px;">
@@ -4512,8 +4512,8 @@
             <!-- HERO GRADIENT (same as Home) -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.1);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.03);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.02);
                 overflow: hidden;">
                 <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
                 <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
@@ -4860,11 +4860,11 @@
                     <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 24px; opacity: 0.9;">Come posso aiutarti oggi?</h2>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 360px; margin: 0 auto;">
-                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.02); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
                             <span style="display: block; font-size: 20px; margin-bottom: 8px;">📅</span>
                             Pianifica Settimana
                         </button>
-                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.02); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
                             <span style="display: block; font-size: 20px; margin-bottom: 8px;">📝</span>
                             Prepariamoci
                         </button>
@@ -4872,7 +4872,7 @@
                             <span style="display: block; font-size: 20px; margin-bottom: 8px;">🎯</span>
                             Competenze & Priorità
                         </button>
-                        <button onclick="sendAIChatQuick('Dammi un consiglio sulla produttività 🚀')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                        <button onclick="sendAIChatQuick('Dammi un consiglio sulla produttività 🚀')" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.02); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
                             <span style="display: block; font-size: 20px; margin-bottom: 8px;">🚀</span>
                             Produttività
                         </button>
@@ -4887,7 +4887,7 @@
                             font-size: 15px;
                             line-height: 1.5;
                             ${msg.role === 'user'
-                ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
+                ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.02);`
                 : `background: transparent; color: var(--text-primary);`}
                         ">
                             ${msg.role === 'ai' ? marked.parse(msg.text) : msg.text}
@@ -4922,7 +4922,7 @@
                         background: rgba(30,30,30,0.85); 
                         backdrop-filter: blur(12px);
                         -webkit-backdrop-filter: blur(12px);
-                        border: 1px solid rgba(255,255,255,0.1); 
+                        border: 1px solid rgba(255,255,255,0.03); 
                         border-radius: 20px; 
                         padding: 4px 6px 4px 14px; 
                         box-shadow: 0 4px 20px rgba(0,0,0,0.3);
@@ -5205,12 +5205,12 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         <div style="flex:1;">
                             <label style="display:block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">INIZIO</label>
                             <input type="time" id="studyStart" value="${state.availability.start}" onchange="saveAvailability()" 
-                                style="width:100%; height:48px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color:white; padding:0 12px; outline:none; font-family: inherit;">
+                                style="width:100%; height:48px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; color:white; padding:0 12px; outline:none; font-family: inherit;">
                        </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">FINE</label>
                             <input type="time" id="studyEnd" value="${state.availability.end}" onchange="saveAvailability()" 
-                                style="width:100%; height:48px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color:white; padding:0 12px; outline:none; font-family: inherit;">
+                                style="width:100%; height:48px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; color:white; padding:0 12px; outline:none; font-family: inherit;">
                        </div>
                    </div>
                </div>
@@ -5344,7 +5344,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <div class="view" style="padding-top: 60px;">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Verifiche</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.02); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
                                 <i class="ph-bold ph-exam" style="font-size: 32px; color: var(--text-secondary);"></i>
                            </div>
                             <h3 style="font-size: 18px; color: var(--text-primary); margin-bottom: 8px;">Nessuna verifica</h3>
@@ -5378,7 +5378,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
             return `
                             <div class="glass-panel" style="padding: 20px; display: flex; align-items: flex-start; gap: 16px;">
-                                <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(255,255,255,0.05);">
+                                <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(255,255,255,0.05);">
                                     <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${monthName}</span>
                                     <span style="font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1.1;">${dayNum}</span>
                                </div>
@@ -5412,7 +5412,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <div class="view" style="padding-top: 60px;">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Arretrati</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.02); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
                                 <i class="ph-bold ph-check-fat" style="font-size: 32px; color: var(--green);"></i>
                            </div>
                             <h3 style="font-size: 18px; color: var(--text-primary); margin-bottom: 8px;">Tutto in ordine!</h3>
@@ -5443,7 +5443,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                                     <div style="font-size: 11px; font-weight: 700; color: ${getSubjectColor(b.subject)}; text-transform: uppercase; margin-bottom: 4px;">${b.subject}</div>
                                     <div style="font-size: 15px; font-weight: 500; color: var(--text-primary); line-height: 1.3;">${b.topic}</div>
                                </div>
-                                <button onclick="removeBacklog(${index})" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                <button onclick="removeBacklog(${index})" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.03); background: rgba(255,255,255,0.02); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
                                     <i class="ph-bold ph-check"></i>
                                </button>
                            </div>
@@ -6043,18 +6043,18 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         <div>
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Descrizione</label>
                             <input id="quickTaskText" type="text" placeholder="Es. Studiare cap. 5 Storia" 
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
+                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); background: rgba(255,255,255,0.02); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
                         </div>
                         <div>
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Materia</label>
-                            <select id="quickTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
+                            <select id="quickTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
                                 ${subjectOptions}
                             </select>
                         </div>
                         <div>
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Data</label>
                             <input id="quickTaskDate" type="date" value="${getLocalDateString()}"
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
+                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
                         </div>
                     </div>
                     <button onclick="submitQuickTask()" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
@@ -6111,25 +6111,25 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Tipo</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
                                 <button id="tipo-verifica" onclick="selectRegistroTipo('Verifica')" style="padding: 10px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(99,102,241,0.15); color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer;">Verifica</button>
-                                <button id="tipo-orale" onclick="selectRegistroTipo('Interrogazione')" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Orale</button>
-                                <button id="tipo-compito" onclick="selectRegistroTipo('Compito in classe')" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Compito</button>
+                                <button id="tipo-orale" onclick="selectRegistroTipo('Interrogazione')" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.03); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Orale</button>
+                                <button id="tipo-compito" onclick="selectRegistroTipo('Compito in classe')" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.03); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Compito</button>
                             </div>
                         </div>
                         <div>
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Materia</label>
-                            <select id="registroTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
+                            <select id="registroTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
                                 ${subjectOptions}
                             </select>
                         </div>
                         <div>
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Argomenti</label>
                             <textarea id="registroTaskArgs" placeholder="Es. Capitoli 3-5, Equazioni 2° grado" rows="2"
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
+                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); background: rgba(255,255,255,0.02); color: white; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
                         </div>
                         <div>
                             <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Data</label>
                             <input id="registroTaskDate" type="date" value="${getLocalDateString()}"
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
+                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
                         </div>
                     </div>
                     <button onclick="submitRegistroTask()" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
@@ -6218,7 +6218,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
                         ${subjectsList.map(s => `
-                            <div style="padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                            <div style="padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.02);">
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
                                     <input type="checkbox" value="${s.name}" class="competency-check" id="comp-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" ${s.media < 6.5 || s.savedLevel < 3 ? 'checked' : ''} style="accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer;" />
                                     <span style="background: ${s.color}; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"></span>
