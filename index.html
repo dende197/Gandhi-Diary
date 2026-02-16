@@ -2178,11 +2178,29 @@
     });
 
     // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version)
-    // Usiamo una logica di bridging che non ricorra se impl non è pronta
+    // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version v2)
+    // 1. Capture implementations FIRST (Hoisting saves us)
+    //    We explicitly grab the hoisted function references before overwriting window[name]
+    window.performLogin_impl = performLogin;
+    window.performSync_impl = performSync;
+    window.navigate_impl = navigate;
+    window.render_impl = render;
+    window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
+    window.closeModal_impl = closeModal;
+    window.openArgoLogin_impl = openArgoLogin;
+    window.performArgoSync_impl = performArgoSync;
+    window.selectProfile_impl = selectProfile;
+    window.switchProfile_impl = switchProfile;
+    window.handleLoginSuccess_impl = handleLoginSuccess;
+    window.checkServerHealth_impl = checkServerHealth;
+    window.showProfileSelectionModal_impl = showProfileSelectionModal;
+
+    // 2. NOW expose the safety wrappers
     const safeExpose = (name) => {
+        const original = window[name + "_impl"];
         window[name] = (...args) => {
             const impl = window[name + "_impl"];
-            if (typeof impl === 'function' && impl !== window[name]) {
+            if (typeof impl === 'function') {
                 return impl(...args);
             }
             console.warn(`🚀 ${name} non ancora pronto o ricorsivo...`);
@@ -2327,6 +2345,18 @@
             if (typeof saveTasksSnapshotRemote === 'function') await saveTasksSnapshotRemote();
         } catch { }
     }
+
+    // ⭐ Helper per container modali (ripristinato)
+    function getModalContainer() {
+        let el = document.getElementById('modal-container');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'modal-container';
+            document.body.appendChild(el);
+        }
+        return el;
+    }
+
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hardSavePlanner(); });
     window.addEventListener('beforeunload', () => { hardSavePlanner(); });
 
@@ -5845,19 +5875,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     }
 
     // 🔥 Implementation Pointers
-    window.performLogin_impl = performLogin;
-    window.performSync_impl = performArgoSync;
-    window.navigate_impl = navigate;
-    window.render_impl = render;
-    window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
-    window.closeModal_impl = closeModal;
-    window.openArgoLogin_impl = openArgoLogin;
-    window.performArgoSync_impl = performArgoSync;
-    window.selectProfile_impl = selectProfile;
-    window.switchProfile_impl = switchProfile;
-    window.handleLoginSuccess_impl = handleLoginSuccess;
-    window.checkServerHealth_impl = checkServerHealth;
-    window.showProfileSelectionModal_impl = showProfileSelectionModal;
+    // Global exposures removed (handled by safeExpose at top)
 
 
     async function switchProfile() {
