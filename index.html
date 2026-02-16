@@ -80,7 +80,8 @@
         html {
             color-scheme: dark;
             background: var(--bg-body);
-            height: 100%;
+            height: auto;
+            min-height: 100%;
         }
 
         body {
@@ -88,7 +89,8 @@
             background: var(--bg-body);
             color: var(--text-primary);
             height: 100%;
-            overflow-y: auto;
+            min-height: 100%;
+            overflow-y: visible;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
@@ -7412,36 +7414,40 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         if (!scroller || !thumb) return;
 
         let fadeTimeout;
+        let isScrolling = false;
 
         function updateScroll() {
             const viewportHeight = window.innerHeight;
             const totalHeight = document.documentElement.scrollHeight;
-            const scrollY = window.scrollY;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
-            if (totalHeight <= viewportHeight + 10) {
+            // Don't show if content fits in one screen
+            if (totalHeight <= viewportHeight + 20) {
                 scroller.classList.remove('show-scrollbar');
                 return;
             }
 
             scroller.classList.add('show-scrollbar');
 
+            // Calculate thumb height proportionally
             const thumbHeight = Math.max(60, (viewportHeight / totalHeight) * viewportHeight);
             const scrollPercent = scrollY / (totalHeight - viewportHeight);
-            const thumbTop = scrollPercent * (viewportHeight - thumbHeight - 8);
+            const thumbTop = scrollPercent * (viewportHeight - thumbHeight - 20); // 20px padding
 
             thumb.style.height = thumbHeight + 'px';
-            thumb.style.transform = `translateY(${thumbTop}px)`;
+            thumb.style.transform = `translateY(${thumbTop + 10}px)`; // Offset for floating look
 
             clearTimeout(fadeTimeout);
             fadeTimeout = setTimeout(() => {
                 scroller.classList.remove('show-scrollbar');
-            }, 2000);
+            }, 1800);
         }
 
+        // Listen to root scroll
         window.addEventListener('scroll', updateScroll, { passive: true });
         window.addEventListener('resize', updateScroll);
 
-        // Watch for DOM changes (navigation, dynamic content)
+        // Watch for internal height changes
         const observer = new MutationObserver(updateScroll);
         observer.observe(document.body, { childList: true, subtree: true });
 
