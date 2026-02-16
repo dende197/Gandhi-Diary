@@ -2328,6 +2328,18 @@
         return el;
     }
 
+    function showModal(html, className = '') {
+        const container = getModalContainer();
+        if (!container) return;
+        container.innerHTML = `
+            <div class="modal-overlay active" onclick="closeModal(event)">
+                <div class="modal-content ${className}" onclick="event.stopPropagation()">
+                    ${html}
+                </div>
+            </div>
+        `;
+    }
+
     // ⭐ Helper Restore: closeModal
     function closeModal(event) {
         if (event) event.stopPropagation();
@@ -3218,7 +3230,7 @@
         }
         const isRegistro = state.plannerMode === 'registro';
         container.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-overlay active" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" style="max-width:440px; padding:24px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
                             <div>
@@ -3564,7 +3576,7 @@
         const modalContainer = getModalContainer();
         if (!modalContainer) return;
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 440px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Modifica Profilo</h2>
@@ -3596,7 +3608,7 @@
         const modalContainer = getModalContainer();
         if (!modalContainer) return;
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 380px; padding: 8px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);">
                 <!-- User Profile Summary -->
                 <div style="padding: 24px; display: flex; align-items: center; gap: 16px;">
@@ -4011,7 +4023,7 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
                     <h2 style="margin:0;">Stress Giornaliero</h2>
@@ -4080,7 +4092,7 @@
         const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
@@ -4140,7 +4152,7 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
             </div>
         </div> `;
@@ -4295,7 +4307,7 @@
 
     function showVotiView() {
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Voti DidUP</h2>
@@ -4355,7 +4367,7 @@
         console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
 
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Bacheca & Avvisi</h2>
@@ -5273,7 +5285,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         const subjects = getAllSubjects();
 
         container.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                         <h2 style="margin:0; font-size:18px; font-weight:800;">📚 Argomento Arretrato</h2>
@@ -5446,7 +5458,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         const modalContainer = getModalContainer();
         if (!modalContainer) return;
         modalContainer.innerHTML = `
-        <div class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" style="max-width:380px;">
                 <div style="text-align:center; margin-bottom:20px;">
                     <div style="width:60px; height:60px; background:#106690; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
@@ -5578,7 +5590,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         if (!container) return;
 
         container.innerHTML = `
-        <div class="modal-overlay" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
+        <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
             <div class="modal-content glass-panel" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <div style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div style="width: 64px; height: 64px; background: rgba(10, 132, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
@@ -6284,7 +6296,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         const allPendingTasks = state.tasks.filter(t => !t.done);
 
         modalContainer.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-overlay active" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" style="max-width: 450px; padding: 30px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                             <h2 style="margin:0; font-size: 24px;">Cosa fai oggi?</h2>
@@ -6330,7 +6342,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
 
         modalContainer.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)">
+                <div class="modal-overlay active" onclick="closeModal(event)">
                     <div class="modal-content glass-panel" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; position: sticky; top: 0; background: #1e1e1e; padding: 10px; border-radius: 12px; z-index: 5;">
                             <h2 style="margin:0;">Compiti per Materia</h2>
@@ -6758,7 +6770,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
 
         modalContainer.innerHTML = `
-    <div class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-overlay active" onclick="closeModal(event)">
       <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 550px; padding: 24px; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px; max-height:90vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
           <h2 style="margin:0; font-size:22px; font-weight:800; color:white;">Analisi Stress</h2>
@@ -7079,6 +7091,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     window.handleLoginSuccess_impl = handleLoginSuccess;
     window.checkServerHealth_impl = checkServerHealth;
     window.showProfileSelectionModal_impl = showProfileSelectionModal;
+    window.showModal_impl = showModal;
 
     // 2. Expose safety wrappers
     const safeExpose = (name) => {
@@ -7091,7 +7104,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         };
     };
 
-    ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
+    ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
 
     // Initial Render
     document.addEventListener('DOMContentLoaded', () => {
