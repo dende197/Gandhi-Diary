@@ -162,11 +162,16 @@
         /* Bloquea padding globale SOLO per vista AI */
         .view.ai-view {
             padding: 0 !important;
-            height: 100svh;
+            height: calc(100svh - 60px) !important;
+            /* Spazio reale sotto la nav */
+            margin-top: 60px;
+            /* Spazio per nav fissa */
             overflow: hidden;
-            /* BLOCCO SCROLL GLOBALE */
+            border-radius: 0 !important;
             display: flex;
             flex-direction: column;
+            animation: none !important;
+            transform: none !important;
         }
 
         /* Scroll SOLO nei messaggi */
@@ -443,13 +448,18 @@
                 pointer-events: none;
             }
 
-            /* Rounded glassy navbar on mobile */
+            /* Rounded glassy navbar on mobile - FORCE FIXED to avoid scroll loss */
             #top-nav {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                right: 0;
                 height: 60px;
-                background: rgba(18, 18, 20, 0.8);
+                background: rgba(18, 18, 20, 0.9);
                 backdrop-filter: blur(20px) saturate(180%);
                 -webkit-backdrop-filter: blur(20px) saturate(180%);
                 border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                z-index: 1000;
             }
 
             /* Fix planner toggle and calendar buttons — NO forced sizes */
@@ -1471,9 +1481,10 @@
             transform: scale(0.9);
         }
 
-        body.chat-mode #bottom-nav {
+        /* Disabilitato regola che nasconde nav per compatibilità AI View */
+        /* body.chat-mode #bottom-nav {
             display: none;
-        }
+        } */
 
         body.chat-mode #app {
             padding-bottom: 0;
