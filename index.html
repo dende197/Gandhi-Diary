@@ -1412,10 +1412,9 @@
             display: flex;
             gap: 12px;
             padding: 12px 16px max(12px, env(safe-area-inset-bottom));
-            background: rgba(18, 18, 20, 0.85);
+            background: rgba(18, 18, 20, 0.9);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
             z-index: 1000;
         }
 
@@ -1590,11 +1589,10 @@
 </div>
 
 <script>
-    // Scrollbar auto-hide removed for simpler 8px design.
+    // 🚀 G-Diary v1.1.7 [AI Redesign]
+    const APP_VERSION = "1.1.7-ai-redesign";
 
 
-    // 🚀 G-Diary v1.1.6 [Hotfix Marked]
-    const APP_VERSION = "1.1.6-hotfix-marked";
 
     // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
     const savedVersion = localStorage.getItem('app_version');
@@ -4850,62 +4848,43 @@
 
         return `
         <div class="view" style="display: flex; flex-direction: column; height: 100dvh; position: relative; animation: fadeInUp 0.4s ease-out;">
-            <!--Modern Gradient Header-->
-            <!--Modern Gradient Header-->
-            <div style="flex-shrink: 0; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; background: rgba(18,18,20,0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; color: white;">
-                        <i class="ph-fill ph-robot" style="font-size: 24px;"></i>
+            <!--Minimalist Header-->
+            <div style="flex-shrink: 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(18,18,20,0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="ph-fill ph-robot" style="font-size: 18px;"></i>
                     </div>
                     <div>
-                        <h1 style="margin: 0; font-size: 20px; font-weight: 800;">Tutor AI</h1>
-                        <div style="font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Sempre Attivo</div>
+                        <h2 style="margin: 0; font-size: 16px; font-weight: 700;">Tutor AI</h2>
+                        <div style="font-size: 10px; color: var(--green); font-weight: 700; text-transform: uppercase;">Attivo</div>
                     </div>
-                 </div>
-                 <div style="display: flex; gap: 8px;">
-                     <button class="btn-secondary" onclick="clearAIChat()" style="width: 44px; height: 44px; padding: 0; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--red); background: rgba(239, 68, 68, 0.1);">
-                         <i class="ph-bold ph-trash" style="font-size: 20px;"></i>
-                     </button>
-                 </div>
+                </div>
+                <button class="btn-icon-only" onclick="clearAIChat()" style="width: 32px; height: 32px; background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary);">
+                    <i class="ph ph-trash" style="font-size: 18px;"></i>
+                </button>
             </div>
 
             <!--Chat Area-->
-            <!--Chat Area-->
-            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 20px 20px 0 20px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth;">
+            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 16px 16px 0 16px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth;">
                 ${chat.length === 0 ? `
-                <div style="text-align: center; padding: 60px 20px; animation: slideUp 0.5s ease-out;">
-                    <div style="font-size: 56px; margin-bottom: 20px;">✨</div>
-                    <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Come posso aiutarti?</h2>
-                    <p style="color: var(--text-secondary); font-size: 15px; max-width: 280px; margin: 0 auto 32px auto; line-height: 1.5;">
-                        Posso organizzare il tuo studio, consigliarti priorità o aiutarti a preparare una verifica.
-                    </p>
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-                        <button onclick="sendAIChatQuick('Organizza il mio studio per questa settimana')" style="height: 48px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; padding: 0 16px; display: flex; align-items: center; justify-content: space-between;">
-                            <span>📅 Piano settimanale</span>
-                            <i class="ph ph-caret-right" style="color: var(--accent);"></i>
-                        </button>
-                        <button onclick="sendAIChatQuick('Ho una verifica, aiutami a prepararmi')" style="height: 48px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; padding: 0 16px; display: flex; align-items: center; justify-content: space-between;">
-                            <span>📝 Prepara verifica</span>
-                            <i class="ph ph-caret-right" style="color: var(--accent);"></i>
-                        </button>
-                    </div>
+                <div style="text-align: center; padding: 60px 20px; animation: fadeIn 0.5s ease-out;">
+                    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Come posso aiutarti?</h2>
+                    <p style="color: var(--text-secondary); font-size: 14px; max-width: 240px; margin: 0 auto 24px auto;">Oggi sono pronto ad organizzare il tuo studio.</p>
                 </div>
                 ` : chat.map(msg => `
                 <div class="msg-appear" style="display: flex; ${msg.role === 'user' ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}">
                     <div style="
-                        max-width: 85%;
-                        padding: 16px 20px;
-                        font-size: 16px;
-                        line-height: 1.5;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        max-width: ${msg.role === 'user' ? '80%' : '100%'};
+                        padding: ${msg.role === 'user' ? '12px 16px' : '0'};
+                        font-size: 15px;
+                        line-height: 1.6;
                         ${msg.role === 'user'
-                ? `background: linear-gradient(135deg, var(--accent), var(--blue)); color: white; border-radius: 20px 20px 4px 20px; border: 1px solid rgba(255,255,255,0.1);`
-                : `background: rgba(30,30,35,0.8); color: var(--text-primary); border-radius: 20px 20px 20px 4px; border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(10px);`}
+                ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
+                : `background: transparent; color: var(--text-primary);`}
                     ">
                         ${msg.role === 'ai' ? marked.parse(msg.text) : msg.text}
-                        <div style="font-size: 10px; color: ${msg.role === 'user' ? 'rgba(255,255,255,0.6)' : 'var(--text-dim)'}; margin-top: 8px; text-align: ${msg.role === 'user' ? 'right' : 'left'}; font-weight: 700;">${msg.ts || ''}</div>
                         ${msg.role === 'ai' && msg.hasPlan ? `
-                            <button class="btn-primary" onclick="applyAIPlanFromChat(${chat.indexOf(msg)})" style="margin-top: 12px; width: 100%; height: 44px; background: rgba(255,255,255,0.1); box-shadow: none; border: 1px solid rgba(255,255,255,0.1);">
+                            <button class="btn-primary" onclick="applyAIPlanFromChat(${chat.indexOf(msg)})" style="margin-top: 16px; width: 100%; max-width: 240px; height: 40px; background: var(--accent); font-size: 13px;">
                                 <i class="ph-bold ph-calendar-plus"></i> Applica al Planner
                             </button>
                         ` : ''}
@@ -4915,18 +4894,21 @@
             </div>
 
             <!--Input Area-->
-            <!--Input Area-->
             <div class="chat-input-bar">
-                <textarea id="aiChatInput" class="chat-input" placeholder="Chiedi al Tutor..."
-                    rows="1"
-                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
-                    oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
-                <button onclick="sendAIChat()" class="btn-primary" style="width: 48px; height: 48px; padding: 0; border-radius: 50%; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
-                    <i class="ph-bold ph-paper-plane-tilt" style="font-size: 20px;"></i>
-                </button>
+                <div style="flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 4px 12px;">
+                    <textarea id="aiChatInput" class="chat-input" placeholder="Messaggio..."
+                        style="background: transparent; border: none; padding: 8px 4px; min-height: 36px; font-size: 15px;"
+                        rows="1"
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
+                        oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,100)+'px';"></textarea>
+                    <button onclick="sendAIChat()" style="width: 32px; height: 32px; padding: 0; border: none; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 8px;">
+                        <i class="ph-bold ph-arrow-up" style="font-size: 16px;"></i>
+                    </button>
+                </div>
             </div>
         </div> `;
     }
+
 
     function sendAIChatQuick(text) {
         const input = document.getElementById('aiChatInput');
@@ -4961,7 +4943,8 @@
         }, 100);
 
         // Build context
-        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
+        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'
+            })`).join('\n');
         const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
         const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic} `).join('\n');
         const difficulty = (state.difficulty || []).join(', ');
