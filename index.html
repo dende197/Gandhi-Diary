@@ -1782,27 +1782,29 @@
     }
 
     // --- v5.0 Robust Symmetric Threading ---
-    async function sha256Hex(text) {
-        const enc = new TextEncoder().encode(text);
-        const buf = await crypto.subtle.digest('SHA-256', enc);
-        return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    async function hashPassword(password) {
+        if (!password) return '';
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // 🔥 FIX-ALL: Identity based on Supabase Auth UUID (Synchronous getter)
-    // 🔥 CENTRALIZED IDENTITY ENGINE: Sync with server.js
+    // 🔥 CENTRALIZED IDENTITY ENGINE
     function generatePid(school, user, index) {
-        const s = String(school || '').trim().toUpperCase();
-        const u = String(user || '').trim().toLowerCase();
+        if (!school || !user) throw new Error('PID: school e user sono obbligatori');
+        const s = String(school).trim().toUpperCase();
+        const u = String(user).trim().toLowerCase();
         const i = String(index !== undefined ? index : 0);
+        if (!s || !u) throw new Error('PID: parametri vuoti dopo trim');
         return `p:${s}:${u}:${i}`.toLowerCase().replace(/\s+/g, '');
     }
 
     function getUserId() {
         if (!state.user.id) return 'guest';
-        // Se l'ID non inizia con p:, lo normalizziamo (legacy fallback)
         let id = String(state.user.id).toLowerCase().replace(/\s+/g, '');
         if (!id.startsWith('p:')) {
-            // Se abbiamo i dati della sessione, possiamo ricostruirlo correttamente
             const session = sessionManager.load();
             if (session && session.schoolCode && session.userName) {
                 return generatePid(session.schoolCode, session.userName, session.profileIndex || 0);
@@ -1866,16 +1868,9 @@
         return maps[code] || code || 'Indirizzo N/D';
     }
 
-    // Hashing for deterministic chat threads
-    async function sha256Hex(input) {
-        const enc = new TextEncoder().encode(input);
-        const buf = await crypto.subtle.digest('SHA-256', enc);
-        return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
     async function getThreadId(userA, userB) {
         const [x, y] = [userA, userB].sort();
-        return await sha256Hex(`${x}|${y}`);
+        return await hashPassword(`${x}|${y}`);
     }
 
     // --- OUTBOX: anti-replay for planner ---
@@ -2173,16 +2168,16 @@
         }
     });
 
-    // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack)
-    window.performLogin = (...args) => typeof performLogin === 'function' && performLogin(...args);
-    window.performSync = (...args) => typeof performSync === 'function' && performSync(...args);
-    window.navigate = (...args) => typeof navigate === 'function' && navigate(...args);
-    window.render = (...args) => typeof render === 'function' && render(...args);
-    window.showQuickAddTaskModal = (...args) => typeof showQuickAddTaskModal === 'function' && showQuickAddTaskModal(...args);
-    window.closeModal = (...args) => typeof closeModal === 'function' && closeModal(...args);
-    window.openArgoLogin = (...args) => typeof openArgoLogin === 'function' && openArgoLogin(...args);
-    window.performArgoSync = (...args) => typeof performArgoSync === 'function' && performArgoSync(...args);
-    window.selectProfile = (...args) => typeof selectProfile === 'function' && selectProfile(...args);
+    // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version)
+    const safeExpose = (name) => {
+        window[name] = (...args) => {
+            const impl = window[name + "_impl"];
+            if (typeof impl === 'function') return impl(...args);
+            console.warn(`🚀 ${name} non ancora pronto...`);
+        };
+    };
+
+    ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
 
     function updateOfflineBadge() {
         if (state.isOffline) {
@@ -2385,23 +2380,8 @@
 
     async function performLogin(school, user, pass) {
         console.log("🔗 Redireziono performLogin -> performArgoSync");
-        // Mocking DOM values for performArgoSync to consume if called programmatically
         const creds = { schoolCode: school, username: user, password: pass };
         return await performArgoSync(null, creds);
-    }
-
-
-    async function finishLogin(data) {
-        state.isLoggedIn = true;
-        state.user = data.user || {};
-        if (data.token) localStorage.setItem(lsKey('auth_token'), data.token);
-        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-        state.tempLogin = null;
-        await performSync();
-        closeModal();
-        hideBoot();
-        showToast('Accesso effettuato! 🚀');
-        render();
     }
 
     async function performSync(sessionData) {
@@ -5433,34 +5413,34 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
     /* --- Modals --- */
 
-
     function openArgoLogin() {
         const modalContainer = getModalContainer();
         if (!modalContainer) return;
         modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
-                <div class="modal-content" style="max-width:380px;">
-                    <div style="text-align:center; margin-bottom:20px;">
-                        <div style="width:60px; height:60px; background:#106690; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
-                           <i class="ph-fill ph-book-bookmark" style="font-size:30px; color:white;"></i>
-                       </div>
-                        <h2 style="margin:0; color:white;">Collega DidUP</h2>
-                   </div>
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content" style="max-width:380px;">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div style="width:60px; height:60px; background:#106690; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
+                       <i class="ph-fill ph-book-bookmark" style="font-size:30px; color:white;"></i>
+                    </div>
+                    <h2 style="margin:0; color:white;">Collega DidUP</h2>
+                </div>
 
-                    <div id="server-status" style="margin-bottom: 20px; font-size: 12px; color: var(--orange); display: flex; align-items: center; justify-content: center; gap: 6px;">
-                        <span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span>
-                        In attesa del server...
-                   </div>
+                <div id="server-status" style="margin-bottom: 20px; font-size: 12px; color: var(--orange); display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span>
+                    In attesa del server...
+                </div>
 
-                    <input id="argo-school" placeholder="Codice Scuola" value="${localStorage.getItem('argo_school') || ''}">
-                    <input id="argo-user" placeholder="Nome Utente">
-                    <input type="password" id="argo-pass" placeholder="Password">
-                    <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
-                    <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
-               </div>
-           </div>`;
+                <input id="argo-school" placeholder="Codice Scuola" value="${localStorage.getItem('argo_school') || ''}">
+                <input id="argo-user" placeholder="Nome Utente">
+                <input type="password" id="argo-pass" placeholder="Password">
+                <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
+                <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
+            </div>
+        </div>`;
         checkServerHealth();
     }
+
     async function checkServerHealth(attempt = 1) {
         const statusEl = document.getElementById('server-status');
         if (!statusEl) return;
@@ -5490,166 +5470,6 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 statusEl.style.color = "var(--red)";
             }
         }
-    }
-
-    let _marketImages = [];
-
-    function openNewItemModal() {
-        modalContainer.innerHTML = `
-            <div class="modal-overlay" onclick="closeModal(event)">
-                <div class="modal-content glass-panel" style="max-width:500px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-                        <button onclick="closeModal()" style="background:none; border:none; color:var(--blue); cursor:pointer;">Annulla</button>
-                        <b>Vendi Articolo</b>
-                        <button onclick="publishItem()" style="background:none; border:none; color:var(--green); font-weight:700; cursor:pointer;">Metti in vendita</button>
-                   </div>
-                    <input id="item-title" placeholder="Titolo">
-                    <input id="item-price" placeholder="Prezzo (es. 15€)">
-                    <textarea id="item-description" placeholder="Descrizione" style="height:90px; margin-bottom:16px; width:100%; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; font-family:inherit;"></textarea>
-                    
-                    <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.1); padding:16px; border-radius:12px; cursor:pointer; margin-bottom:20px;">
-                        <i class="ph ph-camera" style="font-size:24px;"></i>
-                        <span>Carica Foto</span>
-                        <input type="file" id="item-image-input" accept="image/*" multiple style="display:none;" onchange="handleMarketImagePreview(this)">
-                   </label>
-                    <div id="image-preview" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;"></div>
-               </div>
-           </div>`;
-    }
-
-    function handleMarketImagePreview(input) {
-        _marketImages = [];
-        const preview = document.getElementById('image-preview');
-        preview.innerHTML = '';
-
-        if (!input.files || !input.files.length) return;
-
-        Array.from(input.files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                _marketImages.push(e.target.result);
-                preview.innerHTML += `<img src="${e.target.result}" style="width:64px; height:64px; border-radius:10px; object-fit:cover;">`;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function handleImagePreview(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('image-preview').innerHTML = `<img src="${e.target.result}" style="max-height:100px; border-radius:8px;">`;
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    // ⭐ Credenziali Temporanee (per sopravvivere alla modale se il DOM cambia)
-    let tempCreds = { school: '', user: '', pass: '' };
-
-    // ⭐ HELPERS LOGIN
-    function setLoginBtnText(txt) {
-        const btn = document.getElementById('login-btn') ||
-            document.querySelector('.login-btn') ||
-            document.querySelector('#loginBtn') ||
-            document.querySelector('button[onclick*="performArgoSync"]') ||
-            document.querySelector('button[type="submit"]');
-
-        if (!btn) {
-            console.warn('setLoginBtnText: nessun bottone trovato, skip');
-            return;
-        }
-
-        btn.innerText = txt;
-        btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
-    }
-
-    // ⭐ SELEZIONE PROFILO (Multi-Figlio)
-    function showProfileSelectionModal(profiles, credentials) {
-        console.log("👥 Mostro modale selezione profili:", profiles);
-        const modalContainer = getModalContainer();
-        if (!modalContainer) return;
-
-        modalContainer.innerHTML = `
-                <div class="modal-overlay active">
-                    <div class="modal-content glass-panel" style="max-width: 480px; padding: 32px;">
-                        <div style="text-align: center; margin-bottom: 24px;">
-                            <h2 style="font-size: 22px; color: var(--text-primary); margin-bottom: 8px;">Chi sta usando G-Connect?</h2>
-                            <p style="font-size: 15px; color: var(--text-secondary);">Seleziona il profilo studente per accedere</p>
-                       </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px;">
-                            ${profiles.map((p, idx) => `
-                                <div onclick="selectProfileAndLogin(${idx}, '${credentials.schoolCode}', '${credentials.username}', '${credentials.password}')" 
-                                     class="glass-panel" 
-                                     style="padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
-                                     
-                                    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--blue), var(--indigo)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; margin-bottom: 12px;">
-                                        ${p.name.charAt(0)}
-                                   </div>
-                                    
-                                    <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.3;">${p.name.split(' ')[0]}</div>
-                                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${p.class || 'Studente'}</div>
-                               </div>
-                            `).join('')}
-                       </div>
-                   </div>
-               </div>
-            `;
-    }
-
-
-    // 🆕 Risoluzione nomi profili asincrona
-    async function resolveProfileNamesAsync(profiles, credentials, container) {
-        try {
-            await Promise.all(profiles.map(async (p) => {
-                try {
-                    const resp = await fetch(`${API_BASE_URL}/api/resolve-profile`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            schoolCode: credentials.schoolCode,
-                            username: credentials.username,
-                            password: credentials.password,
-                            profileIndex: p.index
-                        })
-                    });
-                    const j = await resp.json();
-                    if (j.success) {
-                        // Aggiorna in memoria
-                        p.name = j.name;
-                        p.class = j.class;
-                        // Aggiorna UI
-                        const btn = container.querySelector(`.btn-profile[data-index="${p.index}"]`);
-                        if (btn) {
-                            const nameEl = btn.querySelector('.profile-name');
-                            const classEl = btn.querySelector('.profile-class');
-                            const avatarEl = btn.querySelector('.profile-avatar');
-                            if (nameEl) nameEl.textContent = j.name;
-                            if (classEl) classEl.textContent = j.class || 'N/D';
-                            if (avatarEl) avatarEl.textContent = (j.name || 'S')[0].toUpperCase();
-                        }
-                        console.log(`✅ Risolto profilo ${p.index}: ${j.name} - ${j.class}`);
-                    }
-                } catch (e) {
-                    console.warn(`⚠️ Errore risoluzione profilo ${p.index}:`, e);
-                }
-            }));
-        } catch (e) {
-            console.warn('⚠️ Impossibile risolvere nomi profili:', e);
-        }
-    }
-
-    async function selectProfileAndLogin(idx, school, user, pass) {
-        // Wrapper per passare credenziali esplicite
-        await selectProfile(idx, { schoolCode: school, username: user, password: pass });
-    }
-
-    async function selectProfile(profileIndex, credentials) {
-        closeModal();
-        showBoot('Sincronizzazione profilo...');
-        await performArgoSync(profileIndex, credentials);
-        hideBoot();
     }
 
     async function performArgoSync(profileIndex = null, passedCreds = null) {
@@ -5723,155 +5543,208 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
     }
 
+    function showProfileSelectionModal(profiles, credentials) {
+        console.log("👥 Mostro modale selezione profili:", profiles);
+        const container = getModalContainer();
+        if (!container) return;
+
+        container.innerHTML = `
+        <div class="modal-overlay" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
+            <div class="modal-content glass-panel" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                <div style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="width: 64px; height: 64px; background: rgba(10, 132, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                        <i class="ph-fill ph-users" style="font-size: 32px; color: var(--blue);"></i>
+                    </div>
+                    <h2 style="font-size: 20px; margin-bottom: 8px;">Seleziona Profilo</h2>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Scegli quale studente visualizzare</p>
+                </div>
+                
+                <div class="profiles-list" style="padding: 24px; display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto;">
+                    ${profiles.map(p => `
+                        <button class="btn-profile" 
+                                data-index="${p.index}"
+                                style="background: var(--surface-highlight); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: left; -webkit-tap-highlight-color: transparent;">
+                            <div class="profile-avatar" style="width: 44px; height: 44px; background: linear-gradient(135deg, var(--blue), var(--indigo)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
+                                ${(p.name || 'S')[0].toUpperCase()}
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <div class="profile-name" style="font-weight: 700; font-size: 16px; color: white; margin-bottom: 4px;">${p.name || ('Studente ' + (p.index + 1))}</div>
+                                <div class="profile-class" style="font-size: 13px; color: var(--text-secondary);">${p.class || p.school || 'Caricamento...'}</div>
+                            </div>
+                            <i class="ph-bold ph-caret-right" style="color: var(--text-secondary);"></i>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        </div>`;
+
+        // Event Delegation
+        const list = container.querySelector('.profiles-list');
+        list.addEventListener('click', async (ev) => {
+            const btn = ev.target.closest('.btn-profile');
+            if (!btn) return;
+
+            // Disabilita UI
+            const allBtns = list.querySelectorAll('.btn-profile');
+            allBtns.forEach(b => {
+                b.disabled = true;
+                b.style.opacity = '0.5';
+                b.style.pointerEvents = 'none';
+            });
+
+            btn.style.opacity = '1';
+            btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
+
+            await selectProfile(parseInt(btn.dataset.index, 10), credentials);
+        }, { once: true });
+
+        // Risolvi i nomi veri in background
+        resolveProfileNamesAsync(profiles, credentials, container);
+    }
+
+    async function resolveProfileNamesAsync(profiles, credentials, container) {
+        try {
+            await Promise.all(profiles.map(async (p) => {
+                try {
+                    const resp = await fetch(`${API_BASE_URL}/api/resolve-profile`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            schoolCode: credentials.schoolCode,
+                            username: credentials.username,
+                            password: credentials.password,
+                            profileIndex: p.index
+                        })
+                    });
+
+                    if (!resp.ok) {
+                        console.warn(`⚠️ HTTP ${resp.status} resolving profile ${p.index}`);
+                        return;
+                    }
+
+                    const j = await resp.json();
+                    if (j.success) {
+                        p.name = j.name;
+                        p.class = j.class;
+                        const btn = container.querySelector(`.btn-profile[data-index="${p.index}"]`);
+                        if (btn) {
+                            const nameEl = btn.querySelector('.profile-name');
+                            const classEl = btn.querySelector('.profile-class');
+                            const avatarEl = btn.querySelector('.profile-avatar');
+                            if (nameEl) nameEl.textContent = j.name;
+                            if (classEl) classEl.textContent = j.class || 'N/D';
+                            if (avatarEl) avatarEl.textContent = (j.name || 'S')[0].toUpperCase();
+                        }
+                        console.log(`✅ Risolto profilo ${p.index}: ${j.name} - ${j.class}`);
+                    }
+                } catch (e) {
+                    console.warn(`⚠️ Errore risoluzione profilo ${p.index}:`, e);
+                }
+            }));
+        } catch (e) {
+            console.warn('⚠️ Impossibile risolvere nomi profili:', e);
+        }
+    }
+
+    async function selectProfile(profileIndex, credentials) {
+        closeModal();
+        showBoot('Sincronizzazione profilo...');
+        await performArgoSync(profileIndex, credentials);
+        hideBoot();
+    }
+
     async function handleLoginSuccess(data, rawPassword) {
         console.log("✅ Login OK, hydrating state...");
-
         const user = data.session.userName;
         const pass = rawPassword || tempCreds.pass;
 
-        // 1. Sessione
+        // 1. Session Atomic Update
         if (data.session) {
-            data.session.storedUser = btoa(unescape(encodeURIComponent(user)));
-            data.session.storedPass = btoa(unescape(encodeURIComponent(pass)));
-            // 🔥 Use server-provided student ID or reconstruct it if missing
-            data.session.studentId = data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex);
-
-            // 🔥 NEW: Persist full profile info for instant hydration on refresh
-            data.session.name = data.student?.name || data.selectedProfile?.name;
-            data.session.class = data.student?.class || data.selectedProfile?.class;
-            data.session.specialization = data.student?.specialization || data.selectedProfile?.specialization;
-            data.session.avatar = data.student?.avatar || data.selectedProfile?.avatar; // 🔥 Added Avatar
-
-            sessionManager.save(data.session);
+            const sessionData = {
+                ...data.session,
+                storedUser: btoa(unescape(encodeURIComponent(user))),
+                storedPass: btoa(unescape(encodeURIComponent(pass))),
+                studentId: data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex),
+                name: data.student?.name || data.selectedProfile?.name,
+                class: data.student?.class || data.selectedProfile?.class,
+                specialization: data.student?.specialization || data.selectedProfile?.specialization,
+                avatar: data.student?.avatar || data.selectedProfile?.avatar
+            };
+            sessionManager.save(sessionData);
         }
 
-        // 2. Idratazione Identità (MIGLIORATA: ID Fallback immediato) (Bug #5)
-        // 2. Idratazione Identità (DEFENSIVE: Mantieni dati locali ricchi)
-        state.user = state.user || {};
-        const oldUser = { ...state.user };
-
-        // 🔥 Priority ID: Server ID> Reconstructed ID
-        state.user.id = data.student?.id || (data.session ? generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex) : 'guest');
-
-        // 🔥 DEFENSIVE MERGE: Se il server torna dati vuoti/placeholder, tieni quelli locali (Avatar, Spec, Nome)
+        // 2. Identity Atomic Update
         const incoming = data.student || data.selectedProfile || {};
-
-        state.user.name = (incoming.name && isValidName(incoming.name)) ? incoming.name : (oldUser.name || "Studente");
-        state.user.class = (incoming.class && isValidClass(incoming.class)) ? incoming.class : (oldUser.class || "N/D");
-        state.user.specialization = incoming.specialization || oldUser.specialization;
-        state.user.avatar = incoming.avatar || oldUser.avatar || null;
-
+        state.user = {
+            ...state.user,
+            id: data.student?.id || (data.session ? generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex) : 'guest'),
+            name: (incoming.name && isValidName(incoming.name)) ? incoming.name : (state.user?.name || "Studente"),
+            class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : (state.user?.class || "N/D"),
+            specialization: incoming.specialization || state.user?.specialization,
+            avatar: incoming.avatar || state.user?.avatar || null
+        };
         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
-        // 3. Supabase Auth Bridge (FIX-ALL: Centralize identity)
+        // 3. Supabase Auth Bridge (with hashing)
         try {
             const school = (data.session.schoolCode || '').toUpperCase();
             const userName = data.session.userName.toLowerCase();
-            // Create a deterministic email for the Supabase Auth user
             const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
-            // Use the Argo password (obfuscated slightly)
-            const supabasePassword = `Argo_${pass}_!`;
+            const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
 
-            console.log("🔗 Bridging to Supabase Auth...");
             let { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
                 email: supabaseEmail,
                 password: supabasePassword
             });
 
-            if (authErr) {
-                // Try to sign up if sign-in failed (might be a new user)
-                console.log("🆕 User not in Supabase or Sign-In failed, attempting safe bridge...");
+            if (authErr && authErr.message?.includes('Invalid login')) {
                 const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
                     email: supabaseEmail,
                     password: supabasePassword,
-                    options: {
-                        data: {
-                            name: state.user.name,
-                            class: state.user.class
-                        }
-                    }
+                    options: { data: { name: state.user.name, class: state.user.class } }
                 });
-
-                if (!upErr && upData && upData.user) {
-                    authData = upData;
-                } else {
-                    // 🔥 EXPERT FIX: If signup fails (e.g. rate limit, or already exists but wrong pass)
-                    // DO NOT block the user. The Argo session is still valid.
-                    console.warn("⚠️ Supabase Bridge (SignUp) skipped/failed:", upErr?.message || "Unknown error");
-                    // We continue with Argo session as primary
-                }
+                if (!upErr && upData?.user) authData = upData;
             }
 
-            if (authData && authData.user) {
-                // 🔥 CRITICAL: We KEEP the Argo ID in state.user.id for application logic consistency
-                // but we link it to the Supabase profile.
-                console.log("✅ Supabase Auth Linked for:", supabaseEmail);
-
-                // Sync profile to DB immediately using the ARGO ID as primary key
+            if (authData?.user) {
                 await supabaseClient.from('profiles').upsert({
-                    id: String(state.user.id).toLowerCase().replace(/\s+/g, ''), // 🔥 ID HARDENING: Lower & Trim
+                    id: String(state.user.id).toLowerCase().replace(/\s+/g, ''),
                     name: state.user.name,
                     class: state.user.class,
-                    specialization: state.user.specialization, // ✅ Added
-                    avatar: state.user.avatar || null, // ✅ Added
+                    specialization: state.user.specialization,
+                    avatar: state.user.avatar || null,
                     last_active: new Date().toISOString()
                 });
             }
         } catch (ex) {
             console.warn("⚠️ Supabase Bridge failed:", ex.message);
         }
-        // Specialization (Fix for persistent profile)
-        if (data.student.specialization) {
-            state.user.specialization = data.student.specialization;
-            console.log("✅ Indirizzo ricevuto:", state.user.specialization);
-        }
 
-        // ✅ FIX: normalizza sempre la classe prima di salvare
-        const normalized = normalizeClassUi(state.user.class);
-        if (normalized) state.user.class = normalized;
-
-        // Salva con dati validati
-        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-
-        // 4. Planner: Sync senza reset (mantenendo i dati locali se validi)
-
+        // 4. Planner Sync & Fallback Race Fix
         try {
-            await fetchPlannerRemote(); // Questo farà merge intelligente
+            const remotePlanner = await fetchPlannerRemote();
+            if (remotePlanner !== null && typeof remotePlanner === 'object') {
+                state.plannedTasks = remotePlanner;
+            } else {
+                throw new Error("Empty remote data");
+            }
         } catch (e) {
-            console.warn("Recupero planner remoto fallito, uso cache locale");
-        }
-
-        // Fallback locale solo se remoto vuoto
-        if (Object.keys(state.plannedTasks).length === 0) {
+            console.warn("Using local planner cache:", e.message);
             state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
         }
-        if (Object.keys(state.stressLevels).length === 0) {
-            state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
-            state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
-        }
+
+        state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+        state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
         state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
         notifyPlannerChanged();
 
-        // 3. Idratazione Dati Scolastici
-        if (data.tasks) {
-            updateTasks(data.tasks, false);
-            console.log("✅ Compiti caricati:", state.tasks.length);
-        }
+        // 5. Data Hydration & Success
+        if (data.tasks) updateTasks(data.tasks, false);
         if (data.voti) {
             state.voti = Array.isArray(data.voti) ? data.voti : [];
             localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
         }
-        if (data.promemoria || data.announcements) {
-            state.promemoria = Array.isArray(data.promemoria || data.announcements) ? (data.promemoria || data.announcements) : [];
-            localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
-        }
-
-        // 4. PlannerLocali
-        state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-        state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
-        state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
-        state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
         state.isLoggedIn = true;
         state.didup.connected = true;
@@ -5880,8 +5753,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         updateOfflineBadge();
 
         Promise.all([
-            fetchPlannerRemote(),
-            loadProfileFromServer()
+            fetchPlannerRemote().catch(e => console.error("Planned fetch failed:", e)),
+            loadProfileFromServer().catch(e => console.error("Profile load failed:", e))
         ]).then(() => {
             closeModal();
             alert(`✅ Benvenuto ${state.user.name}!`);
@@ -5890,6 +5763,90 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             startThreadsPolling();
         });
     }
+
+    async function switchProfile() {
+        const stored = sessionManager.load();
+        if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+            try {
+                showBoot("Ricerca profili...");
+                const user = decodeURIComponent(escape(atob(stored.storedUser)));
+                const pass = decodeURIComponent(escape(atob(stored.storedPass)));
+
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        schoolCode: stored.schoolCode,
+                        username: user,
+                        password: pass,
+                        profileIndex: null
+                    })
+                });
+
+                if (!response.ok) throw new Error("Errore durante la ricerca profili");
+
+                const data = await response.json();
+                hideBoot();
+
+                if (data.status === 'MULTIPLE_PROFILES') {
+                    showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
+                } else if (data.success) {
+                    handleLoginSuccess(data, pass);
+                } else {
+                    openArgoLogin();
+                }
+            } catch (e) {
+                hideBoot();
+                console.error("Errore switch profile:", e);
+                openArgoLogin();
+            }
+        } else {
+            openArgoLogin();
+        }
+    }
+
+
+    function setLoginBtnText(txt) {
+        const btn = document.getElementById('login-btn') ||
+            document.querySelector('.login-btn') ||
+            document.querySelector('#loginBtn') ||
+            document.querySelector('button[onclick*="performArgoSync"]') ||
+            document.querySelector('button[type="submit"]');
+
+        if (!btn) return;
+
+        btn.innerText = txt;
+        btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
+    }
+
+    function isValidName(name) {
+        if (!name || typeof name !== 'string') return false;
+        const trimmed = name.trim();
+        if (trimmed.length < 2) return false;
+        return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
+    }
+
+    function isValidClass(cls) {
+        if (!cls) return false;
+        const s = String(cls).trim().toUpperCase();
+        return s.length >= 1 && s.length <= 20;
+    }
+
+    // 🔥 Implementation Pointers
+    window.performLogin_impl = performLogin;
+    window.performSync_impl = performArgoSync;
+    window.navigate_impl = navigate;
+    window.render_impl = render;
+    window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
+    window.closeModal_impl = closeModal;
+    window.openArgoLogin_impl = openArgoLogin;
+    window.performArgoSync_impl = performArgoSync;
+    window.selectProfile_impl = selectProfile;
+    window.switchProfile_impl = switchProfile;
+    window.handleLoginSuccess_impl = handleLoginSuccess;
+    window.checkServerHealth_impl = checkServerHealth;
+    window.showProfileSelectionModal_impl = showProfileSelectionModal;
+
 
     async function switchProfile() {
         const stored = sessionManager.load();
@@ -5948,158 +5905,12 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
     }
 
-    // Esposizione Globale
-    window.performArgoSync = performArgoSync;
-    window.handleLoginSuccess = handleLoginSuccess;
-    window.showProfileSelectionModal = showProfileSelectionModal;
-    window.selectProfile = selectProfile;
-    window.switchProfile = switchProfile;
-
-    async function publishPost() {
-        const textEl = document.getElementById('new-post-text');
-        const text = textEl ? textEl.value.trim() : "";
-        const isAnon = document.getElementById('post-anon-toggle')?.checked || false;
-        const imgPreview = document.querySelector('#image-preview img');
-        const pollUI = document.getElementById('poll-creator-ui');
-        const isPoll = pollUI && pollUI.style.display === 'block';
-
-        if (!text && !imgPreview) return;
-
-        const newPost = {
-            id: Date.now(),
-            author: isAnon ? "Studente" : (state.user.name || "Utente"),
-            authorId: state.user.id,
-            class: isAnon ? "Studente" : ((state.user.class || "5B") + (state.user.specialization || "")),
-            text: text,
-            likes: 0,
-            liked: false,
-            anon: isAnon,
-            type: isPoll ? 'poll' : 'text',
-            authorAvatar: isAnon ? null : state.user.avatar,
-            image: imgPreview ? imgPreview.src : null,
-            comments: [],
-            pinned: false
-        };
-
-    }
-
-    // Modal and other utilities
-
-    function getModalContainer() { return document.getElementById('modals'); }
-
-    /**
-     * 🔥 EXPERT MODAL UTILITY
-     * Renders a generic modal with the provided HTML content.
-     */
-    function showModal(html, className = '') {
-        const container = getModalContainer();
-        if (!container) return;
-
-        container.innerHTML = `
-                <div class="modal-overlay" onclick="closeModal(event)" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; animation: fadeIn 0.3s ease;">
-                    <div class="modal-content ${className}" onclick="event.stopPropagation()" style="background:#1a1a1a; width:100%; max-width:400px; border-radius:30px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); position:relative; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
-                        ${html}
-                   </div>
-               </div>
-            `;
-        container.style.display = 'block';
-    }
-
-    function closeModal(e) {
-        if (!e || e.target.classList.contains('modal-overlay')) {
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-            const modalOverlay = document.querySelector('.modal-overlay');
-            if (modalOverlay) {
-                modalOverlay.style.animation = 'modalFadeOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
-                setTimeout(() => {
-                    modalContainer.innerHTML = '';
-                    updateHomeView();
-                }, 150);
-            } else {
-                modalContainer.innerHTML = '';
-                updateHomeView();
-            }
-        }
-    }
 
 
 
 
-    function forceAppUpdate() {
-        if (!confirm("Sei sicuro? Questo cancellerà tutti i dati salvati localmente (cache) e forzerà un aggiornamento totale.")) return;
-        showBoot("Pulizia profonda in corso...");
 
-        // Clear everything
-        const keep = ['sb-qjmjidnzgixspssqdffy-auth-token']; // Mantieni solo il login se possibile? No, meglio tutto per sicurezza
-        Object.keys(localStorage).forEach(key => {
-            localStorage.removeItem(key);
-        });
 
-        // Clear caches (Service Workers)
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                for (let name of names) caches.delete(name);
-            });
-        }
-
-        setTimeout(() => {
-            window.location.href = window.location.href.split('#')[0] + '?update=' + Date.now();
-        }, 1000);
-    }
-
-    function showUserProfile(userId) {
-        // 🔥 NORMALIZED LOOKUP: Use lowercase for case-insensitive matching
-        const normUserId = String(userId).toLowerCase().replace(/\s+/g, '');
-        const u = (state.lastSearchResults || []).find(d => String(d.id).toLowerCase().replace(/\s+/g, '') === normUserId) ||
-            DIRECTORY.find(d => String(d.id).toLowerCase().replace(/\s+/g, '') === normUserId);
-        const threadData = state.threads ? state.threads.find(t => String(t.otherId).toLowerCase().replace(/\s+/g, '') === normUserId) : null;
-
-        // Fallback content
-        const name = u?.name || 'Utente';
-        const avatar = u?.avatar || state.currentChatAvatar || threadData?.otherAvatar || '';
-        const rawClass = u?.class || state.currentChatClass || threadData?.otherClass || '';
-
-        // 🔥 PULIZIA CLASSE: Se la classe contiene già l'indirizzo (es. "5D SA"), estrai solo la base ("5D")
-        // per evitare di scriverlo due volte nella UI
-        let cleanClass = rawClass;
-        const indirizzoMatch = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|LS|CAT|AFM|ITI)\b/);
-        if (indirizzoMatch) {
-            cleanClass = rawClass.replace(new RegExp(indirizzoMatch[0], 'i'), '').trim();
-        }
-
-        const role = (rawClass && !isNaN(parseInt(rawClass))) ? 'Studente' : 'Docente/Utente';
-
-        showModal(`
-                <div style="text-align:center; padding: 24px 16px;">
-                    <div style="display:inline-block; border: 3px solid var(--primary); padding: 4px; border-radius: 50%; margin-bottom: 20px;">
-                        ${renderAvatar(name, 90, avatar)}
-                   </div>
-                    
-                    <h2 style="margin: 0 0 4px 0; color:white; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">${name}</h2>
-                    <div style="display:flex; justify-content:center; gap:8px; margin-bottom: 24px; opacity: 0.8;">
-                        <span style="padding: 4px 12px; background:rgba(255,255,255,0.1); border-radius:20px; font-size:12px; font-weight:600; color:white;">
-                            ${role}
-                       </span>
-                        ${cleanClass ? `<span style="padding: 4px 12px; background:var(--primary); border-radius:20px; font-size:12px; font-weight:600; color:white;">Classe ${cleanClass}</span>` : ''}
-                   </div>
-
-                    <div style="background:rgba(255,255,255,0.03); border-radius:20px; padding: 20px; margin-bottom: 24px; text-align:left; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <i class="ph ph-book-open" style="font-size:24px; color:var(--primary);"></i>
-                            <div>
-                                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">Indirizzo di Studi</div>
-                                <div style="color:white; font-weight:600;">${getSpecializationFullName(u?.specialization, rawClass)}</div>
-                           </div>
-                       </div>
-                   </div>
-                    
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <button onclick="closeModal()" style="width:100%; padding: 14px; background:rgba(255,255,255,0.08); border-radius:16px; color:white; font-weight:700; font-size:15px; border:none; cursor:pointer;">Chiudi</button>
-                   </div>
-               </div>
-            `, 'profilo');
-    }
 
     // --- missing fluidity functions ---
 
@@ -7180,37 +6991,21 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         });
     }
 
-    window.showStressCaptureModal = showDetailedStressModal;
-    window.drawWeeklyStressChart = drawWeeklyStressChart;
-    window.showProfileSelector = showProfileSelector;
-    window.performProfileLogin = performProfileLogin;
     // --- GLOBAL EXPOSURE (CRITICAL FOR BUTTONS) ---
     window.performLogin = performLogin;
-    window.performSync = performSync;
-    window.testBackendConnection = testBackendConnection;
+    window.performSync = performArgoSync; // Unified
+    window.testBackendConnection = checkServerHealth; // Unified
     window.showQuickAddTaskModal = showQuickAddTaskModal;
     window.showPlanWeekModal = showPlanWeekModal;
-    window.showCompetencyInputModal = showCompetencyInputModal; // For AI button
     window.showVotiView = showVotiView;
     window.navigate = navigate;
     window.logout = logout;
-    window.saveProfileChanges = saveProfileChanges;
     window.openArgoLogin = openArgoLogin;
     window.checkServerHealth = checkServerHealth;
-
-    // ERROR HANDLER
-    window.onerror = function (msg, url, line) {
-        // Ignora errori di resize loop
-        if (msg.includes('ResizeObserver')) return false;
-        alert("Errore Script: " + msg + "\nLinea: " + line);
-        return false;
-    };
-
-    // Previous exposures
-    window.showStressCaptureModal = showDetailedStressModal;
-    window.drawWeeklyStressChart = drawWeeklyStressChart;
-    window.showProfileSelector = showProfileSelector;
-    window.performProfileLogin = performProfileLogin;
+    window.handleLoginSuccess = handleLoginSuccess;
+    window.showProfileSelectionModal = showProfileSelectionModal;
+    window.selectProfile = selectProfile;
+    window.switchProfile = switchProfile;
     // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
     function initCustomScrollbar() {
         const scroller = document.getElementById('custom-scrollbar');
