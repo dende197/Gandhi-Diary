@@ -45,7 +45,7 @@ app.use(cors({
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
     // Nuova chiave fornita dall'utente (AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM';
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBR20l7wmXh81NmmhOGp2ut1yTdmV9kwpc';
 
     if (!GEMINI_KEY) {
         console.error("❌ ERRORE CRITICO: GEMINI_API_KEY mancante!");
@@ -134,50 +134,75 @@ app.get('/api/circolari', async (req, res) => {
 // 2. Sintesi AI Circolare (Legge PDF e riassume)
 app.post('/api/circolari/sintesi', async (req, res) => {
     const { link, id } = req.body;
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM';
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBR20l7wmXh81NmmhOGp2ut1yTdmV9kwpc';
 
     if (!link) return res.status(400).json({ error: "Link mancante" });
 
     try {
         let textContent = "";
+        let finalPdfUrl = link;
 
-        if (link.toLowerCase().endsWith('.pdf')) {
-            debugLog(`Scaricando PDF circolare: ${link}`);
-            const pdfRes = await axios.get(link, { responseType: 'arraybuffer', timeout: 15000 });
-            const data = await pdfParse(pdfRes.data);
-            textContent = data.text;
-        } else {
-            debugLog(`Scraping HTML circolare: ${link}`);
+        // Se il link non è un PDF, cerchiamo l'allegato nella pagina HTML
+        if (!link.toLowerCase().endsWith('.pdf')) {
+            debugLog(`Scraping HTML circolare per PDF: ${link}`);
             const htmlRes = await axios.get(link, { timeout: 10000 });
             const $ = cheerio.load(htmlRes.data);
-            textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
+
+            // Cerchiamo i link PDF negli allegati
+            const pdfLinks = [];
+            $('#attachmentsList a[href*=".pdf"]').each((i, el) => {
+                pdfLinks.push($(el).attr('href'));
+            });
+
+            if (pdfLinks.length > 0) {
+                // Preferiamo il link che contiene "circolare" o "comunicato"
+                const bestLink = pdfLinks.find(url => url.toLowerCase().includes('circolare') || url.toLowerCase().includes('comunicato')) || pdfLinks[0];
+                finalPdfUrl = (bestLink.startsWith('http') ? bestLink : `https://www.liceogandhi.edu.it${bestLink}`).trim();
+                debugLog(`Trovato PDF allegato: [${finalPdfUrl}]`);
+            } else {
+                // Fallback al testo della pagina se non trovo PDF
+                textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
+            }
         }
 
-        if (!textContent || textContent.length < 50) {
-            return res.json({ success: true, sintesi: "Testo non estraibile o troppo breve." });
+        // Se abbiamo un PDF (originale o trovato), lo scarichiamo e analizziamo
+        if (finalPdfUrl.toLowerCase().endsWith('.pdf') && !textContent) {
+            try {
+                debugLog(`Scaricando PDF circolare: ${finalPdfUrl}`);
+                const pdfRes = await axios.get(finalPdfUrl, {
+                    headers: { 'User-Agent': USER_AGENT, 'Referer': 'https://www.liceogandhi.edu.it/' },
+                    responseType: 'arraybuffer',
+                    timeout: 15000
+                });
+                const data = await pdfParse(pdfRes.data);
+                textContent = data.text;
+                debugLog(`PDF scaricato e analizzato: ${textContent.length} caratteri.`);
+            } catch (pdfErr) {
+                console.error("PDF Download/Parse Error:", pdfErr.message);
+                if (pdfErr.response) console.error("Status:", pdfErr.response.status, pdfErr.response.headers);
+                // Fallback logic could go here
+            }
         }
 
         // Sintesi AI
-        const prompt = `Sei un assistente per studenti. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, chiari e utili per uno studente. Se ci sono date o scadenze, evidenziale.
+        const prompt = `Sei un assistente per studenti del Liceo Gandhi. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, molto chiari e pratici. Se ci sono date, scadenze, classi coinvolte o orari, evidenziali chiaramente.
 
-Circolare: "${textContent.substring(0, 5000)}"
+Circolare: "${textContent.substring(0, 7000)}"`;
 
-Formato (solo i punti elenco):
-• Punto 1
-• Punto 2
-...`;
-
+        debugLog("Inviando richiesta a Gemini...");
         const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
         const aiResponse = await axios.post(aiUrl, {
             contents: [{ parts: [{ text: prompt }] }]
-        });
+        }, { timeout: 20000 });
 
         const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
+        debugLog("Sintesi generata con successo.");
 
         res.json({ success: true, sintesi, id });
 
     } catch (error) {
         console.error("Synthesis Error:", error.message);
+        if (error.response) console.error("AI Error Data:", JSON.stringify(error.response.data));
         res.status(500).json({ success: false, error: error.message });
     }
 });
