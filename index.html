@@ -7329,6 +7329,16 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     window.navigate = navigate;
     window.logout = logout;
     window.saveProfileChanges = saveProfileChanges;
+    window.openArgoLogin = openArgoLogin;
+    window.checkServerHealth = checkServerHealth;
+
+    // ERROR HANDLER
+    window.onerror = function (msg, url, line) {
+        // Ignora errori di resize loop
+        if (msg.includes('ResizeObserver')) return false;
+        alert("Errore Script: " + msg + "\nLinea: " + line);
+        return false;
+    };
 
     // Previous exposures
     window.showStressCaptureModal = showDetailedStressModal;
