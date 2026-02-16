@@ -84,8 +84,8 @@ app.get('/api/circolari', async (req, res) => {
     }
 
     try {
-        const SCHOOL_URL = 'https://www.gandhinarni.edu.it/albo-online';
-        debugLog(`Scraping Albo Online da: ${SCHOOL_URL}`);
+        const SCHOOL_URL = 'https://www.liceogandhi.edu.it/categoria/storico-circolari/';
+        debugLog(`Scraping Storico Circolari da: ${SCHOOL_URL}`);
 
         const response = await axios.get(SCHOOL_URL, {
             headers: { 'User-Agent': USER_AGENT },
@@ -95,12 +95,15 @@ app.get('/api/circolari', async (req, res) => {
         const $ = cheerio.load(response.data);
         const circolari = [];
 
-        $('.at-item').each((i, el) => {
-            const title = $(el).find('.media-heading').text().trim();
-            // Trova il primo link Spaggiari (solitamente il PDF principale)
-            const link = $(el).find('a[href*="Documenti"]').first().attr('href');
-            const date = $(el).find('.list-group-item strong').first().text().trim() || new Date().toLocaleDateString('it-IT');
-            const numero = $(el).find('.media-left h3').text().trim() || (i + 1);
+        $('.card-wrapper').each((i, el) => {
+            const titleElem = $(el).find('.card-title a');
+            const title = titleElem.text().trim();
+            const link = titleElem.attr('href');
+            const date = $(el).find('.category-date').text().trim() || new Date().toLocaleDateString('it-IT');
+
+            // Estrazione numero circolare
+            const numeroMatch = title.match(/n\.?\s*(\d+)/i);
+            const numero = numeroMatch ? numeroMatch[1] : (i + 1);
 
             if (title && link && circolari.length < 10) {
                 circolari.push({
@@ -114,7 +117,7 @@ app.get('/api/circolari', async (req, res) => {
         });
 
         if (circolari.length === 0) {
-            debugLog("⚠️ Nessuna circolare trovata con i selettori attuali.");
+            debugLog("⚠️ Nessuna circolare trovata in Storico Circolari.");
         }
 
         circularsCache.data = circolari;
