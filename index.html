@@ -408,6 +408,25 @@
                 font-size: 26px !important;
             }
 
+            /* HERO RESPONSIVE OVERRIDES */
+            .hero-container {
+                padding: 32px 20px 28px !important;
+                border-radius: 20px !important;
+            }
+
+            .hero-title {
+                font-size: 26px !important;
+            }
+
+            .hero-subtitle {
+                font-size: 11px !important;
+                margin-bottom: 6px !important;
+            }
+
+            .hero-status {
+                font-size: 14px !important;
+            }
+
             /* Nav items — proper touch targets without breaking layout */
             .nav-item {
                 padding: 10px 12px;
@@ -577,6 +596,43 @@
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 16px;
             margin-top: 16px;
+        }
+
+        /* HERO BASE STYLES */
+        .hero-container {
+            position: relative;
+            padding: 48px 32px 42px;
+            border-radius: 24px;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            text-align: left;
+        }
+
+        .hero-title {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -0.8px;
+            margin-bottom: 10px;
+            line-height: 1.1;
+            color: white;
+        }
+
+        .hero-subtitle {
+            font-size: 13px;
+            color: var(--accent);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+        }
+
+        .hero-status {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            font-weight: 600;
         }
 
         /* === INPUTS === */
@@ -1641,7 +1697,7 @@
     };
 
     // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
-    const APP_VERSION = "1.1.8-ai-polish";
+    const APP_VERSION = "1.1.22-master";
 
 
 
@@ -3864,21 +3920,17 @@
         <div class="view" style="animation: slideUp 0.4s ease-out;">
 
             <!-- HERO -->
-            <div style="position: relative; padding: 48px 32px 42px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.05);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
-                overflow: hidden; text-align: left;">
+            <div class="hero-container">
                 <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
                 <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
                 <div style="position: relative; z-index: 1;">
-                    <p style="font-size: 13px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">
+                    <p class="hero-subtitle">
                         ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
-                    <h1 style="font-size: 32px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 10px; line-height: 1.1; color: white;">
+                    <h1 class="hero-title">
                         ${greeting},<br>${state.user.name.split(' ')[0]}
                     </h1>
-                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 16px; font-weight: 600;">
+                    <p class="hero-status">
                         ${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
                     </p>
                 </div>

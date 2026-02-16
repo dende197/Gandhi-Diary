@@ -84,8 +84,8 @@ app.get('/api/circolari', async (req, res) => {
     }
 
     try {
-        const SCHOOL_URL = 'https://www.liceogandhi.edu.it/circolari'; // URL base
-        debugLog(`Scraping circolari da: ${SCHOOL_URL}`);
+        const SCHOOL_URL = 'https://www.gandhinarni.edu.it/albo-online';
+        debugLog(`Scraping Albo Online da: ${SCHOOL_URL}`);
 
         const response = await axios.get(SCHOOL_URL, {
             headers: { 'User-Agent': USER_AGENT },
@@ -95,27 +95,27 @@ app.get('/api/circolari', async (req, res) => {
         const $ = cheerio.load(response.data);
         const circolari = [];
 
-        // Sellettore tipico per WordPress/Siti scolastici (adattato)
-        // Nota: Il selettore potrebbe variare, usiamo una ricerca generica per link .pdf o classi comuni
-        $('.wp-block-post-title a, .entry-title a, a[href*="circolare"]').each((i, el) => {
-            const title = $(el).text().trim();
-            const link = $(el).attr('href');
-            
-            if (title && link && circolari.length < 10) {
-                // Cerchiamo di trovare la data nel contenitore padre
-                const parentText = $(el).closest('article, .post, div').text();
-                const dateMatch = parentText.match(/(\d{2}[/-]\d{2}[/-]\d{4})/);
-                const date = dateMatch ? dateMatch[1] : new Date().toLocaleDateString('it-IT');
+        $('.at-item').each((i, el) => {
+            const title = $(el).find('.media-heading').text().trim();
+            // Trova il primo link Spaggiari (solitamente il PDF principale)
+            const link = $(el).find('a[href*="Documenti"]').first().attr('href');
+            const date = $(el).find('.list-group-item strong').first().text().trim() || new Date().toLocaleDateString('it-IT');
+            const numero = $(el).find('.media-left h3').text().trim() || (i + 1);
 
+            if (title && link && circolari.length < 10) {
                 circolari.push({
                     id: generateStableId(link),
                     titolo: title,
                     data: date,
-                    link: link.startsWith('http') ? link : `https://www.liceogandhi.edu.it${link}`,
-                    numero: title.match(/\d+/) ? title.match(/\d+/)[0] : (i + 1)
+                    link: link,
+                    numero: numero
                 });
             }
         });
+
+        if (circolari.length === 0) {
+            debugLog("⚠️ Nessuna circolare trovata con i selettori attuali.");
+        }
 
         circularsCache.data = circolari;
         circularsCache.timestamp = now;
@@ -123,7 +123,8 @@ app.get('/api/circolari', async (req, res) => {
         res.json({ success: true, circolari });
     } catch (error) {
         console.error("Scraping Error:", error.message);
-        res.status(500).json({ success: false, error: "Impossibile recuperare le circolari." });
+        // Ritorniamo array vuoto invece di 500 per grazia del frontend
+        res.json({ success: true, circolari: [], error: "Scraping fallito" });
     }
 });
 
@@ -169,7 +170,7 @@ Formato (solo i punti elenco):
         });
 
         const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
-        
+
         res.json({ success: true, sintesi, id });
 
     } catch (error) {
