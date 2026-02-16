@@ -26,12 +26,12 @@
            ============================================ */
 
         :root {
-            --bg-body: #000000;
-            /* Pure Black */
-            --bg-card: #0a0a0a;
-            /* Deep Black Card */
-            --bg-card-hover: #121212;
-            --bg-input: #080808;
+            --bg-body: #121214;
+            /* Softer Dark Gray */
+            --bg-card: #1a1a1c;
+            /* Deep Grey Card */
+            --bg-card-hover: #222224;
+            --bg-input: #0f0f11;
 
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
@@ -52,8 +52,8 @@
 
             --card-border: 1px solid rgba(255, 255, 255, 0.08);
             /* Liquid Glass Border */
-            --card-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
-            --glass-bg: rgba(10, 10, 10, 0.6);
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            --glass-bg: rgba(26, 26, 28, 0.7);
             --glass-blur: blur(20px);
 
             --radius-xl: 22px;
@@ -332,9 +332,43 @@
             margin-top: 24px;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
+            :root {
+                --glass-blur: blur(8px);
+                /* Reduced for performance */
+                --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+
             .dashboard-grid {
                 grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .glass-panel,
+            .metric-card.stress,
+            .metric-card.media {
+                backdrop-filter: none !important;
+                /* Disable expensive filter on mobile */
+                -webkit-backdrop-filter: none !important;
+                background: rgba(30, 30, 34, 0.9) !important;
+            }
+
+            .view {
+                padding: 20px 16px 100px 16px;
+            }
+
+            h1 {
+                font-size: 26px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .metrics-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .metric-card {
+                min-height: 100px;
             }
         }
 
@@ -1704,76 +1738,45 @@
         return await sha256Hex(`${x}|${y}`);
     }
 
-    // === Outbox for publish offline/errore: posts & market ===
-    function enqueueOutbox(kind, item) {
-        const key = lsKey(`outbox_${kind}`);
-        const list = JSON.parse(localStorage.getItem(key) || '[]');
-        list.push(item);
-        localStorage.setItem(key, JSON.stringify(list));
-    }
-
-    // --- OUTBOX: anti-replay (non inviare payload più vecchi dell’ultimo timestamp locale) ---
+    // --- OUTBOX: anti-replay for planner ---
     async function flushOutbox() {
-        for (const kind of ['posts', 'market', 'planner']) {
-            const key = lsKey(`outbox_${kind}`);
-            const list = JSON.parse(localStorage.getItem(key) || '[]');
-            if (!list.length) continue;
+        const key = lsKey('outbox_planner');
+        const list = JSON.parse(localStorage.getItem(key) || '[]');
+        if (!list.length) return;
 
-            const kept = [];
-            for (const it of list) {
-                try {
-                    if (kind === 'planner') {
-                        const userId = it.userId;
-                        const payload = it.payload || {};
-                        const payloadUpdatedAt = payload.updatedAt || null;
-                        const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
+        const kept = [];
+        for (const it of list) {
+            try {
+                const userId = it.userId;
+                const payload = it.payload || {};
+                const payloadUpdatedAt = payload.updatedAt || null;
+                const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                        if (payloadUpdatedAt && localUpdatedAt &&
-                            new Date(payloadUpdatedAt).getTime() < new Date(localUpdatedAt).getTime()) {
-                            console.log("⏭️ Outbox planner saltato (payload più vecchio del locale)");
-                            continue;
-                        }
+                if (payloadUpdatedAt && localUpdatedAt &&
+                    new Date(payloadUpdatedAt).getTime() < new Date(localUpdatedAt).getTime()) {
+                    console.log("⏭️ Outbox planner saltato (payload più vecchio del locale)");
+                    continue;
+                }
 
-                        const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const data = await res.json().catch(() => ({ success: false }));
-                        if (data.success) {
-                            if (data.data?.updatedAt) {
-                                localStorage.setItem(lsKey('planner_updated_at'), data.data.updatedAt);
-                            }
-                            console.log("📤 Outbox planner sincronizzato");
-                        } else {
-                            kept.push(it);
-                        }
-                    } else {
-                        const endpoint = kind === 'posts' ? `${API_BASE_URL}/api/posts` : `${API_BASE_URL}/api/market`;
-                        const res = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(it)
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            if (kind === 'posts') {
-                                state.posts = (data.data || state.posts).map(p => normalizePost(p, getUserId()));
-                                localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                            } else {
-                                state.marketItems = data.data || state.marketItems;
-                                localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
-                            }
-                        } else {
-                            kept.push(it);
-                        }
+                const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json().catch(() => ({ success: false }));
+                if (data.success) {
+                    if (data.data?.updatedAt) {
+                        localStorage.setItem(lsKey('planner_updated_at'), data.data.updatedAt);
                     }
-                } catch (e) {
+                    console.log("📤 Outbox planner sincronizzato");
+                } else {
                     kept.push(it);
                 }
+            } catch (e) {
+                kept.push(it);
             }
-            localStorage.setItem(key, JSON.stringify(kept));
         }
+        localStorage.setItem(key, JSON.stringify(kept));
     }
 
     // 🆕 PERSISTENT SESSION MANAGER
@@ -1998,7 +2001,6 @@
             }
 
             (async () => {
-                await fetchUsersDirectory();
                 await performSync();
             })();
         } else {
@@ -2039,216 +2041,7 @@
         }
     }
 
-    // ✅ Normalize server(Supabase) records to frontend format
-    function normalizePost(p, myId) {
-        // 🔥 DEFENSIVE: Se il server torna "Utente" ma abbiamo dati migliori in cache, o è l'utente corrente, preserviamo l'identità
-        let author = p?.author ?? p?.author_name ?? "Utente";
-        let authorAvatar = p?.authorAvatar ?? p?.author_avatar ?? null;
-
-        // 1. Check if it's ME (current user)
-        const resolvedId = p?.author_id || p?.authorId;
-        const isMe = (resolvedId === getUserId()) ||
-            (author === state.user.name && author !== "Utente");
-
-        if (isMe) {
-            author = state.user.name || author;
-            authorAvatar = state.user.avatar || authorAvatar;
-        }
-        // 2. Secondary Fallback: Check Directory (if server-side join failed)
-        else if (author === "Utente" || !authorAvatar) {
-            const globalUser = (typeof DIRECTORY !== 'undefined') ? DIRECTORY.find(u => u.id === resolvedId) : null;
-            if (globalUser) {
-                author = globalUser.name || author;
-                authorAvatar = globalUser.avatar || authorAvatar;
-            }
-        }
-
-        const comments = (p?.comments || []).map(c => {
-            let cAuthor = c.author || "Utente";
-            let cAvatar = c.author_avatar || null;
-            const cId = c.author_id;
-
-            if (isMe) {
-                cAuthor = state.user.name || cAuthor;
-                cAvatar = state.user.avatar || cAvatar;
-            } else if (cAuthor === "Utente" || !cAvatar) {
-                const gU = (typeof DIRECTORY !== 'undefined') ? DIRECTORY.find(u => u.id === cId) : null;
-                if (gU) {
-                    cAuthor = gU.name || cAuthor;
-                    cAvatar = gU.avatar || cAvatar;
-                }
-            }
-
-            return {
-                author: cAuthor,
-                author_id: cId || null,
-                author_avatar: cAvatar,
-                text: c.text || "",
-                created_at: c.created_at
-            };
-        });
-
-        return {
-            id: p?.id ?? Date.now(),
-            author,
-            authorId: resolvedId ?? null,
-            authorAvatar,
-            class: p?.class ?? "5B",
-            text: p?.text ?? "",
-            image: p?.image ?? null,
-            anon: !!(p?.anon ?? false),
-            likes: Array.isArray(p?.likes) ? p.likes : (typeof p?.likes === 'number' ? p.likes : 0),
-            liked: Array.isArray(p?.likes) ? p.likes.includes(myId) : !!(p?.liked ?? false),
-            comments,
-            type: p?.type ?? 'text',
-            pinned: !!p?.pinned,
-            created_at: p?.created_at || p?.timestamp
-        };
-    }
-
-    function normalizeMarketItem(i) {
-        const images = Array.isArray(i?.images) ? i.images : (i?.image ? [i.image] : []);
-        let seller = i?.seller ?? i?.seller_name ?? "Utente";
-        let sellerAvatar = i?.sellerAvatar ?? i?.seller_avatar ?? null;
-        const sellerId = i?.seller_id || i?.sellerId;
-
-        // 🔥 DEFENSIVE: Evita downgrade a "Utente"
-        if (sellerId === getUserId() || (seller === state.user.name && seller !== "Utente")) {
-            seller = state.user.name || seller;
-            sellerAvatar = state.user.avatar || sellerAvatar;
-        }
-        // Fallback via Directory
-        else if (seller === "Utente" || !sellerAvatar) {
-            const globalUser = (typeof DIRECTORY !== 'undefined') ? DIRECTORY.find(u => u.id === sellerId) : null;
-            if (globalUser) {
-                seller = globalUser.name || seller;
-                sellerAvatar = globalUser.avatar || sellerAvatar;
-            }
-        }
-
-        return {
-            id: i?.id ?? Date.now(),
-            title: i?.title ?? "",
-            price: i?.price ?? "",
-            description: i?.description ?? "",
-            images,
-            image: images[0] || null,
-            status: i?.status ?? 'available',
-            seller,
-            sellerId: sellerId ?? null,
-            sellerAvatar,
-            pinned: !!i?.pinned,
-            created_at: i?.created_at || i?.timestamp
-        };
-    }
-    async function fetchUsersDirectory() {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/users`);
-            const data = await res.json();
-            if (data.success && data.data) {
-                DIRECTORY = data.data;
-                console.log("📂 Directory synchronized:", DIRECTORY.length);
-            }
-        } catch (e) {
-            console.warn("Directory sync failed:", e.message);
-        }
-    }
-
-    function addPollOption() {
-        const container = document.getElementById('pollOptionsContainer');
-        if (!container) return;
-        const idx = container.children.length;
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.gap = '8px';
-        div.innerHTML = `
-                <input type="text" class="poll-option-input" placeholder="Opzione ${idx + 1}" style="flex:1; height:40px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:0 12px;">
-                <button onclick="this.parentElement.remove()" style="width:40px; height:40px; border-radius:12px; border:none; background:rgba(255,69,58,0.1); color:var(--red); cursor:pointer;"><i class="ph ph-trash"></i></button>
-            `;
-        container.appendChild(div);
-    }
-
-    // ⭐ PERSISTENCE HELPERS (New API)
-    async function fetchFeed() {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/posts`);
-            const data = await res.json();
-            if (data.success) {
-                state.posts = (data.data || []).map(p => normalizePost(p, getUserId()));
-                localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                render(); // ✅ Re-render with fresh server data
-                console.log("📝 Feed (server) → cache & UI updated:", state.posts.length);
-            } else {
-                throw new Error(data.error || 'failed');
-            }
-        } catch (e) {
-            console.warn("Feed offline/errore, uso cache:", e.message);
-            const cached = localStorage.getItem(globalKey('posts'));
-            state.posts = cached ? JSON.parse(cached).map(p => normalizePost(p, getUserId())) : [];
-        }
-    }
-
-    async function fetchMarket() {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/market`);
-            const data = await res.json();
-            if (data.success) {
-                state.marketItems = (data.data || []).map(normalizeMarketItem);
-                localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
-                render(); // ✅ Re-render with fresh server data
-                console.log("🛒 Market (server) → cache & UI updated:", state.marketItems.length);
-            } else {
-                throw new Error(data.error || 'failed');
-            }
-        } catch (e) {
-            console.warn("Market offline/errore, uso cache:", e.message);
-            const cached = localStorage.getItem(globalKey('market'));
-            state.marketItems = cached ? JSON.parse(cached).map(normalizeMarketItem) : [];
-        }
-    }
-
-    async function fetchThreads() {
-        const myId = getUserId();
-        if (!myId) return;
-
-        try {
-            // v7.0 - Fetch from Relational API
-            const res = await fetch(`${API_BASE_URL}/api/conversations/user/${myId}`);
-            const data = await res.json();
-            if (data.success) {
-                state.threads = (data.data || []).map(t => {
-                    const dirUser = DIRECTORY.find(u => String(u.id).toLowerCase() === String(t.otherId).toLowerCase());
-                    return {
-                        threadId: t.id,
-                        otherId: t.otherId,
-                        otherName: t.otherName || dirUser?.name || "Utente",
-                        otherAvatar: t.otherAvatar || dirUser?.avatar,
-                        otherClass: t.otherClass || (dirUser?.class ? 'Classe ' + dirUser.class : ''), // 🔥 DNA FALLBACK PREP
-                        lastText: t.lastMessage || "",
-                        lastTime: t.lastAt,
-                        senderId: t.senderId,
-                        unread: false
-                    };
-                });
-                render();
-                localStorage.setItem(lsKey('threads'), JSON.stringify(state.threads));
-            }
-        } catch (e) {
-            console.warn("Fetch threads failed:", e);
-            // Fallback cache logic
-            const cached = localStorage.getItem(lsKey('threads'));
-            if (cached) state.threads = JSON.parse(cached);
-        }
-    }
-
-    let _threadsPoller = null;
-
-    function startThreadsPolling() {
-        if (_threadsPoller) clearInterval(_threadsPoller);
-        _threadsPoller = setInterval(() => {
-            if (sessionManager.isLoggedIn()) fetchThreads();
-        }, 12000);
-    }
+    // Global caches removed (Social/Market/Chat)
 
     // Carica planner dal server: non sovrascrivere locale se il remoto è vuoto e il locale ha dati
     // --- FETCH: blindato anti-wipe + last-write-wins ---
@@ -2317,96 +2110,7 @@
     }
 
     /* --- GLOBAL STATE STUDIO --- */
-    async function fetchPolls() {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/polls`);
-            const data = await res.json();
-            if (data.success) {
-                state.polls = data.data || [];
-                localStorage.setItem(globalKey('polls'), JSON.stringify(state.polls));
-                render();
-            }
-        } catch (e) {
-            console.warn("fetchPolls failed:", e.message);
-            const cached = localStorage.getItem(globalKey('polls'));
-            if (cached) state.polls = JSON.parse(cached);
-        }
-    }
-
-    async function submitPollVote(pollId, choiceId) {
-        const voterId = getUserId();
-        if (!voterId || voterId === 'guest') { alert('Devi essere loggato per votare'); return; }
-
-        const poll = state.polls.find(p => p.id === pollId);
-        if (poll) {
-            const prev = poll.voters ? poll.voters[voterId] : null;
-            if (prev === choiceId) return;
-            poll.voters = poll.voters || {};
-            poll.voters[voterId] = choiceId;
-            poll.choices = poll.choices.map(c => {
-                if (c.id === choiceId) return { ...c, votes: (c.votes || 0) + 1 };
-                if (prev && c.id === prev) return { ...c, votes: Math.max(0, (c.votes || 0) - 1) };
-                return c;
-            });
-            render();
-        }
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/polls/${encodeURIComponent(pollId)}/vote`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ voterId, choiceId })
-            });
-            const data = await res.json();
-            if (data.success) {
-                const idx = state.polls.findIndex(p => p.id === pollId);
-                if (idx > -1) state.polls[idx] = data.data;
-                localStorage.setItem(globalKey('polls'), JSON.stringify(state.polls));
-                render();
-            }
-        } catch (e) {
-            console.error("submitPollVote error:", e);
-        }
-    }
-
-    function renderPollWidget() {
-        const poll = (state.polls && state.polls[0]) || null;
-        if (!poll) return '';
-
-        const voterId = getUserId();
-        const userChoice = poll.voters ? poll.voters[voterId] : null;
-        const totalVotes = poll.choices.reduce((s, x) => s + (x.votes || 0), 0);
-
-        return `
-            <div class="card glass-panel" style="padding: 20px; margin-bottom: 24px; border: 1px solid rgba(10, 132, 255, 0.3);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="width:8px; height:8px; background:var(--blue); border-radius:50%; animation: pulse 2s infinite;"></div>
-                        <div style="font-weight:800; color: var(--blue); text-transform: uppercase; font-size:11px; letter-spacing:1px;">Sondaggio Community</div>
-                   </div>
-               </div>
-                <div style="font-size:19px; font-weight:800; color:white; margin-bottom:20px; line-height:1.3;">${poll.question}</div>
-                <div style="display:flex; flex-direction:column; gap:12px;">
-                    ${poll.choices.map(c => {
-            const pct = totalVotes ? Math.round(((c.votes || 0) / totalVotes) * 100) : 0;
-            const isSelected = userChoice === c.id;
-            return `
-                        <button onclick="submitPollVote('${poll.id}','${c.id}')" style="position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-radius:14px; border:1px solid ${isSelected ? 'var(--blue)' : 'rgba(255,255,255,0.08)'}; background:${isSelected ? 'rgba(10, 132, 255, 0.1)' : 'rgba(255,255,255,0.03)'}; color:white; font-weight:700; cursor:pointer; transition: all 0.2s;">
-                            <div style="position:absolute; left:0; top:0; bottom:0; width:${pct}%; background:rgba(10, 132, 255, 0.1); z-index:0; transition: width 0.5s ease-out;"></div>
-                            <span style="position:relative; z-index:1; display:flex; align-items:center; gap:8px;">
-                                ${isSelected ? '<i class="ph-fill ph-check-circle" style="color:var(--blue);"></i>' : ''}
-                                ${c.text}
-                           </span>
-                            <span style="position:relative; z-index:1; font-size:13px; font-weight:800; color:${isSelected ? 'var(--blue)' : 'var(--text-muted)'};">${pct}%</span>
-                       </button>
-                        `;
-        }).join('')}
-               </div>
-                <div style="margin-top:16px; font-size:11px; color:var(--text-muted); font-weight:600; text-align:center;">
-                    ${totalVotes} voti totali • Pubblicato il ${new Date(poll.created_at).toLocaleDateString()}
-               </div>
-           </div>`;
-    }
+    // Poll and Social features removed
 
     // Salva planner sul server quando cambia
     // Save remoto + timestamp locale
@@ -2524,69 +2228,14 @@
         return dateStr >= todayStr;
     }
 
-    // 🔥 REMOVED: fetchPosts() was a duplicate of fetchFeed(). Use fetchFeed() only.
-
-
-    async function submitPost(postData) {
-        // optimistic: aggiorna subito UI/cache
-        state.posts = [postData, ...state.posts].slice(0, 100);
-        localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-        render();
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/posts`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(postData)
-            });
-            const data = await res.json();
-            if (data.success) {
-                state.posts = (data.data || state.posts).map(p => normalizePost(p, getUserId()));
-                localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                console.log("📝 Post pubblicato (server) e cache allineata");
-            } else {
-                throw new Error(data.error || 'failed');
-            }
-        } catch (e) {
-            console.warn("Post → outbox (offline/errore):", e.message);
-            enqueueOutbox('posts', postData);
-            alert("Sei offline o il server non risponde: il post verrà inviato alla prossima connessione.");
-        }
-    }
-
-    async function submitItem(itemData) {
-        state.marketItems = [itemData, ...state.marketItems];
-        localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
-        render();
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/market`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(itemData)
-            });
-            const data = await res.json();
-            if (data.success) {
-                state.marketItems = data.data || state.marketItems;
-                localStorage.setItem(globalKey('market'), JSON.stringify(state.marketItems));
-                console.log("🛒 Item pubblicato (server) e cache allineata");
-            } else {
-                throw new Error(data.error || 'failed');
-            }
-        } catch (e) {
-            console.warn("Market → outbox (offline/errore):", e.message);
-            enqueueOutbox('market', itemData);
-            alert("Sei offline o il server non risponde: l'oggetto verrà pubblicato alla prossima connessione.");
-        }
-    }
+    // Social and Market submission removed
 
     async function performSync(sessionData) {
         if (state.syncing) return;
         state.syncing = true;
         render();
 
-        // ⭐ Fetch Global Data (Feed & Market)
-        await Promise.all([fetchFeed(), fetchMarket()]);
+        // Global data sync removed for Pure Planner
 
         // ⭐ Usa la sessione passata o carica quella salvata (come nel codice vecchio)
         if (!sessionData) sessionData = sessionManager.load();
@@ -2985,7 +2634,7 @@
         if (shouldRender) render();
     }
     // Router & Loader helpers
-    const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'market', 'chat_list'];
+    const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile'];
 
     function currentViewFromHash() {
         const v = (location.hash || '').replace('#', '').trim();
@@ -3093,8 +2742,6 @@
             case 'home': html = renderHome(); break;
             case 'planner': html = renderPlanner(); break;
             case 'voti': html = renderGradesView(); break;
-            case 'market': html = renderMarket(); break;
-            case 'chat_list': html = renderChatList(); break;
             case 'ai_assistant': html = renderAIAssistantView(); break;
             case 'academic_profile': html = renderAcademicProfile(); break;
             case 'profile': html = renderProfile(); break;
@@ -3643,39 +3290,7 @@
         </div>`;
     }
 
-    function renderChatList() {
-        // Implementazione moderna della lista chat
-        return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
-            <div style="margin-bottom: 24px;">
-                <h1 style="font-size: 28px; font-weight: 800;">Social</h1>
-                <p style="color: var(--text-secondary); font-size: 14px;">I tuoi contatti e conversazioni</p>
-            </div>
-
-            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                <button class="btn-secondary active" style="flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent); color: white;">
-                    <i class="ph-fill ph-chats"></i> Chat
-                </button>
-                <button class="btn-secondary" onclick="navigate('market')" style="flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="ph ph-shopping-bag"></i> Market
-                </button>
-            </div>
-
-            <div class="card" style="padding: 12px; margin-bottom: 16px;">
-                 <i class="ph ph-magnifying-glass" style="position: absolute; margin: 12px; color: var(--text-dim);"></i>
-                 <input type="text" placeholder="Cerca studente..." style="width: 100%; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: white; padding: 0 12px 0 40px; font-size: 14px; outline: none;">
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <!-- Placeholder for empty chats -->
-                <div style="text-align: center; padding: 40px 20px; opacity: 0.6;">
-                    <div style="font-size: 40px; margin-bottom: 12px;">💬</div>
-                    <div style="font-size: 15px; font-weight: 700;">Nessun messaggio</div>
-                    <p style="font-size: 13px; margin-top: 4px;">Inizia a vendere o scambiare appunti per chattare!</p>
-                </div>
-            </div>
-        </div>`;
-    }
+    // renderChatList removed
 
     function getSubjectColor(subject) {
         const s = (subject || '').trim();
@@ -6107,106 +5722,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             pinned: false
         };
 
-        if (isPoll) {
-            const optInputs = document.querySelectorAll('.poll-opt-input');
-            const choices = Array.from(optInputs).map(i => ({ text: i.value.trim() })).filter(v => v.text !== '');
-
-            if (choices.length >= 2) {
-                try {
-                    const pollPayload = {
-                        question: text,
-                        choices: choices,
-                        author: state.user.name || "Utente",
-                        authorId: state.user.id
-                    };
-                    const res = await fetch(`${API_BASE_URL}/api/polls`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(pollPayload)
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        state.polls = data.data; // Aggiorna lista sondaggi
-                    }
-                } catch (e) {
-                    console.error("Errore creazione sondaggio:", e);
-                }
-            }
-        } else {
-            // Aggiungi localmente per feedback immediato
-            state.posts.unshift(newPost);
-
-            // Invia al server
-            try {
-                await submitPost(newPost);
-            } catch (e) {
-                console.error("Errore invio post:", e);
-            }
-        }
-
-        closeModal();
-        render();
     }
 
-    async function publishItem() {
-        const title = document.getElementById('item-title').value;
-        const price = document.getElementById('item-price').value;
-        const description = document.getElementById('item-description').value;
-
-        if (title && price) {
-            const newItem = {
-                id: Date.now(),
-                title,
-                price,
-                description,
-                images: _marketImages || [],
-                seller: state.user.name || "Utente",
-                sellerId: getUserId(),
-                status: 'available'
-            };
-            await submitItem(newItem);
-            _marketImages = [];
-            closeModal();
-            render();
-        }
-    }
-
-    async function toggleLike(id) {
-        const p = state.posts.find(x => x.id === id);
-        if (p) {
-            const userId = getUserId();
-            if (!Array.isArray(p.likes)) {
-                // Fallback se stiamo ancora usando il vecchio schema local
-                p.liked = !p.liked;
-                p.likes = p.liked ? 1 : 0;
-            } else {
-                // Nuovo schema: array di ID
-                if (p.likes.includes(userId)) {
-                    p.likes = p.likes.filter(uid => uid !== userId);
-                } else {
-                    p.likes.push(userId);
-                }
-            }
-            localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-            render();
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/posts/${id}/like`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    p.likes = data.likes;
-                    localStorage.setItem(globalKey('posts'), JSON.stringify(state.posts));
-                    render();
-                }
-            } catch (e) {
-                console.error("Like error:", e);
-            }
-        }
-    }
+    // Modal and other utilities
 
     function getModalContainer() { return document.getElementById('modals'); }
 
