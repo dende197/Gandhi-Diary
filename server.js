@@ -185,7 +185,12 @@ app.post('/api/circolari/sintesi', async (req, res) => {
         }
 
         // Sintesi AI
-        const prompt = `Sei un assistente per studenti del Liceo Gandhi. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, molto chiari e pratici. Se ci sono date, scadenze, classi coinvolte o orari, evidenziali chiaramente.
+        const prompt = `Sei un assistente per studenti del Liceo Gandhi. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, molto chiari e pratici. 
+REGOLE DI FORMATTAZIONE:
+- Usa il formato **Markdown**.
+- Usa **grassetto** per date, scadenze, classi o orari importanti.
+- Usa punti elenco standard (es. - o *).
+- Non aggiungere introduzioni come "Ecco il riassunto".
 
 Circolare: "${textContent.substring(0, 7000)}"`;
 

@@ -598,6 +598,41 @@
             margin-top: 16px;
         }
 
+        /* Sintesi AI Formatting */
+        .sintesi-content {
+            font-size: 15px;
+            color: white;
+            line-height: 1.6;
+            opacity: 1;
+            text-align: left;
+        }
+
+        .sintesi-content ul,
+        .sintesi-content ol {
+            padding-left: 20px;
+            margin: 10px 0;
+            list-style-type: disc;
+        }
+
+        .sintesi-content li {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+
+        .sintesi-content li::marker {
+            color: var(--accent-warm);
+            font-weight: bold;
+        }
+
+        .sintesi-content strong {
+            color: var(--accent-warm);
+            font-weight: 700;
+        }
+
+        .sintesi-content p {
+            margin-bottom: 8px;
+        }
+
         /* HERO BASE STYLES */
         .hero-container {
             position: relative;
@@ -1697,7 +1732,7 @@
     };
 
     // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
-    const APP_VERSION = "1.1.24-master";
+    const APP_VERSION = "1.1.25-master";
 
 
 
@@ -2720,12 +2755,12 @@
                 </div>
 
                 <div style="background:rgba(255,159,10,0.06); border:1px solid rgba(255,159,10,0.15); 
-                    padding:20px; border-radius:18px; margin-bottom:24px;">
-                    <h3 style="font-size:14px; color:var(--accent-warm); font-weight:800; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                        <i class="ph-bold ph-sparkle"></i> Sintesi AI (Student Focus)
+                    padding:22px; border-radius:22px; margin-bottom:24px;">
+                    <h3 style="font-size:14px; color:var(--accent-warm); font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.5px;">
+                        <i class="ph-bold ph-sparkle"></i> Sintesi Premium
                     </h3>
-                    <div style="font-size:15px; color:white; line-height:1.6; white-space:pre-wrap; opacity:0.95;">
-                        ${c.sintesi || "Generando la sintesi ottimizzata..."}
+                    <div class="sintesi-content">
+                        ${c.sintesi ? marked.parse(c.sintesi) : "Generando la sintesi ottimizzata..."}
                     </div>
                     ${!c.sintesi ? '<div style="margin-top:10px; width:100%; height:2px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px;"><div style="width:30%; height:100%; background:var(--accent-warm); animation: loadingBar 2s infinite linear;"></div></div>' : ''}
                 </div>
