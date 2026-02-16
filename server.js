@@ -10,6 +10,14 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const cheerio = require('cheerio');
+const pdfParse = require('pdf-parse');
+
+// ============= CACHE CIRCOLARI (In-memory) =============
+let circularsCache = {
+    data: null,
+    timestamp: 0,
+    ttl: 3600000 // 1 ora
+};
 
 // ============= SETUP APP =============
 const app = express();
@@ -62,6 +70,111 @@ app.post('/api/ai/chat', async (req, res) => {
     } catch (error) {
         console.error("AI Proxy Error:", error.response?.data || error.message);
         res.status(error.response?.status || 500).json(error.response?.data || { error: error.message });
+    }
+});
+
+// ============= CIRCOLARI API =============
+
+// 1. Lista circolari (con Scraper)
+app.get('/api/circolari', async (req, res) => {
+    // Check cache
+    const now = Date.now();
+    if (circularsCache.data && (now - circularsCache.timestamp) < circularsCache.ttl) {
+        return res.json({ success: true, circolari: circularsCache.data, cached: true });
+    }
+
+    try {
+        const SCHOOL_URL = 'https://www.liceogandhi.edu.it/circolari'; // URL base
+        debugLog(`Scraping circolari da: ${SCHOOL_URL}`);
+
+        const response = await axios.get(SCHOOL_URL, {
+            headers: { 'User-Agent': USER_AGENT },
+            timeout: 10000
+        });
+
+        const $ = cheerio.load(response.data);
+        const circolari = [];
+
+        // Sellettore tipico per WordPress/Siti scolastici (adattato)
+        // Nota: Il selettore potrebbe variare, usiamo una ricerca generica per link .pdf o classi comuni
+        $('.wp-block-post-title a, .entry-title a, a[href*="circolare"]').each((i, el) => {
+            const title = $(el).text().trim();
+            const link = $(el).attr('href');
+            
+            if (title && link && circolari.length < 10) {
+                // Cerchiamo di trovare la data nel contenitore padre
+                const parentText = $(el).closest('article, .post, div').text();
+                const dateMatch = parentText.match(/(\d{2}[/-]\d{2}[/-]\d{4})/);
+                const date = dateMatch ? dateMatch[1] : new Date().toLocaleDateString('it-IT');
+
+                circolari.push({
+                    id: generateStableId(link),
+                    titolo: title,
+                    data: date,
+                    link: link.startsWith('http') ? link : `https://www.liceogandhi.edu.it${link}`,
+                    numero: title.match(/\d+/) ? title.match(/\d+/)[0] : (i + 1)
+                });
+            }
+        });
+
+        circularsCache.data = circolari;
+        circularsCache.timestamp = now;
+
+        res.json({ success: true, circolari });
+    } catch (error) {
+        console.error("Scraping Error:", error.message);
+        res.status(500).json({ success: false, error: "Impossibile recuperare le circolari." });
+    }
+});
+
+// 2. Sintesi AI Circolare (Legge PDF e riassume)
+app.post('/api/circolari/sintesi', async (req, res) => {
+    const { link, id } = req.body;
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM';
+
+    if (!link) return res.status(400).json({ error: "Link mancante" });
+
+    try {
+        let textContent = "";
+
+        if (link.toLowerCase().endsWith('.pdf')) {
+            debugLog(`Scaricando PDF circolare: ${link}`);
+            const pdfRes = await axios.get(link, { responseType: 'arraybuffer', timeout: 15000 });
+            const data = await pdfParse(pdfRes.data);
+            textContent = data.text;
+        } else {
+            debugLog(`Scraping HTML circolare: ${link}`);
+            const htmlRes = await axios.get(link, { timeout: 10000 });
+            const $ = cheerio.load(htmlRes.data);
+            textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
+        }
+
+        if (!textContent || textContent.length < 50) {
+            return res.json({ success: true, sintesi: "Testo non estraibile o troppo breve." });
+        }
+
+        // Sintesi AI
+        const prompt = `Sei un assistente per studenti. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, chiari e utili per uno studente. Se ci sono date o scadenze, evidenziale.
+
+Circolare: "${textContent.substring(0, 5000)}"
+
+Formato (solo i punti elenco):
+• Punto 1
+• Punto 2
+...`;
+
+        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
+        const aiResponse = await axios.post(aiUrl, {
+            contents: [{ parts: [{ text: prompt }] }]
+        });
+
+        const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
+        
+        res.json({ success: true, sintesi, id });
+
+    } catch (error) {
+        console.error("Synthesis Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
