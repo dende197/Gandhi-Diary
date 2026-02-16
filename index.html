@@ -2365,6 +2365,59 @@
 
     // Social and Market submission removed
 
+    async function performLogin(school, user, pass) {
+        if (!school || !user || !pass) {
+            showToast('Inserisci tutti i dati!');
+            return;
+        }
+
+        showBoot('Accesso in corso...');
+
+        try {
+            // Usa endpoint alla radice come definito in server.js
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    school: school,
+                    username: user,
+                    password: pass
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Salva sessione
+                state.isLoggedIn = true;
+                state.user = data.user; // { name, class, ... }
+
+                // Salva token e user in locale
+                if (data.token) {
+                    localStorage.setItem(lsKey('auth_token'), data.token);
+                }
+                localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+
+                // Avvia sync completa
+                await performSync();
+
+                closeModal();
+                hideBoot();
+                showToast('Accesso effettuato! 🚀');
+                render();
+            } else {
+                hideBoot();
+                showToast(data.message || 'Errore durante l\'accesso');
+            }
+        } catch (error) {
+            console.error(error);
+            hideBoot();
+            showToast('Errore di connessione al server');
+        }
+    }
+
     async function performSync(sessionData) {
         if (state.syncing) return;
         state.syncing = true;
@@ -3702,7 +3755,7 @@
         <div class="view" style="animation: slideUp 0.4s ease-out;">
 
             <!-- HERO -->
-            <div style="position: relative; padding: 36px 28px 32px; border-radius: 24px; margin-bottom: 24px;
+            <div style="position: relative; padding: 42px 32px 36px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
                 border: 1px solid rgba(255,255,255,0.1);
                 box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
@@ -6838,6 +6891,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     window.submitRegistroTask = submitRegistroTask;
     window.showCompetencyInputModal = showCompetencyInputModal;
     window.submitCompetencyRequest = submitCompetencyRequest;
+    window.performLogin = performLogin;
+    window.performSync = performSync;
+    window.testBackendConnection = testBackendConnection;
 
     function togglePollCreatorUI() {
         const ui = document.getElementById('poll-creator-ui');
