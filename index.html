@@ -4813,8 +4813,7 @@
         const chat = state.aiChatHistory || [];
 
         return `
-        <!-- VIEW BLOCCATA: overflow hidden, niente scroll globale -->
-        <div class="view ai-view">
+        <div class="view ai-view" style="display:flex; flex-direction:column; height:100svh; padding: 0 !important;">
             
             <!-- HEADER FISSO -->
             <div style="flex-shrink: 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(18,18,20,0.95); backdrop-filter: blur(10px); z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -4878,11 +4877,10 @@
                 `).join('')}
             </div>
 
-            <!-- INPUT PILL: COMPATTA E CENTRATA -->
             <div class="chat-input-bar" style="
                 flex-shrink: 0;
                 width: 100%;
-                padding: 8px 16px 16px 16px; 
+                padding: 8px 0 16px 0; 
                 background: transparent;
                 display: flex;
                 justify-content: center;
@@ -4891,7 +4889,8 @@
                 <div style="
                         width: 92%;
                         max-width: 540px;
-                        margin: 0 auto;
+                        margin-left: auto;
+                        margin-right: auto;
                         display: flex; 
                         align-items: center; 
                         background: rgba(30,30,30,0.85); 
