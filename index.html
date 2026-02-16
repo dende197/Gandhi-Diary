@@ -5469,7 +5469,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <input id="argo-school" placeholder="Codice Scuola" value="${localStorage.getItem('argo_school') || ''}">
                     <input id="argo-user" placeholder="Nome Utente">
                     <input type="password" id="argo-pass" placeholder="Password">
-                    <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
+                    <button id="login-btn" onclick="performLogin(document.getElementById('argo-school').value, document.getElementById('argo-user').value, document.getElementById('argo-pass').value)" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
                     <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
                </div>
            </div>`;
@@ -7196,6 +7196,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
     window.showStressCaptureModal = showDetailedStressModal;
     window.drawWeeklyStressChart = drawWeeklyStressChart;
+}); // END DOMContentLoaded
 
     // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
     function initCustomScrollbar() {
