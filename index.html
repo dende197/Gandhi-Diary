@@ -27,22 +27,22 @@
            ============================================ */
 
         :root {
-            --bg-body: #050506;
-            /* Deep Black */
-            --bg-card: #0d0d0f;
-            /* Almost Black Card */
-            --bg-card-hover: #121214;
-            --bg-input: #0a0a0c;
+            --bg-body: radial-gradient(circle at 50% 50%, #150e2b 0%, #0a0a14 50%, #050508 100%);
+            /* Dark Blurred Deep Gradient */
+            --bg-card: rgba(26, 26, 30, 0.4);
+            /* Glassy Base */
+            --bg-card-hover: rgba(35, 35, 45, 0.6);
+            --bg-input: rgba(0, 0, 0, 0.3);
 
-            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-main: 'Urbanist', 'Inter', -apple-system, sans-serif;
 
             --text-primary: #ffffff;
-            --text-secondary: #a1a1aa;
-            --text-dim: #71717a;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-dim: rgba(255, 255, 255, 0.4);
 
-            --accent: #6366f1;
-            /* Indigo */
-            --accent-glow: rgba(99, 102, 241, 0.4);
+            --accent: #8b5cf6;
+            /* Vibrant Violet */
+            --accent-glow: rgba(139, 92, 246, 0.4);
             --accent-warm: #f59e0b;
 
             --blue: #3b82f6;
@@ -51,16 +51,16 @@
             --red: #ef4444;
             --purple: #8b5cf6;
 
-            --card-border: 1px solid rgba(255, 255, 255, 0.03);
-            /* Minimalist Border */
-            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
-            --glass-bg: rgba(13, 13, 15, 0.7);
-            --glass-blur: blur(20px);
+            --card-border: 1px solid rgba(255, 255, 255, 0.08);
+            /* Glass Edge */
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --glass-bg: rgba(20, 20, 25, 0.6);
+            --glass-blur: blur(24px);
 
-            --radius-xl: 22px;
-            --radius-l: 16px;
-            --radius-m: 12px;
-            --radius-s: 8px;
+            --radius-xl: 28px;
+            --radius-l: 22px;
+            --radius-m: 16px;
+            --radius-s: 10px;
 
             --top-nav-height: 72px;
             --safe-top: env(safe-area-inset-top, 0px);
@@ -89,7 +89,7 @@
 
         body {
             font-family: var(--font-main);
-            background: var(--bg-body);
+            background: var(--bg-body) fixed;
             color: var(--text-primary);
             height: 100%;
             min-height: 100%;
@@ -217,10 +217,9 @@
             top: 0;
             width: 100%;
             height: var(--top-nav-height);
-            background: rgba(18, 18, 20, 0.75);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: transparent;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -239,33 +238,41 @@
 
         .nav-links {
             display: flex;
-            gap: 16px;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
         }
 
         .nav-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
-            border-radius: var(--radius-m);
-            color: var(--text-secondary);
-            font-weight: 600;
-            font-size: 14px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 700;
+            font-size: 13px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: transparent;
             border: none;
+            letter-spacing: 0.3px;
         }
 
         .nav-item:hover {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .nav-item.active {
             color: white;
-            background: var(--accent);
-            box-shadow: 0 4px 12px var(--accent-glow);
+            background: rgba(139, 92, 246, 0.25);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), inset 0 0 10px rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.4);
         }
 
         .nav-item i {
@@ -3762,54 +3769,44 @@
         <div class="view" style="animation: slideUp 0.4s ease-out;">
 
             <!-- HERO -->
-            <div style="position: relative; padding: 48px 32px 42px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.03);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.02);
+            <div style="position: relative; padding: 48px 32px 42px; border-radius: var(--radius-xl); margin-bottom: 24px;
+                background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.1));
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                border: var(--card-border);
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
                 overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
-                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
-                <div style="position: relative; z-index: 1;">
-                    <p style="font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+                <div style="position: absolute; top: -50%; right: -20%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%); pointer-events: none;"></div>
+                <div style="position: relative; z-index: 1; text-align: left;">
+                    <p style="font-size: 13px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; filter: drop-shadow(0 0 8px var(--accent-glow));">
                         ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
-                    <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; line-height: 1.2;">
-                        ${greeting}, ${state.user.name.split(' ')[0]}
+                    <h1 style="font-size: 32px; font-weight: 900; letter-spacing: -0.8px; margin-bottom: 8px; line-height: 1.1; color: #fff;">
+                        ${greeting},<br>${state.user.name.split(' ')[0]}
                     </h1>
-                    <p style="color: var(--text-secondary); font-size: 14px;">
-                        ${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 15px; font-weight: 500;">
+                        ${plannedTasks.length > 0 ? `Hai <b style="color:#fff">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
                     </p>
                 </div>
             </div>
 
-
-
             <!-- METRICS -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
-                <div class="metric-card" onclick="showDetailedStressModal()" style="cursor:pointer; border-radius:20px;
-                    background: linear-gradient(145deg, rgba(10,10,12,0.8), rgba(5,5,7,0.9));
-                    border:1px solid rgba(255,255,255,0.08);
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="metric-card glass-panel" onclick="showDetailedStressModal()" style="cursor:pointer; border-radius:var(--radius-l);
+                    padding: 24px; border: var(--card-border); box-shadow: var(--card-shadow); border-radius: var(--radius-l);">
                     <div>
-                        <div class="title" style="margin-bottom:4px;">STRESS</div>
-                        <div style="font-size:34px; font-weight:800; color:${stressColor}; line-height:1;">
-                            ${stressVal}<span style="font-size:13px; color:var(--text-dim);">/10</span>
+                        <div style="font-size: 11px; font-weight: 800; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">STRESS</div>
+                        <div style="font-size: 38px; font-weight: 900; color: ${stressColor}; line-height: 1;">
+                            ${stressVal}<span style="font-size: 15px; color: rgba(255, 255, 255, 0.2); font-weight: 600;">/10</span>
                         </div>
                     </div>
-                    <canvas id="stressWaveCanvas" style="width:100%; height:40px; position:absolute; bottom:0; left:0; pointer-events:none;"></canvas>
                 </div>
-                <div class="metric-card" onclick="navigate('voti')" style="cursor:pointer; border-radius:20px;
-                    background: linear-gradient(145deg, rgba(10,10,12,0.8), rgba(5,5,7,0.9));
-                    border:1px solid rgba(255,255,255,0.08);
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="metric-card glass-panel" onclick="navigate('voti')" style="cursor:pointer; border-radius:var(--radius-l);
+                    padding: 24px; border: var(--card-border); box-shadow: var(--card-shadow); border-radius: var(--radius-l);">
                     <div>
-                        <div class="title" style="margin-bottom:4px;">MEDIA</div>
-                        <div style="font-size:34px; font-weight:800; color:${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'}; line-height:1;">
+                        <div style="font-size: 11px; font-weight: 800; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">MEDIA</div>
+                        <div style="font-size: 38px; font-weight: 900; color: ${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'}; line-height: 1;">
                             ${media || '-'}
                         </div>
-                    </div>
-                    <div style="position:absolute; bottom:16px; left:20px; right:20px; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
-                        <div style="width:${(media / 10) * 100}%; height:100%; border-radius:3px; background:linear-gradient(90deg, var(--blue), var(--purple)); box-shadow:0 0 12px rgba(99,102,241,0.4);"></div>
                     </div>
                 </div>
             </div>
