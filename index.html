@@ -3841,15 +3841,13 @@
         </div>`;
     }
 
-
-
-
+    /* View helper functions */
 
     function renderPlanner() {
         const uiMode = state.plannerView || 'calendar';
 
         return `
-        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
+        <div class="view" style="animation: slideUp 0.4s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <div>
                     <h1 style="font-size: 28px; font-weight: 800;">Planner</h1>
@@ -3881,7 +3879,7 @@
                 </button>
             </div>
 
-            ${ uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : '' }
+            ${uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : ''}
 
             <div class="section-header" style="margin: 32px 0 16px 0;">
                 <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
@@ -3935,13 +3933,12 @@
         if (state.plannerMode === 'registro') {
             return `
         < div style = "display: flex; flex-direction: column; gap: 8px;" >
-            ${
-                list.map(t => {
-                    const d = parseArgoDate(t.displayDate);
-                    const day = d.toLocaleDateString('it-IT', { day: '2-digit' });
-                    const month = d.toLocaleDateString('it-IT', { month: 'short' });
-                    const subjColor = getSubjectColor(t.subject);
-                    return `
+            ${list.map(t => {
+                const d = parseArgoDate(t.displayDate);
+                const day = d.toLocaleDateString('it-IT', { day: '2-digit' });
+                const month = d.toLocaleDateString('it-IT', { month: 'short' });
+                const subjColor = getSubjectColor(t.subject);
+                return `
                     <div class="registro-card" style="display: flex;">
                         <div class="registro-date-box">
                             <span style="font-size: 18px; font-weight: 800; color: var(--text-primary);">${day}</span>
@@ -3960,16 +3957,15 @@
                             </div>
                         </div>
                     </div>`;
-                }).join('')
-    }
+            }).join('')
+                }
             </div > `;
         } else {
             return `
         < div style = "display: flex; flex-direction: column; gap: 12px;" >
-            ${
-                list.map(t => {
-                    const subjColor = getSubjectColor(t.subject);
-                    return `
+            ${list.map(t => {
+                const subjColor = getSubjectColor(t.subject);
+                return `
                     <div class="studio-entry" style="position: relative; background: var(--bg-card); border-radius: var(--radius-m); padding: 16px; border: var(--card-border);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div style="display: flex; align-items: center;">
@@ -3986,8 +3982,8 @@
                             </div>
                         </div>
                     </div>`;
-                }).join('')
-    }
+            }).join('')
+                }
             </div > `;
         }
     }
@@ -4047,7 +4043,7 @@
         const month = months[date.getMonth()];
         const year = date.getFullYear();
         const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-        return `${ day } ${ month } ${ year } • ${ time } `;
+        return `${day} ${month} ${year} • ${time} `;
     }
 
     function showStressDetailsModal() {
@@ -4065,7 +4061,7 @@
             const lv = state.stressLevels[iso] || 0;
             points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
         }
-        const path = points.map((p, idx) => (idx === 0 ? `M ${ p.x.toFixed(1) } ${ p.y.toFixed(1) } ` : `L ${ p.x.toFixed(1) } ${ p.y.toFixed(1) } `)).join(' ');
+        const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
 
         modalContainer.innerHTML = `
         < div class="modal-overlay" onclick = "closeModal(event)" >
@@ -4351,7 +4347,7 @@
                 </div>
                 <div style="padding: 20px; display:flex; flex-direction:column; gap:12px;">
                     ${dataBacheca.length === 0 ?
-                        `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
                         <i class="ph ph-megaphone" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
                         Nessun avviso in bacheca<br>
                         <span style="font-size: 12px; margin-top: 8px; display: block;">Gli avvisi verranno caricati dopo la sincronizzazione con DidUP</span>
@@ -4359,14 +4355,14 @@
                             <i class="ph ph-arrow-clockwise"></i> Sincronizza Ora
                        </button>
                    </div>` :
-                        dataBacheca.map(item => {
-                            const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
-                            const autore = item.autore || item.docente || 'Docente';
-                            const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
-                            const testo = item.testo || item.text || item.descrizione || item.description || '';
-                            const url = item.url || item.allegato || null;
+                dataBacheca.map(item => {
+                    const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
+                    const autore = item.autore || item.docente || 'Docente';
+                    const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
+                    const testo = item.testo || item.text || item.descrizione || item.description || '';
+                    const url = item.url || item.allegato || null;
 
-                            return `
+                    return `
                                 <div class="glass-list-item" style="border-left: 4px solid var(--orange); background: rgba(255, 159, 10, 0.08);">
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                                         <div style="padding:4px 8px; background: rgba(255, 159, 10, 0.2); border-radius:6px; display:flex; gap:6px; align-items:center;">
@@ -4384,8 +4380,8 @@
                                    </a>` : ''}
                                </div>
                             `;
-                        }).join('')
-                    }
+                }).join('')
+            }
                 </div>
             </div>
            </div > `;
@@ -4758,7 +4754,7 @@
                 if (!state.badges) state.badges = [];
                 state.badges.push(ach.id);
                 newlyUnlocked = true;
-                showToast(`Nuovo Achievement: ${ ach.title } !${ ach.icon } `);
+                showToast(`Nuovo Achievement: ${ach.title} !${ach.icon} `);
             }
         });
 
@@ -4776,7 +4772,7 @@
     function renderFocusTimer() {
         const mins = Math.floor(pomodoroState.timeLeft / 60);
         const secs = pomodoroState.timeLeft % 60;
-        const display = `${ String(mins).padStart(2, '0') }:${ String(secs).padStart(2, '0') } `;
+        const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
         const isFocus = pomodoroState.mode === 'focus';
         const modeLabel = isFocus ? 'Focus' : 'Pausa';
         const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
@@ -4940,21 +4936,21 @@
         }, 50);
 
         // Build context
-        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${ t.subject }] ${ t.text } (scad: ${ t.due_date || 'N/D'})`).join('\n');
-        const exams = (state.exams || []).map(ex => `- ${ ex.type } di ${ ex.subject } il ${ ex.date } (${ ex.topic || 'gen.' })`).join('\n');
-        const backlog = (state.backlog || []).map(b => `- [${ b.subject }] ${ b.topic } `).join('\n');
+        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
+        const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
+        const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic} `).join('\n');
         const difficulty = (state.difficulty || []).join(', ');
-        const schedule = `Disponibilità: dalle ${ state.availability?.start || '15:00' } alle ${ state.availability?.end || '19:00' } `;
+        const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'} `;
 
         const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
 
 CONTEXT STUDENTE(aggiornato):
-    - COMPITI ATTIVI: ${ homework || 'Nessuno.' }
-    - VERIFICHE: ${ exams || 'Nessuna.' }
-    - ARRETRATI: ${ backlog || 'Nessuno.' }
-    - MATERIE DIFFICILI: ${ difficulty || 'Nessuna.' }
-    - ${ schedule }
-    - DATA ODIERNA: ${ new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }
+    - COMPITI ATTIVI: ${homework || 'Nessuno.'}
+    - VERIFICHE: ${exams || 'Nessuna.'}
+    - ARRETRATI: ${backlog || 'Nessuno.'}
+    - MATERIE DIFFICILI: ${difficulty || 'Nessuna.'}
+    - ${schedule}
+    - DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 
 QUANDO SUGGERISCI UN PIANO DI STUDIO:
     - Usa orari precisi(es. 15: 30 - 16: 15)
@@ -4978,61 +4974,61 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: contents })
-    });
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: contents })
+                });
 
-    const data = await response.json();
+                const data = await response.json();
 
-    // Check for rate limit (429) or quota errors - retry
-    if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
-        if (attempt < maxRetries) {
-            const waitSec = attempt * 15; // 15s, 30s, 45s
-            state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
-            render();
-            setTimeout(() => {
-                const chatDiv = document.getElementById('aiChatMessages');
-                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-            }, 50);
-            await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
-            // Remove the retry message before next attempt
-            state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
-            continue;
-        } else {
-            state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
-            break;
-        }
-    }
+                // Check for rate limit (429) or quota errors - retry
+                if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
+                    if (attempt < maxRetries) {
+                        const waitSec = attempt * 15; // 15s, 30s, 45s
+                        state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
+                        render();
+                        setTimeout(() => {
+                            const chatDiv = document.getElementById('aiChatMessages');
+                            if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+                        }, 50);
+                        await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+                        // Remove the retry message before next attempt
+                        state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
+                        continue;
+                    } else {
+                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
+                        break;
+                    }
+                }
 
-    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const aiText = data.candidates[0].content.parts[0].text;
-        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
-        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-        state.aiResponse = aiText;
-    } else if (data?.error) {
-        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
-    } else {
-        state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
-    }
-    break; // Success or non-retryable error, exit loop
+                if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    const aiText = data.candidates[0].content.parts[0].text;
+                    const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
+                    state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+                    state.aiResponse = aiText;
+                } else if (data?.error) {
+                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+                } else {
+                    state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+                }
+                break; // Success or non-retryable error, exit loop
             } catch (error) {
-        console.error('AI Chat Error:', error);
-        if (attempt === maxRetries) {
-            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
-        } else {
-            await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-    }
+                console.error('AI Chat Error:', error);
+                if (attempt === maxRetries) {
+                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
         }
 
-    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-    render();
-    setTimeout(() => {
-        const chatDiv = document.getElementById('aiChatMessages');
-        if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-    }, 50);
+        localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+        render();
+        setTimeout(() => {
+            const chatDiv = document.getElementById('aiChatMessages');
+            if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+        }, 50);
     }
 
     function applyAIPlanFromChat(msgIndex) {
