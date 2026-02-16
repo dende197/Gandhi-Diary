@@ -36,11 +36,12 @@ app.use(cors({
 // ============= AI CHAT PROXY =============
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
-    // Nuova chiave fornita dall'utente (AIzaSyABSi1NqIheBR_pU9PtvToXuPUOsdOH__Q)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyABSi1NqIheBR_pU9PtvToXuPUOsdOH__Q';
+    // Nuova chiave fornita dall'utente (AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM)
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM';
 
     if (!GEMINI_KEY) {
-        return res.status(500).json({ error: "Backend error: GEMINI_API_KEY non configurata sul server." });
+        console.error("❌ ERRORE CRITICO: GEMINI_API_KEY mancante!");
+        return res.status(500).json({ error: "Backend error: GEMINI_API_KEY non configurata." });
     }
 
     try {

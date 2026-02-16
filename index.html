@@ -1589,8 +1589,8 @@
 </div>
 
 <script>
-    // 🚀 G-Diary v1.1.7 [AI Redesign]
-    const APP_VERSION = "1.1.7-ai-redesign";
+    // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
+    const APP_VERSION = "1.1.8-ai-polish";
 
 
 
@@ -4849,29 +4849,38 @@
         return `
         <div class="view" style="display: flex; flex-direction: column; height: 100dvh; position: relative; animation: fadeInUp 0.4s ease-out;">
             <!--Minimalist Header-->
-            <div style="flex-shrink: 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(18,18,20,0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; color: white;">
-                        <i class="ph-fill ph-robot" style="font-size: 18px;"></i>
-                    </div>
-                    <div>
-                        <h2 style="margin: 0; font-size: 16px; font-weight: 700;">Tutor AI</h2>
-                        <div style="font-size: 10px; color: var(--green); font-weight: 700; text-transform: uppercase;">Attivo</div>
-                    </div>
+            <div style="flex-shrink: 0; padding: 12px 16px; display: flex; align-items: center; justify-content: center; background: rgba(18,18,20,0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10;">
+                <div style="display: flex; align-items: center; gap: 8px; opacity: 0.8;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green);"></div>
+                    <span style="font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">Tutor AI</span>
                 </div>
-                <button class="btn-icon-only" onclick="clearAIChat()" style="width: 32px; height: 32px; background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary);">
-                    <i class="ph ph-trash" style="font-size: 18px;"></i>
-                </button>
             </div>
 
             <!--Chat Area-->
-            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 16px 16px 0 16px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth;">
+            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 20px 16px 80px 16px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
                 ${chat.length === 0 ? `
                 <div style="text-align: center; padding: 60px 20px; animation: fadeIn 0.5s ease-out;">
-                    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Come posso aiutarti?</h2>
-                    <p style="color: var(--text-secondary); font-size: 14px; max-width: 240px; margin: 0 auto 24px auto;">Oggi sono pronto ad organizzare il tuo studio.</p>
+                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 24px; opacity: 0.9;">Come posso aiutarti oggi?</h2>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 360px; margin: 0 auto;">
+                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">📅</span>
+                            Pianifica Settimana
+                        </button>
+                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">📝</span>
+                            Prepariamoci
+                        </button>
+                        <button onclick="sendAIChatQuick('Dammi un consiglio sulla produttività 🚀')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">🚀</span>
+                            Produttività
+                        </button>
+                        <button onclick="sendAIChatQuick('Svuota la chat 🗑️')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-secondary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
+                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">🗑️</span>
+                            Reset Chat
+                        </button>
+                    </div>
                 </div>
-                ` : chat.map(msg => `
                 <div class="msg-appear" style="display: flex; ${msg.role === 'user' ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}">
                     <div style="
                         max-width: ${msg.role === 'user' ? '80%' : '100%'};
@@ -4879,8 +4888,8 @@
                         font-size: 15px;
                         line-height: 1.6;
                         ${msg.role === 'user'
-                ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
-                : `background: transparent; color: var(--text-primary);`}
+                    ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
+                    : `background: transparent; color: var(--text-primary);`}
                     ">
                         ${msg.role === 'ai' ? marked.parse(msg.text) : msg.text}
                         ${msg.role === 'ai' && msg.hasPlan ? `
@@ -4890,21 +4899,63 @@
                         ` : ''}
                     </div>
                 </div>
-                `).join('')}
-            </div>
+                `).join('')
+    }
+            </div >
 
-            <!--Input Area-->
-            <div class="chat-input-bar">
-                <div style="flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 4px 12px;">
-                    <textarea id="aiChatInput" class="chat-input" placeholder="Messaggio..."
-                        style="background: transparent; border: none; padding: 8px 4px; min-height: 36px; font-size: 15px;"
-                        rows="1"
-                        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
-                        oninput="this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,100)+'px';"></textarea>
-                    <button onclick="sendAIChat()" style="width: 32px; height: 32px; padding: 0; border: none; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 8px;">
-                        <i class="ph-bold ph-arrow-up" style="font-size: 16px;"></i>
-                    </button>
-                </div>
+            < !--Input Area-- >
+        <div class="chat-input-bar">
+            <div style="
+                    flex: 1; 
+                    display: flex; 
+                    align-items: center; 
+                    background: rgba(30,30,30,0.95); 
+                    border: 1px solid rgba(255,255,255,0.1); 
+                    border-radius: 30px; 
+                    padding: 6px 6px 6px 16px; 
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                "
+                onfocuswithin="this.style.borderColor='rgba(255,255,255,0.3)'; this.style.boxShadow='0 4px 25px rgba(0,0,0,0.3)';"
+                onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)';">
+
+                <textarea id="aiChatInput" placeholder="Messaggio..."
+                    style="
+                            flex: 1;
+                            background: transparent; 
+                            border: none; 
+                            padding: 10px 0; 
+                            min-height: 24px; 
+                            max-height: 120px;
+                            font-size: 16px; 
+                            line-height: 1.5;
+                            resize: none;
+                            outline: none;
+                            color: white;
+                        "
+                    rows="1"
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
+                    oninput="this.style.height='auto'; this.style.height= Math.min(this.scrollHeight, 120) + 'px';"></textarea>
+
+                <button onclick="sendAIChat()" style="
+                        width: 36px; height: 36px; 
+                        padding: 0; 
+                        border: none; 
+                        background: white; 
+                        color: black; 
+                        border-radius: 50%; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        flex-shrink: 0; 
+                        margin-left: 8px;
+                        cursor: pointer;
+                        transition: transform 0.1s;
+                    "
+                    onmousedown="this.style.transform='scale(0.9)'"
+                    onmouseup="this.style.transform='scale(1)'">
+                    <i class="ph-bold ph-arrow-up" style="font-size: 18px;"></i>
+                </button>
             </div>
         </div> `;
     }
@@ -4943,22 +4994,22 @@
         }, 100);
 
         // Build context
-        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'
+        const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${ t.subject }] ${ t.text } (scad: ${ t.due_date || 'N/D'
             })`).join('\n');
-        const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-        const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic} `).join('\n');
+        const exams = (state.exams || []).map(ex => `- ${ ex.type } di ${ ex.subject } il ${ ex.date } (${ ex.topic || 'gen.' })`).join('\n');
+        const backlog = (state.backlog || []).map(b => `- [${ b.subject }] ${ b.topic } `).join('\n');
         const difficulty = (state.difficulty || []).join(', ');
-        const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'} `;
+        const schedule = `Disponibilità: dalle ${ state.availability?.start || '15:00' } alle ${ state.availability?.end || '19:00' } `;
 
         const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
 
 CONTEXT STUDENTE(aggiornato):
-    - COMPITI ATTIVI: ${homework || 'Nessuno.'}
-    - VERIFICHE: ${exams || 'Nessuna.'}
-    - ARRETRATI: ${backlog || 'Nessuno.'}
-    - MATERIE DIFFICILI: ${difficulty || 'Nessuna.'}
-    - ${schedule}
-    - DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+    - COMPITI ATTIVI: ${ homework || 'Nessuno.' }
+    - VERIFICHE: ${ exams || 'Nessuna.' }
+    - ARRETRATI: ${ backlog || 'Nessuno.' }
+    - MATERIE DIFFICILI: ${ difficulty || 'Nessuna.' }
+    - ${ schedule }
+    - DATA ODIERNA: ${ new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }
 
 QUANDO SUGGERISCI UN PIANO DI STUDIO:
     - Usa orari precisi(es. 15: 30 - 16: 15)
@@ -4982,61 +5033,61 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: contents })
-                });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: contents })
+    });
 
-                const data = await response.json();
+    const data = await response.json();
 
-                // Check for rate limit (429) or quota errors - retry
-                if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
-                    if (attempt < maxRetries) {
-                        const waitSec = attempt * 15; // 15s, 30s, 45s
-                        state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
-                        render();
-                        setTimeout(() => {
-                            const chatDiv = document.getElementById('aiChatMessages');
-                            if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-                        }, 50);
-                        await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
-                        // Remove the retry message before next attempt
-                        state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
-                        continue;
-                    } else {
-                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
-                        break;
-                    }
-                }
+    // Check for rate limit (429) or quota errors - retry
+    if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
+        if (attempt < maxRetries) {
+            const waitSec = attempt * 15; // 15s, 30s, 45s
+            state.aiChatHistory.push({ role: 'ai', text: `⏳ Rate limit raggiunto. Riprovo tra ${waitSec}s... (tentativo ${attempt}/${maxRetries})`, ts: now, isRetry: true });
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
+            await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+            // Remove the retry message before next attempt
+            state.aiChatHistory = state.aiChatHistory.filter(m => !m.isRetry);
+            continue;
+        } else {
+            state.aiChatHistory.push({ role: 'ai', text: `⚠️ API in sovraccarico dopo ${maxRetries} tentativi. Riprova tra qualche minuto.\n\nConsiglio: se l'errore persiste, la quota giornaliera potrebbe essere esaurita.`, ts: now });
+            break;
+        }
+    }
 
-                if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    const aiText = data.candidates[0].content.parts[0].text;
-                    const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
-                    state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-                    state.aiResponse = aiText;
-                } else if (data?.error) {
-                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
-                } else {
-                    state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
-                }
-                break; // Success or non-retryable error, exit loop
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const aiText = data.candidates[0].content.parts[0].text;
+        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
+        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+        state.aiResponse = aiText;
+    } else if (data?.error) {
+        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+    } else {
+        state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+    }
+    break; // Success or non-retryable error, exit loop
             } catch (error) {
-                console.error('AI Chat Error:', error);
-                if (attempt === maxRetries) {
-                    state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                }
-            }
+        console.error('AI Chat Error:', error);
+        if (attempt === maxRetries) {
+            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
         }
 
-        localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-        render();
-        setTimeout(() => {
-            const chatDiv = document.getElementById('aiChatMessages');
-            if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-        }, 50);
+    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+    render();
+    setTimeout(() => {
+        const chatDiv = document.getElementById('aiChatMessages');
+        if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+    }, 50);
     }
 
     function applyAIPlanFromChat(msgIndex) {
