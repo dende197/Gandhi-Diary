@@ -1584,7 +1584,7 @@
 
 
     // 🚀 G-Diary v1.1.2 [Master Fix]
-    const APP_VERSION = "1.1.2-master-fix";
+    const APP_VERSION = "1.1.3-tag-fix";
 
     // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
     const savedVersion = localStorage.getItem('app_version');
@@ -1633,7 +1633,7 @@
             hash = ((hash << 5) + hash) + str.charCodeAt(i);
             hash = hash & 0xffffffff;
         }
-        return (hash >>> 0).toString(36);
+        return (hash>>> 0).toString(36);
     }
 
     function stableTaskId(raw) {
@@ -1661,8 +1661,8 @@
 
     // Helper: calcola classi sfondo media (good/warn/bad)
     function gaugeClassForMedia(m) {
-        if (m >= 6.5) return 'gauge-good';
-        if (m >= 6.0) return 'gauge-warn';
+        if (m>= 6.5) return 'gauge-good';
+        if (m>= 6.0) return 'gauge-warn';
         return 'gauge-bad';
     }
 
@@ -1993,7 +1993,7 @@
             // 🔥 PRIORITY FIX: Se abbiamo dati manuali/cacheati (state.user), usiamo quelli.
             // Usiamo argoSession solo come fallback iniziale o per campi essenziali.
             state.user.name = state.user.name || (argoSession.name && isValidName(argoSession.name) ? argoSession.name : 'Utente');
-            state.user.class = state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
+            state.user.class=state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
             state.user.specialization = state.user.specialization || argoSession.specialization;
             state.user.avatar = state.user.avatar || argoSession.avatar;
 
@@ -2166,12 +2166,12 @@
                 state.stressVents = { ...state.stressVents, ...localSV };
                 const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0 || Object.keys(remoteSV).length > 0;
-                const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0 || Object.keys(localSV).length > 0;
+                const remoteHasData = Object.keys(remotePT).length> 0 || Object.keys(remoteSL).length> 0 || Object.keys(remoteSV).length> 0;
+                const localHasData = Object.keys(localPT).length> 0 || Object.keys(localSL).length> 0 || Object.keys(localSV).length> 0;
 
                 // ✅ FIX: definisci ENTRAMBE le variabili
-                const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
-                const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || new Date(localUpdatedAt).getTime() > new Date(remoteUpdatedAt).getTime());
+                const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime()> new Date(localUpdatedAt).getTime());
+                const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || new Date(localUpdatedAt).getTime()> new Date(remoteUpdatedAt).getTime());
 
                 console.log("📊 Planner sync:", { remoteHasData, localHasData, remoteIsNewer, localIsNewer });
 
@@ -2277,11 +2277,11 @@
             const localSL = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
             const localGauge = JSON.parse(localStorage.getItem(lsKey('gauge_state')) || 'null');
             if (localGauge && !state.__mediaGauge) state.__mediaGauge = localGauge;
-            if ((Object.keys(state.plannedTasks || {}).length === 0) && Object.keys(localPT).length > 0) {
+            if ((Object.keys(state.plannedTasks || {}).length === 0) && Object.keys(localPT).length> 0) {
                 state.plannedTasks = localPT; notifyPlannerChanged();
                 console.log("🔁 Ripristino plannedTasks da cache");
             }
-            if ((Object.keys(state.stressLevels || {}).length === 0) && Object.keys(localSL).length > 0) {
+            if ((Object.keys(state.stressLevels || {}).length === 0) && Object.keys(localSL).length> 0) {
                 state.stressLevels = localSL; console.log("🔁 Ripristino stressLevels da cache");
             }
         } catch { }
@@ -2295,7 +2295,7 @@
 
         const toast = document.createElement('div');
         toast.id = 'g-toast';
-        toast.style = `
+        toast.style=`
                 position: fixed;
                 bottom: 160px;
                 left: 50%;
@@ -2325,7 +2325,7 @@
         if (!dateStr) return false;
         const todayStr = getLocalDateString();
         // Use string comparison for YYYY-MM-DD equality or superiority
-        return dateStr >= todayStr;
+        return dateStr>= todayStr;
     }
 
     // Social and Market submission removed
@@ -2374,7 +2374,7 @@
 
             if (data.success && data.tasks) {
                 // ⭐ Gestione compiti
-                if (data.tasks.length === 0 && state.tasks.length > 0) {
+                if (data.tasks.length === 0 && state.tasks.length> 0) {
                     console.warn("⚠️ Il server ha mandato 0 compiti. Mantengo quelli locali per sicurezza.");
                     state.isOffline = false;
                     updateOfflineBadge();
@@ -2410,11 +2410,11 @@
                     const localSL = state.stressLevels || {};
                     const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                    const remoteHasData = Object.keys(remotePT).length > 0;
-                    const localHasData = Object.keys(localPT).length > 0;
+                    const remoteHasData = Object.keys(remotePT).length> 0;
+                    const localHasData = Object.keys(localPT).length> 0;
 
                     const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
-                        new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+                        new Date(remoteUpdatedAt).getTime()> new Date(localUpdatedAt).getTime());
 
                     console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer });
 
@@ -2606,7 +2606,7 @@
                 const prev = prevRaw ? JSON.parse(prevRaw) : null;
                 const prevCount = Array.isArray(prev) ? prev.length : 0;
 
-                if (tasksToSave.length === 0 && prevCount > 0) {
+                if (tasksToSave.length === 0 && prevCount> 0) {
                     console.warn("🛑 Anti-wipe: blocco salvataggio vuoto (cache aveva", prevCount, "tasks)");
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels || {}));
@@ -2677,7 +2677,7 @@
                 due_date: isoDate,
                 display_date: rawDate,
                 dateObj,
-                hasValidDate: !isNaN(dateObj.getTime()) && dateObj.getTime() > 0,
+                hasValidDate: !isNaN(dateObj.getTime()) && dateObj.getTime()> 0,
                 done: match ? !!match.done : !!t.done
             };
         });
@@ -2784,7 +2784,7 @@
     function isValidClass(cls) {
         if (!cls) return false;
         const s = String(cls).trim().toUpperCase();
-        return s.length >= 1 && s.length <= 20;
+        return s.length>= 1 && s.length <= 20;
     }
 
     function isValidName(name) {
@@ -2950,7 +2950,7 @@
             const todayPlanned = state.plannedTasks[todayStr] || [];
             const plannedTasks = state.tasks.filter(t => todayPlanned.includes(t.id));
 
-            const tasksHTML = plannedTasks.length > 0 ?
+            const tasksHTML = plannedTasks.length> 0 ?
                 plannedTasks.map(t => {
                     const subjectColor = getSubjectColor(t.subject);
                     return `
@@ -3094,7 +3094,7 @@
                 const abbrev = getSubjectAbbrev(t.subject);
                 return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
             }).join('')}
-                            ${dayTasks.length > 3 ? `<div class="more-events">+${dayTasks.length - 3}</div>` : ''}
+                            ${dayTasks.length> 3 ? `<div class="more-events">+${dayTasks.length - 3}</div>` : ''}
                        </div>
                    </div>
                 `;
@@ -3175,7 +3175,7 @@
         }).join('')}
                        </div>
 
-                        ${tasksForDay.length > 0 ? `
+                        ${tasksForDay.length> 0 ? `
                         <div style="margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
                             <button onclick="closeModal()" class="btn btn-primary" style="width:100%; height:50px; border-radius:16px; font-weight:800; letter-spacing:0.5px;">OK, CHIUDI</button>
                        </div>
@@ -3190,7 +3190,7 @@
         if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
         const index = state.plannedTasks[dateStr].indexOf(taskId);
 
-        if (index > -1) {
+        if (index> -1) {
             state.plannedTasks[dateStr].splice(index, 1);
         } else {
             state.plannedTasks[dateStr].push(taskId);
@@ -3233,7 +3233,7 @@
         const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
 
         const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-        const html = filtered.length > 0
+        const html = filtered.length> 0
             ? filtered.map(t => {
                 const d = new Date(t.plannedDate);
                 const dayLabel = `${dayNamesShort[d.getDay()]} ${d.getDate()}`;
@@ -3470,7 +3470,7 @@
                 const profile = data.data;
                 if (profile.specialization) state.user.specialization = profile.specialization;
                 if (!isValidName(state.user.name) && profile.name) state.user.name = profile.name;
-                if (!isValidClass(state.user.class) && profile.class) state.user.class = profile.class;
+                if (!isValidClass(state.user.class) && profile.class) state.user.class=profile.class;
                 localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                 return profile;
             }
@@ -3624,7 +3624,7 @@
             // 🔥 Sync with DIRECTORY for global search
             const myId = getUserId();
             const myName = String(state.user.name || '').toLowerCase().trim();
-            for (let i = DIRECTORY.length - 1; i >= 0; i--) {
+            for (let i = DIRECTORY.length - 1; i>= 0; i--) {
                 const d = DIRECTORY[i];
                 if (String(d.id).toLowerCase() === myId.toLowerCase() || String(d.name || '').toLowerCase().trim() === myName) {
                     DIRECTORY.splice(i, 1);
@@ -3685,7 +3685,7 @@
                         ${greeting}, ${state.user.name.split(' ')[0]}
                     </h1>
                     <p style="color: var(--text-secondary); font-size: 14px;">
-                        ${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
+                        ${plannedTasks.length> 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
                     </p>
                 </div>
             </div>
@@ -3734,7 +3734,7 @@
                     box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
                     <div>
                         <div class="title" style="margin-bottom:4px;">MEDIA</div>
-                        <div style="font-size:34px; font-weight:800; color:${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'}; line-height:1;">
+                        <div style="font-size:34px; font-weight:800; color:${media>= 6 ? 'var(--green)' : media>= 5 ? 'var(--orange)' : 'var(--red)'}; line-height:1;">
                             ${media || '-'}
                         </div>
                     </div>
@@ -3755,7 +3755,7 @@
                         GESTISCI
                     </span>
                 </div>
-                ${plannedTasks.length > 0 ? `
+                ${plannedTasks.length> 0 ? `
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         ${plannedTasks.map((t, i) => {
             const sc = getSubjectColor(t.subject);
@@ -3789,7 +3789,7 @@
             </div>
 
             <!-- PROSSIME SCADENZE -->
-            ${upcomingTasks.length > 0 ? `
+            ${upcomingTasks.length> 0 ? `
             <div style="margin-bottom:24px;">
                 <h2 style="font-size:17px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
                     <i class="ph-fill ph-clock" style="color:var(--orange);"></i> Prossime Scadenze
@@ -3894,7 +3894,7 @@
             <div id="weekly-agenda-list">
                 ${renderWeeklyAgenda()}
             </div>
-        </div > `;
+        </div> `;
     }
 
     function renderWeeklyAgenda() {
@@ -3926,15 +3926,15 @@
 
         if (!list.length) {
             return `
-        < div class="card" style = "text-align: center; color: var(--text-dim); padding: 50px 20px;" >
+        <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px;">
                 <i class="ph ph-sparkle" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px;"></i>
                 <div style="font-size: 14px; font-weight: 500;">Tutto in ordine! Nessuna attività prevista.</div>
-            </div > `;
+            </div> `;
         }
 
         if (state.plannerMode === 'registro') {
             return `
-        < div style = "display: flex; flex-direction: column; gap: 8px;" >
+        <div style="display: flex; flex-direction: column; gap: 8px;">
             ${list.map(t => {
                 const d = parseArgoDate(t.displayDate);
                 const day = d.toLocaleDateString('it-IT', { day: '2-digit' });
@@ -3961,10 +3961,10 @@
                     </div>`;
             }).join('')
                 }
-            </div > `;
+            </div> `;
         } else {
             return `
-        < div style = "display: flex; flex-direction: column; gap: 12px;" >
+        <div style="display: flex; flex-direction: column; gap: 12px;">
             ${list.map(t => {
                 const subjColor = getSubjectColor(t.subject);
                 return `
@@ -3986,7 +3986,7 @@
                     </div>`;
             }).join('')
                 }
-            </div > `;
+            </div> `;
         }
     }
 
@@ -3997,7 +3997,7 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-        < div class="modal-overlay" onclick = "closeModal(event)" >
+        <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
                     <h2 style="margin:0;">Stress Giornaliero</h2>
@@ -4015,7 +4015,7 @@
                     <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
                 </div>
             </div>
-        </div > `;
+        </div> `;
     }
 
     // Dettagli Stress: grafico storico ultimi 14 giorni (linea)
@@ -4056,7 +4056,7 @@
         const modalContainer = getModalContainer();
         if (!modalContainer) return;
 
-        for (let i = days - 1; i >= 0; i--) {
+        for (let i = days - 1; i>= 0; i--) {
             const d = new Date(today);
             d.setDate(today.getDate() - i);
             const iso = getLocalDateString(d);
@@ -4066,7 +4066,7 @@
         const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
 
         modalContainer.innerHTML = `
-        < div class="modal-overlay" onclick = "closeModal(event)" >
+        <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
@@ -4087,7 +4087,7 @@
                     ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
                 </div>
             </div>
-        </div > `;
+        </div> `;
     }
 
     // setStressLevel(lv, inModal): aggiorna fluido
@@ -4111,7 +4111,7 @@
             if (existingBadge) existingBadge.remove();
             const badge = document.createElement('div');
             badge.setAttribute('data-stress-badge', '');
-            badge.style = "position:absolute; bottom:10px; right:12px; background: rgba(255,255,255,0.18); color:#fff; font-size:11px; font-weight:800; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.28);";
+            badge.style="position:absolute; bottom:10px; right:12px; background: rgba(255,255,255,0.18); color:#fff; font-size:11px; font-weight:800; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.28);";
             badge.textContent = String(lv);
             stressBadge.appendChild(badge);
         }
@@ -4126,10 +4126,10 @@
         if (!modalContainer) return;
 
         modalContainer.innerHTML = `
-        < div class="modal-overlay" onclick = "closeModal(event)" >
+        <div class="modal-overlay" onclick="closeModal(event)">
             <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
             </div>
-        </div > `;
+        </div> `;
         refreshPlanWeekModalContent();
     }
 
@@ -4149,10 +4149,10 @@
         }
 
         contentEl.innerHTML = `
-        < div style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" >
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin:0;">Pianifica Settimana</h2>
                     <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
-               </div >
+               </div>
                 <div style="display: flex; flex-direction: column; gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
                     <!-- CUSTOM QUEST SECTION -->
                     <div style="background: rgba(255,255,255,0.08); padding: 16px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 4px;">
@@ -4204,7 +4204,7 @@
 
         if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
         const index = state.plannedTasks[dateStr].indexOf(taskId);
-        if (index > -1) {
+        if (index> -1) {
             state.plannedTasks[dateStr].splice(index, 1);
         } else {
             state.plannedTasks[dateStr].push(taskId);
@@ -4281,7 +4281,7 @@
 
     function showVotiView() {
         modalContainer.innerHTML = `
-        < div class="modal-overlay" onclick = "closeModal(event)" >
+        <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Voti DidUP</h2>
@@ -4291,25 +4291,25 @@
                     ${renderVoti()}
                 </div>
             </div>
-           </div > `;
+           </div> `;
     }
 
     function renderVoti() {
-        const votiData = (state.voti && state.voti.length > 0) ? state.voti :
-            ((state.grades && state.grades.length > 0) ? state.grades : []);
+        const votiData = (state.voti && state.voti.length> 0) ? state.voti :
+            ((state.grades && state.grades.length> 0) ? state.grades : []);
 
         if (votiData.length === 0) {
             return `
-        < div style = "text-align:center; padding: 48px 24px; color: var(--text-muted);" >
+        <div style="text-align:center; padding: 48px 24px; color: var(--text-muted);">
                     <i class="ph ph-graduation-cap" style="font-size: 56px; opacity: 0.2; margin-bottom: 16px; display: block;"></i>
                     <p style="margin-bottom:20px; font-size:16px;">Nessun voto registrato.</p>
                     <button onclick="performArgoSync()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto;">Sincronizza DidUP</button>
-               </div > `;
+               </div> `;
         }
 
         const media = calcolaMedia(votiData);
         return `
-        < div class="view" >
+        <div class="view">
                 <div class="card" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(79, 70, 229, 0.4)); border: 1px solid var(--blue); padding: 24px; text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">Media Generale</div>
                     <div style="font-size: 56px; font-weight: 800; color: white;">${media || '--'}</div>
@@ -4319,7 +4319,7 @@
                     ${votiData.map(v => {
             const val = (v.valore || v.value || '').toString();
             const mat = v.materia || v.subject || 'Materia';
-            const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
+            const color = parseFloat(val.replace(',', '.'))>= 6 ? 'var(--green)' : 'var(--red)';
             return `
                         <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${color}15; border:1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:${color};">${val}</div>
@@ -4330,18 +4330,18 @@
                        </div>`;
         }).join('')}
                </div>
-           </div > `;
+           </div> `;
     }
 
     function showBachecaModal() {
         // ⭐ Prova prima promemoria, poi announcements
-        const dataBacheca = state.promemoria && state.promemoria.length > 0 ? state.promemoria :
-            (state.announcements && state.announcements.length > 0 ? state.announcements : []);
+        const dataBacheca = state.promemoria && state.promemoria.length> 0 ? state.promemoria :
+            (state.announcements && state.announcements.length> 0 ? state.announcements : []);
 
         console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
 
         modalContainer.innerHTML = `
-        < div class="modal-overlay" onclick = "closeModal(event)" >
+        <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Bacheca & Avvisi</h2>
@@ -4386,12 +4386,12 @@
             }
                 </div>
             </div>
-           </div > `;
+           </div> `;
     }
 
     function renderProfile() {
         return `
-        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
+        <div class="view" style="animation: slideUp 0.4s ease-out;">
             <div style="margin-bottom: 24px;">
                 <h1 style="font-size: 28px; font-weight: 800;">Il Mio Account</h1>
                 <p style="color: var(--text-secondary); font-size: 14px;">Gestisci le tue impostazioni e preferenze</p>
@@ -4449,15 +4449,15 @@
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
                 </button>
             </div>
-        </div > `;
+        </div> `;
     }
 
     /* --- Advanced Grades & Analytics (v1.1) --- */
 
     function getVotiData() {
         // ⭐ Consolida i dati da diverse possibili fonti (legacy sync vs argo argo)
-        return (state.voti && state.voti.length > 0) ? state.voti :
-            ((state.grades && state.grades.length > 0) ? state.grades : []);
+        return (state.voti && state.voti.length> 0) ? state.voti :
+            ((state.grades && state.grades.length> 0) ? state.grades : []);
     }
 
     function renderGradesView() {
@@ -4481,7 +4481,7 @@
         }).sort((a, b) => b.media - a.media);
 
         return `
-        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
+        <div class="view" style="animation: slideUp 0.4s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div>
                     <h1 style="font-size: 28px; font-weight: 800;">Media & Analisi</h1>
@@ -4492,7 +4492,7 @@
                 </button>
             </div>
 
-            <!--Global Media Card-- >
+            <!--Global Media Card-->
             <div class="card" style="background: linear-gradient(135deg, var(--accent) 0%, #4338ca 100%); padding: 32px; border: none; margin-bottom: 32px; box-shadow: 0 20px 40px var(--accent-glow);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
@@ -4532,15 +4532,15 @@
                             <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${s.name}</div>
                             <div style="font-size: 12px; color: var(--text-dim);">${s.count} voti totali</div>
                             <div class="mini-trend">
-                                ${s.trend.map(v => `<div class="trend-dot" style="background: ${v >= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
+                                ${s.trend.map(v => `<div class="trend-dot" style="background: ${v>= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
                             </div>
                         </div>
-                        <div class="grade-badge" style="color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}">${s.media.toFixed(1)}</div>
+                        <div class="grade-badge" style="color: ${s.media>= 6 ? 'var(--green)' : 'var(--red)'}">${s.media.toFixed(1)}</div>
                         <i class="ph ph-caret-right" style="color: var(--text-dim);"></i>
                     </div>`;
         }).join('')}
             </div>
-        </div > `;
+        </div> `;
     }
 
     function promptSetGoal(type) {
@@ -4548,7 +4548,7 @@
         const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
         if (res !== null) {
             const val = parseFloat(res.replace(',', '.'));
-            if (!isNaN(val) && val > 0 && val <= 10) {
+            if (!isNaN(val) && val> 0 && val <= 10) {
                 if (!state.goals) state.goals = {};
                 state.goals[type] = val;
                 saveTasks(); // Persist standard
@@ -4674,7 +4674,7 @@
         const subjColor = getSubjectColor(subjectName);
 
         return `
-        < div class="view" style = "animation: slideUp 0.4s ease-out;" >
+        <div class="view" style="animation: slideUp 0.4s ease-out;">
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
                 <button class="btn-icon-only" onclick="state.activeSubject = null; render();" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
                     <i class="ph-bold ph-arrow-left"></i>
@@ -4689,7 +4689,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
                     <div>
                         <div style="font-size: 10px; color: var(--text-dim); font-weight: 800; text-transform: uppercase;">Media</div>
-                        <div style="font-size: 24px; font-weight: 800; color: ${media >= 6 ? 'var(--green)' : 'var(--red)'};">${media.toFixed(2)}</div>
+                        <div style="font-size: 24px; font-weight: 800; color: ${media>= 6 ? 'var(--green)' : 'var(--red)'};">${media.toFixed(2)}</div>
                     </div>
                     <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
                         <div style="font-size: 10px; color: var(--text-dim); font-weight: 800; text-transform: uppercase;">Obiettivo</div>
@@ -4707,7 +4707,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 ${votiData.map(v => {
             const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-            const isSuff = val >= 6;
+            const isSuff = val>= 6;
             return `
                     <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
                         <div style="width: 48px; height: 48px; border-radius: 12px; background: ${isSuff ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: ${isSuff ? 'var(--green)' : 'var(--red)'};">
@@ -4721,20 +4721,20 @@
                     </div>`;
         }).join('')}
             </div>
-        </div > `;
+        </div> `;
     }
 
     /* --- Gamification & Badges --- */
 
     const ACHIEVEMENTS = [
-        { id: 'first_10', title: 'Cacciatore di 10', icon: '🎯', desc: 'Prendi il tuo primo 10', condition: (voti) => voti.some(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')) >= 10) },
-        { id: 'gold_media', title: 'Media d\'Oro', icon: '🏆', desc: 'Raggiungi una media generale ≥ 8.5', condition: (voti) => parseFloat(calcolaMedia(voti)) >= 8.5 },
-        { id: 'constant', title: 'Costante', icon: '🔥', desc: 'Accumula almeno 15 voti', condition: (voti) => voti.length >= 15 },
+        { id: 'first_10', title: 'Cacciatore di 10', icon: '🎯', desc: 'Prendi il tuo primo 10', condition: (voti) => voti.some(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.'))>= 10) },
+        { id: 'gold_media', title: 'Media d\'Oro', icon: '🏆', desc: 'Raggiungi una media generale ≥ 8.5', condition: (voti) => parseFloat(calcolaMedia(voti))>= 8.5 },
+        { id: 'constant', title: 'Costante', icon: '🔥', desc: 'Accumula almeno 15 voti', condition: (voti) => voti.length>= 15 },
         {
             id: 'subject_master', title: 'Maestro', icon: '🧠', desc: 'Media ≥ 9.0 in una materia', condition: (voti) => {
                 const map = {};
                 voti.forEach(v => { const m = v.materia || v.subject; if (!map[m]) map[m] = []; map[m].push(v); });
-                return Object.values(map).some(list => parseFloat(calcolaMedia(list)) >= 9.0);
+                return Object.values(map).some(list => parseFloat(calcolaMedia(list))>= 9.0);
             }
         }
     ];
@@ -4780,7 +4780,7 @@
         const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
 
         return `
-        < div class="card glass-panel" style = "padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;" >
+        <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
                     <div style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; background:${modeColor}; color:white;">${modeLabel}</div>
@@ -4794,7 +4794,7 @@
                         ↺ Reset
                     </button>
                 </div>
-            </div > `;
+            </div> `;
     }
 
     function togglePomodoro() {
@@ -4839,8 +4839,8 @@
         const chat = state.aiChatHistory || [];
 
         return `
-        < div class="view" style = "display: flex; flex-direction: column; height: calc(100dvh - 100px); animation: fadeInUp 0.4s ease-out;" >
-            < !--Modern Gradient Header-- >
+        <div class="view" style="display: flex; flex-direction: column; height: calc(100dvh - 100px); animation: fadeInUp 0.4s ease-out;">
+            <!--Modern Gradient Header-->
             <div style="flex-shrink: 0; padding: 16px 0; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; color: white;">
@@ -4858,7 +4858,7 @@
                  </div>
             </div>
 
-            <!--Chat Area-- >
+            <!--Chat Area-->
             <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 16px;">
                 ${chat.length === 0 ? `
                 <div style="text-align: center; padding: 60px 20px; animation: slideUp 0.5s ease-out;">
@@ -4893,7 +4893,7 @@
                 `).join('')}
             </div>
 
-            <!--Input Area-- >
+            <!--Input Area-->
         <div style="flex-shrink: 0; padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: flex-end;">
             <div style="flex: 1; position: relative; background: var(--bg-card); border-radius: 18px; border: 1px solid rgba(255,255,255,0.06); padding: 4px;">
                 <textarea id="aiChatInput" rows="1" placeholder="Fai una domanda..."
@@ -4905,7 +4905,7 @@
                 <i class="ph-bold ph-paper-plane-tilt" style="font-size: 20px;"></i>
             </button>
         </div>
-        </div > `;
+        </div> `;
     }
 
     function sendAIChatQuick(text) {
@@ -5049,7 +5049,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 const time = timeMatch[1];
                 // Clean line from time and bullet points
                 let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
-                if (clean && clean.length > 2) {
+                if (clean && clean.length> 2) {
                     const parts = clean.split(/[ \-–—]/);
                     const subject = parts[0];
                     const topic = parts.slice(1).join(' ').trim() || 'Studio';
@@ -5091,7 +5091,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             }
         });
 
-        if (addedCount > 0) {
+        if (addedCount> 0) {
             saveTasks();
             if (typeof savePlannerRemote === 'function') savePlannerRemote();
             showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
@@ -5146,7 +5146,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Materie Critiche</div>
                     <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Seleziona le materie in cui hai più difficoltà.</p>
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
-                        ${subjects.length > 0 ? subjects.map(s => {
+                        ${subjects.length> 0 ? subjects.map(s => {
             const active = state.difficulty.includes(s);
             const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
@@ -5565,7 +5565,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     if (j.success) {
                         // Aggiorna in memoria
                         p.name = j.name;
-                        p.class = j.class;
+                        p.class=j.class;
                         // Aggiorna UI
                         const btn = container.querySelector(`.btn-profile[data-index="${p.index}"]`);
                         if (btn) {
@@ -5685,7 +5685,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
             // 🔥 NEW: Persist full profile info for instant hydration on refresh
             data.session.name = data.student?.name || data.selectedProfile?.name;
-            data.session.class = data.student?.class || data.selectedProfile?.class;
+            data.session.class=data.student?.class || data.selectedProfile?.class;
             data.session.specialization = data.student?.specialization || data.selectedProfile?.specialization;
             data.session.avatar = data.student?.avatar || data.selectedProfile?.avatar; // 🔥 Added Avatar
 
@@ -5704,7 +5704,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         const incoming = data.student || data.selectedProfile || {};
 
         state.user.name = (incoming.name && isValidName(incoming.name)) ? incoming.name : (oldUser.name || "Studente");
-        state.user.class = (incoming.class && isValidClass(incoming.class)) ? incoming.class : (oldUser.class || "N/D");
+        state.user.class=(incoming.class && isValidClass(incoming.class)) ? incoming.class : (oldUser.class || "N/D");
         state.user.specialization = incoming.specialization || oldUser.specialization;
         state.user.avatar = incoming.avatar || oldUser.avatar || null;
 
@@ -5775,7 +5775,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         // ✅ FIX: normalizza sempre la classe prima di salvare
         const normalized = normalizeClassUi(state.user.class);
-        if (normalized) state.user.class = normalized;
+        if (normalized) state.user.class=normalized;
 
         // Salva con dati validati
         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
@@ -6128,7 +6128,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         <p style="font-size: 15px; opacity: 0.8; margin-bottom: 24px; line-height: 1.5;">Seleziona dalla lista i compiti che vuoi affrontare oggi. Verranno aggiunti alla tua agenda giornaliera.</p>
                         
                         <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; max-height: 450px; overflow-y: auto; padding-right: 8px;">
-                            ${allPendingTasks.length > 0 ? allPendingTasks.map(t => {
+                            ${allPendingTasks.length> 0 ? allPendingTasks.map(t => {
             const isPlanned = plannedIds.includes(t.id);
             const subjectColor = getSubjectColor(t.subject);
             return `
@@ -6220,7 +6220,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
 
         const index = state.plannedTasks[todayStr].indexOf(id);
-        if (index > -1) {
+        if (index> -1) {
             state.plannedTasks[todayStr].splice(index, 1);
         } else {
             state.plannedTasks[todayStr].push(id);
@@ -6446,8 +6446,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         function arcGradient(val) {
             const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-            if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
-            else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
+            if (val>= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
+            else if (val>= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
             else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
             return g;
         }
@@ -6473,7 +6473,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
 
             valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
-            valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
+            valueEl.style.color = currentVal>= 6 ? 'var(--green)' : (currentVal>= 5 ? 'var(--orange)' : 'var(--red)');
         }
 
         // Se siamo già a target, disegna frame fisso e stop
@@ -6623,7 +6623,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         <div style="margin-bottom:24px;">
             <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Storico Recente</div>
             <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:8px; scrollbar-width:none;">
-                ${historyDays.length > 0 ? historyDays.map(h => `
+                ${historyDays.length> 0 ? historyDays.map(h => `
                     <div style="min-width:140px; background:rgba(255,255,255,0.04); border-radius:16px; padding:12px; border:1px solid rgba(255,255,255,0.06);">
                         <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.3); margin-bottom:4px;">${h.displayDate}</div>
                         <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:4px;">Livello ${h.level}</div>
@@ -6699,7 +6699,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         const dayNames = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 
-        for (let i = days - 1; i >= 0; i--) {
+        for (let i = days - 1; i>= 0; i--) {
             const d = new Date(today);
             d.setDate(today.getDate() - i);
             const iso = d.toISOString().slice(0, 10);
@@ -6783,7 +6783,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const series = [];
-        for (let i = days - 1; i >= 0; i--) {
+        for (let i = days - 1; i>= 0; i--) {
             const d = new Date(today);
             d.setDate(today.getDate() - i);
             const iso = d.toISOString().slice(0, 10);
