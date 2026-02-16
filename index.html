@@ -7318,7 +7318,23 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     window.drawWeeklyStressChart = drawWeeklyStressChart;
     window.showProfileSelector = showProfileSelector;
     window.performProfileLogin = performProfileLogin;
+    // --- GLOBAL EXPOSURE (CRITICAL FOR BUTTONS) ---
+    window.performLogin = performLogin;
+    window.performSync = performSync;
+    window.testBackendConnection = testBackendConnection;
+    window.showQuickAddTaskModal = showQuickAddTaskModal;
+    window.showPlanWeekModal = showPlanWeekModal;
+    window.showCompetencyInputModal = showCompetencyInputModal; // For AI button
+    window.showVotiView = showVotiView;
+    window.navigate = navigate;
+    window.logout = logout;
+    window.saveProfileChanges = saveProfileChanges;
 
+    // Previous exposures
+    window.showStressCaptureModal = showDetailedStressModal;
+    window.drawWeeklyStressChart = drawWeeklyStressChart;
+    window.showProfileSelector = showProfileSelector;
+    window.performProfileLogin = performProfileLogin;
     // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
     function initCustomScrollbar() {
         const scroller = document.getElementById('custom-scrollbar');
