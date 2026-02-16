@@ -1732,7 +1732,7 @@
     };
 
     // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
-    const APP_VERSION = "1.1.25-master";
+    const APP_VERSION = "1.1.26-master";
 
 
 
@@ -2720,12 +2720,19 @@
                 body: JSON.stringify({ id, link })
             });
             const data = await res.json();
-            if (data.success) {
-                const c = state.circolari.find(x => x.id === id);
-                if (c) {
-                    c.sintesi = data.sintesi;
-                    render();
+            const c = state.circolari.find(x => x.id === id);
+
+            if (data.success && c) {
+                c.sintesi = data.sintesi;
+                render();
+            } else if (c) {
+                // Gestione specifica per quota esaurita
+                if (data.error && data.error.includes("429")) {
+                    c.sintesi = "🔴 **Quota AI temporaneamente esaurita**. Questa circolare verrà sintetizzata non appena possibile (riprova tra qualche ora).";
+                } else {
+                    c.sintesi = "Impossibile generare la sintesi al momento.";
                 }
+                render();
             }
         } catch (e) {
             console.error("Sintesi Error:", e);

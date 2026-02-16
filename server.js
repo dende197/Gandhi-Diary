@@ -19,6 +19,34 @@ let circularsCache = {
     ttl: 3600000 // 1 ora
 };
 
+// ============= CACHE SINTESI AI (Persistent JSON) =============
+const SINTESI_CACHE_FILE = path.join(__dirname, 'cache_sintesi.json');
+let sintesiCache = {};
+
+function loadSintesiCache() {
+    try {
+        if (fs.existsSync(SINTESI_CACHE_FILE)) {
+            const data = fs.readFileSync(SINTESI_CACHE_FILE, 'utf8');
+            sintesiCache = JSON.parse(data);
+            console.log(`✅ Cache sintesi caricata: ${Object.keys(sintesiCache).length} elementi.`);
+        }
+    } catch (e) {
+        console.error("❌ Errore caricamento cache sintesi:", e.message);
+        sintesiCache = {};
+    }
+}
+
+function saveSintesiCache() {
+    try {
+        fs.writeFileSync(SINTESI_CACHE_FILE, JSON.stringify(sintesiCache, null, 2));
+    } catch (e) {
+        console.error("❌ Errore salvataggio cache sintesi:", e.message);
+    }
+}
+
+// Carica all'avvio
+loadSintesiCache();
+
 // ============= SETUP APP =============
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -138,6 +166,12 @@ app.post('/api/circolari/sintesi', async (req, res) => {
 
     if (!link) return res.status(400).json({ error: "Link mancante" });
 
+    // 1. Controllo Cache Persistente
+    if (id && sintesiCache[id]) {
+        debugLog(`[CACHE] Restituendo sintesi archiviata per: ${id}`);
+        return res.json({ success: true, sintesi: sintesiCache[id], id, cached: true });
+    }
+
     try {
         let textContent = "";
         let finalPdfUrl = link;
@@ -202,6 +236,12 @@ Circolare: "${textContent.substring(0, 7000)}"`;
 
         const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
         debugLog("Sintesi generata con successo.");
+
+        // SALVA IN CACHE
+        if (id && sintesi && !sintesi.includes("Impossibile")) {
+            sintesiCache[id] = sintesi;
+            saveSintesiCache();
+        }
 
         res.json({ success: true, sintesi, id });
 
