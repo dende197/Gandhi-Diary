@@ -1748,9 +1748,8 @@
         return false;
     };
 
-    // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
-
-
+    // 🚀 G-Diary v1.1.32-master [Master Sync & Smoothness]
+    const APP_VERSION = '1.1.32-master';
 
     // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
     const savedVersion = localStorage.getItem('app_version');
@@ -3420,12 +3419,6 @@
         }
     }
 
-    /* ==========================================================================
-       G-CONNECT CORE: INITIAL STATE & CONFIGURATION
-       v1.1.32-master — "Master Sync & Smoothness"
-       ========================================================================== */
-
-    const APP_VERSION = '1.1.32-master';
     function renderDayDetailModal(dateStr) {
         const container = getModalContainer();
         if (!container) return;
