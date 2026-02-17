@@ -159,13 +159,13 @@ app.get('/api/circolari', async (req, res) => {
     }
 });
 
-// 2. Sintesi AI Circolare (Legge PDF e riassume)
+// 2. Sintesi AI Circolare (Legge PDF e riassume) — v1.1.32.18 with retry
 app.post('/api/circolari/sintesi', async (req, res) => {
     const { link, id } = req.body;
-    // Account 1 - Gemini 1.5 Flash (Stability & Speed)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY_SINTESI || 'AIzaSyCgu9P7K8PNbHQkX65bqOT_w5a2R4yU3Zw';
+    // 🔑 Updated API Key (v1.1.32.18)
+    const GEMINI_KEY = process.env.GEMINI_API_KEY_SINTESI || 'AIzaSyABafxYUjlvdc3E0fWW3YQrl-39ZX1MQhg';
 
-    if (!link) return res.status(400).json({ error: "Link mancante" });
+    if (!link) return res.status(400).json({ success: false, error: "Link mancante", errorType: "badRequest" });
 
     // 1. Controllo Cache Persistente
     if (id && sintesiCache[id]) {
@@ -183,19 +183,16 @@ app.post('/api/circolari/sintesi', async (req, res) => {
             const htmlRes = await axios.get(link, { timeout: 10000 });
             const $ = cheerio.load(htmlRes.data);
 
-            // Cerchiamo i link PDF negli allegati
             const pdfLinks = [];
             $('#attachmentsList a[href*=".pdf"]').each((i, el) => {
                 pdfLinks.push($(el).attr('href'));
             });
 
             if (pdfLinks.length > 0) {
-                // Preferiamo il link che contiene "circolare" o "comunicato"
                 const bestLink = pdfLinks.find(url => url.toLowerCase().includes('circolare') || url.toLowerCase().includes('comunicato')) || pdfLinks[0];
                 finalPdfUrl = (bestLink.startsWith('http') ? bestLink : `https://www.liceogandhi.edu.it${bestLink}`).trim();
                 debugLog(`Trovato PDF allegato: [${finalPdfUrl}]`);
             } else {
-                // Fallback al testo della pagina se non trovo PDF
                 textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
             }
         }
@@ -215,11 +212,15 @@ app.post('/api/circolari/sintesi', async (req, res) => {
             } catch (pdfErr) {
                 console.error("PDF Download/Parse Error:", pdfErr.message);
                 if (pdfErr.response) console.error("Status:", pdfErr.response.status, pdfErr.response.headers);
-                // Fallback logic could go here
+                return res.status(500).json({ success: false, error: "Impossibile scaricare il documento PDF.", errorType: "pdfError" });
             }
         }
 
-        // Sintesi AI
+        if (!textContent || textContent.trim().length < 20) {
+            return res.status(400).json({ success: false, error: "Nessun contenuto testuale trovato nella circolare.", errorType: "noContent" });
+        }
+
+        // Sintesi AI — with retry on 429/500
         const prompt = `Sei un assistente per studenti del Liceo Gandhi. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, molto chiari e pratici. 
 REGOLE DI FORMATTAZIONE:
 - Usa il formato **Markdown**.
@@ -229,27 +230,57 @@ REGOLE DI FORMATTAZIONE:
 
 Circolare: "${textContent.substring(0, 7000)}"`;
 
-        debugLog("Inviando richiesta a Gemini...");
-        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
-        const aiResponse = await axios.post(aiUrl, {
-            contents: [{ parts: [{ text: prompt }] }]
-        }, { timeout: 20000 });
+        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+        const MAX_RETRIES = 2;
+        let lastError = null;
 
-        const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
-        debugLog("Sintesi generata con successo.");
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+                debugLog(`Inviando richiesta a Gemini (tentativo ${attempt + 1}/${MAX_RETRIES})...`);
+                const aiResponse = await axios.post(aiUrl, {
+                    contents: [{ parts: [{ text: prompt }] }]
+                }, { timeout: 25000 });
 
-        // SALVA IN CACHE
-        if (id && sintesi && !sintesi.includes("Impossibile")) {
-            sintesiCache[id] = sintesi;
-            saveSintesiCache();
+                const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
+                debugLog("Sintesi generata con successo.");
+
+                // SALVA IN CACHE
+                if (id && sintesi && !sintesi.includes("Impossibile")) {
+                    sintesiCache[id] = sintesi;
+                    saveSintesiCache();
+                }
+
+                return res.json({ success: true, sintesi, id });
+            } catch (aiErr) {
+                lastError = aiErr;
+                const status = aiErr.response?.status;
+                console.error(`AI Attempt ${attempt + 1} failed (status: ${status}):`, aiErr.message);
+
+                // Only retry on 429 (quota) or 500/503 (server error)
+                if (status === 429 || status === 500 || status === 503) {
+                    if (attempt < MAX_RETRIES - 1) {
+                        const delay = (attempt + 1) * 2000; // 2s, 4s
+                        debugLog(`Ritentando tra ${delay}ms...`);
+                        await new Promise(r => setTimeout(r, delay));
+                        continue;
+                    }
+                }
+                break; // Don't retry on other errors (400, 401, etc.)
+            }
         }
 
-        res.json({ success: true, sintesi, id });
+        // All retries exhausted
+        const status = lastError?.response?.status;
+        if (status === 429) {
+            return res.status(429).json({ success: false, error: "Quota AI temporaneamente esaurita. Riprova tra qualche minuto.", errorType: "quotaExceeded" });
+        }
+        console.error("Synthesis Error (all retries failed):", lastError?.message);
+        if (lastError?.response) console.error("AI Error Data:", JSON.stringify(lastError.response.data));
+        res.status(500).json({ success: false, error: lastError?.message || "Errore AI sconosciuto", errorType: "aiError" });
 
     } catch (error) {
         console.error("Synthesis Error:", error.message);
-        if (error.response) console.error("AI Error Data:", JSON.stringify(error.response.data));
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: error.message, errorType: "serverError" });
     }
 });
 
