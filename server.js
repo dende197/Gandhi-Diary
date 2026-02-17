@@ -81,7 +81,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${GEMINI_KEY}`;
         const response = await axios.post(url, {
             contents: messages,
             generationConfig: {
@@ -229,7 +229,7 @@ REGOLE DI FORMATTAZIONE:
 Circolare: "${textContent.substring(0, 7000)}"`;
 
         debugLog("Inviando richiesta a Gemini...");
-        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
+        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${GEMINI_KEY}`;
         const aiResponse = await axios.post(aiUrl, {
             contents: [{ parts: [{ text: prompt }] }]
         }, { timeout: 20000 });
