@@ -1926,8 +1926,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.52 [Z-Index Fix]
-        const APP_VERSION = '1.1.52';
+        // 🚀 G-Diary v1.1.53 [Fixed Positioning Fix]
+        const APP_VERSION = '1.1.53';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6902,28 +6902,44 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         function togglePlannerMenu(event) {
             if (event) event.stopPropagation();
             const menu = document.getElementById('planner-cloud-menu');
-            if (!menu) return;
+            const btn = event?.currentTarget || event?.target?.closest('button');
+            if (!menu || !btn) return;
 
             const isVisible = menu.classList.contains('active');
 
-            // Chiudi tutti gli altri eventuali dropdown prima (opzionale)
+            // Chiudi tutti gli altri eventuali dropdown prima
             document.querySelectorAll('.planner-dropdown-content').forEach(el => {
-                el.classList.remove('active');
-                el.style.display = 'none';
+                if (el !== menu) {
+                    el.classList.remove('active');
+                    el.style.display = 'none';
+                }
             });
 
             if (!isVisible) {
-                // Force display with important to override CSS display:none
+                // Calcola posizione esatta sullo schermo (bypass overflow padri)
+                const rect = btn.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (rect.bottom + 8) + 'px';
+                menu.style.right = (window.innerWidth - rect.right) + 'px';
+                menu.style.left = 'auto'; // Forza allineamento a destra
+                menu.style.zIndex = '999999';
+
+                // Mostra il menu
                 menu.style.setProperty('display', 'flex', 'important');
                 menu.classList.add('active');
+
+                // Gestore chiusura universale
                 const closeHandler = (e) => {
-                    if (!menu.contains(e.target)) {
+                    if (!menu.contains(e.target) && !btn.contains(e.target)) {
                         menu.classList.remove('active');
                         menu.style.display = 'none';
                         document.removeEventListener('click', closeHandler);
                     }
                 };
                 setTimeout(() => document.addEventListener('click', closeHandler), 10);
+            } else {
+                menu.classList.remove('active');
+                menu.style.display = 'none';
             }
         }
 
