@@ -363,11 +363,11 @@
             transform: scale(1.02);
         }
 
-        /* === HEADER TOOLS (v1.1.32.13 Standardized) === */
+        /* === HEADER TOOLS (v1.1.32.14 Resized) === */
         .btn-icon-glass {
-            width: 40px;
-            height: 40px;
-            border-radius: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: white;
@@ -378,6 +378,11 @@
             transition: all 0.2s;
             padding: 0;
             flex-shrink: 0;
+        }
+
+        .btn-icon-glass i {
+            font-size: 20px;
+            /* Scaled icon */
         }
 
         .btn-icon-glass:hover {
@@ -4249,7 +4254,7 @@
         return `
         <div class="view">
 
-            <!-- HERO GRADIENT (Restored Full Size v1.1.32.13) -->
+            <!-- HERO GRADIENT (v1.1.32.14: AI & View Only) -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
                 border: 1px solid rgba(255,255,255,0.1);
@@ -4264,39 +4269,20 @@
                             <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <!-- AI TUTOR (40px Circle Glass) -->
+                            <!-- AI TUTOR (44px Circle Glass) -->
                             <button class="btn-icon-glass" onclick="navigate('ai_assistant')" title="AI Tutor">
                                 <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i>
                             </button>
 
-                            <!-- CLOUD ACTIONS DROPDOWN (40px Circle Glass) -->
-                            <div class="planner-dropdown">
-                                <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud">
-                                    <i class="ph-bold ph-cloud" style="font-size: 18px;"></i>
-                                </button>
-                                <div id="planner-cloud-menu" class="planner-dropdown-content">
-                                    <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
-                                        <i class="ph-bold ph-cloud-arrow-up" style="color: var(--blue);"></i> Salva
-                                    </button>
-                                    <button class="pd-item" onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
-                                        <i class="ph-bold ph-cloud-arrow-down" style="color: var(--blue);"></i> Carica
-                                    </button>
-                                    <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
-                                    <button class="pd-item" onclick="clearStudyPlan().then(() => togglePlannerMenu())" style="color: #ff4d4d;">
-                                        <i class="ph-bold ph-trash"></i> Reset
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- VIEW SWITCHER (Standardized Height) -->
-                            <div style="background: rgba(255,255,255,0.08); border-radius: 20px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; height: 40px; align-items: center;">
+                            <!-- VIEW SWITCHER (Standardized Height 44px) -->
+                            <div style="background: rgba(255,255,255,0.08); border-radius: 22px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; height: 44px; align-items: center;">
                                 <button onclick="state.plannerView='calendar'; render();" 
-                                    style="width: 32px; height: 32px; border-radius: 16px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">
-                                    <i class="ph ph-calendar" style="font-size: 16px;"></i>
+                                    style="width: 36px; height: 36px; border-radius: 18px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">
+                                    <i class="ph ph-calendar" style="font-size: 18px;"></i>
                                 </button>
                                 <button onclick="state.plannerView='list'; render();" 
-                                    style="width: 32px; height: 32px; border-radius: 16px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">
-                                    <i class="ph ph-list-bullets" style="font-size: 16px;"></i>
+                                    style="width: 36px; height: 36px; border-radius: 18px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">
+                                    <i class="ph ph-list-bullets" style="font-size: 18px;"></i>
                                 </button>
                             </div>
                         </div>
@@ -4306,13 +4292,13 @@
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 30px; background: var(--bg-card); padding: 4px; border-radius: 14px; border: var(--card-border);">
                 <button onclick="state.plannerMode='registro'; render();" 
-                    style="height:40px; border-radius:10px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s;
+                    style="height:44px; border-radius:10px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s;
                     background: ${state.plannerMode === 'registro' ? 'rgba(255,255,255,0.05)' : 'transparent'};
                     color: ${state.plannerMode === 'registro' ? 'var(--accent)' : 'var(--text-dim)'};">
                     <i class="ph-fill ph-notebook" style="margin-right: 6px;"></i> Registro Scadenze
                 </button>
                 <button onclick="state.plannerMode='studio'; render();" 
-                    style="height:40px; border-radius:10px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s;
+                    style="height:44px; border-radius:10px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s;
                     background: ${state.plannerMode === 'studio' ? 'rgba(255,255,255,0.05)' : 'transparent'};
                     color: ${state.plannerMode === 'studio' ? 'var(--accent)' : 'var(--text-dim)'};">
                     <i class="ph-fill ph-graduation-cap" style="margin-right: 6px;"></i> Piano di Studio
@@ -4321,12 +4307,32 @@
 
             ${uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : ''}
 
-            <div class="section-header" style="margin: 32px 0 16px 0;">
-                <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            <div class="section-header" style="margin: 32px 0 16px 0; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px; margin: 0;">
                     <i class="${state.plannerMode === 'registro' ? 'ph-fill ph-clock' : 'ph-fill ph-calendar-star'}" style="color: var(--accent);"></i>
                     ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Mio Schedule Studio'}
                 </h2>
-                <div style="display: flex; gap: 8px;">
+                
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <!-- CLOUD SYNC DROPDOWN (Moved Here v1.1.32.14) -->
+                    <div class="planner-dropdown">
+                        <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
+                            <i class="ph-bold ph-dots-three-circle" style="font-size: 20px; color: var(--text-secondary);"></i>
+                        </button>
+                        <div id="planner-cloud-menu" class="planner-dropdown-content" style="top: 100%; right: 0;">
+                            <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
+                                <i class="ph-bold ph-cloud-arrow-up" style="color: var(--blue);"></i> Salva
+                            </button>
+                            <button class="pd-item" onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
+                                <i class="ph-bold ph-cloud-arrow-down" style="color: var(--blue);"></i> Carica
+                            </button>
+                            <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
+                            <button class="pd-item" onclick="clearStudyPlan().then(() => togglePlannerMenu())" style="color: #ff4d4d;">
+                                <i class="ph-bold ph-trash"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
                     ${state.plannerMode === 'registro' ? `<span class="section-action" onclick="showAddRegistroTaskModal()" style="font-weight: 700; display:flex; align-items:center; gap:4px;"><i class="ph-bold ph-plus" style="font-size:12px;"></i> Aggiungi</span>` : ''}
                     ${state.plannerMode === 'studio' ? `<span class="section-action" onclick="showPlanWeekModal()" style="font-weight: 700;">+ Aggiungi Blocco</span>` : ''}
                 </div>
