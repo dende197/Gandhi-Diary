@@ -630,7 +630,24 @@
         }
 
         .sintesi-content p {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .sintesi-content {
+                font-size: 14px;
+                line-height: 1.5;
+            }
+
+            .sintesi-content ul,
+            .sintesi-content ol {
+                margin: 6px 0;
+                padding-left: 16px;
+            }
+
+            .sintesi-content li {
+                margin-bottom: 4px;
+            }
         }
 
         /* HERO BASE STYLES */
@@ -1732,7 +1749,7 @@
     };
 
     // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
-    const APP_VERSION = "1.1.30-master";
+    const APP_VERSION = "1.1.31-master";
 
 
 
@@ -2306,6 +2323,8 @@
                 const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                 const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
                 const remoteSV = data.data.stressVents || data.data.stress_vents || {};
+                const remoteTS = data.data.tasks || [];
+                const remotePL = data.data.prepLevels || data.data.prep_levels || {};
                 const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
 
                 const localPT = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
@@ -2330,10 +2349,14 @@
                     state.plannedTasks = mergePlannerData(state.plannedTasks, remotePT);
                     state.stressLevels = { ...remoteSL, ...state.stressLevels };
                     state.stressVents = { ...remoteSV, ...state.stressVents };
+                    state.tasks = remoteTS; // Full task list sync (LWW)
+                    state.prepLevels = { ...remotePL, ...state.prepLevels };
 
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                     localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
+                    localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+                    localStorage.setItem(lsKey('prep_levels'), JSON.stringify(state.prepLevels));
                     if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
                 } else if (localHasData && (!remoteHasData || localIsNewer)) {
                     console.log("ℹ️ Locale più nuovo o remoto vuoto → sincronizzo verso remoto");
@@ -2383,6 +2406,8 @@
             plannedTasks: state.plannedTasks || {},
             stressLevels: state.stressLevels || {},
             plannedDetails,
+            tasks: state.tasks || [],
+            prepLevels: state.prepLevels || {},
             updatedAt: nowIso
         };
 
@@ -6425,31 +6450,35 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     </div>
                     <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">Indica la tua preparazione (1-5) per ogni materia. L'AI userà sia i voti sia il tuo livello dichiarato.</p>
 
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+                    <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
                         ${subjectsList.map(s => `
-                            <div style="padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                                    <input type="checkbox" value="${s.name}" class="competency-check" id="comp-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" ${s.media < 6.5 || s.savedLevel < 3 ? 'checked' : ''} style="accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer;" />
-                                    <span style="background: ${s.color}; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"></span>
+                            <div style="padding: 18px; border-radius: 16px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08);">
+                                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px; cursor: pointer;" onclick="const chk=this.querySelector('input'); chk.checked=!chk.checked">
+                                    <input type="checkbox" value="${s.name}" class="competency-check" id="comp-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" ${s.media < 6.5 || s.savedLevel < 3 ? 'checked' : ''} style="accent-color: var(--accent); width: 22px; height: 22px; cursor: pointer;" onclick="event.stopPropagation()" />
+                                    <span style="background: ${s.color}; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;"></span>
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="font-size: 14px; font-weight: 600; color: white;">${s.name}</div>
-                                        <div style="font-size: 10px; color: var(--text-dim);">${s.count > 0 ? `Media: ${s.media.toFixed(1)} · ${s.priority}` : 'Nessun voto'}</div>
+                                        <div style="font-size: 15px; font-weight: 700; color: white;">${s.name}</div>
+                                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${s.count > 0 ? `Media: ${s.media.toFixed(1)} · ${s.priority}` : 'Nessun voto'}</div>
                                     </div>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 10px; padding-left: 26px;">
-                                    <span style="font-size: 10px; color: var(--text-dim); min-width: 55px;">Prep:</span>
-                                    <input type="range" min="1" max="5" value="${s.savedLevel}" class="prep-slider" data-subject="${s.name}"
-                                        oninput="document.getElementById('prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}').textContent = ['','Per niente','Poco','Sufficiente','Abbastanza','Molto'][this.value]"
-                                        style="flex: 1; accent-color: var(--accent); height: 4px;" />
-                                    <span id="prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" style="font-size: 10px; color: var(--accent); font-weight: 600; min-width: 80px; text-align: right;">${levelLabels[s.savedLevel]}</span>
+                                <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 2px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Preparazione:</span>
+                                        <span id="prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" style="font-size: 12px; color: var(--accent); font-weight: 800;">${levelLabels[s.savedLevel]}</span>
+                                    </div>
+                                    <div style="height: 48px; display: flex; align-items: center;">
+                                        <input type="range" min="1" max="5" value="${s.savedLevel}" class="prep-slider" data-subject="${s.name}"
+                                            oninput="document.getElementById('prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}').textContent = ['','Per niente','Poco','Sufficiente','Abbastanza','Molto'][this.value]"
+                                            style="flex: 1; accent-color: var(--accent); height: 8px; cursor: pointer;" />
+                                    </div>
                                 </div>
                             </div>
                         `).join('')}
-                        ${subjectsList.length === 0 ? '<div style="text-align:center; padding:20px; color:var(--text-dim); font-size:13px;">Nessun voto disponibile. Sincronizza prima i voti.</div>' : ''}
+                        ${subjectsList.length === 0 ? '<div style="text-align:center; padding:40px; color:var(--text-dim); font-size:14px;">Nessun voto disponibile. Sincronizza prima i voti.</div>' : ''}
                     </div>
 
-                    <button onclick="submitCompetencyRequest()" style="width: 100%; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
-                        <i class="ph-bold ph-sparkle" style="margin-right: 6px;"></i> Chiedi un Piano all'AI
+                    <button class="btn-primary" onclick="submitCompetencyRequest()" style="width: 100%; border:none; color:white; font-size: 16px; font-weight: 800; padding: 18px; border-radius: 16px;">
+                        <i class="ph-bold ph-sparkle" style="margin-right: 8px;"></i> Chiedi un Piano all'AI
                     </button>
                 </div>
         `);

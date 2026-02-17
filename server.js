@@ -1644,6 +1644,8 @@ app.get('/api/planner/:user_id', async (req, res) => {
                     planned_tasks: {},
                     stress_levels: {},
                     planned_details: {},
+                    tasks: [],
+                    prep_levels: {},
                     updated_at: null
                 }
             });
@@ -1693,6 +1695,8 @@ app.put('/api/planner/:user_id', async (req, res) => {
         planned_tasks: body.plannedTasks || body.planned_tasks || {},
         stress_levels: body.stressLevels || body.stress_levels || {},
         planned_details: body.plannedDetails || body.planned_details || {},
+        tasks: body.tasks || [],
+        prep_levels: body.prepLevels || body.prep_levels || {},
         updated_at: new Date().toISOString()
     };
 
@@ -1714,6 +1718,8 @@ app.put('/api/planner/:user_id', async (req, res) => {
                         plannedTasks: data.planned_tasks,
                         stressLevels: data.stress_levels,
                         plannedDetails: data.planned_details,
+                        tasks: data.tasks || [],
+                        prepLevels: data.prep_levels || {},
                         updatedAt: data.updated_at
                     }
                 });
@@ -2141,6 +2147,16 @@ app.post('/sync', async (req, res) => {
                     sName = resIdent.name;
                     sClass = normalizeClass(resIdent.cls) || resIdent.cls;
                 }
+                const prompt = `Analizza il seguente testo estratto da una circolare scolastica e creane una sintesi "Premium" ed estremamente efficace per uno studente.
+                
+                Usa lo stile Markdown per formattare la risposta in modo leggibile e COMPATTO:
+                1. Usa **Grassetto** per evidenziare date, scadenze, nomi di docenti o luoghi.
+                2. Usa elenchi puntati o numerati solo se necessario per semplificare elenchi di cose da fare.
+                3. Sii estremamente conciso: evita introduzioni di cortesia e focalizzati sull'azione richiesta.
+                4. Evita troppi a capo o spazi vuoti eccessivi: la sintesi deve essere densa di informazioni ma facile da scorrere su smartphone.
+
+                Testo della circolare:
+                ${text}`;
 
                 const pid = generatePid(school, user, profileIndex);
 
