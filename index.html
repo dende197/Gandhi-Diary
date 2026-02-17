@@ -215,7 +215,7 @@
         #top-nav {
             position: fixed;
             top: auto;
-            bottom: 24px;
+            bottom: 12px;
             left: 0;
             width: 100%;
             height: auto;
@@ -547,7 +547,7 @@
             }
 
             .planner-dropdown-content {
-                display: none;
+                display: none !important;
                 position: fixed;
                 /* Fixed to escape overflow:hidden containers */
                 top: 50%;
@@ -571,7 +571,7 @@
             /* Removed desktop-specific absolute positioning to ensure consistent behavior */
 
             .planner-dropdown-content.active {
-                display: block;
+                display: block !important;
             }
 
             .pd-item {
@@ -1913,8 +1913,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.32-master [Master Sync & Smoothness]
-        const APP_VERSION = '1.1.32-master';
+        // 🚀 G-Diary v1.1.42 [Force Cache Bust]
+        const APP_VERSION = '1.1.42';
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
@@ -4459,7 +4459,7 @@
                         <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
                             <i class="ph-bold ph-dots-three-circle" style="font-size: 20px; color: var(--text-secondary);"></i>
                         </button>
-                        <div id="planner-cloud-menu" class="planner-dropdown-content" style="top: 100%; right: 0;">
+                        <div id="planner-cloud-menu" class="planner-dropdown-content">
                             <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
                                 <i class="ph-bold ph-cloud-arrow-up" style="color: rgba(139,92,246,0.8);"></i> Salva
                             </button>
