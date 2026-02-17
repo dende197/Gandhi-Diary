@@ -3542,9 +3542,9 @@
             state.plannedTasks[dateStr].push(taskId);
         }
 
-        // Persistenza
+        // Persistenza locale
         saveTasks();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO: Ora manuale
 
         // Aggiorna UI Calendario
         const calendarEl = document.getElementById('calendar');
@@ -4154,14 +4154,14 @@
                             <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center;">
-                            <button class="btn-secondary" onclick="fetchPlannerRemote().then(() => showToast('Sync completato'))" title="Forza Sincronizzazione" style="height: 36px; width: 36px; flex-shrink: 0; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
-                                <i class="ph-bold ph-arrows-clockwise" style="color: var(--text-secondary);"></i>
+                            <button class="btn-secondary" onclick="savePlannerRemote().then(() => showToast('Piano salvato ✨'))" title="Carica sul Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: var(--blue); color: white; border: none;">
+                                <i class="ph-bold ph-cloud-arrow-up"></i> Salva
+                            </button>
+                            <button class="btn-secondary" onclick="fetchPlannerRemote().then(() => { showToast('Piano scaricato ☁️'); render(); })" title="Scarica dal Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+                                <i class="ph-bold ph-cloud-arrow-down"></i> Carica
                             </button>
                             <button class="btn-secondary" onclick="clearStudyPlan()" title="Elimina tutto il piano" style="height: 36px; width: 36px; flex-shrink: 0; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,20,20,0.1); border: 1px solid rgba(255,20,20,0.2);">
                                 <i class="ph-bold ph-trash" style="color: #ff4d4d;"></i>
-                            </button>
-                            <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
-                                <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
                             </button>
                             <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
                                 <button onclick="state.plannerView='calendar'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-calendar"></i></button>
@@ -4404,7 +4404,7 @@
         const todayStr = getLocalDateString();
         state.stressLevels[todayStr] = lv;
         saveTasks();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
 
         if (inModal) {
             document.querySelectorAll('.stress-pill').forEach(p => {
@@ -4519,7 +4519,7 @@
         }
 
         saveTasks();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
         updateWeekDayButton(taskId, dateStr);
         notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
     }
@@ -4566,7 +4566,7 @@
 
         // ✅ Salva immediatamente
         saveTasks();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
 
         // ✅ Feedback visivo immediato
         showToast('Compito aggiunto!');
@@ -6241,8 +6241,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             if (state.reminders && state.reminders.find(x => x.id === id)) {
                 localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
             }
-            debouncedSavePlannerRemote();
-            debouncedSavePlannerRemote();
+            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+            // debouncedSavePlannerRemote();
 
             // === SURGICAL DOM UPDATE ===
             // Update all checkboxes for this task ID without rebuilding
@@ -6370,7 +6370,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         state.plannedTasks[dateVal].push(taskId);
 
         saveTasks();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
         closeModal();
         showToast('Compito aggiunto! ✅');
         render();
@@ -6461,7 +6461,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         };
         state.tasks.push(newTask);
         saveTasks();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
         closeModal();
         showToast(`${tipo} aggiunta! 📝`);
         render();
@@ -6668,8 +6668,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
 
         saveTasks();
-        debouncedSavePlannerRemote();
-        debouncedSavePlannerRemote();
+        // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+        // debouncedSavePlannerRemote();
         updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
         updatePlannerCounter();
         notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
