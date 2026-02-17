@@ -2364,6 +2364,10 @@
     // Save remoto + timestamp locale
     // --- SALVATAGGIO: aggiorna subito timestamp locale e invia updatedAt ---
     async function savePlannerRemote() {
+        if (state.booting || state.syncing) {
+            console.log("⏳ [SYNC] Save deferred: sync in progress or booting.");
+            return;
+        }
         const userId = getUserId();
         if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
 
@@ -2424,7 +2428,7 @@
         if (!confirm("⚠️ Sei sicuro di voler ELIMINARE tutto il piano organizzativo? Questa azione non può essere annullata e cancellerà i blocchi pianificati su tutti i dispositivi.")) return;
 
         showToast("Eliminazione piano...");
-        
+
         // Reset state
         state.plannedTasks = {};
         state.stressLevels = {};
@@ -2436,7 +2440,7 @@
         localStorage.setItem(lsKey('stress_levels'), JSON.stringify({}));
         localStorage.setItem(lsKey('prep_levels'), JSON.stringify({}));
         localStorage.setItem(lsKey('reminders'), JSON.stringify([]));
-        
+
         const nowIso = new Date().toISOString();
         localStorage.setItem(lsKey('planner_updated_at'), nowIso);
 
@@ -2661,7 +2665,9 @@
                     } else if (localHasData && !remoteHasData) {
                         // Locale ha dati, server vuoto → push verso server
                         console.log("📤 Planner: locale ha dati, server vuoto → sync verso server");
-                        debouncedSavePlannerRemote(100);
+                        // Rimuoviamo il save automatico se il server è vuoto durante il primo sync
+                        // Lasciamo che sia l'utente o un'azione successiva a salvare.
+                        // debouncedSavePlannerRemote(100); 
                     } else if (localHasData) {
                         // Entrambi hanno dati, locale più recente → mantieni locale
                         console.log("✅ Planner: mantengo dati locali (più recenti)");
@@ -3538,7 +3544,7 @@
 
         // Persistenza
         saveTasks();
-        savePlannerRemote();
+        debouncedSavePlannerRemote();
 
         // Aggiorna UI Calendario
         const calendarEl = document.getElementById('calendar');
@@ -4398,7 +4404,6 @@
         const todayStr = getLocalDateString();
         state.stressLevels[todayStr] = lv;
         saveTasks();
-        savePlannerRemote();
         debouncedSavePlannerRemote();
 
         if (inModal) {
@@ -4514,7 +4519,6 @@
         }
 
         saveTasks();
-        savePlannerRemote();
         debouncedSavePlannerRemote();
         updateWeekDayButton(taskId, dateStr);
         notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
@@ -4562,7 +4566,7 @@
 
         // ✅ Salva immediatamente
         saveTasks();
-        savePlannerRemote();
+        debouncedSavePlannerRemote();
 
         // ✅ Feedback visivo immediato
         showToast('Compito aggiunto!');
@@ -5444,7 +5448,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         if (addedCount > 0) {
             saveTasks();
-            if (typeof savePlannerRemote === 'function') savePlannerRemote();
+            if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote();
             showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
             // Give a bit of time for the toast before navigating
             setTimeout(() => navigate('planner'), 800);
@@ -6234,7 +6238,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             if (state.reminders && state.reminders.find(x => x.id === id)) {
                 localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
             }
-            savePlannerRemote();
+            debouncedSavePlannerRemote();
             debouncedSavePlannerRemote();
 
             // === SURGICAL DOM UPDATE ===
@@ -6363,7 +6367,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         state.plannedTasks[dateVal].push(taskId);
 
         saveTasks();
-        savePlannerRemote();
+        debouncedSavePlannerRemote();
         closeModal();
         showToast('Compito aggiunto! ✅');
         render();
@@ -6454,7 +6458,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         };
         state.tasks.push(newTask);
         saveTasks();
-        savePlannerRemote();
+        debouncedSavePlannerRemote();
         closeModal();
         showToast(`${tipo} aggiunta! 📝`);
         render();
@@ -6661,7 +6665,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
 
         saveTasks();
-        savePlannerRemote();
+        debouncedSavePlannerRemote();
         debouncedSavePlannerRemote();
         updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
         updatePlannerCounter();
