@@ -80,6 +80,14 @@
             padding: 0;
         }
 
+        /* 🔥 ZERO-STUTTER: Disable ALL animations/transitions until app is fully loaded */
+        body:not(.loaded) *,
+        body:not(.loaded) *::before,
+        body:not(.loaded) *::after {
+            animation-duration: 0s !important;
+            transition-duration: 0s !important;
+        }
+
         html {
             color-scheme: dark;
             background: var(--bg-body);
@@ -392,7 +400,8 @@
         }
 
         .btn-icon-glass:active {
-            transform: scale(0.95);
+            transform: scale(0.92);
+            transition: transform 0.05s;
         }
 
         /* Responsive Grid */
@@ -487,13 +496,15 @@
                 font-size: 16px !important;
             }
 
-            /* Active feedback — subtle and clean */
+            /* Active feedback — "Cliccaccio" robusto */
             .btn-primary:active,
             .btn-secondary:active,
             .nav-item:active,
-            .card:active {
-                transform: scale(0.97);
-                transition: transform 0.08s ease;
+            .card:active,
+            .section-action:active,
+            button:active {
+                transform: scale(0.92);
+                transition: transform 0.05s cubic-bezier(0.2, 0, 0, 1);
             }
 
             /* Stress wave canvas */
@@ -591,7 +602,8 @@
 
             .pd-item:active {
                 background: rgba(255, 255, 255, 0.12);
-                transform: scale(0.98);
+                transform: scale(0.92);
+                transition: transform 0.05s;
             }
 
             @keyframes fadeInDown {
@@ -707,10 +719,11 @@
         }
 
         /* Smooth section transition for planner tabs */
+        /* Smooth section transition for planner tabs */
         @keyframes fadeSlide {
             from {
                 opacity: 0;
-                transform: translateY(4px);
+                transform: translateY(8px);
             }
 
             to {
@@ -720,13 +733,13 @@
         }
 
         .section-animate {
-            animation: fadeSlide 0.22s cubic-bezier(0.25, 0.1, 0.25, 1);
+            animation: fadeSlide 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
             will-change: opacity, transform;
         }
 
         /* Smoother view transition */
         .view {
-            animation: fadeSlide 0.28s cubic-bezier(0.25, 0.1, 0.25, 1);
+            animation: fadeSlide 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
             will-change: opacity, transform;
         }
 
@@ -2395,12 +2408,13 @@
             render();
             hideBoot();
 
+            // 🔥 Enable animations AFTER first layout stabilizes (300ms)
+            setTimeout(() => document.body.classList.add('loaded'), 300);
+
             // 4. Controllo Supabase & Recovery Bridge
             const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
 
             if (sbSession) {
-                // 🔥 BOOT HYDRATION: Carica i dati professionali (Specializzazione/Avatar) da Supabase
-                // Questo risolve la perdita di dati al refresh.
                 loadProfileFromServer().catch(e => console.warn("Boot Profile Load failed:", e));
             } else if (state.isLoggedIn && argoSession.storedUser) {
                 console.log("🩹 Boot: Sessione Supabase assente, avvio recovery silenzioso...");
@@ -2418,7 +2432,6 @@
 
                     if (arErr) {
                         console.warn("🩹 Boot: Recovery fallito:", arErr.message);
-                        // Fallback: Use identity from local cache if Supabase is down
                         console.log("🩹 Boot: Using local identity fallback...");
                     } else {
                         console.log("✅ Boot: Sessione Supabase ripristinata!");
@@ -2430,7 +2443,7 @@
             }
 
             if (state.isLoggedIn) {
-                // Sincronizzazione remota in background
+                // 🔥 Background sync — render ONLY after all data merged
                 performSync().catch(e => console.error("Boot Sync failed:", e));
             } else {
                 state.view = 'login';
@@ -2440,10 +2453,10 @@
             console.error("CRITICAL BOOT FAILURE:", e);
         } finally {
             state.booting = false;
-            // Single final render — avoid duplicates that cause micro-stutters
-            if (!_renderRequest) render();
+            // 🔥 NO render() here — already rendered at L2395, performSync handles its own
             hideBoot();
             updateOfflineBadge();
+            // 🔥 loadCircolari does NOT trigger full render — uses targeted DOM update
             loadCircolari();
         }
     });
@@ -2756,7 +2769,7 @@
     async function performSync(sessionData) {
         if (state.syncing) return;
         state.syncing = true;
-        render();
+        // 🔥 NO render() at start — avoid stutter from showing "syncing" state
 
         // Global data sync removed for Pure Planner
 
@@ -2765,7 +2778,6 @@
         if (!sessionData) {
             console.warn("⚠️ Nessuna sessione disponibile per sync");
             state.syncing = false;
-            render();
             return;
         }
 
@@ -2801,7 +2813,6 @@
                     console.warn("⚠️ Il server ha mandato 0 compiti. Mantengo quelli locali per sicurezza.");
                     state.isOffline = false;
                     updateOfflineBadge();
-                    render();
                     state.syncing = false;
                     return;
                 }
@@ -2916,6 +2927,7 @@
         } finally {
             state.syncing = false;
             hideBoot && hideBoot();
+            // 🔥 SINGLE render after all sync data is merged
             render && render();
         }
     }
@@ -2930,7 +2942,8 @@
             const data = await res.json();
             if (data.success && data.circolari) {
                 state.circolari = data.circolari;
-                render();
+                // 🔥 Targeted DOM update — NO full render() to avoid stutter
+                if (state.view === 'home') render();
             }
         } catch (e) {
             console.warn("⚠️ Impossibile caricare circolari:", e);
