@@ -1926,8 +1926,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.54 [Vertical Layout Fix]
-        const APP_VERSION = '1.1.54';
+        // 🚀 G-Diary v1.1.55 [Teleport Menu Fix]
+        const APP_VERSION = '1.1.55';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6916,21 +6916,26 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             });
 
             if (!isVisible) {
-                // Calcola posizione esatta sullo schermo (bypass overflow padri)
+                // 🚀 TELETRASPORTO: Esci dai contenitori padri (v1.1.55)
+                if (menu.parentElement !== document.body) {
+                    document.body.appendChild(menu);
+                }
+
+                // Calcola posizione esatta sullo schermo 
                 const rect = btn.getBoundingClientRect();
                 const isMobile = window.innerWidth <= 768;
 
                 menu.style.position = 'fixed';
-                menu.style.top = (rect.bottom + 8) + 'px';
+                menu.style.top = (rect.bottom + 10) + 'px';
                 menu.style.right = (window.innerWidth - rect.right) + 'px';
                 menu.style.left = 'auto';
-                menu.style.zIndex = '999999';
+                menu.style.zIndex = '1000000';
 
-                // Forza Layout Verticale Premium (v1.1.54)
+                // Forza Layout Verticale e Dimensioni Premium
                 menu.style.setProperty('display', 'flex', 'important');
                 menu.style.flexDirection = 'column';
-                menu.style.flexWrap = 'nowrap';
                 menu.style.width = isMobile ? '220px' : '280px';
+                menu.style.minHeight = 'auto';
 
                 menu.classList.add('active');
 
