@@ -4153,17 +4153,17 @@
                             <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">Planner</h1>
                             <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-secondary" onclick="fetchPlannerRemote().then(() => showToast('Sync completato'))" title="Forza Sincronizzazione" style="height: 36px; width: 36px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center;">
+                            <button class="btn-secondary" onclick="fetchPlannerRemote().then(() => showToast('Sync completato'))" title="Forza Sincronizzazione" style="height: 36px; width: 36px; flex-shrink: 0; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
                                 <i class="ph-bold ph-arrows-clockwise" style="color: var(--text-secondary);"></i>
                             </button>
-                            <button class="btn-secondary" onclick="clearStudyPlan()" title="Elimina tutto il piano" style="height: 36px; width: 36px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,20,20,0.1); border: 1px solid rgba(255,20,20,0.2);">
+                            <button class="btn-secondary" onclick="clearStudyPlan()" title="Elimina tutto il piano" style="height: 36px; width: 36px; flex-shrink: 0; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,20,20,0.1); border: 1px solid rgba(255,20,20,0.2);">
                                 <i class="ph-bold ph-trash" style="color: #ff4d4d;"></i>
                             </button>
-                            <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+                            <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
                                 <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
                             </button>
-                            <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
                                 <button onclick="state.plannerView='calendar'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-calendar"></i></button>
                                 <button onclick="state.plannerView='list'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-list-bullets"></i></button>
                             </div>
@@ -6043,6 +6043,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         }
 
         // 4. Planner Sync & Fallback Race Fix
+        state.syncing = true; // 🔥 GATING: Prevent auto-save during hydration
         try {
             const remotePlanner = await fetchPlannerRemote();
             if (remotePlanner !== null && typeof remotePlanner === 'object') {
@@ -6053,6 +6054,8 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         } catch (e) {
             console.warn("Using local planner cache:", e.message);
             state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
+        } finally {
+            state.syncing = false; // RELEASE
         }
 
         state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
