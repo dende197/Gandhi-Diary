@@ -1926,8 +1926,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.51 [Visibility & Style Revert]
-        const APP_VERSION = '1.1.51';
+        // 🚀 G-Diary v1.1.52 [Z-Index Fix]
+        const APP_VERSION = '1.1.52';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4462,7 +4462,7 @@
 
             ${uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : ''}
 
-            <div class="section-header" style="margin: 32px 0 16px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div class="section-header" style="margin: 32px 0 16px 0; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 200;">
                 <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     <i class="${state.plannerMode === 'registro' ? 'ph-fill ph-clock' : 'ph-fill ph-calendar-star'}" style="color: var(--accent);"></i>
                     ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Mio Schedule Studio'}
