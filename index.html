@@ -513,18 +513,7 @@
             }
 
             /* Rounded glassy navbar on mobile - transparent container, pill has its own blur */
-            #top-nav {
-                position: fixed !important;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 60px;
-                background: transparent !important;
-                backdrop-filter: none !important;
-                -webkit-backdrop-filter: none !important;
-                border-bottom: none;
-                z-index: 1000;
-            }
+            /* Overriding #top-nav removed to allow bottom dock at L215 */
 
             /* Fix planner toggle and calendar buttons — NO forced sizes */
             .calendar-nav button {
@@ -571,7 +560,8 @@
             /* Removed desktop-specific absolute positioning to ensure consistent behavior */
 
             .planner-dropdown-content.active {
-                display: block !important;
+                display: flex !important;
+                flex-direction: column;
             }
 
             .pd-item {
@@ -1914,7 +1904,7 @@
         };
 
         // 🚀 G-Diary v1.1.42 [Force Cache Bust]
-        const APP_VERSION = '1.1.42';
+        const APP_VERSION = '1.1.43';
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
