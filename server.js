@@ -73,7 +73,7 @@ app.use(cors({
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
     // Nuova chiave fornita dall'utente (AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBR20l7wmXh81NmmhOGp2ut1yTdmV9kwpc';
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCgu9P7K8PNbHQkX65bqOT_w5a2R4yU3Zw';
 
     if (!GEMINI_KEY) {
         console.error("❌ ERRORE CRITICO: GEMINI_API_KEY mancante!");
@@ -81,7 +81,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${GEMINI_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
         const response = await axios.post(url, {
             contents: messages,
             generationConfig: {
@@ -162,7 +162,7 @@ app.get('/api/circolari', async (req, res) => {
 // 2. Sintesi AI Circolare (Legge PDF e riassume)
 app.post('/api/circolari/sintesi', async (req, res) => {
     const { link, id } = req.body;
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBR20l7wmXh81NmmhOGp2ut1yTdmV9kwpc';
+    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCgu9P7K8PNbHQkX65bqOT_w5a2R4yU3Zw';
 
     if (!link) return res.status(400).json({ error: "Link mancante" });
 
@@ -229,7 +229,7 @@ REGOLE DI FORMATTAZIONE:
 Circolare: "${textContent.substring(0, 7000)}"`;
 
         debugLog("Inviando richiesta a Gemini...");
-        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${GEMINI_KEY}`;
+        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
         const aiResponse = await axios.post(aiUrl, {
             contents: [{ parts: [{ text: prompt }] }]
         }, { timeout: 20000 });
