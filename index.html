@@ -1860,22 +1860,23 @@
 
 <body style="margin:0; padding:0; background:var(--bg-body);">
 
-    <!-- PREMIUM LOADER: masks micro-stutters, auto-dismiss after 1.5s -->
+    <!-- PREMIUM LOADER: masks micro-stutters, auto-dismiss after 3s -->
     <div id="app-loader"
         style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.5s ease-out;">
         <div style="text-align:center;">
             <div
                 style="width:44px;height:44px;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;">
             </div>
-            <img src="https://i.ibb.co/C5fC60k/g-connect-logo.png" alt="G-Connect" style="height:28px;opacity:0.7;">
+            <div
+                style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;">
+                G-CONNECT</div>
         </div>
     </div>
     <script>
-        // Auto-dismiss loader after 1.5s (masks micro-stutters)
         setTimeout(function () {
             var el = document.getElementById('app-loader');
             if (el) { el.style.opacity = '0'; setTimeout(function () { el.remove() }, 500); }
-        }, 1500);
+        }, 3000);
     </script>
 
     <div id="offline-badge" class="offline-badge">Disconnesso</div>
@@ -5116,7 +5117,7 @@
                 ${subjects.map(s => {
                 const subjColor = getSubjectColor(s.name);
                 return `
-                    <div class="subject-summary-card" style="border-left-color: ${subjColor};" onclick="state.activeSubject='${s.name.replace(/'/g, "\\'')}'; render();" >
+                    <div class="subject-summary-card" style="border-left-color: ${subjColor};" onclick="state.activeSubject='${s.name.replace(/'/g, "\\'")}'; render();" >
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${s.name}</div>
                             <div style="font-size: 12px; color: var(--text-dim);">${s.count} voti totali</div>
@@ -5127,142 +5128,142 @@
                         <div class="grade-badge" style="color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}">${s.media.toFixed(1)}</div>
                         <i class="ph ph-caret-right" style="color: var(--text-dim);"></i>
                     </div > `;
-        }).join('')}
+            }).join('')}
             </div>
         </div> `;
+        }
+
+        function promptSetGoal(type) {
+            const currentGoal = state.goals?.[type] || 8.0;
+            const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
+            if (res !== null) {
+                const val = parseFloat(res.replace(',', '.'));
+                if (!isNaN(val) && val > 0 && val <= 10) {
+                    if (!state.goals) state.goals = {};
+                    state.goals[type] = val;
+                    saveTasks(); // Persist standard
+                    render();
+                } else {
+                    alert("Inserisci un valore valido tra 1 e 10");
+                }
+            }
+        }
+
+        function initGradesCharts() {
+            const canvas = document.getElementById('gradesTrendCanvas');
+            if (!canvas) return;
+
+            const { ctx, rect } = setupCanvas(canvas);
+            const W = rect.width, H = rect.height;
+
+            let votiData = [...getVotiData()];
+            if (state.activeSubject) {
+                votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
+            }
+            // Sort by absolute time
+            votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
+
+            if (votiData.length < 2) {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '700 13px Rubik';
+                ctx.textAlign = 'center';
+                ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
+                return;
             }
 
-    function promptSetGoal(type) {
-                    const currentGoal = state.goals?.[type] || 8.0;
-                    const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
-                    if (res !== null) {
-                        const val = parseFloat(res.replace(',', '.'));
-                        if (!isNaN(val) && val > 0 && val <= 10) {
-                            if (!state.goals) state.goals = {};
-                            state.goals[type] = val;
-                            saveTasks(); // Persist standard
-                            render();
-                        } else {
-                            alert("Inserisci un valore valido tra 1 e 10");
-                        }
-                    }
-                }
+            // High Precision: Calculate progressive moving average
+            let sum = 0;
+            const points = votiData.map((v, i) => {
+                const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
+                sum += val;
+                return {
+                    val: sum / (i + 1),
+                    raw: val,
+                    date: v.data || v.date
+                };
+            });
 
-    function initGradesCharts() {
-                    const canvas = document.getElementById('gradesTrendCanvas');
-                    if (!canvas) return;
+            const padding = 30;
+            const scrollX = 0; // Future: horizontal scrolling for many points
+            const stepX = (W - padding * 2) / (points.length - 1);
 
-                    const { ctx, rect } = setupCanvas(canvas);
-                    const W = rect.width, H = rect.height;
+            const values = points.map(p => p.val);
+            const minV = Math.max(0, Math.min(...values) - 0.5);
+            const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
 
-                    let votiData = [...getVotiData()];
-                    if (state.activeSubject) {
-                        votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
-                    }
-                    // Sort by absolute time
-                    votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
+            function getY(val) {
+                const range = maxV - minV;
+                const perc = (val - minV) / range;
+                return (H - padding) - perc * (H - padding * 2);
+            }
 
-                    if (votiData.length < 2) {
-                        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                        ctx.font = '700 13px Rubik';
-                        ctx.textAlign = 'center';
-                        ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
-                        return;
-                    }
+            // Area Gradient (Premium look)
+            const areaGrad = ctx.createLinearGradient(0, 0, 0, H);
+            areaGrad.addColorStop(0, 'rgba(10, 132, 255, 0.2)');
+            areaGrad.addColorStop(1, 'rgba(10, 132, 255, 0)');
 
-                    // High Precision: Calculate progressive moving average
-                    let sum = 0;
-                    const points = votiData.map((v, i) => {
-                        const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-                        sum += val;
-                        return {
-                            val: sum / (i + 1),
-                            raw: val,
-                            date: v.data || v.date
-                        };
-                    });
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(points[0].val));
 
-                    const padding = 30;
-                    const scrollX = 0; // Future: horizontal scrolling for many points
-                    const stepX = (W - padding * 2) / (points.length - 1);
+            // Bezier Curve Smoothing
+            for (let i = 0; i < points.length - 1; i++) {
+                const x1 = padding + i * stepX;
+                const y1 = getY(points[i].val);
+                const x2 = padding + (i + 1) * stepX;
+                const y2 = getY(points[i + 1].val);
+                const cpX = (x1 + x2) / 2;
+                ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
+            }
 
-                    const values = points.map(p => p.val);
-                    const minV = Math.max(0, Math.min(...values) - 0.5);
-                    const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
+            ctx.lineTo(padding + (points.length - 1) * stepX, H);
+            ctx.lineTo(padding, H);
+            ctx.closePath();
+            ctx.fillStyle = areaGrad;
+            ctx.fill();
 
-                    function getY(val) {
-                        const range = maxV - minV;
-                        const perc = (val - minV) / range;
-                        return (H - padding) - perc * (H - padding * 2);
-                    }
+            // Linea (Neon Effect)
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(points[0].val));
+            for (let i = 0; i < points.length - 1; i++) {
+                const x1 = padding + i * stepX;
+                const y1 = getY(points[i].val);
+                const x2 = padding + (i + 1) * stepX;
+                const y2 = getY(points[i + 1].val);
+                const cpX = (x1 + x2) / 2;
+                ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
+            }
 
-                    // Area Gradient (Premium look)
-                    const areaGrad = ctx.createLinearGradient(0, 0, 0, H);
-                    areaGrad.addColorStop(0, 'rgba(10, 132, 255, 0.2)');
-                    areaGrad.addColorStop(1, 'rgba(10, 132, 255, 0)');
+            ctx.strokeStyle = '#0a84ff';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(10,132,255,0.5)';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
 
-                    ctx.beginPath();
-                    ctx.moveTo(padding, getY(points[0].val));
+            // Interactive points
+            points.forEach((p, i) => {
+                const x = padding + i * stepX;
+                const y = getY(p.val);
 
-                    // Bezier Curve Smoothing
-                    for (let i = 0; i < points.length - 1; i++) {
-                        const x1 = padding + i * stepX;
-                        const y1 = getY(points[i].val);
-                        const x2 = padding + (i + 1) * stepX;
-                        const y2 = getY(points[i + 1].val);
-                        const cpX = (x1 + x2) / 2;
-                        ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
-                    }
+                // Outer glow
+                ctx.fillStyle = 'rgba(10, 132, 255, 0.3)';
+                ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
 
-                    ctx.lineTo(padding + (points.length - 1) * stepX, H);
-                    ctx.lineTo(padding, H);
-                    ctx.closePath();
-                    ctx.fillStyle = areaGrad;
-                    ctx.fill();
+                // Point core
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+            });
+        }
 
-                    // Linea (Neon Effect)
-                    ctx.beginPath();
-                    ctx.moveTo(padding, getY(points[0].val));
-                    for (let i = 0; i < points.length - 1; i++) {
-                        const x1 = padding + i * stepX;
-                        const y1 = getY(points[i].val);
-                        const x2 = padding + (i + 1) * stepX;
-                        const y2 = getY(points[i + 1].val);
-                        const cpX = (x1 + x2) / 2;
-                        ctx.bezierCurveTo(cpX, y1, cpX, y2, x2, y2);
-                    }
+        function renderSubjectDetailView(subjectName) {
+            const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
+            const media = parseFloat(calcolaMedia(votiData)) || 0;
+            const goal = state.goals?.[subjectName] || 8.0;
+            const subjColor = getSubjectColor(subjectName);
 
-                    ctx.strokeStyle = '#0a84ff';
-                    ctx.lineWidth = 4;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = 'rgba(10,132,255,0.5)';
-                    ctx.stroke();
-                    ctx.shadowBlur = 0;
-
-                    // Interactive points
-                    points.forEach((p, i) => {
-                        const x = padding + i * stepX;
-                        const y = getY(p.val);
-
-                        // Outer glow
-                        ctx.fillStyle = 'rgba(10, 132, 255, 0.3)';
-                        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
-
-                        // Point core
-                        ctx.fillStyle = '#ffffff';
-                        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-                    });
-                }
-
-    function renderSubjectDetailView(subjectName) {
-                    const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
-                    const media = parseFloat(calcolaMedia(votiData)) || 0;
-                    const goal = state.goals?.[subjectName] || 8.0;
-                    const subjColor = getSubjectColor(subjectName);
-
-                    return `
+            return `
         <div class="view" style="animation: slideUp 0.4s ease-out;">
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
                 <button class="btn-icon-only" onclick="state.activeSubject = null; render();" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
@@ -5295,9 +5296,9 @@
 
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 ${votiData.map(v => {
-                        const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-                        const isSuff = val >= 6;
-                        return `
+                const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
+                const isSuff = val >= 6;
+                return `
                     <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
                         <div style="width: 48px; height: 48px; border-radius: 12px; background: ${isSuff ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: ${isSuff ? 'var(--green)' : 'var(--red)'};">
                             ${v.valore || v.value}
@@ -5308,29 +5309,29 @@
                         </div>
                         ${v.commento ? `<i class="ph ph-chat-text" style="color: var(--accent); font-size: 18px;" title="${v.commento}"></i>` : ''}
                     </div>`;
-                    }).join('')}
+            }).join('')}
             </div>
         </div> `;
-                }
+        }
 
-    /* --- Gamification & Badges (DISABLED) --- */
-    /* Achievements removed per user request */
-    function checkAchievements() { /* No-op */ }
+        /* --- Gamification & Badges (DISABLED) --- */
+        /* Achievements removed per user request */
+        function checkAchievements() { /* No-op */ }
 
-    /* --- AI Assistant (v1.0) --- */
+        /* --- AI Assistant (v1.0) --- */
 
-    // Pomodoro / Focus Timer
-    let pomodoroState = { running: false, timeLeft: 25 * 60, mode: 'focus', interval: null };
+        // Pomodoro / Focus Timer
+        let pomodoroState = { running: false, timeLeft: 25 * 60, mode: 'focus', interval: null };
 
-            function renderFocusTimer() {
-                const mins = Math.floor(pomodoroState.timeLeft / 60);
-                const secs = pomodoroState.timeLeft % 60;
-                const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
-                const isFocus = pomodoroState.mode === 'focus';
-                const modeLabel = isFocus ? 'Focus' : 'Pausa';
-                const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
+        function renderFocusTimer() {
+            const mins = Math.floor(pomodoroState.timeLeft / 60);
+            const secs = pomodoroState.timeLeft % 60;
+            const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
+            const isFocus = pomodoroState.mode === 'focus';
+            const modeLabel = isFocus ? 'Focus' : 'Pausa';
+            const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
 
-                return `
+            return `
         <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
@@ -5346,50 +5347,50 @@
                     </button>
                 </div>
             </div> `;
-            }
+        }
 
-            function togglePomodoro() {
-                if (pomodoroState.running) {
-                    clearInterval(pomodoroState.interval);
-                    pomodoroState.running = false;
-                } else {
-                    pomodoroState.running = true;
-                    pomodoroState.interval = setInterval(() => {
-                        pomodoroState.timeLeft--;
-                        if (pomodoroState.timeLeft <= 0) {
-                            clearInterval(pomodoroState.interval);
-                            pomodoroState.running = false;
-                            if (pomodoroState.mode === 'focus') {
-                                pomodoroState.mode = 'break';
-                                pomodoroState.timeLeft = 5 * 60;
-                                showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
-                            } else {
-                                pomodoroState.mode = 'focus';
-                                pomodoroState.timeLeft = 25 * 60;
-                                showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
-                            }
-                        }
-                        const container = document.getElementById('pomodoroContainer');
-                        if (container) container.innerHTML = renderFocusTimer();
-                    }, 1000);
-                }
-                const container = document.getElementById('pomodoroContainer');
-                if (container) container.innerHTML = renderFocusTimer();
-            }
-
-            function resetPomodoro() {
+        function togglePomodoro() {
+            if (pomodoroState.running) {
                 clearInterval(pomodoroState.interval);
                 pomodoroState.running = false;
-                pomodoroState.mode = 'focus';
-                pomodoroState.timeLeft = 25 * 60;
-                const container = document.getElementById('pomodoroContainer');
-                if (container) container.innerHTML = renderFocusTimer();
+            } else {
+                pomodoroState.running = true;
+                pomodoroState.interval = setInterval(() => {
+                    pomodoroState.timeLeft--;
+                    if (pomodoroState.timeLeft <= 0) {
+                        clearInterval(pomodoroState.interval);
+                        pomodoroState.running = false;
+                        if (pomodoroState.mode === 'focus') {
+                            pomodoroState.mode = 'break';
+                            pomodoroState.timeLeft = 5 * 60;
+                            showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
+                        } else {
+                            pomodoroState.mode = 'focus';
+                            pomodoroState.timeLeft = 25 * 60;
+                            showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
+                        }
+                    }
+                    const container = document.getElementById('pomodoroContainer');
+                    if (container) container.innerHTML = renderFocusTimer();
+                }, 1000);
             }
+            const container = document.getElementById('pomodoroContainer');
+            if (container) container.innerHTML = renderFocusTimer();
+        }
 
-            function renderAIAssistantView() {
-                const chat = state.aiChatHistory || [];
+        function resetPomodoro() {
+            clearInterval(pomodoroState.interval);
+            pomodoroState.running = false;
+            pomodoroState.mode = 'focus';
+            pomodoroState.timeLeft = 25 * 60;
+            const container = document.getElementById('pomodoroContainer');
+            if (container) container.innerHTML = renderFocusTimer();
+        }
 
-                return `
+        function renderAIAssistantView() {
+            const chat = state.aiChatHistory || [];
+
+            return `
         <div class="view ai-view" style="display:flex; flex-direction:column; height:100svh; padding: 0 !important;">
             
             <!-- HEADER FISSO -->
@@ -5440,8 +5441,8 @@
                             font-size: 15px;
                             line-height: 1.5;
                             ${msg.role === 'user'
-                        ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
-                        : `background: transparent; color: var(--text-primary);`}
+                    ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
+                    : `background: transparent; color: var(--text-primary);`}
                         ">
                             ${msg.role === 'ai' ? marked.parse(msg.text) : msg.text}
                             ${msg.role === 'ai' && msg.hasPlan ? `
@@ -5523,56 +5524,56 @@
                     </button>
                 </div>
             </div> `;
-            }
+        }
 
 
-            function sendAIChatQuick(text) {
-                const input = document.getElementById('aiChatInput');
-                if (input) input.value = text;
-                sendAIChat();
-            }
+        function sendAIChatQuick(text) {
+            const input = document.getElementById('aiChatInput');
+            if (input) input.value = text;
+            sendAIChat();
+        }
 
-            function clearAIChat() {
-                state.aiChatHistory = [];
-                localStorage.setItem(lsKey('ai_chat'), '[]');
-                state.aiResponse = '';
-                render();
-            }
+        function clearAIChat() {
+            state.aiChatHistory = [];
+            localStorage.setItem(lsKey('ai_chat'), '[]');
+            state.aiResponse = '';
+            render();
+        }
 
-            function deleteAIChatMessage(index) {
-                if (!confirm('Eliminare questo messaggio?')) return;
-                state.aiChatHistory.splice(index, 1);
-                localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-                render();
-            }
+        function deleteAIChatMessage(index) {
+            if (!confirm('Eliminare questo messaggio?')) return;
+            state.aiChatHistory.splice(index, 1);
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            render();
+        }
 
-            async function sendAIChat() {
-                const input = document.getElementById('aiChatInput');
-                const text = (input?.value || '').trim();
-                if (!text) return;
+        async function sendAIChat() {
+            const input = document.getElementById('aiChatInput');
+            const text = (input?.value || '').trim();
+            if (!text) return;
 
-                // Add user message
-                const now = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-                state.aiChatHistory.push({ role: 'user', text, ts: now });
-                input.value = '';
-                input.style.height = 'auto';
-                render();
-                render();
-                setTimeout(() => {
-                    const chatDiv = document.getElementById('aiChatMessages');
-                    if (chatDiv) {
-                        chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'smooth' });
-                    }
-                }, 100);
+            // Add user message
+            const now = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            state.aiChatHistory.push({ role: 'user', text, ts: now });
+            input.value = '';
+            input.style.height = 'auto';
+            render();
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) {
+                    chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'smooth' });
+                }
+            }, 100);
 
-                // Build context
-                const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
-                const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-                const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
-                const difficulty = (state.difficulty || []).join(', ');
-                const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
+            // Build context
+            const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
+            const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
+            const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
+            const difficulty = (state.difficulty || []).join(', ');
+            const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
 
-                const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
+            const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
 
 CONTEXT STUDENTE(aggiornato):
     - COMPITI ATTIVI: ${homework || 'Nessuno.'}
@@ -5588,163 +5589,163 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     - Includi pause
     - Prioritizza verifiche imminenti e materie difficili`;
 
-                // Build conversation for Gemini
-                const contents = [
-                    { role: 'user', parts: [{ text: systemContext }] },
-                    { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
-                ];
-                state.aiChatHistory.forEach(msg => {
-                    contents.push({
-                        role: msg.role === 'user' ? 'user' : 'model',
-                        parts: [{ text: msg.text }]
+            // Build conversation for Gemini
+            const contents = [
+                { role: 'user', parts: [{ text: systemContext }] },
+                { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
+            ];
+            state.aiChatHistory.forEach(msg => {
+                contents.push({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.text }]
+                });
+            });
+
+            const maxRetries = 3;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages: contents })
                     });
-                });
 
-                const maxRetries = 3;
-                for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                    try {
-                        const url = `https://g-connect-backend.onrender.com/api/ai/chat`; // 🔥 Use backend proxy
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ messages: contents })
-                        });
+                    const data = await response.json();
 
-                        const data = await response.json();
-
-                        // Check for rate limit (429) or quota errors - retry
-                        if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
-                            // Friendly Error Handler for overload
-                            if (attempt < maxRetries) {
-                                const waitSec = attempt * 5;
-                                console.warn(`Rate limit. Retrying in ${waitSec}s...`);
-                                await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
-                                continue;
-                            } else {
-                                state.aiChatHistory.push({ role: 'ai', text: `⚠️ I server di Google sono molto occupati al momento. Riprova tra un attimo!`, ts: now });
-                                break;
-                            }
-                        }
-
-                        if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-                            const aiText = data.candidates[0].content.parts[0].text;
-                            const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
-                            state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-                            state.aiResponse = aiText;
-                        } else if (data?.error) {
-                            // Handle 503 specifically
-                            if (data.error.code === 503) {
-                                state.aiChatHistory.push({ role: 'ai', text: `🚧 L'IA sta riposando (Server Overload). Riprova tra poco!`, ts: now });
-                            } else {
-                                state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
-                            }
+                    // Check for rate limit (429) or quota errors - retry
+                    if (response.status === 429 || (data?.error?.code === 429) || (data?.error?.message && data.error.message.toLowerCase().includes('quota'))) {
+                        // Friendly Error Handler for overload
+                        if (attempt < maxRetries) {
+                            const waitSec = attempt * 5;
+                            console.warn(`Rate limit. Retrying in ${waitSec}s...`);
+                            await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+                            continue;
                         } else {
-                            state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
-                        }
-                        break; // Success or non-retryable error, exit loop
-                    } catch (error) {
-                        console.error('AI Chat Error:', error);
-                        if (attempt === maxRetries) {
-                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
-                        } else {
-                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ I server di Google sono molto occupati al momento. Riprova tra un attimo!`, ts: now });
+                            break;
                         }
                     }
-                }
 
-                localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+                    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        const aiText = data.candidates[0].content.parts[0].text;
+                        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
+                        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+                        state.aiResponse = aiText;
+                    } else if (data?.error) {
+                        // Handle 503 specifically
+                        if (data.error.code === 503) {
+                            state.aiChatHistory.push({ role: 'ai', text: `🚧 L'IA sta riposando (Server Overload). Riprova tra poco!`, ts: now });
+                        } else {
+                            state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore API: ${data.error.message || 'Errore sconosciuto'}`, ts: now });
+                        }
+                    } else {
+                        state.aiChatHistory.push({ role: 'ai', text: '⚠️ Risposta non valida dall\'API. Riprova.', ts: now });
+                    }
+                    break; // Success or non-retryable error, exit loop
+                } catch (error) {
+                    console.error('AI Chat Error:', error);
+                    if (attempt === maxRetries) {
+                        state.aiChatHistory.push({ role: 'ai', text: `⚠️ Errore di connessione: ${error.message}`, ts: now });
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    }
+                }
+            }
+
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            render();
+            setTimeout(() => {
+                const chatDiv = document.getElementById('aiChatMessages');
+                if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 50);
+        }
+
+        function applyAIPlanFromChat(msgIndex) {
+            const msg = state.aiChatHistory[msgIndex];
+            if (!msg || msg.role !== 'ai') return;
+
+            const text = msg.text;
+            const todayStr = getLocalDateString();
+            const lines = text.split('\n');
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                // Match patterns like: "15:30-16:15 Materia - Argomento" or "15:30 Materia"
+                const timeMatch = line.match(/(\d{1,2}[:.:]\d{2})/);
+                if (timeMatch) {
+                    const time = timeMatch[1];
+                    // Clean line from time and bullet points
+                    let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
+                    if (clean && clean.length > 2) {
+                        const parts = clean.split(/[ \-–—]/);
+                        const subject = parts[0];
+                        const topic = parts.slice(1).join(' ').trim() || 'Studio';
+
+                        const todayStr = getLocalDateString();
+
+                        // Deduplication: check if a similar task already exists for today/subject
+                        const existing = state.tasks.find(et =>
+                            et.due_date === todayStr &&
+                            et.subject.toLowerCase() === subject.toLowerCase() &&
+                            (et.id.startsWith('t_') || et.subject === 'QUEST')
+                        );
+
+                        if (existing) {
+                            // Use existing task
+                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                            if (!state.plannedTasks[todayStr].includes(existing.id)) {
+                                state.plannedTasks[todayStr].push(existing.id);
+                            }
+                        } else {
+                            // Create new AI task
+                            const newTask = {
+                                id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                                subject: subject.charAt(0).toUpperCase() + subject.slice(1),
+                                text: `[AI] ${time}: ${topic}`,
+                                due_date: todayStr,
+                                done: false,
+                                created_at: new Date().toISOString()
+                            };
+                            state.tasks.push(newTask);
+
+                            // Auto-plan for today in Studio mode
+                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+                            state.plannedTasks[todayStr].push(newTask.id);
+                        }
+
+                        addedCount++;
+                    }
+                }
+            });
+
+            if (addedCount > 0) {
+                saveTasks();
+                // if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+                showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
+                // Give a bit of time for the toast before navigating
+                setTimeout(() => navigate('planner'), 800);
+            } else {
+                showToast('⚠️ Non ho trovato orari chiari nel messaggio. Prova a chiedere un piano orario!', 'var(--orange)');
+            }
+        }
+
+        function saveGeminiKey() {
+            const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
+            if (val) {
+                state.geminiKey = val;
+                localStorage.setItem('g_diary_gemini_key', val);
+                showToast('Chiave salvata! 🛡️');
                 render();
-                setTimeout(() => {
-                    const chatDiv = document.getElementById('aiChatMessages');
-                    if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
-                }, 50);
             }
+        }
 
-            function applyAIPlanFromChat(msgIndex) {
-                const msg = state.aiChatHistory[msgIndex];
-                if (!msg || msg.role !== 'ai') return;
+        /* --- Hyper-Planner: Academic Profile & Setup --- */
 
-                const text = msg.text;
-                const todayStr = getLocalDateString();
-                const lines = text.split('\n');
-                let addedCount = 0;
+        function renderAcademicProfile() {
+            const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
-                lines.forEach(line => {
-                    // Match patterns like: "15:30-16:15 Materia - Argomento" or "15:30 Materia"
-                    const timeMatch = line.match(/(\d{1,2}[:.:]\d{2})/);
-                    if (timeMatch) {
-                        const time = timeMatch[1];
-                        // Clean line from time and bullet points
-                        let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
-                        if (clean && clean.length > 2) {
-                            const parts = clean.split(/[ \-–—]/);
-                            const subject = parts[0];
-                            const topic = parts.slice(1).join(' ').trim() || 'Studio';
-
-                            const todayStr = getLocalDateString();
-
-                            // Deduplication: check if a similar task already exists for today/subject
-                            const existing = state.tasks.find(et =>
-                                et.due_date === todayStr &&
-                                et.subject.toLowerCase() === subject.toLowerCase() &&
-                                (et.id.startsWith('t_') || et.subject === 'QUEST')
-                            );
-
-                            if (existing) {
-                                // Use existing task
-                                if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                                if (!state.plannedTasks[todayStr].includes(existing.id)) {
-                                    state.plannedTasks[todayStr].push(existing.id);
-                                }
-                            } else {
-                                // Create new AI task
-                                const newTask = {
-                                    id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                                    subject: subject.charAt(0).toUpperCase() + subject.slice(1),
-                                    text: `[AI] ${time}: ${topic}`,
-                                    due_date: todayStr,
-                                    done: false,
-                                    created_at: new Date().toISOString()
-                                };
-                                state.tasks.push(newTask);
-
-                                // Auto-plan for today in Studio mode
-                                if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                                state.plannedTasks[todayStr].push(newTask.id);
-                            }
-
-                            addedCount++;
-                        }
-                    }
-                });
-
-                if (addedCount > 0) {
-                    saveTasks();
-                    // if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                    showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
-                    // Give a bit of time for the toast before navigating
-                    setTimeout(() => navigate('planner'), 800);
-                } else {
-                    showToast('⚠️ Non ho trovato orari chiari nel messaggio. Prova a chiedere un piano orario!', 'var(--orange)');
-                }
-            }
-
-            function saveGeminiKey() {
-                const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
-                if (val) {
-                    state.geminiKey = val;
-                    localStorage.setItem('g_diary_gemini_key', val);
-                    showToast('Chiave salvata! 🛡️');
-                    render();
-                }
-            }
-
-            /* --- Hyper-Planner: Academic Profile & Setup --- */
-
-            function renderAcademicProfile() {
-                const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
-
-                return `
+            return `
             <div class="view" style="padding-top: 60px;">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Profilo Accademico</h1>
@@ -5774,70 +5775,70 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Seleziona le materie in cui hai più difficoltà.</p>
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
                         ${subjects.length > 0 ? subjects.map(s => {
-                    const active = state.difficulty.includes(s);
-                    const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
-                }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
+                const active = state.difficulty.includes(s);
+                const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
+            }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
                    </div>
                </div>
            </div>`;
+        }
+        function getAllSubjects() {
+            const fromGrades = getVotiData().map(v => v.materia || v.subject).filter(Boolean);
+            const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
+            const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
+            const all = [...new Set([...fromGrades, ...fromTasks, ...fromExams])];
+            if (all.length === 0) {
+                return ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'];
             }
-            function getAllSubjects() {
-                const fromGrades = getVotiData().map(v => v.materia || v.subject).filter(Boolean);
-                const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
-                const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
-                const all = [...new Set([...fromGrades, ...fromTasks, ...fromExams])];
-                if (all.length === 0) {
-                    return ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'];
-                }
-                return all.sort();
+            return all.sort();
+        }
+
+        function submitExamForm() {
+            let subject = document.getElementById('examSubject').value;
+            if (subject === '__custom') {
+                subject = (document.getElementById('examCustomSubject').value || '').trim();
+                if (!subject) { showToast('Inserisci il nome della materia', '#ff453a'); return; }
             }
+            const type = document.getElementById('examType').value;
+            const date = document.getElementById('examDate').value;
+            const topic = (document.getElementById('examTopic').value || '').trim();
 
-            function submitExamForm() {
-                let subject = document.getElementById('examSubject').value;
-                if (subject === '__custom') {
-                    subject = (document.getElementById('examCustomSubject').value || '').trim();
-                    if (!subject) { showToast('Inserisci il nome della materia', '#ff453a'); return; }
-                }
-                const type = document.getElementById('examType').value;
-                const date = document.getElementById('examDate').value;
-                const topic = (document.getElementById('examTopic').value || '').trim();
+            if (!date) { showToast('Seleziona una data', '#ff453a'); return; }
 
-                if (!date) { showToast('Seleziona una data', '#ff453a'); return; }
+            state.exams.push({ subject, type, date, topic });
 
-                state.exams.push({ subject, type, date, topic });
+            // Also add to calendar tasks
+            const examTask = {
+                id: 'exam_' + Date.now(),
+                text: `${type}: ${topic || subject}`,
+                subject: subject,
+                due_date: date,
+                done: false,
+                isExam: true
+            };
+            state.tasks.push(examTask);
 
-                // Also add to calendar tasks
-                const examTask = {
-                    id: 'exam_' + Date.now(),
-                    text: `${type}: ${topic || subject}`,
-                    subject: subject,
-                    due_date: date,
-                    done: false,
-                    isExam: true
-                };
-                state.tasks.push(examTask);
+            saveTasks();
+            closeModal();
+            render();
+            showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
+        }
 
-                saveTasks();
-                closeModal();
-                render();
-                showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
-            }
+        function removeExam(index) {
+            state.exams.splice(index, 1);
+            saveTasks();
+            render();
+        }
 
-            function removeExam(index) {
-                state.exams.splice(index, 1);
-                saveTasks();
-                render();
-            }
+        function promptAddBacklog() { showAddBacklogModal(); }
 
-            function promptAddBacklog() { showAddBacklogModal(); }
+        function showAddBacklogModal() {
+            const container = getModalContainer();
+            if (!container) return;
+            const subjects = getAllSubjects();
 
-            function showAddBacklogModal() {
-                const container = getModalContainer();
-                if (!container) return;
-                const subjects = getAllSubjects();
-
-                container.innerHTML = `
+            container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -5864,36 +5865,36 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                    </div>
                </div>
            </div>`;
-            }
+        }
 
-            function submitBacklogForm() {
-                const subject = document.getElementById('backlogSubject').value;
-                const topic = (document.getElementById('backlogTopic').value || '').trim();
-                if (!topic) { showToast('Inserisci l\'argomento da recuperare', '#ff453a'); return; }
+        function submitBacklogForm() {
+            const subject = document.getElementById('backlogSubject').value;
+            const topic = (document.getElementById('backlogTopic').value || '').trim();
+            if (!topic) { showToast('Inserisci l\'argomento da recuperare', '#ff453a'); return; }
 
-                state.backlog.push({ subject, topic });
-                saveTasks();
-                closeModal();
-                render();
-                showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
-            }
+            state.backlog.push({ subject, topic });
+            saveTasks();
+            closeModal();
+            render();
+            showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
+        }
 
-            function removeBacklog(index) {
-                state.backlog.splice(index, 1);
-                saveTasks();
-                render();
-            }
+        function removeBacklog(index) {
+            state.backlog.splice(index, 1);
+            saveTasks();
+            render();
+        }
 
-            /* --- Fine Advanced Grades --- */
+        /* --- Fine Advanced Grades --- */
 
-            /* --- Verifiche & Recuperei (Liquid Glass) --- */
-            function renderVerifiche() {
-                const exams = state.exams || [];
-                // Sort by date
-                exams.sort((a, b) => new Date(a.date) - new Date(b.date));
+        /* --- Verifiche & Recuperei (Liquid Glass) --- */
+        function renderVerifiche() {
+            const exams = state.exams || [];
+            // Sort by date
+            exams.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                if (exams.length === 0) {
-                    return `
+            if (exams.length === 0) {
+                return `
                     <div class="view" style="padding-top: 60px;">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Verifiche</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
@@ -5907,9 +5908,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                            </button>
                        </div>
                    </div>`;
-                }
+            }
 
-                return `
+            return `
                 <div class="view" style="padding-top: 60px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
@@ -5923,13 +5924,13 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         ${exams.map((e, index) => {
-                    const dateObj = new Date(e.date);
-                    const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'short' });
-                    const dayNum = dateObj.getDate();
-                    const monthName = dateObj.toLocaleDateString('it-IT', { month: 'short' });
-                    const color = getSubjectColor(e.subject);
+                const dateObj = new Date(e.date);
+                const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'short' });
+                const dayNum = dateObj.getDate();
+                const monthName = dateObj.toLocaleDateString('it-IT', { month: 'short' });
+                const color = getSubjectColor(e.subject);
 
-                    return `
+                return `
                             <div class="glass-panel" style="padding: 20px; display: flex; align-items: flex-start; gap: 16px;">
                                 <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(255,255,255,0.05);">
                                     <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${monthName}</span>
@@ -5952,16 +5953,16 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                                </div>
                            </div>
                             `;
-                }).join('')}
+            }).join('')}
                    </div>
                </div>`;
-            }
+        }
 
-            function renderRecoveries() {
-                const backlog = state.backlog || [];
+        function renderRecoveries() {
+            const backlog = state.backlog || [];
 
-                if (backlog.length === 0) {
-                    return `
+            if (backlog.length === 0) {
+                return `
                     <div class="view" style="padding-top: 60px;">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Arretrati</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
@@ -5975,9 +5976,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                            </button>
                        </div>
                    </div>`;
-                }
+            }
 
-                return `
+            return `
                 <div class="view" style="padding-top: 60px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
@@ -6003,14 +6004,14 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         `).join('')}
                    </div>
                </div>`;
-            }
+        }
 
-            /* --- Modals --- */
+        /* --- Modals --- */
 
-            function openArgoLogin() {
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
-                modalContainer.innerHTML = `
+        function openArgoLogin() {
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
+            modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;">
                 <div style="text-align:center; margin-bottom:20px;">
@@ -6032,117 +6033,117 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
             </div>
         </div>`;
-                checkServerHealth();
-            }
+            checkServerHealth();
+        }
 
-            async function checkServerHealth(attempt = 1) {
-                const statusEl = document.getElementById('server-status');
-                if (!statusEl) return;
+        async function checkServerHealth(attempt = 1) {
+            const statusEl = document.getElementById('server-status');
+            if (!statusEl) return;
 
-                try {
-                    const controller = new AbortController();
-                    const id = setTimeout(() => controller.abort(), 3500);
+            try {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), 3500);
 
-                    const res = await fetch(`${API_BASE_URL}/health`, {
-                        method: 'GET',
-                        signal: controller.signal
-                    });
-                    clearTimeout(id);
+                const res = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                clearTimeout(id);
 
-                    if (res.ok) {
-                        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
-                        statusEl.style.color = "var(--green)";
-                    } else {
-                        throw new Error("Server error");
-                    }
-                } catch (e) {
-                    if (attempt < 15) {
-                        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
-                        setTimeout(() => checkServerHealth(attempt + 1), 2500);
-                    } else {
-                        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Offline (uso dati cached)`;
-                        statusEl.style.color = "var(--red)";
-                    }
+                if (res.ok) {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
+                    statusEl.style.color = "var(--green)";
+                } else {
+                    throw new Error("Server error");
+                }
+            } catch (e) {
+                if (attempt < 15) {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
+                    setTimeout(() => checkServerHealth(attempt + 1), 2500);
+                } else {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Offline (uso dati cached)`;
+                    statusEl.style.color = "var(--red)";
                 }
             }
+        }
 
-            async function performArgoSync(profileIndex = null, passedCreds = null) {
-                const inputSchool = document.getElementById('argo-school');
-                const inputUser = document.getElementById('argo-user');
-                const inputPass = document.getElementById('argo-pass');
+        async function performArgoSync(profileIndex = null, passedCreds = null) {
+            const inputSchool = document.getElementById('argo-school');
+            const inputUser = document.getElementById('argo-user');
+            const inputPass = document.getElementById('argo-pass');
 
-                const credentials = passedCreds || {
-                    schoolCode: (inputSchool ? inputSchool.value : (tempCreds.school || "")).trim(),
-                    username: (inputUser ? inputUser.value : (tempCreds.user || "")).trim(),
-                    password: inputPass ? inputPass.value : (tempCreds.pass || "")
+            const credentials = passedCreds || {
+                schoolCode: (inputSchool ? inputSchool.value : (tempCreds.school || "")).trim(),
+                username: (inputUser ? inputUser.value : (tempCreds.user || "")).trim(),
+                password: inputPass ? inputPass.value : (tempCreds.pass || "")
+            };
+
+            if (!credentials.schoolCode || !credentials.username || !credentials.password) {
+                alert("Dati mancanti! Reinserisci le credenziali.");
+                if (!inputSchool) render();
+                return;
+            }
+
+            if (inputSchool) tempCreds = { school: credentials.schoolCode, user: credentials.username, pass: credentials.password };
+
+            setLoginBtnText("Connessione... ");
+
+            try {
+                const payload = {
+                    schoolCode: credentials.schoolCode,
+                    username: credentials.username,
+                    password: credentials.password,
+                    profileIndex: profileIndex
                 };
 
-                if (!credentials.schoolCode || !credentials.username || !credentials.password) {
-                    alert("Dati mancanti! Reinserisci le credenziali.");
-                    if (!inputSchool) render();
+                // Fallback a profilo salvato se non specificato
+                if (profileIndex === null) {
+                    const savedSession = sessionManager.load();
+                    if (savedSession && savedSession.profileIndex !== undefined) {
+                        payload.profileIndex = savedSession.profileIndex;
+                    }
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'MULTIPLE_PROFILES') {
+                    showProfileSelectionModal(data.profiles, credentials);
                     return;
                 }
 
-                if (inputSchool) tempCreds = { school: credentials.schoolCode, user: credentials.username, pass: credentials.password };
+                if (!response.ok) throw new Error(data.error || "Errore Server");
 
-                setLoginBtnText("Connessione... ");
-
-                try {
-                    const payload = {
-                        schoolCode: credentials.schoolCode,
-                        username: credentials.username,
-                        password: credentials.password,
-                        profileIndex: profileIndex
-                    };
-
-                    // Fallback a profilo salvato se non specificato
-                    if (profileIndex === null) {
-                        const savedSession = sessionManager.load();
-                        if (savedSession && savedSession.profileIndex !== undefined) {
-                            payload.profileIndex = savedSession.profileIndex;
-                        }
-                    }
-
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-                    const response = await fetch(`${API_BASE_URL}/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeoutId);
-
-                    const data = await response.json();
-
-                    if (response.ok && data.status === 'MULTIPLE_PROFILES') {
-                        showProfileSelectionModal(data.profiles, credentials);
-                        return;
-                    }
-
-                    if (!response.ok) throw new Error(data.error || "Errore Server");
-
-                    if (data.success) {
-                        handleLoginSuccess(data, credentials.password);
-                    } else {
-                        throw new Error(data.error || "Login fallito");
-                    }
-                } catch (e) {
-                    console.error("❌ Login error:", e);
-                    alert(e.name === 'AbortError' ? "⚠️ Tempo scaduto!" : "❌ Errore: " + e.message);
-                    navigate('login');
-                } finally {
-                    setLoginBtnText("Accedi");
+                if (data.success) {
+                    handleLoginSuccess(data, credentials.password);
+                } else {
+                    throw new Error(data.error || "Login fallito");
                 }
+            } catch (e) {
+                console.error("❌ Login error:", e);
+                alert(e.name === 'AbortError' ? "⚠️ Tempo scaduto!" : "❌ Errore: " + e.message);
+                navigate('login');
+            } finally {
+                setLoginBtnText("Accedi");
             }
+        }
 
-            function showProfileSelectionModal(profiles, credentials) {
-                console.log("👥 Mostro modale selezione profili:", profiles);
-                const container = getModalContainer();
-                if (!container) return;
+        function showProfileSelectionModal(profiles, credentials) {
+            console.log("👥 Mostro modale selezione profili:", profiles);
+            const container = getModalContainer();
+            if (!container) return;
 
-                container.innerHTML = `
+            container.innerHTML = `
         <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
             <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <div style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -6172,412 +6173,412 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             </div>
         </div>`;
 
-                // Event Delegation
-                const list = container.querySelector('.profiles-list');
-                list.addEventListener('click', async (ev) => {
-                    const btn = ev.target.closest('.btn-profile');
-                    if (!btn) return;
+            // Event Delegation
+            const list = container.querySelector('.profiles-list');
+            list.addEventListener('click', async (ev) => {
+                const btn = ev.target.closest('.btn-profile');
+                if (!btn) return;
 
-                    // Disabilita UI
-                    const allBtns = list.querySelectorAll('.btn-profile');
-                    allBtns.forEach(b => {
-                        b.disabled = true;
-                        b.style.opacity = '0.5';
-                        b.style.pointerEvents = 'none';
-                    });
-
-                    btn.style.opacity = '1';
-                    btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
-
-                    await selectProfile(parseInt(btn.dataset.index, 10), credentials);
-                }, { once: true });
-
-                // Risolvi i nomi veri in background
-                resolveProfileNamesAsync(profiles, credentials, container);
-            }
-
-            async function resolveProfileNamesAsync(profiles, credentials, container) {
-                try {
-                    await Promise.all(profiles.map(async (p) => {
-                        try {
-                            const resp = await fetch(`${API_BASE_URL}/api/resolve-profile`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    schoolCode: credentials.schoolCode,
-                                    username: credentials.username,
-                                    password: credentials.password,
-                                    profileIndex: p.index
-                                })
-                            });
-
-                            if (!resp.ok) {
-                                console.warn(`⚠️ HTTP ${resp.status} resolving profile ${p.index}`);
-                                return;
-                            }
-
-                            const j = await resp.json();
-                            if (j.success) {
-                                p.name = j.name;
-                                p.class = j.class;
-                                const btn = container.querySelector(`.btn-profile[data-index="${p.index}"]`);
-                                if (btn) {
-                                    const nameEl = btn.querySelector('.profile-name');
-                                    const classEl = btn.querySelector('.profile-class');
-                                    const avatarEl = btn.querySelector('.profile-avatar');
-                                    if (nameEl) nameEl.textContent = j.name;
-                                    if (classEl) classEl.textContent = j.class || 'N/D';
-                                    if (avatarEl) avatarEl.textContent = (j.name || 'S')[0].toUpperCase();
-                                }
-                                console.log(`✅ Risolto profilo ${p.index}: ${j.name} - ${j.class}`);
-                            }
-                        } catch (e) {
-                            console.warn(`⚠️ Errore risoluzione profilo ${p.index}:`, e);
-                        }
-                    }));
-                } catch (e) {
-                    console.warn('⚠️ Impossibile risolvere nomi profili:', e);
-                }
-            }
-
-            async function selectProfile(profileIndex, credentials) {
-                closeModal();
-                showBoot('Sincronizzazione profilo...');
-                await performArgoSync(profileIndex, credentials);
-                hideBoot();
-            }
-
-            async function handleLoginSuccess(data, rawPassword) {
-                console.log("✅ Login OK, hydrating state...");
-                const user = data.session.userName;
-                const pass = rawPassword || tempCreds.pass;
-
-                // 1. Session Atomic Update
-                if (data.session) {
-                    const sessionData = {
-                        ...data.session,
-                        storedUser: btoa(unescape(encodeURIComponent(user))),
-                        storedPass: btoa(unescape(encodeURIComponent(pass))),
-                        studentId: data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex),
-                        name: data.student?.name || data.selectedProfile?.name,
-                        class: data.student?.class || data.selectedProfile?.class,
-                        specialization: data.student?.specialization || data.selectedProfile?.specialization,
-                        avatar: data.student?.avatar || data.selectedProfile?.avatar
-                    };
-                    sessionManager.save(sessionData);
-                }
-
-                // 2. Identity Atomic Update
-                const incoming = data.student || data.selectedProfile || {};
-                state.user = {
-                    ...state.user,
-                    id: data.student?.id || (data.session ? generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex) : 'guest'),
-                    name: (incoming.name && isValidName(incoming.name)) ? incoming.name : (state.user?.name || "Studente"),
-                    class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : (state.user?.class || "N/D"),
-                    specialization: incoming.specialization || state.user?.specialization,
-                    avatar: incoming.avatar || state.user?.avatar || null
-                };
-                localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-
-                // 3. Supabase Auth Bridge (with hashing)
-                try {
-                    const school = (data.session.schoolCode || '').toUpperCase();
-                    const userName = data.session.userName.toLowerCase();
-                    const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
-                    const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
-
-                    let { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
-                        email: supabaseEmail,
-                        password: supabasePassword
-                    });
-
-                    if (authErr && authErr.message?.includes('Invalid login')) {
-                        const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
-                            email: supabaseEmail,
-                            password: supabasePassword,
-                            options: { data: { name: state.user.name, class: state.user.class } }
-                        });
-                        if (!upErr && upData?.user) authData = upData;
-                    }
-
-                    if (authData?.user) {
-                        await supabaseClient.from('profiles').upsert({
-                            id: String(state.user.id).toLowerCase().replace(/\s+/g, ''),
-                            name: state.user.name,
-                            class: state.user.class,
-                            specialization: state.user.specialization,
-                            avatar: state.user.avatar || null,
-                            last_active: new Date().toISOString()
-                        });
-                    }
-                } catch (ex) {
-                    console.warn("⚠️ Supabase Bridge failed:", ex.message);
-                }
-
-                // 4. Planner Sync REMOVED from auto-flow (v1.1.32.11)
-                // L'utente deve cliccare Carica per avere il piano.
-                // Questo evita race conditions con l'argo sync che sta per partire.
-                state.syncing = false;
-                state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-
-                state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
-                state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
-                state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
-
-                notifyPlannerChanged();
-
-                // 5. Data Hydration & Success
-                if (data.tasks) updateTasks(data.tasks, false);
-                if (data.voti) {
-                    state.voti = Array.isArray(data.voti) ? data.voti : [];
-                    localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
-                }
-
-                state.isLoggedIn = true;
-                state.didup.connected = true;
-                state.isOffline = false;
-                state.lastSync = new Date().toLocaleTimeString();
-                updateOfflineBadge();
-
-                Promise.all([
-                    loadProfileFromServer().catch(e => console.error("Profile load failed:", e))
-                ]).then(() => {
-                    closeModal();
-                    alert(`✅ Benvenuto ${state.user.name}!`);
-                    navigate('home');
-                    render();
-                    startThreadsPolling();
+                // Disabilita UI
+                const allBtns = list.querySelectorAll('.btn-profile');
+                allBtns.forEach(b => {
+                    b.disabled = true;
+                    b.style.opacity = '0.5';
+                    b.style.pointerEvents = 'none';
                 });
-            }
 
-            async function switchProfile() {
-                const stored = sessionManager.load();
-                if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+                btn.style.opacity = '1';
+                btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
+
+                await selectProfile(parseInt(btn.dataset.index, 10), credentials);
+            }, { once: true });
+
+            // Risolvi i nomi veri in background
+            resolveProfileNamesAsync(profiles, credentials, container);
+        }
+
+        async function resolveProfileNamesAsync(profiles, credentials, container) {
+            try {
+                await Promise.all(profiles.map(async (p) => {
                     try {
-                        showBoot("Ricerca profili...");
-                        const user = decodeURIComponent(escape(atob(stored.storedUser)));
-                        const pass = decodeURIComponent(escape(atob(stored.storedPass)));
-
-                        const response = await fetch(`${API_BASE_URL}/login`, {
+                        const resp = await fetch(`${API_BASE_URL}/api/resolve-profile`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                schoolCode: stored.schoolCode,
-                                username: user,
-                                password: pass,
-                                profileIndex: null
+                                schoolCode: credentials.schoolCode,
+                                username: credentials.username,
+                                password: credentials.password,
+                                profileIndex: p.index
                             })
                         });
 
-                        if (!response.ok) throw new Error("Errore durante la ricerca profili");
+                        if (!resp.ok) {
+                            console.warn(`⚠️ HTTP ${resp.status} resolving profile ${p.index}`);
+                            return;
+                        }
 
-                        const data = await response.json();
-                        hideBoot();
-
-                        if (data.status === 'MULTIPLE_PROFILES') {
-                            showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
-                        } else if (data.success) {
-                            handleLoginSuccess(data, pass);
-                        } else {
-                            openArgoLogin();
+                        const j = await resp.json();
+                        if (j.success) {
+                            p.name = j.name;
+                            p.class = j.class;
+                            const btn = container.querySelector(`.btn-profile[data-index="${p.index}"]`);
+                            if (btn) {
+                                const nameEl = btn.querySelector('.profile-name');
+                                const classEl = btn.querySelector('.profile-class');
+                                const avatarEl = btn.querySelector('.profile-avatar');
+                                if (nameEl) nameEl.textContent = j.name;
+                                if (classEl) classEl.textContent = j.class || 'N/D';
+                                if (avatarEl) avatarEl.textContent = (j.name || 'S')[0].toUpperCase();
+                            }
+                            console.log(`✅ Risolto profilo ${p.index}: ${j.name} - ${j.class}`);
                         }
                     } catch (e) {
-                        hideBoot();
-                        console.error("Errore switch profile:", e);
-                        openArgoLogin();
+                        console.warn(`⚠️ Errore risoluzione profilo ${p.index}:`, e);
                     }
-                } else {
-                    openArgoLogin();
+                }));
+            } catch (e) {
+                console.warn('⚠️ Impossibile risolvere nomi profili:', e);
+            }
+        }
+
+        async function selectProfile(profileIndex, credentials) {
+            closeModal();
+            showBoot('Sincronizzazione profilo...');
+            await performArgoSync(profileIndex, credentials);
+            hideBoot();
+        }
+
+        async function handleLoginSuccess(data, rawPassword) {
+            console.log("✅ Login OK, hydrating state...");
+            const user = data.session.userName;
+            const pass = rawPassword || tempCreds.pass;
+
+            // 1. Session Atomic Update
+            if (data.session) {
+                const sessionData = {
+                    ...data.session,
+                    storedUser: btoa(unescape(encodeURIComponent(user))),
+                    storedPass: btoa(unescape(encodeURIComponent(pass))),
+                    studentId: data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex),
+                    name: data.student?.name || data.selectedProfile?.name,
+                    class: data.student?.class || data.selectedProfile?.class,
+                    specialization: data.student?.specialization || data.selectedProfile?.specialization,
+                    avatar: data.student?.avatar || data.selectedProfile?.avatar
+                };
+                sessionManager.save(sessionData);
+            }
+
+            // 2. Identity Atomic Update
+            const incoming = data.student || data.selectedProfile || {};
+            state.user = {
+                ...state.user,
+                id: data.student?.id || (data.session ? generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex) : 'guest'),
+                name: (incoming.name && isValidName(incoming.name)) ? incoming.name : (state.user?.name || "Studente"),
+                class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : (state.user?.class || "N/D"),
+                specialization: incoming.specialization || state.user?.specialization,
+                avatar: incoming.avatar || state.user?.avatar || null
+            };
+            localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+
+            // 3. Supabase Auth Bridge (with hashing)
+            try {
+                const school = (data.session.schoolCode || '').toUpperCase();
+                const userName = data.session.userName.toLowerCase();
+                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
+                const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
+
+                let { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+                    email: supabaseEmail,
+                    password: supabasePassword
+                });
+
+                if (authErr && authErr.message?.includes('Invalid login')) {
+                    const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
+                        email: supabaseEmail,
+                        password: supabasePassword,
+                        options: { data: { name: state.user.name, class: state.user.class } }
+                    });
+                    if (!upErr && upData?.user) authData = upData;
                 }
+
+                if (authData?.user) {
+                    await supabaseClient.from('profiles').upsert({
+                        id: String(state.user.id).toLowerCase().replace(/\s+/g, ''),
+                        name: state.user.name,
+                        class: state.user.class,
+                        specialization: state.user.specialization,
+                        avatar: state.user.avatar || null,
+                        last_active: new Date().toISOString()
+                    });
+                }
+            } catch (ex) {
+                console.warn("⚠️ Supabase Bridge failed:", ex.message);
             }
 
+            // 4. Planner Sync REMOVED from auto-flow (v1.1.32.11)
+            // L'utente deve cliccare Carica per avere il piano.
+            // Questo evita race conditions con l'argo sync che sta per partire.
+            state.syncing = false;
+            state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
 
-            function setLoginBtnText(txt) {
-                const btn = document.getElementById('login-btn') ||
-                    document.querySelector('.login-btn') ||
-                    document.querySelector('#loginBtn') ||
-                    document.querySelector('button[onclick*="performArgoSync"]') ||
-                    document.querySelector('button[type="submit"]');
+            state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+            state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
+            state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
 
-                if (!btn) return;
+            notifyPlannerChanged();
 
-                btn.innerText = txt;
-                btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
+            // 5. Data Hydration & Success
+            if (data.tasks) updateTasks(data.tasks, false);
+            if (data.voti) {
+                state.voti = Array.isArray(data.voti) ? data.voti : [];
+                localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
             }
 
-            function isValidName(name) {
-                if (!name || typeof name !== 'string') return false;
-                const trimmed = name.trim();
-                if (trimmed.length < 2) return false;
-                return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
-            }
+            state.isLoggedIn = true;
+            state.didup.connected = true;
+            state.isOffline = false;
+            state.lastSync = new Date().toLocaleTimeString();
+            updateOfflineBadge();
 
-            function isValidClass(cls) {
-                if (!cls) return false;
-                const s = String(cls).trim().toUpperCase();
-                return s.length >= 1 && s.length <= 20;
-            }
+            Promise.all([
+                loadProfileFromServer().catch(e => console.error("Profile load failed:", e))
+            ]).then(() => {
+                closeModal();
+                alert(`✅ Benvenuto ${state.user.name}!`);
+                navigate('home');
+                render();
+                startThreadsPolling();
+            });
+        }
 
-            // 🔥 Implementation Pointers
-            // Global exposures removed (handled by safeExpose at top)
+        async function switchProfile() {
+            const stored = sessionManager.load();
+            if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+                try {
+                    showBoot("Ricerca profili...");
+                    const user = decodeURIComponent(escape(atob(stored.storedUser)));
+                    const pass = decodeURIComponent(escape(atob(stored.storedPass)));
 
-
-            async function switchProfile() {
-                const stored = sessionManager.load();
-
-                // Se abbiamo credenziali salvate, tentiamo il login "a vuoto" per scatenare la scelta profilo
-                if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
-                    try {
-                        showBoot("Ricerca profili...");
-
-                        // Decodifica (reverse di quello fatto in handleLoginSuccess)
-                        const user = decodeURIComponent(escape(atob(stored.storedUser)));
-                        const pass = decodeURIComponent(escape(atob(stored.storedPass)));
-
-                        // Chiamata Login SENZA profileIndex, per forzare la lista profili se multipli
-                        const payload = {
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
                             schoolCode: stored.schoolCode,
                             username: user,
                             password: pass,
                             profileIndex: null
-                        };
+                        })
+                    });
 
-                        const response = await fetch(`${API_BASE_URL}/login`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
+                    if (!response.ok) throw new Error("Errore durante la ricerca profili");
 
-                        const data = await response.json();
-                        hideBoot();
+                    const data = await response.json();
+                    hideBoot();
 
-                        if (response.ok && data.status === 'MULTIPLE_PROFILES') {
-                            // Bingo! Mostriamo il modale di scelta
-                            showProfileSelectionModal(data.profiles, {
-                                schoolCode: stored.schoolCode,
-                                username: user,
-                                password: pass
-                            });
-                        } else if (response.ok && data.success) {
-                            // Solo un profilo? Ricarichiamo quello (refresh)
-                            alert("Hai un solo profilo disponibile su questo account.");
-                            handleLoginSuccess(data, pass);
-                        } else {
-                            // Errore o altro, fallback al login classico
-                            console.warn("Switch fallito, apro login manuale.");
-                            openArgoLogin();
-                        }
-
-                    } catch (e) {
-                        hideBoot();
-                        console.error("Errore switch profile:", e);
+                    if (data.status === 'MULTIPLE_PROFILES') {
+                        showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
+                    } else if (data.success) {
+                        handleLoginSuccess(data, pass);
+                    } else {
                         openArgoLogin();
                     }
-                } else {
-                    // Nessuna credenziale salvata, login classico
+                } catch (e) {
+                    hideBoot();
+                    console.error("Errore switch profile:", e);
                     openArgoLogin();
                 }
+            } else {
+                openArgoLogin();
             }
+        }
 
 
+        function setLoginBtnText(txt) {
+            const btn = document.getElementById('login-btn') ||
+                document.querySelector('.login-btn') ||
+                document.querySelector('#loginBtn') ||
+                document.querySelector('button[onclick*="performArgoSync"]') ||
+                document.querySelector('button[type="submit"]');
+
+            if (!btn) return;
+
+            btn.innerText = txt;
+            btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
+        }
+
+        function isValidName(name) {
+            if (!name || typeof name !== 'string') return false;
+            const trimmed = name.trim();
+            if (trimmed.length < 2) return false;
+            return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
+        }
+
+        function isValidClass(cls) {
+            if (!cls) return false;
+            const s = String(cls).trim().toUpperCase();
+            return s.length >= 1 && s.length <= 20;
+        }
+
+        // 🔥 Implementation Pointers
+        // Global exposures removed (handled by safeExpose at top)
 
 
+        async function switchProfile() {
+            const stored = sessionManager.load();
 
+            // Se abbiamo credenziali salvate, tentiamo il login "a vuoto" per scatenare la scelta profilo
+            if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+                try {
+                    showBoot("Ricerca profili...");
 
+                    // Decodifica (reverse di quello fatto in handleLoginSuccess)
+                    const user = decodeURIComponent(escape(atob(stored.storedUser)));
+                    const pass = decodeURIComponent(escape(atob(stored.storedPass)));
 
+                    // Chiamata Login SENZA profileIndex, per forzare la lista profili se multipli
+                    const payload = {
+                        schoolCode: stored.schoolCode,
+                        username: user,
+                        password: pass,
+                        profileIndex: null
+                    };
 
-            // --- missing fluidity functions ---
-
-
-
-            function toggleTask(id) {
-                if (event) event.stopPropagation();
-
-                let t = state.tasks.find(x => x.id === id);
-                if (!t) t = state.reminders.find(x => x.id === id);
-
-                if (t) {
-                    t.done = !t.done;
-                    saveTasks();
-                    if (state.reminders && state.reminders.find(x => x.id === id)) {
-                        localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
-                    }
-                    // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                    // debouncedSavePlannerRemote();
-
-                    // === SURGICAL DOM UPDATE ===
-                    // Update all checkboxes for this task ID without rebuilding
-                    document.querySelectorAll(`[data-task-toggle="${id}"]`).forEach(cb => {
-                        cb.style.borderColor = t.done ? 'var(--green)' : cb.dataset.subjectColor || 'rgba(255,255,255,0.2)';
-                        cb.style.background = t.done ? 'var(--green)' : 'transparent';
-                        cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:12px; color:black;"></i>' : '';
-                        cb.style.transform = 'scale(0.85)';
-                        setTimeout(() => { cb.style.transform = 'scale(1)'; }, 120);
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
                     });
-                    // Update text strikethrough
-                    document.querySelectorAll(`[data-task-text="${id}"]`).forEach(el => {
-                        el.style.textDecoration = t.done ? 'line-through' : 'none';
-                        el.style.opacity = t.done ? '0.5' : '1';
-                    });
 
-                    // Update Home's Focus di Oggi toggle checkboxes (inline onclick) 
-                    updatePlanTaskUI(id, t.done);
+                    const data = await response.json();
+                    hideBoot();
 
-                    // Sync calendar events (lightweight, no full re-render)
-                    const calendarEl = document.getElementById('calendar');
-                    if (calendarEl && calendarEl._fullCalendar) {
-                        syncCalendarEvents(calendarEl._fullCalendar);
-                    }
-                    if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
-
-                    // Update completed badge
-                    const badge = document.querySelector('[data-completed-badge]');
-                    if (badge) {
-                        const todayTasks = state.tasks.filter(t => {
-                            if (!t.dateObj) return false;
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            const d = new Date(t.dateObj);
-                            d.setHours(0, 0, 0, 0);
-                            return d.getTime() === today.getTime();
+                    if (response.ok && data.status === 'MULTIPLE_PROFILES') {
+                        // Bingo! Mostriamo il modale di scelta
+                        showProfileSelectionModal(data.profiles, {
+                            schoolCode: stored.schoolCode,
+                            username: user,
+                            password: pass
                         });
-                        const completedToday = todayTasks.filter(t => t.done).length;
-                        badge.textContent = `${completedToday}/${todayTasks.length}`;
+                    } else if (response.ok && data.success) {
+                        // Solo un profilo? Ricarichiamo quello (refresh)
+                        alert("Hai un solo profilo disponibile su questo account.");
+                        handleLoginSuccess(data, pass);
+                    } else {
+                        // Errore o altro, fallback al login classico
+                        console.warn("Switch fallito, apro login manuale.");
+                        openArgoLogin();
                     }
-                }
-            }
 
-            function addManualReminder() {
-                const text = prompt("Cosa devi fare? (es. Compito Mate per il 20/01)");
-                if (text) {
-                    state.reminders.push({
-                        id: Date.now(),
-                        text: text,
-                        done: false
-                    });
+                } catch (e) {
+                    hideBoot();
+                    console.error("Errore switch profile:", e);
+                    openArgoLogin();
+                }
+            } else {
+                // Nessuna credenziale salvata, login classico
+                openArgoLogin();
+            }
+        }
+
+
+
+
+
+
+
+
+        // --- missing fluidity functions ---
+
+
+
+        function toggleTask(id) {
+            if (event) event.stopPropagation();
+
+            let t = state.tasks.find(x => x.id === id);
+            if (!t) t = state.reminders.find(x => x.id === id);
+
+            if (t) {
+                t.done = !t.done;
+                saveTasks();
+                if (state.reminders && state.reminders.find(x => x.id === id)) {
                     localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
-                    render();
+                }
+                // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+                // debouncedSavePlannerRemote();
+
+                // === SURGICAL DOM UPDATE ===
+                // Update all checkboxes for this task ID without rebuilding
+                document.querySelectorAll(`[data-task-toggle="${id}"]`).forEach(cb => {
+                    cb.style.borderColor = t.done ? 'var(--green)' : cb.dataset.subjectColor || 'rgba(255,255,255,0.2)';
+                    cb.style.background = t.done ? 'var(--green)' : 'transparent';
+                    cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:12px; color:black;"></i>' : '';
+                    cb.style.transform = 'scale(0.85)';
+                    setTimeout(() => { cb.style.transform = 'scale(1)'; }, 120);
+                });
+                // Update text strikethrough
+                document.querySelectorAll(`[data-task-text="${id}"]`).forEach(el => {
+                    el.style.textDecoration = t.done ? 'line-through' : 'none';
+                    el.style.opacity = t.done ? '0.5' : '1';
+                });
+
+                // Update Home's Focus di Oggi toggle checkboxes (inline onclick) 
+                updatePlanTaskUI(id, t.done);
+
+                // Sync calendar events (lightweight, no full re-render)
+                const calendarEl = document.getElementById('calendar');
+                if (calendarEl && calendarEl._fullCalendar) {
+                    syncCalendarEvents(calendarEl._fullCalendar);
+                }
+                if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+
+                // Update completed badge
+                const badge = document.querySelector('[data-completed-badge]');
+                if (badge) {
+                    const todayTasks = state.tasks.filter(t => {
+                        if (!t.dateObj) return false;
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const d = new Date(t.dateObj);
+                        d.setHours(0, 0, 0, 0);
+                        return d.getTime() === today.getTime();
+                    });
+                    const completedToday = todayTasks.filter(t => t.done).length;
+                    badge.textContent = `${completedToday}/${todayTasks.length}`;
                 }
             }
+        }
 
-            function updateFeedSearch(value) {
-                state.feed.search = value;
-                surgicalRefreshFeedList();
+        function addManualReminder() {
+            const text = prompt("Cosa devi fare? (es. Compito Mate per il 20/01)");
+            if (text) {
+                state.reminders.push({
+                    id: Date.now(),
+                    text: text,
+                    done: false
+                });
+                localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
+                render();
             }
+        }
 
-            function setFeedClass(c) {
-                state.feed.classFilter = c;
-                surgicalRefreshFeedList();
-            }
+        function updateFeedSearch(value) {
+            state.feed.search = value;
+            surgicalRefreshFeedList();
+        }
 
-            // === QUICK ADD TASK (from Home — goes to Piano di Studio) ===
-            function showQuickAddTaskModal() {
-                const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
-                const subjectOptions = subjects.length > 0
-                    ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
-                    : '<option value="Generale">Generale</option>';
+        function setFeedClass(c) {
+            state.feed.classFilter = c;
+            surgicalRefreshFeedList();
+        }
 
-                showModal(`
+        // === QUICK ADD TASK (from Home — goes to Piano di Studio) ===
+        function showQuickAddTaskModal() {
+            const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+            const subjectOptions = subjects.length > 0
+                ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+                : '<option value="Generale">Generale</option>';
+
+            showModal(`
                 <div style="padding: 24px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Aggiungi Compito</h2>
@@ -6607,44 +6608,44 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     </button>
                 </div>
         `);
-            }
+        }
 
-            function submitQuickTask() {
-                const text = document.getElementById('quickTaskText')?.value?.trim();
-                const subject = document.getElementById('quickTaskSubject')?.value || 'Generale';
-                const dateVal = document.getElementById('quickTaskDate')?.value;
-                if (!text) { showToast('Inserisci una descrizione!'); return; }
+        function submitQuickTask() {
+            const text = document.getElementById('quickTaskText')?.value?.trim();
+            const subject = document.getElementById('quickTaskSubject')?.value || 'Generale';
+            const dateVal = document.getElementById('quickTaskDate')?.value;
+            if (!text) { showToast('Inserisci una descrizione!'); return; }
 
-                const taskId = 'manual_' + Date.now();
-                const newTask = {
-                    id: taskId,
-                    text: text,
-                    subject: subject,
-                    done: false,
-                    due_date: dateVal,
-                    dateObj: new Date(dateVal)
-                };
-                state.tasks.push(newTask);
+            const taskId = 'manual_' + Date.now();
+            const newTask = {
+                id: taskId,
+                text: text,
+                subject: subject,
+                done: false,
+                due_date: dateVal,
+                dateObj: new Date(dateVal)
+            };
+            state.tasks.push(newTask);
 
-                // Add to planned tasks for the selected date
-                if (!state.plannedTasks[dateVal]) state.plannedTasks[dateVal] = [];
-                state.plannedTasks[dateVal].push(taskId);
+            // Add to planned tasks for the selected date
+            if (!state.plannedTasks[dateVal]) state.plannedTasks[dateVal] = [];
+            state.plannedTasks[dateVal].push(taskId);
 
-                saveTasks();
-                // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                closeModal();
-                showToast('Compito aggiunto! ✅');
-                render();
-            }
+            saveTasks();
+            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+            closeModal();
+            showToast('Compito aggiunto! ✅');
+            render();
+        }
 
-            // === ADD REGISTRO TASK (verifica/orale/compito in classe) ===
-            function showAddRegistroTaskModal() {
-                const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
-                const subjectOptions = subjects.length > 0
-                    ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
-                    : '<option value="Generale">Generale</option>';
+        // === ADD REGISTRO TASK (verifica/orale/compito in classe) ===
+        function showAddRegistroTaskModal() {
+            const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+            const subjectOptions = subjects.length > 0
+                ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+                : '<option value="Generale">Generale</option>';
 
-                showModal(`
+            showModal(`
                 <div style="padding: 24px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Nuova Scadenza</h2>
@@ -6682,78 +6683,78 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     </button>
                 </div>
         `);
-                window._registroTipo = 'Verifica';
-            }
+            window._registroTipo = 'Verifica';
+        }
 
-            function selectRegistroTipo(tipo) {
-                window._registroTipo = tipo;
-                ['tipo-verifica', 'tipo-orale', 'tipo-compito'].forEach(id => {
-                    const b = document.getElementById(id);
-                    if (b) {
-                        b.style.border = '1px solid rgba(255,255,255,0.1)';
-                        b.style.background = 'transparent';
-                        b.style.color = 'var(--text-dim)';
-                    }
-                });
-                const map = { 'Verifica': 'tipo-verifica', 'Interrogazione': 'tipo-orale', 'Compito in classe': 'tipo-compito' };
-                const active = document.getElementById(map[tipo]);
-                if (active) {
-                    active.style.border = '1px solid var(--accent)';
-                    active.style.background = 'rgba(99,102,241,0.15)';
-                    active.style.color = 'var(--accent)';
+        function selectRegistroTipo(tipo) {
+            window._registroTipo = tipo;
+            ['tipo-verifica', 'tipo-orale', 'tipo-compito'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) {
+                    b.style.border = '1px solid rgba(255,255,255,0.1)';
+                    b.style.background = 'transparent';
+                    b.style.color = 'var(--text-dim)';
                 }
+            });
+            const map = { 'Verifica': 'tipo-verifica', 'Interrogazione': 'tipo-orale', 'Compito in classe': 'tipo-compito' };
+            const active = document.getElementById(map[tipo]);
+            if (active) {
+                active.style.border = '1px solid var(--accent)';
+                active.style.background = 'rgba(99,102,241,0.15)';
+                active.style.color = 'var(--accent)';
             }
+        }
 
-            function submitRegistroTask() {
-                const subject = document.getElementById('registroTaskSubject')?.value || 'Generale';
-                const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
-                const dateVal = document.getElementById('registroTaskDate')?.value;
-                const tipo = window._registroTipo || 'Verifica';
+        function submitRegistroTask() {
+            const subject = document.getElementById('registroTaskSubject')?.value || 'Generale';
+            const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
+            const dateVal = document.getElementById('registroTaskDate')?.value;
+            const tipo = window._registroTipo || 'Verifica';
 
-                const text = args ? `${tipo}: ${args}` : tipo;
-                const taskId = 'registro_' + Date.now();
-                const newTask = {
-                    id: taskId,
-                    text: text,
-                    subject: subject,
-                    done: false,
-                    due_date: dateVal,
-                    dateObj: new Date(dateVal)
-                };
-                state.tasks.push(newTask);
-                saveTasks();
-                // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                closeModal();
-                showToast(`${tipo} aggiunta! 📝`);
-                render();
-            }
+            const text = args ? `${tipo}: ${args}` : tipo;
+            const taskId = 'registro_' + Date.now();
+            const newTask = {
+                id: taskId,
+                text: text,
+                subject: subject,
+                done: false,
+                due_date: dateVal,
+                dateObj: new Date(dateVal)
+            };
+            state.tasks.push(newTask);
+            saveTasks();
+            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+            closeModal();
+            showToast(`${tipo} aggiunta! 📝`);
+            render();
+        }
 
-            // === COMPETENCY INPUT MODAL (AI) with user prep level ===
-            function showCompetencyInputModal() {
-                const votiData = getVotiData();
-                const subjectsMap = {};
-                votiData.forEach(v => {
-                    const sub = v.materia || v.subject || 'Altro';
-                    if (!subjectsMap[sub]) subjectsMap[sub] = [];
-                    subjectsMap[sub].push(v);
-                });
+        // === COMPETENCY INPUT MODAL (AI) with user prep level ===
+        function showCompetencyInputModal() {
+            const votiData = getVotiData();
+            const subjectsMap = {};
+            votiData.forEach(v => {
+                const sub = v.materia || v.subject || 'Altro';
+                if (!subjectsMap[sub]) subjectsMap[sub] = [];
+                subjectsMap[sub].push(v);
+            });
 
-                // Also gather all known subjects from tasks (in case there are subjects with no grades yet)
-                const allSubjects = new Set(Object.keys(subjectsMap));
-                state.tasks.forEach(t => { if (t.subject) allSubjects.add(t.subject); });
+            // Also gather all known subjects from tasks (in case there are subjects with no grades yet)
+            const allSubjects = new Set(Object.keys(subjectsMap));
+            state.tasks.forEach(t => { if (t.subject) allSubjects.add(t.subject); });
 
-                const subjectsList = [...allSubjects].map(name => {
-                    const list = subjectsMap[name] || [];
-                    const media = list.length > 0 ? (parseFloat(calcolaMedia(list)) || 0) : 0;
-                    const color = getSubjectColor(name);
-                    const savedLevel = (state.prepLevels || {})[name] || 3;
-                    const priority = media < 6 ? '🔴 Recupero' : media < 7 ? '🟡 Migliorabile' : '🟢 Buona';
-                    return { name, media, color, priority, count: list.length, savedLevel };
-                }).sort((a, b) => a.media - b.media);
+            const subjectsList = [...allSubjects].map(name => {
+                const list = subjectsMap[name] || [];
+                const media = list.length > 0 ? (parseFloat(calcolaMedia(list)) || 0) : 0;
+                const color = getSubjectColor(name);
+                const savedLevel = (state.prepLevels || {})[name] || 3;
+                const priority = media < 6 ? '🔴 Recupero' : media < 7 ? '🟡 Migliorabile' : '🟢 Buona';
+                return { name, media, color, priority, count: list.length, savedLevel };
+            }).sort((a, b) => a.media - b.media);
 
-                const levelLabels = { 1: 'Per niente pronto', 2: 'Poco pronto', 3: 'Sufficiente', 4: 'Abbastanza pronto', 5: 'Molto pronto' };
+            const levelLabels = { 1: 'Per niente pronto', 2: 'Poco pronto', 3: 'Sufficiente', 4: 'Abbastanza pronto', 5: 'Molto pronto' };
 
-                showModal(`
+            showModal(`
                 <div style="padding: 24px; max-height: 80vh; overflow-y: auto;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <h2 style="margin: 0; font-size: 20px; font-weight: 800;">🎯 Competenze & Priorità</h2>
@@ -6793,56 +6794,56 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     </button>
                 </div>
         `);
-            }
+        }
 
-            function submitCompetencyRequest() {
-                const checked = [...document.querySelectorAll('.competency-check:checked')].map(c => c.value);
-                if (checked.length === 0) { showToast('Seleziona almeno una materia!'); return; }
+        function submitCompetencyRequest() {
+            const checked = [...document.querySelectorAll('.competency-check:checked')].map(c => c.value);
+            if (checked.length === 0) { showToast('Seleziona almeno una materia!'); return; }
 
-                // Save prep levels to state
-                if (!state.prepLevels) state.prepLevels = {};
-                document.querySelectorAll('.prep-slider').forEach(sl => {
-                    state.prepLevels[sl.dataset.subject] = parseInt(sl.value);
-                });
-                localStorage.setItem('g_diary_prep_levels', JSON.stringify(state.prepLevels));
+            // Save prep levels to state
+            if (!state.prepLevels) state.prepLevels = {};
+            document.querySelectorAll('.prep-slider').forEach(sl => {
+                state.prepLevels[sl.dataset.subject] = parseInt(sl.value);
+            });
+            localStorage.setItem('g_diary_prep_levels', JSON.stringify(state.prepLevels));
 
-                const votiData = getVotiData();
-                const levelLabels = { 1: 'per niente pronto', 2: 'poco pronto', 3: 'sufficientemente pronto', 4: 'abbastanza pronto', 5: 'molto pronto' };
+            const votiData = getVotiData();
+            const levelLabels = { 1: 'per niente pronto', 2: 'poco pronto', 3: 'sufficientemente pronto', 4: 'abbastanza pronto', 5: 'molto pronto' };
 
-                const details = checked.map(name => {
-                    const list = votiData.filter(v => (v.materia || v.subject) === name);
-                    const media = list.length > 0 ? (parseFloat(calcolaMedia(list)) || 0) : 0;
-                    const userLevel = state.prepLevels[name] || 3;
-                    const mediaStr = list.length > 0 ? `media: ${media.toFixed(1)}, ${list.length} voti` : 'nessun voto registrato';
-                    return `${name} (${mediaStr}, preparazione autodichiarata: ${userLevel}/5 — ${levelLabels[userLevel]})`;
-                }).join('; ');
+            const details = checked.map(name => {
+                const list = votiData.filter(v => (v.materia || v.subject) === name);
+                const media = list.length > 0 ? (parseFloat(calcolaMedia(list)) || 0) : 0;
+                const userLevel = state.prepLevels[name] || 3;
+                const mediaStr = list.length > 0 ? `media: ${media.toFixed(1)}, ${list.length} voti` : 'nessun voto registrato';
+                return `${name} (${mediaStr}, preparazione autodichiarata: ${userLevel}/5 — ${levelLabels[userLevel]})`;
+            }).join('; ');
 
-                closeModal();
+            closeModal();
 
-                // Navigate to AI view first, then send
-                if (state.view !== 'ai_assistant') {
-                    navigate('ai_assistant');
-                    // Wait for render to complete
-                    setTimeout(() => {
-                        const input = document.getElementById('aiChatInput');
-                        const prompt = `Sono uno studente e ho bisogno di un piano di recupero/miglioramento per le seguenti materie: ${details}. IMPORTANTE: il livello di preparazione è stato dichiarato da me studente e deve avere la priorità rispetto ai voti — posso avere buoni voti ma essere indietro con certi argomenti. Dammi un piano di studio settimanale con priorità sulle materie dove mi sento meno pronto, suggerendo argomenti chiave da ripassare e strategie di studio efficaci. Organizza tutto per priorità dal più urgente al meno urgente.`;
-                        if (input) input.value = prompt;
-                        sendAIChat();
-                    }, 400);
-                } else {
+            // Navigate to AI view first, then send
+            if (state.view !== 'ai_assistant') {
+                navigate('ai_assistant');
+                // Wait for render to complete
+                setTimeout(() => {
                     const input = document.getElementById('aiChatInput');
                     const prompt = `Sono uno studente e ho bisogno di un piano di recupero/miglioramento per le seguenti materie: ${details}. IMPORTANTE: il livello di preparazione è stato dichiarato da me studente e deve avere la priorità rispetto ai voti — posso avere buoni voti ma essere indietro con certi argomenti. Dammi un piano di studio settimanale con priorità sulle materie dove mi sento meno pronto, suggerendo argomenti chiave da ripassare e strategie di studio efficaci. Organizza tutto per priorità dal più urgente al meno urgente.`;
                     if (input) input.value = prompt;
                     sendAIChat();
-                }
+                }, 400);
+            } else {
+                const input = document.getElementById('aiChatInput');
+                const prompt = `Sono uno studente e ho bisogno di un piano di recupero/miglioramento per le seguenti materie: ${details}. IMPORTANTE: il livello di preparazione è stato dichiarato da me studente e deve avere la priorità rispetto ai voti — posso avere buoni voti ma essere indietro con certi argomenti. Dammi un piano di studio settimanale con priorità sulle materie dove mi sento meno pronto, suggerendo argomenti chiave da ripassare e strategie di studio efficaci. Organizza tutto per priorità dal più urgente al meno urgente.`;
+                if (input) input.value = prompt;
+                sendAIChat();
             }
+        }
 
-            function showOrganizeStudyModal() {
-                const todayStr = getLocalDateString(getSchoolDate());
-                const plannedIds = state.plannedTasks[todayStr] || [];
-                const allPendingTasks = state.tasks.filter(t => !t.done);
+        function showOrganizeStudyModal() {
+            const todayStr = getLocalDateString(getSchoolDate());
+            const plannedIds = state.plannedTasks[todayStr] || [];
+            const allPendingTasks = state.tasks.filter(t => !t.done);
 
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -6853,9 +6854,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     
                     <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; max-height: 450px; overflow-y: auto;">
                         ${allPendingTasks.length > 0 ? allPendingTasks.map(t => {
-                    const isPlanned = plannedIds.includes(t.id);
-                    const subjectColor = getSubjectColor(t.subject);
-                    return `
+                const isPlanned = plannedIds.includes(t.id);
+                const subjectColor = getSubjectColor(t.subject);
+                return `
                                 <div class="glass-list-item" style="padding: 18px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-left: 4px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.05)'}; background: ${isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)'};" onclick="togglePlanTask('${t.id}')">
                                     <div class="plan-checkbox ${isPlanned ? 'checked' : ''}" style="width: 28px; height: 28px; border-radius: 8px; background: ${isPlanned ? 'var(--green)' : 'transparent'}; border: 2px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         ${isPlanned ? '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>' : ''}
@@ -6866,39 +6867,39 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                                     </div>
                                 </div>
                             `;
-                }).join('') : '<div style="text-align: center; opacity: 0.5; padding: 40px;">Nessun compito in sospeso.</div>'}
+            }).join('') : '<div style="text-align: center; opacity: 0.5; padding: 40px;">Nessun compito in sospeso.</div>'}
                     </div>
                     <button onclick="closeModal()" class="btn-primary" style="width: 100%; padding: 16px; font-size: 16px; font-weight: 700;">Salva Agenda</button>
                 </div>
             </div>
         `;
+        }
+
+        function togglePlannerMenu(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('planner-cloud-menu');
+            if (!menu) return;
+
+            const isVisible = menu.classList.contains('active');
+
+            // Chiudi tutti gli altri eventuali dropdown prima (opzionale)
+            document.querySelectorAll('.planner-dropdown-content').forEach(el => el.classList.remove('active'));
+
+            if (!isVisible) {
+                menu.classList.add('active');
+                const closeHandler = (e) => {
+                    if (!menu.contains(e.target)) {
+                        menu.classList.remove('active');
+                        document.removeEventListener('click', closeHandler);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closeHandler), 10);
             }
+        }
 
-            function togglePlannerMenu(event) {
-                if (event) event.stopPropagation();
-                const menu = document.getElementById('planner-cloud-menu');
-                if (!menu) return;
-
-                const isVisible = menu.classList.contains('active');
-
-                // Chiudi tutti gli altri eventuali dropdown prima (opzionale)
-                document.querySelectorAll('.planner-dropdown-content').forEach(el => el.classList.remove('active'));
-
-                if (!isVisible) {
-                    menu.classList.add('active');
-                    const closeHandler = (e) => {
-                        if (!menu.contains(e.target)) {
-                            menu.classList.remove('active');
-                            document.removeEventListener('click', closeHandler);
-                        }
-                    };
-                    setTimeout(() => document.addEventListener('click', closeHandler), 10);
-                }
-            }
-
-            function showTasksBySubjectModal() {
-                const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
-                modalContainer.innerHTML = `
+        function showTasksBySubjectModal() {
+            const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
+            modalContainer.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -6907,9 +6908,9 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 24px;">
                         ${subjects.map(s => {
-                    const subjectTasks = state.tasks.filter(t => t.subject === s);
-                    const color = getSubjectColor(s);
-                    return `
+                const subjectTasks = state.tasks.filter(t => t.subject === s);
+                const color = getSubjectColor(s);
+                return `
                                 <div style="border-left: 4px solid ${color}; padding-left: 16px;">
                                     <h3 style="color: ${color}; text-transform: uppercase; font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                                         <i class="ph-fill ph-book-open"></i> ${s}
@@ -6930,393 +6931,393 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                                     </div>
                                 </div>
                             `;
-                }).join('')}
+            }).join('')}
                     </div>
                     <button onclick="closeModal()" class="btn-primary" style="margin-top: 30px; width: 100%;">Chiudi</button>
                 </div>
             </div>
         `;
+        }
+        function togglePlanTask(id) {
+            if (event) event.stopPropagation();
+
+            const todayStr = getLocalDateString(getSchoolDate());
+            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+
+            const index = state.plannedTasks[todayStr].indexOf(id);
+            if (index > -1) {
+                state.plannedTasks[todayStr].splice(index, 1);
+            } else {
+                state.plannedTasks[todayStr].push(id);
             }
-            function togglePlanTask(id) {
-                if (event) event.stopPropagation();
 
-                const todayStr = getLocalDateString(getSchoolDate());
-                if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+            saveTasks();
+            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+            // debouncedSavePlannerRemote();
+            updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
+            updatePlannerCounter();
+            notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
+        }
 
-                const index = state.plannedTasks[todayStr].indexOf(id);
-                if (index > -1) {
-                    state.plannedTasks[todayStr].splice(index, 1);
+
+
+        function updateTaskUI(taskId, isDone) {
+            const checkbox = document.querySelector(`[data-task-toggle="${taskId}"]`);
+            const taskText = document.querySelector(`[data-task-text="${taskId}"]`);
+
+            if (checkbox) {
+                checkbox.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+
+                if (isDone) {
+                    checkbox.style.background = 'var(--green, #30D158)';
+                    checkbox.style.borderColor = 'var(--green, #30D158)';
+                    checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>';
                 } else {
-                    state.plannedTasks[todayStr].push(id);
+                    checkbox.style.background = 'transparent';
+                    checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
+                    checkbox.innerHTML = '';
                 }
 
-                saveTasks();
-                // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                // debouncedSavePlannerRemote();
-                updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
-                updatePlannerCounter();
-                notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
-            }
-
-
-
-            function updateTaskUI(taskId, isDone) {
-                const checkbox = document.querySelector(`[data-task-toggle="${taskId}"]`);
-                const taskText = document.querySelector(`[data-task-text="${taskId}"]`);
-
-                if (checkbox) {
-                    checkbox.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-
-                    if (isDone) {
-                        checkbox.style.background = 'var(--green, #30D158)';
-                        checkbox.style.borderColor = 'var(--green, #30D158)';
-                        checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>';
-                    } else {
-                        checkbox.style.background = 'transparent';
-                        checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
-                        checkbox.innerHTML = '';
-                    }
-
-                    checkbox.style.transform = 'scale(0.85) translateZ(0)';
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            checkbox.style.transform = 'scale(1) translateZ(0)';
-                        }, 50);
-                    });
-                }
-
-                if (taskText) {
-                    taskText.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-                    if (isDone) {
-                        taskText.style.opacity = '0.5';
-                        taskText.style.textDecoration = 'line-through';
-                    } else {
-                        taskText.style.opacity = '1';
-                        taskText.style.textDecoration = 'none';
-                    }
-                }
-            }
-
-            function startStudySession() {
-                const duration = prompt("Quanti minuti vuoi studiare?", "25");
-                if (duration && !isNaN(duration)) {
-                    // For now simple alert, can be expanded to a real visible timer later
-                    alert(`⏱️ Sessione di studio avviata per ${duration} minuti!\n\nConcentrati e metti via il telefono.`);
-
+                checkbox.style.transform = 'scale(0.85) translateZ(0)';
+                requestAnimationFrame(() => {
                     setTimeout(() => {
-                        alert("⏰ DING! Sessione finita. Prenditi una pausa!");
-                    }, duration * 60 * 1000);
-                }
-            }
-
-            // ⭐ Funzione di test per verificare la connessione backend
-            async function testBackendConnection() {
-                const statusEl = document.getElementById('server-status');
-                if (statusEl) {
-                    statusEl.innerHTML = '<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Test in corso...';
-                    statusEl.style.color = "var(--orange)";
-                }
-
-                try {
-                    console.log("🔍 Test connessione backend...");
-
-                    // Test 1: Health check
-                    const healthRes = await fetch(`${API_BASE_URL}/health`, {
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json' }
-                    });
-                    console.log("✅ Health check:", healthRes.status, healthRes.ok);
-
-                    // Test 2: Verifica formato risposta (se disponibile)
-                    if (healthRes.ok) {
-                        const healthData = await healthRes.json().catch(() => ({}));
-                        console.log("📋 Health response:", healthData);
-                    }
-
-                    if (statusEl) {
-                        statusEl.innerHTML = '<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Backend raggiungibile';
-                        statusEl.style.color = "var(--green)";
-                    }
-
-                    alert("✅ Backend raggiungibile! Controlla la console per i dettagli.");
-                } catch (e) {
-                    console.error("❌ Test fallito:", e);
-                    if (statusEl) {
-                        statusEl.innerHTML = '<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Backend non raggiungibile';
-                        statusEl.style.color = "var(--red)";
-                    }
-                    alert("❌ Backend non raggiungibile: " + e.message + "\n\nVerifica:\n- URL backend corretto: " + API_BASE_URL + "\n- Server online\n- CORS configurato");
-                }
-            }
-
-            // Init - render will be called by DOMContentLoaded
-            let __stressWaveRAF = null;
-            let __mediaGaugeRAF = null;
-
-            /* Utilità canvas DPR-safe */
-            function setupCanvas(canvas) {
-                const rect = canvas.getBoundingClientRect();
-                const dpr = window.devicePixelRatio || 1;
-                canvas.width = Math.floor(rect.width * dpr);
-                canvas.height = Math.floor(rect.height * dpr);
-                const ctx = canvas.getContext('2d');
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                return { ctx, rect, dpr };
-            }
-
-            // ============= HELPER FUNCTIONS (v7.0) =============
-            async function postJson(getEndpointUrl, payload) {
-                const url = await getEndpointUrl(); // resolve if Promise
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                        checkbox.style.transform = 'scale(1) translateZ(0)';
+                    }, 50);
                 });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.json();
             }
 
-            async function searchPeople(term, limit = 20) {
-                const q = (term || '').trim();
-                if (!q) return [];
-                // Usa Supabase Client per ricerca sicura su RLS profiles
-                const { data, error } = await supabaseClient
-                    .from('profiles')
-                    .select('id, name, class, avatar')
-                    .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
-                    .limit(limit);
-                if (error) { console.warn("Search error:", error); return []; }
-                return data;
+            if (taskText) {
+                taskText.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+                if (isDone) {
+                    taskText.style.opacity = '0.5';
+                    taskText.style.textDecoration = 'line-through';
+                } else {
+                    taskText.style.opacity = '1';
+                    taskText.style.textDecoration = 'none';
+                }
+            }
+        }
+
+        function startStudySession() {
+            const duration = prompt("Quanti minuti vuoi studiare?", "25");
+            if (duration && !isNaN(duration)) {
+                // For now simple alert, can be expanded to a real visible timer later
+                alert(`⏱️ Sessione di studio avviata per ${duration} minuti!\n\nConcentrati e metti via il telefono.`);
+
+                setTimeout(() => {
+                    alert("⏰ DING! Sessione finita. Prenditi una pausa!");
+                }, duration * 60 * 1000);
+            }
+        }
+
+        // ⭐ Funzione di test per verificare la connessione backend
+        async function testBackendConnection() {
+            const statusEl = document.getElementById('server-status');
+            if (statusEl) {
+                statusEl.innerHTML = '<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Test in corso...';
+                statusEl.style.color = "var(--orange)";
             }
 
-            function getCurrentUserId() {
-                return getUserId(); // Alias for compatibility
-            }
+            try {
+                console.log("🔍 Test connessione backend...");
 
-            /* 3A) STRESS: onda animata (livello 0-10) */
-            function renderStressWave(level = 5) {
-                if (__stressWaveRAF) cancelAnimationFrame(__stressWaveRAF);
-                const canvas = document.getElementById('stressWaveCanvas');
-                if (!canvas) return;
-                const { ctx, rect } = setupCanvas(canvas);
-                const W = rect.width, H = rect.height;
+                // Test 1: Health check
+                const healthRes = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                console.log("✅ Health check:", healthRes.status, healthRes.ok);
 
-                // Parametri onda in base al livello (Dynamic Speed)
-                const ampBase = 12;
-                const amp = ampBase * (0.5 + (level / 10) * 0.5);
-                const freq = 0.02;
-                const speed = 0.02 + (level / 10) * 0.08; // Più stress -> più veloce
-
-                let t = 0;
-
-                function strokeGradient() {
-                    const g = ctx.createLinearGradient(0, 0, W, 0);
-                    g.addColorStop(0.00, 'rgba(255,255,255,0.4)');
-                    g.addColorStop(0.50, 'rgba(255,255,255,0.8)');
-                    g.addColorStop(1.00, 'rgba(255,255,255,0.4)');
-                    return g;
+                // Test 2: Verifica formato risposta (se disponibile)
+                if (healthRes.ok) {
+                    const healthData = await healthRes.json().catch(() => ({}));
+                    console.log("📋 Health response:", healthData);
                 }
 
-                function draw() {
-                    if (!document.getElementById('stressWaveCanvas')) {
-                        cancelAnimationFrame(__stressWaveRAF);
-                        __stressWaveRAF = null;
-                        return;
-                    }
-                    ctx.clearRect(0, 0, W, H);
-
-                    ctx.lineWidth = 2.5;
-                    ctx.strokeStyle = strokeGradient();
-                    ctx.shadowColor = 'rgba(255,255,255,0.2)';
-                    ctx.shadowBlur = 4;
-
-                    ctx.beginPath();
-                    const midY = H / 2;
-                    for (let x = 0; x <= W; x += 4) {
-                        const y = midY + Math.sin(x * freq + t) * amp;
-                        if (x === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    }
-                    ctx.stroke();
-
-                    t += speed;
-                    __stressWaveRAF = requestAnimationFrame(draw);
+                if (statusEl) {
+                    statusEl.innerHTML = '<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Backend raggiungibile';
+                    statusEl.style.color = "var(--green)";
                 }
+
+                alert("✅ Backend raggiungibile! Controlla la console per i dettagli.");
+            } catch (e) {
+                console.error("❌ Test fallito:", e);
+                if (statusEl) {
+                    statusEl.innerHTML = '<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Backend non raggiungibile';
+                    statusEl.style.color = "var(--red)";
+                }
+                alert("❌ Backend non raggiungibile: " + e.message + "\n\nVerifica:\n- URL backend corretto: " + API_BASE_URL + "\n- Server online\n- CORS configurato");
+            }
+        }
+
+        // Init - render will be called by DOMContentLoaded
+        let __stressWaveRAF = null;
+        let __mediaGaugeRAF = null;
+
+        /* Utilità canvas DPR-safe */
+        function setupCanvas(canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(rect.width * dpr);
+            canvas.height = Math.floor(rect.height * dpr);
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { ctx, rect, dpr };
+        }
+
+        // ============= HELPER FUNCTIONS (v7.0) =============
+        async function postJson(getEndpointUrl, payload) {
+            const url = await getEndpointUrl(); // resolve if Promise
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function searchPeople(term, limit = 20) {
+            const q = (term || '').trim();
+            if (!q) return [];
+            // Usa Supabase Client per ricerca sicura su RLS profiles
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('id, name, class, avatar')
+                .or(`name.ilike.%${q}%,class.ilike.%${q}%`)
+                .limit(limit);
+            if (error) { console.warn("Search error:", error); return []; }
+            return data;
+        }
+
+        function getCurrentUserId() {
+            return getUserId(); // Alias for compatibility
+        }
+
+        /* 3A) STRESS: onda animata (livello 0-10) */
+        function renderStressWave(level = 5) {
+            if (__stressWaveRAF) cancelAnimationFrame(__stressWaveRAF);
+            const canvas = document.getElementById('stressWaveCanvas');
+            if (!canvas) return;
+            const { ctx, rect } = setupCanvas(canvas);
+            const W = rect.width, H = rect.height;
+
+            // Parametri onda in base al livello (Dynamic Speed)
+            const ampBase = 12;
+            const amp = ampBase * (0.5 + (level / 10) * 0.5);
+            const freq = 0.02;
+            const speed = 0.02 + (level / 10) * 0.08; // Più stress -> più veloce
+
+            let t = 0;
+
+            function strokeGradient() {
+                const g = ctx.createLinearGradient(0, 0, W, 0);
+                g.addColorStop(0.00, 'rgba(255,255,255,0.4)');
+                g.addColorStop(0.50, 'rgba(255,255,255,0.8)');
+                g.addColorStop(1.00, 'rgba(255,255,255,0.4)');
+                return g;
+            }
+
+            function draw() {
+                if (!document.getElementById('stressWaveCanvas')) {
+                    cancelAnimationFrame(__stressWaveRAF);
+                    __stressWaveRAF = null;
+                    return;
+                }
+                ctx.clearRect(0, 0, W, H);
+
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = strokeGradient();
+                ctx.shadowColor = 'rgba(255,255,255,0.2)';
+                ctx.shadowBlur = 4;
+
+                ctx.beginPath();
+                const midY = H / 2;
+                for (let x = 0; x <= W; x += 4) {
+                    const y = midY + Math.sin(x * freq + t) * amp;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                t += speed;
                 __stressWaveRAF = requestAnimationFrame(draw);
             }
+            __stressWaveRAF = requestAnimationFrame(draw);
+        }
 
-            /* Dopo ogni render della Home, ridisegna l’onda con il livello odierno */
-            function initStressWaveFromState() {
-                const todayStr = new Date().toISOString().slice(0, 10);
-                const level = (state.stressLevels && state.stressLevels[todayStr] != null)
-                    ? Number(state.stressLevels[todayStr]) : 5;
-                renderStressWave(level);
+        /* Dopo ogni render della Home, ridisegna l’onda con il livello odierno */
+        function initStressWaveFromState() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const level = (state.stressLevels && state.stressLevels[todayStr] != null)
+                ? Number(state.stressLevels[todayStr]) : 5;
+            renderStressWave(level);
+        }
+
+        function renderMediaGauge(target = 0) {
+            const canvas = document.getElementById('mediaGaugeCanvas');
+            const valueEl = document.getElementById('mediaValue');
+            if (!canvas || !valueEl) return;
+
+            const { ctx, rect } = setupCanvas(canvas);
+            const W = rect.width, H = rect.height;
+            const cx = W / 2, cy = H * 0.95;
+            const radius = Math.min(W, H * 2) / 2.3;
+            const start = Math.PI;
+            const endMax = 2 * Math.PI;
+            const lineW = 12;
+
+            if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
+
+            function arcGradient(val) {
+                const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
+                if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
+                else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
+                else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
+                return g;
             }
 
-            function renderMediaGauge(target = 0) {
-                const canvas = document.getElementById('mediaGaugeCanvas');
-                const valueEl = document.getElementById('mediaValue');
-                if (!canvas || !valueEl) return;
+            function drawFrame(currentVal) {
+                ctx.clearRect(0, 0, W, H);
+                ctx.lineWidth = lineW;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+                ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
 
-                const { ctx, rect } = setupCanvas(canvas);
-                const W = rect.width, H = rect.height;
-                const cx = W / 2, cy = H * 0.95;
-                const radius = Math.min(W, H * 2) / 2.3;
-                const start = Math.PI;
-                const endMax = 2 * Math.PI;
-                const lineW = 12;
+                const progress = (currentVal / 10);
+                const end = start + progress * Math.PI;
+                ctx.strokeStyle = arcGradient(currentVal);
+                ctx.shadowColor = 'rgba(0,0,0,0.15)';
+                ctx.shadowBlur = 4;
+                ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
 
-                if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
+                const knobX = cx + radius * Math.cos(end);
+                const knobY = cy + radius * Math.sin(end);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 6;
+                ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
 
-                function arcGradient(val) {
-                    const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-                    if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
-                    else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
-                    else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
-                    return g;
-                }
+                valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
+                valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
+            }
 
-                function drawFrame(currentVal) {
-                    ctx.clearRect(0, 0, W, H);
-                    ctx.lineWidth = lineW;
-                    ctx.lineCap = 'round';
-                    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-                    ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
+            // Se siamo già a target, disegna frame fisso e stop
+            if (state.__mediaGauge.target === target && Math.abs(state.__mediaGauge.current - target) < 0.005) {
+                state.__mediaGauge.current = target;
+                drawFrame(target);
+                if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
+                __mediaGaugeRAF = null;
+                return;
+            }
 
-                    const progress = (currentVal / 10);
-                    const end = start + progress * Math.PI;
-                    ctx.strokeStyle = arcGradient(currentVal);
-                    ctx.shadowColor = 'rgba(0,0,0,0.15)';
-                    ctx.shadowBlur = 4;
-                    ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
+            state.__mediaGauge.target = target;
+            if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
 
-                    const knobX = cx + radius * Math.cos(end);
-                    const knobY = cy + radius * Math.sin(end);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowBlur = 6;
-                    ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
-
-                    valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
-                    valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
-                }
-
-                // Se siamo già a target, disegna frame fisso e stop
-                if (state.__mediaGauge.target === target && Math.abs(state.__mediaGauge.current - target) < 0.005) {
-                    state.__mediaGauge.current = target;
-                    drawFrame(target);
-                    if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
+            function animate() {
+                if (!document.getElementById('mediaGaugeCanvas')) {
                     __mediaGaugeRAF = null;
                     return;
                 }
-
-                state.__mediaGauge.target = target;
-                if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
-
-                function animate() {
-                    if (!document.getElementById('mediaGaugeCanvas')) {
-                        __mediaGaugeRAF = null;
-                        return;
-                    }
-                    const diff = target - state.__mediaGauge.current;
-                    if (Math.abs(diff) < 0.005) {
-                        state.__mediaGauge.current = target;
-                        drawFrame(target);
-                        __mediaGaugeRAF = null;
-                        saveTasks(); // Persisti lo stato finale
-                        return;
-                    }
-                    state.__mediaGauge.current += diff * 0.08;
-                    drawFrame(state.__mediaGauge.current);
-                    __mediaGaugeRAF = requestAnimationFrame(animate);
+                const diff = target - state.__mediaGauge.current;
+                if (Math.abs(diff) < 0.005) {
+                    state.__mediaGauge.current = target;
+                    drawFrame(target);
+                    __mediaGaugeRAF = null;
+                    saveTasks(); // Persisti lo stato finale
+                    return;
                 }
-
-                // Disegna subito il primo frame per evitare flicker (blank canvas)
+                state.__mediaGauge.current += diff * 0.08;
                 drawFrame(state.__mediaGauge.current);
                 __mediaGaugeRAF = requestAnimationFrame(animate);
             }
 
-            /* 3C) API semplici per aggiornare i widget in runtime */
-            function updateStressWidget(level) { renderStressWave(level); }
-            function updateMediaWidget(value) { renderMediaGauge(value); }
+            // Disegna subito il primo frame per evitare flicker (blank canvas)
+            drawFrame(state.__mediaGauge.current);
+            __mediaGaugeRAF = requestAnimationFrame(animate);
+        }
 
-            /* 3D) Init: richiama con i tuoi valori (es. media voti e stress odierno) */
-            function initHomeWidgets({ mediaValue = 7.64, stressLevel = 5 } = {}) {
-                renderStressWave(stressLevel);
-                renderMediaGauge(mediaValue);
+        /* 3C) API semplici per aggiornare i widget in runtime */
+        function updateStressWidget(level) { renderStressWave(level); }
+        function updateMediaWidget(value) { renderMediaGauge(value); }
+
+        /* 3D) Init: richiama con i tuoi valori (es. media voti e stress odierno) */
+        function initHomeWidgets({ mediaValue = 7.64, stressLevel = 5 } = {}) {
+            renderStressWave(stressLevel);
+            renderMediaGauge(mediaValue);
+        }
+
+        /* Se ridimensioni, ridisegna mantenendo la qualità */
+        window.addEventListener('resize', () => {
+            if (state.view !== 'home') return;
+            initStressWaveFromState();
+            const currentMedia = state.__mediaGauge?.current || 0;
+            renderMediaGauge(currentMedia);
+        });
+
+        // ⭐ Global exposures
+        window.showPlanWeekModal = showPlanWeekModal;
+        window.closeModal = closeModal;
+        window.setStressLevel = setStressLevel;
+        window.showQuickAddTaskModal = showQuickAddTaskModal;
+        window.submitQuickTask = submitQuickTask;
+        window.showAddRegistroTaskModal = showAddRegistroTaskModal;
+        window.selectRegistroTipo = selectRegistroTipo;
+        window.submitRegistroTask = submitRegistroTask;
+        window.showCompetencyInputModal = showCompetencyInputModal;
+        window.submitCompetencyRequest = submitCompetencyRequest;
+        window.performLogin = performLogin;
+        window.performSync = performSync;
+        window.testBackendConnection = testBackendConnection;
+
+        function togglePollCreatorUI() {
+            const ui = document.getElementById('poll-creator-ui');
+            if (ui) {
+                ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
             }
+        }
+        // window.publishPost = publishPost; // ❌ Removed orphaned reference
+        window.navigate = navigate;
+        window.showBoot = showBoot;
+        window.hideBoot = hideBoot;
+        window.showDetailedStressModal = showDetailedStressModal;
+        window.initHomeWidgets = initHomeWidgets;
 
-            /* Se ridimensioni, ridisegna mantenendo la qualità */
-            window.addEventListener('resize', () => {
-                if (state.view !== 'home') return;
-                initStressWaveFromState();
-                const currentMedia = state.__mediaGauge?.current || 0;
-                renderMediaGauge(currentMedia);
-            });
+        // Mostra loader anche al ritorno da refresh / bfcache
+        window.addEventListener('pageshow', () => {
+            showBoot("Ripristino pagina...");
+            setTimeout(hideBoot, 400);
+        });
 
-            // ⭐ Global exposures
-            window.showPlanWeekModal = showPlanWeekModal;
-            window.closeModal = closeModal;
-            window.setStressLevel = setStressLevel;
-            window.showQuickAddTaskModal = showQuickAddTaskModal;
-            window.submitQuickTask = submitQuickTask;
-            window.showAddRegistroTaskModal = showAddRegistroTaskModal;
-            window.selectRegistroTipo = selectRegistroTipo;
-            window.submitRegistroTask = submitRegistroTask;
-            window.showCompetencyInputModal = showCompetencyInputModal;
-            window.submitCompetencyRequest = submitCompetencyRequest;
-            window.performLogin = performLogin;
-            window.performSync = performSync;
-            window.testBackendConnection = testBackendConnection;
+        function showDetailedStressModal(event) {
+            if (event) event.stopPropagation();
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
 
-            function togglePollCreatorUI() {
-                const ui = document.getElementById('poll-creator-ui');
-                if (ui) {
-                    ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
+            const todayStr = new Date().toISOString().slice(0, 10);
+
+            // Draft State Initialization
+            state.tempStress = {
+                level: state.stressLevels?.[todayStr] ?? 5,
+                vent: state.stressVents?.[todayStr] ?? ''
+            };
+
+            const historyDays = [];
+            const today = new Date();
+            for (let i = 0; i < 30; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const iso = d.toISOString().slice(0, 10);
+                if (state.stressLevels?.[iso] || state.stressVents?.[iso]) {
+                    historyDays.push({
+                        date: iso,
+                        level: state.stressLevels?.[iso] || 5,
+                        vent: state.stressVents?.[iso] || '',
+                        displayDate: d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                    });
                 }
             }
-            // window.publishPost = publishPost; // ❌ Removed orphaned reference
-            window.navigate = navigate;
-            window.showBoot = showBoot;
-            window.hideBoot = hideBoot;
-            window.showDetailedStressModal = showDetailedStressModal;
-            window.initHomeWidgets = initHomeWidgets;
 
-            // Mostra loader anche al ritorno da refresh / bfcache
-            window.addEventListener('pageshow', () => {
-                showBoot("Ripristino pagina...");
-                setTimeout(hideBoot, 400);
-            });
-
-            function showDetailedStressModal(event) {
-                if (event) event.stopPropagation();
-                const modalContainer = getModalContainer();
-                if (!modalContainer) return;
-
-                const todayStr = new Date().toISOString().slice(0, 10);
-
-                // Draft State Initialization
-                state.tempStress = {
-                    level: state.stressLevels?.[todayStr] ?? 5,
-                    vent: state.stressVents?.[todayStr] ?? ''
-                };
-
-                const historyDays = [];
-                const today = new Date();
-                for (let i = 0; i < 30; i++) {
-                    const d = new Date(today);
-                    d.setDate(today.getDate() - i);
-                    const iso = d.toISOString().slice(0, 10);
-                    if (state.stressLevels?.[iso] || state.stressVents?.[iso]) {
-                        historyDays.push({
-                            date: iso,
-                            level: state.stressLevels?.[iso] || 5,
-                            vent: state.stressVents?.[iso] || '',
-                            displayDate: d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-                        });
-                    }
-                }
-
-                modalContainer.innerHTML = `
+            modalContainer.innerHTML = `
     <div class="modal-overlay active" onclick="closeModal(event)">
       <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 550px; padding: 24px; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px; max-height:90vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
@@ -7374,289 +7375,289 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
      </div>
    </div>
   `;
-                drawDetailedStressChart('weeklyDetailedChart');
-            }
+            drawDetailedStressChart('weeklyDetailedChart');
+        }
 
-            function updateStressDraft(lv) {
-                state.tempStress.level = lv;
-                // Update Buttons without innerHTML re-render (Flicker Fix)
-                document.querySelectorAll('.stress-pill-btn').forEach(btn => {
-                    const buttonLv = parseInt(btn.dataset.lv);
-                    if (buttonLv === lv) {
-                        btn.style.background = 'var(--primary)';
-                        btn.style.color = 'white';
-                    } else {
-                        btn.style.background = 'rgba(255,255,255,0.06)';
-                        btn.style.color = 'rgba(255,255,255,0.4)';
-                    }
-                });
-            }
-
-            function commitStressChanges() {
-                const todayStr = new Date().toISOString().slice(0, 10);
-                if (!state.stressLevels) state.stressLevels = {};
-                if (!state.stressVents) state.stressVents = {};
-
-                state.stressLevels[todayStr] = state.tempStress.level;
-                state.stressVents[todayStr] = state.tempStress.vent;
-
-                saveTasks(); // Persist
-                closeModal();
-                if (typeof render === 'function') render(); // Update Home card (wave etc)
-                showToast("Stress salvato con successo!");
-            }
-
-            function updateStressAndModal(lv) {
-                setStressLevel(lv, false);
-                showDetailedStressModal(); // Refresh UI
-                if (typeof render === 'function') render();
-            }
-
-            function saveDailyVent(text) {
-                const todayStr = new Date().toISOString().slice(0, 10);
-                if (!state.stressLevels) state.stressLevels = {};
-                if (!state.stressVents) state.stressVents = {};
-                state.stressVents[todayStr] = text;
-                saveTasks(); // Persist to localStorage
-            }
-
-            function drawDetailedStressChart(canvasId) {
-                const canvas = document.getElementById(canvasId);
-                if (!canvas) return;
-                const { ctx, rect } = setupCanvas(canvas);
-                const W = rect.width, H = rect.height;
-
-                const days = 7;
-                const today = new Date();
-                const series = [];
-                const labels = [];
-
-                const dayNames = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
-
-                for (let i = days - 1; i >= 0; i--) {
-                    const d = new Date(today);
-                    d.setDate(today.getDate() - i);
-                    const iso = d.toISOString().slice(0, 10);
-                    const lv = Number(state.stressLevels?.[iso] ?? 5);
-                    series.push(lv);
-                    labels.push(dayNames[d.getDay()]);
+        function updateStressDraft(lv) {
+            state.tempStress.level = lv;
+            // Update Buttons without innerHTML re-render (Flicker Fix)
+            document.querySelectorAll('.stress-pill-btn').forEach(btn => {
+                const buttonLv = parseInt(btn.dataset.lv);
+                if (buttonLv === lv) {
+                    btn.style.background = 'var(--primary)';
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = 'rgba(255,255,255,0.06)';
+                    btn.style.color = 'rgba(255,255,255,0.4)';
                 }
+            });
+        }
 
-                ctx.clearRect(0, 0, W, H);
+        function commitStressChanges() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (!state.stressLevels) state.stressLevels = {};
+            if (!state.stressVents) state.stressVents = {};
 
-                const padding = 25;
-                const stepX = (W - padding * 2) / (series.length - 1);
+            state.stressLevels[todayStr] = state.tempStress.level;
+            state.stressVents[todayStr] = state.tempStress.vent;
 
-                function getY(val) {
-                    return (H - padding * 1.5) - (val / 10) * (H - padding * 2.5);
-                }
+            saveTasks(); // Persist
+            closeModal();
+            if (typeof render === 'function') render(); // Update Home card (wave etc)
+            showToast("Stress salvato con successo!");
+        }
 
-                // Area Gradient
-                const grad = ctx.createLinearGradient(0, 0, 0, H);
-                grad.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
-                grad.addColorStop(1, 'rgba(37, 99, 235, 0)');
+        function updateStressAndModal(lv) {
+            setStressLevel(lv, false);
+            showDetailedStressModal(); // Refresh UI
+            if (typeof render === 'function') render();
+        }
 
-                // Draw Area
+        function saveDailyVent(text) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (!state.stressLevels) state.stressLevels = {};
+            if (!state.stressVents) state.stressVents = {};
+            state.stressVents[todayStr] = text;
+            saveTasks(); // Persist to localStorage
+        }
+
+        function drawDetailedStressChart(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const { ctx, rect } = setupCanvas(canvas);
+            const W = rect.width, H = rect.height;
+
+            const days = 7;
+            const today = new Date();
+            const series = [];
+            const labels = [];
+
+            const dayNames = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const iso = d.toISOString().slice(0, 10);
+                const lv = Number(state.stressLevels?.[iso] ?? 5);
+                series.push(lv);
+                labels.push(dayNames[d.getDay()]);
+            }
+
+            ctx.clearRect(0, 0, W, H);
+
+            const padding = 25;
+            const stepX = (W - padding * 2) / (series.length - 1);
+
+            function getY(val) {
+                return (H - padding * 1.5) - (val / 10) * (H - padding * 2.5);
+            }
+
+            // Area Gradient
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
+            grad.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+            // Draw Area
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(series[0]));
+            for (let i = 1; i < series.length; i++) {
+                ctx.lineTo(padding + i * stepX, getY(series[i]));
+            }
+            ctx.lineTo(W - padding, H - padding * 1.5);
+            ctx.lineTo(padding, H - padding * 1.5);
+            ctx.closePath();
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Draw Line
+            ctx.beginPath();
+            ctx.moveTo(padding, getY(series[0]));
+            for (let i = 1; i < series.length; i++) {
+                ctx.lineTo(padding + i * stepX, getY(series[i]));
+            }
+            ctx.strokeStyle = 'var(--primary)';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // Dots & Labels
+            series.forEach((val, i) => {
+                const x = padding + i * stepX;
+                const y = getY(val);
+
+                ctx.fillStyle = 'white';
                 ctx.beginPath();
-                ctx.moveTo(padding, getY(series[0]));
-                for (let i = 1; i < series.length; i++) {
-                    ctx.lineTo(padding + i * stepX, getY(series[i]));
-                }
-                ctx.lineTo(W - padding, H - padding * 1.5);
-                ctx.lineTo(padding, H - padding * 1.5);
-                ctx.closePath();
-                ctx.fillStyle = grad;
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Draw Line
-                ctx.beginPath();
-                ctx.moveTo(padding, getY(series[0]));
-                for (let i = 1; i < series.length; i++) {
-                    ctx.lineTo(padding + i * stepX, getY(series[i]));
-                }
-                ctx.strokeStyle = 'var(--primary)';
-                ctx.lineWidth = 4;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.stroke();
-
-                // Dots & Labels
-                series.forEach((val, i) => {
-                    const x = padding + i * stepX;
-                    const y = getY(val);
-
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Draw Day Label
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                    ctx.font = '800 10px inherit';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(labels[i], x, H - 5);
-                });
-            }
-
-            function drawWeeklyStressChart(canvasId) {
-                const canvas = document.getElementById(canvasId);
-                if (!canvas) return;
-
-                // DPR-safe
-                const rect = canvas.getBoundingClientRect();
-                const dpr = window.devicePixelRatio || 1;
-                canvas.width = Math.floor(rect.width * dpr);
-                canvas.height = Math.floor(rect.height * dpr);
-                const ctx = canvas.getContext('2d');
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-                const W = rect.width, H = rect.height;
-
-                // Calcola ultimi 7 giorni
-                const days = 7;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const series = [];
-                for (let i = days - 1; i >= 0; i--) {
-                    const d = new Date(today);
-                    d.setDate(today.getDate() - i);
-                    const iso = d.toISOString().slice(0, 10);
-                    const lv = Number(state.stressLevels?.[iso] ?? 0);
-                    series.push({ date: iso, level: lv });
-                }
-
-                // Sfondo
-                ctx.clearRect(0, 0, W, H);
-                ctx.fillStyle = 'rgba(255,255,255,0.05)';
-                ctx.fillRect(0, 0, W, H);
-
-                // Assi
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(40, 16);
-                ctx.lineTo(40, H - 28);
-                ctx.lineTo(W - 12, H - 28);
-                ctx.stroke();
-
-                // Linea valori (0-10)
-                const minX = 52, maxX = W - 24;
-                const minY = 20, maxY = H - 40;
-                const stepX = (maxX - minX) / Math.max(1, series.length - 1);
-
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                series.forEach((pt, i) => {
-                    const x = minX + i * stepX;
-                    const y = maxY - (pt.level / 10) * (maxY - minY);
-                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                    // punti
-                    ctx.fillStyle = '#ef4444';
-                    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-                });
-                ctx.stroke();
-
-                // Etichette giorno
-                ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                ctx.font = '11px system-ui';
-                series.forEach((pt, i) => {
-                    const x = minX + i * stepX;
-                    const label = pt.date.slice(5); // MM-DD
-                    ctx.fillText(label, x - 12, H - 10);
-                });
-            }
-
-            // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
-            function initCustomScrollbar() {
-                const scroller = document.getElementById('custom-scrollbar');
-                const thumb = document.getElementById('scroll-thumb');
-                if (!scroller || !thumb) return;
-
-                let fadeTimeout;
-                let isScrolling = false;
-
-                function updateScroll() {
-                    const viewportHeight = window.innerHeight;
-                    const totalHeight = document.documentElement.scrollHeight;
-                    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-
-                    // Don't show if content fits in one screen
-                    if (totalHeight <= viewportHeight + 20) {
-                        scroller.classList.remove('show-scrollbar');
-                        return;
-                    }
-
-                    scroller.classList.add('show-scrollbar');
-
-                    // Calculate thumb height proportionally
-                    const thumbHeight = Math.max(60, (viewportHeight / totalHeight) * viewportHeight);
-                    const scrollPercent = scrollY / (totalHeight - viewportHeight);
-                    const thumbTop = scrollPercent * (viewportHeight - thumbHeight - 20); // 20px padding
-
-                    thumb.style.height = thumbHeight + 'px';
-                    thumb.style.transform = `translateY(${thumbTop + 10}px)`; // Offset for floating look
-
-                    clearTimeout(fadeTimeout);
-                    fadeTimeout = setTimeout(() => {
-                        scroller.classList.remove('show-scrollbar');
-                    }, 1800);
-                }
-
-                // Listen to root scroll
-                window.addEventListener('scroll', updateScroll, { passive: true });
-                window.addEventListener('resize', updateScroll);
-
-                // Watch for internal height changes
-                const observer = new MutationObserver(updateScroll);
-                observer.observe(document.body, { childList: true, subtree: true });
-
-                updateScroll();
-            }
-
-            // Call after DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initCustomScrollbar);
-            } else {
-                initCustomScrollbar();
-            }
-
-            // 🚀 LATE GLOBAL EXPOSURE (Final Stability Fix)
-            // Moves capture to end of file to guarantee all functions (hoisted or not) are defined.
-
-            // 1. Capture implementations
-            window.performLogin_impl = performLogin;
-            window.performSync_impl = performSync;
-            window.navigate_impl = navigate;
-            window.render_impl = render;
-            window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
-            window.closeModal_impl = closeModal;
-            window.openArgoLogin_impl = openArgoLogin;
-            window.performArgoSync_impl = performArgoSync;
-            window.selectProfile_impl = selectProfile;
-            window.switchProfile_impl = switchProfile;
-            window.handleLoginSuccess_impl = handleLoginSuccess;
-            window.checkServerHealth_impl = checkServerHealth;
-            window.showProfileSelectionModal_impl = showProfileSelectionModal;
-            window.showModal_impl = showModal;
-
-            // 2. Expose safety wrappers
-            const safeExpose = (name) => {
-                window[name] = (...args) => {
-                    const impl = window[name + "_impl"];
-                    if (typeof impl === 'function') {
-                        return impl(...args);
-                    }
-                    console.warn(`🚀 ${name} non ancora pronto...`);
-                };
-            };
-
-            ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
-
-            // Initial Render
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log("🚀 DOM Ready - Starting App...");
+                // Draw Day Label
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.font = '800 10px inherit';
+                ctx.textAlign = 'center';
+                ctx.fillText(labels[i], x, H - 5);
             });
+        }
+
+        function drawWeeklyStressChart(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            // DPR-safe
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(rect.width * dpr);
+            canvas.height = Math.floor(rect.height * dpr);
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const W = rect.width, H = rect.height;
+
+            // Calcola ultimi 7 giorni
+            const days = 7;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const series = [];
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const iso = d.toISOString().slice(0, 10);
+                const lv = Number(state.stressLevels?.[iso] ?? 0);
+                series.push({ date: iso, level: lv });
+            }
+
+            // Sfondo
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Assi
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(40, 16);
+            ctx.lineTo(40, H - 28);
+            ctx.lineTo(W - 12, H - 28);
+            ctx.stroke();
+
+            // Linea valori (0-10)
+            const minX = 52, maxX = W - 24;
+            const minY = 20, maxY = H - 40;
+            const stepX = (maxX - minX) / Math.max(1, series.length - 1);
+
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            series.forEach((pt, i) => {
+                const x = minX + i * stepX;
+                const y = maxY - (pt.level / 10) * (maxY - minY);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                // punti
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.stroke();
+
+            // Etichette giorno
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '11px system-ui';
+            series.forEach((pt, i) => {
+                const x = minX + i * stepX;
+                const label = pt.date.slice(5); // MM-DD
+                ctx.fillText(label, x - 12, H - 10);
+            });
+        }
+
+        // --- CUSTOM FLOATING SCROLLBAR LOGIC ---
+        function initCustomScrollbar() {
+            const scroller = document.getElementById('custom-scrollbar');
+            const thumb = document.getElementById('scroll-thumb');
+            if (!scroller || !thumb) return;
+
+            let fadeTimeout;
+            let isScrolling = false;
+
+            function updateScroll() {
+                const viewportHeight = window.innerHeight;
+                const totalHeight = document.documentElement.scrollHeight;
+                const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+                // Don't show if content fits in one screen
+                if (totalHeight <= viewportHeight + 20) {
+                    scroller.classList.remove('show-scrollbar');
+                    return;
+                }
+
+                scroller.classList.add('show-scrollbar');
+
+                // Calculate thumb height proportionally
+                const thumbHeight = Math.max(60, (viewportHeight / totalHeight) * viewportHeight);
+                const scrollPercent = scrollY / (totalHeight - viewportHeight);
+                const thumbTop = scrollPercent * (viewportHeight - thumbHeight - 20); // 20px padding
+
+                thumb.style.height = thumbHeight + 'px';
+                thumb.style.transform = `translateY(${thumbTop + 10}px)`; // Offset for floating look
+
+                clearTimeout(fadeTimeout);
+                fadeTimeout = setTimeout(() => {
+                    scroller.classList.remove('show-scrollbar');
+                }, 1800);
+            }
+
+            // Listen to root scroll
+            window.addEventListener('scroll', updateScroll, { passive: true });
+            window.addEventListener('resize', updateScroll);
+
+            // Watch for internal height changes
+            const observer = new MutationObserver(updateScroll);
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            updateScroll();
+        }
+
+        // Call after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCustomScrollbar);
+        } else {
+            initCustomScrollbar();
+        }
+
+        // 🚀 LATE GLOBAL EXPOSURE (Final Stability Fix)
+        // Moves capture to end of file to guarantee all functions (hoisted or not) are defined.
+
+        // 1. Capture implementations
+        window.performLogin_impl = performLogin;
+        window.performSync_impl = performSync;
+        window.navigate_impl = navigate;
+        window.render_impl = render;
+        window.showQuickAddTaskModal_impl = showQuickAddTaskModal;
+        window.closeModal_impl = closeModal;
+        window.openArgoLogin_impl = openArgoLogin;
+        window.performArgoSync_impl = performArgoSync;
+        window.selectProfile_impl = selectProfile;
+        window.switchProfile_impl = switchProfile;
+        window.handleLoginSuccess_impl = handleLoginSuccess;
+        window.checkServerHealth_impl = checkServerHealth;
+        window.showProfileSelectionModal_impl = showProfileSelectionModal;
+        window.showModal_impl = showModal;
+
+        // 2. Expose safety wrappers
+        const safeExpose = (name) => {
+            window[name] = (...args) => {
+                const impl = window[name + "_impl"];
+                if (typeof impl === 'function') {
+                    return impl(...args);
+                }
+                console.warn(`🚀 ${name} non ancora pronto...`);
+            };
+        };
+
+        ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
+
+        // Initial Render
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("🚀 DOM Ready - Starting App...");
+        });
     </script>
 </body>
 
