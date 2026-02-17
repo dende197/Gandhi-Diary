@@ -81,7 +81,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${GEMINI_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
         const response = await axios.post(url, {
             contents: messages,
             generationConfig: {
