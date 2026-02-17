@@ -2215,10 +2215,10 @@
 
             // Global caches removed (Social/Market)
 
-            // Primo render dai dati locali per evitare schermo vuoto
+            // Primo render dai dati locali per rendere l'app subito pronta
             state.booting = false;
             render();
-            state.booting = true; // Ri-blocca per il sync remoto
+            hideBoot();
 
             // 4. Controllo Supabase & Recovery Bridge
             const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
@@ -2255,13 +2255,11 @@
             }
 
             if (state.isLoggedIn) {
-                try {
-                    await performSync();
-                } catch (e) {
-                    console.error("Boot Sync failed:", e);
-                }
+                // Sincronizzazione remota in background
+                performSync().catch(e => console.error("Boot Sync failed:", e));
             } else {
                 state.view = 'login';
+                render();
             }
         } catch (e) {
             console.error("CRITICAL BOOT FAILURE:", e);
@@ -2700,11 +2698,6 @@
             if (data.success && data.circolari) {
                 state.circolari = data.circolari;
                 render();
-
-                // Carichiamo le sintesi per le prime 3 (lazy)
-                state.circolari.slice(0, 3).forEach(c => {
-                    if (!c.sintesi) loadCircolareSintesi(c.id, c.link);
-                });
             }
         } catch (e) {
             console.warn("⚠️ Impossibile caricare circolari:", e);
@@ -2760,15 +2753,22 @@
                     </div>
                 </div>
 
-                <div style="background:rgba(255,159,10,0.06); border:1px solid rgba(255,159,10,0.15); 
+                <div id="sintesi-box-${c.id}" style="background:rgba(255,159,10,0.06); border:1px solid rgba(255,159,10,0.15); 
                     padding:22px; border-radius:22px; margin-bottom:24px;">
                     <h3 style="font-size:14px; color:var(--accent-warm); font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.5px;">
                         <i class="ph-bold ph-sparkle"></i> Sintesi Premium
                     </h3>
                     <div class="sintesi-content">
-                        ${c.sintesi ? marked.parse(c.sintesi) : "Generando la sintesi ottimizzata..."}
+                        ${c.sintesi ? marked.parse(c.sintesi) : `
+                            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:15px;">La sintesi non è stata ancora generata per questa circolare.</p>
+                            <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
+                                id="btn-sintesi-${c.id}"
+                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-primary); 
+                                padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px;">
+                                <i class="ph-bold ph-magic-wand"></i> Sintetizza Circolare ✨
+                            </button>
+                        `}
                     </div>
-                    ${!c.sintesi ? '<div style="margin-top:10px; width:100%; height:2px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px;"><div style="width:30%; height:100%; background:var(--accent-warm); animation: loadingBar 2s infinite linear;"></div></div>' : ''}
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr; gap:12px;">
@@ -2788,7 +2788,20 @@
             </div>
         `);
 
-        if (!c.sintesi) loadCircolareSintesi(c.id, c.link);
+    }
+
+    async function requestCircularSynthesis(id, link) {
+        const btn = document.getElementById(`btn-sintesi-${id}`);
+        const content = document.querySelector(`#sintesi-box-${id} .sintesi-content`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner-gap anim-spin"></i> Generazione...';
+        }
+        if (content && !state.circolari.find(x => x.id === id).sintesi) {
+            content.innerHTML = '<div style="margin-top:10px; width:100%; height:2px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px;"><div style="width:30%; height:100%; background:var(--accent-warm); animation: loadingBar 2s infinite linear;"></div></div>';
+        }
+
+        await loadCircolareSintesi(id, link);
     }
 
     async function performSilentLogin(school, encodedUser, encodedPass) {

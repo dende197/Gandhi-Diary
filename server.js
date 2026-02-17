@@ -2147,16 +2147,6 @@ app.post('/sync', async (req, res) => {
                     sName = resIdent.name;
                     sClass = normalizeClass(resIdent.cls) || resIdent.cls;
                 }
-                const prompt = `Analizza il seguente testo estratto da una circolare scolastica e creane una sintesi "Premium" ed estremamente efficace per uno studente.
-                
-                Usa lo stile Markdown per formattare la risposta in modo leggibile e COMPATTO:
-                1. Usa **Grassetto** per evidenziare date, scadenze, nomi di docenti o luoghi.
-                2. Usa elenchi puntati o numerati solo se necessario per semplificare elenchi di cose da fare.
-                3. Sii estremamente conciso: evita introduzioni di cortesia e focalizzati sull'azione richiesta.
-                4. Evita troppi a capo o spazi vuoti eccessivi: la sintesi deve essere densa di informazioni ma facile da scorrere su smartphone.
-
-                Testo della circolare:
-                ${text}`;
 
                 const pid = generatePid(school, user, profileIndex);
 
