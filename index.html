@@ -157,7 +157,6 @@
             max-width: 1100px;
             margin: 0 auto;
             padding: 30px 20px 100px 20px;
-            animation: slideUp 0.4s ease-out;
         }
 
         /* Bloquea padding globale SOLO per vista AI */
@@ -728,14 +727,11 @@
         }
 
         .section-animate {
-            animation: liquidIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-            will-change: opacity, transform, filter;
+            /* Clean instant render — no animations */
         }
 
-        /* Smoother view liquid transition */
         .view {
-            animation: liquidIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-            will-change: opacity, transform, filter;
+            /* Clean instant render — no animations */
         }
 
         /* Sintesi AI Formatting */
@@ -1876,7 +1872,7 @@
         setTimeout(function () {
             var el = document.getElementById('app-loader');
             if (el) { el.style.opacity = '0'; setTimeout(function () { el.remove() }, 500); }
-        }, 3000);
+        }, 5000);
     </script>
 
     <div id="offline-badge" class="offline-badge">Disconnesso</div>
@@ -4149,7 +4145,7 @@
 
         function renderSettings() {
             return `
-            <div class="view" style="padding-top: 60px;">
+            <div class="view">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Impostazioni</h1>
                     <p style="font-size: 15px; color: var(--text-secondary);">Configura la tua esperienza</p>
@@ -4265,7 +4261,7 @@
             const stressColor = stressVal === '-' ? 'var(--text-dim)' : (stressNum <= 3 ? 'var(--green)' : stressNum <= 6 ? 'var(--orange)' : 'var(--red)');
 
             return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        <div class="view">
 
             <!-- HERO -->
             <div class="hero-container">
@@ -4419,19 +4415,23 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
+            <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);">
                 <button onclick="state.plannerMode='registro'; render();" 
-                    style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-                    background: ${state.plannerMode === 'registro' ? 'rgba(139,92,246,0.25)' : 'transparent'};
-                    color: ${state.plannerMode === 'registro' ? 'white' : 'rgba(255,255,255,0.6)'};
-                    ${state.plannerMode === 'registro' ? 'box-shadow: 0 0 20px rgba(139,92,246,0.3), inset 0 0 10px rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.4);' : ''}">
+                    style="flex:1; height:42px; border-radius:12px; border:none; font-weight:700; font-size:13px; cursor:pointer;
+                    background: ${state.plannerMode === 'registro' ? 'rgba(255,255,255,0.1)' : 'transparent'};
+                    color: ${state.plannerMode === 'registro' ? 'white' : 'rgba(255,255,255,0.4)'};
+                    backdrop-filter: ${state.plannerMode === 'registro' ? 'blur(20px)' : 'none'};
+                    -webkit-backdrop-filter: ${state.plannerMode === 'registro' ? 'blur(20px)' : 'none'};
+                    ${state.plannerMode === 'registro' ? 'border: 1px solid rgba(255,255,255,0.08);' : ''}">
                     <i class="ph-fill ph-notebook" style="margin-right: 6px;"></i> Registro Scadenze
                 </button>
                 <button onclick="state.plannerMode='studio'; render();" 
-                    style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-                    background: ${state.plannerMode === 'studio' ? 'rgba(139,92,246,0.25)' : 'transparent'};
-                    color: ${state.plannerMode === 'studio' ? 'white' : 'rgba(255,255,255,0.6)'};
-                    ${state.plannerMode === 'studio' ? 'box-shadow: 0 0 20px rgba(139,92,246,0.3), inset 0 0 10px rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.4);' : ''}">
+                    style="flex:1; height:42px; border-radius:12px; border:none; font-weight:700; font-size:13px; cursor:pointer;
+                    background: ${state.plannerMode === 'studio' ? 'rgba(255,255,255,0.1)' : 'transparent'};
+                    color: ${state.plannerMode === 'studio' ? 'white' : 'rgba(255,255,255,0.4)'};
+                    backdrop-filter: ${state.plannerMode === 'studio' ? 'blur(20px)' : 'none'};
+                    -webkit-backdrop-filter: ${state.plannerMode === 'studio' ? 'blur(20px)' : 'none'};
+                    ${state.plannerMode === 'studio' ? 'border: 1px solid rgba(255,255,255,0.08);' : ''}">
                     <i class="ph-fill ph-graduation-cap" style="margin-right: 6px;"></i> Piano di Studio
                 </button>
             </div>
@@ -4690,7 +4690,7 @@
                 if (existingBadge) existingBadge.remove();
                 const badge = document.createElement('div');
                 badge.setAttribute('data-stress-badge', '');
-                badge.style = "position:absolute; bottom:10px; right:12px; background: rgba(255,255,255,0.18); color:#fff; font-size:11px; font-weight:800; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.28);";
+                badge.style = "position:absolute; bottom:10px; right:12px; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28); color:#fff; font-size:11px; font-weight:800; padding: 4px 8px; border-radius: 999px;";
                 badge.textContent = String(lv);
                 stressBadge.appendChild(badge);
             }
@@ -4969,7 +4969,7 @@
 
         function renderProfile() {
             return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        <div class="view">
             <div style="margin-bottom: 24px;">
                 <h1 style="font-size: 28px; font-weight: 800;">Il Mio Account</h1>
                 <p style="color: var(--text-secondary); font-size: 14px;">Gestisci le tue impostazioni e preferenze</p>
@@ -5059,9 +5059,9 @@
             }).sort((a, b) => b.media - a.media);
 
             return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        <div class="view">
 
-            <!-- HERO GRADIENT (same as Home) -->
+            <!-- HERO GRADIENT (v1.1.32.14: AI & View Only) -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
                 background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
                 border: 1px solid rgba(255,255,255,0.1);
@@ -5264,7 +5264,7 @@
             const subjColor = getSubjectColor(subjectName);
 
             return `
-        <div class="view" style="animation: slideUp 0.4s ease-out;">
+        <div class="view">
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
                 <button class="btn-icon-only" onclick="state.activeSubject = null; render();" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
                     <i class="ph-bold ph-arrow-left"></i>
