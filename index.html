@@ -2323,6 +2323,9 @@
                 const remotePL = data.data.prepLevels || data.data.prep_levels || {};
                 const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
 
+                const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at'));
+                console.log(`🔍 [SYNC] Remote Update: ${remoteUpdatedAt} | Local Update: ${localUpdatedAt}`);
+
                 // Robust LWW Sync per ogni sezione di stato
                 state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt);
                 state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt);
@@ -2340,6 +2343,8 @@
 
                 notifyPlannerChanged();
                 return state.plannedTasks;
+            } else {
+                console.log("🔍 [SYNC] No remote data or success: false");
             }
         } catch (e) {
             console.warn("Planner remote fetch failed:", e.message);
@@ -2413,6 +2418,40 @@
             saveTasks(); await savePlannerRemote();
             if (typeof saveTasksSnapshotRemote === 'function') await saveTasksSnapshotRemote();
         } catch { }
+    }
+
+    async function clearStudyPlan() {
+        if (!confirm("⚠️ Sei sicuro di voler ELIMINARE tutto il piano organizzativo? Questa azione non può essere annullata e cancellerà i blocchi pianificati su tutti i dispositivi.")) return;
+
+        showToast("Eliminazione piano...");
+        
+        // Reset state
+        state.plannedTasks = {};
+        state.stressLevels = {};
+        state.prepLevels = {};
+        state.reminders = [];
+
+        // Persist locally
+        localStorage.setItem(lsKey('planned_tasks'), JSON.stringify({}));
+        localStorage.setItem(lsKey('stress_levels'), JSON.stringify({}));
+        localStorage.setItem(lsKey('prep_levels'), JSON.stringify({}));
+        localStorage.setItem(lsKey('reminders'), JSON.stringify([]));
+        
+        const nowIso = new Date().toISOString();
+        localStorage.setItem(lsKey('planner_updated_at'), nowIso);
+
+        // Notify UI
+        notifyPlannerChanged();
+        render();
+
+        try {
+            // Push "empty" state to server
+            await savePlannerRemote();
+            showToast("✅ Piano eliminato permanentemente");
+        } catch (e) {
+            console.error("Errore durante eliminazione remota:", e);
+            showToast("❌ Errore sincronizzazione eliminazione");
+        }
     }
 
     // ⭐ Helper per container modali (ripristinato)
@@ -4109,6 +4148,12 @@
                             <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
                         </div>
                         <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary" onclick="fetchPlannerRemote().then(() => showToast('Sync completato'))" title="Forza Sincronizzazione" style="height: 36px; width: 36px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+                                <i class="ph-bold ph-arrows-clockwise" style="color: var(--text-secondary);"></i>
+                            </button>
+                            <button class="btn-secondary" onclick="clearStudyPlan()" title="Elimina tutto il piano" style="height: 36px; width: 36px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,20,20,0.1); border: 1px solid rgba(255,20,20,0.2);">
+                                <i class="ph-bold ph-trash" style="color: #ff4d4d;"></i>
+                            </button>
                             <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
                                 <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
                             </button>
