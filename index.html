@@ -156,16 +156,16 @@
             width: 100%;
             max-width: 1100px;
             margin: 0 auto;
-            padding: 30px 20px 140px 20px;
+            padding: 30px 20px 100px 20px;
         }
 
         /* Bloquea padding globale SOLO per vista AI */
         .view.ai-view {
             padding: 0 !important;
-            padding-bottom: 100px !important;
-            /* Space for dock */
-            height: 100dvh !important;
-            margin-top: 0;
+            height: calc(100svh - 60px) !important;
+            /* Spazio reale sotto la nav */
+            margin-top: 60px;
+            /* Spazio per nav fissa */
             overflow: hidden;
             border-radius: 0 !important;
             display: flex;
@@ -213,12 +213,12 @@
 
         /* === TOP NAVIGATION === */
         #top-nav {
-            position: fixed;
-            top: auto;
-            bottom: 12px;
+            position: sticky;
+            top: 14px;
+            bottom: auto;
             left: 0;
             width: 100%;
-            height: auto;
+            height: var(--top-nav-height);
             background: transparent;
             display: flex;
             align-items: center;
@@ -1904,7 +1904,7 @@
         };
 
         // 🚀 G-Diary v1.1.42 [Force Cache Bust]
-        const APP_VERSION = '1.1.43';
+        const APP_VERSION = '1.1.45';
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
@@ -4449,7 +4449,7 @@
                         <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
                             <i class="ph-bold ph-dots-three-circle" style="font-size: 20px; color: var(--text-secondary);"></i>
                         </button>
-                        <div id="planner-cloud-menu" class="planner-dropdown-content">
+                        <div id="planner-cloud-menu" class="planner-dropdown-content" style="display: none;">
                             <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
                                 <i class="ph-bold ph-cloud-arrow-up" style="color: rgba(139,92,246,0.8);"></i> Salva
                             </button>
@@ -6881,13 +6881,18 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             const isVisible = menu.classList.contains('active');
 
             // Chiudi tutti gli altri eventuali dropdown prima (opzionale)
-            document.querySelectorAll('.planner-dropdown-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.planner-dropdown-content').forEach(el => {
+                el.classList.remove('active');
+                el.style.display = 'none';
+            });
 
             if (!isVisible) {
+                menu.style.display = 'flex'; // Use flex for column layout
                 menu.classList.add('active');
                 const closeHandler = (e) => {
                     if (!menu.contains(e.target)) {
                         menu.classList.remove('active');
+                        menu.style.display = 'none';
                         document.removeEventListener('click', closeHandler);
                     }
                 };
