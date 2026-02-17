@@ -2137,153 +2137,141 @@
 
     // BOOT LIFECYCLE (MIGLIORATO: Esperto Session Persistence & Silent Recovery)
     document.addEventListener('DOMContentLoaded', async () => {
-        const loadingText = document.querySelector('.boot-title span');
-        if (loadingText) loadingText.textContent = "Sincronizzazione...";
+        try {
+            const loadingText = document.querySelector('.boot-title span');
+            if (loadingText) loadingText.textContent = "Sincronizzazione...";
 
-        // 1. Identità Immediata (Priorità Argo Session + Identity Cache)
-        const argoSession = sessionManager.load();
-        if (argoSession && argoSession.studentId) {
-            state.isLoggedIn = true;
-            state.user.id = argoSession.studentId;
+            // 1. Identità Immediata (Priorità Argo Session + Identity Cache)
+            const argoSession = sessionManager.load();
+            if (argoSession && argoSession.studentId) {
+                state.isLoggedIn = true;
+                state.user.id = argoSession.studentId;
 
-            // 🔥 DUAL HYDRATION: Prova prima dalla specifica identity cache, poi dalla sessione
-            const userCache = localStorage.getItem(lsKey('user'));
-            if (userCache) {
-                try {
-                    const parsed = JSON.parse(userCache);
-                    state.user = {
-                        ...state.user,
-                        ...parsed,
-                        id: argoSession.studentId // Mantieni l'ID della sessione attiva
-                    };
-                    console.log("💾 Boot: Identità caricata da identity cache");
-                } catch (e) { }
-            }
-
-            // Merge finale con dati sessione (Argo names/class) MA solo se validi
-            // 🔥 PRIORITY FIX: Se abbiamo dati manuali/cacheati (state.user), usiamo quelli.
-            // Usiamo argoSession solo come fallback iniziale o per campi essenziali.
-            state.user.name = state.user.name || (argoSession.name && isValidName(argoSession.name) ? argoSession.name : 'Utente');
-            state.user.class = state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
-            state.user.specialization = state.user.specialization || argoSession.specialization;
-            state.user.avatar = state.user.avatar || argoSession.avatar;
-
-            console.log("💾 Boot: Sessione unificata per:", state.user.id);
-        }
-
-        // 2. Ripristino Vista (Hash> nav_state> home/login)
-        const hashView = currentViewFromHash();
-        const savedNavStr = localStorage.getItem(lsKey('nav_state'));
-        let savedNav = null;
-        try { savedNav = JSON.parse(savedNavStr); } catch { }
-
-        if (hashView && hashView !== 'login') {
-            state.view = hashView;
-            if (savedNav && savedNav.view === hashView) {
-                state.currentThreadId = savedNav.currentThreadId;
-                state.currentChatUser = savedNav.currentChatUser;
-                state.currentChatId = savedNav.currentChatId;
-                state.currentChatAvatar = savedNav.currentChatAvatar;
-                state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
-                loadChatMessages(state.currentThreadId);
-            }
-        } else if (savedNav && savedNav.view && savedNav.view !== 'login') {
-            state.view = savedNav.view;
-            if (savedNav.view === 'chat') {
-                state.currentThreadId = savedNav.currentThreadId;
-                state.currentChatUser = savedNav.currentChatUser;
-                state.currentChatId = savedNav.currentChatId;
-                state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
-                state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
-                loadChatMessages(state.currentThreadId);
-            }
-        } else {
-            state.view = state.isLoggedIn ? 'home' : 'login';
-        }
-
-        // 3. Load Caches
-        ['tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'stress_levels', 'stress_vents'].forEach(key => {
-            const cached = localStorage.getItem(lsKey(key));
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : (key === 'stress_vents' ? 'stressVents' : key))] = parsed;
-                } catch { }
-            }
-        });
-
-        // Global caches removed (Social/Market)
-
-        // Primo render immediato (Evita il flash del login se loggato)
-        render();
-
-        // 4. Controllo Supabase & Recovery Bridge
-        const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
-
-        if (sbSession) {
-            // 🔥 BOOT HYDRATION: Carica i dati professionali (Specializzazione/Avatar) da Supabase
-            // Questo risolve la perdita di dati al refresh.
-            loadProfileFromServer().catch(e => console.warn("Boot Profile Load failed:", e));
-        } else if (state.isLoggedIn && argoSession.storedUser) {
-            console.log("🩹 Boot: Sessione Supabase assente, avvio recovery silenzioso...");
-            try {
-                const school = argoSession.schoolCode.toUpperCase();
-                const userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
-                const pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
-                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
-                const supabasePassword = `Argo_${pass}_!`;
-
-                const { data: arData, error: arErr } = await supabaseClient.auth.signInWithPassword({
-                    email: supabaseEmail,
-                    password: supabasePassword
-                });
-
-                if (arErr) {
-                    console.warn("🩹 Boot: Recovery fallito:", arErr.message);
-                    // Fallback: Use identity from local cache if Supabase is down
-                    console.log("🩹 Boot: Using local identity fallback...");
-                } else {
-                    console.log("✅ Boot: Sessione Supabase ripristinata!");
-                    loadProfileFromServer().catch(e => console.warn("Recovery Profile Load failed:", e));
+                // 🔥 DUAL HYDRATION: Prova prima dalla specifica identity cache, poi dalla sessione
+                const userCache = localStorage.getItem(lsKey('user'));
+                if (userCache) {
+                    try {
+                        const parsed = JSON.parse(userCache);
+                        state.user = {
+                            ...state.user,
+                            ...parsed,
+                            id: argoSession.studentId // Mantieni l'ID della sessione attiva
+                        };
+                        console.log("💾 Boot: Identità caricata da identity cache");
+                    } catch (e) { }
                 }
-            } catch (e) {
-                console.warn("🩹 Boot: Errore durante recovery:", e.message);
-            }
-        }
 
-        // 5. Sincronizzazione Dati Forzata (User Request)
-        if (state.isLoggedIn) {
-            const profile = await getCurrentUser();
-            if (profile) {
-                // 🔥 DEFENSIVE HYDRATION: Non sovrascrivere mai con dati peggiori
-                const oldUser = { ...state.user };
-                state.user = {
-                    ...oldUser,
-                    ...profile,
-                    id: profile.id || oldUser.id, // Mai perdere l'Argo PID
-                    name: (profile.name && isValidName(profile.name)) ? profile.name : oldUser.name,
-                    class: (profile.class && isValidClass(profile.class)) ? profile.class : oldUser.class,
-                    specialization: profile.specialization || oldUser.specialization,
-                    avatar: profile.avatar || oldUser.avatar
-                };
-                console.log("✅ Boot: State hydrated from Supabase profile");
+                // Merge finale con dati sessione (Argo names/class) MA solo se validi
+                // 🔥 PRIORITY FIX: Se abbiamo dati manuali/cacheati (state.user), usiamo quelli.
+                // Usiamo argoSession solo come fallback iniziale o per campi essenziali.
+                state.user.name = state.user.name || (argoSession.name && isValidName(argoSession.name) ? argoSession.name : 'Utente');
+                state.user.class = state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
+                state.user.specialization = state.user.specialization || argoSession.specialization;
+                state.user.avatar = state.user.avatar || argoSession.avatar;
+
+                console.log("💾 Boot: Sessione unificata per:", state.user.id);
             }
 
-            (async () => {
-                await performSync();
-                state.booting = false; // 🔥 RELEASE GATE after first sync
-                render();
-                hideBoot();
-            })();
-        } else {
-            state.view = 'login';
+            // 2. Ripristino Vista (Hash> nav_state> home/login)
+            const hashView = currentViewFromHash();
+            const savedNavStr = localStorage.getItem(lsKey('nav_state'));
+            let savedNav = null;
+            try { savedNav = JSON.parse(savedNavStr); } catch { }
+
+            if (hashView && hashView !== 'login') {
+                state.view = hashView;
+                if (savedNav && savedNav.view === hashView) {
+                    state.currentThreadId = savedNav.currentThreadId;
+                    state.currentChatUser = savedNav.currentChatUser;
+                    state.currentChatId = savedNav.currentChatId;
+                    state.currentChatAvatar = savedNav.currentChatAvatar;
+                    state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
+                    loadChatMessages(state.currentThreadId);
+                }
+            } else if (savedNav && savedNav.view && savedNav.view !== 'login') {
+                state.view = savedNav.view;
+                if (savedNav.view === 'chat') {
+                    state.currentThreadId = savedNav.currentThreadId;
+                    state.currentChatUser = savedNav.currentChatUser;
+                    state.currentChatId = savedNav.currentChatId;
+                    state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
+                    state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
+                    loadChatMessages(state.currentThreadId);
+                }
+            } else {
+                state.view = state.isLoggedIn ? 'home' : 'login';
+            }
+
+            // 3. Load Caches
+            ['tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'stress_levels', 'stress_vents'].forEach(key => {
+                const cached = localStorage.getItem(lsKey(key));
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : (key === 'stress_vents' ? 'stressVents' : key))] = parsed;
+                    } catch { }
+                }
+            });
+
+            // Global caches removed (Social/Market)
+
+            // Primo render dai dati locali per evitare schermo vuoto
+            state.booting = false;
+            render();
+            state.booting = true; // Ri-blocca per il sync remoto
+
+            // 4. Controllo Supabase & Recovery Bridge
+            const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
+
+            if (sbSession) {
+                // 🔥 BOOT HYDRATION: Carica i dati professionali (Specializzazione/Avatar) da Supabase
+                // Questo risolve la perdita di dati al refresh.
+                loadProfileFromServer().catch(e => console.warn("Boot Profile Load failed:", e));
+            } else if (state.isLoggedIn && argoSession.storedUser) {
+                console.log("🩹 Boot: Sessione Supabase assente, avvio recovery silenzioso...");
+                try {
+                    const school = argoSession.schoolCode.toUpperCase();
+                    const userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
+                    const pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
+                    const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
+                    const supabasePassword = `Argo_${pass}_!`;
+
+                    const { data: arData, error: arErr } = await supabaseClient.auth.signInWithPassword({
+                        email: supabaseEmail,
+                        password: supabasePassword
+                    });
+
+                    if (arErr) {
+                        console.warn("🩹 Boot: Recovery fallito:", arErr.message);
+                        // Fallback: Use identity from local cache if Supabase is down
+                        console.log("🩹 Boot: Using local identity fallback...");
+                    } else {
+                        console.log("✅ Boot: Sessione Supabase ripristinata!");
+                        loadProfileFromServer().catch(e => console.warn("Recovery Profile Load failed:", e));
+                    }
+                } catch (e) {
+                    console.warn("🩹 Boot: Errore durante recovery:", e.message);
+                }
+            }
+
+            if (state.isLoggedIn) {
+                try {
+                    await performSync();
+                } catch (e) {
+                    console.error("Boot Sync failed:", e);
+                }
+            } else {
+                state.view = 'login';
+            }
+        } catch (e) {
+            console.error("CRITICAL BOOT FAILURE:", e);
+        } finally {
             state.booting = false;
             render();
             hideBoot();
+            updateOfflineBadge();
+            loadCircolari();
         }
-
-        updateOfflineBadge();
-        loadCircolari();
     });
 
     // Listen for Auth changes (Safe logic)
