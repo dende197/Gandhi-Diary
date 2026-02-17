@@ -1625,7 +1625,7 @@ app.get('/api/planner/:user_id', async (req, res) => {
     if (!supabase) return res.status(500).json({ success: false, error: "Supabase not configured" });
 
     try {
-        const userId = decodeURIComponent(req.params.user_id);
+        const userId = decodeURIComponent(req.params.user_id).toLowerCase().replace(/\s+/g, '');
         debugLog(`📅 GET Planner Request for user: ${userId}`);
 
         const { data, error } = await supabase.from("planners")
@@ -1681,7 +1681,7 @@ function sbTableUrl(table) {
 }
 
 app.put('/api/planner/:user_id', async (req, res) => {
-    const userId = decodeURIComponent(req.params.user_id);
+    const userId = decodeURIComponent(req.params.user_id).toLowerCase().replace(/\s+/g, '');
     const body = req.body || {};
 
     debugLog(`📅 PUT Planner Request for user: ${userId}`, {

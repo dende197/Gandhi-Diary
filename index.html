@@ -2312,10 +2312,15 @@
         if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return null;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`);
+            console.log(`🔍 [SYNC] Iniciando fetch autoritativo para: ${userId}`);
+            const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
+                cache: 'no-store', // 🔥 CRITICO: Forza il browser a NON usare cache
+                mode: 'cors'
+            });
             const data = await res.json();
 
             if (data.success && data.data) {
+                console.log("📥 [SYNC] Dati ricevuti dal Cloud:", data.data);
                 const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                 const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
                 const remoteSV = data.data.stressVents || data.data.stress_vents || {};
@@ -2397,7 +2402,9 @@
             const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                cache: 'no-store',
+                mode: 'cors'
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
@@ -6050,21 +6057,11 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             console.warn("⚠️ Supabase Bridge failed:", ex.message);
         }
 
-        // 4. Planner Sync & Fallback Race Fix
-        state.syncing = true; // 🔥 GATING: Prevent auto-save during hydration
-        try {
-            const remotePlanner = await fetchPlannerRemote();
-            if (remotePlanner !== null && typeof remotePlanner === 'object') {
-                state.plannedTasks = remotePlanner;
-            } else {
-                throw new Error("Empty remote data");
-            }
-        } catch (e) {
-            console.warn("Using local planner cache:", e.message);
-            state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-        } finally {
-            state.syncing = false; // RELEASE
-        }
+        // 4. Planner Sync REMOVED from auto-flow (v1.1.32.11)
+        // L'utente deve cliccare Carica per avere il piano.
+        // Questo evita race conditions con l'argo sync che sta per partire.
+        state.syncing = false;
+        state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
 
         state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
         state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
@@ -6086,7 +6083,6 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         updateOfflineBadge();
 
         Promise.all([
-            fetchPlannerRemote().catch(e => console.error("Planned fetch failed:", e)),
             loadProfileFromServer().catch(e => console.error("Profile load failed:", e))
         ]).then(() => {
             closeModal();
