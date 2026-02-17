@@ -2307,7 +2307,7 @@
     // Carica planner dal server: non sovrascrivere locale se il remoto è vuoto e il locale ha dati
     // --- FETCH: blindato anti-wipe + last-write-wins ---
     // --- FETCH: blindato anti-wipe + last-write-wins ---
-    async function fetchPlannerRemote() {
+    async function fetchPlannerRemote(force = false) {
         const userId = getUserId();
         if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return null;
 
@@ -2327,11 +2327,11 @@
                 console.log(`🔍 [SYNC] Remote Update: ${remoteUpdatedAt} | Local Update: ${localUpdatedAt}`);
 
                 // Robust LWW Sync per ogni sezione di stato
-                state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt);
-                state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt);
-                state.stressVents = syncStateSlice('stressVents', remoteSV, remoteUpdatedAt);
-                state.tasks = syncStateSlice('tasks', remoteTS, remoteUpdatedAt);
-                state.prepLevels = syncStateSlice('prepLevels', remotePL, remoteUpdatedAt);
+                state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt, force);
+                state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt, force);
+                state.stressVents = syncStateSlice('stressVents', remoteSV, remoteUpdatedAt, force);
+                state.tasks = syncStateSlice('tasks', remoteTS, remoteUpdatedAt, force);
+                state.prepLevels = syncStateSlice('prepLevels', remotePL, remoteUpdatedAt, force);
 
                 // Persist locally
                 localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
@@ -2419,7 +2419,8 @@
     }
     async function hardSavePlanner() {
         try {
-            saveTasks(); await savePlannerRemote();
+            saveTasks();
+            // await savePlannerRemote(); // 🔥 DISABILITATO: Ora solo manuale
             if (typeof saveTasksSnapshotRemote === 'function') await saveTasksSnapshotRemote();
         } catch { }
     }
@@ -3619,14 +3620,14 @@
 
     /* === 3) Notifica centralizzata per aggiornare tutto in tempo reale === */
     // Helper per merge non distruttivo e robusto (Last-Write-Wins)
-    function syncStateSlice(sliceName, remoteData, remoteUpdatedAt) {
+    function syncStateSlice(sliceName, remoteData, remoteUpdatedAt, force = false) {
         const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
         // Se il remoto è più nuovo (o il locale non ha timestamp), usiamo il remoto
         const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
 
-        if (remoteIsNewer && remoteData) {
-            console.log(`☁️ Remote [${sliceName}] is newer → using remote.`);
+        if ((force || remoteIsNewer) && remoteData) {
+            console.log(`☁️ Remote [${sliceName}] applied (force=${force}, newer=${remoteIsNewer})`);
             return remoteData;
         }
 
@@ -4161,7 +4162,7 @@
                             <button class="btn-secondary" onclick="savePlannerRemote().then(() => showToast('Piano salvato ✨'))" title="Carica sul Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: var(--blue); color: white; border: none;">
                                 <i class="ph-bold ph-cloud-arrow-up"></i> Salva
                             </button>
-                            <button class="btn-secondary" onclick="fetchPlannerRemote().then(() => { showToast('Piano scaricato ☁️'); render(); })" title="Scarica dal Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+                            <button class="btn-secondary" onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); render(); })" title="Scarica dal Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
                                 <i class="ph-bold ph-cloud-arrow-down"></i> Carica
                             </button>
                             <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
