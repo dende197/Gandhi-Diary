@@ -216,10 +216,8 @@
             position: fixed;
             top: auto;
             bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: auto;
-            max-width: 90%;
+            left: 0;
+            width: 100%;
             height: auto;
             background: transparent;
             display: flex;
@@ -570,16 +568,7 @@
 
             /* On desktop/large screens, position it relative to button if possible, 
                but fixed centering is safer for "scomposto" constraint */
-            @media (min-width: 768px) {
-                .planner-dropdown-content {
-                    position: absolute;
-                    top: 100%;
-                    right: 0;
-                    left: auto;
-                    transform: none;
-                    margin-top: 8px;
-                }
-            }
+            /* Removed desktop-specific absolute positioning to ensure consistent behavior */
 
             .planner-dropdown-content.active {
                 display: block;
