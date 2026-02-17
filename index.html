@@ -156,7 +156,7 @@
             width: 100%;
             max-width: 1100px;
             margin: 0 auto;
-            padding: 30px 20px 100px 20px;
+            padding: 100px 20px 100px 20px;
         }
 
         /* Bloquea padding globale SOLO per vista AI */
@@ -213,7 +213,7 @@
 
         /* === TOP NAVIGATION === */
         #top-nav {
-            position: sticky;
+            position: fixed;
             top: 14px;
             bottom: auto;
             left: 0;
@@ -537,27 +537,23 @@
 
             .planner-dropdown-content {
                 display: none !important;
-                position: fixed;
-                /* Fixed to escape overflow:hidden containers */
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                /* Centered modal style for mobile/desktop reliability */
+                position: absolute;
+                top: 120%;
+                right: 0;
+                left: auto;
+                transform: none;
+                /* Popover style relative to button */
                 background: rgba(30, 30, 34, 0.98);
                 backdrop-filter: blur(25px);
                 -webkit-backdrop-filter: blur(25px);
-                min-width: 200px;
+                min-width: 240px;
                 border-radius: 20px;
                 border: 1px solid rgba(255, 255, 255, 0.12);
-                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
                 z-index: 99999;
                 overflow: hidden;
-                animation: fadeInScale 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+                animation: fadeInDown 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
             }
-
-            /* On desktop/large screens, position it relative to button if possible, 
-               but fixed centering is safer for "scomposto" constraint */
-            /* Removed desktop-specific absolute positioning to ensure consistent behavior */
 
             .planner-dropdown-content.active {
                 display: flex !important;
@@ -567,10 +563,10 @@
             .pd-item {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 14px 18px;
+                gap: 14px;
+                padding: 16px 20px;
                 color: white;
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 700;
                 cursor: pointer;
                 transition: all 0.2s;
@@ -1904,7 +1900,7 @@
         };
 
         // 🚀 G-Diary v1.1.42 [Force Cache Bust]
-        const APP_VERSION = '1.1.45';
+        const APP_VERSION = '1.1.46';
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
