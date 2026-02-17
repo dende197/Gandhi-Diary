@@ -503,6 +503,76 @@
                 font-size: 12px;
             }
 
+            /* === PLANNER DROPDOWN (v1.1.32.12) === */
+            .planner-dropdown {
+                position: relative;
+                display: inline-block;
+            }
+
+            .planner-dropdown-content {
+                display: none;
+                position: absolute;
+                right: 0;
+                top: calc(100% + 8px);
+                background: rgba(30, 30, 34, 0.98);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                min-width: 180px;
+                border-radius: 18px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                z-index: 1000;
+                overflow: hidden;
+                animation: fadeInDown 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            }
+
+            .planner-dropdown-content.active {
+                display: block;
+            }
+
+            .pd-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 18px;
+                color: white;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.2s;
+                border: none;
+                background: transparent;
+                width: 100%;
+                text-align: left;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            .pd-item:hover {
+                background: rgba(255, 255, 255, 0.08);
+            }
+
+            .pd-item i {
+                font-size: 18px;
+                opacity: 0.8;
+            }
+
+            .pd-item:active {
+                background: rgba(255, 255, 255, 0.12);
+                transform: scale(0.98);
+            }
+
+            @keyframes fadeInDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-8px) scale(0.98);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
             /* Home hero card animations */
             .home-glass-card {
                 backdrop-filter: blur(12px) saturate(150%);
@@ -4151,36 +4221,56 @@
         return `
         <div class="view" style="animation: slideUp 0.4s ease-out;">
 
-            <!-- HERO GRADIENT (same as Home) -->
-            <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.1);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+            <!-- HERO GRADIENT (Compact v1.1.32.12) -->
+            <div style="position: relative; padding: 22px 20px 18px; border-radius: 22px; margin-bottom: 20px;
+                background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.06), rgba(59,130,246,0.08));
+                border: 1px solid rgba(255,255,255,0.08);
+                box-shadow: 0 8px 32px rgba(99,102,241,0.06), inset 0 1px 0 rgba(255,255,255,0.06);
                 overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
-                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; top: -30px; right: -30px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(99,102,241,0.2), transparent 70%); pointer-events: none;"></div>
                 <div style="position: relative; z-index: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">Planner</h1>
-                            <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
+                            <h1 style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px;">Planner</h1>
+                            <p style="color: var(--text-secondary); font-size: 11px;">Organizza lo studio e le scadenze</p>
                         </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center;">
-                            <button class="btn-secondary" onclick="savePlannerRemote().then(() => showToast('Piano salvato ✨'))" title="Carica sul Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: var(--blue); color: white; border: none;">
-                                <i class="ph-bold ph-cloud-arrow-up"></i> Salva
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <!-- AI TUTOR (Always Visible) -->
+                            <button class="btn-secondary" onclick="navigate('ai_assistant')" 
+                                    style="height: 34px; padding: 0 12px; border-radius: 17px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">
+                                <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI
                             </button>
-                            <button class="btn-secondary" onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); render(); })" title="Scarica dal Cloud" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
-                                <i class="ph-bold ph-cloud-arrow-down"></i> Carica
-                            </button>
-                            <button class="btn-secondary" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; white-space: nowrap; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
-                                <i class="ph-fill ph-sparkle" style="color: var(--accent);"></i> AI Tutor
-                            </button>
-                            <button class="btn-secondary" onclick="clearStudyPlan()" title="Elimina tutto il piano" style="height: 36px; width: 36px; flex-shrink: 0; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,20,20,0.1); border: 1px solid rgba(255,20,20,0.2);">
-                                <i class="ph-bold ph-trash" style="color: #ff4d4d;"></i>
-                            </button>
-                            <div style="background: rgba(255,255,255,0.06); border-radius: 18px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
-                                <button onclick="state.plannerView='calendar'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-calendar"></i></button>
-                                <button onclick="state.plannerView='list'; render();" style="width: 30px; height: 30px; border-radius: 15px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s;"><i class="ph ph-list-bullets"></i></button>
+
+                            <!-- CLOUD ACTIONS DROPDOWN -->
+                            <div class="planner-dropdown">
+                                <button class="btn-secondary" onclick="togglePlannerMenu(event)" 
+                                        style="height: 34px; width: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--blue); color: white; border: none; padding:0;">
+                                    <i class="ph-bold ph-cloud-arrow-up" style="font-size: 16px;"></i>
+                                </button>
+                                <div id="planner-cloud-menu" class="planner-dropdown-content">
+                                    <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
+                                        <i class="ph-bold ph-cloud-arrow-up" style="color: var(--blue);"></i> Salva sul Cloud
+                                    </button>
+                                    <button class="pd-item" onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
+                                        <i class="ph-bold ph-cloud-arrow-down" style="color: var(--blue);"></i> Carica dal Cloud
+                                    </button>
+                                    <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
+                                    <button class="pd-item" onclick="clearStudyPlan().then(() => togglePlannerMenu())" style="color: #ff4d4d;">
+                                        <i class="ph-bold ph-trash"></i> Elimina Piano
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- VIEW SWITCHER -->
+                            <div style="background: rgba(255,255,255,0.05); border-radius: 17px; padding: 2px; display: flex; border: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+                                <button onclick="state.plannerView='calendar'; render();" 
+                                    style="width: 28px; height: 28px; border-radius: 14px; border: none; background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">
+                                    <i class="ph ph-calendar" style="font-size: 14px;"></i>
+                                </button>
+                                <button onclick="state.plannerView='list'; render();" 
+                                    style="width: 28px; height: 28px; border-radius: 14px; border: none; background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'}; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">
+                                    <i class="ph ph-list-bullets" style="font-size: 14px;"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -6615,6 +6705,28 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                 </div>
             </div>
         `;
+    }
+
+    function togglePlannerMenu(event) {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById('planner-cloud-menu');
+        if (!menu) return;
+
+        const isVisible = menu.classList.contains('active');
+
+        // Chiudi tutti gli altri eventuali dropdown prima (opzionale)
+        document.querySelectorAll('.planner-dropdown-content').forEach(el => el.classList.remove('active'));
+
+        if (!isVisible) {
+            menu.classList.add('active');
+            const closeHandler = (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeHandler), 10);
+        }
     }
 
     function showTasksBySubjectModal() {
