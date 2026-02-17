@@ -532,7 +532,12 @@
             /* === PLANNER DROPDOWN (v1.1.32.12) === */
             .planner-dropdown {
                 position: relative;
-                display: inline-block;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
             }
 
             .planner-dropdown-content {
@@ -1923,7 +1928,7 @@
         };
 
         // 🚀 G-Diary v1.1.42 [Force Cache Bust]
-        const APP_VERSION = '1.1.47';
+        const APP_VERSION = '1.1.48';
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
