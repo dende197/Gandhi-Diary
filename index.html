@@ -535,8 +535,8 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 36px;
-                height: 36px;
+                width: 40px;
+                height: 40px;
                 flex-shrink: 0;
             }
 
@@ -1926,8 +1926,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.49 [Boot Fix & UI Refinement]
-        const APP_VERSION = '1.1.49';
+        // 🚀 G-Diary v1.1.50 [Button Standard]
+        const APP_VERSION = '1.1.50';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4472,8 +4472,8 @@
                     <!-- CLOUD SYNC DROPDOWN (Solo in Piano di Studio v1.1.32.18) -->
                     ${state.plannerMode === 'studio' ? `
                     <div class="planner-dropdown">
-                        <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
-                            <i class="ph-bold ph-dots-three-circle" style="font-size: 20px; color: var(--text-secondary);"></i>
+                        <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 40px; height: 40px; border-radius: 20px; border-color: rgba(255,255,255,0.05);">
+                            <i class="ph-bold ph-dots-three" style="font-size: 24px; color: var(--text-secondary);"></i>
                         </button>
                         <div id="planner-cloud-menu" class="planner-dropdown-content" style="display: none;">
                             <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
