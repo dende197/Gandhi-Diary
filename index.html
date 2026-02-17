@@ -1749,7 +1749,6 @@
     };
 
     // 🚀 G-Diary v1.1.8 [AI Polish & API Fix]
-    const APP_VERSION = "1.1.31-master";
 
 
 
@@ -2094,6 +2093,14 @@
         return `${year}-${month}-${day}`;
     }
 
+    // 🔥 SCHOOL TIME (CET/CEST): Ensures "Today" is consistent across devices regardless of local OS settings
+    function getSchoolDate() {
+        // Return a Date object normalized to Italy (UTC+1 or UTC+2)
+        const now = new Date();
+        const italyStr = now.toLocaleString("en-US", { timeZone: "Europe/Rome" });
+        return new Date(italyStr);
+    }
+
     const state = {
         view: 'login',
         user: { id: null, name: 'Utente', class: 'N/D', avatar: null },
@@ -2121,7 +2128,8 @@
         aiChatHistory: JSON.parse(localStorage.getItem(lsKey('ai_chat'))) || [],
         messages: {},
         plannerWeekOffset: 0,
-        didup: { connected: false }
+        didup: { connected: false },
+        booting: true // 🔥 BLOCK RENDER during sync
     };
 
     const app = document.getElementById('app');
@@ -2264,15 +2272,19 @@
 
             (async () => {
                 await performSync();
+                state.booting = false; // 🔥 RELEASE GATE after first sync
+                render();
+                hideBoot();
             })();
         } else {
             state.view = 'login';
+            state.booting = false;
+            render();
+            hideBoot();
         }
 
         updateOfflineBadge();
         loadCircolari();
-        render();
-        hideBoot(); // 🔥 Instant hide
     });
 
     // Listen for Auth changes (Safe logic)
@@ -2312,14 +2324,13 @@
     // --- FETCH: blindato anti-wipe + last-write-wins ---
     async function fetchPlannerRemote() {
         const userId = getUserId();
-        if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
+        if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return null;
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`);
             const data = await res.json();
 
             if (data.success && data.data) {
-                // ✅ FIX: supporta sia snake_case (Supabase) che camelCase
                 const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                 const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
                 const remoteSV = data.data.stressVents || data.data.stress_vents || {};
@@ -2327,51 +2338,28 @@
                 const remotePL = data.data.prepLevels || data.data.prep_levels || {};
                 const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
 
-                const localPT = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-                const localSL = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
-                const localSV = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
-                state.stressLevels = { ...state.stressLevels, ...localSL };
-                state.stressVents = { ...state.stressVents, ...localSV };
-                const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
+                // Robust LWW Sync per ogni sezione di stato
+                state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt);
+                state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt);
+                state.stressVents = syncStateSlice('stressVents', remoteSV, remoteUpdatedAt);
+                state.tasks = syncStateSlice('tasks', remoteTS, remoteUpdatedAt);
+                state.prepLevels = syncStateSlice('prepLevels', remotePL, remoteUpdatedAt);
 
-                const remoteHasData = Object.keys(remotePT).length > 0 || Object.keys(remoteSL).length > 0 || Object.keys(remoteSV).length > 0;
-                const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0 || Object.keys(localSV).length > 0;
-
-                // ✅ FIX: definisci ENTRAMBE le variabili
-                const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
-                const localIsNewer = localUpdatedAt && (!remoteUpdatedAt || new Date(localUpdatedAt).getTime() > new Date(remoteUpdatedAt).getTime());
-
-                console.log("📊 Planner sync:", { remoteHasData, localHasData, remoteIsNewer, localIsNewer });
-
-                if (remoteIsNewer && remoteHasData) {
-                    console.log("☁️ Remoto più nuovo e valido → merge dati stimato");
-                    // Deep Merge: non sovrascrivere mai se abbiamo dati locali diversi
-                    state.plannedTasks = mergePlannerData(state.plannedTasks, remotePT);
-                    state.stressLevels = { ...remoteSL, ...state.stressLevels };
-                    state.stressVents = { ...remoteSV, ...state.stressVents };
-                    state.tasks = remoteTS; // Full task list sync (LWW)
-                    state.prepLevels = { ...remotePL, ...state.prepLevels };
-
-                    localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
-                    localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
-                    localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
-                    localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
-                    localStorage.setItem(lsKey('prep_levels'), JSON.stringify(state.prepLevels));
-                    if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                } else if (localHasData && (!remoteHasData || localIsNewer)) {
-                    console.log("ℹ️ Locale più nuovo o remoto vuoto → sincronizzo verso remoto");
-                    // Forza push se locale ha dati e server no, o se locale è più nuovo
-                    state.plannedTasks = localPT;
-                    state.stressLevels = localSL;
-                    state.stressVents = localSV;
-                    savePlannerRemote(); // Esecuzione immediata per sicurezza
-                }
+                // Persist locally
+                localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
+                localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
+                localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+                localStorage.setItem(lsKey('prep_levels'), JSON.stringify(state.prepLevels));
+                if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
 
                 notifyPlannerChanged();
+                return state.plannedTasks;
             }
         } catch (e) {
             console.warn("Planner remote fetch failed:", e.message);
         }
+        return null;
     }
 
     // 🔥 SCROLL AUTHORITY: Disabilita il ripristino nativo per controllo totale
@@ -2537,8 +2525,7 @@
 
     function isFutureOrToday(dateStr) {
         if (!dateStr) return false;
-        const todayStr = getLocalDateString();
-        // Use string comparison for YYYY-MM-DD equality or superiority
+        const todayStr = getLocalDateString(getSchoolDate());
         return dateStr >= todayStr;
     }
 
@@ -3143,7 +3130,7 @@
 
     let _renderRequest = null;
     function render() {
-        if (_renderRequest) return;
+        if (_renderRequest || state.booting) return; // 🔥 GATING: No render during boot/sync
         _renderRequest = requestAnimationFrame(() => {
             _renderCore();
             _renderRequest = null;
@@ -3433,9 +3420,12 @@
         }
     }
 
-    // ==============================================================================
-    // 🗓️ NEW SENIOR PLANNER: DAY DETAIL MODAL
-    // ==============================================================================
+    /* ==========================================================================
+       G-CONNECT CORE: INITIAL STATE & CONFIGURATION
+       v1.1.32-master — "Master Sync & Smoothness"
+       ========================================================================== */
+
+    const APP_VERSION = '1.1.32-master';
     function renderDayDetailModal(dateStr) {
         const container = getModalContainer();
         if (!container) return;
@@ -3585,12 +3575,26 @@
     }
 
     /* === 3) Notifica centralizzata per aggiornare tutto in tempo reale === */
-    // Helper per merge non distruttivo del planner
+    // Helper per merge non distruttivo e robusto (Last-Write-Wins)
+    function syncStateSlice(sliceName, remoteData, remoteUpdatedAt) {
+        const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
+
+        // Se il remoto è più nuovo (o il locale non ha timestamp), usiamo il remoto
+        const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+
+        if (remoteIsNewer && remoteData) {
+            console.log(`☁️ Remote [${sliceName}] is newer → using remote.`);
+            return remoteData;
+        }
+
+        return state[sliceName]; // Mantieni locale se locale è più nuovo o remoto invalido
+    }
+
     function mergePlannerData(local, remote) {
-        const result = { ...remote, ...local }; // Priorità a locale se chiavi collidono
+        // Fallback per vecchie chiamate, ma ora preferiamo syncStateSlice
+        const result = { ...remote, ...local };
         for (const date in remote) {
             if (local[date]) {
-                // Unione IDs senza duplicati
                 result[date] = [...new Set([...local[date], ...remote[date]])];
             }
         }
@@ -6527,111 +6531,87 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
     }
 
     function showOrganizeStudyModal() {
-        const todayStr = getLocalDateString();
+        const todayStr = getLocalDateString(getSchoolDate());
         const plannedIds = state.plannedTasks[todayStr] || [];
-
-        // Show ALL pending tasks (not just today's)
         const allPendingTasks = state.tasks.filter(t => !t.done);
 
         modalContainer.innerHTML = `
-                <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 30px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h2 style="margin:0; font-size: 24px;">Cosa fai oggi?</h2>
-                            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 28px; opacity: 0.6;"></i>
-                       </div>
-                        <p style="font-size: 15px; opacity: 0.8; margin-bottom: 24px; line-height: 1.5;">Seleziona dalla lista i compiti che vuoi affrontare oggi. Verranno aggiunti alla tua agenda giornaliera.</p>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; max-height: 450px; overflow-y: auto; padding-right: 8px;">
-                            ${allPendingTasks.length > 0 ? allPendingTasks.map(t => {
+            <div class="modal-overlay active" onclick="closeModal(event)">
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2 style="margin:0; font-size: 24px;">Cosa fai oggi?</h2>
+                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 28px; opacity: 0.6;"></i>
+                    </div>
+                    <p style="font-size: 15px; opacity: 0.8; margin-bottom: 24px; line-height: 1.5;">Seleziona i compiti che vuoi affrontare oggi.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; max-height: 450px; overflow-y: auto;">
+                        ${allPendingTasks.length > 0 ? allPendingTasks.map(t => {
             const isPlanned = plannedIds.includes(t.id);
             const subjectColor = getSubjectColor(t.subject);
             return `
-                                    <div class="glass-list-item" data-task-id="${t.id}" style="margin-bottom: 0; padding: 18px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-left: 4px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.05)'}; background: ${isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)'};" onclick="togglePlanTask('${t.id}')">
-                                        <div 
-                                            class="plan-checkbox ${isPlanned ? 'checked' : ''}"
-                                            data-plan-checkbox
-                                            data-task-id="${t.id}"
-                                            data-color="${subjectColor}"
-                                            style="width: 28px; height: 28px; border-radius: 8px; background: ${isPlanned ? 'var(--green)' : 'transparent'}; border: 2px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
-                                            ${isPlanned ? '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>' : ''}
-                                       </div>
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="font-weight: 700; font-size: 16px; color: white; margin-bottom: 4px; line-height: 1.3;">${t.text}</div>
-                                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                                                <div style="font-size: 12px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${t.subject}</div>
-                                                <div style="font-size: 11px; opacity: 0.5; font-weight: 600;">Scade: ${t.display_date}</div>
-                                           </div>
-                                       </div>
-                                   </div>
-                                `;
-        }).join('') : '<div style="text-align: center; opacity: 0.5; padding: 40px;">Non ci sono compiti in sospeso. Ottimo lavoro!</div>'}
-                       </div>
-
-                        <div style="display: flex; gap: 12px;">
-                            <button onclick="closeModal()" class="btn-primary" style="flex: 1; padding: 16px; font-size: 16px; font-weight: 700;">Salva Agenda</button>
-                       </div>
-                   </div>
-               </div>
-            `;
+                                <div class="glass-list-item" style="padding: 18px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-left: 4px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.05)'}; background: ${isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)'};" onclick="togglePlanTask('${t.id}')">
+                                    <div class="plan-checkbox ${isPlanned ? 'checked' : ''}" style="width: 28px; height: 28px; border-radius: 8px; background: ${isPlanned ? 'var(--green)' : 'transparent'}; border: 2px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        ${isPlanned ? '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>' : ''}
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-weight: 700; font-size: 16px; color: white;">${t.text}</div>
+                                        <div style="font-size: 12px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${t.subject}</div>
+                                    </div>
+                                </div>
+                            `;
+        }).join('') : '<div style="text-align: center; opacity: 0.5; padding: 40px;">Nessun compito in sospeso.</div>'}
+                    </div>
+                    <button onclick="closeModal()" class="btn-primary" style="width: 100%; padding: 16px; font-size: 16px; font-weight: 700;">Salva Agenda</button>
+                </div>
+            </div>
+        `;
     }
 
     function showTasksBySubjectModal() {
         const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
-
         modalContainer.innerHTML = `
-                <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; position: sticky; top: 0; background: #1e1e1e; padding: 10px; border-radius: 12px; z-index: 5;">
-                            <h2 style="margin:0;">Compiti per Materia</h2>
-                            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
-                       </div>
-
-                        <div style="display: flex; flex-direction: column; gap: 24px;">
-                            ${subjects.map(s => {
+            <div class="modal-overlay active" onclick="closeModal(event)">
+                <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2 style="margin:0;">Compiti per Materia</h2>
+                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        ${subjects.map(s => {
             const subjectTasks = state.tasks.filter(t => t.subject === s);
             const color = getSubjectColor(s);
             return `
-                                    <div style="border-left: 4px solid ${color}; padding-left: 16px;">
-                                        <h3 style="color: ${color}; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                            <i class="ph-fill ph-book-open"></i>
-                                            ${s}
-                                            <span style="background: ${color}20; color: ${color}; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 800; border: 1px solid ${color}40;">
-                                                ${subjectTasks.length}
-                                           </span>
-                                       </h3>
-                                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                                            ${subjectTasks.map(t => `
-                                                <div class="glass-list-item" style="margin-bottom: 0; background: rgba(255,255,255,0.03); padding: 12px; display: flex; align-items: center; gap: 12px;">
-                                                    <div 
-                                                        class="task-checkbox ${t.done ? 'checked' : ''}"
-                                                        data-task-toggle="${t.id}"
-                                                        onclick="toggleTask('${t.id}')" 
-                                                        style="width: 18px; height: 18px; border: 2px solid ${t.done ? 'var(--green, #10b981)' : 'rgba(255,255,255,0.2)'}; background: ${t.done ? 'var(--green, #10b981)' : 'transparent'}; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
-                                                        ${t.done ? '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>' : ''}
-                                                   </div>
-                                                    <div style="flex: 1;">
-                                                        <div data-task-text="${t.id}" style="font-size: 14px; font-weight: 600; color: white; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''} transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">${t.text}</div>
-                                                        <div style="font-size: 10px; opacity: 0.5; margin-top: 2px;">Data: ${t.display_date}</div>
-                                                   </div>
-                                               </div>
-                                            `).join('')}
-                                       </div>
-                                   </div>
-                                `;
+                                <div style="border-left: 4px solid ${color}; padding-left: 16px;">
+                                    <h3 style="color: ${color}; text-transform: uppercase; font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                        <i class="ph-fill ph-book-open"></i> ${s}
+                                        <span style="font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 800; border: 1px solid ${color}40;">${subjectTasks.length}</span>
+                                    </h3>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        ${subjectTasks.map(t => `
+                                            <div class="glass-list-item" style="padding: 12px; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03);">
+                                                <div class="task-checkbox ${t.done ? 'checked' : ''}" style="width: 18px; height: 18px; border: 2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; border-radius: 5px; background: ${t.done ? 'var(--green)' : 'transparent'}; display: flex; align-items: center; justify-content: center;">
+                                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>' : ''}
+                                                </div>
+                                                <div style="flex: 1;">
+                                                    <div style="font-size: 14px; font-weight: 600; color: white; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${t.text}</div>
+                                                    <div style="font-size: 10px; opacity: 0.5;">${t.display_date}</div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
         }).join('')}
-                       </div>
-                        
-                        <button onclick="closeModal()" class="btn-primary" style="margin-top: 30px;">Chiudi</button>
-                   </div>
-               </div>
-            `;
+                    </div>
+                    <button onclick="closeModal()" class="btn-primary" style="margin-top: 30px; width: 100%;">Chiudi</button>
+                </div>
+            </div>
+        `;
     }
-
     function togglePlanTask(id) {
         if (event) event.stopPropagation();
 
-        const todayStr = getLocalDateString();
+        const todayStr = getLocalDateString(getSchoolDate());
         if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
 
         const index = state.plannedTasks[todayStr].indexOf(id);
