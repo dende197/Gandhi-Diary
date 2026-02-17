@@ -2192,53 +2192,22 @@ app.post('/sync', async (req, res) => {
                     specialization: storedSpecialization,
                     avatar: storedAvatar
                 };
-
             } catch (e) {
                 debugLog("⚠️ Sync Supabase error", e.message);
             }
         }
 
-        // ✅ FIX: Carica planner dal database con maybeSingle
+        // ❌ PLANNER REMOVED FROM AUTO-SYNC: Now fully manual via /api/planner
         let plannerData = null;
-        if (supabase) {
-            try {
-                const pid = generatePid(school, user, profileIndex);
-                debugLog("📅 Sync: Caricamento planner per", pid);
-
-                const { data: plannerResult, error: plannerError } = await supabase
-                    .from('planners')
-                    .select('*')
-                    .eq('user_id', pid)
-                    .maybeSingle();
-
-                if (plannerError) {
-                    debugLog("⚠️ Planner query error", plannerError.message);
-                } else if (plannerResult) {
-                    plannerData = {
-                        plannedTasks: plannerResult.planned_tasks || {},
-                        stressLevels: plannerResult.stress_levels || {},
-                        updatedAt: plannerResult.updated_at
-                    };
-                    debugLog("✅ Planner caricato in sync", {
-                        plannedDays: Object.keys(plannerData.plannedTasks).length,
-                        updatedAt: plannerData.updatedAt
-                    });
-                } else {
-                    debugLog("ℹ️ Nessun planner esistente per questo utente");
-                }
-            } catch (e) {
-                debugLog("⚠️ Planner sync exception", e.message);
-            }
-        }
 
         res.json({
             success: true,
             tasks,
             voti: grades,
-            promemoria, // ✅ FIX: Usa la variabile corretta
+            promemoria,
             new_tokens: { authToken, accessToken },
             planner: plannerData,
-            student: req.enrichedStudent || null // ✅ Added enriched student info
+            student: req.enrichedStudent
         });
 
     } catch (e) {

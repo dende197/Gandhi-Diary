@@ -2517,7 +2517,11 @@
         } catch { }
     }
     // Autosave/verify periodico
-    setInterval(() => { debouncedSavePlannerRemote(0); if (typeof saveTasksSnapshotRemote === 'function') saveTasksSnapshotRemote(); verifyAndRepairPlanner(); }, 45000);
+    // Auto-save interval REMOVED for strictly manual sync
+    setInterval(() => {
+        if (typeof saveTasksSnapshotRemote === 'function') saveTasksSnapshotRemote();
+        verifyAndRepairPlanner();
+    }, 60000);
 
     function showToast(message) {
         const existing = document.getElementById('g-toast');
@@ -5448,7 +5452,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
         if (addedCount > 0) {
             saveTasks();
-            if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote();
+            // if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(); // 🔥 DISABILITATO
             showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
             // Give a bit of time for the toast before navigating
             setTimeout(() => navigate('planner'), 800);
