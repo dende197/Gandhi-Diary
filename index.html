@@ -563,18 +563,17 @@
             /* Responsive Adjustments */
             @media (max-width: 768px) {
                 .planner-dropdown-content {
-                    min-width: 200px;
+                    min-width: 220px;
                     max-width: 85vw;
-                    /* Prevent overflow on small screens */
-                    right: -10px;
-                    /* Slight nudge to ensure it doesn't clip right edge */
+                    /* Safe fitting on mobile */
+                    right: 0;
                 }
             }
 
             @media (min-width: 769px) {
                 .planner-dropdown-content {
-                    min-width: 260px;
-                    /* Larger proper menu on desktop */
+                    min-width: 280px;
+                    /* More substantial menu on desktop */
                 }
 
                 .pd-item {
@@ -1927,8 +1926,11 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.42 [Force Cache Bust]
-        const APP_VERSION = '1.1.48';
+        // 🚀 G-Diary v1.1.49 [Boot Fix & UI Refinement]
+        const APP_VERSION = '1.1.49';
+
+        // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
+        window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
 
         // 🔥 EXPERT CACHE BYPASS: Force reload on version mismatch
         const savedVersion = localStorage.getItem('app_version');
