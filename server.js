@@ -72,16 +72,16 @@ app.use(cors({
 // ============= AI CHAT PROXY =============
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
-    // Nuova chiave fornita dall'utente (AIzaSyB0YZoxl1TijXvbL0Gp8cASeqxShdulWbM)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCgu9P7K8PNbHQkX65bqOT_w5a2R4yU3Zw';
+    // Account 2 - Gemini 3 Pro (Expert Planner)
+    const GEMINI_KEY = process.env.GEMINI_API_KEY_PLANNER || 'AIzaSyBF7BpoY_w5PmmpZPxwsMqAHCMM4E-vqSE';
 
     if (!GEMINI_KEY) {
-        console.error("❌ ERRORE CRITICO: GEMINI_API_KEY mancante!");
-        return res.status(500).json({ error: "Backend error: GEMINI_API_KEY non configurata." });
+        console.error("❌ ERRORE CRITICO: GEMINI_API_KEY_PLANNER mancante!");
+        return res.status(500).json({ error: "Backend error: GEMINI_API_KEY_PLANNER non configurata." });
     }
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${GEMINI_KEY}`;
         const response = await axios.post(url, {
             contents: messages,
             generationConfig: {
@@ -162,7 +162,8 @@ app.get('/api/circolari', async (req, res) => {
 // 2. Sintesi AI Circolare (Legge PDF e riassume)
 app.post('/api/circolari/sintesi', async (req, res) => {
     const { link, id } = req.body;
-    const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCgu9P7K8PNbHQkX65bqOT_w5a2R4yU3Zw';
+    // Account 1 - Gemini 1.5 Flash (Stability & Speed)
+    const GEMINI_KEY = process.env.GEMINI_API_KEY_SINTESI || 'AIzaSyCgu9P7K8PNbHQkX65bqOT_w5a2R4yU3Zw';
 
     if (!link) return res.status(400).json({ error: "Link mancante" });
 
