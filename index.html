@@ -724,14 +724,6 @@
             }
         }
 
-        .section-animate {
-            /* Clean instant render — no animations */
-        }
-
-        .view {
-            /* Clean instant render — no animations */
-        }
-
         /* Sintesi AI Formatting */
         .sintesi-content {
             font-size: 15px;
@@ -1903,8 +1895,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.58 [Centered Layout Fix]
-        const APP_VERSION = '1.1.58';
+        // 🚀 G-Diary v1.1.59 [Architecture Hardening]
+        const APP_VERSION = '1.1.59';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4449,21 +4441,9 @@
                     <!-- CLOUD SYNC DROPDOWN (Solo in Piano di Studio v1.1.32.18) -->
                     ${state.plannerMode === 'studio' ? `
                     <div class="planner-dropdown">
-                        <button class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
+                        <button id="planner-cloud-btn" class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
                             <i class="ph-bold ph-dots-three-circle" style="font-size: 20px; color: var(--text-secondary);"></i>
                         </button>
-                        <div id="planner-cloud-menu" class="planner-dropdown-content" style="display: none;">
-                            <button class="pd-item" onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
-                                <i class="ph-bold ph-cloud-arrow-up" style="color: rgba(139,92,246,0.8);"></i> Salva
-                            </button>
-                            <button class="pd-item" onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
-                                <i class="ph-bold ph-cloud-arrow-down" style="color: rgba(139,92,246,0.8);"></i> Carica
-                            </button>
-                            <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
-                            <button class="pd-item" onclick="clearStudyPlan().then(() => togglePlannerMenu())" style="color: rgba(255,100,100,0.9);">
-                                <i class="ph-bold ph-trash" style="color: rgba(255,100,100,0.8);"></i> Reset
-                            </button>
-                        </div>
                     </div>
                     ` : ''}
 
@@ -6879,7 +6859,7 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
         function togglePlannerMenu(event) {
             if (event) event.stopPropagation();
             const menu = document.getElementById('planner-cloud-menu');
-            const btn = event?.currentTarget || event?.target?.closest('button');
+            const btn = document.getElementById('planner-cloud-btn') || event?.currentTarget || event?.target?.closest('button');
             if (!menu || !btn) return;
 
             const isVisible = menu.classList.contains('active');
@@ -7712,6 +7692,22 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             console.log("🚀 DOM Ready - Starting App...");
         });
     </script>
+    <!-- Persistent cloud menu — outside render() (v1.1.59) -->
+    <div id="planner-cloud-menu" class="planner-dropdown-content" style="display: none;">
+        <button class="pd-item"
+            onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
+            <i class="ph-bold ph-cloud-arrow-up" style="color: rgba(139,92,246,0.8);"></i> Salva
+        </button>
+        <button class="pd-item"
+            onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
+            <i class="ph-bold ph-cloud-arrow-down" style="color: rgba(139,92,246,0.8);"></i> Carica
+        </button>
+        <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
+        <button class="pd-item" onclick="clearStudyPlan().then(() => togglePlannerMenu())"
+            style="color: rgba(255,100,100,0.9);">
+            <i class="ph-bold ph-trash" style="color: rgba(255,100,100,0.8);"></i> Reset
+        </button>
+    </div>
 </body>
 
 </html>
