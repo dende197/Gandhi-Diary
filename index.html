@@ -594,42 +594,7 @@
                 flex-shrink: 0;
             }
 
-            .planner-dropdown-content.active {
-                display: flex !important;
-                flex-direction: column;
-            }
 
-            .pd-item {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 16px 20px;
-                color: white;
-                font-size: 14px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: all 0.2s;
-                border: none;
-                background: transparent;
-                width: 100%;
-                text-align: left;
-                -webkit-tap-highlight-color: transparent;
-            }
-
-            .pd-item:hover {
-                background: rgba(255, 255, 255, 0.08);
-            }
-
-            .pd-item i {
-                font-size: 18px;
-                opacity: 0.8;
-            }
-
-            .pd-item:active {
-                background: rgba(255, 255, 255, 0.12);
-                transform: scale(0.92);
-                transition: transform 0.05s;
-            }
 
             @keyframes fadeInDown {
                 from {
@@ -1938,8 +1903,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.56 [Security & UI Polish]
-        const APP_VERSION = '1.1.56';
+        // 🚀 G-Diary v1.1.57 [CSS Duplicate Fix]
+        const APP_VERSION = '1.1.57';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
