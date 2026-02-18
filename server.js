@@ -230,7 +230,7 @@ REGOLE DI FORMATTAZIONE:
 
 Circolare: "${textContent.substring(0, 7000)}"`;
 
-        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
         const MAX_RETRIES = 2;
         let lastError = null;
 
