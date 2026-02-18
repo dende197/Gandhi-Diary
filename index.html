@@ -1903,8 +1903,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.57 [CSS Duplicate Fix]
-        const APP_VERSION = '1.1.57';
+        // 🚀 G-Diary v1.1.58 [Centered Layout Fix]
+        const APP_VERSION = '1.1.58';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6904,13 +6904,22 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
                 const updatePosition = () => {
                     const rect = btn.getBoundingClientRect();
-                    let rightEdge = window.innerWidth - rect.right;
-                    if (rightEdge < 8) rightEdge = 8;
+                    const isMobile = window.innerWidth <= 768;
+                    const menuWidth = isMobile ? 240 : 300;
+
+                    // Calculate left position anchored to button's right edge (v1.1.58)
+                    let leftPos = rect.right - menuWidth;
+                    // Prevent overflow on left edge
+                    if (leftPos < 8) leftPos = 8;
+                    // Prevent overflow on right edge
+                    if (leftPos + menuWidth > window.innerWidth - 8) {
+                        leftPos = window.innerWidth - menuWidth - 8;
+                    }
 
                     menu.style.setProperty('position', 'fixed', 'important');
                     menu.style.setProperty('top', (rect.bottom + 8) + 'px', 'important');
-                    menu.style.setProperty('right', rightEdge + 'px', 'important');
-                    menu.style.setProperty('left', 'auto', 'important');
+                    menu.style.setProperty('left', leftPos + 'px', 'important');
+                    menu.style.setProperty('right', 'auto', 'important');
                     menu.style.setProperty('z-index', '2147483647', 'important');
                     menu.style.setProperty('width', menuWidth + 'px', 'important');
                     menu.style.setProperty('min-width', menuWidth + 'px', 'important');
