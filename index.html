@@ -1980,8 +1980,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.66 [Mental Health Engine]
-        const APP_VERSION = '1.1.66';
+        // 🚀 G-Diary v1.1.67 [Planner Layout Fix]
+        const APP_VERSION = '1.1.67';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4494,10 +4494,8 @@
             return `
         <div class="view">
 
-            <!-- HERO GRADIENT (v1.1.32.14: AI & View Only) -->
+            <!-- HERO GRADIENT (v1.1.67 Fix) -->
             <div style="position: relative; padding: 28px 24px 24px; margin-bottom: 24px; z-index: 5;">
-                
-                <!-- Background Layer (Clipped) -->
                 <div style="position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 24px; overflow: hidden;
                     background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
                     border: 1px solid rgba(255,255,255,0.1);
@@ -4506,6 +4504,7 @@
                     <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%);"></div>
                     <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%);"></div>
                 </div>
+
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: nowrap;">
                         <div>
@@ -4514,29 +4513,9 @@
                         </div>
                         <div style="display: flex; gap: 6px; align-items: center; margin-left: auto;">
                             <!-- AI TUTOR -->
+                            <button class="btn-icon-glass" onclick="navigate('ai_assistant')" title="AI Tutor" style="width: 40px; height: 40px; border-radius: 20px;">
+                                <i class="ph-fill ph-sparkle" style="color: rgba(139,92,246,0.9); font-size: 18px;"></i>
                             </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SMART ADVICE BANNER (v1.1.66) -->
-                ${(() => {
-                    const todayStr = getLocalDateString();
-                    const mh = state.stressLevels[todayStr];
-                    if (mh && typeof mh === 'object' && (mh.stress >= 4 || mh.fatigue >= 4)) {
-                        return `
-                        <div class="mh-advice-card" style="margin: 0 24px 24px; animation: fadeInDown 0.4s ease;">
-                            <h4 style="margin:0 0 8px 0; font-size:14px; display:flex; align-items:center; gap:8px;">
-                                <i class="ph-fill ph-warning-octagon" style="color:#FF453A;"></i> Rischio Burnout Rilevato
-                            </h4>
-                            <p style="font-size:13px; opacity:0.9; margin:0; line-height:1.5;">
-                                Il tuo livello di ${mh.stress >= 4 ? 'stress' : 'stanchezza'} è alto. 
-                                Ti consigliamo di alleggerire il carico di oggi o posticipare i compiti non urgenti per salvaguardare la tua produttività.
-                            </p>
-                        </div>`;
-                    }
-                    return '';
-                })()}
 
                             <!-- VIEW SWITCHER (Pill style) -->
                             <div style="background: rgba(255,255,255,0.03); border-radius: 30px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; height: 40px; align-items: center; backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
@@ -4559,6 +4538,26 @@
                     </div>
                 </div>
             </div>
+
+            <!-- SMART ADVICE BANNER (v1.1.66+) -->
+            ${(() => {
+                    const todayStr = getLocalDateString();
+                    const mh = state.stressLevels[todayStr];
+                    if (mh && typeof mh === 'object' && (mh.stress >= 4 || mh.fatigue >= 4)) {
+                        return `
+                    <div class="mh-advice-card" style="margin: 0 0 24px 0; animation: fadeInDown 0.4s ease;">
+                        <h4 style="margin:0 0 8px 0; font-size:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="ph-fill ph-warning-octagon" style="color:#FF453A;"></i> Rischio Burnout Rilevato
+                        </h4>
+                        <p style="font-size:13px; opacity:0.9; margin:0; line-height:1.5;">
+                            Il tuo livello di ${mh.stress >= 4 ? 'stress' : 'stanchezza'} è alto. 
+                            Ti consigliamo di alleggerire il carico di oggi per salvaguardare la tua produttività.
+                        </p>
+                    </div>`;
+                    }
+                    return '';
+                })()}
+
 
             <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
                 <button onclick="state.plannerMode='registro'; render();" 
