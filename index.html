@@ -1316,6 +1316,7 @@
 
         .mh-slider {
             -webkit-appearance: none;
+            appearance: none;
             width: 100%;
             height: 6px;
             background: rgba(255, 255, 255, 0.1);
@@ -1390,6 +1391,28 @@
         .mh-badge-high {
             background: rgba(255, 69, 58, 0.2);
             color: #FF453A;
+        }
+
+        .mh-loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: mhPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes mhPulse {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
         }
 
         /* === PROFILE === */
@@ -1980,8 +2003,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.67 [Planner Layout Fix]
-        const APP_VERSION = '1.1.67';
+        // 🚀 G-Diary v1.1.68 [Mental Health Engine v2]
+        const APP_VERSION = '1.1.68';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4396,7 +4419,11 @@
                         ${greeting},<br>${state.user.name.includes(' ') ? state.user.name.split(' ').slice(1).join(' ') : state.user.name}
                     </h1>
                     <p class="hero-status">
-                        ${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
+                        ${(() => {
+                    const quote = typeof getDailyQuote === 'function' ? getDailyQuote() : null;
+                    if (quote) return `<span style="font-style:italic; opacity:0.8;">"${quote}"</span>`;
+                    return plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio';
+                })()}
                     </p>
                 </div>
             </div>
@@ -4539,20 +4566,28 @@
                 </div>
             </div>
 
-            <!-- SMART ADVICE BANNER (v1.1.66+) -->
+            <!-- SMART ADVICE BANNER (v1.1.68 Enhanced) -->
             ${(() => {
                     const todayStr = getLocalDateString();
                     const mh = state.stressLevels[todayStr];
-                    if (mh && typeof mh === 'object' && (mh.stress >= 4 || mh.fatigue >= 4)) {
+                    if (mh && typeof mh === 'object' && (mh.stress >= 4 || mh.fatigue >= 4 || mh.sleep < 5)) {
+                        const ai = _mhAICache && _mhAICache._date === todayStr ? _mhAICache : null;
+                        const reason = mh.sleep < 5 ? `Hai dormito solo ${mh.sleep}h` :
+                            mh.stress >= 4 ? 'Il tuo stress è alto' : 'La tua stanchezza mentale è elevata';
                         return `
                     <div class="mh-advice-card" style="margin: 0 0 24px 0; animation: fadeInDown 0.4s ease;">
-                        <h4 style="margin:0 0 8px 0; font-size:14px; display:flex; align-items:center; gap:8px;">
+                        <h4 style="margin:0 0 10px 0; font-size:14px; display:flex; align-items:center; gap:8px;">
                             <i class="ph-fill ph-warning-octagon" style="color:#FF453A;"></i> Rischio Burnout Rilevato
                         </h4>
-                        <p style="font-size:13px; opacity:0.9; margin:0; line-height:1.5;">
-                            Il tuo livello di ${mh.stress >= 4 ? 'stress' : 'stanchezza'} è alto. 
-                            Ti consigliamo di alleggerire il carico di oggi per salvaguardare la tua produttività.
+                        <p style="font-size:13px; opacity:0.9; margin:0 0 ${ai ? '12px' : '0'} 0; line-height:1.5;">
+                            ${reason}. Ti consigliamo di alleggerire il carico di oggi.
                         </p>
+                        ${ai && ai.studyPlan ? `
+                        <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:12px; border-left:3px solid var(--accent);">
+                            <p style="margin:0; font-size:12px; line-height:1.5; color:rgba(255,255,255,0.75);">
+                                <strong style="color:var(--accent);">Piano suggerito:</strong> ${ai.studyPlan}
+                            </p>
+                        </div>` : ''}
                     </div>`;
                     }
                     return '';
@@ -4726,7 +4761,10 @@
         </div> `;
         }
 
-        /* === MENTAL HEALTH ENGINE (v1.1.66) === */
+        /* === MENTAL HEALTH ENGINE v2 (v1.1.68) === */
+        let _mhSaveTimeout = null;
+        let _mhAICache = null; // Cache AI advice for today
+
         function migrateStressData() {
             if (!state.stressLevels) return;
             Object.keys(state.stressLevels).forEach(date => {
@@ -4743,19 +4781,76 @@
             });
         }
 
-        function getMentalHealthAdvice() {
+        function saveMHToSupabase(data) {
+            const pid = getUserId();
+            if (!pid || pid === 'guest') return;
             const todayStr = getLocalDateString();
+            fetch(`${API_BASE_URL}/api/mental-health/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profileId: pid,
+                    date: todayStr,
+                    stress: data.stress,
+                    fatigue: data.fatigue,
+                    sleep: data.sleep,
+                    load: data.load,
+                    note: data.note || ''
+                })
+            }).catch(e => console.warn('MH save failed:', e.message));
+        }
+
+        async function fetchMHAIAdvice(forceRefresh = false) {
+            const todayStr = getLocalDateString();
+            // Check cache: avoid redundant calls within the same day
+            if (!forceRefresh && _mhAICache && _mhAICache._date === todayStr) return _mhAICache;
+
             const data = state.stressLevels[todayStr];
-            if (!data || typeof data !== 'object') return "Esegui il check-in per ricevere consigli personalizzati.";
+            if (!data || typeof data !== 'object') return null;
 
-            const advices = [];
-            if (data.stress >= 4) advices.push("⚠️ **Stress Elevato**: Considera di spezzare i compiti lunghi in micro-sessioni da 25 minuti.");
-            if (data.fatigue >= 4) advices.push("🔋 **Affaticamento**: La tua stanchezza mentale è alta. Dai priorità al ripasso leggero.");
-            if (data.sleep < 6 && data.sleep > 0) advices.push("😴 **Debito di Sonno**: Hai dormito poco. Evita sessioni notturne oggi.");
-            if (data.load === 'high' && (data.stress >= 4 || data.fatigue >= 4)) advices.push("🚨 **Rischio Burnout**: Il carico è alto e sei stanco. Rimanda i compiti non urgenti.");
+            // Count today's tasks and upcoming exams
+            const taskCount = (state.tasks || []).filter(t => t.due_date && isFutureOrToday(t.due_date)).length;
+            const upcomingExams = (state.tasks || []).filter(t => {
+                if (!t.due_date || !isFutureOrToday(t.due_date)) return false;
+                return /verific|interrogaz|compito in classe|esame|test/i.test(t.text || '');
+            }).length;
 
-            if (advices.length === 0) return "✅ **Stato Ottimale**: Il tuo bilanciamento è buono. Procedi con lo studio previsto.";
-            return advices.join('<br><br>');
+            // Build recent history for context
+            const recentHistory = [];
+            for (let i = 1; i <= 7; i++) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const ds = getLocalDateString(d);
+                const v = state.stressLevels[ds];
+                if (v && typeof v === 'object') {
+                    recentHistory.push({ date: ds, stress: v.stress, fatigue: v.fatigue, sleep: v.sleep, load: v.load });
+                }
+            }
+
+            try {
+                const pid = getUserId();
+                const resp = await fetch(`${API_BASE_URL}/api/mental-health/ai-advice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profileId: pid !== 'guest' ? pid : undefined,
+                        stress: data.stress, fatigue: data.fatigue,
+                        sleep: data.sleep, load: data.load,
+                        taskCount, upcomingExams, recentHistory
+                    })
+                });
+                const result = await resp.json();
+                if (result.advice) {
+                    _mhAICache = { ...result, _date: todayStr };
+                    // Store quote for Home hero
+                    if (result.quote) {
+                        localStorage.setItem('mh_daily_quote', JSON.stringify({ quote: result.quote, date: todayStr }));
+                    }
+                    return _mhAICache;
+                }
+            } catch (e) {
+                console.warn('MH AI advice fetch failed:', e.message);
+            }
+            return null;
         }
 
         function updateMHMetric(key, val) {
@@ -4765,108 +4860,199 @@
             }
             state.stressLevels[todayStr][key] = val;
             saveTasks();
+
+            // Debounced save to Supabase (don't save on every slider tick)
+            if (_mhSaveTimeout) clearTimeout(_mhSaveTimeout);
+            _mhSaveTimeout = setTimeout(() => {
+                saveMHToSupabase(state.stressLevels[todayStr]);
+                // Refresh AI advice after save
+                fetchMHAIAdvice(true).then(() => render());
+            }, 1500);
+
             render();
+        }
+
+        function getDailyQuote() {
+            const todayStr = getLocalDateString();
+            try {
+                const cached = JSON.parse(localStorage.getItem('mh_daily_quote') || '{}');
+                if (cached.quote && cached.date === todayStr) return cached.quote;
+            } catch (e) { }
+            return null;
         }
 
         function renderMentalHealthView() {
             migrateStressData();
             const todayStr = getLocalDateString();
             const data = state.stressLevels[todayStr] || { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
-            const advice = getMentalHealthAdvice();
 
-            // Trend 7 days
-            const trend = [];
-            const labels = [];
+            // AI Advice (cached or loading)
+            const aiData = _mhAICache && _mhAICache._date === todayStr ? _mhAICache : null;
+            const adviceHTML = aiData
+                ? `<div style="margin-bottom:12px;"><strong style="color:white;">Consiglio:</strong> ${aiData.advice}</div>
+                   <div><strong style="color:white;">Piano Studio:</strong> ${aiData.studyPlan}</div>`
+                : `<div style="display:flex; align-items:center; gap:10px;">
+                     <div class="mh-loading-dot"></div>
+                     <span style="opacity:0.7;">Analisi AI in corso...</span>
+                   </div>`;
+
+            const severityBadge = aiData
+                ? `<span class="mh-badge ${aiData.severity === 'high' ? 'mh-badge-high' : aiData.severity === 'medium' ? 'mh-badge-mid' : 'mh-badge-low'}">${aiData.severity === 'high' ? 'Attenzione' : aiData.severity === 'medium' ? 'Moderato' : 'Ottimo'}</span>`
+                : '';
+
+            // Trend 7 days (stress + sleep dual line)
+            const trendStress = [], trendSleep = [], labels = [];
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
                 const ds = getLocalDateString(d);
                 const val = state.stressLevels[ds];
-                trend.push(typeof val === 'object' ? val.stress : (Number(val) || 0));
-                labels.push(ds.split('-')[2]);
+                trendStress.push(typeof val === 'object' ? val.stress : (Number(val) || 0));
+                trendSleep.push(typeof val === 'object' ? val.sleep : 0);
+                labels.push(d.toLocaleDateString('it-IT', { weekday: 'short' }).substring(0, 3));
             }
-            const path = trend.map((v, i) => `${(i / 6) * 280},${100 - (v / 5) * 80}`).join(' L ');
+            const stressPath = trendStress.map((v, i) => `${20 + (i / 6) * 260},${110 - (v / 5) * 80}`).join(' L ');
+            const sleepPath = trendSleep.map((v, i) => `${20 + (i / 6) * 260},${110 - (v / 12) * 80}`).join(' L ');
+
+            // Trigger AI fetch if not cached
+            if (!aiData) {
+                fetchMHAIAdvice().then(result => {
+                    if (result && state.view === 'mental_health') render();
+                });
+            }
 
             return `
             <div class="view animate-fade-in" style="padding: 24px; padding-bottom: 120px;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:28px;">
-                    <button onclick="navigate('home')" style="background:rgba(255,255,255,0.05); border:none; width:40px; height:40px; border-radius:12px; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                        <i class="ph ph-arrow-left" style="font-size:20px;"></i>
+                    <button type="button" onclick="navigate('home')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;">
+                        <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
                     </button>
-                    <h1 style="margin:0; font-size:24px; font-weight:800; letter-spacing:-0.5px;">Mental Health</h1>
+                    <div>
+                        <h1 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.5px;">Benessere & Studio</h1>
+                        <p style="margin:2px 0 0; font-size:12px; color:var(--text-dim);">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                    </div>
                 </div>
 
-                <div class="glass-panel" style="padding:24px; margin-bottom:24px; border-radius:24px;">
-                    <h3 style="margin:0 0 20px 0; font-size:16px; opacity:0.8; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
-                        <i class="ph-fill ph-check-circle" style="color:var(--accent);"></i> Check-in Giornaliero
+                <!-- DAILY CHECK-IN -->
+                <div class="glass-panel" style="padding:24px; margin-bottom:20px; border-radius:24px;">
+                    <h3 style="margin:0 0 20px 0; font-size:14px; opacity:0.6; text-transform:uppercase; letter-spacing:1.5px; display:flex; align-items:center; gap:8px;">
+                        <i class="ph-fill ph-heart-half" style="color:#FF6B8A;"></i> Check-in Giornaliero
                     </h3>
 
                     <div class="mh-metric-box">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:700;">Livello Stress</span>
+                            <span style="font-weight:700; font-size:15px;">Livello di Stress</span>
                             <span class="mh-badge ${data.stress > 3 ? 'mh-badge-high' : data.stress > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.stress}/5</span>
                         </div>
                         <div class="mh-slider-container">
-                            <input type="range" min="1" max="5" value="${data.stress}" class="mh-slider" oninput="updateMHMetric('stress', parseInt(this.value))">
+                            <input type="range" min="1" max="5" value="${data.stress}" class="mh-slider" style="--slider-color: ${data.stress > 3 ? '#FF453A' : data.stress > 1 ? '#FF9F0A' : '#30D158'};" oninput="updateMHMetric('stress', parseInt(this.value))">
+                            <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                                <span style="font-size:10px; opacity:0.4;">Calmo</span>
+                                <span style="font-size:10px; opacity:0.4;">Molto stressato</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mh-metric-box">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:700;">Stanchezza Mentale</span>
+                            <span style="font-weight:700; font-size:15px;">Stanchezza Mentale</span>
                             <span class="mh-badge ${data.fatigue > 3 ? 'mh-badge-high' : data.fatigue > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.fatigue}/5</span>
                         </div>
                         <div class="mh-slider-container">
                             <input type="range" min="1" max="5" value="${data.fatigue}" class="mh-slider" oninput="updateMHMetric('fatigue', parseInt(this.value))">
+                            <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                                <span style="font-size:10px; opacity:0.4;">Fresco</span>
+                                <span style="font-size:10px; opacity:0.4;">Esausto</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mh-metric-box">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:700;">Sonno (Ore)</span>
-                            <span style="font-weight:800; color:var(--accent);">${data.sleep}h</span>
+                            <span style="font-weight:700; font-size:15px;">Ore di Sonno</span>
+                            <span style="font-weight:800; font-size:18px; color:${data.sleep < 6 ? '#FF453A' : data.sleep < 7 ? '#FF9F0A' : 'var(--accent)'}">${data.sleep}h</span>
                         </div>
                         <div class="mh-slider-container">
-                            <input type="range" min="0" max="12" value="${data.sleep}" class="mh-slider" oninput="updateMHMetric('sleep', parseInt(this.value))">
+                            <input type="range" min="0" max="12" step="0.5" value="${data.sleep}" class="mh-slider" oninput="updateMHMetric('sleep', parseFloat(this.value))">
+                            <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                                <span style="font-size:10px; opacity:0.4;">0h</span>
+                                <span style="font-size:10px; color:${data.sleep < 6 ? '#FF453A' : 'rgba(255,255,255,0.3)'}">${data.sleep < 6 ? '⚠️ Debito' : ''}</span>
+                                <span style="font-size:10px; opacity:0.4;">12h</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mh-metric-box" style="margin-bottom:0;">
-                        <span style="font-weight:700;">Carico Studio Percepito</span>
+                        <span style="font-weight:700; font-size:15px;">Carico Studio Percepito</span>
                         <div class="mh-segment-grid">
-                            <div class="mh-segment ${data.load === 'low' ? 'active' : ''}" onclick="updateMHMetric('load', 'low')">Leggero</div>
-                            <div class="mh-segment ${data.load === 'medium' ? 'active' : ''}" onclick="updateMHMetric('load', 'medium')">Medio</div>
-                            <div class="mh-segment ${data.load === 'high' ? 'active' : ''}" onclick="updateMHMetric('load', 'high')">Pesante</div>
+                            <div class="mh-segment ${data.load === 'low' ? 'active' : ''}" onclick="updateMHMetric('load', 'low')">
+                                <i class="ph ph-sun" style="display:block; margin-bottom:4px;"></i> Leggero
+                            </div>
+                            <div class="mh-segment ${data.load === 'medium' ? 'active' : ''}" onclick="updateMHMetric('load', 'medium')">
+                                <i class="ph ph-cloud" style="display:block; margin-bottom:4px;"></i> Medio
+                            </div>
+                            <div class="mh-segment ${data.load === 'high' ? 'active' : ''}" onclick="updateMHMetric('load', 'high')">
+                                <i class="ph ph-cloud-rain" style="display:block; margin-bottom:4px;"></i> Pesante
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="mh-advice-card">
-                    <h3 style="margin:0 0 12px 0; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:8px;">
-                        <i class="ph-fill ph-lightning" style="color:#FFD60A;"></i> AI Insight
-                    </h3>
-                    <div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.9);">
-                        ${advice}
+                <!-- AI INSIGHT (Real Gemini) -->
+                <div class="mh-advice-card" style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <h3 style="margin:0; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:8px;">
+                            <i class="ph-fill ph-brain" style="color:#A78BFA;"></i> AI Insight
+                        </h3>
+                        ${severityBadge}
                     </div>
+                    <div style="font-size:14px; line-height:1.7; color:rgba(255,255,255,0.85);">
+                        ${adviceHTML}
+                    </div>
+                    ${aiData && aiData.quote ? `
+                    <div style="margin-top:16px; padding:14px; background:rgba(255,255,255,0.03); border-radius:14px; border-left:3px solid var(--accent);">
+                        <p style="margin:0; font-size:13px; font-style:italic; color:rgba(255,255,255,0.7); line-height:1.5;">"${aiData.quote}"</p>
+                    </div>` : ''}
                 </div>
 
-                <div class="glass-panel" style="margin-top:24px; padding:20px; border-radius:24px;">
-                    <h3 style="margin:0 0 16px 0; font-size:13px; opacity:0.5; text-transform:uppercase; letter-spacing:1px;">Trend Stress Settimanale</h3>
-                    <div style="height:120px; width:100%; position:relative;">
-                        <svg viewBox="0 0 300 120" preserveAspectRatio="none" style="width:100%; height:100%;">
-                            <path d="M ${path}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                <!-- TREND CHART (Dual: Stress + Sleep) -->
+                <div class="glass-panel" style="padding:20px; border-radius:24px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:13px; opacity:0.5; text-transform:uppercase; letter-spacing:1px;">Andamento 7 Giorni</h3>
+                        <div style="display:flex; gap:12px; font-size:10px;">
+                            <span style="display:flex; align-items:center; gap:4px;"><span style="width:8px;height:3px;background:var(--accent);border-radius:2px;"></span> Stress</span>
+                            <span style="display:flex; align-items:center; gap:4px;"><span style="width:8px;height:3px;background:#30D158;border-radius:2px;"></span> Sonno</span>
+                        </div>
+                    </div>
+                    <div style="height:140px; width:100%; position:relative; overflow:visible;">
+                        <svg viewBox="0 0 300 140" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; overflow:visible;">
+                            <!-- Grid lines -->
+                            <line x1="20" y1="30" x2="280" y2="30" stroke="rgba(255,255,255,0.05)" />
+                            <line x1="20" y1="70" x2="280" y2="70" stroke="rgba(255,255,255,0.05)" />
+                            <line x1="20" y1="110" x2="280" y2="110" stroke="rgba(255,255,255,0.05)" />
+                            <!-- Stress line -->
+                            <path d="M ${stressPath}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                            <!-- Sleep line -->
+                            <path d="M ${sleepPath}" fill="none" stroke="#30D158" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />
+                            <!-- Dots -->
+                            ${trendStress.map((v, i) => `<circle cx="${20 + (i / 6) * 260}" cy="${110 - (v / 5) * 80}" r="3.5" fill="var(--accent)" />`).join('')}
                         </svg>
-                        <div style="display:flex; justify-content:space-between; margin-top:8px;">
-                            ${labels.map(l => `<span style="font-size:10px; opacity:0.4;">${l}</span>`).join('')}
-                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:0 8px; margin-top:4px;">
+                        ${labels.map(l => `<span style="font-size:10px; opacity:0.35; text-transform:capitalize;">${l}</span>`).join('')}
                     </div>
                 </div>
 
-                <div style="margin-top:24px;">
-                    <h3 style="margin:0 0 12px 0; font-size:14px; opacity:0.8;">Cosa ti ha pesato oggi?</h3>
+                <!-- NOTES -->
+                <div class="glass-panel" style="padding:20px; border-radius:24px;">
+                    <h3 style="margin:0 0 12px 0; font-size:14px; opacity:0.6; display:flex; align-items:center; gap:8px;">
+                        <i class="ph ph-note-pencil" style="color:var(--accent);"></i> Diario Breve
+                    </h3>
                     <textarea 
-                        style="width:100%; height:80px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px; color:white; font-family:inherit; font-size:14px; outline:none;"
-                        placeholder="Es. verifica, poco sonno, troppe materie..."
-                        onchange="updateMHMetric('note', this.value)">${data.note || ''}</textarea>
+                        id="mh-note-textarea"
+                        style="width:100%; height:80px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px; color:white; font-family:inherit; font-size:14px; outline:none; resize:none; transition: border-color 0.2s;"
+                        placeholder="Cosa ti ha pesato oggi? Questo è privato e aiuta a riconoscere pattern..."
+                        onfocus="this.style.borderColor='rgba(99,102,241,0.4)'"
+                        onblur="this.style.borderColor='rgba(255,255,255,0.08)'; updateMHMetric('note', this.value)">${data.note || ''}</textarea>
                 </div>
             </div>`;
         }

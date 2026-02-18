@@ -101,6 +101,156 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 });
 
+// ============= MENTAL HEALTH ENGINE v2 (v1.1.68) =============
+
+// POST /api/mental-health/save — Upsert daily check-in to Supabase
+app.post('/api/mental-health/save', async (req, res) => {
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    const { profileId, date, stress, fatigue, sleep, load, note } = req.body;
+    if (!profileId || !date) return res.status(400).json({ success: false, error: 'profileId e date obbligatori' });
+
+    try {
+        const { error } = await supabase
+            .from('mental_health_logs')
+            .upsert({
+                profile_id: profileId,
+                log_date: date,
+                stress: Math.min(5, Math.max(1, Number(stress) || 3)),
+                fatigue: Math.min(5, Math.max(1, Number(fatigue) || 3)),
+                sleep_hours: Math.min(24, Math.max(0, Number(sleep) || 7)),
+                perceived_load: ['low', 'medium', 'high'].includes(load) ? load : 'medium',
+                note: (note || '').substring(0, 500) // Limit note length for privacy/storage
+            }, { onConflict: 'profile_id,log_date' });
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (e) {
+        console.error('MH Save Error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// GET /api/mental-health/history — Fetch recent check-in data for charts
+app.get('/api/mental-health/history', async (req, res) => {
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    const { profileId, days } = req.query;
+    if (!profileId) return res.status(400).json({ success: false, error: 'profileId obbligatorio' });
+
+    const numDays = Math.min(30, Math.max(1, Number(days) || 14));
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - numDays);
+
+    try {
+        const { data, error } = await supabase
+            .from('mental_health_logs')
+            .select('log_date, stress, fatigue, sleep_hours, perceived_load, note, ai_advice, motivational_quote')
+            .eq('profile_id', profileId)
+            .gte('log_date', sinceDate.toISOString().slice(0, 10))
+            .order('log_date', { ascending: false });
+
+        if (error) throw error;
+        res.json({ success: true, data: data || [] });
+    } catch (e) {
+        console.error('MH History Error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// POST /api/mental-health/ai-advice — Get personalized AI study advice
+app.post('/api/mental-health/ai-advice', async (req, res) => {
+    const GEMINI_KEY = process.env.GEMINI_API_KEY_PLANNER;
+    if (!GEMINI_KEY) return res.status(500).json({ success: false, error: 'AI key mancante' });
+
+    const { stress, fatigue, sleep, load, taskCount, upcomingExams, recentHistory } = req.body;
+
+    // Build anonymized context (NO names, NO IDs)
+    const severity = (stress >= 4 || fatigue >= 4 || sleep < 5) ? 'high' :
+                     (stress >= 3 || fatigue >= 3 || sleep < 6) ? 'medium' : 'low';
+
+    const historyContext = (recentHistory || []).slice(0, 7).map(h =>
+        `${h.date}: stress=${h.stress}, stanchezza=${h.fatigue}, sonno=${h.sleep}h, carico=${h.load}`
+    ).join('\n');
+
+    const prompt = `Sei un consulente per il benessere e la produttività di uno studente liceale italiano.
+
+DATI DI OGGI (anonimi):
+- Stress: ${stress}/5
+- Stanchezza mentale: ${fatigue}/5
+- Ore di sonno la notte scorsa: ${sleep}
+- Carico percepito: ${load}
+- Compiti in programma oggi: ${taskCount || 0}
+- Verifiche/interrogazioni imminenti: ${upcomingExams || 0}
+
+STORICO ULTIMI GIORNI:
+${historyContext || 'Nessun dato precedente.'}
+
+RISPONDI in formato JSON stretto (senza markdown, senza backtick):
+{
+  "advice": "Un consiglio specifico e pratico per lo studio di oggi (max 2 frasi, basato sui dati). NON usare frasi generiche. Sii diretto e concreto.",
+  "studyPlan": "Suggerimento preciso su come organizzare lo studio oggi (es. 'Inizia con 25min di ripasso leggero, poi pausa di 10min. Evita argomenti nuovi dopo le 20:00'). Max 2 frasi.",
+  "quote": "Una breve frase motivazionale o di conforto adatta allo stato attuale dello studente. Non banale, niente cliché. Max 15 parole.",
+  "severity": "${severity}"
+}
+
+REGOLE:
+- Se il sonno è sotto le 6 ore, dai priorità al recupero energetico
+- Se lo stress è 4-5, suggerisci micro-sessioni e pause attive
+- Se la stanchezza è 4-5, scoraggia studio su argomenti complessi
+- Se il carico è "high" con stress alto, suggerisci di posticipare i compiti meno urgenti
+- Rispondi SOLO con il JSON, nessun altro testo`;
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
+        const response = await axios.post(url, {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.6, maxOutputTokens: 512 }
+        }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
+
+        const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        // Parse JSON from response (handle potential markdown wrapping)
+        let parsed;
+        try {
+            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            parsed = JSON.parse(cleaned);
+        } catch (parseErr) {
+            console.error('MH AI Parse Error:', parseErr.message, 'Raw:', rawText.substring(0, 200));
+            parsed = {
+                advice: 'Prenditi un momento per valutare le tue priorità di oggi.',
+                studyPlan: 'Inizia con una sessione breve di 20 minuti su un argomento che conosci bene.',
+                quote: 'Ogni passo conta, anche il più piccolo.',
+                severity
+            };
+        }
+
+        // Save AI advice to Supabase if we have a profileId
+        if (req.body.profileId && supabase) {
+            const todayDate = new Date().toISOString().slice(0, 10);
+            await supabase.from('mental_health_logs')
+                .update({
+                    ai_advice: parsed.advice + '\n\n' + parsed.studyPlan,
+                    motivational_quote: parsed.quote
+                })
+                .eq('profile_id', req.body.profileId)
+                .eq('log_date', todayDate)
+                .catch(e => console.error('MH AI Save Error:', e.message));
+        }
+
+        res.json({ success: true, ...parsed });
+    } catch (error) {
+        console.error('MH AI Error:', error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            success: false,
+            advice: 'Concentrati su ciò che puoi controllare oggi.',
+            studyPlan: 'Fai una sessione breve di ripasso e valuta come ti senti dopo.',
+            quote: 'La gentilezza verso te stesso è la prima forma di disciplina.',
+            severity: 'medium'
+        });
+    }
+});
+
 // ============= CIRCOLARI API =============
 
 // 1. Lista circolari (con Scraper)
