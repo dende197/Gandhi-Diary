@@ -1888,8 +1888,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.64 [Perfect Positioning]
-        const APP_VERSION = '1.1.64';
+        // 🚀 G-Diary v1.1.65 [Personalized Greeting]
+        const APP_VERSION = '1.1.65';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4300,7 +4300,7 @@
                         ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                     <h1 class="hero-title" onclick="navigate('profile')" style="cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-                        ${greeting},<br>${state.user.name.split(' ')[0]}
+                        ${greeting},<br>${state.user.name.includes(' ') ? state.user.name.split(' ').slice(1).join(' ') : state.user.name}
                     </h1>
                     <p class="hero-status">
                         ${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}
