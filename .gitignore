@@ -1,0 +1,7 @@
+.env
+node_modules
+.DS_Store
+cache_sintesi.json
+server.log
+*.old
+index.html_*

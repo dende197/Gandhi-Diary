@@ -73,7 +73,7 @@ app.use(cors({
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
     // Account 2 - Gemini 3 Pro (Expert Planner)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY_PLANNER || 'AIzaSyBF7BpoY_w5PmmpZPxwsMqAHCMM4E-vqSE';
+    const GEMINI_KEY = process.env.GEMINI_API_KEY_PLANNER;
 
     if (!GEMINI_KEY) {
         console.error("❌ ERRORE CRITICO: GEMINI_API_KEY_PLANNER mancante!");
@@ -163,7 +163,7 @@ app.get('/api/circolari', async (req, res) => {
 app.post('/api/circolari/sintesi', async (req, res) => {
     const { link, id } = req.body;
     // 🔑 Updated API Key (v1.1.32.18)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY_SINTESI || 'AIzaSyABafxYUjlvdc3E0fWW3YQrl-39ZX1MQhg';
+    const GEMINI_KEY = process.env.GEMINI_API_KEY_SINTESI;
 
     if (!link) return res.status(400).json({ success: false, error: "Link mancante", errorType: "badRequest" });
 

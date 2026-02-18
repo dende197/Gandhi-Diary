@@ -542,44 +542,56 @@
 
             .planner-dropdown-content {
                 display: none;
-                position: absolute;
-                top: 120%;
-                right: 0;
-                left: auto;
-                transform: none;
-                /* Popover style relative to button */
-                background: rgba(30, 30, 34, 0.98);
-                backdrop-filter: blur(25px);
-                -webkit-backdrop-filter: blur(25px);
-                min-width: 240px;
+                position: fixed;
+                /* default fixed, overridden by JS anyway */
+                background: rgba(22, 22, 28, 0.97);
+                backdrop-filter: blur(30px);
+                -webkit-backdrop-filter: blur(30px);
                 border-radius: 20px;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-                z-index: 99999;
+                border: 1px solid rgba(255, 255, 255, 0.10);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
                 overflow: hidden;
                 animation: fadeInDown 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+                /* NO min-width/max-width here — set by JS based on device */
             }
 
-            /* Responsive Adjustments */
-            @media (max-width: 768px) {
-                .planner-dropdown-content {
-                    min-width: 220px;
-                    max-width: 85vw;
-                    /* Safe fitting on mobile */
-                    right: 0;
-                }
+            .planner-dropdown-content.active {
+                display: flex !important;
+                flex-direction: column;
             }
 
-            @media (min-width: 769px) {
-                .planner-dropdown-content {
-                    min-width: 280px;
-                    /* More substantial menu on desktop */
-                }
+            .pd-item {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 16px 22px;
+                color: rgba(255, 255, 255, 0.92);
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.15s ease;
+                border: none;
+                background: transparent;
+                width: 100%;
+                text-align: left;
+                -webkit-tap-highlight-color: transparent;
+                white-space: nowrap;
+            }
 
-                .pd-item {
-                    font-size: 15px !important;
-                    padding: 16px 24px !important;
-                }
+            .pd-item:hover {
+                background: rgba(255, 255, 255, 0.09);
+            }
+
+            .pd-item:active {
+                background: rgba(255, 255, 255, 0.14);
+                transform: scale(0.97);
+                transition: transform 0.05s;
+            }
+
+            .pd-item i {
+                font-size: 19px;
+                opacity: 0.85;
+                flex-shrink: 0;
             }
 
             .planner-dropdown-content.active {
@@ -1926,8 +1938,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.55 [Teleport Menu Fix]
-        const APP_VERSION = '1.1.55';
+        // 🚀 G-Diary v1.1.56 [Security & UI Polish]
+        const APP_VERSION = '1.1.56';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6916,27 +6928,32 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             });
 
             if (!isVisible) {
-                // 🚀 TELETRASPORTO: Esci dai contenitori padri (v1.1.55)
+                // 🚀 TELETRASPORTO: Esci dai contenitori padri (v1.1.56)
                 if (menu.parentElement !== document.body) {
                     document.body.appendChild(menu);
                 }
 
                 // Calcola posizione esatta sullo schermo 
-                const rect = btn.getBoundingClientRect();
                 const isMobile = window.innerWidth <= 768;
+                const menuWidth = isMobile ? 240 : 300;
 
-                menu.style.position = 'fixed';
-                menu.style.top = (rect.bottom + 10) + 'px';
-                menu.style.right = (window.innerWidth - rect.right) + 'px';
-                menu.style.left = 'auto';
-                menu.style.zIndex = '1000000';
+                const updatePosition = () => {
+                    const rect = btn.getBoundingClientRect();
+                    let rightEdge = window.innerWidth - rect.right;
+                    if (rightEdge < 8) rightEdge = 8;
 
-                // Forza Layout Verticale e Dimensioni Premium
-                menu.style.setProperty('display', 'flex', 'important');
-                menu.style.flexDirection = 'column';
-                menu.style.width = isMobile ? '220px' : '280px';
-                menu.style.minHeight = 'auto';
+                    menu.style.setProperty('position', 'fixed', 'important');
+                    menu.style.setProperty('top', (rect.bottom + 8) + 'px', 'important');
+                    menu.style.setProperty('right', rightEdge + 'px', 'important');
+                    menu.style.setProperty('left', 'auto', 'important');
+                    menu.style.setProperty('z-index', '2147483647', 'important');
+                    menu.style.setProperty('width', menuWidth + 'px', 'important');
+                    menu.style.setProperty('min-width', menuWidth + 'px', 'important');
+                    menu.style.setProperty('display', 'flex', 'important');
+                    menu.style.setProperty('flex-direction', 'column', 'important');
+                };
 
+                updatePosition();
                 menu.classList.add('active');
 
                 // Gestore chiusura universale
@@ -6945,9 +6962,14 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         menu.classList.remove('active');
                         menu.style.display = 'none';
                         document.removeEventListener('click', closeHandler);
+                        window.removeEventListener('scroll', updatePosition, true);
                     }
                 };
-                setTimeout(() => document.addEventListener('click', closeHandler), 10);
+
+                setTimeout(() => {
+                    document.addEventListener('click', closeHandler);
+                    window.addEventListener('scroll', updatePosition, true);
+                }, 10);
             } else {
                 menu.classList.remove('active');
                 menu.style.display = 'none';
