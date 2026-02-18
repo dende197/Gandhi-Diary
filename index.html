@@ -1888,8 +1888,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.63 [UI Stability & Real Progress]
-        const APP_VERSION = '1.1.63';
+        // 🚀 G-Diary v1.1.64 [Perfect Positioning]
+        const APP_VERSION = '1.1.64';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6931,9 +6931,13 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         leftPos = window.innerWidth - menuWidth - 8;
                     }
 
-                    menu.style.setProperty('position', 'fixed', 'important');
-                    menu.style.setProperty('top', (rect.bottom + 8) + 'px', 'important');
-                    menu.style.setProperty('left', leftPos + 'px', 'important');
+                    // Perfect Positioning (v1.1.64): Absolute relative to document to scroll NATURALLY
+                    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+                    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+
+                    menu.style.setProperty('position', 'absolute', 'important');
+                    menu.style.setProperty('top', (scrollY + rect.bottom + 8) + 'px', 'important');
+                    menu.style.setProperty('left', (scrollX + leftPos) + 'px', 'important');
                     menu.style.setProperty('right', 'auto', 'important');
                     menu.style.setProperty('z-index', '2147483647', 'important');
                     menu.style.setProperty('width', menuWidth + 'px', 'important');
