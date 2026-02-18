@@ -399,11 +399,81 @@
         }
 
         /* Responsive Grid */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-            margin-top: 24px;
+        /* === PLANNER DROPDOWN (v1.1.32.12) === */
+        .planner-dropdown {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .planner-dropdown-content {
+            display: none;
+            position: fixed;
+            /* default fixed, overridden by JS anyway */
+            background: rgba(22, 22, 28, 0.97);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            animation: fadeInDown 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            /* NO min-width/max-width here — set by JS based on device */
+        }
+
+        .planner-dropdown-content.active {
+            display: flex !important;
+            flex-direction: column;
+        }
+
+        .pd-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 22px;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
+        }
+
+        .pd-item:hover {
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .pd-item:active {
+            background: rgba(255, 255, 255, 0.14);
+            transform: scale(0.97);
+            transition: transform 0.05s;
+        }
+
+        .pd-item i {
+            font-size: 19px;
+            opacity: 0.85;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         @media (max-width: 768px) {
@@ -529,84 +599,7 @@
                 font-size: 12px;
             }
 
-            /* === PLANNER DROPDOWN (v1.1.32.12) === */
-            .planner-dropdown {
-                position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 36px;
-                height: 36px;
-                flex-shrink: 0;
-            }
 
-            .planner-dropdown-content {
-                display: none;
-                position: fixed;
-                /* default fixed, overridden by JS anyway */
-                background: rgba(22, 22, 28, 0.97);
-                backdrop-filter: blur(30px);
-                -webkit-backdrop-filter: blur(30px);
-                border-radius: 20px;
-                border: 1px solid rgba(255, 255, 255, 0.10);
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
-                overflow: hidden;
-                animation: fadeInDown 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-                /* NO min-width/max-width here — set by JS based on device */
-            }
-
-            .planner-dropdown-content.active {
-                display: flex !important;
-                flex-direction: column;
-            }
-
-            .pd-item {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 16px 22px;
-                color: rgba(255, 255, 255, 0.92);
-                font-size: 15px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background 0.15s ease;
-                border: none;
-                background: transparent;
-                width: 100%;
-                text-align: left;
-                -webkit-tap-highlight-color: transparent;
-                white-space: nowrap;
-            }
-
-            .pd-item:hover {
-                background: rgba(255, 255, 255, 0.09);
-            }
-
-            .pd-item:active {
-                background: rgba(255, 255, 255, 0.14);
-                transform: scale(0.97);
-                transition: transform 0.05s;
-            }
-
-            .pd-item i {
-                font-size: 19px;
-                opacity: 0.85;
-                flex-shrink: 0;
-            }
-
-
-
-            @keyframes fadeInDown {
-                from {
-                    opacity: 0;
-                    transform: translateY(-8px) scale(0.98);
-                }
-
-                to {
-                    opacity: 1;
-                    transform: translateY(0) scale(1);
-                }
-            }
 
             /* Home hero card animations */
             .home-glass-card {
@@ -1895,8 +1888,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.59 [Architecture Hardening]
-        const APP_VERSION = '1.1.59';
+        // 🚀 G-Diary v1.1.60 [Global Style Fix]
+        const APP_VERSION = '1.1.60';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
