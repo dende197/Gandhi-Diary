@@ -1888,8 +1888,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.62 [AI Endpoint Fix]
-        const APP_VERSION = '1.1.62';
+        // 🚀 G-Diary v1.1.63 [UI Stability & Real Progress]
+        const APP_VERSION = '1.1.63';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2966,8 +2966,14 @@
                 const c = state.circolari.find(x => x.id === id);
 
                 if (data.success && c) {
+                    // Update progress UI if visible
+                    const bar = document.getElementById(`sintesi-progress-bar-${id}`);
+                    const label = document.getElementById(`sintesi-progress-label-${id}`);
+                    if (bar) bar.style.width = '100%';
+                    if (label) label.innerHTML = '✨ Sintesi completata!';
+
                     c.sintesi = data.sintesi;
-                    render();
+                    setTimeout(() => render(), 300); // Small delay to see the 100% state
                 } else if (c) {
                     // Gestione specifica per tipo di errore
                     if (data.errorType === 'quotaExceeded') {
@@ -3026,13 +3032,15 @@
                     </h3>
                     <div class="sintesi-content">
                         ${c.sintesi ? marked.parse(c.sintesi) : `
-                            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:15px;">La sintesi non è stata ancora generata per questa circolare.</p>
-                            <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
-                                id="btn-sintesi-${c.id}"
-                                style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-primary); 
-                                padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px;">
-                                <i class="ph-bold ph-magic-wand"></i> Sintetizza Circolare ✨
-                            </button>
+                            <div id="sintesi-placeholder-${c.id}">
+                                <p style="color:var(--text-secondary); font-size:14px; margin-bottom:15px;">La sintesi non è stata ancora generata per questa circolare.</p>
+                                <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
+                                    id="btn-sintesi-${c.id}"
+                                    style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-primary); 
+                                    padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px;">
+                                    <i class="ph-bold ph-magic-wand"></i> Sintetizza Circolare ✨
+                                </button>
+                            </div>
                         `}
                     </div>
                 </div>
@@ -3058,16 +3066,50 @@
 
         async function requestCircularSynthesis(id, link) {
             const btn = document.getElementById(`btn-sintesi-${id}`);
-            const content = document.querySelector(`#sintesi-box-${id} .sintesi-content`);
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="ph-bold ph-spinner-gap anim-spin"></i> Generazione...';
-            }
-            if (content && !state.circolari.find(x => x.id === id).sintesi) {
-                content.innerHTML = '<div style="margin-top:10px; width:100%; height:2px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px;"><div style="width:30%; height:100%; background:var(--accent-warm); animation: loadingBar 2s infinite linear;"></div></div>';
+            const box = document.getElementById(`sintesi-placeholder-${id}`);
+            if (btn) btn.style.display = 'none';
+
+            if (box) {
+                box.innerHTML = `
+                    <div style="margin-top:10px;">
+                        <p id="sintesi-progress-label-${id}" style="font-size:12px; color:var(--accent-warm); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Inizializzazione...</p>
+                        <div style="width:100%; height:8px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent-warm), #FFD60A); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(255,159,10,0.3);"></div>
+                        </div>
+                    </div>
+                `;
             }
 
+            // Progressive Progress Logic (v1.1.63)
+            const label = document.getElementById(`sintesi-progress-label-${id}`);
+            const bar = document.getElementById(`sintesi-progress-bar-${id}`);
+
+            let progress = 0;
+            const stages = [
+                { limit: 25, text: "🔍 Scansione documento...", duration: 2000 },
+                { limit: 50, text: "📥 Download PDF...", duration: 3000 },
+                { limit: 75, text: "📄 Estrazione testo...", duration: 4000 },
+                { limit: 90, text: "🧠 Sintesi AI in corso...", duration: 6000 }
+            ];
+
+            let currentStage = 0;
+            const interval = setInterval(() => {
+                if (progress >= 90 || !bar) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                progress += (90 / 150); // Spread logic over ~15 seconds
+                bar.style.width = progress + '%';
+
+                if (currentStage < stages.length && progress > stages[currentStage].limit) {
+                    if (label) label.innerText = stages[currentStage].text;
+                    currentStage++;
+                }
+            }, 100);
+
             await loadCircolareSintesi(id, link);
+            clearInterval(interval);
         }
 
         async function performSilentLogin(school, encodedUser, encodedPass) {
@@ -6909,13 +6951,11 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
                         menu.classList.remove('active');
                         menu.style.display = 'none';
                         document.removeEventListener('click', closeHandler);
-                        window.removeEventListener('scroll', updatePosition, true);
                     }
                 };
 
                 setTimeout(() => {
                     document.addEventListener('click', closeHandler);
-                    window.addEventListener('scroll', updatePosition, true);
                 }, 10);
             } else {
                 menu.classList.remove('active');
