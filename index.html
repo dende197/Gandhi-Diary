@@ -5143,8 +5143,8 @@
             // AI Advice (cached or loading)
             const aiData = _mhAICache && _mhAICache._date === todayStr ? _mhAICache : null;
             const adviceHTML = aiData
-                ? `<div style="margin-bottom:12px;"><strong style="color:white;">Consiglio:</strong> ${aiData.advice}</div>
-                   <div><strong style="color:white;">Piano Studio:</strong> ${aiData.studyPlan}</div>`
+                ? `<div class="ai-prose" style="margin-bottom:12px;"><strong style="color:white; font-size:15px; display:block; margin-bottom:6px;">Consiglio AI:</strong> ${typeof marked !== 'undefined' ? marked.parse(aiData.advice || '') : (aiData.advice || '')}</div>
+                   <div class="ai-prose"><strong style="color:white; font-size:15px; display:block; margin-bottom:6px;">Piano Studio Suggerito:</strong> ${typeof marked !== 'undefined' ? marked.parse(aiData.studyPlan || '') : (aiData.studyPlan || '')}</div>`
                 : `<div style="display:flex; align-items:center; gap:10px;">
                      <div class="mh-loading-dot"></div>
                      <span style="opacity:0.7;">Analisi AI in corso...</span>

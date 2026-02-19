@@ -202,7 +202,7 @@ ${historyContext || 'Nessun dato precedente.'}
 RISPONDI in formato JSON stretto (senza markdown, senza backtick):
 {
   "advice": "Un consiglio specifico e pratico per lo studio di oggi (max 2 frasi, basato sui dati). NON usare frasi generiche. Sii diretto e concreto.",
-  "studyPlan": "Suggerimento preciso su come organizzare lo studio oggi (es. 'Inizia con 25min di ripasso leggero, poi pausa di 10min. Evita argomenti nuovi dopo le 20:00'). Max 2 frasi.",
+  "studyPlan": "Suggerimento su come organizzare lo studio oggi. USA TESTO SEMPLICE E PULITO. VIETATO USARE ASTERISCHI (*) o formattazioni strane. Sii formale e professionale.",
   "quote": "Una breve frase motivazionale o di conforto adatta allo stato attuale dello studente. Non banale, niente cliché. Max 15 parole.",
   "severity": "${severity}"
 }
