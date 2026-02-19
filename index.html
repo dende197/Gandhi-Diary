@@ -769,6 +769,114 @@
             }
         }
 
+        /* ===================================================
+           AI CHAT — Prose formatting pulita e professionale
+           =================================================== */
+        .ai-prose {
+            font-size: 14.5px;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.7;
+            text-align: left;
+            word-break: break-word;
+        }
+
+        .ai-prose>*:first-child {
+            margin-top: 0;
+        }
+
+        .ai-prose>*:last-child {
+            margin-bottom: 0;
+        }
+
+        .ai-prose p {
+            margin: 0 0 10px 0;
+        }
+
+        .ai-prose ul,
+        .ai-prose ol {
+            margin: 4px 0 10px 0;
+            padding-left: 20px;
+        }
+
+        .ai-prose li {
+            margin-bottom: 5px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .ai-prose li::marker {
+            color: var(--accent);
+        }
+
+        .ai-prose strong,
+        .ai-prose b {
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .ai-prose em {
+            color: rgba(255, 255, 255, 0.7);
+            font-style: italic;
+        }
+
+        .ai-prose h1,
+        .ai-prose h2,
+        .ai-prose h3,
+        .ai-prose h4 {
+            font-weight: 700;
+            color: white;
+            margin: 16px 0 6px 0;
+            line-height: 1.3;
+        }
+
+        .ai-prose h1 {
+            font-size: 17px;
+        }
+
+        .ai-prose h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--accent);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            padding-bottom: 4px;
+        }
+
+        .ai-prose h3 {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .ai-prose code {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 1px 6px;
+            font-size: 13px;
+            color: #a5f3fc;
+        }
+
+        .ai-prose blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 4px 12px;
+            margin: 8px 0;
+            color: rgba(255, 255, 255, 0.65);
+            font-style: italic;
+        }
+
+        .ai-prose hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            margin: 14px 0;
+        }
+
+        @media (max-width: 768px) {
+            .ai-prose {
+                font-size: 14px;
+                line-height: 1.65;
+            }
+        }
+
         /* HERO BASE STYLES */
         .hero-container {
             position: relative;
@@ -2576,7 +2684,7 @@
         // Listen for Auth changes (Safe logic)
         supabaseClient.auth.onAuthStateChange((event, session) => {
             console.log("🔐 Supabase Auth Event:", event);
-            if (event === 'SIGNED_IN') {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 state.isLoggedIn = true;
                 render();
             } else if (event === 'SIGNED_OUT') {
@@ -2591,6 +2699,55 @@
                 }
             }
         });
+
+        // ===== SESSION KEEP-ALIVE v2 =====
+        // Rinfresca il token Supabase ogni 20 minuti e pinga il server
+        // per evitare la disconnessione per inattività (Render free tier).
+        (function initSessionKeepAlive() {
+            const REFRESH_MS = 20 * 60 * 1000; // 20 minuti
+            const PING_MS = 9 * 60 * 1000;  // 9 minuti (Render dorme dopo 15)
+
+            // Refresh token Supabase
+            async function refreshSupabaseToken() {
+                try {
+                    const { data, error } = await supabaseClient.auth.refreshSession();
+                    if (error) {
+                        console.warn('🔄 Token refresh fallito:', error.message);
+                        if (!sessionManager.isLoggedIn()) {
+                            console.warn('❌ Sessione scaduta definitivamente.');
+                        }
+                    } else if (data?.session) {
+                        console.log('🔄 Token Supabase rinnovato ✓');
+                    }
+                } catch (e) {
+                    console.warn('🔄 Keep-alive token error:', e.message);
+                }
+            }
+
+            // Ping server per tenerlo sveglio (Render free tier si addormenta dopo ~15min)
+            async function pingServer() {
+                try {
+                    await fetch(API_BASE_URL + '/api/ping', { method: 'GET', cache: 'no-store' });
+                } catch (e) { /* silenzioso */ }
+            }
+
+            // Avvia i timer solo dopo il boot
+            setTimeout(() => {
+                setInterval(refreshSupabaseToken, REFRESH_MS);
+                setInterval(pingServer, PING_MS);
+                // Ping immediato all'avvio
+                pingServer();
+            }, 5000);
+
+            // Refresh anche quando la pagina torna visibile dopo inattività
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    console.log('👁 Pagina tornata visibile — refresh token');
+                    refreshSupabaseToken();
+                    pingServer();
+                }
+            });
+        })();
 
         // 🚀 EARLY GLOBAL EXPOSURE (Stability Hack - Safe Version)
         // 🚀 GLOBAL EXPOSURE (Moved to end of file to ensure all functions are defined)
@@ -2899,7 +3056,7 @@
 
                 updateLoader("Contatto Server...");
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+                const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout to allow Render wakeup
 
                 const response = await fetch(`${API_BASE_URL}/sync`, {
                     method: 'POST',
@@ -4418,11 +4575,16 @@
                     <h1 class="hero-title" onclick="navigate('profile')" style="cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         ${greeting},<br>${state.user.name.includes(' ') ? state.user.name.split(' ').slice(1).join(' ') : state.user.name}
                     </h1>
-                    <p class="hero-status">
+                    <p class="hero-status" style="display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:8px;">
                         ${(() => {
                     const quote = typeof getDailyQuote === 'function' ? getDailyQuote() : null;
-                    if (quote) return `<span style="font-style:italic; opacity:0.8;">"${quote}"</span>`;
-                    return plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio';
+                    if (quote) {
+                        return `<span style="font-style:italic; opacity:0.8; flex:1;">"${quote}"</span>
+                                <button onclick="refreshDailyQuote(this); event.stopPropagation();" style="background:none; border:none; color:white; opacity:0.6; cursor:pointer; padding:4px; font-size:16px; transition:all 0.2s; margin-top:-4px;" title="Nuova frase" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                                    <i class="ph-bold ph-arrows-clockwise"></i>
+                                </button>`;
+                    }
+                    return `<span style="flex:1;">${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}</span>`;
                 })()}
                     </p>
                 </div>
@@ -4865,6 +5027,8 @@
             if (_mhSaveTimeout) clearTimeout(_mhSaveTimeout);
             _mhSaveTimeout = setTimeout(() => {
                 saveMHToSupabase(state.stressLevels[todayStr]);
+                // 🔥 Salva anche sul planner remoto per sincronizzazione cross-device
+                debouncedSavePlannerRemote(200);
                 // Refresh AI advice after save
                 fetchMHAIAdvice(true).then(() => render());
             }, 1500);
@@ -4879,6 +5043,20 @@
                 if (cached.quote && cached.date === todayStr) return cached.quote;
             } catch (e) { }
             return null;
+        }
+
+        async function refreshDailyQuote(btn) {
+            if (btn) {
+                btn.style.transform = 'rotate(180deg)';
+                btn.style.opacity = '0.3';
+            }
+            showToast('Generazione nuova frase in corso...', 'var(--blue)');
+            await fetchMHAIAdvice(true);
+            if (btn) {
+                btn.style.transform = 'rotate(0deg)';
+                btn.style.opacity = '0.6';
+            }
+            if (state.view === 'home' || state.view === 'mental_health') render();
         }
 
         function renderMentalHealthView() {
@@ -5874,26 +6052,35 @@
                     </div>
                 </div>
                 ` : chat.map((msg, idx) => `
-                <div class="msg-appear" style="display: flex; flex-direction: column; ${msg.role === 'user' ? 'align-items: flex-end;' : 'align-items: flex-start;'}">
-                    <div style="display: flex; align-items: flex-end; gap: 8px; max-width: ${msg.role === 'user' ? '85%' : '100%'};">
-                        
-                        <div style="
-                            padding: ${msg.role === 'user' ? '10px 14px' : '0'};
-                            font-size: 15px;
-                            line-height: 1.5;
-                            ${msg.role === 'user'
-                    ? `background: rgba(255,255,255,0.06); color: white; border-radius: 18px 18px 4px 18px; border: 1px solid rgba(255,255,255,0.08);`
-                    : `background: transparent; color: var(--text-primary);`}
-                        ">
-                            ${msg.role === 'ai' ? marked.parse(msg.text) : msg.text}
-                            ${msg.role === 'ai' && msg.hasPlan ? `
-                                <button class="btn-primary" onclick="applyAIPlanFromChat(${idx})" style="margin-top: 12px; width: 100%; height: 36px; background: var(--accent); font-size: 13px;">
-                                    <i class="ph-bold ph-calendar-plus"></i> Applica al Planner
-                                </button>
-                            ` : ''}
-                        </div>
+                <div class="msg-appear" style="display:flex; flex-direction:column; ${msg.role === 'user' ? 'align-items:flex-end;' : 'align-items:flex-start;'} margin-bottom:2px;">
 
+                    ${msg.role === 'user' ? `
+                    <div style="max-width:82%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); border-radius:18px 18px 4px 18px; padding:11px 15px; color:white; font-size:14.5px; line-height:1.55; word-break:break-word;">
+                        ${msg.text}
                     </div>
+                    ` : `
+                    <div style="width:100%; display:flex; flex-direction:column;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <div style="width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#a855f7); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(99,102,241,0.3);">
+                                <i class='ph-fill ph-sparkle' style='font-size:12px; color:white;'></i>
+                            </div>
+                            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.6px;">Tutor AI</span>
+                            <span style="font-size:10px; color:rgba(255,255,255,0.2);">${msg.ts || ''}</span>
+                        </div>
+                        <div class="ai-prose" style="padding-left:32px;">
+                            ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
+                        </div>
+                        ${msg.hasPlan ? `
+                        <div style="padding-left:32px; margin-top:14px;">
+                            <button onclick="applyAIPlanFromChat(${idx})" style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,#6366f1,#a855f7); color:white; border:none; border-radius:12px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity 0.15s; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+                                <i class='ph-bold ph-calendar-plus' style='font-size:15px;'></i> Applica al Planner
+                            </button>
+                        </div>
+                        ` : ''}
+                        <div style="margin-top:12px; padding-left:32px; height:1px; background:rgba(255,255,255,0.05);"></div>
+                    </div>
+                    `}
+
                 </div>
                 `).join('')}
             </div>
@@ -6014,21 +6201,67 @@
             const difficulty = (state.difficulty || []).join(', ');
             const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
 
-            const systemContext = `Sei un Tutor Accademico AI integrato in un'app di pianificazione scolastica chiamata G-Diary. Rispondi sempre in italiano. Sei amichevole, motivante e sintetico. Usa emoji.
+            // Stress data (ultimi 7 giorni)
+            const stressToday = state.stressLevels?.[getLocalDateString()] || null;
+            const stressHistory = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const ds = getLocalDateString(d);
+                const v = state.stressLevels?.[ds];
+                if (v && typeof v === 'object') stressHistory.push({ date: ds, ...v });
+            }
+            const avgStress = stressHistory.length
+                ? (stressHistory.reduce((s, h) => s + (h.stress || 3), 0) / stressHistory.length).toFixed(1)
+                : null;
+            const stressBlock = stressToday
+                ? `BENESSERE STRUMENTO TEST STRESS STUDENTE (oggi):
+    - Stress: ${stressToday.stress || '?'}/5
+    - Stanchezza mentale: ${stressToday.fatigue || '?'}/5
+    - Ore di sonno: ${stressToday.sleep || '?'}h
+    - Carico percepito: ${stressToday.load || '?'}
+    - Nota studente: "${stressToday.note || 'nessuna'}"
 
-CONTEXT STUDENTE(aggiornato):
-    - COMPITI ATTIVI: ${homework || 'Nessuno.'}
-    - VERIFICHE: ${exams || 'Nessuna.'}
-    - ARRETRATI: ${backlog || 'Nessuno.'}
-    - MATERIE DIFFICILI: ${difficulty || 'Nessuna.'}
+    SE L'UTENTE TI CHIEDE SE VEDI IL SUO STRESS, DEVI RISPONDERE DI SÌ e citargli i valori qui sopra.`
+                : 'BENESSERE STUDENTE: nessun dato inserito oggi. Chiedi all\'utente di inserire i dati nello slider del Benessere.';
+
+            // Compiti già pianificati nei prossimi giorni (anti-duplicazione)
+            const plannedSummary = Object.entries(state.plannedTasks || {})
+                .filter(([date]) => date >= getLocalDateString())
+                .map(([date, ids]) => {
+                    const dayTasks = ids.map(id => {
+                        const t = (state.tasks || []).find(x => x.id === id);
+                        return t ? `[${t.subject}] ${t.text}` : null;
+                    }).filter(Boolean);
+                    return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
+                }).filter(Boolean).join('\n');
+
+            const systemContext = `Sei un Tutor Accademico AI professionale integrato in G-Diary, un'app di pianificazione scolastica. Rispondi sempre in italiano. Sii preciso, strutturato e concreto. Usa SEMPRE la formattazione Markdown (grassetti, corsivi, elenchi).
+
+PROFILO STUDENTE — ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+${stressBlock}
+
+AGENDA ACCADEMICA:
+    - Compiti attivi: ${homework || 'Nessuno.'}
+    - Verifiche/interrogazioni: ${exams || 'Nessuna.'}
+    - Arretrati: ${backlog || 'Nessuno.'}
+    - Materie difficili: ${difficulty || 'Nessuna.'}
     - ${schedule}
-    - DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+${plannedSummary ? `\nGIÀ PIANIFICATO (non duplicare):\n${plannedSummary}` : ''}
 
-QUANDO SUGGERISCI UN PIANO DI STUDIO:
-    - Usa orari precisi(es. 15:30 - 16:15)
-    - Indica materia e argomento per ogni slot
-    - Includi pause
-    - Prioritizza verifiche imminenti e materie difficili`;
+REGOLE DI RISPOSTA (OBBLIGATORIE):
+1. SE L'UTENTE TI CHIEDE DEL SUO STRESS: DEVI confermare che hai accesso ai suoi dati in tempo reale e mostrargli un riepilogo (es. Stress: X/5, Sonno: Y ore). NON dire mai che non hai i dati.
+2. FORMATTAZIONE: Rispondi in modo schematico, usando elenchi puntati/numerati (es. 1️⃣, 2️⃣) e grassetto per le parole chiave. Evita blocchi di testo ("muri di testo"). Dividi in paragrafi brevi.
+
+REGOLE PIANIFICAZIONE (OBBLIGATORIE — segui SEMPRE se viene richiesto un piano):
+1. Adatta intensità e durata delle sessioni allo stress/stanchezza (stress alto = sessioni brevi, più pause).
+2. Per piani multi-giorno, ASSEGNA ogni task alla DATA SPECIFICA usando il formato:
+   ## LUNEDÌ 2025-01-20
+   - 15:30 – 16:15: [Materia] Argomento
+3. Usa SEMPRE date nel formato YYYY-MM-DD nei titoli dei giorni.
+4. Includi pause (es. ☕ 16:15 – 16:30 Pausa).
+5. Prioritizza verifiche imminenti e materie difficili.
+6. Non pianificare task già presenti nel "GIÀ PIANIFICATO".
+7. Se stress ≥ 4/5, suggerisci sessioni max 45 min e pause frequenti.`;
 
             // Build conversation for Gemini
             const contents = [
@@ -6070,8 +6303,12 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
 
                     if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
                         const aiText = data.candidates[0].content.parts[0].text;
-                        const hasPlan = /\d{1,2}[:.:]\d{2}/.test(aiText);
-                        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+                        // Rileva se il messaggio contiene un piano con orari
+                        const hasPlan = /\d{1,2}[:.]\d{2}/.test(aiText) &&
+                            /(lune|mart|merc|giov|vend|sab|dom|\d{4}-\d{2}-\d{2}|lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)/i.test(aiText);
+                        // Rileva piano single-day (ha orari ma non giorni specifici)
+                        const hasPlanSingleDay = /\d{1,2}[:.]\d{2}/.test(aiText) && !hasPlan;
+                        state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan: hasPlan || hasPlanSingleDay });
                         state.aiResponse = aiText;
                     } else if (data?.error) {
                         // Handle 503 specifically
@@ -6110,64 +6347,166 @@ QUANDO SUGGERISCI UN PIANO DI STUDIO:
             const todayStr = getLocalDateString();
             const lines = text.split('\n');
             let addedCount = 0;
+            let currentDate = todayStr; // Data corrente durante il parsing
 
-            lines.forEach(line => {
-                // Match patterns like: "15:30-16:15 Materia - Argomento" or "15:30 Materia"
-                const timeMatch = line.match(/(\d{1,2}[:.:]\d{2})/);
-                if (timeMatch) {
-                    const time = timeMatch[1];
-                    // Clean line from time and bullet points
-                    let clean = line.replace(/^[*\-\d.\s]+/, '').replace(time, '').replace(/[\-:]/, '').trim();
-                    if (clean && clean.length > 2) {
-                        const parts = clean.split(/[ \-–—]/);
-                        const subject = parts[0];
-                        const topic = parts.slice(1).join(' ').trim() || 'Studio';
+            // ====================================================
+            // PARSER MULTI-GIORNO PROFESSIONALE
+            // Riconosce intestazioni di giorno come:
+            //   ## LUNEDÌ 2025-01-20
+            //   **Martedì 21 gennaio**
+            //   ### Mercoledì (2025-01-22)
+            // e assegna i task alla data corretta
+            // ====================================================
+            const DAY_IT = {
+                lune: 1, lunedì: 1,
+                mart: 2, martedì: 2,
+                merc: 3, mercoledì: 3,
+                giov: 4, giovedì: 4,
+                vend: 5, venerdì: 5,
+                sab: 6, sabato: 6,
+                dom: 0, domenica: 0
+            };
 
-                        const todayStr = getLocalDateString();
+            function parseItalianDateLine(line) {
+                // Prova 1: data esplicita YYYY-MM-DD
+                const isoMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
+                if (isoMatch) return isoMatch[1];
 
-                        // Deduplication: check if a similar task already exists for today/subject
-                        const existing = state.tasks.find(et =>
-                            et.due_date === todayStr &&
-                            et.subject.toLowerCase() === subject.toLowerCase() &&
-                            (et.id.startsWith('t_') || et.subject === 'QUEST')
-                        );
-
-                        if (existing) {
-                            // Use existing task
-                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                            if (!state.plannedTasks[todayStr].includes(existing.id)) {
-                                state.plannedTasks[todayStr].push(existing.id);
-                            }
-                        } else {
-                            // Create new AI task
-                            const newTask = {
-                                id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                                subject: subject.charAt(0).toUpperCase() + subject.slice(1),
-                                text: `[AI] ${time}: ${topic}`,
-                                due_date: todayStr,
-                                done: false,
-                                created_at: new Date().toISOString()
-                            };
-                            state.tasks.push(newTask);
-
-                            // Auto-plan for today in Studio mode
-                            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
-                            state.plannedTasks[todayStr].push(newTask.id);
-                        }
-
-                        addedCount++;
+                // Prova 2: "21 gennaio" o "gennaio 21" con anno opzionale
+                const monthNames = {
+                    gennaio: 1, febbraio: 2, marzo: 3, aprile: 4, maggio: 5, giugno: 6,
+                    luglio: 7, agosto: 8, settembre: 9, ottobre: 10, novembre: 11, dicembre: 12
+                };
+                const monthNumMatch = line.match(/(\d{1,2})\s+(\w+)(?:\s+(\d{4}))?/i);
+                if (monthNumMatch) {
+                    const day = parseInt(monthNumMatch[1]);
+                    const monthStr = monthNumMatch[2].toLowerCase();
+                    const month = monthNames[monthStr];
+                    const year = monthNumMatch[3] ? parseInt(monthNumMatch[3]) : new Date().getFullYear();
+                    if (month && day >= 1 && day <= 31) {
+                        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     }
                 }
+                // Prova 3: nome del giorno → calcola la data più vicina futura
+                const lc = line.toLowerCase();
+                for (const [key, dayNum] of Object.entries(DAY_IT)) {
+                    if (lc.includes(key)) {
+                        const today = new Date();
+                        let diff = dayNum - today.getDay();
+                        if (diff < 0) diff += 7;
+                        const target = new Date(today);
+                        target.setDate(today.getDate() + diff);
+                        return getLocalDateString(target);
+                    }
+                }
+                return null;
+            }
+
+            function isDayHeader(line) {
+                const clean = line.replace(/[#*_\[\]]/g, '').trim();
+                const lc = clean.toLowerCase();
+                // È un'intestazione se contiene un nome di giorno o una data ISO
+                const hasDayName = Object.keys(DAY_IT).some(k => lc.startsWith(k) || lc.includes(' ' + k));
+                const hasDate = /\d{4}-\d{2}-\d{2}/.test(clean) || /\d{1,2}\s+\w+/.test(clean);
+                // Ma NON deve contenere un orario (per non confondersi con i task)
+                const hasTime = /\d{1,2}[:.]\d{2}/.test(clean);
+                return (hasDayName || hasDate) && !hasTime;
+            }
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                // Controlla se è un'intestazione di giorno
+                if (isDayHeader(trimmed)) {
+                    const parsedDate = parseItalianDateLine(trimmed);
+                    if (parsedDate) {
+                        currentDate = parsedDate;
+                        console.log(`📅 [AI Planner] Giorno rilevato: ${trimmed} → ${currentDate}`);
+                    }
+                    return; // Non è un task, continua
+                }
+
+                // Controlla se contiene un orario (= è un task)
+                const timeMatch = trimmed.match(/(\d{1,2})[.:](\d{2})(?:\s*[-–—]\s*\d{1,2}[.:]\d{2})?/);
+                if (!timeMatch) return;
+
+                const timeStr = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+
+                // Pulizia della riga: rimuovi markdown, bullet, orari
+                let clean = trimmed
+                    .replace(/^[#*\->\s•·]+/, '')           // markdown/bullet
+                    .replace(/\d{1,2}[.:]\d{2}(\s*[-–—]\s*\d{1,2}[.:]\d{2})?/, '') // orario (anche range)
+                    .replace(/^[:\-–—\s]+/, '')              // separatori iniziali
+                    .trim();
+
+                // Salta pause/breaks
+                if (/pausa|break|☕|🍎|riposo|relax/i.test(clean)) return;
+
+                if (!clean || clean.length < 2) return;
+
+                // Estrai materia e argomento
+                let subject = '', topic = '';
+                const bracketMatch = clean.match(/^\[?([^\]\-–—:]+)[\]\-–—:\s]+(.+)$/);
+                if (bracketMatch) {
+                    subject = bracketMatch[1].trim();
+                    topic = bracketMatch[2].trim();
+                } else {
+                    const words = clean.split(/\s+/);
+                    subject = words[0];
+                    topic = words.slice(1).join(' ').trim() || 'Studio';
+                }
+
+                // Normalizza materia
+                subject = subject.replace(/[\[\]]/g, '').trim();
+                subject = subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase();
+                if (subject.length < 2) subject = 'Studio';
+
+                // Deduplication
+                const existing = (state.tasks || []).find(et =>
+                    et.due_date === currentDate &&
+                    et.subject.toLowerCase() === subject.toLowerCase() &&
+                    et.text.includes(timeStr)
+                );
+                if (existing) {
+                    if (!state.plannedTasks[currentDate]) state.plannedTasks[currentDate] = [];
+                    if (!state.plannedTasks[currentDate].includes(existing.id)) {
+                        state.plannedTasks[currentDate].push(existing.id);
+                        addedCount++;
+                    }
+                    return;
+                }
+
+                // Crea nuovo task AI
+                const newTask = {
+                    id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    subject: subject,
+                    text: `[AI] ${timeStr} — ${topic}`,
+                    due_date: currentDate,
+                    done: false,
+                    created_at: new Date().toISOString()
+                };
+                state.tasks.push(newTask);
+
+                if (!state.plannedTasks[currentDate]) state.plannedTasks[currentDate] = [];
+                state.plannedTasks[currentDate].push(newTask.id);
+                addedCount++;
+                console.log(`✅ [AI Planner] Task aggiunto: ${currentDate} → ${timeStr} [${subject}] ${topic}`);
             });
 
             if (addedCount > 0) {
                 saveTasks();
-                // if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                showToast(`✅ ${addedCount} task aggiunti al Planner per oggi!`, 'var(--green)');
-                // Give a bit of time for the toast before navigating
-                setTimeout(() => navigate('planner'), 800);
+                debouncedSavePlannerRemote(300);
+                // Conta i giorni distinti pianificati
+                const daysPlanned = new Set(
+                    Object.entries(state.plannedTasks)
+                        .filter(([, ids]) => ids.some(id => (state.tasks || []).find(t => t.id === id && t.id.startsWith('ai_'))))
+                        .map(([date]) => date)
+                ).size;
+                showToast(`✅ ${addedCount} sessioni aggiunte al Planner su ${daysPlanned} giorn${daysPlanned === 1 ? 'o' : 'i'}!`, 'var(--green)');
+                setTimeout(() => navigate('planner'), 900);
             } else {
-                showToast('⚠️ Non ho trovato orari chiari nel messaggio. Prova a chiedere un piano orario!', 'var(--orange)');
+                showToast('⚠️ Non ho trovato sessioni da pianificare. Chiedi un piano con orari e giorni specifici!', 'var(--orange)');
             }
         }
 

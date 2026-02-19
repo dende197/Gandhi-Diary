@@ -1721,7 +1721,17 @@ function saveJsonFile(filepath, data) {
 
 // Health Check
 app.get('/health', (req, res) => {
-    res.status(200).json({ status: "ok", debug: DEBUG_MODE });
+    res.status(200).json({
+        status: 'ok',
+        debug: DEBUG_MODE,
+        ts: new Date().toISOString(),
+        uptime: Math.floor(process.uptime())
+    });
+});
+
+// Keep-alive endpoint ottimizzato per PWA (risposta leggera)
+app.get('/api/ping', (req, res) => {
+    res.status(200).json({ pong: true, ts: Date.now() });
 });
 
 // Avatar Upload (Supabase)
