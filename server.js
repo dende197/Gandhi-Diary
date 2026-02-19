@@ -11,6 +11,10 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const cheerio = require('cheerio');
 const pdfParse = require('pdf-parse');
+const Groq = require('groq-sdk');
+
+// ============= GROQ AI CLIENT (openai/gpt-oss-120b) =============
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ============= CACHE CIRCOLARI (In-memory) =============
 let circularsCache = {
@@ -69,35 +73,45 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
-// ============= AI CHAT PROXY =============
+// ============= AI CHAT PROXY (Groq — openai/gpt-oss-120b) =============
 app.post('/api/ai/chat', async (req, res) => {
     const { messages } = req.body;
-    // Account 2 - Gemini 3 Pro (Expert Planner)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY_PLANNER;
 
-    if (!GEMINI_KEY) {
-        console.error("❌ ERRORE CRITICO: GEMINI_API_KEY_PLANNER mancante!");
-        return res.status(500).json({ error: "Backend error: GEMINI_API_KEY_PLANNER non configurata." });
+    if (!process.env.GROQ_API_KEY) {
+        console.error("❌ ERRORE CRITICO: GROQ_API_KEY mancante!");
+        return res.status(500).json({ error: "Backend error: GROQ_API_KEY non configurata." });
     }
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
-        const response = await axios.post(url, {
-            contents: messages,
-            generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 2048,
-            }
-        }, {
-            headers: { 'Content-Type': 'application/json' }
+        // Convert Gemini format [{role, parts:[{text}]}] to OpenAI format [{role, content}]
+        const openAIMessages = (messages || []).map(m => ({
+            role: m.role === 'model' ? 'assistant' : m.role,
+            content: m.parts?.[0]?.text || m.content || ''
+        }));
+
+        const completion = await groq.chat.completions.create({
+            messages: openAIMessages,
+            model: 'openai/gpt-oss-120b',
+            temperature: 0.7,
+            max_completion_tokens: 2048,
+            top_p: 0.95,
+            stream: false
         });
 
-        res.json(response.data);
+        const aiText = completion.choices?.[0]?.message?.content || '';
+
+        // Return in Gemini-compatible format so frontend doesn't need changes
+        res.json({
+            candidates: [{
+                content: {
+                    parts: [{ text: aiText }],
+                    role: 'model'
+                }
+            }]
+        });
     } catch (error) {
-        console.error("AI Proxy Error:", error.response?.data || error.message);
-        res.status(error.response?.status || 500).json(error.response?.data || { error: error.message });
+        console.error("AI Proxy Error:", error.message);
+        res.status(error.status || 500).json({ error: { message: error.message, code: error.status || 500 } });
     }
 });
 
@@ -158,16 +172,15 @@ app.get('/api/mental-health/history', async (req, res) => {
     }
 });
 
-// POST /api/mental-health/ai-advice — Get personalized AI study advice
+// POST /api/mental-health/ai-advice — Get personalized AI study advice (Groq)
 app.post('/api/mental-health/ai-advice', async (req, res) => {
-    const GEMINI_KEY = process.env.GEMINI_API_KEY_PLANNER;
-    if (!GEMINI_KEY) return res.status(500).json({ success: false, error: 'AI key mancante' });
+    if (!process.env.GROQ_API_KEY) return res.status(500).json({ success: false, error: 'AI key mancante' });
 
     const { stress, fatigue, sleep, load, taskCount, upcomingExams, recentHistory } = req.body;
 
     // Build anonymized context (NO names, NO IDs)
     const severity = (stress >= 4 || fatigue >= 4 || sleep < 5) ? 'high' :
-                     (stress >= 3 || fatigue >= 3 || sleep < 6) ? 'medium' : 'low';
+        (stress >= 3 || fatigue >= 3 || sleep < 6) ? 'medium' : 'low';
 
     const historyContext = (recentHistory || []).slice(0, 7).map(h =>
         `${h.date}: stress=${h.stress}, stanchezza=${h.fatigue}, sonno=${h.sleep}h, carico=${h.load}`
@@ -202,14 +215,17 @@ REGOLE:
 - Rispondi SOLO con il JSON, nessun altro testo`;
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
-        const response = await axios.post(url, {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.6, maxOutputTokens: 512 }
-        }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: 'user', content: prompt }],
+            model: 'openai/gpt-oss-120b',
+            temperature: 0.6,
+            max_completion_tokens: 512,
+            top_p: 1,
+            stream: false
+        });
 
-        const rawText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
+        const rawText = completion.choices?.[0]?.message?.content || '';
+
         // Parse JSON from response (handle potential markdown wrapping)
         let parsed;
         try {
@@ -240,8 +256,8 @@ REGOLE:
 
         res.json({ success: true, ...parsed });
     } catch (error) {
-        console.error('MH AI Error:', error.response?.data || error.message);
-        res.status(error.response?.status || 500).json({
+        console.error('MH AI Error:', error.message);
+        res.status(error.status || 500).json({
             success: false,
             advice: 'Concentrati su ciò che puoi controllare oggi.',
             studyPlan: 'Fai una sessione breve di ripasso e valuta come ti senti dopo.',
@@ -309,11 +325,9 @@ app.get('/api/circolari', async (req, res) => {
     }
 });
 
-// 2. Sintesi AI Circolare (Legge PDF e riassume) — v1.1.32.18 with retry
+// 2. Sintesi AI Circolare (Legge PDF e riassume) — Groq (openai/gpt-oss-120b) with retry
 app.post('/api/circolari/sintesi', async (req, res) => {
     const { link, id } = req.body;
-    // 🔑 Updated API Key (v1.1.32.18)
-    const GEMINI_KEY = process.env.GEMINI_API_KEY_SINTESI;
 
     if (!link) return res.status(400).json({ success: false, error: "Link mancante", errorType: "badRequest" });
 
@@ -370,7 +384,7 @@ app.post('/api/circolari/sintesi', async (req, res) => {
             return res.status(400).json({ success: false, error: "Nessun contenuto testuale trovato nella circolare.", errorType: "noContent" });
         }
 
-        // Sintesi AI — with retry on 429/500
+        // Sintesi AI — Groq (openai/gpt-oss-120b) with retry
         const prompt = `Sei un assistente per studenti del Liceo Gandhi. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, molto chiari e pratici. 
 REGOLE DI FORMATTAZIONE:
 - Usa il formato **Markdown**.
@@ -380,18 +394,22 @@ REGOLE DI FORMATTAZIONE:
 
 Circolare: "${textContent.substring(0, 7000)}"`;
 
-        const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`;
         const MAX_RETRIES = 2;
         let lastError = null;
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
             try {
-                debugLog(`Inviando richiesta a Gemini (tentativo ${attempt + 1}/${MAX_RETRIES})...`);
-                const aiResponse = await axios.post(aiUrl, {
-                    contents: [{ parts: [{ text: prompt }] }]
-                }, { timeout: 25000 });
+                debugLog(`Inviando richiesta a Groq (tentativo ${attempt + 1}/${MAX_RETRIES})...`);
+                const completion = await groq.chat.completions.create({
+                    messages: [{ role: 'user', content: prompt }],
+                    model: 'openai/gpt-oss-120b',
+                    temperature: 0.5,
+                    max_completion_tokens: 1024,
+                    top_p: 1,
+                    stream: false
+                });
 
-                const sintesi = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Impossibile generare la sintesi.";
+                const sintesi = completion.choices?.[0]?.message?.content || "Impossibile generare la sintesi.";
                 debugLog("Sintesi generata con successo.");
 
                 // SALVA IN CACHE
@@ -403,7 +421,7 @@ Circolare: "${textContent.substring(0, 7000)}"`;
                 return res.json({ success: true, sintesi, id });
             } catch (aiErr) {
                 lastError = aiErr;
-                const status = aiErr.response?.status;
+                const status = aiErr.status || aiErr.response?.status;
                 console.error(`AI Attempt ${attempt + 1} failed (status: ${status}):`, aiErr.message);
 
                 // Only retry on 429 (quota) or 500/503 (server error)
@@ -420,12 +438,11 @@ Circolare: "${textContent.substring(0, 7000)}"`;
         }
 
         // All retries exhausted
-        const status = lastError?.response?.status;
+        const status = lastError?.status || lastError?.response?.status;
         if (status === 429) {
             return res.status(429).json({ success: false, error: "Quota AI temporaneamente esaurita. Riprova tra qualche minuto.", errorType: "quotaExceeded" });
         }
         console.error("Synthesis Error (all retries failed):", lastError?.message);
-        if (lastError?.response) console.error("AI Error Data:", JSON.stringify(lastError.response.data));
         res.status(500).json({ success: false, error: lastError?.message || "Errore AI sconosciuto", errorType: "aiError" });
 
     } catch (error) {
