@@ -4126,25 +4126,26 @@
                                     <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 12px; opacity:0.15;"></i>
                                     <div style="font-size:15px; font-weight:600; opacity:0.5;">Nessun compito per questa data</div>
                                 </div>
-                            ` : tasksForDay.map(t => {
+                            ` : tasksForDay.filter(t => !/check\s*liste|checklist/i.test(t.text)).map(t => {
                 const color = getSubjectColor(t.subject);
+                const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                 const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
                 const timeStr = timeMatch ? timeMatch[1] : '';
                 // Clear [AI], time patterns and all asterisks (*)
                 const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '').replace(/\*/g, '').trim();
                 return `
-                                    <div style="border-radius:14px; overflow:hidden; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.08)'};">
+                                    <div style="border-radius:14px; overflow:hidden; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.08)'}; min-height:80px;">
                                         <div style="width:4px; background:${color}; flex-shrink:0;"></div>
-                                        <div style="flex:1; padding:14px 12px 14px 14px; min-width:0;">
-                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-                                                <span style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.6px;">${t.subject}</span>
+                                        <div style="flex:1; padding:18px 16px; min-width:0;">
+                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                                                <span style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.6px;">${cleanSubject}</span>
                                                 ${timeStr ? `<span style="font-size:11px; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.07); padding:1px 7px; border-radius:10px;">${timeStr}</span>` : ''}
                                             </div>
-                                            <div style="font-size:15px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'white'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
+                                            <div style="font-size:16px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'white'}; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
                                         </div>
                                         <div style="padding:12px 14px; display:flex; align-items:center; flex-shrink:0;">
-                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:36px; height:36px; border-radius:50%; background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.08)'}; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
-                                                <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'black' : 'rgba(255,255,255,0.6)'};"></i>
+                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:40px; height:40px; border-radius:50%; background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.08)'}; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                                                <i class="ph-bold ph-check" style="font-size:18px; color:${t.done ? 'black' : 'rgba(255,255,255,0.6)'};"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -4874,7 +4875,7 @@
             <div class="section-header" style="margin: 32px 0 16px 0; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 200;">
                 <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     <i class="${state.plannerMode === 'registro' ? 'ph-fill ph-clock' : 'ph-fill ph-calendar-star'}" style="color: var(--accent);"></i>
-                    ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Piano DI Studio'}
+                    ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Piano Di Studio'}
                 </h2>
                 
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -4969,13 +4970,14 @@
                         ${labelTag}
                     </div>
                     <div style="display:flex; flex-direction:column; gap:12px; padding-left:4px;">
-                        ${grouped[dateStr].map(t => {
+                        ${grouped[dateStr].filter(t => !/check\s*liste|checklist/i.test(t.text)).map(t => {
                         const subjColor = getSubjectColor(t.subject);
+                        const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                         return `
                         <div style="display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.04)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.07)'}; border-radius:16px; overflow:hidden;">
                             <div style="width:4px; background:${subjColor}; flex-shrink:0;"></div>
                             <div style="flex:1; padding:14px 14px 14px 16px; min-width:0;">
-                                <div style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:5px;">${t.subject}</div>
+                                <div style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:5px;">${cleanSubject}</div>
                                 <div data-task-text="${t.id}" style="font-size:15px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'var(--text-primary)'}; line-height:1.45; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${(t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim()}</div>
                             </div>
                             <div style="padding:14px 16px; display:flex; align-items:center; flex-shrink:0;">
@@ -5027,8 +5029,9 @@
                     ${labelTag}
                 </div>
                 <div style="display:flex; flex-direction:column; gap:14px; padding-left:4px;">
-                    ${grouped[dateStr].map(t => {
+                    ${grouped[dateStr].filter(t => !/check\s*liste|checklist/i.test(t.text || t.description || '')).map(t => {
                         const subjColor = getSubjectColor(t.subject);
+                        const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                         const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
                         const timeStr = timeMatch ? timeMatch[1] : '';
                         const displayText = (t.text || t.description || 'Sessione di studio')
@@ -5042,7 +5045,7 @@
                         <div style="width:4px; background:${subjColor}; flex-shrink:0;"></div>
                         <div style="flex:1; padding:14px 14px 14px 16px; min-width:0;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
-                                <span style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.6px;">${t.subject}</span>
+                                <span style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.6px;">${cleanSubject}</span>
                                 ${timeStr ? `<span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:20px;">${timeStr}</span>` : ''}
                             </div>
                             <div data-task-text="${t.id}" style="font-size:15px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.3)' : 'var(--text-primary)'}; line-height:1.45; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
