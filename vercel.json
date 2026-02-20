@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    },
+    "api/login.js": {
+      "maxDuration": 60
+    },
+    "api/sync.js": {
+      "maxDuration": 60
+    },
+    "api/circolari/sintesi.js": {
+      "maxDuration": 45
+    }
+  },
+  "rewrites": [
+    { "source": "/login", "destination": "/api/login" },
+    { "source": "/sync", "destination": "/api/sync" },
+    { "source": "/health", "destination": "/api/health" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token" }
+      ]
+    }
+  ]
+}
