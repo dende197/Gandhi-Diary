@@ -772,12 +772,16 @@
         /* ===================================================
            AI CHAT — Prose formatting pulita e professionale
            =================================================== */
+        /* ============================================
+           AI PROSE — ChatGPT-quality formatting
+           ============================================ */
         .ai-prose {
             font-size: 14.5px;
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.88);
+            line-height: 1.72;
             text-align: left;
             word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .ai-prose>*:first-child {
@@ -789,23 +793,36 @@
         }
 
         .ai-prose p {
-            margin: 0 0 10px 0;
+            margin: 0 0 12px 0;
         }
 
         .ai-prose ul,
         .ai-prose ol {
-            margin: 4px 0 10px 0;
-            padding-left: 20px;
+            margin: 4px 0 12px 0;
+            padding-left: 22px;
         }
 
         .ai-prose li {
-            margin-bottom: 5px;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 6px;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.82);
         }
 
         .ai-prose li::marker {
             color: var(--accent);
+        }
+
+        .ai-prose ul>li {
+            list-style-type: disc;
+        }
+
+        .ai-prose ol>li {
+            list-style-type: decimal;
+        }
+
+        .ai-prose ul ul,
+        .ai-prose ol ul {
+            margin: 4px 0 4px 0;
         }
 
         .ai-prose strong,
@@ -815,7 +832,7 @@
         }
 
         .ai-prose em {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.72);
             font-style: italic;
         }
 
@@ -823,57 +840,127 @@
         .ai-prose h2,
         .ai-prose h3,
         .ai-prose h4 {
-            font-weight: 700;
+            font-weight: 800;
             color: white;
-            margin: 16px 0 6px 0;
+            margin: 18px 0 8px 0;
             line-height: 1.3;
         }
 
         .ai-prose h1 {
-            font-size: 17px;
+            font-size: 18px;
         }
 
         .ai-prose h2 {
-            font-size: 14px;
+            font-size: 13px;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.7px;
             color: var(--accent);
-            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
-            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.18);
+            padding-bottom: 5px;
+            margin-top: 22px;
         }
 
         .ai-prose h3 {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.8);
+            font-size: 14.5px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 700;
+        }
+
+        .ai-prose h4 {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 700;
         }
 
         .ai-prose code {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.07);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 5px;
-            padding: 1px 6px;
+            padding: 1px 7px;
             font-size: 13px;
-            color: #a5f3fc;
+            color: #93c5fd;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .ai-prose pre {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px 14px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .ai-prose pre code {
+            background: none;
+            border: none;
+            padding: 0;
         }
 
         .ai-prose blockquote {
             border-left: 3px solid var(--accent);
-            padding: 4px 12px;
-            margin: 8px 0;
-            color: rgba(255, 255, 255, 0.65);
+            padding: 6px 14px;
+            margin: 10px 0;
+            color: rgba(255, 255, 255, 0.6);
             font-style: italic;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 0 8px 8px 0;
         }
 
         .ai-prose hr {
             border: none;
             border-top: 1px solid rgba(255, 255, 255, 0.07);
-            margin: 14px 0;
+            margin: 16px 0;
+        }
+
+        .ai-prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .ai-prose th {
+            background: rgba(99, 102, 241, 0.15);
+            color: white;
+            font-weight: 700;
+            padding: 8px 12px;
+            text-align: left;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .ai-prose td {
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .ai-prose tr:nth-child(even) td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Task card mobile — prevenzione overflow testo */
+        .registro-card,
+        .studio-entry,
+        [data-task-text] {
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        [data-task-text] {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: unset !important;
         }
 
         @media (max-width: 768px) {
             .ai-prose {
                 font-size: 14px;
-                line-height: 1.65;
+                line-height: 1.68;
+            }
+
+            .ai-prose h2 {
+                font-size: 12px;
             }
         }
 
@@ -4020,7 +4107,7 @@
             const isRegistro = state.plannerMode === 'registro';
             container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:24px;">
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:20px 20px 24px 20px; width:calc(100vw - 40px);">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
                             <div>
                                 <div style="font-size:11px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
@@ -4033,25 +4120,34 @@
                            </button>
                        </div>
 
-                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto; padding-right:4px;">
+                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:14px; max-height:65vh; overflow-y:auto; padding-right:4px; -webkit-overflow-scrolling:touch;">
                             ${tasksForDay.length === 0 ? `
-                                <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
-                                    <i class="ph ph-calendar-blank" style="font-size:48px; opacity:0.2; margin-bottom:12px;"></i>
-                                    <div style="font-weight:600;">Nessun compito per oggi</div>
-                               </div>
+                                <div style="text-align:center; padding:48px 20px; color:var(--text-dim);">
+                                    <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 12px; opacity:0.15;"></i>
+                                    <div style="font-size:15px; font-weight:600; opacity:0.5;">Nessun compito per questa data</div>
+                                </div>
                             ` : tasksForDay.map(t => {
                 const color = getSubjectColor(t.subject);
+                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+                const timeStr = timeMatch ? timeMatch[1] : '';
+                // Clear [AI], time patterns and all asterisks (*)
+                const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '').replace(/\*/g, '').trim();
                 return `
-                                    <div class="glass-list-item" style="padding:16px; border-radius:18px; display:flex; gap:14px; align-items:center; border:1px solid ${t.done ? 'rgba(48, 209, 88, 0.2)' : 'rgba(255,255,255,0.05)'}; background:${t.done ? 'rgba(48, 209, 88, 0.05)' : 'rgba(255,255,255,0.02)'};">
-                                        <div style="width:4px; height:32px; background:${color}; border-radius:4px;"></div>
-                                        <div style="flex:1;">
-                                            <div style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">${t.subject}</div>
-                                            <div style="font-size:15px; font-weight:600; color:white; line-height:1.4; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.text}</div>
-                                       </div>
-                                        <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.1)'}; border:none; width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
-                                            <i class="ph-bold ph-check" style="font-size:20px; color:${t.done ? 'black' : 'white'};"></i>
-                                       </button>
-                                   </div>
+                                    <div style="border-radius:14px; overflow:hidden; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.08)'};">
+                                        <div style="width:4px; background:${color}; flex-shrink:0;"></div>
+                                        <div style="flex:1; padding:14px 12px 14px 14px; min-width:0;">
+                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                                                <span style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.6px;">${t.subject}</span>
+                                                ${timeStr ? `<span style="font-size:11px; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.07); padding:1px 7px; border-radius:10px;">${timeStr}</span>` : ''}
+                                            </div>
+                                            <div style="font-size:15px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'white'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
+                                        </div>
+                                        <div style="padding:12px 14px; display:flex; align-items:center; flex-shrink:0;">
+                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:36px; height:36px; border-radius:50%; background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.08)'}; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                                                <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'black' : 'rgba(255,255,255,0.6)'};"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 `;
             }).join('')}
                        </div>
@@ -4778,7 +4874,7 @@
             <div class="section-header" style="margin: 32px 0 16px 0; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 200;">
                 <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     <i class="${state.plannerMode === 'registro' ? 'ph-fill ph-clock' : 'ph-fill ph-calendar-star'}" style="color: var(--accent);"></i>
-                    ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Mio Schedule Studio'}
+                    ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Piano DI Studio'}
                 </h2>
                 
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -4838,60 +4934,131 @@
             }
 
             if (state.plannerMode === 'registro') {
+                // Group tasks by date
+                const grouped = {};
+                list.forEach(t => {
+                    if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
+                    grouped[t.displayDate].push(t);
+                });
+                const sortedDates = Object.keys(grouped).sort();
+
                 return `
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-            ${list.map(t => {
-                    const d = parseArgoDate(t.displayDate);
-                    const day = d.toLocaleDateString('it-IT', { day: '2-digit' });
-                    const month = d.toLocaleDateString('it-IT', { month: 'short' });
-                    const subjColor = getSubjectColor(t.subject);
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            ${sortedDates.map(dateStr => {
+                    const d = parseArgoDate(dateStr);
+                    const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
+                    const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
+                    const monthName = d.toLocaleDateString('it-IT', { month: 'long' });
+                    const isToday = dateStr === getLocalDateString();
+                    const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
+                    const labelTag = isToday
+                        ? '<span style="font-size:10px;font-weight:800;color:#34C759;background:rgba(52,199,89,0.12);padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">Oggi</span>'
+                        : isTomorrow
+                            ? '<span style="font-size:10px;font-weight:800;color:#FF9F0A;background:rgba(255,159,10,0.12);padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">Domani</span>'
+                            : '';
+
                     return `
-                    <div class="registro-card" style="display: flex;">
-                        <div class="registro-date-box">
-                            <span style="font-size: 18px; font-weight: 800; color: var(--text-primary);">${day}</span>
-                            <span style="font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${month}</span>
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding:0 2px;">
+                        <div style="text-align:center; min-width:40px;">
+                            <div style="font-size:24px; font-weight:900; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1;">${dayNum}</div>
+                            <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">${monthName.slice(0, 3)}</div>
                         </div>
-                        <div style="flex: 1; padding: 14px 16px; min-width: 0;">
-                            <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                                <span class="subject-badge" style="background: ${subjColor};"></span>
-                                <span style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">${t.subject}</span>
+                        <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize;">${dayName}</div>
+                        ${labelTag}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:12px; padding-left:4px;">
+                        ${grouped[dateStr].map(t => {
+                        const subjColor = getSubjectColor(t.subject);
+                        return `
+                        <div style="display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.04)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.07)'}; border-radius:16px; overflow:hidden;">
+                            <div style="width:4px; background:${subjColor}; flex-shrink:0;"></div>
+                            <div style="flex:1; padding:14px 14px 14px 16px; min-width:0;">
+                                <div style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:5px;">${t.subject}</div>
+                                <div data-task-text="${t.id}" style="font-size:15px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'var(--text-primary)'}; line-height:1.45; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${(t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim()}</div>
                             </div>
-                            <div data-task-text="${t.id}" style="font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.text}</div>
-                        </div>
-                        <div style="padding: 14px; display: flex; align-items: center;">
-                            <div data-task-toggle="${t.id}" data-subject-color="${subjColor}" onclick="toggleTask('${t.id}')" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${t.done ? 'var(--green)' : 'var(--text-dim)'}; background: ${t.done ? 'var(--green)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.12s;">
-                                ${t.done ? '<i class="ph-bold ph-check" style="font-size: 12px; color: black;"></i>' : ''}
+                            <div style="padding:14px 16px; display:flex; align-items:center; flex-shrink:0;">
+                                <div data-task-toggle="${t.id}" data-subject-color="${subjColor}" onclick="toggleTask('${t.id}')" style="width:28px; height:28px; border-radius:50%; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.25)'}; background:${t.done ? 'var(--green)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size:13px; color:black;"></i>' : ''}
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
-                }).join('')
-                    }
-            </div> `;
+                        </div>`;
+                    }).join('')}
+                    </div>
+                </div>`;
+                }).join('')}
+        </div>`;
             } else {
+                // Group studio tasks by date
+                const grouped = {};
+                list.forEach(t => {
+                    if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
+                    grouped[t.displayDate].push(t);
+                });
+                const sortedDates = Object.keys(grouped).sort();
+
+                if (!sortedDates.length) return `<div class="card" style="text-align:center;color:var(--text-dim);padding:50px 20px;"><i class="ph ph-graduation-cap" style="font-size:40px;opacity:0.2;margin-bottom:12px;display:block;"></i><div style="font-size:14px;font-weight:500;">Nessuna sessione pianificata.<br>Chiedi all'AI di organizzare la settimana!</div></div>`;
+
                 return `
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            ${list.map(t => {
-                    const subjColor = getSubjectColor(t.subject);
+        <div style="display:flex; flex-direction:column; gap:24px;">
+            ${sortedDates.map(dateStr => {
+                    const d = parseArgoDate(dateStr);
+                    const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
+                    const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
+                    const monthName = d.toLocaleDateString('it-IT', { month: 'long' });
+                    const isToday = dateStr === getLocalDateString();
+                    const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
+                    const labelTag = isToday
+                        ? '<span style="font-size:10px;font-weight:800;color:#34C759;background:rgba(52,199,89,0.12);padding:2px 8px;border-radius:20px;">Oggi</span>'
+                        : isTomorrow
+                            ? '<span style="font-size:10px;font-weight:800;color:#FF9F0A;background:rgba(255,159,10,0.12);padding:2px 8px;border-radius:20px;">Domani</span>'
+                            : '';
+
                     return `
-                    <div class="studio-entry" style="position: relative; background: var(--bg-card); border-radius: var(--radius-m); padding: 16px; border: var(--card-border);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div style="display: flex; align-items: center;">
-                                <span class="subject-badge" style="background: ${subjColor}; margin-right: 8px;"></span>
-                                <span style="font-size: 12px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">${t.subject}</span>
+            <div>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; padding:0 2px;">
+                    <div style="text-align:center; min-width:40px;">
+                        <div style="font-size:24px; font-weight:900; color:${isToday ? '#a855f7' : 'var(--text-primary)'}; line-height:1;">${dayNum}</div>
+                        <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">${monthName.slice(0, 3)}</div>
+                    </div>
+                    <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
+                    <div style="font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize;">${dayName}</div>
+                    ${labelTag}
+                </div>
+                <div style="display:flex; flex-direction:column; gap:14px; padding-left:4px;">
+                    ${grouped[dateStr].map(t => {
+                        const subjColor = getSubjectColor(t.subject);
+                        const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+                        const timeStr = timeMatch ? timeMatch[1] : '';
+                        const displayText = (t.text || t.description || 'Sessione di studio')
+                            .replace(/^\[AI\]\s*/i, '')
+                            .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
+                            .replace(/\*/g, '')
+                            .trim();
+
+                        return `
+                    <div style="display:flex; align-items:stretch; background:${t.done ? 'rgba(168,85,247,0.04)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.07)'}; border-radius:16px; overflow:hidden;">
+                        <div style="width:4px; background:${subjColor}; flex-shrink:0;"></div>
+                        <div style="flex:1; padding:14px 14px 14px 16px; min-width:0;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+                                <span style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.6px;">${t.subject}</span>
+                                ${timeStr ? `<span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:20px;">${timeStr}</span>` : ''}
                             </div>
-                            <span style="font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(99, 102, 241, 0.1); padding: 2px 8px; border-radius: 10px;">STUDIO</span>
+                            <div data-task-text="${t.id}" style="font-size:15px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.3)' : 'var(--text-primary)'}; line-height:1.45; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
+                            ${t.due_date && t.due_date !== dateStr ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">📋 Scade: ${parseArgoDate(t.due_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</div>` : ''}
                         </div>
-                        <div data-task-text="${t.id}" style="font-size: 15px; font-weight: 700; color: var(--text-primary); ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${t.description || t.text || 'Studio Personale'}</div>
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Sessione di studio pianificata per il ${new Date(t.displayDate).toLocaleDateString()}</div>
-                        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
-                             <div data-task-toggle="${t.id}" data-subject-color="${subjColor}" onclick="toggleTask('${t.id}')" style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid ${t.done ? 'var(--green)' : 'var(--text-dim)'}; background: ${t.done ? 'var(--green)' : 'transparent'}; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.12s;">
-                                ${t.done ? '<i class="ph-bold ph-check" style="font-size: 14px; color: black;"></i>' : ''}
+                        <div style="padding:14px 16px; display:flex; align-items:center; flex-shrink:0;">
+                            <div data-task-toggle="${t.id}" data-subject-color="${subjColor}" onclick="toggleTask('${t.id}')" style="width:28px; height:28px; border-radius:50%; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.25)'}; background:${t.done ? 'var(--green)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                                ${t.done ? '<i class="ph-bold ph-check" style="font-size:13px; color:black;"></i>' : ''}
                             </div>
                         </div>
                     </div>`;
-                }).join('')
-                    }
-            </div> `;
+                    }).join('')}
+                </div>
+            </div>`;
+                }).join('')}
+        </div>`;
             }
         }
 
@@ -6271,7 +6438,13 @@
             }, 100);
 
             // Build context
-            const homework = (state.tasks || []).filter(t => !t.done).map(t => `- [${t.subject}] ${t.text} (scad: ${t.due_date || 'N/D'})`).join('\n');
+            // Build context — include Argo tasks sorted by due date
+            const argoTasks = (state.tasks || []).filter(t => !t.done && !t.id.startsWith('ai_') && t.subject !== 'QUEST');
+            argoTasks.sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
+            const homework = argoTasks.map(t => {
+                const dueDate = t.due_date ? parseArgoDate(t.due_date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
+                return `- [${t.subject}] ${t.text} → consegna: ${dueDate}`;
+            }).join('\n');
             const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
             const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
             const difficulty = (state.difficulty || []).join(', ');
@@ -6290,14 +6463,13 @@
                 ? (stressHistory.reduce((s, h) => s + (h.stress || 3), 0) / stressHistory.length).toFixed(1)
                 : null;
             const stressBlock = stressToday
-                ? `BENESSERE STRUMENTO TEST STRESS STUDENTE (oggi):
+                ? `🧠 BENESSERE STUDENTE (dati disponibili in tempo reale):
     - Stress: ${stressToday.stress || '?'}/5
     - Stanchezza mentale: ${stressToday.fatigue || '?'}/5
     - Ore di sonno: ${stressToday.sleep || '?'}h
     - Carico percepito: ${stressToday.load || '?'}
-    - Nota studente: "${stressToday.note || 'nessuna'}"
-
-    SE L'UTENTE TI CHIEDE SE VEDI IL SUO STRESS, DEVI RISPONDERE DI SÌ e citargli i valori qui sopra.`
+    - Nota: "${stressToday.note || 'nessuna'}"
+    - Media stress ultimi ${stressHistory.length} giorni: ${avgStress || 'N/D'}/5`
                 : 'BENESSERE STUDENTE: nessun dato inserito oggi. Chiedi all\'utente di inserire i dati nello slider del Benessere.';
 
             // Compiti già pianificati nei prossimi giorni (anti-duplicazione)
@@ -6311,33 +6483,36 @@
                     return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
                 }).filter(Boolean).join('\n');
 
-            const systemContext = `Sei un Tutor Accademico AI professionale integrato in G-Diary, un'app di pianificazione scolastica. Rispondi sempre in italiano. Sii preciso, strutturato e concreto. Usa SEMPRE la formattazione Markdown (grassetti, corsivi, elenchi).
+            const systemContext = `Sei G-AI, the tutor personale integrato in G-Diary — un'app scolastica italiana. Rispondi SEMPRE in italiano in modo naturale, come farebbe un amico intelligente che studia con te. Adatta il tuo stile alla domanda: domanda semplice → risposta diretta e concisa; richiesta di piano o analisi → struttura chiara con Markdown.
 
-PROFILO STUDENTE — ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+HAI ACCESSO AI DATI REALI DELLO STUDENTE:
+
+📅 DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+
 ${stressBlock}
 
-AGENDA ACCADEMICA:
-    - Compiti attivi: ${homework || 'Nessuno.'}
-    - Verifiche/interrogazioni: ${exams || 'Nessuna.'}
-    - Arretrati: ${backlog || 'Nessuno.'}
-    - Materie difficili: ${difficulty || 'Nessuna.'}
-    - ${schedule}
+📚 AGENDA SCOLASTICA:
+- Compiti da fare: ${homework || 'nessuno'}
+- Verifiche/interrogazioni: ${exams || 'nessuna'}
+- Arretrati: ${backlog || 'nessuno'}
+- Materie difficili: ${difficulty || 'nessuna'}
+- ${schedule}
 ${plannedSummary ? `\nGIÀ PIANIFICATO (non duplicare):\n${plannedSummary}` : ''}
 
-REGOLE DI RISPOSTA (OBBLIGATORIE):
-1. SE L'UTENTE TI CHIEDE DEL SUO STRESS: DEVI confermare che hai accesso ai suoi dati in tempo reale e mostrargli un riepilogo (es. Stress: X/5, Sonno: Y ore). NON dire mai che non hai i dati.
-2. FORMATTAZIONE: Rispondi in modo schematico, usando elenchi puntati/numerati (es. 1️⃣, 2️⃣) e grassetto per le parole chiave. Evita blocchi di testo ("muri di testo"). Dividi in paragrafi brevi.
+COME RISPONDERE:
+• Sii naturale e conversazionale — non robotico. Varia il tono: incoraggiante, pratico, diretto.
+• Domande semplici → risposta breve (2-5 righe). Non schematizzare tutto.
+• Richieste di piani → struttura ordinata con sezioni e orari precisi.
+• Domande su stress/benessere → cita esplicitamente i dati che hai ("Vedo che oggi hai stress 4/5...").
+• Usa emoji con parsimonia, solo dove aggiungono chiarezza.
+• MAI dire "non ho accesso a..." se i dati sono nel contesto sopra.
 
-REGOLE PIANIFICAZIONE (OBBLIGATORIE — segui SEMPRE se viene richiesto un piano):
-1. Adatta intensità e durata delle sessioni allo stress/stanchezza (stress alto = sessioni brevi, più pause).
-2. Per piani multi-giorno, ASSEGNA ogni task alla DATA SPECIFICA usando il formato:
-   ## LUNEDÌ 2025-01-20
-   - 15:30 – 16:15: [Materia] Argomento
-3. Usa SEMPRE date nel formato YYYY-MM-DD nei titoli dei giorni.
-4. Includi pause (es. ☕ 16:15 – 16:30 Pausa).
-5. Prioritizza verifiche imminenti e materie difficili.
-6. Non pianificare task già presenti nel "GIÀ PIANIFICATO".
-7. Se stress ≥ 4/5, suggerisci sessioni max 45 min e pause frequenti.`;
+SE CREI UN PIANO DI STUDIO multi-giorno:
+• Intestazioni: ## GIORNO YYYY-MM-DD (es. ## LUNEDÌ 2025-01-20)
+• Slot: - HH:MM – HH:MM: [Materia] Attività specifica
+• Stress ≥ 4 → sessioni max 40 min, pausa ogni ora
+• Includi ☕ pause
+• Non duplicare ciò che è già pianificato`;
 
             // Build conversation for Gemini
             const contents = [
