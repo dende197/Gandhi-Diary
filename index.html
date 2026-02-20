@@ -4139,7 +4139,7 @@
                     .replace(/[\s|]+$/, '')
                     .trim();
                 return `
-                                    <div style="border-radius:18px; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.06)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.25)' : 'rgba(255,255,255,0.1)'}; margin-bottom:10px; min-height:110px;">
+                                    <div style="flex-shrink:0; border-radius:18px; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.06)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.25)' : 'rgba(255,255,255,0.1)'}; min-height:110px;">
                                         <div style="width:5px; background:${color}; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:22px 18px 24px 18px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
@@ -4979,7 +4979,7 @@
                         const subjColor = getSubjectColor(t.subject);
                         const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                         return `
-                        <div style="display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius:18px; margin-bottom:4px; min-height:90px;">
+                        <div style="flex-shrink:0; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius:18px; min-height:90px;">
                             <div style="width:5px; background:${subjColor}; flex-shrink:0;"></div>
                             <div style="flex:1; padding:18px 18px 20px 18px; min-width:0;">
                                 <div style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; opacity:0.9;">${cleanSubject}</div>
@@ -5047,7 +5047,7 @@
                             .trim();
 
                         return `
-                    <div style="display:flex; align-items:stretch; background:${t.done ? 'rgba(168,85,247,0.06)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius:18px; margin-bottom:6px; min-height:100px;">
+                    <div style="flex-shrink:0; display:flex; align-items:stretch; background:${t.done ? 'rgba(168,85,247,0.06)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius:18px; min-height:100px;">
                         <div style="width:5px; background:${subjColor}; flex-shrink:0;"></div>
                         <div style="flex:1; padding:20px 18px 22px 18px; min-width:0;">
                             <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
