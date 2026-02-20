@@ -4126,7 +4126,7 @@
                                     <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 12px; opacity:0.15;"></i>
                                     <div style="font-size:15px; font-weight:600; opacity:0.5;">Nessun compito per questa data</div>
                                 </div>
-                            ` : tasksForDay.filter(t => !/check\s*liste|checklist/i.test(t.text)).map(t => {
+                            ` : tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
                 const color = getSubjectColor(t.subject);
                 const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                 const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
@@ -4134,7 +4134,7 @@
                 // Clear [AI], time patterns and all asterisks (*)
                 const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '').replace(/\*/g, '').trim();
                 return `
-                                    <div style="border-radius:14px; overflow:hidden; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.08)'}; min-height:80px;">
+                                    <div style="border-radius:14px; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.2)' : 'rgba(255,255,255,0.08)'}; min-height:100px; margin-bottom:4px;">
                                         <div style="width:4px; background:${color}; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:18px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
@@ -4142,6 +4142,7 @@
                                                 ${timeStr ? `<span style="font-size:11px; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.07); padding:1px 7px; border-radius:10px;">${timeStr}</span>` : ''}
                                             </div>
                                             <div style="font-size:16px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'white'}; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
+                                            <div style="height:8px;"></div>
                                         </div>
                                         <div style="padding:12px 14px; display:flex; align-items:center; flex-shrink:0;">
                                             <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:40px; height:40px; border-radius:50%; background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.08)'}; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
@@ -4970,7 +4971,7 @@
                         ${labelTag}
                     </div>
                     <div style="display:flex; flex-direction:column; gap:12px; padding-left:4px;">
-                        ${grouped[dateStr].filter(t => !/check\s*liste|checklist/i.test(t.text)).map(t => {
+                        ${grouped[dateStr].filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
                         const subjColor = getSubjectColor(t.subject);
                         const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                         return `
@@ -5029,7 +5030,7 @@
                     ${labelTag}
                 </div>
                 <div style="display:flex; flex-direction:column; gap:14px; padding-left:4px;">
-                    ${grouped[dateStr].filter(t => !/check\s*liste|checklist/i.test(t.text || t.description || '')).map(t => {
+                    ${grouped[dateStr].filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text || t.description || '')).map(t => {
                         const subjColor = getSubjectColor(t.subject);
                         const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
                         const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
