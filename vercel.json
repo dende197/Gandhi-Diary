@@ -1,6 +1,12 @@
 {
   "version": 2,
   "functions": {
+    "api/ping.js": {
+      "maxDuration": 30
+    },
+    "api/health.js": {
+      "maxDuration": 30
+    },
     "api/login.js": {
       "maxDuration": 60
     },
@@ -16,6 +22,12 @@
     "api/ai/chat.js": {
       "maxDuration": 30
     },
+    "api/mental-health/save.js": {
+      "maxDuration": 30
+    },
+    "api/mental-health/history.js": {
+      "maxDuration": 30
+    },
     "api/mental-health/ai-advice.js": {
       "maxDuration": 30
     },
@@ -29,6 +41,9 @@
       "maxDuration": 30
     },
     "api/profile/*.js": {
+      "maxDuration": 30
+    },
+    "api/debug/profile-raw.js": {
       "maxDuration": 30
     }
   },
