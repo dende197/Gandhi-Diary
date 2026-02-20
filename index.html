@@ -4129,6 +4129,8 @@
                             ` : tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
                 const color = getSubjectColor(t.subject);
                 const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
+                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+                const timeStr = timeMatch ? timeMatch[1] : '';
                 // Clear [AI], time patterns, all asterisks (*), and trailing separators (|)
                 const displayText = (t.text || '')
                     .replace(/^\[AI\]\s*/i, '')
