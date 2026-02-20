@@ -1,31 +1,67 @@
 {
   "version": 2,
   "functions": {
-    "api/**/*.js": {
-      "maxDuration": 30
-    },
     "api/login.js": {
       "maxDuration": 60
     },
     "api/sync.js": {
       "maxDuration": 60
     },
+    "api/upload.js": {
+      "maxDuration": 30
+    },
+    "api/resolve-profile.js": {
+      "maxDuration": 30
+    },
+    "api/ai/chat.js": {
+      "maxDuration": 30
+    },
+    "api/mental-health/ai-advice.js": {
+      "maxDuration": 30
+    },
+    "api/circolari/index.js": {
+      "maxDuration": 30
+    },
     "api/circolari/sintesi.js": {
-      "maxDuration": 45
+      "maxDuration": 60
+    },
+    "api/planner/*.js": {
+      "maxDuration": 30
+    },
+    "api/profile/*.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/login", "destination": "/api/login" },
-    { "source": "/sync", "destination": "/api/sync" },
-    { "source": "/health", "destination": "/api/health" }
+    {
+      "source": "/login",
+      "destination": "/api/login"
+    },
+    {
+      "source": "/sync",
+      "destination": "/api/sync"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,PUT,DELETE,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token"
+        }
       ]
     }
   ]
