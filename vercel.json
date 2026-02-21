@@ -3,96 +3,33 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30
-    },
-    "api/auth.js": {
-      "maxDuration": 60
-    },
-    "api/circolari.js": {
-      "maxDuration": 60
     }
   },
   "rewrites": [
-    {
-      "source": "/login",
-      "destination": "/api/auth?action=login"
-    },
-    {
-      "source": "/sync",
-      "destination": "/api/auth?action=sync"
-    },
-    {
-      "source": "/health",
-      "destination": "/api/main?action=health"
-    },
-    {
-      "source": "/api/ping",
-      "destination": "/api/main?action=ping"
-    },
-    {
-      "source": "/api/resolve-profile",
-      "destination": "/api/auth?action=resolve-profile"
-    },
-    {
-      "source": "/api/profile/:user_id",
-      "destination": "/api/profile?user_id=:user_id"
-    },
-    {
-      "source": "/api/profile",
-      "destination": "/api/profile"
-    },
-    {
-      "source": "/api/planner/:user_id",
-      "destination": "/api/planner?user_id=:user_id"
-    },
-    {
-      "source": "/api/circolari",
-      "destination": "/api/circolari?action=index"
-    },
-    {
-      "source": "/api/circolari/sintesi",
-      "destination": "/api/circolari?action=sintesi"
-    },
-    {
-      "source": "/api/ai/chat",
-      "destination": "/api/ai?action=chat"
-    },
-    {
-      "source": "/api/mental-health/ai-advice",
-      "destination": "/api/ai?action=ai-advice"
-    },
-    {
-      "source": "/api/mental-health/save",
-      "destination": "/api/mental?action=save"
-    },
-    {
-      "source": "/api/mental-health/history",
-      "destination": "/api/mental?action=history"
-    },
-    {
-      "source": "/api/conversations/user/:user_id",
-      "destination": "/api/conversations?user_id=:user_id"
-    },
-    {
-      "source": "/api/debug/profile-raw",
-      "destination": "/api/debug"
-    }
+    { "source": "/login", "destination": "/api/auth?action=login" },
+    { "source": "/sync", "destination": "/api/auth?action=sync" },
+    { "source": "/health", "destination": "/api/main?action=health" },
+    { "source": "/api/ping", "destination": "/api/main?action=ping" },
+    { "source": "/api/resolve-profile", "destination": "/api/auth?action=resolve-profile" },
+    { "source": "/api/profile/:user_id", "destination": "/api/profile?user_id=:user_id" },
+    { "source": "/api/profile", "destination": "/api/profile" },
+    { "source": "/api/planner/:user_id", "destination": "/api/planner?user_id=:user_id" },
+    { "source": "/api/circolari", "destination": "/api/circolari?action=index" },
+    { "source": "/api/circolari/sintesi", "destination": "/api/circolari?action=sintesi" },
+    { "source": "/api/ai/chat", "destination": "/api/ai?action=chat" },
+    { "source": "/api/mental-health/ai-advice", "destination": "/api/ai?action=ai-advice" },
+    { "source": "/api/mental-health/save", "destination": "/api/mental?action=save" },
+    { "source": "/api/mental-health/history", "destination": "/api/mental?action=history" },
+    { "source": "/api/conversations/user/:user_id", "destination": "/api/conversations?user_id=:user_id" },
+    { "source": "/api/debug/profile-raw", "destination": "/api/debug" }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET,POST,PUT,DELETE,OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token"
-        }
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token" }
       ]
     }
   ]
