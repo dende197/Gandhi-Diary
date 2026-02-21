@@ -1,64 +1,111 @@
 {
   "version": 2,
   "functions": {
-    "api/ping.js": {
-      "maxDuration": 30
+    "api/main.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/ping.js,api/health.js"
     },
-    "api/health.js": {
-      "maxDuration": 30
+    "api/auth.js": {
+      "maxDuration": 60,
+      "includeFiles": "api/login.js,api/sync.js,api/resolve-profile.js"
     },
-    "api/login.js": {
-      "maxDuration": 60
+    "api/profile.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/profile/index.js,api/profile/[user_id].js"
     },
-    "api/sync.js": {
-      "maxDuration": 60
+    "api/planner.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/planner/[user_id].js"
+    },
+    "api/circolari.js": {
+      "maxDuration": 60,
+      "includeFiles": "api/circolari/index.js,api/circolari/sintesi.js"
+    },
+    "api/ai.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/ai/chat.js,api/mental-health/ai-advice.js"
+    },
+    "api/mental.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/mental-health/save.js,api/mental-health/history.js"
     },
     "api/upload.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/upload.js"
     },
-    "api/resolve-profile.js": {
-      "maxDuration": 30
+    "api/conversations.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/conversations/user/[user_id].js"
     },
-    "api/ai/chat.js": {
-      "maxDuration": 30
-    },
-    "api/mental-health/save.js": {
-      "maxDuration": 30
-    },
-    "api/mental-health/history.js": {
-      "maxDuration": 30
-    },
-    "api/mental-health/ai-advice.js": {
-      "maxDuration": 30
-    },
-    "api/circolari/index.js": {
-      "maxDuration": 30
-    },
-    "api/circolari/sintesi.js": {
-      "maxDuration": 60
-    },
-    "api/planner/*.js": {
-      "maxDuration": 30
-    },
-    "api/profile/*.js": {
-      "maxDuration": 30
-    },
-    "api/debug/profile-raw.js": {
-      "maxDuration": 30
+    "api/debug.js": {
+      "maxDuration": 30,
+      "includeFiles": "api/debug/profile-raw.js"
     }
   },
   "rewrites": [
     {
       "source": "/login",
-      "destination": "/api/login"
+      "destination": "/api/auth?action=login"
     },
     {
       "source": "/sync",
-      "destination": "/api/sync"
+      "destination": "/api/auth?action=sync"
     },
     {
       "source": "/health",
-      "destination": "/api/health"
+      "destination": "/api/main?action=health"
+    },
+    {
+      "source": "/api/ping",
+      "destination": "/api/main?action=ping"
+    },
+    {
+      "source": "/api/resolve-profile",
+      "destination": "/api/auth?action=resolve-profile"
+    },
+    {
+      "source": "/api/profile/:user_id",
+      "destination": "/api/profile?user_id=:user_id"
+    },
+    {
+      "source": "/api/profile",
+      "destination": "/api/profile"
+    },
+    {
+      "source": "/api/planner/:user_id",
+      "destination": "/api/planner?user_id=:user_id"
+    },
+    {
+      "source": "/api/circolari",
+      "destination": "/api/circolari?action=index"
+    },
+    {
+      "source": "/api/circolari/sintesi",
+      "destination": "/api/circolari?action=sintesi"
+    },
+    {
+      "source": "/api/ai/chat",
+      "destination": "/api/ai?action=chat"
+    },
+    {
+      "source": "/api/mental-health/ai-advice",
+      "destination": "/api/ai?action=ai-advice"
+    },
+    {
+      "source": "/api/mental-health/save",
+      "destination": "/api/mental?action=save"
+    },
+    {
+      "source": "/api/mental-health/history",
+      "destination": "/api/mental?action=history"
+    },
+    {
+      "source": "/api/conversations/user/:user_id",
+      "destination": "/api/conversations?user_id=:user_id"
+    },
+    {
+      "source": "/api/debug/profile-raw",
+      "destination": "/api/debug"
     }
   ],
   "headers": [
