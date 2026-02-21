@@ -2942,10 +2942,13 @@
                 updatedAt: nowIso
             };
 
-            // 🛡️ ANTI-WIPE: Se i task locali sono vuoti ma la cache aveva dati, non sovrascrivere il server con un vuoto.
+            // 🛡️ HARD ANTI-WIPE (v1.1.69): Mai salvare un piano vuoto se abbiamo dati in cache locale.
             const prevTasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
-            if (payload.tasks.length === 0 && prevTasks.length > 0) {
-                console.warn("🛡️ [Planner] Save aborted: tasks array is empty but local storage has data.");
+            const localHasTasks = Array.isArray(state.tasks) && state.tasks.length > 0;
+            const remoteIsEmpty = payload.tasks.length === 0;
+
+            if (remoteIsEmpty && prevTasks.length > 0 && localHasTasks) {
+                console.warn("🛡️ [Planner] HARD Anti-wipe: blocco salvataggio vuoto su server (cache locale ha dati)");
                 return;
             }
 
@@ -4272,8 +4275,8 @@
                 const remoteIsEmpty = (Array.isArray(remoteData) && remoteData.length === 0) || (remoteData && typeof remoteData === 'object' && Object.keys(remoteData).length === 0);
                 const localHasData = (Array.isArray(localData) && localData.length > 0) || (localData && typeof localData === 'object' && Object.keys(localData).length > 0);
 
-                if (remoteIsEmpty && localHasData && !force) {
-                    console.warn(`🛡️ Anti-wipe [${sliceName}]: Remote data is empty, but local state has data. Preserving local.`);
+                if (remoteIsEmpty && localHasData) {
+                    console.warn(`🛡️ HARD Anti-wipe [${sliceName}]: Remote is empty, preserving local (even if force=${force})`);
                     return localData;
                 }
 
