@@ -2,7 +2,12 @@
   "version": 2,
   "functions": {
     "api/*.js": {
-      "runtime": "nodejs22.x",
+      "maxDuration": 30
+    },
+    "api/auth.js": {
+      "maxDuration": 60
+    },
+    "api/circolari.js": {
       "maxDuration": 60
     }
   },
