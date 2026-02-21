@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { handleCors, debugLog } = require('../../lib/helpers');
+const { handleCors } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
 
 function sbHeaders() {
@@ -18,10 +18,20 @@ function sbTableUrl(table) {
     return `${process.env.SUPABASE_URL}/rest/v1/${table}`;
 }
 
+function parseJsonb(value, fallback) {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string') {
+        try { return JSON.parse(value); } catch (e) { return fallback; }
+    }
+    return value;
+}
+
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
 
     const { user_id } = req.query;
+    if (!user_id) return res.status(400).json({ success: false, error: 'user_id mancante' });
+
     const userId = decodeURIComponent(user_id).toLowerCase().replace(/\s+/g, '');
 
     // GET
@@ -30,7 +40,12 @@ module.exports = async function handler(req, res) {
         if (!supabase) return res.status(500).json({ success: false, error: 'Supabase not configured' });
 
         try {
-            const { data, error } = await supabase.from('planners').select('*').eq('user_id', userId).limit(1);
+            const { data, error } = await supabase
+                .from('planners')
+                .select('*')
+                .eq('user_id', userId)
+                .limit(1);
+
             if (error) throw error;
 
             if (!data || data.length === 0) {
@@ -48,11 +63,20 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            res.json({ success: true, data: data[0] });
+            const row = data[0];
+
+            // Parsa campi jsonb nel caso arrivino come stringa
+            row.tasks = parseJsonb(row.tasks, []);
+            row.planned_tasks = parseJsonb(row.planned_tasks, {});
+            row.stress_levels = parseJsonb(row.stress_levels, {});
+            row.planned_details = parseJsonb(row.planned_details, {});
+            row.prep_levels = parseJsonb(row.prep_levels, {});
+
+            return res.json({ success: true, data: row });
+
         } catch (e) {
-            res.status(500).json({ success: false, error: e.message });
+            return res.status(500).json({ success: false, error: e.message });
         }
-        return;
     }
 
     // PUT
@@ -82,17 +106,20 @@ module.exports = async function handler(req, res) {
                         success: true,
                         data: {
                             userId: data.user_id,
-                            plannedTasks: data.planned_tasks,
-                            stressLevels: data.stress_levels,
-                            plannedDetails: data.planned_details,
-                            tasks: data.tasks || [],
-                            prepLevels: data.prep_levels || {},
+                            plannedTasks: parseJsonb(data.planned_tasks, {}),
+                            stressLevels: parseJsonb(data.stress_levels, {}),
+                            plannedDetails: parseJsonb(data.planned_details, {}),
+                            tasks: parseJsonb(data.tasks, []),
+                            prepLevels: parseJsonb(data.prep_levels, {}),
                             updatedAt: data.updated_at
                         }
                     });
                 }
+
+                if (error) console.error('planner upsert error:', error.message);
+
             } catch (e) {
-                console.error('planner upsert supabase-js exception:', e.message);
+                console.error('planner upsert exception:', e.message);
             }
         }
 
@@ -109,18 +136,22 @@ module.exports = async function handler(req, res) {
                 success: true,
                 data: {
                     userId: row.user_id,
-                    plannedTasks: row.planned_tasks,
-                    stressLevels: row.stress_levels,
-                    plannedDetails: row.planned_details,
-                    tasks: row.tasks || [],
-                    prepLevels: row.prep_levels || {},
+                    plannedTasks: parseJsonb(row.planned_tasks, {}),
+                    stressLevels: parseJsonb(row.stress_levels, {}),
+                    plannedDetails: parseJsonb(row.planned_details, {}),
+                    tasks: parseJsonb(row.tasks, []),
+                    prepLevels: parseJsonb(row.prep_levels, {}),
                     updatedAt: row.updated_at
                 }
             });
+
         } catch (e) {
-            return res.status(e.response?.status || 500).json({ success: false, error: e.response?.data || e.message });
+            return res.status(e.response?.status || 500).json({
+                success: false,
+                error: e.response?.data || e.message
+            });
         }
     }
 
     res.status(405).json({ error: 'Method not allowed' });
-}
+};
