@@ -2932,7 +2932,6 @@
             } catch { }
 
             const nowIso = new Date().toISOString();
-            localStorage.setItem(lsKey('planner_updated_at'), nowIso);
 
             const payload = {
                 plannedTasks: state.plannedTasks || {},
@@ -2942,6 +2941,15 @@
                 prepLevels: state.prepLevels || {},
                 updatedAt: nowIso
             };
+
+            // 🛡️ ANTI-WIPE: Se i task locali sono vuoti ma la cache aveva dati, non sovrascrivere il server con un vuoto.
+            const prevTasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
+            if (payload.tasks.length === 0 && prevTasks.length > 0) {
+                console.warn("🛡️ [Planner] Save aborted: tasks array is empty but local storage has data.");
+                return;
+            }
+
+            localStorage.setItem(lsKey('planner_updated_at'), nowIso);
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
@@ -4259,6 +4267,16 @@
             const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
 
             if ((force || remoteIsNewer) && remoteData) {
+                // 🛡️ ANTI-WIPE: Se il remoto è vuoto ma il locale ha dati, preserveremo i locali a meno di un force
+                const localData = state[sliceName];
+                const remoteIsEmpty = (Array.isArray(remoteData) && remoteData.length === 0) || (remoteData && typeof remoteData === 'object' && Object.keys(remoteData).length === 0);
+                const localHasData = (Array.isArray(localData) && localData.length > 0) || (localData && typeof localData === 'object' && Object.keys(localData).length > 0);
+
+                if (remoteIsEmpty && localHasData && !force) {
+                    console.warn(`🛡️ Anti-wipe [${sliceName}]: Remote data is empty, but local state has data. Preserving local.`);
+                    return localData;
+                }
+
                 console.log(`☁️ Remote [${sliceName}] applied (force=${force}, newer=${remoteIsNewer})`);
                 return remoteData;
             }
