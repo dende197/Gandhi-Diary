@@ -1,45 +1,8 @@
 {
   "version": 2,
   "functions": {
-    "api/main.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/ping.js,api/health.js"
-    },
-    "api/auth.js": {
-      "maxDuration": 60,
-      "includeFiles": "api/login.js,api/sync.js,api/resolve-profile.js"
-    },
-    "api/profile.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/profile/index.js,api/profile/[user_id].js"
-    },
-    "api/planner.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/planner/[user_id].js"
-    },
-    "api/circolari.js": {
-      "maxDuration": 60,
-      "includeFiles": "api/circolari/index.js,api/circolari/sintesi.js"
-    },
-    "api/ai.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/ai/chat.js,api/mental-health/ai-advice.js"
-    },
-    "api/mental.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/mental-health/save.js,api/mental-health/history.js"
-    },
-    "api/upload.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/upload.js"
-    },
-    "api/conversations.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/conversations/user/[user_id].js"
-    },
-    "api/debug.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/debug/profile-raw.js"
+    "api/*.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
