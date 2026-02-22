@@ -6460,7 +6460,7 @@
                             "
                         rows="1"
                         onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
-                        oninput="this.style.height='auto'; const max=window.innerWidth<600?60:100; this.style.height=Math.min(this.scrollHeight,max)+'px';"></textarea>
+                        oninput="state.aiChatInputValue=this.value; this.style.height='auto'; const max=window.innerWidth<600?60:100; this.style.height=Math.min(this.scrollHeight,max)+'px';">${state.aiChatInputValue || ''}</textarea>
 
                     <button onclick="sendAIChat()" style="
                             width: 32px; height: 32px; 
@@ -6487,6 +6487,7 @@
 
 
         function sendAIChatQuick(text) {
+            state.aiChatInputValue = '';
             const input = document.getElementById('aiChatInput');
             if (input) input.value = text;
             sendAIChat();
@@ -6512,6 +6513,7 @@
             if (!text) return;
 
             // Add user message
+            state.aiChatInputValue = '';
             const now = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
             state.aiChatHistory.push({ role: 'user', text, ts: now });
             input.value = '';
@@ -6571,36 +6573,29 @@
                     return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
                 }).filter(Boolean).join('\n');
 
-            const systemContext = `Sei G-AI, the tutor personale integrato in G-Diary — un'app scolastica italiana. Rispondi SEMPRE in italiano in modo naturale, come farebbe un amico intelligente che studia con te. Adatta il tuo stile alla domanda: domanda semplice → risposta diretta e concisa; richiesta di piano o analisi → struttura chiara con Markdown.
+            const systemContext = `Sei G-AI, il tutor personale di G-Diary. Rispondi in italiano in modo naturale, amichevole e conciso.
 
-HAI ACCESSO AI DATI REALI DELLO STUDENTE:
-
-📅 DATA ODIERNA: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-
+DATI STUDENTE:
+📅 OGGI: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 ${stressBlock}
-
-📚 AGENDA SCOLASTICA:
-- Compiti da fare: ${homework || 'nessuno'}
-- Verifiche/interrogazioni: ${exams || 'nessuna'}
+📚 AGENDA:
+- Compiti: ${homework || 'nessuno'}
+- Verifiche: ${exams || 'nessuna'}
 - Arretrati: ${backlog || 'nessuno'}
-- Materie difficili: ${difficulty || 'nessuna'}
+- Materie critiche: ${difficulty || 'nessuna'}
 - ${schedule}
-${plannedSummary ? `\nGIÀ PIANIFICATO (non duplicare):\n${plannedSummary}` : ''}
+${plannedSummary ? `\nGIÀ PIANIFICATO (NON duplicare questi):\n${plannedSummary}` : ''}
 
-COME RISPONDERE:
-• Sii naturale e conversazionale — non robotico. Varia il tono: incoraggiante, pratico, diretto.
-• Domande semplici → risposta breve (2-5 righe). Non schematizzare tutto.
-• Richieste di piani → struttura ordinata con sezioni e orari precisi.
-• Domande su stress/benessere → cita esplicitamente i dati che hai ("Vedo che oggi hai stress 4/5...").
-• Usa emoji con parsimonia, solo dove aggiungono chiarezza.
-• MAI dire "non ho accesso a..." se i dati sono nel contesto sopra.
+REGOLE DI RISPOSTA:
+1. Sii naturale ed empatico. Domande semplici -> risposte brevi (2-5 righe).
+2. Usa le emoji con parsimonia. 
+3. Basati sempre sui dati forniti qui sopra, non dire mai "non ho accesso a...".
 
-SE CREI UN PIANO DI STUDIO multi-giorno:
-• Intestazioni: ## GIORNO YYYY-MM-DD (es. ## LUNEDÌ 2025-01-20)
-• Slot: - HH:MM – HH:MM: [Materia] Attività specifica
-• Stress ≥ 4 → sessioni max 40 min, pausa ogni ora
-• Includi ☕ pause
-• Non duplicare ciò che è già pianificato`;
+SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
+- Formato per ogni giorno ESATTO: ## GIORNO YYYY-MM-DD (es. ## LUNEDÌ 2026-02-24)
+- Formato per ogni slot ESATTO: - HH:MM – HH:MM: [Materia] Attività da svolgere
+- Se Stress >= 4, mantieni le sessioni brevi (max 40 min) e pause frequenti.
+- Includi sempre delle ☕ pause tra le varie sessioni.`;
 
             // Build conversation for Gemini
             const contents = [
