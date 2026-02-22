@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.80 [Global Reset Sync & Save Reliability]
-        const APP_VERSION = '1.1.80';
+        // 🚀 G-Diary v1.1.81 [Reset Propagation & Authoritative Sync]
+        const APP_VERSION = '1.1.81';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -3281,19 +3281,15 @@
                         const localSL = state.stressLevels || {};
                         const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                        const remoteHasData = Object.keys(remotePT).length > 0 ||
-                            Object.keys(remoteSL).length > 0 ||
-                            (data.planner.prepLevels && Object.keys(data.planner.prepLevels).length > 0);
-
-                        const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
-
+                        // v1.1.81: Trust the server timestamp even if remote slices are empty (RESET scenario)
                         const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
                             new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
 
-                        // AUTHORITATIVE HYDRATION: Se locale è vuoto ma remote ha dati, carichiamo SEMPRE (anche se non newer)
-                        const shouldOverwrite = remoteHasData && (remoteIsNewer || !localHasData);
+                        // AUTHORITATIVE OVERWRITE: Se il server è più recente, carichiamo SEMPRE (anche se vuoto = reset)
+                        // Oppure se il locale è vuoto e il server ha un record.
+                        const shouldOverwrite = remoteIsNewer || (!localHasData && data.planner);
 
-                        console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer, shouldOverwrite });
+                        console.log("📊 Planner merge:", { remoteIsNewer, localHasData, shouldOverwrite });
 
                         if (shouldOverwrite) {
                             // authoritative overwrite to avoid Append Bug
@@ -4366,9 +4362,10 @@
             }
 
             if ((force || remoteIsNewer) && remoteData) {
-                // 🛡️ [v1.1.79] NEVER overwrite with empty if local has data
-                if (remoteIsEmpty && localHasData) {
-                    console.warn(`🛡️ [${sliceName}] Sync bypass: remote è vuoto, mantengo dati locali`);
+                // 🛡️ [v1.1.81] ALLOW overwrite with empty IF it's newer (intentional reset)
+                // BLOCCO solo se NON è forzato E NON è più nuovo (possibile wipe accidentale)
+                if (remoteIsEmpty && localHasData && !force && !remoteIsNewer) {
+                    console.warn(`🛡️ [${sliceName}] Sync bypass: remote è vuoto e non più recente, mantengo dati locali`);
                     return localData;
                 }
                 console.log(`☁️ Remote [${sliceName}] applicato (force=${force}, newer=${remoteIsNewer})`);
