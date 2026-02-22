@@ -2919,7 +2919,8 @@
         async function savePlannerRemote() {
             console.trace("📤 [SAVE] savePlannerRemote called");
             if (state.booting || state.syncing) {
-                console.log("⏳ [SYNC] Save deferred: sync in progress or booting.");
+                console.log("⏳ [SYNC] Save deferred: sync in progress or booting. Retrying in 2s...");
+                setTimeout(() => { savePlannerRemote().catch(() => { }); }, 2000);
                 return;
             }
             const userId = getUserId();
@@ -3683,10 +3684,21 @@
             });
 
             // ✅ PERSISTENCE FIX: Mantieni i compiti locali (AI o manuali) non presenti su Argo
-            // Questo evita che vengano cancellati ad ogni sync/refresh.
-            const localQuests = localIndex ? Array.from(localIndex.values()).filter(t =>
+            // 🔥 FIX v2: Leggi AI tasks sia da localStorage CHE da state.tasks in memoria
+            //    perché saveTasks usa setTimeout(150ms) e potrebbe non aver scritto ancora
+            const aiFromLocalStorage = localIndex ? Array.from(localIndex.values()).filter(t =>
                 (t.id && (t.id.startsWith('ai_') || t.id.startsWith('t_'))) || t.subject === 'QUEST'
             ) : [];
+            const aiFromState = (state.tasks || []).filter(t =>
+                (t.id && (t.id.startsWith('ai_') || t.id.startsWith('t_'))) || t.subject === 'QUEST'
+            );
+            // Unisci senza duplicati (priorità a state.tasks che è più fresco)
+            const aiTaskMap = new Map();
+            for (const t of aiFromLocalStorage) aiTaskMap.set(t.id, t);
+            for (const t of aiFromState) aiTaskMap.set(t.id, t); // sovrascrive con versione più recente
+            const localQuests = Array.from(aiTaskMap.values());
+
+            console.log(`🔍 [updateTasks] AI tasks preservati: ${localQuests.length} (${aiFromLocalStorage.length} da cache, ${aiFromState.length} da state)`);
 
             // Unisci QUEST locali con i nuovi task formattati
             // Usa un set per evitare duplicati se per caso lo stesso QUEST è già in formatted
