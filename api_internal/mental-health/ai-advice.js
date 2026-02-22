@@ -70,14 +70,14 @@ Rispondi SOLO con JSON (senza markdown):
             const supabase = getSupabase();
             if (supabase) {
                 const todayDate = new Date().toISOString().slice(0, 10);
-                await supabase.from('mental_health_logs')
+                const { error: dbError } = await supabase.from('mental_health_logs')
                     .update({
                         ai_advice: parsed.advice + '\n\n' + parsed.studyPlan,
                         motivational_quote: parsed.quote
                     })
                     .eq('profile_id', profileId)
-                    .eq('log_date', todayDate)
-                    .catch(e => console.error('MH AI Save Error:', e.message));
+                    .eq('log_date', todayDate);
+                if (dbError) console.error('MH AI Save Error:', dbError.message);
             }
         }
 
