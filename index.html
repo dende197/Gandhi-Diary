@@ -5326,7 +5326,6 @@
             if (btn) {
                 const originalHTML = btn.innerHTML;
                 btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Salvataggio...';
-                btn.disabled = true;
                 btn.style.opacity = '0.7';
 
                 await savePlannerRemote();
@@ -5337,7 +5336,6 @@
 
                 setTimeout(() => {
                     btn.innerHTML = originalHTML;
-                    btn.disabled = false;
                     btn.style.opacity = '1';
                     btn.style.background = 'var(--accent)';
                     btn.style.color = 'white';
@@ -5500,7 +5498,7 @@
                             <p style="margin:2px 0 0; font-size:12px; color:var(--text-dim);">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                         </div>
                     </div>
-                    <button onclick="handleManualStressSave(this)" style="background:var(--accent); color:white; border:none; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(99,102,241,0.3); transition: transform 0.2s, opacity 0.2s;">
+                    <button onclick="window.handleManualStressSave(this)" style="background:var(--accent); color:white; border:none; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(99,102,241,0.3); transition: transform 0.2s, opacity 0.2s;">
                         <i class="ph-bold ph-cloud-arrow-up"></i> Salva e Sincronizza
                     </button>
                 </div>
@@ -8878,7 +8876,6 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
         window.checkServerHealth_impl = checkServerHealth;
         window.showProfileSelectionModal_impl = showProfileSelectionModal;
         window.showModal_impl = showModal;
-        window.handleManualStressSave_impl = handleManualStressSave;
 
         // 2. Expose safety wrappers
         const safeExpose = (name) => {
@@ -8891,7 +8888,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
             };
         };
 
-        ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal', 'handleManualStressSave'].forEach(safeExpose);
+        ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
 
         // Initial Render
         document.addEventListener('DOMContentLoaded', () => {
