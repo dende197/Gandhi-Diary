@@ -5274,25 +5274,50 @@
             return null;
         }
 
-        function updateMHMetric(key, val) {
-            const todayStr = getLocalDateString();
-            if (!state.stressLevels[todayStr] || typeof state.stressLevels[todayStr] !== 'object') {
-                state.stressLevels[todayStr] = { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
+        function updateMHMetric(key, value) {
+            const dateStr = getLocalDateString();
+            if (!state.stressLevels) state.stressLevels = {};
+            if (!state.stressLevels[dateStr]) {
+                state.stressLevels[dateStr] = { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
             }
-            state.stressLevels[todayStr][key] = val;
+            state.stressLevels[dateStr][key] = value;
             saveTasks();
 
             // Debounced save to Supabase (don't save on every slider tick)
             if (_mhSaveTimeout) clearTimeout(_mhSaveTimeout);
             _mhSaveTimeout = setTimeout(() => {
-                saveMHToSupabase(state.stressLevels[todayStr]);
-                // 🔥 Salva anche sul planner remoto per sincronizzazione cross-device
+                saveMHToSupabase(state.stressLevels[dateStr]);
                 debouncedSavePlannerRemote(200);
-                // Refresh AI advice after save
                 fetchMHAIAdvice(true).then(() => render());
             }, 1500);
 
-            render();
+            if (state.view === 'mental-health') render();
+        }
+
+        async function handleManualStressSave(btn) {
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Salvataggio...';
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+
+                await savePlannerRemote();
+
+                btn.innerHTML = '<i class="ph-bold ph-check"></i> Salvato!';
+                btn.style.background = 'var(--green)';
+                btn.style.color = 'black';
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.background = 'var(--accent)';
+                    btn.style.color = 'white';
+                }, 2000);
+            } else {
+                await savePlannerRemote();
+            }
+            showToast('✅ Benessere sincronizzato su tutti i dispositivi', 'var(--green)');
         }
 
         const MOTIVATIONAL_QUOTES = [
@@ -5437,14 +5462,19 @@
 
             return `
             <div class="view animate-fade-in" style="padding: 24px; padding-bottom: 120px;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:28px;">
-                    <button type="button" onclick="navigate('home')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;">
-                        <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
-                    </button>
-                    <div>
-                        <h1 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.5px;">Benessere & Studio</h1>
-                        <p style="margin:2px 0 0; font-size:12px; color:var(--text-dim);">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <button type="button" onclick="navigate('home')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;">
+                            <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
+                        </button>
+                        <div>
+                            <h1 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.5px;">Benessere</h1>
+                            <p style="margin:2px 0 0; font-size:12px; color:var(--text-dim);">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                        </div>
                     </div>
+                    <button onclick="handleManualStressSave(this)" style="background:var(--accent); color:white; border:none; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(99,102,241,0.3); transition: transform 0.2s, opacity 0.2s;">
+                        <i class="ph-bold ph-cloud-arrow-up"></i> Salva e Sincronizza
+                    </button>
                 </div>
 
                 <!-- DAILY CHECK-IN -->
@@ -8837,6 +8867,21 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
         // Initial Render
         document.addEventListener('DOMContentLoaded', () => {
             console.log("🚀 DOM Ready - Starting App...");
+        });
+
+        // 🔄 AUTOSYNC CROSS-DEVICE ON APP FOCUS
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                const uid = getUserId();
+                if (uid && uid !== 'guest') {
+                    console.log("🔄 App a fuoco: scarico dati recenti dal cloud...");
+                    fetchPlannerRemote(true).then(() => {
+                        if (state.view === 'mental-health' || state.view === 'planner') {
+                            render();
+                        }
+                    });
+                }
+            }
         });
     </script>
     <!-- Persistent cloud menu — outside render() (v1.1.59) -->
