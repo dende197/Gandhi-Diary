@@ -4036,14 +4036,17 @@
 
         function getSubjectAbbrev(subject) {
             if (!subject) return 'GEN';
+            let cleanSubj = subject.replace(/[*_\[\]]/g, '').trim();
+            if (!cleanSubj) return 'GEN';
+
             const abbrevs = {
-                'ITALIANO': 'ITA', 'MATEMATICA': 'MAT', 'INGLESSE': 'ING',
+                'ITALIANO': 'ITA', 'MATEMATICA': 'MAT', 'INGLESSE': 'ING', 'INGLESE': 'ING',
                 'STORIA': 'STO', 'GEOGRAFIA': 'GEO', 'FILOSOFIA': 'FIL',
                 'FISICA': 'FIS', 'SCIENZE': 'SCI', 'BIOLOGIA': 'BIO',
                 'CHIMICA': 'CHI', 'ARTE': 'ART', 'DISEGNO': 'DIS',
-                'RELIGIONE': 'REL', 'ED. FISICA': 'EDF', 'INFORMATICA': 'INF'
+                'RELIGIONE': 'REL', 'EDUCAZIONE FISICA': 'EDF', 'INFORMATICA': 'INF'
             };
-            const key = subject.toUpperCase().trim();
+            const key = cleanSubj.toUpperCase().trim();
             if (abbrevs[key]) return abbrevs[key];
             for (let [full, short] of Object.entries(abbrevs)) {
                 if (key.includes(full)) return short;
@@ -4474,7 +4477,8 @@
         // renderChatList removed
 
         function getSubjectColor(subject) {
-            const s = (subject || '').trim();
+            let s = (subject || '').trim();
+            s = s.replace(/[*_\[\]]/g, '').trim();
             if (!s) return '#0A84FF';
 
             const lower = s.toLowerCase();
