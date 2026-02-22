@@ -5283,18 +5283,20 @@
             state.stressLevels[dateStr][key] = value;
             saveTasks();
 
-            // Debounced save to Supabase (don't save on every slider tick)
-            if (_mhSaveTimeout) clearTimeout(_mhSaveTimeout);
-            _mhSaveTimeout = setTimeout(() => {
-                saveMHToSupabase(state.stressLevels[dateStr]);
-                debouncedSavePlannerRemote(200);
-                fetchMHAIAdvice(true).then(() => render());
-            }, 1500);
+            // Local UI Update without full render
+            const badge = document.getElementById('mh-badge-' + key);
+            if (badge) badge.innerText = value + (key === 'sleep' ? 'h' : (key === 'load' ? '' : '/5'));
 
-            if (state.view === 'mental-health') render();
+            // Debounced save to Supabase (don't save on every slider tick)
+            if (window._mhSaveTimeout) clearTimeout(window._mhSaveTimeout);
+            window._mhSaveTimeout = setTimeout(() => {
+                if (typeof saveMHToSupabase === 'function') saveMHToSupabase(state.stressLevels[dateStr]);
+                debouncedSavePlannerRemote(200);
+                if (typeof fetchMHAIAdvice === 'function') fetchMHAIAdvice(true).then(() => { if (state.view === 'mental-health') render(); });
+            }, 1500);
         }
 
-        async function handleManualStressSave(btn) {
+        window.handleManualStressSave = async function (btn) {
             if (btn) {
                 const originalHTML = btn.innerHTML;
                 btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Salvataggio...';
@@ -5486,10 +5488,10 @@
                     <div class="mh-metric-box">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-weight:700; font-size:15px;">Livello di Stress</span>
-                            <span class="mh-badge ${data.stress > 3 ? 'mh-badge-high' : data.stress > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.stress}/5</span>
+                            <span id="mh-badge-stress" class="mh-badge ${data.stress > 3 ? 'mh-badge-high' : data.stress > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.stress}/5</span>
                         </div>
                         <div class="mh-slider-container">
-                            <input type="range" min="1" max="5" value="${data.stress}" class="mh-slider" style="--slider-color: ${data.stress > 3 ? '#FF453A' : data.stress > 1 ? '#FF9F0A' : '#30D158'};" oninput="updateMHMetric('stress', parseInt(this.value))">
+                            <input type="range" min="1" max="5" value="${data.stress}" class="mh-slider" style="--slider-color: ${data.stress > 3 ? '#FF453A' : data.stress > 1 ? '#FF9F0A' : '#30D158'};" oninput="updateMHMetric('stress', parseInt(this.value)); this.style.setProperty('--slider-color', this.value > 3 ? '#FF453A' : this.value > 1 ? '#FF9F0A' : '#30D158'); document.getElementById('mh-badge-stress').className = 'mh-badge ' + (this.value > 3 ? 'mh-badge-high' : this.value > 1 ? 'mh-badge-mid' : 'mh-badge-low');">
                             <div style="display:flex; justify-content:space-between; margin-top:6px;">
                                 <span style="font-size:10px; opacity:0.4;">Calmo</span>
                                 <span style="font-size:10px; opacity:0.4;">Molto stressato</span>
@@ -5500,10 +5502,10 @@
                     <div class="mh-metric-box">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-weight:700; font-size:15px;">Stanchezza Mentale</span>
-                            <span class="mh-badge ${data.fatigue > 3 ? 'mh-badge-high' : data.fatigue > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.fatigue}/5</span>
+                            <span id="mh-badge-fatigue" class="mh-badge ${data.fatigue > 3 ? 'mh-badge-high' : data.fatigue > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.fatigue}/5</span>
                         </div>
                         <div class="mh-slider-container">
-                            <input type="range" min="1" max="5" value="${data.fatigue}" class="mh-slider" oninput="updateMHMetric('fatigue', parseInt(this.value))">
+                            <input type="range" min="1" max="5" value="${data.fatigue}" class="mh-slider" oninput="updateMHMetric('fatigue', parseInt(this.value)); document.getElementById('mh-badge-fatigue').className = 'mh-badge ' + (this.value > 3 ? 'mh-badge-high' : this.value > 1 ? 'mh-badge-mid' : 'mh-badge-low');">
                             <div style="display:flex; justify-content:space-between; margin-top:6px;">
                                 <span style="font-size:10px; opacity:0.4;">Fresco</span>
                                 <span style="font-size:10px; opacity:0.4;">Esausto</span>
@@ -5514,10 +5516,10 @@
                     <div class="mh-metric-box">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-weight:700; font-size:15px;">Ore di Sonno</span>
-                            <span style="font-weight:800; font-size:18px; color:${data.sleep < 6 ? '#FF453A' : data.sleep < 7 ? '#FF9F0A' : 'var(--accent)'}">${data.sleep}h</span>
+                            <span id="mh-badge-sleep" style="font-weight:800; font-size:18px; color:${data.sleep < 6 ? '#FF453A' : data.sleep < 7 ? '#FF9F0A' : 'var(--accent)'}">${data.sleep}h</span>
                         </div>
                         <div class="mh-slider-container">
-                            <input type="range" min="0" max="12" step="0.5" value="${data.sleep}" class="mh-slider" oninput="updateMHMetric('sleep', parseFloat(this.value))">
+                            <input type="range" min="0" max="12" step="0.5" value="${data.sleep}" class="mh-slider" oninput="updateMHMetric('sleep', parseFloat(this.value)); document.getElementById('mh-badge-sleep').style.color = (this.value < 6 ? '#FF453A' : this.value < 7 ? '#FF9F0A' : 'var(--accent)');">
                             <div style="display:flex; justify-content:space-between; margin-top:6px;">
                                 <span style="font-size:10px; opacity:0.4;">0h</span>
                                 <span style="font-size:10px; color:${data.sleep < 6 ? '#FF453A' : 'rgba(255,255,255,0.3)'}">${data.sleep < 6 ? '⚠️ Debito' : ''}</span>
@@ -8850,6 +8852,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
         window.checkServerHealth_impl = checkServerHealth;
         window.showProfileSelectionModal_impl = showProfileSelectionModal;
         window.showModal_impl = showModal;
+        window.handleManualStressSave_impl = handleManualStressSave;
 
         // 2. Expose safety wrappers
         const safeExpose = (name) => {
@@ -8862,7 +8865,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
             };
         };
 
-        ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal'].forEach(safeExpose);
+        ['performLogin', 'performSync', 'navigate', 'render', 'showQuickAddTaskModal', 'showModal', 'closeModal', 'openArgoLogin', 'performArgoSync', 'selectProfile', 'switchProfile', 'handleLoginSuccess', 'checkServerHealth', 'showProfileSelectionModal', 'handleManualStressSave'].forEach(safeExpose);
 
         // Initial Render
         document.addEventListener('DOMContentLoaded', () => {
