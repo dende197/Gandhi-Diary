@@ -153,7 +153,12 @@ module.exports = async function handler(req, res) {
 
     } catch (e) {
         console.error('LOGIN FAILURE', e);
-        const { DEBUG_MODE } = require('../lib/helpers');
-        res.status(401).json({ success: false, error: e.message, traceback: DEBUG_MODE ? e.stack : null });
+        const status = e.status || (e.response?.status) || 401;
+        const msg = e.message || "Errore sconosciuto durante il login";
+        res.status(status).json({
+            success: false,
+            error: msg,
+            code: status
+        });
     }
 }

@@ -1800,7 +1800,9 @@
         }
 
         .offline-badge.show {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         /* === FAB === */
@@ -2168,7 +2170,11 @@
         }, 5000);
     </script>
 
-    <div id="offline-badge" class="offline-badge">Disconnesso</div>
+    <div id="offline-badge" class="offline-badge">
+        <i class="ph ph-warning-circle"></i> Disconnesso
+        <button onclick="performSync().catch(()=>{})"
+            style="margin-left:8px; background: var(--orange); color: black; border: none; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: pointer;">RIPROVA</button>
+    </div>
     <div id="nav-container"></div>
 
     <div class="main-container">
@@ -2198,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.73 [Mental Health Engine v2]
-        const APP_VERSION = '1.1.73';
+        // 🚀 G-Diary v1.1.75 [Stability Patch]
+        const APP_VERSION = '1.1.75';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2840,7 +2846,9 @@
         // 🚀 GLOBAL EXPOSURE (Moved to end of file to ensure all functions are defined)
 
         function updateOfflineBadge() {
+            if (!offlineBadge) return;
             if (state.isOffline) {
+                console.log("⚠️ Mostro offline badge");
                 offlineBadge.classList.add('show');
             } else {
                 offlineBadge.classList.remove('show');
@@ -3212,16 +3220,20 @@
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
+                    if (response.status === 403) throw new Error("Accesso negato da Argo (403). Attendi qualche minuto.");
                     throw new Error(`Server error: ${response.status}`);
                 }
 
                 const data = await response.json();
                 updateLoader("Analisi Dati...");
+
+                state.isOffline = false; // Se arriviamo qui, il server ha risposto
+                updateOfflineBadge();
+
                 console.log("📥 Dati ricevuti dal server:", {
                     success: data.success,
                     tasksCount: data.tasks?.length || 0,
                     votiCount: data.voti?.length || 0,
-                    promemoriaCount: data.promemoria?.length || data.announcements?.length || 0,
                     plannerReceived: !!data.planner,
                     error: data.error
                 });
@@ -3229,9 +3241,7 @@
                 if (data.success && data.tasks) {
                     // ⭐ Gestione compiti
                     if (data.tasks.length === 0 && state.tasks.length > 0) {
-                        console.warn("⚠️ Il server ha mandato 0 compiti. Mantengo quelli locali per sicurezza.");
-                        state.isOffline = false;
-                        updateOfflineBadge();
+                        console.warn("⚠️ Il server ha mandato 0 compiti. Mantengo quelli locali.");
                         state.syncing = false;
                         return;
                     }
@@ -7308,9 +7318,16 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
                     return;
                 }
 
-                if (!response.ok) throw new Error(data.error || "Errore Server");
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error("⚠️ Argo ha bloccato la connessione (Errore 403). Attendi 5-10 minuti senza fare refresh e riprova.");
+                    }
+                    throw new Error(data.error || `Errore Server (${response.status})`);
+                }
 
                 if (data.success) {
+                    state.isOffline = false;
+                    updateOfflineBadge();
                     handleLoginSuccess(data, credentials.password);
                 } else {
                     throw new Error(data.error || "Login fallito");
