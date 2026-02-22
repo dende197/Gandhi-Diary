@@ -51,6 +51,7 @@ module.exports = async function handler(req, res) {
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
 
         let enrichedStudent = null;
+        let plannerData = null;
         const supabase = getSupabase();
 
         if (supabase) {
@@ -66,6 +67,8 @@ module.exports = async function handler(req, res) {
                 }
 
                 const pid = generatePid(school, user, profileIndex);
+
+                // 1. Update Profile
                 const { data: existingProfile } = await supabase.from('profiles')
                     .select('specialization, avatar, name, class').eq('id', pid).single();
 
@@ -95,6 +98,31 @@ module.exports = async function handler(req, res) {
                     specialization: storedSpecialization,
                     avatar: storedAvatar
                 };
+
+                // 2. Fetch Planner Data (For cross-device sync on login/sync)
+                const { data: plannerRow } = await supabase.from('planners')
+                    .select('*').eq('user_id', pid).single();
+
+                if (plannerRow) {
+                    const parseJsonb = (val, fallback) => {
+                        if (val === null || val === undefined) return fallback;
+                        if (typeof val === 'string') {
+                            try { return JSON.parse(val); } catch (e) { return fallback; }
+                        }
+                        return val;
+                    };
+
+                    plannerData = {
+                        plannedTasks: parseJsonb(plannerRow.planned_tasks, {}),
+                        stressLevels: parseJsonb(plannerRow.stress_levels, {}),
+                        plannedDetails: parseJsonb(plannerRow.planned_details, {}),
+                        tasks: parseJsonb(plannerRow.tasks, []),
+                        prepLevels: parseJsonb(plannerRow.prep_levels, {}),
+                        updatedAt: plannerRow.updated_at
+                    };
+                    debugLog('✅ Planner data included in sync for:', pid);
+                }
+
             } catch (e) {
                 debugLog('⚠️ Sync Supabase error', e.message);
             }
@@ -106,7 +134,7 @@ module.exports = async function handler(req, res) {
             voti: grades,
             promemoria,
             new_tokens: { authToken, accessToken },
-            planner: null,
+            planner: plannerData,
             student: enrichedStudent
         });
 
