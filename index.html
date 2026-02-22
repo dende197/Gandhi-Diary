@@ -2917,12 +2917,20 @@
         // Save remoto + timestamp locale
         // --- SALVATAGGIO: aggiorna subito timestamp locale e invia updatedAt ---
         async function savePlannerRemote() {
+            console.trace("📤 [SAVE] savePlannerRemote called");
             if (state.booting || state.syncing) {
                 console.log("⏳ [SYNC] Save deferred: sync in progress or booting.");
                 return;
             }
             const userId = getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
+
+            // 🛡️ ANTI-WIPE v2: Se state.plannedTasks è vuoto ma localStorage ha dati, ripristina PRIMA di salvare
+            const cachedPT = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
+            if (Object.keys(state.plannedTasks || {}).length === 0 && Object.keys(cachedPT).length > 0) {
+                console.warn("🛡️ [SAVE] Anti-wipe: state.plannedTasks vuoto ma cache ha dati → ripristino da cache prima del save");
+                state.plannedTasks = cachedPT;
+            }
 
             const plannedDetails = {};
             try {
@@ -2944,6 +2952,8 @@
                 prepLevels: state.prepLevels || {},
                 updatedAt: nowIso
             };
+
+            console.log(`📤 [SAVE] Payload: plannedTasks=${Object.keys(payload.plannedTasks).length} giorni, tasks=${payload.tasks.length}`);
 
             // 🛡️ HARD ANTI-WIPE (v1.1.69): Mai salvare un piano vuoto se abbiamo dati in cache locale.
             const prevTasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
@@ -8790,7 +8800,7 @@ SE CREI UN PIANO DI STUDIO multi-giorno:
             <i class="ph-bold ph-cloud-arrow-up" style="color: rgba(139,92,246,0.8);"></i> Salva
         </button>
         <button class="pd-item"
-            onclick="fetchPlannerRemote(true).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
+            onclick="fetchPlannerRemote(false).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
             <i class="ph-bold ph-cloud-arrow-down" style="color: rgba(139,92,246,0.8);"></i> Carica
         </button>
         <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
