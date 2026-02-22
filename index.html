@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.81 [Reset Propagation & Authoritative Sync]
-        const APP_VERSION = '1.1.81';
+        // 🚀 G-Diary v1.1.82 [Sync Crash Fix]
+        const APP_VERSION = '1.1.82';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -3284,6 +3284,8 @@
                         // v1.1.81: Trust the server timestamp even if remote slices are empty (RESET scenario)
                         const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
                             new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+
+                        const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
 
                         // AUTHORITATIVE OVERWRITE: Se il server è più recente, carichiamo SEMPRE (anche se vuoto = reset)
                         // Oppure se il locale è vuoto e il server ha un record.
