@@ -6781,7 +6781,10 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
 
                 // Estrai materia e argomento
                 let subject = '', topic = '';
-                const bracketMatch = clean.match(/^\[?([^\]\-–—:]+)[\]\-–—:\s]+(.+)$/);
+                // Rimuovi eventuali asterischi markdown attorno alle parentesi: **[Materia]** -> [Materia]
+                clean = clean.replace(/\*\*\[/g, '[').replace(/\]\*\*/g, ']').replace(/\*\[/g, '[').replace(/\]\*/g, ']');
+
+                const bracketMatch = clean.match(/^\[([^\]]+)\][\-–—:\s]*(.+)$/);
                 if (bracketMatch) {
                     subject = bracketMatch[1].trim();
                     topic = bracketMatch[2].trim();
@@ -6791,8 +6794,8 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
                     topic = words.slice(1).join(' ').trim() || 'Studio';
                 }
 
-                // Normalizza materia
-                subject = subject.replace(/[\[\]]/g, '').trim();
+                // Normalizza materia rimuovendo markdown residuo (*, _)
+                subject = subject.replace(/[*_\[\]]/g, '').trim();
                 subject = subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase();
                 if (subject.length < 2) subject = 'Studio';
 
