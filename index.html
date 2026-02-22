@@ -2853,6 +2853,7 @@
         // --- FETCH: blindato anti-wipe + last-write-wins ---
         // --- FETCH: blindato anti-wipe + last-write-wins ---
         async function fetchPlannerRemote(force = false) {
+            console.trace(`🔍 [SYNC] fetchPlannerRemote called (force=${force})`);
             const userId = getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return null;
 
@@ -4277,6 +4278,7 @@
 
                 if (remoteIsEmpty && localHasData) {
                     console.warn(`🛡️ HARD Anti-wipe [${sliceName}]: Remote is empty, preserving local (even if force=${force})`);
+                    console.log(`📊 Anti-wipe Debug [${sliceName}]: remoteData=`, remoteData, "localData=", localData);
                     return localData;
                 }
 
