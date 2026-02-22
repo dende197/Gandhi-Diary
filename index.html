@@ -2866,29 +2866,31 @@
                 const data = await res.json();
 
                 if (data.success && data.data) {
-                    console.log("📥 [SYNC] Dati ricevuti dal Cloud:", data.data);
+                    console.log("📥 [SYNC] Dati ricevuti dal Cloud:", JSON.stringify(data.data));
                     const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                     const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
                     const remoteSV = data.data.stressVents || data.data.stress_vents || {};
-                    const remoteTS = data.data.tasks || [];
+                    // 🔥 NON sincronizzare tasks dal planner — i compiti Argo arrivano SOLO da performSync
+                    // const remoteTS = data.data.tasks || [];
                     const remotePL = data.data.prepLevels || data.data.prep_levels || {};
                     const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
 
                     const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at'));
                     console.log(`🔍 [SYNC] Remote Update: ${remoteUpdatedAt} | Local Update: ${localUpdatedAt}`);
+                    console.log(`📊 [SYNC] planned_tasks ricevuti:`, JSON.stringify(remotePT));
+                    console.log(`📊 [SYNC] state.tasks locali: ${(state.tasks || []).length} compiti`);
 
-                    // Robust LWW Sync per ogni sezione di stato
+                    // Robust LWW Sync per ogni sezione di stato (NO tasks!)
                     state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt, force);
                     state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt, force);
                     state.stressVents = syncStateSlice('stressVents', remoteSV, remoteUpdatedAt, force);
-                    state.tasks = syncStateSlice('tasks', remoteTS, remoteUpdatedAt, force);
+                    // 🔥 state.tasks NON viene toccato — proviene solo da Argo
                     state.prepLevels = syncStateSlice('prepLevels', remotePL, remoteUpdatedAt, force);
 
-                    // Persist locally
+                    // Persist locally (NO tasks — gestiti da saveTasks/updateTasks)
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                     localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
-                    localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
                     localStorage.setItem(lsKey('prep_levels'), JSON.stringify(state.prepLevels));
                     if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
 
@@ -2968,7 +2970,7 @@
                 if (data?.success && data?.data?.updatedAt) {
                     localStorage.setItem(lsKey('planner_updated_at'), data.data.updatedAt);
                 }
-                console.log("✅ Planner salvato sul server");
+                console.log("✅ Planner salvato sul server — risposta:", JSON.stringify(data?.data || {}));
             } catch (e) {
                 console.warn("Planner remote save failed, outbox:", e.message);
                 enqueueOutbox('planner', { userId, payload });
@@ -4266,29 +4268,31 @@
         // Helper per merge non distruttivo e robusto (Last-Write-Wins)
         function syncStateSlice(sliceName, remoteData, remoteUpdatedAt, force = false) {
             const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
+            const remoteIsNewer = remoteUpdatedAt && (
+                !localUpdatedAt ||
+                new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()
+            );
 
-            // Se il remoto è più nuovo (o il locale non ha timestamp), usiamo il remoto
-            const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt || new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
+            const localData = state[sliceName];
+            const remoteIsEmpty = Array.isArray(remoteData)
+                ? remoteData.length === 0
+                : (!remoteData || Object.keys(remoteData).length === 0);
+            const localHasData = Array.isArray(localData)
+                ? localData.length > 0
+                : (localData && Object.keys(localData).length > 0);
+
+            if (remoteIsEmpty && localHasData) {
+                console.warn(`🛡️ HARD Anti-wipe [${sliceName}]: Remote è vuoto, preservo locale (force=${force})`);
+                return localData;
+            }
 
             if ((force || remoteIsNewer) && remoteData) {
-                // 🛡️ ANTI-WIPE: Se il remoto è vuoto ma il locale ha dati, preserveremo i locali a meno di un force
-                const localData = state[sliceName];
-                const remoteIsEmpty = (Array.isArray(remoteData) && remoteData.length === 0) || (remoteData && typeof remoteData === 'object' && Object.keys(remoteData).length === 0);
-                const localHasData = (Array.isArray(localData) && localData.length > 0) || (localData && typeof localData === 'object' && Object.keys(localData).length > 0);
-
-                if (remoteIsEmpty && localHasData) {
-                    console.warn(`🛡️ HARD Anti-wipe [${sliceName}]: Remote is empty, preserving local (even if force=${force})`);
-                    console.log(`📊 Anti-wipe Debug [${sliceName}]: remoteData=`, remoteData, "localData=", localData);
-                    return localData;
-                }
-
-                console.log(`☁️ Remote [${sliceName}] applied (force=${force}, newer=${remoteIsNewer})`);
+                console.log(`☁️ Remote [${sliceName}] applicato (force=${force}, newer=${remoteIsNewer})`);
                 return remoteData;
             }
 
-            return state[sliceName]; // Mantieni locale se locale è più nuovo o remoto invalido
+            return state[sliceName];
         }
-
         function mergePlannerData(local, remote) {
             // Fallback per vecchie chiamate, ma ora preferiamo syncStateSlice
             const result = { ...remote, ...local };
