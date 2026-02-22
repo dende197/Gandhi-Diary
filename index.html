@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.77 [Sync Refinement]
-        const APP_VERSION = '1.1.77';
+        // 🚀 G-Diary v1.1.78 [Sync & Anti-Wipe Robustness]
+        const APP_VERSION = '1.1.78';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2964,12 +2964,20 @@
             const userId = getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
 
-            // 🛡️ ANTI-WIPE v2: Se state.plannedTasks è vuoto ma localStorage ha dati, ripristina PRIMA di salvare
-            const cachedPT = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-            if (Object.keys(state.plannedTasks || {}).length === 0 && Object.keys(cachedPT).length > 0) {
-                console.warn("🛡️ [SAVE] Anti-wipe: state.plannedTasks vuoto ma cache ha dati → ripristino da cache prima del save");
-                state.plannedTasks = cachedPT;
-            }
+            // 🛡️ ANTI-WIPE v3: Ripristina Sottostati critici se vuoti ma presenti in cache
+            const restoreIfEmpty = (slice, lsName) => {
+                const cached = JSON.parse(localStorage.getItem(lsKey(lsName)) || 'null');
+                const stateData = state[slice] || {};
+                if (Object.keys(stateData).length === 0 && cached && Object.keys(cached).length > 0) {
+                    console.warn(`🛡️ [SAVE] Anti-wipe [${slice}]: ripristino da cache locale prima del save`);
+                    state[slice] = cached;
+                }
+            };
+
+            restoreIfEmpty('plannedTasks', 'planned_tasks');
+            restoreIfEmpty('stressLevels', 'stress_levels');
+            restoreIfEmpty('prepLevels', 'prep_levels');
+            restoreIfEmpty('stressVents', 'stress_vents');
 
             const plannedDetails = {};
             try {
@@ -3273,15 +3281,21 @@
                         const localSL = state.stressLevels || {};
                         const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
 
-                        const remoteHasData = Object.keys(remotePT).length > 0;
-                        const localHasData = Object.keys(localPT).length > 0;
+                        const remoteHasData = Object.keys(remotePT).length > 0 ||
+                            Object.keys(remoteSL).length > 0 ||
+                            (data.planner.prepLevels && Object.keys(data.planner.prepLevels).length > 0);
+
+                        const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
 
                         const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
                             new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
 
-                        console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer });
+                        // AUTHORITATIVE HYDRATION: Se locale è vuoto ma remote ha dati, carichiamo SEMPRE (anche se non newer)
+                        const shouldOverwrite = remoteHasData && (remoteIsNewer || !localHasData);
 
-                        if (remoteIsNewer && remoteHasData) {
+                        console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer, shouldOverwrite });
+
+                        if (shouldOverwrite) {
                             // authoritative overwrite to avoid Append Bug
                             state.plannedTasks = remotePT;
                             state.stressLevels = remoteSL;
