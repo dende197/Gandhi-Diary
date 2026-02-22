@@ -2865,6 +2865,18 @@
                 });
                 const data = await res.json();
 
+                // 🔥 FIX: Supabase può restituire campi JSONB come stringhe JSON
+                if (typeof data.data === 'string') {
+                    try { data.data = JSON.parse(data.data); } catch (e) { }
+                }
+                if (data.data) {
+                    for (const field of ['planned_tasks', 'planned_details', 'tasks', 'stress_levels', 'prep_levels', 'stress_vents']) {
+                        if (typeof data.data[field] === 'string') {
+                            try { data.data[field] = JSON.parse(data.data[field]); } catch (e) { }
+                        }
+                    }
+                }
+
                 if (data.success && data.data) {
                     console.log("📥 [SYNC] Dati ricevuti dal Cloud:", JSON.stringify(data.data));
                     const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
