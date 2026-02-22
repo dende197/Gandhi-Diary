@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.75 [Stability Patch]
-        const APP_VERSION = '1.1.75';
+        // 🚀 G-Diary v1.1.76 [Auto-Sync & Polish]
+        const APP_VERSION = '1.1.76';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2828,6 +2828,10 @@
             setTimeout(() => {
                 setInterval(refreshSupabaseToken, REFRESH_MS);
                 setInterval(pingServer, PING_MS);
+                // 🔄 Auto-Sync periodico ogni 60 secondi
+                setInterval(() => {
+                    if (state.user && !state.isOffline) fetchPlannerRemote();
+                }, 60000);
                 // Ping immediato all'avvio
                 pingServer();
             }, 5000);
@@ -2835,9 +2839,10 @@
             // Refresh anche quando la pagina torna visibile dopo inattività
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
-                    console.log('👁 Pagina tornata visibile — refresh token');
+                    console.log('👁 Pagina tornata visibile — refresh sync');
                     refreshSupabaseToken();
                     pingServer();
+                    if (state.user && !state.isOffline) fetchPlannerRemote();
                 }
             });
         })();
@@ -4258,9 +4263,9 @@
                 state.plannedTasks[dateStr].push(taskId);
             }
 
-            // Persistenza locale
+            // Persistenza locale e remota automatica
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO: Ora manuale
+            debouncedSavePlannerRemote(500); // ✨ Ripristinato auto-sync 🚀
 
             // Aggiorna UI Calendario
             const calendarEl = document.getElementById('calendar');
@@ -5515,9 +5520,6 @@
                             <p style="margin:2px 0 0; font-size:12px; color:var(--text-dim);">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                         </div>
                     </div>
-                    <button type="button" onclick="console.log('BTN CLICK RECOGNIZED'); window.handleManualStressSave(this)" style="z-index:99; position:relative; background:var(--accent); color:white; border:none; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(99,102,241,0.3); transition: transform 0.2s, opacity 0.2s;">
-                        <i class="ph-bold ph-cloud-arrow-up"></i> Salva e Sincronizza
-                    </button>
                 </div>
 
                 <!-- DAILY CHECK-IN -->
@@ -5819,7 +5821,7 @@
             }
 
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+            debouncedSavePlannerRemote(500); // ✨ Ripristinato auto-sync 🚀
             updateWeekDayButton(taskId, dateStr);
             notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
         }
@@ -5864,9 +5866,9 @@
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             state.plannedTasks[dateStr].push(quest.id);
 
-            // ✅ Salva immediatamente
+            // ✅ Salva immediatamente (Locale + Remoto)
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+            debouncedSavePlannerRemote(500); // ✨ Ripristinato auto-sync 🚀
 
             // ✅ Feedback visivo immediato
             showToast('Compito aggiunto!');
