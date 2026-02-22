@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.78 [Sync & Anti-Wipe Robustness]
-        const APP_VERSION = '1.1.78';
+        // 🚀 G-Diary v1.1.79 [Sync Race Condition & Stress Fix]
+        const APP_VERSION = '1.1.79';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -3012,8 +3012,6 @@
                 return;
             }
 
-            localStorage.setItem(lsKey('planner_updated_at'), nowIso);
-
             try {
                 const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
                     method: 'PUT',
@@ -3024,9 +3022,11 @@
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                if (data?.success && data?.data?.updatedAt) {
-                    localStorage.setItem(lsKey('planner_updated_at'), data.data.updatedAt);
-                }
+
+                // ✅ UPDATE TIMESTAMP ONLY AFTER SERVER CONFIRMATION (v1.1.79)
+                const finalUpdatedAt = data.data?.updatedAt || data.data?.updated_at || nowIso;
+                localStorage.setItem(lsKey('planner_updated_at'), finalUpdatedAt);
+
                 console.log("✅ Planner salvato sul server — risposta:", JSON.stringify(data?.data || {}));
             } catch (e) {
                 console.warn("Planner remote save failed, outbox:", e.message);
@@ -4366,6 +4366,11 @@
             }
 
             if ((force || remoteIsNewer) && remoteData) {
+                // 🛡️ [v1.1.79] NEVER overwrite with empty if local has data
+                if (remoteIsEmpty && localHasData) {
+                    console.warn(`🛡️ [${sliceName}] Sync bypass: remote è vuoto, mantengo dati locali`);
+                    return localData;
+                }
                 console.log(`☁️ Remote [${sliceName}] applicato (force=${force}, newer=${remoteIsNewer})`);
                 return remoteData;
             }
