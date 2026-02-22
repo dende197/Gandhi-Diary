@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.79 [Sync Race Condition & Stress Fix]
-        const APP_VERSION = '1.1.79';
+        // 🚀 G-Diary v1.1.80 [Global Reset Sync & Save Reliability]
+        const APP_VERSION = '1.1.80';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2958,7 +2958,7 @@
             console.trace(`📤 [SAVE] savePlannerRemote called (force=${force})`);
             if (state.booting || state.syncing) {
                 console.log("⏳ [SYNC] Save deferred: sync in progress or booting. Retrying in 2s...");
-                setTimeout(() => { savePlannerRemote().catch(() => { }); }, 2000);
+                setTimeout(() => { savePlannerRemote(force).catch(() => { }); }, 2000);
                 return;
             }
             const userId = getUserId();
@@ -3055,30 +3055,30 @@
 
             // Reset state
             state.plannedTasks = {};
+            state.plannedDetails = {}; // Aggiunto per pulizia totale
             state.stressLevels = {};
             state.prepLevels = {};
             state.reminders = [];
 
             // Persist locally
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify({}));
+            localStorage.setItem(lsKey('planned_details'), JSON.stringify({}));
             localStorage.setItem(lsKey('stress_levels'), JSON.stringify({}));
             localStorage.setItem(lsKey('prep_levels'), JSON.stringify({}));
             localStorage.setItem(lsKey('reminders'), JSON.stringify([]));
 
-            const nowIso = new Date().toISOString();
-            localStorage.setItem(lsKey('planner_updated_at'), nowIso);
-
-            // Notify UI
+            // Notify UI immediately
             notifyPlannerChanged();
             render();
 
             try {
                 // ✅ Global Reset: Sincronizza lo stato vuoto sul server bypassando l'anti-wipe
+                // Il timestamp verrà aggiornato da savePlannerRemote a operazione conclusa.
                 await savePlannerRemote(true);
                 showToast("✅ Piano resettato globalmente su ogni dispositivo 🗑️");
             } catch (e) {
                 console.error("Errore durante eliminazione remota:", e);
-                showToast("❌ Errore sincronizzazione eliminazione");
+                showToast("Reset locale ok, errore sincronizzazione cloud");
             }
         }
 
