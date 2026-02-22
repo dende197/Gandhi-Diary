@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.76 [Auto-Sync & Polish]
-        const APP_VERSION = '1.1.76';
+        // 🚀 G-Diary v1.1.77 [Sync Refinement]
+        const APP_VERSION = '1.1.77';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2828,10 +2828,6 @@
             setTimeout(() => {
                 setInterval(refreshSupabaseToken, REFRESH_MS);
                 setInterval(pingServer, PING_MS);
-                // 🔄 Auto-Sync periodico ogni 60 secondi
-                setInterval(() => {
-                    if (state.user && !state.isOffline) fetchPlannerRemote();
-                }, 60000);
                 // Ping immediato all'avvio
                 pingServer();
             }, 5000);
@@ -2839,10 +2835,9 @@
             // Refresh anche quando la pagina torna visibile dopo inattività
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
-                    console.log('👁 Pagina tornata visibile — refresh sync');
+                    console.log('👁 Pagina tornata visibile — refresh token');
                     refreshSupabaseToken();
                     pingServer();
-                    if (state.user && !state.isOffline) fetchPlannerRemote();
                 }
             });
         })();
@@ -2959,8 +2954,8 @@
         // Salva planner sul server quando cambia
         // Save remoto + timestamp locale
         // --- SALVATAGGIO: aggiorna subito timestamp locale e invia updatedAt ---
-        async function savePlannerRemote() {
-            console.trace("📤 [SAVE] savePlannerRemote called");
+        async function savePlannerRemote(force = false) {
+            console.trace(`📤 [SAVE] savePlannerRemote called (force=${force})`);
             if (state.booting || state.syncing) {
                 console.log("⏳ [SYNC] Save deferred: sync in progress or booting. Retrying in 2s...");
                 setTimeout(() => { savePlannerRemote().catch(() => { }); }, 2000);
@@ -3004,7 +2999,7 @@
             const localHasTasks = Array.isArray(state.tasks) && state.tasks.length > 0;
             const remoteIsEmpty = payload.tasks.length === 0;
 
-            if (remoteIsEmpty && prevTasks.length > 0 && localHasTasks) {
+            if (!force && remoteIsEmpty && prevTasks.length > 0 && localHasTasks) {
                 console.warn("🛡️ [Planner] HARD Anti-wipe: blocco salvataggio vuoto su server (cache locale ha dati)");
                 return;
             }
@@ -3070,9 +3065,9 @@
             render();
 
             try {
-                // Push "empty" state to server
-                await savePlannerRemote();
-                showToast("✅ Piano eliminato permanentemente");
+                // ✅ Global Reset: Sincronizza lo stato vuoto sul server bypassando l'anti-wipe
+                await savePlannerRemote(true);
+                showToast("✅ Piano resettato globalmente su ogni dispositivo 🗑️");
             } catch (e) {
                 console.error("Errore durante eliminazione remota:", e);
                 showToast("❌ Errore sincronizzazione eliminazione");
@@ -3287,9 +3282,9 @@
                         console.log("📊 Planner merge:", { remoteHasData, localHasData, remoteIsNewer });
 
                         if (remoteIsNewer && remoteHasData) {
-                            // Deep Merge invece di sovrascrittura totale
-                            state.plannedTasks = mergePlannerData(state.plannedTasks, remotePT);
-                            state.stressLevels = { ...remoteSL, ...state.stressLevels };
+                            // authoritative overwrite to avoid Append Bug
+                            state.plannedTasks = remotePT;
+                            state.stressLevels = remoteSL;
 
                             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                             localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
@@ -4364,14 +4359,8 @@
             return state[sliceName];
         }
         function mergePlannerData(local, remote) {
-            // Fallback per vecchie chiamate, ma ora preferiamo syncStateSlice
-            const result = { ...remote, ...local };
-            for (const date in remote) {
-                if (local[date]) {
-                    result[date] = [...new Set([...local[date], ...remote[date]])];
-                }
-            }
-            return result;
+            // AUTHORITATIVE SYNC: Priorità assoluta al remote per evitare bug di append
+            return { ...local, ...remote };
         }
 
         function notifyPlannerChanged() {
@@ -8938,18 +8927,9 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
     </script>
     <!-- Persistent cloud menu — outside render() (v1.1.59) -->
     <div id="planner-cloud-menu" class="planner-dropdown-content" style="display: none;">
-        <button class="pd-item"
-            onclick="savePlannerRemote().then(() => { showToast('Piano salvato ✨'); togglePlannerMenu(); })">
-            <i class="ph-bold ph-cloud-arrow-up" style="color: rgba(139,92,246,0.8);"></i> Salva
-        </button>
-        <button class="pd-item"
-            onclick="fetchPlannerRemote(false).then(() => { showToast('Piano scaricato ☁️'); togglePlannerMenu(); render(); })">
-            <i class="ph-bold ph-cloud-arrow-down" style="color: rgba(139,92,246,0.8);"></i> Carica
-        </button>
-        <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0;"></div>
         <button class="pd-item" onclick="clearStudyPlan().then(() => togglePlannerMenu())"
             style="color: rgba(255,100,100,0.9);">
-            <i class="ph-bold ph-trash" style="color: rgba(255,100,100,0.8);"></i> Reset
+            <i class="ph-bold ph-trash" style="color: rgba(255,100,100,0.8);"></i> Reset Totale
         </button>
     </div>
 </body>
