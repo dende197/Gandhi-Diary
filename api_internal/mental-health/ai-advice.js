@@ -40,11 +40,12 @@ Rispondi SOLO con JSON (senza markdown):
 }`;
 
     try {
+        console.log("➡️ [AI-Advice] Requesting completion for model llama-3.3-70b-versatile");
         const completion = await groq.chat.completions.create({
             messages: [{ role: 'user', content: prompt }],
-            model: 'openai/gpt-oss-120b',
+            model: 'llama-3.3-70b-versatile',
             temperature: 0.6,
-            max_completion_tokens: 512,
+            max_tokens: 512,
             top_p: 1,
             stream: false
         });
@@ -55,6 +56,7 @@ Rispondi SOLO con JSON (senza markdown):
             const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             parsed = JSON.parse(cleaned);
         } catch {
+            console.warn("⚠️ [AI-Advice] JSON parse failed, falling back to basic result");
             parsed = {
                 advice: 'Prenditi un momento per valutare le tue priorità di oggi.',
                 studyPlan: 'Inizia con una sessione breve di 20 minuti su un argomento che conosci bene.',
@@ -81,9 +83,10 @@ Rispondi SOLO con JSON (senza markdown):
 
         res.json({ success: true, ...parsed });
     } catch (error) {
-        console.error('MH AI Error:', error.message);
-        res.status(error.status || 500).json({
+        console.error('❌ [AI-Advice] Backend Error:', error.message);
+        res.status(500).json({
             success: false,
+            error: error.message,
             advice: 'Concentrati su ciò che puoi controllare oggi.',
             studyPlan: 'Fai una sessione breve di ripasso e valuta come ti senti dopo.',
             quote: 'La gentilezza verso te stesso è la prima forma di disciplina.',
