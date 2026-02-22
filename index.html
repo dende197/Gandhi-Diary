@@ -5281,7 +5281,6 @@
                 state.stressLevels[dateStr] = { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
             }
             state.stressLevels[dateStr][key] = value;
-            saveTasks();
 
             // Local UI Update without full render
             const badge = document.getElementById('mh-badge-' + key);
@@ -5290,9 +5289,36 @@
             // Debounced save to Supabase (don't save on every slider tick)
             if (window._mhSaveTimeout) clearTimeout(window._mhSaveTimeout);
             window._mhSaveTimeout = setTimeout(() => {
+                saveTasks(); // 🔥 SPOSTATO QUI: evita Lag e blocco della UI durante il trascinamento (60fps garantiti)
                 if (typeof saveMHToSupabase === 'function') saveMHToSupabase(state.stressLevels[dateStr]);
                 debouncedSavePlannerRemote(200);
-                if (typeof fetchMHAIAdvice === 'function') fetchMHAIAdvice(true).then(() => { if (state.view === 'mental-health') render(); });
+                if (typeof fetchMHAIAdvice === 'function') {
+                    fetchMHAIAdvice(true).then((aiData) => {
+                        // 🔥 INVECE DI FARE render() GLOBALE (CHE DISTRUGGE BUTTON STATE E OVERLAPS), 
+                        // AGGIORNIAMO SOLO IL BOX DEI CONSIGLI AI
+                        if (state.view === 'mental-health' && aiData) {
+                            const adviceCard = document.querySelector('.mh-advice-card');
+                            if (adviceCard) {
+                                adviceCard.innerHTML = `
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                        <h3 style="margin:0; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:8px;">
+                                            <i class="ph-fill ph-brain" style="color:#A78BFA;"></i> AI Insight
+                                        </h3>
+                                        <span class="mh-badge ${aiData.severity === 'high' ? 'mh-badge-high' : aiData.severity === 'medium' ? 'mh-badge-mid' : 'mh-badge-low'}">${aiData.severity === 'high' ? 'Attenzione' : aiData.severity === 'medium' ? 'Moderato' : 'Ottimo'}</span>
+                                    </div>
+                                    <div style="font-size:14px; line-height:1.7; color:rgba(255,255,255,0.85);">
+                                        <div class="ai-prose" style="margin-bottom:12px;"><strong style="color:white; font-size:15px; display:block; margin-bottom:6px;">Consiglio AI:</strong> ${typeof marked !== 'undefined' ? marked.parse(aiData.advice || '') : (aiData.advice || '')}</div>
+                                        <div class="ai-prose"><strong style="color:white; font-size:15px; display:block; margin-bottom:6px;">Piano Studio Suggerito:</strong> ${typeof marked !== 'undefined' ? marked.parse(aiData.studyPlan || '') : (aiData.studyPlan || '')}</div>
+                                    </div>
+                                    ${aiData.quote ? `
+                                    <div style="margin-top:16px; padding:14px; background:rgba(255,255,255,0.03); border-radius:14px; border-left:3px solid var(--accent);">
+                                        <p style="margin:0; font-size:13px; font-style:italic; color:rgba(255,255,255,0.7); line-height:1.5;">"${aiData.quote}"</p>
+                                    </div>` : ''}
+                                `;
+                            }
+                        }
+                    });
+                }
             }, 1500);
         }
 
