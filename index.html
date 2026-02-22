@@ -2198,8 +2198,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.68 [Mental Health Engine v2]
-        const APP_VERSION = '1.1.68';
+        // 🚀 G-Diary v1.1.71 [Mental Health Engine v2]
+        const APP_VERSION = '1.1.71';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -5296,7 +5296,7 @@
                     fetchMHAIAdvice(true).then((aiData) => {
                         // 🔥 INVECE DI FARE render() GLOBALE (CHE DISTRUGGE BUTTON STATE E OVERLAPS), 
                         // AGGIORNIAMO SOLO IL BOX DEI CONSIGLI AI
-                        if (state.view === 'mental-health' && aiData) {
+                        if (state.view === 'mental_health' && aiData) {
                             const adviceCard = document.querySelector('.mh-advice-card');
                             if (adviceCard) {
                                 adviceCard.innerHTML = `
@@ -5323,16 +5323,23 @@
         }
 
         window.handleManualStressSave = async function (btn) {
+            console.log("➡️ [Stress] Inizio handleManualStressSave, btn:", !!btn);
             if (btn) {
                 const originalHTML = btn.innerHTML;
                 btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Salvataggio...';
                 btn.style.opacity = '0.7';
 
-                await savePlannerRemote();
-
-                btn.innerHTML = '<i class="ph-bold ph-check"></i> Salvato!';
-                btn.style.background = 'var(--green)';
-                btn.style.color = 'black';
+                try {
+                    await savePlannerRemote();
+                    console.log("✅ [Stress] savePlannerRemote completato");
+                    btn.innerHTML = '<i class="ph-bold ph-check"></i> Salvato!';
+                    btn.style.background = 'var(--green)';
+                    btn.style.color = 'black';
+                } catch (e) {
+                    console.error("❌ [Stress] Errore durante savePlannerRemote:", e);
+                    btn.innerHTML = '<i class="ph-bold ph-warning"></i> Errore';
+                    btn.style.background = 'var(--red)';
+                }
 
                 setTimeout(() => {
                     btn.innerHTML = originalHTML;
@@ -5341,7 +5348,7 @@
                     btn.style.color = 'white';
                 }, 2000);
             } else {
-                await savePlannerRemote();
+                try { await savePlannerRemote(); } catch (e) { console.error("Error saving planner remotely", e); }
             }
             showToast('✅ Benessere sincronizzato su tutti i dispositivi', 'var(--green)');
         }
@@ -8902,7 +8909,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
                 if (uid && uid !== 'guest') {
                     console.log("🔄 App a fuoco: scarico dati recenti dal cloud...");
                     fetchPlannerRemote(true).then(() => {
-                        if (state.view === 'mental-health' || state.view === 'planner') {
+                        if (state.view === 'mental_health' || state.view === 'planner') {
                             render();
                         }
                     });
