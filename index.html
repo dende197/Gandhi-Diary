@@ -5297,6 +5297,8 @@
 
         const MOTIVATIONAL_QUOTES = [
             "Il successo è la somma di piccoli sforzi, ripetuti giorno dopo giorno.",
+            "There is no tomorrow",
+            "No risk, no story",
             "Non contare i giorni, fai in modo che i giorni contino.",
             "La perseveranza batte il talento quando il talento non persevera.",
             "L'unico modo per fare un ottimo lavoro è amare quello che fai.",
@@ -6788,7 +6790,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
                 // Rimuovi eventuali asterischi markdown attorno alle parentesi: **[Materia]** -> [Materia]
                 clean = clean.replace(/\*\*\[/g, '[').replace(/\]\*\*/g, ']').replace(/\*\[/g, '[').replace(/\]\*/g, ']');
 
-                const bracketMatch = clean.match(/^\[([^\]]+)\][\-–—:\s]*(.+)$/);
+                const bracketMatch = clean.match(/^\[?([^\]\-–—:]+)[\]\-–—:\s]+(.+)$/);
                 if (bracketMatch) {
                     subject = bracketMatch[1].trim();
                     topic = bracketMatch[2].trim();
@@ -6798,8 +6800,8 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
                     topic = words.slice(1).join(' ').trim() || 'Studio';
                 }
 
-                // Normalizza materia rimuovendo markdown residuo (*, _)
-                subject = subject.replace(/[*_\[\]]/g, '').trim();
+                // Normalizza materia rimuovendo markdown residuo (*, _), emoji e punteggiatura
+                subject = subject.replace(/[^\p{L}\s]/gu, '').trim();
                 subject = subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase();
                 if (subject.length < 2) subject = 'Studio';
 
