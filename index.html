@@ -2882,8 +2882,7 @@
                     const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
                     const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
                     const remoteSV = data.data.stressVents || data.data.stress_vents || {};
-                    // 🔥 NON sincronizzare tasks dal planner — i compiti Argo arrivano SOLO da performSync
-                    // const remoteTS = data.data.tasks || [];
+                    const remoteTS = data.data.tasks || [];
                     const remotePL = data.data.prepLevels || data.data.prep_levels || {};
                     const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
 
@@ -2892,14 +2891,33 @@
                     console.log(`📊 [SYNC] planned_tasks ricevuti:`, JSON.stringify(remotePT));
                     console.log(`📊 [SYNC] state.tasks locali: ${(state.tasks || []).length} compiti`);
 
-                    // Robust LWW Sync per ogni sezione di stato (NO tasks!)
+                    // Robust LWW Sync per plannedTasks e metadati
                     state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt, force);
                     state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt, force);
                     state.stressVents = syncStateSlice('stressVents', remoteSV, remoteUpdatedAt, force);
-                    // 🔥 state.tasks NON viene toccato — proviene solo da Argo
                     state.prepLevels = syncStateSlice('prepLevels', remotePL, remoteUpdatedAt, force);
 
-                    // Persist locally (NO tasks — gestiti da saveTasks/updateTasks)
+                    // 🔥 FIX DEFINITIVO: Merge solo AI tasks dal planner, senza toccare i compiti Argo
+                    const remoteAiTasks = remoteTS.filter(t => t.id && t.id.startsWith('ai_'));
+                    if (remoteAiTasks.length > 0) {
+                        const localIds = new Set((state.tasks || []).map(t => t.id));
+                        let addedCount = 0;
+                        for (const aiTask of remoteAiTasks) {
+                            if (!localIds.has(aiTask.id)) {
+                                // Re-hydrate dateObj
+                                aiTask.dateObj = parseArgoDate(aiTask.due_date || aiTask.dateObj);
+                                aiTask.hasValidDate = aiTask.dateObj && !isNaN(aiTask.dateObj.getTime());
+                                state.tasks.push(aiTask);
+                                addedCount++;
+                            }
+                        }
+                        if (addedCount > 0) {
+                            console.log(`✅ [SYNC] Importati ${addedCount} AI tasks dal cloud (totale: ${state.tasks.length})`);
+                            localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+                        }
+                    }
+
+                    // Persist locally
                     localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                     localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                     localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents));
