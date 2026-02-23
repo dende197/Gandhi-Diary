@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.4 [Web Push atob Fix]
-        const APP_VERSION = '2.4.4';
+        // 🚀 G-Diary v2.4.5 [Backend URL Fix]
+        const APP_VERSION = '2.4.5';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2356,7 +2356,7 @@
         // ---------------------------------------------
         // ⚙️ CONFIGURATION
         const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend-r5j1.vercel.app";
+        const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend.onrender.com";
 
         // 🔥 SUPABASE CLIENT (Frontend - per Realtime Chat)
         const SUPABASE_URL = "https://mlcutgkfunbpmrnbeznd.supabase.co";
