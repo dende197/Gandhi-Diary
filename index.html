@@ -945,6 +945,30 @@
             line-height: 1.5;
         }
 
+        /* Voice Input Animations */
+        @keyframes micPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .mic-active {
+            animation: micPulse 1.5s infinite;
+            background: #ef4444 !important;
+            color: white !important;
+        }
+
         .ai-prose tr:last-child td {
             border-bottom: none;
         }
@@ -2233,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.1.2 [AI Planner Precision Fix]
-        const APP_VERSION = '2.1.2';
+        // 🚀 G-Diary v2.2.0 [Voice & Smart Balancing]
+        const APP_VERSION = '2.2.0';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6521,6 +6545,21 @@
                         onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
                         oninput="state.aiChatInputValue=this.value; this.style.height='auto'; const max=window.innerWidth<600?60:100; this.style.height=Math.min(this.scrollHeight,max)+'px';">${state.aiChatInputValue || ''}</textarea>
 
+                    <button id="aiMicBtn" onclick="toggleVoiceInput()" style="
+                            width: 32px; height: 32px; 
+                            background: rgba(255,255,255,0.05); 
+                            color: white; 
+                            border: none;
+                            border-radius: 50%;
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        " title="Dettatura vocale">
+                        <i class="ph ph-microphone" style="font-size: 18px;"></i>
+                    </button>
+
                     <button onclick="sendAIChat()" style="
                             width: 32px; height: 32px; 
                             padding: 0; 
@@ -6566,7 +6605,67 @@
             render();
         }
 
+        let recognition = null;
+        function toggleVoiceInput() {
+            const btn = document.getElementById('aiMicBtn');
+            const input = document.getElementById('aiChatInput');
+
+            if (!recognition) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert("Il tuo browser non supporta il riconoscimento vocale.");
+                    return;
+                }
+                recognition = new SpeechRecognition();
+                recognition.lang = 'it-IT';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    if (btn) btn.classList.add('mic-active');
+                    if (btn) btn.innerHTML = '<i class="ph-fill ph-microphone"></i>';
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    if (input) {
+                        input.value = (input.value ? input.value + ' ' : '') + transcript;
+                        state.aiChatInputValue = input.value;
+                        // Trigger resize
+                        input.style.height = 'auto';
+                        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    stopVoiceInput();
+                };
+
+                recognition.onend = () => {
+                    stopVoiceInput();
+                };
+
+                recognition.start();
+            } else {
+                stopVoiceInput();
+            }
+        }
+
+        function stopVoiceInput() {
+            if (recognition) {
+                recognition.stop();
+                recognition = null;
+            }
+            const btn = document.getElementById('aiMicBtn');
+            if (btn) {
+                btn.classList.remove('mic-active');
+                btn.innerHTML = '<i class="ph ph-microphone"></i>';
+            }
+        }
+
         async function sendAIChat() {
+            stopVoiceInput(); // Chiudi microfono se aperto
             const input = document.getElementById('aiChatInput');
             const text = (input?.value || '').trim();
             if (!text) return;
@@ -6681,9 +6780,11 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 - Formato giorno ESATTO (grassetto): **GIORNO YYYY-MM-DD** (es. **LUNEDÌ 2026-02-23**)
 - Includi pause di 10-15 min tra le sessioni.
 - NON aggiungere MAI una riga "CHECK" o "Review" finale.
-- **PRECISIONE ASSOLUTA**: Non rielaborare, non interpretare e non "inventare" note. Usa ESATTAMENTE il testo dei compiti forniti sopra.
-- Se un compito scade oggi ed è pomeriggio, IGNORALO (non appartiene più a un piano di studio).
-- **PRIORITÀ**: Inizia il piano focalizzandoti sulle scadenze di DOMANI prima di tutto. Se oggi è lunedì pomeriggio, il piano deve concentrarsi sui compiti per MARTEDÌ.`;
+- **PRECISIONE ASSOLUTA**: Non rielaborare e non "inventare" note. Usa il testo dei compiti forniti.
+- **SMART BALANCING**: Se il carico di oggi/domani è leggero e lo STRESS dello studente è BASSO (<=3), puoi ANTICIPARE compiti dalla lista "📋 PROSSIME" per bilanciare la settimana. 
+- Se lo STRESS è ALTO (>3), mantieni il piano leggero e non anticipare nulla.
+- Se un compito scade oggi ed è pomeriggio, IGNORALO.
+- **PRIORITÀ**: Inizia sempre dalle scadenze di DOMANI. Poi, se c'è spazio e lo stress lo permette, aggiungi sessioni per anticipare i compiti dei giorni successivi.`;
 
             // Build conversation for Gemini
             const contents = [
