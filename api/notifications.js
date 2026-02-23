@@ -129,7 +129,7 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
-                if (isStudy && !(isStress && setting.stress_time === setting.study_time)) {
+                if (isStudy) {
                     try {
                         await webpush.sendNotification(userSub.subscription, JSON.stringify({
                             title: 'G-Diary 📚',
