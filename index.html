@@ -2233,8 +2233,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.1.1 [AI Planner Fixes & UI Polish]
-        const APP_VERSION = '2.1.1';
+        // 🚀 G-Diary v2.1.2 [AI Planner Precision Fix]
+        const APP_VERSION = '2.1.2';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6588,7 +6588,7 @@
 
             const today = new Date();
             const hour = today.getHours();
-            const todayStr = getLocalDateString();
+            const todayStr = getLocalDateString(); // YYYY-MM-DD
             const endOfWeek = new Date(today);
             endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
 
@@ -6597,11 +6597,9 @@
                 if (t.done || t.id.startsWith('ai_') || t.subject === 'QUEST') return false;
                 if (!t.due_date) return true;
 
-                // If it's after 14:00, ignore tasks due today or earlier
+                // If it's after 14:00, ignore tasks due today or earlier (ISO comparison is safe)
                 if (hour >= 14) {
-                    const dueDate = parseArgoDate(t.due_date);
-                    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    if (dueDate <= todayDate) return false;
+                    if (t.due_date <= todayStr) return false;
                 }
                 return true;
             });
@@ -6680,14 +6678,12 @@ REGOLE DI RISPOSTA:
 SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 - OBBLIGATORIO: Usa ESCLUSIVAMENTE una tabella markdown per ogni giorno con queste colonne esatte:
   | Orario | Attività | Note |
-  |--------|----------|------|
-  | 15:00 – 15:45 | 🇬🇧 **Inglese** – Esercizi p. 293 | Sottolinea vocaboli nuovi |
-  | 15:45 – 16:00 | ☕ **PAUSA** – Stretching | 10 min. |
 - Formato giorno ESATTO (grassetto): **GIORNO YYYY-MM-DD** (es. **LUNEDÌ 2026-02-23**)
-- Includi sempre pause di 10-15 min tra le sessioni di studio.
-- NON aggiungere MAI una riga "CHECK" o "Review" finale. Il piano deve terminare con l'ultima sessione di studio.
-- Basa il piano SOLO sui compiti elencati sopra. Se un compito scade oggi ed è già pomeriggio, IGNORALO (l'utente lo ha probabilmente già fatto).
-- PRIORITÀ: focalizzati sulle scadenze di DOMANI prima di tutto.`;
+- Includi pause di 10-15 min tra le sessioni.
+- NON aggiungere MAI una riga "CHECK" o "Review" finale.
+- **PRECISIONE ASSOLUTA**: Non rielaborare, non interpretare e non "inventare" note. Usa ESATTAMENTE il testo dei compiti forniti sopra.
+- Se un compito scade oggi ed è pomeriggio, IGNORALO (non appartiene più a un piano di studio).
+- **PRIORITÀ**: Inizia il piano focalizzandoti sulle scadenze di DOMANI prima di tutto. Se oggi è lunedì pomeriggio, il piano deve concentrarsi sui compiti per MARTEDÌ.`;
 
             // Build conversation for Gemini
             const contents = [
