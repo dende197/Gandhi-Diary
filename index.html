@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.3.0 [Conversational AI & Stress Dynamics]
-        const APP_VERSION = '2.3.0';
+        // 🚀 G-Diary v2.4.0 [Push Notifications & Smart Reminders]
+        const APP_VERSION = '2.4.0';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4622,6 +4622,184 @@
         </div>`;
         }
 
+        // ==========================================
+        //         NOTIFICHE WEB PUSH SETTINGS (v2.4.0)
+        // ==========================================
+        async function loadNotificationSettings() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/notifications/settings?profileId=${getUserId()}`);
+                const data = await res.json();
+                return data.settings || {};
+            } catch (e) {
+                console.error("Load settings error:", e);
+                return {};
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function saveNotificationSettings() {
+            const stressEnabled = document.getElementById('notif-stress-toggle').checked;
+            const stressTime = document.getElementById('notif-stress-time').value;
+            const studyEnabled = document.getElementById('notif-study-toggle').checked;
+            const studyTime = document.getElementById('notif-study-time').value;
+
+            try {
+                showBoot("Registrazione notifiche...");
+
+                // Richiedi permessi se mancanti o di default
+                if (Notification.permission !== 'granted') {
+                    const perm = await Notification.requestPermission();
+                    if (perm !== 'granted') {
+                        throw new Error("Permesso Notifiche negato o ignorato.");
+                    }
+                }
+
+                // Setup Service Worker
+                let reg = await navigator.serviceWorker.register('/sw.js');
+                reg = await navigator.serviceWorker.ready;
+
+                // Subscribe a Web Push Manager
+                const vapidPublicKey = 'BGykItHVYlyzS1HWADHj9DlBNYQRfbnLUAbvPHXwZd31QQINf2y3A5cqX-j0X6MC_96bLDTozFnrGnE-vuZLaG8';
+                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+                const subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                // 1. Invio subscription a Supabase (Push)
+                await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId: getUserId(), subscription })
+                });
+
+                // 2. Invio configurazione orari
+                const res = await fetch(`${API_BASE_URL}/api/notifications/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profileId: getUserId(),
+                        stressEnabled, stressTime,
+                        studyEnabled, studyTime
+                    })
+                });
+
+                const data = await res.json();
+                if (!data.success) throw new Error("Errore salvataggio impostazioni DB");
+
+                hideBoot();
+                closeModal();
+            } catch (err) {
+                hideBoot();
+                alert("❌ Errore durante l'attivazione delle notifiche: " + err.message);
+            }
+        }
+
+        async function showNotificationsModal() {
+            const modalContainer = getModalContainer();
+            if (!modalContainer) return;
+
+            modalContainer.innerHTML = `
+        <style>
+            .apple-toggle {
+                position: relative; display: inline-block; width: 44px; height: 24px;
+            }
+            .apple-toggle input { opacity: 0; width: 0; height: 0; }
+            .apple-slider {
+                position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+                background-color: rgba(255,255,255,0.2); transition: .3s; border-radius: 24px;
+            }
+            .apple-slider:before {
+                position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+                background-color: white; transition: .3s; border-radius: 50%;
+            }
+            .apple-toggle input:checked + .apple-slider { background-color: var(--accent); }
+            .apple-toggle input:checked + .apple-slider:before { transform: translateX(20px); }
+        </style>
+        <div class="modal-overlay active" onclick="closeModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 440px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Notifiche e Promemoria</h2>
+                    <button onclick="closeModal()" style="background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 20px;"><i class="ph-bold ph-x"></i></button>
+                </div>
+
+                <div id="notif-loading" style="text-align: center; padding: 20px; color: var(--text-dim);">
+                    <i class="ph ph-spinner ph-spin" style="font-size: 24px; margin-bottom: 8px;"></i><br>Caricamento preferenze...
+                </div>
+
+                <div id="notif-form" style="display: none; flex-direction: column; gap: 20px;">
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+                        Attiva i promemoria per ricevere notifiche push direttamente sul tuo dispositivo. Assicurati di acconsentire se il browser lo richiede.
+                    </p>
+
+                    <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: var(--radius-m); border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="font-weight: 700; color: var(--text-primary); display:flex; align-items:center;">
+                                <i class="ph-bold ph-brain" style="color: var(--accent); margin-right: 8px; font-size: 18px;"></i> Promemoria Stress
+                            </div>
+                            <label class="apple-toggle">
+                                <input type="checkbox" id="notif-stress-toggle" onchange="document.getElementById('notif-stress-time').disabled = !this.checked">
+                                <span class="apple-slider"></span>
+                            </label>
+                        </div>
+                        <input type="time" id="notif-stress-time" value="14:00" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 10px; font-size: 16px;">
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: var(--radius-m); border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="font-weight: 700; color: var(--text-primary); display:flex; align-items:center;">
+                                <i class="ph-bold ph-books" style="color: var(--blue); margin-right: 8px; font-size: 18px;"></i> Promemoria Studio
+                            </div>
+                            <label class="apple-toggle">
+                                <input type="checkbox" id="notif-study-toggle" onchange="document.getElementById('notif-study-time').disabled = !this.checked">
+                                <span class="apple-slider"></span>
+                            </label>
+                        </div>
+                        <input type="time" id="notif-study-time" value="15:00" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 10px; font-size: 16px;">
+                    </div>
+
+                    <button onclick="saveNotificationSettings()" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                        Salva e Attiva Notifiche
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+            const settings = await loadNotificationSettings();
+
+            const stressToggle = document.getElementById('notif-stress-toggle');
+            const stressTime = document.getElementById('notif-stress-time');
+            const studyToggle = document.getElementById('notif-study-toggle');
+            const studyTime = document.getElementById('notif-study-time');
+
+            if (settings && Object.keys(settings).length > 0) {
+                stressToggle.checked = settings.stress_enabled;
+                stressTime.value = settings.stress_time || '14:00';
+                stressTime.disabled = !stressToggle.checked;
+
+                studyToggle.checked = settings.study_enabled;
+                studyTime.value = settings.study_time || '15:00';
+                studyTime.disabled = !studyToggle.checked;
+            } else {
+                stressToggle.checked = true;
+                studyToggle.checked = true;
+            }
+
+            document.getElementById('notif-loading').style.display = 'none';
+            document.getElementById('notif-form').style.display = 'flex';
+        }
+
         function showProfileActions() {
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
@@ -4690,11 +4868,11 @@
 
                         <div style="height: 1px; background: rgba(255,255,255,0.05); margin-left: 66px;"></div>
 
-                        <div onclick="alert('Funzionalità in arrivo!')" style="padding: 16px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: background 0.2s;">
+                        <div onclick="showNotificationsModal()" style="padding: 16px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: background 0.2s;">
                              <div style="width: 32px; height: 32px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
                                 <i class="ph-bold ph-bell" style="font-size: 18px;"></i>
                            </div>
-                            <div style="flex: 1; font-size: 16px; font-weight: 500; color: var(--text-primary);">Notifiche</div>
+                            <div style="flex: 1; font-size: 16px; font-weight: 500; color: var(--text-primary);">Notifiche e Promemoria</div>
                              <i class="ph-bold ph-caret-right" style="color: var(--text-secondary); font-size: 16px;"></i>
                        </div>
 
@@ -4755,6 +4933,7 @@
         // Expose functions globally for dynamic HTML events
         window.showEditProfileModal = showEditProfileModal;
         window.showProfileActions = showProfileActions;
+        window.showNotificationsModal = showNotificationsModal;
         window.saveProfileChanges = saveProfileChanges;
 
         function renderHome() {

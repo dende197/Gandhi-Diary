@@ -12,6 +12,8 @@ const { v4: uuidv4 } = require('uuid');
 const cheerio = require('cheerio');
 const pdfParse = require('pdf-parse');
 const Groq = require('groq-sdk');
+const webpush = require('web-push');
+const cron = require('node-cron');
 
 // ============= GROQ AI CLIENT (openai/gpt-oss-120b) =============
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -500,6 +502,136 @@ if (supabaseKey) {
     console.log("❌ SUPABASE_SERVICE_ROLE_KEY: NOT SET");
 }
 console.log("=".repeat(70) + "\n");
+
+// ============= WEB PUSH NOTIFICATIONS & CRON =============
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+        'mailto:info@liceogandhi.edu.it',
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+    );
+    console.log("✅ Web Push (VAPID) configurato correttamente.");
+} else {
+    console.log("⚠️ Web Push (VAPID) NON configurato (chiavi mancanti).");
+}
+
+app.post('/api/notifications/subscribe', async (req, res) => {
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+    const { profileId, subscription } = req.body;
+    if (!profileId || !subscription) return res.status(400).json({ success: false, error: 'Dati incompleti' });
+
+    try {
+        const { error } = await supabase
+            .from('push_subscriptions')
+            .upsert({
+                profile_id: profileId,
+                subscription: subscription
+            }, { onConflict: 'profile_id' });
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Push Subscribe Error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/notifications/settings', async (req, res) => {
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database down' });
+    const { profileId, stressEnabled, stressTime, studyEnabled, studyTime } = req.body;
+    try {
+        const { error } = await supabase
+            .from('notification_settings')
+            .upsert({
+                profile_id: profileId,
+                stress_enabled: stressEnabled,
+                stress_time: stressTime,
+                study_enabled: studyEnabled,
+                study_time: studyTime
+            }, { onConflict: 'profile_id' });
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.get('/api/notifications/settings', async (req, res) => {
+    if (!supabase) return res.status(503).json({ success: false });
+    const { profileId } = req.query;
+    if (!profileId) return res.status(400).json({ success: false });
+    try {
+        const { data, error } = await supabase
+            .from('notification_settings')
+            .select('*')
+            .eq('profile_id', profileId)
+            .single();
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+        res.json({ success: true, settings: data || null });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// Dynamic Cron Job — Runs every minute to check if any user needs a notification NOW
+cron.schedule('* * * * *', async () => {
+    if (!supabase || !process.env.VAPID_PUBLIC_KEY) return;
+
+    // Get current time in HH:mm format (Italian timezone)
+    const now = new Date();
+    // Use an Intl formatter to ensure it matches the 24h format strictly in Italy time, or just UTC if the server timezone is correct.
+    // Easiest reliable way:
+    const options = { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hour12: false };
+    const timeStr = new Intl.DateTimeFormat('it-IT', options).format(now);
+
+    try {
+        const { data: settings, error: settingsError } = await supabase
+            .from('notification_settings')
+            .select('*')
+            .or(`and(stress_enabled.eq.true,stress_time.eq."${timeStr}"),and(study_enabled.eq.true,study_time.eq."${timeStr}")`);
+
+        if (settingsError || !settings || settings.length === 0) return;
+
+        const profileIds = settings.map(s => s.profile_id);
+        const { data: subs, error: subsError } = await supabase
+            .from('push_subscriptions')
+            .select('*')
+            .in('profile_id', profileIds);
+
+        if (subsError || !subs || subs.length === 0) return;
+
+        for (const setting of settings) {
+            const userSub = subs.find(s => s.profile_id === setting.profile_id);
+            if (!userSub || !userSub.subscription) continue;
+
+            const isStressTime = setting.stress_enabled && setting.stress_time === timeStr;
+            const isStudyTime = setting.study_enabled && setting.study_time === timeStr;
+
+            let title = '';
+            let body = '';
+            if (isStressTime) {
+                title = 'G-Diary 🧠';
+                body = 'Ehi! Nel Check-in, come ti senti oggi? (Stress e Stanchezza)';
+            } else if (isStudyTime) {
+                title = 'G-Diary 📚';
+                body = 'È ora di studiare! Inizia a sfoltire i compiti di domani nella sezione Appunti.';
+            }
+
+            if (title && body) {
+                const payload = JSON.stringify({ title, body, icon: '/icon-192.png' });
+                try {
+                    await webpush.sendNotification(userSub.subscription, payload);
+                } catch (e) {
+                    if (e.statusCode === 410 || e.statusCode === 404) {
+                        await supabase.from('push_subscriptions').delete().eq('profile_id', userSub.profile_id);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Cron job error:', e.message);
+    }
+});
 
 // ============= CONSTANTS =============
 const CHALLENGE_URL = "https://auth.portaleargo.it/oauth2/auth";
