@@ -140,45 +140,57 @@ module.exports = async function handler(req, res) {
                 const userSub = subs.find(s => s.profile_id === setting.profile_id);
                 if (!userSub?.subscription) continue;
 
-                // Anti-spam: check if already notified today
-                if (setting.last_notified) {
-                    const lastNotifiedDate = new Date(setting.last_notified);
-                    const lastNotifiedStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(lastNotifiedDate);
-                    if (lastNotifiedStr === todayStr) continue; // Already sent today
+                let isStress = setting.stress_enabled && timeWindow.includes(setting.stress_time);
+                let isStudy = setting.study_enabled && timeWindow.includes(setting.study_time);
+
+                // Anti-spam Stress: check if already notified today
+                if (isStress && setting.last_stress_sent) {
+                    const lastD = new Date(setting.last_stress_sent);
+                    if (new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(lastD) === todayStr) {
+                        isStress = false; // Already sent stress today
+                    }
                 }
 
-                const isStress = setting.stress_enabled && timeWindow.includes(setting.stress_time);
-                const isStudy = setting.study_enabled && timeWindow.includes(setting.study_time);
-                let sentToUser = false;
+                // Anti-spam Study: check if already notified today
+                if (isStudy && setting.last_study_sent) {
+                    const lastD = new Date(setting.last_study_sent);
+                    if (new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(lastD) === todayStr) {
+                        isStudy = false; // Already sent study today
+                    }
+                }
+
+                if (!isStress && !isStudy) continue; // Nothing to send for this user in this window
+
+                const updates = {};
 
                 if (isStress) {
                     try {
                         await webpush.sendNotification(userSub.subscription,
                             JSON.stringify({ title: 'G-Diary 🧠', body: 'Come ti senti oggi? Registra stress e stanchezza.', icon: '/icon-192.png' }));
                         sent++;
-                        sentToUser = true;
+                        updates.last_stress_sent = new Date().toISOString();
                     } catch (e) {
                         if (e.statusCode === 410 || e.statusCode === 404)
                             await supabase.from('push_subscriptions').delete().eq('profile_id', setting.profile_id);
                     }
                 }
-                if (isStudy && !(isStress && setting.stress_time === setting.study_time)) {
+                if (isStudy) {
                     try {
                         await webpush.sendNotification(userSub.subscription,
                             JSON.stringify({ title: 'G-Diary 📚', body: 'È ora di studiare! Controlla i compiti.', icon: '/icon-192.png' }));
                         sent++;
-                        sentToUser = true;
+                        updates.last_study_sent = new Date().toISOString();
                     } catch (e) {
                         if (e.statusCode === 410 || e.statusCode === 404)
                             await supabase.from('push_subscriptions').delete().eq('profile_id', setting.profile_id);
                     }
                 }
 
-                // Update last_notified timestamp to prevent spam
-                if (sentToUser) {
+                // Update DB with timestamps
+                if (Object.keys(updates).length > 0) {
                     await supabase
                         .from('notification_settings')
-                        .update({ last_notified: new Date().toISOString() })
+                        .update(updates)
                         .eq('profile_id', setting.profile_id);
                 }
             }
