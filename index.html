@@ -2233,8 +2233,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.1.0 [AI Planner & Stress UI Overhaul]
-        const APP_VERSION = '2.1.0';
+        // 🚀 G-Diary v2.1.1 [AI Planner Fixes & UI Polish]
+        const APP_VERSION = '2.1.1';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -5514,8 +5514,8 @@
                 </div>
 
                 <!-- DAILY CHECK-IN -->
-                <div class="glass-panel" style="padding:24px; margin-bottom:20px; border-radius:24px;">
-                    <h3 style="margin:0 0 20px 0; font-size:14px; opacity:0.6; text-transform:uppercase; letter-spacing:1.5px; display:flex; align-items:center; gap:8px;">
+                <div class="glass-panel" style="padding:28px 24px; margin-bottom:24px; border-radius:24px; border-bottom: 2px solid rgba(255,255,255,0.03);">
+                    <h3 style="margin:0 0 24px 0; font-size:14px; opacity:0.6; text-transform:uppercase; letter-spacing:1.5px; display:flex; align-items:center; gap:8px;">
                         <i class="ph-fill ph-heart-half" style="color:#FF6B8A;"></i> Check-in Giornaliero
                     </h3>
 
@@ -6586,13 +6586,25 @@
                 }
             }, 100);
 
-            // Build context — split tasks into THIS WEEK vs LATER for priority awareness
             const today = new Date();
+            const hour = today.getHours();
             const todayStr = getLocalDateString();
             const endOfWeek = new Date(today);
             endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
 
-            const argoTasks = (state.tasks || []).filter(t => !t.done && !t.id.startsWith('ai_') && t.subject !== 'QUEST');
+            // Filter tasks: avoid planning for "today" if it's already afternoon (deadline passed or too late)
+            const argoTasks = (state.tasks || []).filter(t => {
+                if (t.done || t.id.startsWith('ai_') || t.subject === 'QUEST') return false;
+                if (!t.due_date) return true;
+
+                // If it's after 14:00, ignore tasks due today or earlier
+                if (hour >= 14) {
+                    const dueDate = parseArgoDate(t.due_date);
+                    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    if (dueDate <= todayDate) return false;
+                }
+                return true;
+            });
             argoTasks.sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
 
             // Split into urgent (this week) and later
@@ -6671,10 +6683,11 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
   |--------|----------|------|
   | 15:00 – 15:45 | 🇬🇧 **Inglese** – Esercizi p. 293 | Sottolinea vocaboli nuovi |
   | 15:45 – 16:00 | ☕ **PAUSA** – Stretching | 10 min. |
-- Formato giorno ESATTO: **GIORNO YYYY-MM-DD** (es. **LUNEDÌ 2026-02-24**)
+- Formato giorno ESATTO (grassetto): **GIORNO YYYY-MM-DD** (es. **LUNEDÌ 2026-02-23**)
 - Includi sempre pause di 10-15 min tra le sessioni di studio.
 - NON aggiungere MAI una riga "CHECK" o "Review" finale. Il piano deve terminare con l'ultima sessione di studio.
-- Basa il piano SOLO sui compiti elencati sopra. Non inventare compiti che non esistono nella lista.`;
+- Basa il piano SOLO sui compiti elencati sopra. Se un compito scade oggi ed è già pomeriggio, IGNORALO (l'utente lo ha probabilmente già fatto).
+- PRIORITÀ: focalizzati sulle scadenze di DOMANI prima di tutto.`;
 
             // Build conversation for Gemini
             const contents = [
@@ -6781,9 +6794,12 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
             };
 
             function parseItalianDateLine(line) {
-                // Prova 1: data esplicita YYYY-MM-DD
+                // Prova 1: data esplicita YYYY-MM-DD o DD-MM-YYYY o DD/MM/YYYY
                 const isoMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
                 if (isoMatch) return isoMatch[1];
+
+                const dmyMatch = line.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+                if (dmyMatch) return `${dmyMatch[3]}-${String(dmyMatch[2]).padStart(2, '0')}-${String(dmyMatch[1]).padStart(2, '0')}`;
 
                 // Prova 2: "21 gennaio" o "gennaio 21" con anno opzionale
                 const monthNames = {
@@ -6800,13 +6816,17 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
                         return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     }
                 }
-                // Prova 3: nome del giorno → calcola la data più vicina futura
+                // Prova 3: nome del giorno → calcola la data più vicina (preferendo quella corrente/futura ma gestendo offset)
                 const lc = line.toLowerCase();
                 for (const [key, dayNum] of Object.entries(DAY_IT)) {
                     if (lc.includes(key)) {
                         const today = new Date();
-                        let diff = dayNum - today.getDay();
-                        if (diff < 0) diff += 7;
+                        const currentDay = today.getDay();
+                        let diff = dayNum - currentDay;
+
+                        // Se l'AI nomina un giorno passato nella conversazione corrente, non saltiamo di 7 giorni
+                        // Se diff < 0 significa che il giorno è già passato questa settimana.
+                        // Lo teniamo così com'è per permettere di caricare piani generati poco fa.
                         const target = new Date(today);
                         target.setDate(today.getDate() + diff);
                         return getLocalDateString(target);
