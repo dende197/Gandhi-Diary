@@ -915,28 +915,60 @@
 
         .ai-prose table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 16px 0;
             font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(10, 10, 15, 0.4);
         }
 
         .ai-prose th {
-            background: rgba(99, 102, 241, 0.15);
-            color: white;
+            background: rgba(99, 102, 241, 0.1);
+            color: rgba(255, 255, 255, 0.9);
             font-weight: 700;
-            padding: 8px 12px;
+            padding: 12px 14px;
             text-align: left;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 11px;
         }
 
         .ai-prose td {
-            padding: 8px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: rgba(255, 255, 255, 0.8);
+            vertical-align: middle;
+            line-height: 1.5;
         }
 
-        .ai-prose tr:nth-child(even) td {
+        .ai-prose tr:last-child td {
+            border-bottom: none;
+        }
+
+        .ai-prose td:first-child {
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            width: 100px;
+        }
+
+        .ai-prose tr:hover td {
             background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Mobile Responsive Table */
+        @media (max-width: 600px) {
+            .ai-prose {
+                overflow-x: auto;
+            }
+
+            .ai-prose table {
+                min-width: 450px;
+            }
         }
 
         /* Task card mobile — prevenzione overflow testo */
@@ -1495,13 +1527,13 @@
             border-color: rgba(10, 132, 255, 0.4);
         }
 
-        /* === MENTAL HEALTH DASHBOARD (v1.1.66) === */
+        /* === MENTAL HEALTH DASHBOARD === */
         .mh-metric-box {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 16px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
         }
 
         .mh-slider-container {
@@ -1521,8 +1553,8 @@
 
         .mh-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 22px;
-            height: 22px;
+            width: 26px;
+            height: 26px;
             background: white;
             border-radius: 50%;
             cursor: pointer;
@@ -1530,30 +1562,27 @@
             border: 4px solid var(--accent);
         }
 
-        .mh-segment-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-top: 12px;
-        }
+        /* Mobile stress UI improvements */
+        @media (max-width: 480px) {
+            .mh-metric-box {
+                padding: 20px 18px;
+                margin-bottom: 14px;
+                border-radius: 18px;
+            }
 
-        .mh-segment {
-            padding: 10px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-dim);
-            font-size: 13px;
-            font-weight: 700;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+            .mh-metric-box span[style*="font-weight:700"] {
+                font-size: 14px !important;
+            }
 
-        .mh-segment.active {
-            background: rgba(99, 102, 241, 0.2);
-            border-color: var(--accent);
-            color: white;
+            .mh-slider::-webkit-slider-thumb {
+                width: 30px;
+                height: 30px;
+            }
+
+            .mh-slider-container {
+                margin-top: 12px;
+                padding: 0 4px;
+            }
         }
 
         .mh-advice-card {
@@ -2204,8 +2233,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.0.1 [Fix HTTP 400 on Save]
-        const APP_VERSION = '2.0.1';
+        // 🚀 G-Diary v2.1.0 [AI Planner & Stress UI Overhaul]
+        const APP_VERSION = '2.1.0';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -5255,13 +5284,13 @@
             const dateStr = getLocalDateString();
             if (!state.stressLevels) state.stressLevels = {};
             if (!state.stressLevels[dateStr]) {
-                state.stressLevels[dateStr] = { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
+                state.stressLevels[dateStr] = { stress: 3, fatigue: 3, sleep: 7, note: '' };
             }
             state.stressLevels[dateStr][key] = value;
 
             // Local UI Update without full render
             const badge = document.getElementById('mh-badge-' + key);
-            if (badge) badge.innerText = value + (key === 'sleep' ? 'h' : (key === 'load' ? '' : '/5'));
+            if (badge) badge.innerText = value + (key === 'sleep' ? 'h' : '/5');
 
             // Debounced save to Supabase (don't save on every slider tick)
             if (window._mhSaveTimeout) clearTimeout(window._mhSaveTimeout);
@@ -5533,20 +5562,7 @@
                         </div>
                     </div>
 
-                    <div class="mh-metric-box" style="margin-bottom:0;">
-                        <span style="font-weight:700; font-size:15px;">Carico Studio Percepito</span>
-                        <div class="mh-segment-grid">
-                            <div class="mh-segment ${data.load === 'low' ? 'active' : ''}" onclick="updateMHMetric('load', 'low')">
-                                <i class="ph ph-sun" style="display:block; margin-bottom:4px;"></i> Leggero
-                            </div>
-                            <div class="mh-segment ${data.load === 'medium' ? 'active' : ''}" onclick="updateMHMetric('load', 'medium')">
-                                <i class="ph ph-cloud" style="display:block; margin-bottom:4px;"></i> Medio
-                            </div>
-                            <div class="mh-segment ${data.load === 'high' ? 'active' : ''}" onclick="updateMHMetric('load', 'high')">
-                                <i class="ph ph-cloud-rain" style="display:block; margin-bottom:4px;"></i> Pesante
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
 
                 <!-- AI INSIGHT (Real Gemini) -->
@@ -6570,21 +6586,34 @@
                 }
             }, 100);
 
-            // Build context
-            // Build context — include Argo tasks sorted by due date
+            // Build context — split tasks into THIS WEEK vs LATER for priority awareness
+            const today = new Date();
+            const todayStr = getLocalDateString();
+            const endOfWeek = new Date(today);
+            endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+
             const argoTasks = (state.tasks || []).filter(t => !t.done && !t.id.startsWith('ai_') && t.subject !== 'QUEST');
             argoTasks.sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
-            const homework = argoTasks.map(t => {
-                const dueDate = t.due_date ? parseArgoDate(t.due_date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
-                return `- [${t.subject}] ${t.text} → consegna: ${dueDate}`;
-            }).join('\n');
+
+            // Split into urgent (this week) and later
+            const thisWeekTasks = [];
+            const laterTasks = [];
+            argoTasks.forEach(t => {
+                const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
+                const dueDateStr = dueDate ? dueDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
+                const entry = `- [${t.subject}] ${t.text} → consegna: ${dueDateStr}`;
+                if (dueDate && dueDate <= endOfWeek) {
+                    thisWeekTasks.push(entry);
+                } else {
+                    laterTasks.push(entry);
+                }
+            });
+
             const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-            const backlog = (state.backlog || []).map(b => `- [${b.subject}] ${b.topic}`).join('\n');
-            const difficulty = (state.difficulty || []).join(', ');
             const schedule = `Disponibilità: dalle ${state.availability?.start || '15:00'} alle ${state.availability?.end || '19:00'}`;
 
             // Stress data (ultimi 7 giorni)
-            const stressToday = state.stressLevels?.[getLocalDateString()] || null;
+            const stressToday = state.stressLevels?.[todayStr] || null;
             const stressHistory = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(); d.setDate(d.getDate() - i);
@@ -6596,18 +6625,16 @@
                 ? (stressHistory.reduce((s, h) => s + (h.stress || 3), 0) / stressHistory.length).toFixed(1)
                 : null;
             const stressBlock = stressToday
-                ? `🧠 BENESSERE STUDENTE (dati disponibili in tempo reale):
+                ? `🧠 BENESSERE STUDENTE:
     - Stress: ${stressToday.stress || '?'}/5
     - Stanchezza mentale: ${stressToday.fatigue || '?'}/5
     - Ore di sonno: ${stressToday.sleep || '?'}h
-    - Carico percepito: ${stressToday.load || '?'}
-    - Nota: "${stressToday.note || 'nessuna'}"
     - Media stress ultimi ${stressHistory.length} giorni: ${avgStress || 'N/D'}/5`
-                : 'BENESSERE STUDENTE: nessun dato inserito oggi. Chiedi all\'utente di inserire i dati nello slider del Benessere.';
+                : 'BENESSERE STUDENTE: nessun dato inserito oggi.';
 
             // Compiti già pianificati nei prossimi giorni (anti-duplicazione)
             const plannedSummary = Object.entries(state.plannedTasks || {})
-                .filter(([date]) => date >= getLocalDateString())
+                .filter(([date]) => date >= todayStr)
                 .map(([date, ids]) => {
                     const dayTasks = ids.map(id => {
                         const t = (state.tasks || []).find(x => x.id === id);
@@ -6619,26 +6646,35 @@
             const systemContext = `Sei G-AI, il tutor personale di G-Diary. Rispondi in italiano in modo naturale, amichevole e conciso.
 
 DATI STUDENTE:
-📅 OGGI: ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+📅 OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 ${stressBlock}
-📚 AGENDA:
-- Compiti: ${homework || 'nessuno'}
-- Verifiche: ${exams || 'nessuna'}
-- Arretrati: ${backlog || 'nessuno'}
-- Materie critiche: ${difficulty || 'nessuna'}
-- ${schedule}
+
+🔴 SCADENZE QUESTA SETTIMANA (PRIORITÀ ALTA):
+${thisWeekTasks.length > 0 ? thisWeekTasks.join('\n') : '- Nessuna scadenza urgente'}
+
+📋 COMPITI FUTURI:
+${laterTasks.length > 0 ? laterTasks.join('\n') : '- Nessuno'}
+
+📝 Verifiche in programma: ${exams || 'nessuna'}
+⏰ ${schedule}
 ${plannedSummary ? `\nGIÀ PIANIFICATO (NON duplicare questi):\n${plannedSummary}` : ''}
 
 REGOLE DI RISPOSTA:
 1. Sii naturale ed empatico. Domande semplici -> risposte brevi (2-5 righe).
-2. Usa le emoji con parsimonia. 
+2. Usa le emoji con parsimonia.
 3. Basati sempre sui dati forniti qui sopra, non dire mai "non ho accesso a...".
+4. PRIORITÀ: dai sempre la precedenza alle scadenze di QUESTA SETTIMANA. Se lo stress è >= 4, mantieni sessioni brevi (max 40 min) e più pause.
 
-SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
-- Formato per ogni giorno ESATTO: ## GIORNO YYYY-MM-DD (es. ## LUNEDÌ 2026-02-24)
-- Formato per ogni slot ESATTO: - HH:MM – HH:MM: [Materia] Attività da svolgere
-- Se Stress >= 4, mantieni le sessioni brevi (max 40 min) e pause frequenti.
-- Includi sempre delle ☕ pause tra le varie sessioni.`;
+SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
+- OBBLIGATORIO: Usa ESCLUSIVAMENTE una tabella markdown per ogni giorno con queste colonne esatte:
+  | Orario | Attività | Note |
+  |--------|----------|------|
+  | 15:00 – 15:45 | 🇬🇧 **Inglese** – Esercizi p. 293 | Sottolinea vocaboli nuovi |
+  | 15:45 – 16:00 | ☕ **PAUSA** – Stretching | 10 min. |
+- Formato giorno ESATTO: **GIORNO YYYY-MM-DD** (es. **LUNEDÌ 2026-02-24**)
+- Includi sempre pause di 10-15 min tra le sessioni di studio.
+- NON aggiungere MAI una riga "CHECK" o "Review" finale. Il piano deve terminare con l'ultima sessione di studio.
+- Basa il piano SOLO sui compiti elencati sopra. Non inventare compiti che non esistono nella lista.`;
 
             // Build conversation for Gemini
             const contents = [
