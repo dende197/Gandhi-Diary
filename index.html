@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.2 [Service Worker Path Fix]
-        const APP_VERSION = '2.4.2';
+        // 🚀 G-Diary v2.4.4 [Web Push atob Fix]
+        const APP_VERSION = '2.4.4';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4638,7 +4638,9 @@
 
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\\-/g, '+').replace(/_/g, '/');
+            // Sicuro per tutti i browser, no regex escape ambiguo
+            const base64 = (base64String + padding).split('-').join('+').split('_').join('/');
+
             const rawData = window.atob(base64);
             const outputArray = new Uint8Array(rawData.length);
             for (let i = 0; i < rawData.length; ++i) {
