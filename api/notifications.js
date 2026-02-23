@@ -168,5 +168,29 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    if (action === 'debug-cron') {
+        const supabase = getSupabase();
+        if (!supabase) return res.status(503).json({ success: false, error: 'DB non configurato' });
+
+        const nowDate = new Date();
+        const romeNow = new Date(nowDate.toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
+        const currentMinutes = romeNow.getHours() * 60 + romeNow.getMinutes();
+        const timeWindow = [];
+        for (let offset = 0; offset < 5; offset++) {
+            const m = currentMinutes + offset;
+            const hh = String(Math.floor(m / 60) % 24).padStart(2, '0');
+            const mm = String(m % 60).padStart(2, '0');
+            timeWindow.push(`${hh}:${mm}`);
+        }
+
+        try {
+            const { data: settings } = await supabase.from('notification_settings').select('*');
+            const { data: subs } = await supabase.from('push_subscriptions').select('*');
+            return res.json({ timeWindow, settings, subs });
+        } catch (e) {
+            return res.status(500).json({ error: e.message });
+        }
+    }
+
     return res.status(404).json({ success: false, error: 'Action not found. Valid: subscribe, settings, test, cron' });
 };
