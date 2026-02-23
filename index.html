@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.6 [Full Notification System Fix]
-        const APP_VERSION = '2.4.6';
+        // 🚀 G-Diary v2.4.7 [Notification Delivery Pipeline Fix]
+        const APP_VERSION = '2.4.7';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4713,6 +4713,27 @@
             }
         }
 
+        async function testPushNotification() {
+            try {
+                showBoot('Invio notifica di test...');
+                const res = await fetch(`${API_BASE_URL}/api/test-push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId: getUserId() })
+                });
+                const data = await res.json();
+                hideBoot();
+                if (data.success) {
+                    alert('✅ Notifica di test inviata! Controlla le notifiche del dispositivo.');
+                } else {
+                    alert('❌ ' + (data.error || 'Errore sconosciuto'));
+                }
+            } catch (e) {
+                hideBoot();
+                alert('❌ Errore: ' + e.message);
+            }
+        }
+
         async function showNotificationsModal() {
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
@@ -4778,6 +4799,9 @@
 
                     <button onclick="saveNotificationSettings()" class="btn-primary" style="width: 100%; margin-top: 10px;">
                         Salva e Attiva Notifiche
+                    </button>
+                    <button onclick="testPushNotification()" class="btn-secondary" style="width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Invia Notifica di Test
                     </button>
                 </div>
             </div>

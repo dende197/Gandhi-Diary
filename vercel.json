@@ -5,6 +5,12 @@
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "* * * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/login",
