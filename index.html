@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.1 [Push Notifications Hotfix]
-        const APP_VERSION = '2.4.1';
+        // 🚀 G-Diary v2.4.2 [Service Worker Path Fix]
+        const APP_VERSION = '2.4.2';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4664,8 +4664,8 @@
                     }
                 }
 
-                // Setup Service Worker
-                let reg = await navigator.serviceWorker.register('/sw.js');
+                // Setup Service Worker (Relative path for GitHub Pages)
+                let reg = await navigator.serviceWorker.register('./sw.js');
                 reg = await navigator.serviceWorker.ready;
 
                 // Subscribe a Web Push Manager
