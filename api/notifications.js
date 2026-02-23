@@ -76,8 +76,14 @@ module.exports = async function handler(req, res) {
         }
     }
 
-    // ---- CRON (GET — called by Vercel Cron) ----
+    // ---- CRON (GET — called by external scheduler) ----
     if (action === 'cron') {
+        // Optional Security: Check for a secret key to prevent unauthorized triggers
+        const secret = req.query.secret;
+        if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
         const wp = setupWebPush();
         if (!wp) return res.status(503).json({ success: false, error: 'VAPID non configurate' });
 

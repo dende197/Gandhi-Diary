@@ -5,12 +5,6 @@
       "maxDuration": 30
     }
   },
-  "crons": [
-    {
-      "path": "/api/notifications?action=cron",
-      "schedule": "* * * * *"
-    }
-  ],
   "rewrites": [
     {
       "source": "/login",
