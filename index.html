@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.2.0 [Voice & Smart Balancing]
-        const APP_VERSION = '2.2.0';
+        // 🚀 G-Diary v2.3.0 [Conversational AI & Stress Dynamics]
+        const APP_VERSION = '2.3.0';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6775,16 +6775,17 @@ REGOLE DI RISPOSTA:
 4. PRIORITÀ: dai sempre la precedenza alle scadenze di QUESTA SETTIMANA. Se lo stress è >= 4, mantieni sessioni brevi (max 40 min) e più pause.
 
 SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
-- OBBLIGATORIO: Usa ESCLUSIVAMENTE una tabella markdown per ogni giorno con queste colonne esatte:
+- **TUTOR INTERATTIVO**: Non essere un semplice generatore di tabelle. Sei un tutor! Dialoga con l'utente. Prima o dopo la tabella, fai 1 o 2 DOMANDE BREVI per calibrare il piano (es. "Hai allenamento oggi pomeriggio?", "Sei molto stanco, preferisci iniziare dalla materia più leggera o toglierti il dente con la più difficile?").
+- **STRESS E CARICO (LIVELLO: ${state.stressLevels.stress}/5, STANCHEZZA: ${state.stressLevels.tiredness}/5)**: 
+  - Se Stress/Stanchezza sono ALTI (>= 4): Crea un piano molto dilazionato. Inserisci un carico leggero e pause lunghe (15-20 min). IGNORA l'anticipo di compiti. Suggerisci di riposare se non c'è nulla di urgente per domani.
+  - Se Stress/Stanchezza sono BASSI (<= 2): Puoi sfidare l'utente. Crea un piano denso e ANTICIPA compiti dalla lista "📋 PROSSIME".
+- OBBLIGATORIO: Quando crei il piano, usa ESCLUSIVAMENTE una tabella markdown per ogni giorno con queste colonne esatte:
   | Orario | Attività | Note |
 - Formato giorno ESATTO (grassetto): **GIORNO YYYY-MM-DD** (es. **LUNEDÌ 2026-02-23**)
-- Includi pause di 10-15 min tra le sessioni.
 - NON aggiungere MAI una riga "CHECK" o "Review" finale.
-- **PRECISIONE ASSOLUTA**: Non rielaborare e non "inventare" note. Usa il testo dei compiti forniti.
-- **SMART BALANCING**: Se il carico di oggi/domani è leggero e lo STRESS dello studente è BASSO (<=3), puoi ANTICIPARE compiti dalla lista "📋 PROSSIME" per bilanciare la settimana. 
-- Se lo STRESS è ALTO (>3), mantieni il piano leggero e non anticipare nulla.
-- Se un compito scade oggi ed è pomeriggio, IGNORALO.
-- **PRIORITÀ**: Inizia sempre dalle scadenze di DOMANI. Poi, se c'è spazio e lo stress lo permette, aggiungi sessioni per anticipare i compiti dei giorni successivi.`;
+- **PRECISIONE ASSOLUTA**: Non inventare compiti o materie. Usa il testo esatto fornito nei dati.
+- Se un compito scade oggi ed è pomeriggio inoltrato, IGNORALO (a meno che l'utente non lo citi esplicitamente).
+- **PRIORITÀ**: Concentrati prima sulle scadenze di DOMANI. Poi, in base allo stress, valuta se anticipare altro.`;
 
             // Build conversation for Gemini
             const contents = [
