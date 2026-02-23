@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.5 [Backend URL Fix]
-        const APP_VERSION = '2.4.5';
+        // 🚀 G-Diary v2.4.6 [Full Notification System Fix]
+        const APP_VERSION = '2.4.6';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2356,7 +2356,7 @@
         // ---------------------------------------------
         // ⚙️ CONFIGURATION
         const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend.onrender.com";
+        const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend-r5j1.vercel.app";
 
         // 🔥 SUPABASE CLIENT (Frontend - per Realtime Chat)
         const SUPABASE_URL = "https://mlcutgkfunbpmrnbeznd.supabase.co";
@@ -4658,36 +4658,8 @@
             try {
                 showBoot("Registrazione notifiche...");
 
-                // Richiedi permessi se mancanti o di default
-                if (Notification.permission !== 'granted') {
-                    const perm = await Notification.requestPermission();
-                    if (perm !== 'granted') {
-                        throw new Error("Permesso Notifiche negato o ignorato.");
-                    }
-                }
-
-                // Setup Service Worker (Relative path for GitHub Pages)
-                let reg = await navigator.serviceWorker.register('./sw.js');
-                reg = await navigator.serviceWorker.ready;
-
-                // Subscribe a Web Push Manager
-                const vapidPublicKey = 'BGykItHVYlyzS1HWADHj9DlBNYQRfbnLUAbvPHXwZd31QQINf2y3A5cqX-j0X6MC_96bLDTozFnrGnE-vuZLaG8';
-                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-
-                const subscription = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: convertedVapidKey
-                });
-
-                // 1. Invio subscription a Supabase (Push)
-                await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profileId: getUserId(), subscription })
-                });
-
-                // 2. Invio configurazione orari
-                const res = await fetch(`${API_BASE_URL}/api/notifications/settings`, {
+                // 1. First save the settings to the DB (this works regardless of SW support)
+                const settingsRes = await fetch(`${API_BASE_URL}/api/notifications/settings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -4696,15 +4668,48 @@
                         studyEnabled, studyTime
                     })
                 });
+                const settingsData = await settingsRes.json();
+                if (!settingsData.success) throw new Error('Errore salvataggio impostazioni: ' + (settingsData.error || 'sconosciuto'));
 
-                const data = await res.json();
-                if (!data.success) throw new Error("Errore salvataggio impostazioni DB");
+                // 2. Then try to set up push subscription (optional - may fail on some browsers)
+                try {
+                    if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
+                        if (Notification.permission !== 'granted') {
+                            const perm = await Notification.requestPermission();
+                            if (perm !== 'granted') {
+                                console.warn('Push permission denied, settings saved without push subscription');
+                                hideBoot();
+                                closeModal();
+                                return;
+                            }
+                        }
+
+                        const reg = await navigator.serviceWorker.register('./sw.js');
+                        await navigator.serviceWorker.ready;
+
+                        const vapidPublicKey = 'BGykItHVYlyzS1HWADHj9DlBNYQRfbnLUAbvPHXwZd31QQINf2y3A5cqX-j0X6MC_96bLDTozFnrGnE-vuZLaG8';
+                        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+                        const subscription = await reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: convertedVapidKey
+                        });
+
+                        await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ profileId: getUserId(), subscription })
+                        });
+                    }
+                } catch (pushErr) {
+                    console.warn('Push subscription failed (settings still saved):', pushErr.message);
+                }
 
                 hideBoot();
                 closeModal();
             } catch (err) {
                 hideBoot();
-                alert("❌ Errore durante l'attivazione delle notifiche: " + err.message);
+                alert("❌ Errore: " + err.message);
             }
         }
 
