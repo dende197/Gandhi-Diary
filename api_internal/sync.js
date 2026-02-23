@@ -112,10 +112,11 @@ module.exports = async function handler(req, res) {
                         return val;
                     };
 
+                    const parsedSL = parseJsonb(plannerRow.stress_levels, {});
                     plannerData = {
                         plannedTasks: parseJsonb(plannerRow.planned_tasks, {}),
-                        stressLevels: parseJsonb(plannerRow.stress_levels, {}),
-                        stressVents: parseJsonb(plannerRow.stress_vents, {}),
+                        stressLevels: parsedSL,
+                        stressVents: parsedSL.__vents || {},
                         plannedDetails: parseJsonb(plannerRow.planned_details, {}),
                         tasks: parseJsonb(plannerRow.tasks, []),
                         prepLevels: parseJsonb(plannerRow.prep_levels, {}),

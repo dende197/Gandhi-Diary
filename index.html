@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.0.0 [Sync System Overhaul]
-        const APP_VERSION = '2.0.0';
+        // 🚀 G-Diary v2.0.1 [Fix HTTP 400 on Save]
+        const APP_VERSION = '2.0.1';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2886,8 +2886,9 @@
                 if (data.success && data.data) {
                     console.log("📥 [SYNC] Dati ricevuti dal Cloud:", JSON.stringify(data.data));
                     const remotePT = data.data.plannedTasks || data.data.planned_tasks || {};
-                    const remoteSL = data.data.stressLevels || data.data.stress_levels || {};
-                    const remoteSV = data.data.stressVents || data.data.stress_vents || {};
+                    const remoteSLRaw = data.data.stressLevels || data.data.stress_levels || {};
+                    const { __vents: extractedVents, ...remoteSL } = remoteSLRaw;
+                    const remoteSV = data.data.stressVents || extractedVents || {};
                     const remoteTS = data.data.tasks || [];
                     const remotePL = data.data.prepLevels || data.data.prep_levels || {};
                     const remoteUpdatedAt = data.data.updatedAt || data.data.updated_at || null;
@@ -3251,8 +3252,9 @@
                     // ✅ Planner Merge — delegates to syncStateSlice (v2.0.0)
                     if (data.planner) {
                         const remotePT = data.planner.plannedTasks || {};
-                        const remoteSL = data.planner.stressLevels || {};
-                        const remoteSV = data.planner.stressVents || {};
+                        const remoteSLRaw = data.planner.stressLevels || {};
+                        const { __vents: extractedVents2, ...remoteSL } = remoteSLRaw;
+                        const remoteSV = data.planner.stressVents || extractedVents2 || {};
                         const remotePL = data.planner.prepLevels || {};
                         const remoteUpdatedAt = data.planner.updatedAt || null;
 
