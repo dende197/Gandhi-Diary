@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.9 [External Cron Fix]
-        const APP_VERSION = '2.4.9';
+        // 🚀 G-Diary v2.5.0 [Final Push Notification System]
+        const APP_VERSION = '2.5.0';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -4781,7 +4781,7 @@
                                 <span class="apple-slider"></span>
                             </label>
                         </div>
-                        <input type="time" id="notif-stress-time" value="14:00" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 10px; font-size: 16px;">
+                        <input type="time" id="notif-stress-time" value="14:00" step="300" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 10px; font-size: 16px;">
                     </div>
 
                     <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: var(--radius-m); border: 1px solid rgba(255,255,255,0.08);">
@@ -4794,7 +4794,7 @@
                                 <span class="apple-slider"></span>
                             </label>
                         </div>
-                        <input type="time" id="notif-study-time" value="15:00" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 10px; font-size: 16px;">
+                        <input type="time" id="notif-study-time" value="15:00" step="300" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 10px; font-size: 16px;">
                     </div>
 
                     <button onclick="saveNotificationSettings()" class="btn-primary" style="width: 100%; margin-top: 10px;">

@@ -1,0 +1,18 @@
+name: Notification Scheduler
+
+on:
+  schedule:
+    # Runs every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Trigger notification check
+        run: |
+          curl -s -o /dev/null -w "HTTP %{http_code}" \
+            "https://g-connect-backend-r5j1.vercel.app/api/notifications?action=cron" \
+            --max-time 15

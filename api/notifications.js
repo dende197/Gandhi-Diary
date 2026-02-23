@@ -103,9 +103,21 @@ module.exports = async function handler(req, res) {
                 return res.json({ success: true, time: timeStr, sent: 0, reason: 'no settings' });
             }
 
+            // Build a 5-minute window of times to match against (to handle scheduler running every 5 min)
+            const nowDate = new Date();
+            const romeNow = new Date(nowDate.toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
+            const currentMinutes = romeNow.getHours() * 60 + romeNow.getMinutes();
+            const timeWindow = [];
+            for (let offset = 0; offset < 5; offset++) {
+                const m = currentMinutes + offset;
+                const hh = String(Math.floor(m / 60) % 24).padStart(2, '0');
+                const mm = String(m % 60).padStart(2, '0');
+                timeWindow.push(`${hh}:${mm}`);
+            }
+
             const matching = settings.filter(s =>
-                (s.stress_enabled && s.stress_time === timeStr) ||
-                (s.study_enabled && s.study_time === timeStr)
+                (s.stress_enabled && timeWindow.includes(s.stress_time)) ||
+                (s.study_enabled && timeWindow.includes(s.study_time))
             );
 
             if (matching.length === 0) {
@@ -125,8 +137,8 @@ module.exports = async function handler(req, res) {
                 const userSub = subs.find(s => s.profile_id === setting.profile_id);
                 if (!userSub?.subscription) continue;
 
-                const isStress = setting.stress_enabled && setting.stress_time === timeStr;
-                const isStudy = setting.study_enabled && setting.study_time === timeStr;
+                const isStress = setting.stress_enabled && timeWindow.includes(setting.stress_time);
+                const isStudy = setting.study_enabled && timeWindow.includes(setting.study_time);
 
                 if (isStress) {
                     try {
