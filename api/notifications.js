@@ -91,9 +91,8 @@ module.exports = async function handler(req, res) {
         if (!supabase) return res.status(503).json({ success: false, error: 'DB non configurato' });
 
         const now = new Date();
-        const timeStr = new Intl.DateTimeFormat('it-IT', {
-            timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hour12: false
-        }).format(now);
+        const romeTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
+        const timeStr = `${String(romeTime.getHours()).padStart(2, '0')}:${String(romeTime.getMinutes()).padStart(2, '0')}`;
 
         try {
             const { data: settings, error: sErr } = await supabase
@@ -103,9 +102,23 @@ module.exports = async function handler(req, res) {
                 return res.json({ success: true, time: timeStr, sent: 0, reason: 'no settings' });
             }
 
+            // Build a 5-minute backwards window to match against (catches slightly delayed pings)
+            const nowDate = new Date();
+            const romeNow = new Date(nowDate.toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
+            const currentMinutes = romeNow.getHours() * 60 + romeNow.getMinutes();
+            const timeWindow = [];
+            for (let offset = 0; offset < 5; offset++) {
+                // offset 0 is current minute, 1 is 1 minute ago, etc.
+                let m = currentMinutes - offset;
+                if (m < 0) m += 24 * 60; // Handle midnight wrap-around
+                const hh = String(Math.floor(m / 60)).padStart(2, '0');
+                const mm = String(m % 60).padStart(2, '0');
+                timeWindow.push(`${hh}:${mm}`);
+            }
+
             const matching = settings.filter(s =>
-                (s.stress_enabled && s.stress_time === timeStr) ||
-                (s.study_enabled && s.study_time === timeStr)
+                (s.stress_enabled && timeWindow.includes(s.stress_time)) ||
+                (s.study_enabled && timeWindow.includes(s.study_time))
             );
 
             if (matching.length === 0) {
@@ -121,18 +134,29 @@ module.exports = async function handler(req, res) {
             }
 
             let sent = 0;
+            const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(nowDate); // YYYY-MM-DD
+
             for (const setting of matching) {
                 const userSub = subs.find(s => s.profile_id === setting.profile_id);
                 if (!userSub?.subscription) continue;
 
-                const isStress = setting.stress_enabled && setting.stress_time === timeStr;
-                const isStudy = setting.study_enabled && setting.study_time === timeStr;
+                // Anti-spam: check if already notified today
+                if (setting.last_notified) {
+                    const lastNotifiedDate = new Date(setting.last_notified);
+                    const lastNotifiedStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(lastNotifiedDate);
+                    if (lastNotifiedStr === todayStr) continue; // Already sent today
+                }
+
+                const isStress = setting.stress_enabled && timeWindow.includes(setting.stress_time);
+                const isStudy = setting.study_enabled && timeWindow.includes(setting.study_time);
+                let sentToUser = false;
 
                 if (isStress) {
                     try {
                         await webpush.sendNotification(userSub.subscription,
                             JSON.stringify({ title: 'G-Diary 🧠', body: 'Come ti senti oggi? Registra stress e stanchezza.', icon: '/icon-192.png' }));
                         sent++;
+                        sentToUser = true;
                     } catch (e) {
                         if (e.statusCode === 410 || e.statusCode === 404)
                             await supabase.from('push_subscriptions').delete().eq('profile_id', setting.profile_id);
@@ -143,10 +167,19 @@ module.exports = async function handler(req, res) {
                         await webpush.sendNotification(userSub.subscription,
                             JSON.stringify({ title: 'G-Diary 📚', body: 'È ora di studiare! Controlla i compiti.', icon: '/icon-192.png' }));
                         sent++;
+                        sentToUser = true;
                     } catch (e) {
                         if (e.statusCode === 410 || e.statusCode === 404)
                             await supabase.from('push_subscriptions').delete().eq('profile_id', setting.profile_id);
                     }
+                }
+
+                // Update last_notified timestamp to prevent spam
+                if (sentToUser) {
+                    await supabase
+                        .from('notification_settings')
+                        .update({ last_notified: new Date().toISOString() })
+                        .eq('profile_id', setting.profile_id);
                 }
             }
 
