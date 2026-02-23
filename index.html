@@ -2257,8 +2257,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v2.4.0 [Push Notifications & Smart Reminders]
-        const APP_VERSION = '2.4.0';
+        // 🚀 G-Diary v2.4.1 [Push Notifications Hotfix]
+        const APP_VERSION = '2.4.1';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -6231,6 +6231,9 @@
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <button class="btn-secondary" onclick="showEditProfileModal()" style="height: 52px; justify-content: flex-start; padding: 0 20px;">
                     <i class="ph ph-user-circle" style="font-size: 20px; color: var(--accent);"></i> Modifica Dati Personali
+                </button>
+                <button class="btn-secondary" onclick="showNotificationsModal()" style="height: 52px; justify-content: flex-start; padding: 0 20px;">
+                    <i class="ph ph-bell" style="font-size: 20px; color: var(--green);"></i> Notifiche e Promemoria
                 </button>
                 <button class="btn-secondary" onclick="forceAppUpdate()" style="height: 52px; justify-content: flex-start; padding: 0 20px;">
                     <i class="ph ph-trash" style="font-size: 20px; color: var(--orange);"></i> Svuota Cache e Riavvia
