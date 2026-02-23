@@ -58,6 +58,7 @@ module.exports = async function handler(req, res) {
                         planned_details: {},
                         tasks: [],
                         prep_levels: {},
+                        stress_vents: {},
                         updated_at: null
                     }
                 });
@@ -71,6 +72,7 @@ module.exports = async function handler(req, res) {
             row.stress_levels = parseJsonb(row.stress_levels, {});
             row.planned_details = parseJsonb(row.planned_details, {});
             row.prep_levels = parseJsonb(row.prep_levels, {});
+            row.stress_vents = parseJsonb(row.stress_vents, {});
 
             return res.json({ success: true, data: row });
 
@@ -89,6 +91,7 @@ module.exports = async function handler(req, res) {
             planned_details: body.plannedDetails || body.planned_details || {},
             tasks: body.tasks || [],
             prep_levels: body.prepLevels || body.prep_levels || {},
+            stress_vents: body.stressVents || body.stress_vents || {},
             updated_at: new Date().toISOString()
         };
 
@@ -111,6 +114,7 @@ module.exports = async function handler(req, res) {
                             plannedDetails: parseJsonb(data.planned_details, {}),
                             tasks: parseJsonb(data.tasks, []),
                             prepLevels: parseJsonb(data.prep_levels, {}),
+                            stressVents: parseJsonb(data.stress_vents, {}),
                             updatedAt: data.updated_at
                         }
                     });
@@ -141,6 +145,7 @@ module.exports = async function handler(req, res) {
                     plannedDetails: parseJsonb(row.planned_details, {}),
                     tasks: parseJsonb(row.tasks, []),
                     prepLevels: parseJsonb(row.prep_levels, {}),
+                    stressVents: parseJsonb(row.stress_vents, {}),
                     updatedAt: row.updated_at
                 }
             });

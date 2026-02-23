@@ -115,6 +115,7 @@ module.exports = async function handler(req, res) {
                     plannerData = {
                         plannedTasks: parseJsonb(plannerRow.planned_tasks, {}),
                         stressLevels: parseJsonb(plannerRow.stress_levels, {}),
+                        stressVents: parseJsonb(plannerRow.stress_vents, {}),
                         plannedDetails: parseJsonb(plannerRow.planned_details, {}),
                         tasks: parseJsonb(plannerRow.tasks, []),
                         prepLevels: parseJsonb(plannerRow.prep_levels, {}),

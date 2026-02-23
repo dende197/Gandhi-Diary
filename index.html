@@ -2204,8 +2204,8 @@
             return false;
         };
 
-        // 🚀 G-Diary v1.1.82 [Sync Crash Fix]
-        const APP_VERSION = '1.1.82';
+        // 🚀 G-Diary v2.0.0 [Sync System Overhaul]
+        const APP_VERSION = '2.0.0';
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -2857,9 +2857,7 @@
 
         // Global caches removed (Social/Market/Chat)
 
-        // Carica planner dal server: non sovrascrivere locale se il remoto è vuoto e il locale ha dati
-        // --- FETCH: blindato anti-wipe + last-write-wins ---
-        // --- FETCH: blindato anti-wipe + last-write-wins ---
+        // --- FETCH: autoritativo via syncStateSlice ---
         async function fetchPlannerRemote(force = false) {
             console.trace(`🔍 [SYNC] fetchPlannerRemote called (force=${force})`);
             const userId = getUserId();
@@ -2948,36 +2946,32 @@
             history.scrollRestoration = 'manual';
         }
 
-        /* --- GLOBAL STATE STUDIO --- */
-        // Poll and Social features removed
-
-        // Salva planner sul server quando cambia
-        // Save remoto + timestamp locale
-        // --- SALVATAGGIO: aggiorna subito timestamp locale e invia updatedAt ---
+        // --- SAVE: salva planner + stress sul server ---
         async function savePlannerRemote(force = false) {
-            console.trace(`📤 [SAVE] savePlannerRemote called (force=${force})`);
             if (state.booting || state.syncing) {
-                console.log("⏳ [SYNC] Save deferred: sync in progress or booting. Retrying in 2s...");
+                console.log("⏳ Save deferred: sync in progress. Retrying in 2s...");
                 setTimeout(() => { savePlannerRemote(force).catch(() => { }); }, 2000);
                 return;
             }
             const userId = getUserId();
             if (!sessionManager.isLoggedIn() || !userId || userId === 'guest') return;
 
-            // 🛡️ ANTI-WIPE v3: Ripristina Sottostati critici se vuoti ma presenti in cache
+            // Anti-wipe: restore critical slices from cache if state is empty
             const restoreIfEmpty = (slice, lsName) => {
                 const cached = JSON.parse(localStorage.getItem(lsKey(lsName)) || 'null');
                 const stateData = state[slice] || {};
                 if (Object.keys(stateData).length === 0 && cached && Object.keys(cached).length > 0) {
-                    console.warn(`🛡️ [SAVE] Anti-wipe [${slice}]: ripristino da cache locale prima del save`);
+                    console.warn(`🛡️ [SAVE] Anti-wipe [${slice}]: restored from cache`);
                     state[slice] = cached;
                 }
             };
 
-            restoreIfEmpty('plannedTasks', 'planned_tasks');
-            restoreIfEmpty('stressLevels', 'stress_levels');
-            restoreIfEmpty('prepLevels', 'prep_levels');
-            restoreIfEmpty('stressVents', 'stress_vents');
+            if (!force) {
+                restoreIfEmpty('plannedTasks', 'planned_tasks');
+                restoreIfEmpty('stressLevels', 'stress_levels');
+                restoreIfEmpty('prepLevels', 'prep_levels');
+                restoreIfEmpty('stressVents', 'stress_vents');
+            }
 
             const plannedDetails = {};
             try {
@@ -2990,27 +2984,17 @@
             } catch { }
 
             const nowIso = new Date().toISOString();
-
             const payload = {
                 plannedTasks: state.plannedTasks || {},
                 stressLevels: state.stressLevels || {},
+                stressVents: state.stressVents || {},
                 plannedDetails,
                 tasks: state.tasks || [],
                 prepLevels: state.prepLevels || {},
                 updatedAt: nowIso
             };
 
-            console.log(`📤 [SAVE] Payload: plannedTasks=${Object.keys(payload.plannedTasks).length} giorni, tasks=${payload.tasks.length}`);
-
-            // 🛡️ HARD ANTI-WIPE (v1.1.69): Mai salvare un piano vuoto se abbiamo dati in cache locale.
-            const prevTasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
-            const localHasTasks = Array.isArray(state.tasks) && state.tasks.length > 0;
-            const remoteIsEmpty = payload.tasks.length === 0;
-
-            if (!force && remoteIsEmpty && prevTasks.length > 0 && localHasTasks) {
-                console.warn("🛡️ [Planner] HARD Anti-wipe: blocco salvataggio vuoto su server (cache locale ha dati)");
-                return;
-            }
+            console.log(`📤 [SAVE] PT=${Object.keys(payload.plannedTasks).length} days, SL=${Object.keys(payload.stressLevels).length} days, tasks=${payload.tasks.length}`);
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
@@ -3023,14 +3007,13 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
 
-                // ✅ UPDATE TIMESTAMP ONLY AFTER SERVER CONFIRMATION (v1.1.79)
+                // Update timestamp ONLY after server confirmation
                 const finalUpdatedAt = data.data?.updatedAt || data.data?.updated_at || nowIso;
                 localStorage.setItem(lsKey('planner_updated_at'), finalUpdatedAt);
 
-                console.log("✅ Planner salvato sul server — risposta:", JSON.stringify(data?.data || {}));
+                console.log("✅ Planner saved to server");
             } catch (e) {
-                console.warn("Planner remote save failed, outbox:", e.message);
-                enqueueOutbox('planner', { userId, payload });
+                console.warn("❌ Planner remote save failed:", e.message);
             }
         }
 
@@ -3040,23 +3023,17 @@
             if (_plannerSaveT) clearTimeout(_plannerSaveT);
             _plannerSaveT = setTimeout(() => { savePlannerRemote().catch(() => { }); }, delay);
         }
-        async function hardSavePlanner() {
-            try {
-                saveTasks();
-                // await savePlannerRemote(); // 🔥 DISABILITATO: Ora solo manuale
-                if (typeof saveTasksSnapshotRemote === 'function') await saveTasksSnapshotRemote();
-            } catch { }
-        }
-
+        // --- GLOBAL RESET: clears all planner data locally and on server ---
         async function clearStudyPlan() {
-            if (!confirm("⚠️ Sei sicuro di voler ELIMINARE tutto il piano organizzativo? Questa azione non può essere annullata e cancellerà i blocchi pianificati su tutti i dispositivi.")) return;
+            if (!confirm("⚠️ Sei sicuro di voler ELIMINARE tutto il piano organizzativo? Cancellerà i dati su tutti i dispositivi.")) return;
 
             showToast("Eliminazione piano...");
 
-            // Reset state
+            // Reset all state slices
             state.plannedTasks = {};
-            state.plannedDetails = {}; // Aggiunto per pulizia totale
+            state.plannedDetails = {};
             state.stressLevels = {};
+            state.stressVents = {};
             state.prepLevels = {};
             state.reminders = [];
 
@@ -3064,21 +3041,21 @@
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify({}));
             localStorage.setItem(lsKey('planned_details'), JSON.stringify({}));
             localStorage.setItem(lsKey('stress_levels'), JSON.stringify({}));
+            localStorage.setItem(lsKey('stress_vents'), JSON.stringify({}));
             localStorage.setItem(lsKey('prep_levels'), JSON.stringify({}));
             localStorage.setItem(lsKey('reminders'), JSON.stringify([]));
 
-            // Notify UI immediately
+            // Update UI immediately
             notifyPlannerChanged();
             render();
 
             try {
-                // ✅ Global Reset: Sincronizza lo stato vuoto sul server bypassando l'anti-wipe
-                // Il timestamp verrà aggiornato da savePlannerRemote a operazione conclusa.
+                // Force save empty state to server (bypasses anti-wipe)
                 await savePlannerRemote(true);
-                showToast("✅ Piano resettato globalmente su ogni dispositivo 🗑️");
+                showToast("✅ Piano resettato su tutti i dispositivi 🗑️");
             } catch (e) {
-                console.error("Errore durante eliminazione remota:", e);
-                showToast("Reset locale ok, errore sincronizzazione cloud");
+                console.error("Reset cloud failed:", e);
+                showToast("Reset locale ok, errore sync cloud");
             }
         }
 
@@ -3121,8 +3098,8 @@
             }
         }
 
-        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hardSavePlanner(); });
-        window.addEventListener('beforeunload', () => { hardSavePlanner(); });
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveTasks(); });
+        window.addEventListener('beforeunload', () => { saveTasks(); });
 
         // Watchdog: se planner si svuota, ripristina dalla cache
         function verifyAndRepairPlanner() {
@@ -3271,47 +3248,24 @@
                         localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
                     }
 
-                    // ✅ FIX PLANNER: Merge intelligente con locale
+                    // ✅ Planner Merge — delegates to syncStateSlice (v2.0.0)
                     if (data.planner) {
                         const remotePT = data.planner.plannedTasks || {};
                         const remoteSL = data.planner.stressLevels || {};
+                        const remoteSV = data.planner.stressVents || {};
+                        const remotePL = data.planner.prepLevels || {};
                         const remoteUpdatedAt = data.planner.updatedAt || null;
 
-                        const localPT = state.plannedTasks || {};
-                        const localSL = state.stressLevels || {};
-                        const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
+                        state.plannedTasks = syncStateSlice('plannedTasks', remotePT, remoteUpdatedAt);
+                        state.stressLevels = syncStateSlice('stressLevels', remoteSL, remoteUpdatedAt);
+                        state.stressVents = syncStateSlice('stressVents', remoteSV, remoteUpdatedAt);
+                        state.prepLevels = syncStateSlice('prepLevels', remotePL, remoteUpdatedAt);
 
-                        // v1.1.81: Trust the server timestamp even if remote slices are empty (RESET scenario)
-                        const remoteIsNewer = remoteUpdatedAt && (!localUpdatedAt ||
-                            new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime());
-
-                        const localHasData = Object.keys(localPT).length > 0 || Object.keys(localSL).length > 0;
-
-                        // AUTHORITATIVE OVERWRITE: Se il server è più recente, carichiamo SEMPRE (anche se vuoto = reset)
-                        // Oppure se il locale è vuoto e il server ha un record.
-                        const shouldOverwrite = remoteIsNewer || (!localHasData && data.planner);
-
-                        console.log("📊 Planner merge:", { remoteIsNewer, localHasData, shouldOverwrite });
-
-                        if (shouldOverwrite) {
-                            // authoritative overwrite to avoid Append Bug
-                            state.plannedTasks = remotePT;
-                            state.stressLevels = remoteSL;
-
-                            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
-                            localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
-                            if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
-                            console.log("✅ Planner: merge difensivo con dati server (più recenti)");
-                        } else if (localHasData && !remoteHasData) {
-                            // Locale ha dati, server vuoto → push verso server
-                            console.log("📤 Planner: locale ha dati, server vuoto → sync verso server");
-                            // Rimuoviamo il save automatico se il server è vuoto durante il primo sync
-                            // Lasciamo che sia l'utente o un'azione successiva a salvare.
-                            // debouncedSavePlannerRemote(100); 
-                        } else if (localHasData) {
-                            // Entrambi hanno dati, locale più recente → mantieni locale
-                            console.log("✅ Planner: mantengo dati locali (più recenti)");
-                        }
+                        localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                        localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
+                        localStorage.setItem(lsKey('stress_vents'), JSON.stringify(state.stressVents || {}));
+                        localStorage.setItem(lsKey('prep_levels'), JSON.stringify(state.prepLevels));
+                        if (remoteUpdatedAt) localStorage.setItem(lsKey('planner_updated_at'), remoteUpdatedAt);
 
                         notifyPlannerChanged();
                     }
@@ -4341,16 +4295,14 @@
             }, 100);
         }
 
-        /* === 3) Notifica centralizzata per aggiornare tutto in tempo reale === */
-        // Helper per merge non distruttivo e robusto (Last-Write-Wins)
+        /* === 3) Sync State Slice — v2.0.0 Clean Rewrite === */
         function syncStateSlice(sliceName, remoteData, remoteUpdatedAt, force = false) {
+            const localData = state[sliceName];
             const localUpdatedAt = localStorage.getItem(lsKey('planner_updated_at')) || null;
             const remoteIsNewer = remoteUpdatedAt && (
                 !localUpdatedAt ||
                 new Date(remoteUpdatedAt).getTime() > new Date(localUpdatedAt).getTime()
             );
-
-            const localData = state[sliceName];
             const remoteIsEmpty = Array.isArray(remoteData)
                 ? remoteData.length === 0
                 : (!remoteData || Object.keys(remoteData).length === 0);
@@ -4358,27 +4310,28 @@
                 ? localData.length > 0
                 : (localData && Object.keys(localData).length > 0);
 
-            if (remoteIsEmpty && localHasData) {
-                console.warn(`🛡️ HARD Anti-wipe [${sliceName}]: Remote è vuoto, preservo locale (force=${force})`);
-                return localData;
-            }
-
-            if ((force || remoteIsNewer) && remoteData) {
-                // 🛡️ [v1.1.81] ALLOW overwrite with empty IF it's newer (intentional reset)
-                // BLOCCO solo se NON è forzato E NON è più nuovo (possibile wipe accidentale)
-                if (remoteIsEmpty && localHasData && !force && !remoteIsNewer) {
-                    console.warn(`🛡️ [${sliceName}] Sync bypass: remote è vuoto e non più recente, mantengo dati locali`);
-                    return localData;
-                }
-                console.log(`☁️ Remote [${sliceName}] applicato (force=${force}, newer=${remoteIsNewer})`);
+            // RULE 1: Force → always apply remote (used by Global Reset)
+            if (force) {
+                console.log(`☁️ [${sliceName}] Forced apply`);
                 return remoteData;
             }
-
-            return state[sliceName];
-        }
-        function mergePlannerData(local, remote) {
-            // AUTHORITATIVE SYNC: Priorità assoluta al remote per evitare bug di append
-            return { ...local, ...remote };
+            // RULE 2: Remote is newer → apply (even if empty = intentional reset)
+            if (remoteIsNewer) {
+                console.log(`☁️ [${sliceName}] Remote is newer → applied`);
+                return remoteData;
+            }
+            // RULE 3: Remote empty + local has data + NOT newer → keep local (anti-wipe)
+            if (remoteIsEmpty && localHasData) {
+                console.log(`🛡️ [${sliceName}] Anti-wipe: remote empty, keeping local`);
+                return localData;
+            }
+            // RULE 4: Local empty + remote has data → hydrate from server
+            if (!localHasData && !remoteIsEmpty) {
+                console.log(`☁️ [${sliceName}] Hydrating from server (local was empty)`);
+                return remoteData;
+            }
+            // Default: keep local
+            return localData;
         }
 
         function notifyPlannerChanged() {
@@ -5713,7 +5666,7 @@
             const todayStr = getLocalDateString();
             state.stressLevels[todayStr] = lv;
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+
 
             if (inModal) {
                 document.querySelectorAll('.stress-pill').forEach(p => {
@@ -7715,8 +7668,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
                 if (state.reminders && state.reminders.find(x => x.id === id)) {
                     localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
                 }
-                // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-                // debouncedSavePlannerRemote();
+
 
                 // === SURGICAL DOM UPDATE ===
                 // Update all checkboxes for this task ID without rebuilding
@@ -7844,7 +7796,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
             state.plannedTasks[dateVal].push(taskId);
 
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+
             closeModal();
             showToast('Compito aggiunto! ✅');
             render();
@@ -7935,7 +7887,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
             };
             state.tasks.push(newTask);
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
+
             closeModal();
             showToast(`${tipo} aggiunta! 📝`);
             render();
@@ -8218,8 +8170,7 @@ SE CREI UN PIANO DI STUDIO MULTI-GIORNO:
             }
 
             saveTasks();
-            // debouncedSavePlannerRemote(); // 🔥 DISABILITATO
-            // debouncedSavePlannerRemote();
+
             updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
             updatePlannerCounter();
             notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
