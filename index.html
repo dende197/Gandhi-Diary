@@ -6282,14 +6282,8 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button class="btn-secondary" onclick="showEditProfileModal()" style="height: 52px; justify-content: flex-start; padding: 0 20px;">
-                    <i class="ph ph-user-circle" style="font-size: 20px; color: var(--accent);"></i> Modifica Dati Personali
-                </button>
                 <button class="btn-secondary" onclick="showNotificationsModal()" style="height: 52px; justify-content: flex-start; padding: 0 20px;">
                     <i class="ph ph-bell" style="font-size: 20px; color: var(--green);"></i> Notifiche e Promemoria
-                </button>
-                <button class="btn-secondary" onclick="forceAppUpdate()" style="height: 52px; justify-content: flex-start; padding: 0 20px;">
-                    <i class="ph ph-trash" style="font-size: 20px; color: var(--orange);"></i> Svuota Cache e Riavvia
                 </button>
                 <button class="btn-primary" onclick="logout()" style="height: 52px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--red); box-shadow: none;">
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
@@ -9251,6 +9245,8 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
         window.checkServerHealth_impl = checkServerHealth;
         window.showProfileSelectionModal_impl = showProfileSelectionModal;
         window.showModal_impl = showModal;
+        window.showNotificationsModal_impl = showNotificationsModal;
+        window.saveNotificationSettings_impl = saveNotificationSettings;
 
         // 2. Expose safety wrappers
         const safeExpose = (name) => {
