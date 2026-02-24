@@ -44,7 +44,7 @@ self.addEventListener('push', function(event) {
             icon: data.icon || '/icons/maskable_icon_x192.png',
             badge: '/icons/maskable_icon_x192.png',
             vibrate: [200, 100, 200, 100, 200, 100, 200],
-            data: { url: data.url || '/' }  // ← messo in oggetto data
+            data: { url: data.url || '/' }
         };
         const title = data.title || 'G-Diary';
         event.waitUntil(self.registration.showNotification(title, options));
@@ -53,42 +53,10 @@ self.addEventListener('push', function(event) {
     }
 });
 
+// ✅ Fix definitivo notificationclick
 self.addEventListener('notificationclick', function(event) {
     event.notification.close();
-
-    // Legge l'URL dai dati della notifica
-    const urlToOpen = new URL(
-        event.notification.data?.url || '/', 
-        self.location.origin
-    ).href;
-
     event.waitUntil(
-        clients.matchAll({
-            type: 'window',
-            includeUncontrolled: true
-        }).then(function(clientList) {
-
-            // Cerca finestra PWA già aperta con quell'URL
-            for (let i = 0; i < clientList.length; i++) {
-                const client = clientList[i];
-                if (client.url === urlToOpen && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-
-            // Cerca qualsiasi finestra aperta del dominio
-            for (let i = 0; i < clientList.length; i++) {
-                const client = clientList[i];
-                if ('focus' in client) {
-                    client.focus();
-                    return client.navigate(urlToOpen);
-                }
-            }
-
-            // Nessuna finestra aperta — apri la PWA
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
+        clients.openWindow('https://g-connect-backend-r5j1.vercel.app/')
     );
 });
