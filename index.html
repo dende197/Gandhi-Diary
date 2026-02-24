@@ -6,6 +6,7 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
     <title>G-Diary</title>
+    <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Forza coerenza della system bar su Android/Samsung per entrambe le modalità -->
@@ -4684,7 +4685,7 @@
                             }
                         }
 
-                        const reg = await navigator.serviceWorker.register('./sw.js');
+                        const reg = await navigator.serviceWorker.register('/sw.js');
                         await navigator.serviceWorker.ready;
 
                         const vapidPublicKey = 'BGykItHVYlyzS1HWADHj9DlBNYQRfbnLUAbvPHXwZd31QQINf2y3A5cqX-j0X6MC_96bLDTozFnrGnE-vuZLaG8';
