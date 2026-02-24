@@ -4657,9 +4657,9 @@
             const studyTime = document.getElementById('notif-study-time').value;
 
             try {
-                showBoot("Registrazione notifiche...");
+                showBoot("Salvataggio impostazioni...");
 
-                // 1. First save the settings to the DB (this works regardless of SW support)
+                // 1. Save settings to DB
                 const settingsRes = await fetch(`${API_BASE_URL}/api/notifications/settings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4670,43 +4670,66 @@
                     })
                 });
                 const settingsData = await settingsRes.json();
-                if (!settingsData.success) throw new Error('Errore salvataggio impostazioni: ' + (settingsData.error || 'sconosciuto'));
+                if (!settingsData.success) throw new Error('Errore salvataggio: ' + (settingsData.error || 'sconosciuto'));
 
-                // 2. Then try to set up push subscription (optional - may fail on some browsers)
-                try {
-                    if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
-                        if (Notification.permission !== 'granted') {
-                            const perm = await Notification.requestPermission();
-                            if (perm !== 'granted') {
-                                console.warn('Push permission denied, settings saved without push subscription');
-                                hideBoot();
-                                closeModal();
-                                return;
-                            }
-                        }
-
-                        const reg = await navigator.serviceWorker.register('/sw.js');
-                        await navigator.serviceWorker.ready;
-
-                        const vapidPublicKey = 'BGykItHVYlyzS1HWADHj9DlBNYQRfbnLUAbvPHXwZd31QQINf2y3A5cqX-j0X6MC_96bLDTozFnrGnE-vuZLaG8';
-                        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-
-                        const subscription = await reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: convertedVapidKey
-                        });
-
-                        await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ profileId: getUserId(), subscription })
-                        });
-                    }
-                } catch (pushErr) {
-                    console.warn('Push subscription failed (settings still saved):', pushErr.message);
+                // 2. Check browser support
+                if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    hideBoot();
+                    alert('⚠️ Impostazioni salvate, ma questo browser non supporta le notifiche push.');
+                    closeModal();
+                    return;
                 }
 
+                // 3. Request permission
+                showBoot("Richiesta permesso notifiche...");
+                if (Notification.permission === 'denied') {
+                    hideBoot();
+                    alert('❌ Le notifiche sono bloccate. Vai nelle impostazioni del browser/app e riattivale per questo sito.');
+                    closeModal();
+                    return;
+                }
+                if (Notification.permission !== 'granted') {
+                    const perm = await Notification.requestPermission();
+                    if (perm !== 'granted') {
+                        hideBoot();
+                        alert('⚠️ Impostazioni salvate, ma senza permesso le notifiche non arriveranno.');
+                        closeModal();
+                        return;
+                    }
+                }
+
+                // 4. Register Service Worker
+                showBoot("Registrazione Service Worker...");
+                const reg = await navigator.serviceWorker.register('/sw.js');
+                await navigator.serviceWorker.ready;
+
+                // 5. Force fresh push subscription (unsubscribe old one first)
+                showBoot("Attivazione notifiche push...");
+                const existingSub = await reg.pushManager.getSubscription();
+                if (existingSub) {
+                    await existingSub.unsubscribe();
+                }
+
+                const vapidPublicKey = 'BGykItHVYlyzS1HWADHj9DlBNYQRfbnLUAbvPHXwZd31QQINf2y3A5cqX-j0X6MC_96bLDTozFnrGnE-vuZLaG8';
+                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+                const subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                // 6. Save NEW subscription to backend
+                showBoot("Sincronizzazione con il server...");
+                const subRes = await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId: getUserId(), subscription: subscription.toJSON() })
+                });
+                const subData = await subRes.json();
+                if (!subData.success) throw new Error('Errore registrazione push: ' + (subData.error || 'sconosciuto'));
+
                 hideBoot();
+                alert('✅ Notifiche attivate! Riceverai i promemoria agli orari scelti.');
                 closeModal();
             } catch (err) {
                 hideBoot();
