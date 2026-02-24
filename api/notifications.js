@@ -151,5 +151,64 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // ---- CHECK SUBSCRIPTION HEALTH (GET) ----
+    if (action === 'check-sub') {
+        const supabase = getSupabase();
+        if (!supabase) return res.status(503).json({ error: 'DB not configured' });
+
+        const profileId = req.query.profileId;
+        if (!profileId) return res.status(400).json({ error: 'profileId required' });
+
+        try {
+            const { data: sub } = await supabase
+                .from('push_subscriptions')
+                .select('*')
+                .eq('profile_id', profileId)
+                .single();
+
+            const { data: settings } = await supabase
+                .from('notification_settings')
+                .select('*')
+                .eq('profile_id', profileId)
+                .single();
+
+            // Try sending a test push and report the result
+            let pushResult = 'not_tested';
+            if (sub && sub.subscription) {
+                const wp = setupWebPush();
+                if (wp) {
+                    try {
+                        await webpush.sendNotification(sub.subscription,
+                            JSON.stringify({ title: 'G-Diary 🔔 Diagnostica', body: 'Se vedi questa notifica, il push funziona!', icon: '/icons/maskable_icon_x192.png' })
+                        );
+                        pushResult = 'SUCCESS — push accepted by FCM';
+                    } catch (pushErr) {
+                        pushResult = `FAILED — ${pushErr.statusCode || 'unknown'}: ${pushErr.message}`;
+                    }
+                }
+            }
+
+            const endpoint = sub?.subscription?.endpoint || 'NONE';
+            const pushService = endpoint.includes('fcm.googleapis.com') ? 'Chrome/FCM'
+                : endpoint.includes('push.services.mozilla.com') ? 'Firefox'
+                    : endpoint.includes('web.push.apple.com') ? 'Safari'
+                        : endpoint.includes('push.api.sec.samsung.com') ? 'Samsung Internet'
+                            : 'Unknown';
+
+            return res.json({
+                profileId,
+                hasSubscription: !!sub,
+                pushService,
+                endpoint: endpoint.substring(0, 80) + '...',
+                settings: settings || null,
+                pushResult,
+                serverTime: new Date().toISOString(),
+                romeTime: new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' })).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+            });
+        } catch (e) {
+            return res.status(500).json({ error: e.message });
+        }
+    }
+
     return res.status(404).json({ success: false, error: 'Action not found' });
 };
