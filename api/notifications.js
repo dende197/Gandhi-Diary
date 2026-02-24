@@ -118,12 +118,15 @@ module.exports = async function handler(req, res) {
                 if (isStress) {
                     try {
                         await webpush.sendNotification(userSub.subscription, JSON.stringify({
-                            title: 'G-Diary 🧠',
+                            title: 'G-Connect 🧠',
                             body: 'Come ti senti oggi? Registra stress e stanchezza.',
-                            icon: '/icon-192.png'
+                            icon: '/icons/maskable_icon_x192.png'
                         }));
                         sentCount++;
+                        // Se entrambi matchano lo stesso minuto, aspettiamo un attimo tra le due notifiche
+                        if (isStudy) await new Promise(r => setTimeout(r, 1000));
                     } catch (e) {
+                        console.error(`Cron Push Error (Stress) for ${setting.profile_id}:`, e.message);
                         if (e.statusCode === 410 || e.statusCode === 404)
                             await supabase.from('push_subscriptions').delete().eq('profile_id', setting.profile_id);
                     }
@@ -132,20 +135,20 @@ module.exports = async function handler(req, res) {
                 if (isStudy) {
                     try {
                         await webpush.sendNotification(userSub.subscription, JSON.stringify({
-                            title: 'G-Diary 📚',
+                            title: 'G-Connect 📚',
                             body: 'È ora di studiare! Controlla i compiti.',
-                            icon: '/icon-192.png'
+                            icon: '/icons/maskable_icon_x192.png'
                         }));
                         sentCount++;
                     } catch (e) {
+                        console.error(`Cron Push Error (Study) for ${setting.profile_id}:`, e.message);
                         if (e.statusCode === 410 || e.statusCode === 404)
                             await supabase.from('push_subscriptions').delete().eq('profile_id', setting.profile_id);
                     }
                 }
             }
 
-            return res.json({ success: true, time: timeStr, matching: matching.length, sent: sentCount });
-
+            return res.json({ success: true, time: timeStr, sent: sentCount, reason: sentCount === 0 ? "no match" : undefined });
         } catch (e) {
             return res.status(500).json({ success: false, error: e.message });
         }
