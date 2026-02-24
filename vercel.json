@@ -71,14 +71,6 @@
       "destination": "/api/debug"
     },
     {
-      "source": "/api/notifications/subscribe",
-      "destination": "/api/notifications?action=subscribe"
-    },
-    {
-      "source": "/api/notifications/settings",
-      "destination": "/api/notifications?action=settings"
-    },
-    {
       "source": "/.well-known/assetlinks.json",
       "destination": "/.well-known/assetlinks.json"
     }
