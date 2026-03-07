@@ -71,6 +71,34 @@
       "destination": "/api/debug"
     },
     {
+      "source": "/api/calendar/auth",
+      "destination": "/api/calendar?action=auth"
+    },
+    {
+      "source": "/api/calendar/callback",
+      "destination": "/api/calendar?action=callback"
+    },
+    {
+      "source": "/api/calendar/status",
+      "destination": "/api/calendar?action=status"
+    },
+    {
+      "source": "/api/calendar/sync",
+      "destination": "/api/calendar?action=sync"
+    },
+    {
+      "source": "/api/calendar/register-sync",
+      "destination": "/api/calendar?action=register-sync"
+    },
+    {
+      "source": "/api/calendar/disconnect",
+      "destination": "/api/calendar?action=disconnect"
+    },
+    {
+      "source": "/api/calendar/events",
+      "destination": "/api/calendar?action=events"
+    },
+    {
       "source": "/.well-known/assetlinks.json",
       "destination": "/.well-known/assetlinks.json"
     }

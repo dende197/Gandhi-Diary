@@ -14,6 +14,7 @@ const pdfParse = require('pdf-parse');
 const Groq = require('groq-sdk');
 const webpush = require('web-push');
 const cron = require('node-cron');
+const gcal = require('./lib/google-calendar');
 
 // ============= GROQ AI CLIENT (openai/gpt-oss-120b) =============
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -2558,6 +2559,460 @@ app.post('/sync', async (req, res) => {
 
 
 
+// ============= GOOGLE CALENDAR API =============
+
+/**
+ * GET /api/calendar/auth?profile_id=...
+ * Avvia il flusso OAuth2 di Google Calendar.
+ * Redirige l'utente alla pagina di consenso Google.
+ */
+app.get('/api/calendar/auth', (req, res) => {
+    const { profile_id } = req.query;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id obbligatorio' });
+
+    try {
+        const state = Buffer.from(JSON.stringify({ profile_id })).toString('base64');
+        const authUrl = gcal.getAuthUrl(state);
+        res.redirect(authUrl);
+    } catch (e) {
+        console.error('[Calendar] Auth URL error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * GET /api/calendar/callback?code=...&state=...
+ * Callback OAuth2 Google. Salva i token in Supabase.
+ */
+app.get('/api/calendar/callback', async (req, res) => {
+    const { code, state, error } = req.query;
+
+    if (error) {
+        return res.status(400).send(`<h3>Accesso negato: ${error}</h3><p>Puoi chiudere questa pagina e riprovare dall'app.</p>`);
+    }
+
+    if (!code || !state) {
+        return res.status(400).send('<h3>Parametri mancanti</h3><p>Riprova dall\'app.</p>');
+    }
+
+    let profileId;
+    try {
+        profileId = JSON.parse(Buffer.from(state, 'base64').toString('utf-8')).profile_id;
+    } catch (e) {
+        return res.status(400).send('<h3>Stato non valido</h3>');
+    }
+
+    if (!profileId) return res.status(400).send('<h3>profile_id mancante nello stato</h3>');
+
+    try {
+        const tokens = await gcal.exchangeCodeForTokens(code);
+
+        if (!tokens.refresh_token) {
+            return res.status(400).send(`
+                <h3>⚠️ Refresh token non ricevuto</h3>
+                <p>Revoca l'accesso all'app Google Calendar (<a href="https://myaccount.google.com/permissions">qui</a>) e riprova.</p>
+            `);
+        }
+
+        if (!supabase) {
+            return res.status(503).send('<h3>Database non disponibile</h3>');
+        }
+
+        const { error: dbError } = await supabase
+            .from('calendar_tokens')
+            .upsert({
+                profile_id: profileId,
+                access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token,
+                expiry_date: tokens.expiry_date || null,
+                calendar_id: 'primary',
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'profile_id' });
+
+        if (dbError) throw dbError;
+
+        console.log(`[Calendar] ✅ Tokens salvati per profilo: ${profileId}`);
+
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="it">
+            <head><meta charset="UTF-8"><title>G-Connect — Google Calendar</title>
+            <style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0f0f15;color:#fff;}
+            .card{text-align:center;padding:40px;background:#1a1a2e;border-radius:16px;max-width:400px;}
+            h2{color:#4CAF50;}p{color:#ccc;}</style></head>
+            <body><div class="card">
+                <h2>✅ Google Calendar collegato!</h2>
+                <p>I tuoi compiti scolastici verranno sincronizzati automaticamente alle 14:00 e alle 00:00.</p>
+                <p style="margin-top:24px;font-size:13px;color:#888;">Puoi chiudere questa pagina e tornare all'app.</p>
+            </div></body></html>
+        `);
+
+    } catch (e) {
+        console.error('[Calendar] Callback error:', e.message);
+        res.status(500).send(`<h3>Errore: ${e.message}</h3>`);
+    }
+});
+
+/**
+ * POST /api/calendar/register-sync
+ * Registra le credenziali Argo per la sincronizzazione automatica in background.
+ * Body: { profile_id, school_code, username, password, profile_index? }
+ */
+app.post('/api/calendar/register-sync', async (req, res) => {
+    const { profile_id, school_code, username, password, profile_index } = req.body;
+
+    if (!profile_id || !school_code || !username || !password) {
+        return res.status(400).json({ success: false, error: 'Campi obbligatori: profile_id, school_code, username, password' });
+    }
+
+    if (!process.env.CALENDAR_ENCRYPTION_KEY) {
+        return res.status(503).json({ success: false, error: 'Cifratura non configurata sul server (CALENDAR_ENCRYPTION_KEY mancante)' });
+    }
+
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    // Verifica che il profilo abbia già connesso Google Calendar
+    const { data: tokenRow } = await supabase
+        .from('calendar_tokens')
+        .select('profile_id')
+        .eq('profile_id', profile_id)
+        .single();
+
+    if (!tokenRow) {
+        return res.status(400).json({ success: false, error: 'Google Calendar non ancora collegato. Prima autorizza tramite /api/calendar/auth' });
+    }
+
+    try {
+        // Cifra le credenziali Argo
+        const credentials = JSON.stringify({ username, password });
+        const encryptedCreds = gcal.encryptCredentials(credentials);
+
+        const { error: dbError } = await supabase
+            .from('calendar_sync_jobs')
+            .upsert({
+                profile_id,
+                argo_school_code: school_code.toUpperCase().trim(),
+                argo_credentials: encryptedCreds,
+                argo_profile_index: parseInt(profile_index) || 0,
+                active: true,
+                sync_errors_count: 0,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'profile_id' });
+
+        if (dbError) throw dbError;
+
+        res.json({ success: true, message: 'Sincronizzazione automatica attivata. Verrà eseguita alle 14:00 e alle 00:00.' });
+
+    } catch (e) {
+        console.error('[Calendar] Register sync error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * DELETE /api/calendar/disconnect
+ * Rimuove i token Google e disattiva la sincronizzazione automatica per un profilo.
+ * Body: { profile_id }
+ */
+app.delete('/api/calendar/disconnect', async (req, res) => {
+    const { profile_id } = req.body;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id obbligatorio' });
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    try {
+        await Promise.all([
+            supabase.from('calendar_tokens').delete().eq('profile_id', profile_id),
+            supabase.from('calendar_sync_jobs').delete().eq('profile_id', profile_id)
+        ]);
+        res.json({ success: true, message: 'Google Calendar disconnesso.' });
+    } catch (e) {
+        console.error('[Calendar] Disconnect error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * GET /api/calendar/status?profile_id=...
+ * Ritorna lo stato della connessione Google Calendar per un profilo.
+ */
+app.get('/api/calendar/status', async (req, res) => {
+    const { profile_id } = req.query;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id obbligatorio' });
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    try {
+        const [{ data: tokenRow }, { data: syncRow }] = await Promise.all([
+            supabase.from('calendar_tokens').select('calendar_id, updated_at').eq('profile_id', profile_id).maybeSingle(),
+            supabase.from('calendar_sync_jobs').select('active, last_sync, last_sync_created, last_sync_errors, sync_errors_count').eq('profile_id', profile_id).maybeSingle()
+        ]);
+
+        res.json({
+            success: true,
+            connected: !!tokenRow,
+            calendar_id: tokenRow?.calendar_id || null,
+            auto_sync: syncRow?.active || false,
+            last_sync: syncRow?.last_sync || null,
+            last_sync_stats: syncRow ? {
+                created: syncRow.last_sync_created,
+                errors: syncRow.last_sync_errors
+            } : null,
+            consecutive_errors: syncRow?.sync_errors_count || 0
+        });
+
+    } catch (e) {
+        console.error('[Calendar] Status error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * POST /api/calendar/sync
+ * Sincronizzazione manuale immediata per un profilo.
+ * Body: { profile_id, school_code, auth_token, access_token, profile_index?, tasks? }
+ * Se tasks è fornito (dal frontend post-login), li usa direttamente.
+ * Altrimenti ri-scarica i dati da Argo con i token di sessione.
+ */
+app.post('/api/calendar/sync', async (req, res) => {
+    const { profile_id, school_code, auth_token, access_token, profile_index, tasks } = req.body;
+
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id obbligatorio' });
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    const { data: tokenRow, error: tokenError } = await supabase
+        .from('calendar_tokens')
+        .select('*')
+        .eq('profile_id', profile_id)
+        .single();
+
+    if (tokenError || !tokenRow) {
+        return res.status(400).json({ success: false, error: 'Google Calendar non collegato. Autorizza prima con /api/calendar/auth' });
+    }
+
+    let tasksToSync = tasks || [];
+
+    // Se non fornite le task, scaricale da Argo tramite i token di sessione
+    if (tasksToSync.length === 0 && school_code && auth_token && access_token) {
+        try {
+            const idx = parseInt(profile_index) || 0;
+            const headers = createHeaders(school_code, access_token, auth_token, null);
+            const [homeworkTasks, promemoria] = await Promise.all([
+                extractHomeworkSafe(headers),
+                extractPromemoria(headers)
+            ]);
+            tasksToSync = [...homeworkTasks, ...promemoria];
+        } catch (e) {
+            console.error('[Calendar] Argo fetch error during manual sync:', e.message);
+            return res.status(500).json({ success: false, error: 'Errore durante il fetch da Argo: ' + e.message });
+        }
+    }
+
+    if (tasksToSync.length === 0) {
+        return res.json({ success: true, stats: { created: 0, skipped: 0, errors: 0 }, message: 'Nessuna task da sincronizzare.' });
+    }
+
+    try {
+        const storedTokens = {
+            access_token: tokenRow.access_token,
+            refresh_token: tokenRow.refresh_token,
+            expiry_date: tokenRow.expiry_date
+        };
+
+        const { stats, updatedTokens } = await gcal.syncTasksToCalendar(
+            storedTokens,
+            tokenRow.calendar_id || 'primary',
+            tasksToSync
+        );
+
+        // Aggiorna i token se sono stati refreshati
+        if (updatedTokens.access_token !== storedTokens.access_token) {
+            await supabase.from('calendar_tokens').update({
+                access_token: updatedTokens.access_token,
+                expiry_date: updatedTokens.expiry_date || null,
+                updated_at: new Date().toISOString()
+            }).eq('profile_id', profile_id);
+        }
+
+        console.log(`[Calendar] ✅ Sync manuale ${profile_id}: +${stats.created} creati, ${stats.skipped} saltati, ${stats.errors} errori`);
+        res.json({ success: true, stats });
+
+    } catch (e) {
+        console.error('[Calendar] Manual sync error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * GET /api/calendar/events?profile_id=...
+ * Lista gli eventi futuri sincronizzati da G-Connect nel calendario.
+ */
+app.get('/api/calendar/events', async (req, res) => {
+    const { profile_id } = req.query;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id obbligatorio' });
+    if (!supabase) return res.status(503).json({ success: false, error: 'Database non disponibile' });
+
+    const { data: tokenRow, error: tokenError } = await supabase
+        .from('calendar_tokens').select('*').eq('profile_id', profile_id).single();
+
+    if (tokenError || !tokenRow) {
+        return res.status(400).json({ success: false, error: 'Google Calendar non collegato.' });
+    }
+
+    try {
+        const storedTokens = {
+            access_token: tokenRow.access_token,
+            refresh_token: tokenRow.refresh_token,
+            expiry_date: tokenRow.expiry_date
+        };
+        const events = await gcal.listCalendarEvents(storedTokens, tokenRow.calendar_id || 'primary');
+        res.json({ success: true, events });
+    } catch (e) {
+        console.error('[Calendar] Events list error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ============= GOOGLE CALENDAR SCHEDULED SYNC =============
+
+/**
+ * Funzione core per la sincronizzazione automatica di tutti gli utenti registrati.
+ * Eseguita dai cron job alle 14:00 e alle 00:00 (ora italiana).
+ */
+async function runScheduledCalendarSync() {
+    if (!supabase) {
+        console.log('[CalendarSync] Supabase non disponibile, skip.');
+        return;
+    }
+    if (!process.env.CALENDAR_ENCRYPTION_KEY) {
+        console.log('[CalendarSync] CALENDAR_ENCRYPTION_KEY mancante, skip.');
+        return;
+    }
+
+    console.log('[CalendarSync] 🔄 Avvio sincronizzazione programmata...');
+
+    // Recupera tutti i job attivi con token Google validi
+    const { data: jobs, error: jobsError } = await supabase
+        .from('calendar_sync_jobs')
+        .select('*')
+        .eq('active', true)
+        .lt('sync_errors_count', 5); // Disabilita automaticamente dopo 5 errori consecutivi
+
+    if (jobsError || !jobs || jobs.length === 0) {
+        console.log('[CalendarSync] Nessun job attivo trovato.');
+        return;
+    }
+
+    console.log(`[CalendarSync] ${jobs.length} utenti da sincronizzare.`);
+
+    for (const job of jobs) {
+        try {
+            // Recupera i token Google per questo profilo
+            const { data: tokenRow } = await supabase
+                .from('calendar_tokens')
+                .select('*')
+                .eq('profile_id', job.profile_id)
+                .single();
+
+            if (!tokenRow) {
+                console.log(`[CalendarSync] Token Google mancanti per ${job.profile_id}, skip.`);
+                continue;
+            }
+
+            // Decifra le credenziali Argo
+            let argoCredentials;
+            try {
+                argoCredentials = JSON.parse(gcal.decryptCredentials(job.argo_credentials));
+            } catch (e) {
+                console.error(`[CalendarSync] Errore decifratura credenziali per ${job.profile_id}:`, e.message);
+                await supabase.from('calendar_sync_jobs').update({ sync_errors_count: job.sync_errors_count + 1 }).eq('profile_id', job.profile_id);
+                continue;
+            }
+
+            // Login ad Argo
+            let accessToken, authToken, profiles;
+            let profileIdx = 0;
+            try {
+                const loginRes = await AdvancedArgo.rawLogin(
+                    job.argo_school_code,
+                    argoCredentials.username,
+                    argoCredentials.password
+                );
+                accessToken = loginRes.access_token;
+                profiles = loginRes.profiles || [];
+
+                profileIdx = Math.min(job.argo_profile_index, Math.max(0, profiles.length - 1));
+                authToken = profiles[profileIdx]?.token;
+
+                if (!accessToken || !authToken) throw new Error('Token Argo non ottenuti');
+            } catch (e) {
+                console.error(`[CalendarSync] Login Argo fallito per ${job.profile_id}:`, e.message);
+                await supabase.from('calendar_sync_jobs').update({ sync_errors_count: job.sync_errors_count + 1 }).eq('profile_id', job.profile_id);
+                continue;
+            }
+
+            // Estrai compiti e promemoria da Argo
+            const headers = createHeaders(job.argo_school_code, accessToken, authToken, profiles[profileIdx]?.idSoggetto);
+            const [homeworkTasks, promemoria] = await Promise.all([
+                extractHomeworkSafe(headers),
+                extractPromemoria(headers)
+            ]);
+            const allTasks = [...homeworkTasks, ...promemoria];
+
+            // Sincronizza con Google Calendar
+            const storedTokens = {
+                access_token: tokenRow.access_token,
+                refresh_token: tokenRow.refresh_token,
+                expiry_date: tokenRow.expiry_date
+            };
+
+            const { stats, updatedTokens } = await gcal.syncTasksToCalendar(
+                storedTokens,
+                tokenRow.calendar_id || 'primary',
+                allTasks
+            );
+
+            // Aggiorna token se refreshati
+            if (updatedTokens.access_token !== storedTokens.access_token) {
+                await supabase.from('calendar_tokens').update({
+                    access_token: updatedTokens.access_token,
+                    expiry_date: updatedTokens.expiry_date || null,
+                    updated_at: new Date().toISOString()
+                }).eq('profile_id', job.profile_id);
+            }
+
+            // Aggiorna stato del job
+            await supabase.from('calendar_sync_jobs').update({
+                last_sync: new Date().toISOString(),
+                last_sync_created: stats.created,
+                last_sync_skipped: stats.skipped,
+                last_sync_errors: stats.errors,
+                sync_errors_count: 0 // Reset errori consecutivi dopo successo
+            }).eq('profile_id', job.profile_id);
+
+            console.log(`[CalendarSync] ✅ ${job.profile_id}: +${stats.created} creati, ${stats.skipped} saltati, ${stats.errors} errori`);
+
+        } catch (e) {
+            console.error(`[CalendarSync] Errore generico per ${job.profile_id}:`, e.message);
+            await supabase.from('calendar_sync_jobs').update({
+                sync_errors_count: job.sync_errors_count + 1
+            }).eq('profile_id', job.profile_id).catch(() => {});
+        }
+    }
+
+    console.log('[CalendarSync] ✅ Sincronizzazione programmata completata.');
+}
+
+// Cron: Sincronizzazione automatica alle 14:00 (ora italiana)
+cron.schedule('0 14 * * *', () => {
+    console.log('[CalendarSync] ⏰ Cron 14:00 — avvio sync Google Calendar');
+    runScheduledCalendarSync().catch(e => console.error('[CalendarSync] Cron 14:00 error:', e.message));
+}, { timezone: 'Europe/Rome' });
+
+// Cron: Sincronizzazione automatica alle 00:00 (ora italiana)
+cron.schedule('0 0 * * *', () => {
+    console.log('[CalendarSync] ⏰ Cron 00:00 — avvio sync Google Calendar');
+    runScheduledCalendarSync().catch(e => console.error('[CalendarSync] Cron 00:00 error:', e.message));
+}, { timezone: 'Europe/Rome' });
+
 // ============= ERROR HANDLER =============
 app.use((err, req, res, next) => {
     console.error("Unhandled Error:", err);
@@ -2569,4 +3024,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Server Node.js avviato su porta ${PORT}`);
     console.log(`Debug Mode: ${DEBUG_MODE}`);
     console.log(`Supabase: ${supabase ? '✅ Configurato' : '❌ Non disponibile'}`);
+    console.log(`Google Calendar: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configurato' : '⚠️ Non configurato (opzionale)'}`);
 });
