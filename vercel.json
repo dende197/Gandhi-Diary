@@ -89,6 +89,26 @@
       "destination": "/api/sync-calendar?action=status"
     },
     {
+      "source": "/api/morning-briefing",
+      "destination": "/api/morning-briefing"
+    },
+    {
+      "source": "/api/morning-chat",
+      "destination": "/api/morning-chat"
+    },
+    {
+      "source": "/api/push-subscribe",
+      "destination": "/api/push-subscribe"
+    },
+    {
+      "source": "/api/send-morning-push",
+      "destination": "/api/send-morning-push"
+    },
+    {
+      "source": "/api/tts",
+      "destination": "/api/tts"
+    },
+    {
       "source": "/.well-known/assetlinks.json",
       "destination": "/.well-known/assetlinks.json"
     }
