@@ -14,6 +14,7 @@ const pdfParse = require('pdf-parse');
 const Groq = require('groq-sdk');
 const webpush = require('web-push');
 const cron = require('node-cron');
+const { syncTasksToCalendar, testConnection: testCalendarConnection } = require('./lib/googleCalendar');
 
 // ============= GROQ AI CLIENT (openai/gpt-oss-120b) =============
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -2556,7 +2557,101 @@ app.post('/sync', async (req, res) => {
     }
 });
 
+// ============= GOOGLE CALENDAR SYNC (Local Dev Cron) =============
 
+// Cron: 14:00 and 00:00 Europe/Rome (for local dev server, Vercel uses vercel.json crons)
+cron.schedule('0 14 * * *', async () => {
+    console.log('📅 [CRON 14:00] Calendar sync triggered...');
+    await runCalendarSync();
+}, { timezone: 'Europe/Rome' });
+
+cron.schedule('0 0 * * *', async () => {
+    console.log('📅 [CRON 00:00] Calendar sync triggered...');
+    await runCalendarSync();
+}, { timezone: 'Europe/Rome' });
+
+async function runCalendarSync() {
+    const schoolCode = process.env.ARGO_SCHOOL_CODE;
+    const argoUser = process.env.ARGO_USERNAME;
+    const argoPass = process.env.ARGO_PASSWORD;
+
+    if (!schoolCode || !argoUser || !argoPass) {
+        console.log('⚠️ Calendar sync skipped: Argo credentials not configured');
+        return;
+    }
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_CALENDAR_ID) {
+        console.log('⚠️ Calendar sync skipped: Google Calendar not configured');
+        return;
+    }
+
+    try {
+        const { AdvancedArgo: ArgoLib, getDashboard: getDash, extractHomeworkFromDashboard: extractHW } = require('./lib/argo');
+        const { createHeaders: mkHeaders } = require('./lib/helpers');
+
+        const loginRes = await ArgoLib.rawLogin(schoolCode, argoUser, argoPass);
+        const { access_token: at, profiles } = loginRes;
+        if (!profiles || profiles.length === 0) throw new Error('No Argo profiles');
+
+        const hdrs = mkHeaders(schoolCode, at, profiles[0].token, profiles[0].idSoggetto);
+        const dashboard = await getDash(hdrs);
+        const tasks = extractHW(dashboard);
+
+        console.log(`📋 Found ${tasks.length} tasks from Argo`);
+        const result = await syncTasksToCalendar(tasks);
+        console.log(`📅 Sync result: added=${result.added} skipped=${result.skipped} errors=${result.errors.length}`);
+    } catch (e) {
+        console.error('❌ Calendar sync cron error:', e.message);
+    }
+}
+
+// Manual sync endpoint (same logic as Vercel cron, for local dev)
+app.post('/api/sync-calendar', async (req, res) => {
+    // Check CRON_SECRET if configured
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+        const auth = req.headers.authorization;
+        if (!auth || auth !== `Bearer ${cronSecret}`) {
+            return res.status(401).json({ success: false, error: 'Non autorizzato' });
+        }
+    }
+
+    const schoolCode = process.env.ARGO_SCHOOL_CODE;
+    const argoUser = process.env.ARGO_USERNAME;
+    const argoPass = process.env.ARGO_PASSWORD;
+
+    if (!schoolCode || !argoUser || !argoPass) {
+        return res.status(500).json({ success: false, error: 'Credenziali Argo mancanti' });
+    }
+
+    try {
+        const { AdvancedArgo: ArgoLib, getDashboard: getDash, extractHomeworkFromDashboard: extractHW } = require('./lib/argo');
+        const { createHeaders: mkHeaders } = require('./lib/helpers');
+
+        const loginRes = await ArgoLib.rawLogin(schoolCode, argoUser, argoPass);
+        const { access_token: at, profiles } = loginRes;
+        if (!profiles || profiles.length === 0) throw new Error('No Argo profiles');
+
+        const hdrs = mkHeaders(schoolCode, at, profiles[0].token, profiles[0].idSoggetto);
+        const dashboard = await getDash(hdrs);
+        const tasks = extractHW(dashboard);
+
+        const result = await syncTasksToCalendar(tasks);
+        res.json({ ...result, total_tasks: tasks.length });
+    } catch (e) {
+        console.error('Calendar sync error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// Calendar connection test
+app.get('/api/calendar/status', async (req, res) => {
+    try {
+        const result = await testCalendarConnection();
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
 
 // ============= ERROR HANDLER =============
 app.use((err, req, res, next) => {
