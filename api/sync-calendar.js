@@ -7,7 +7,7 @@
  */
 
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
-const { syncTasksToCalendar, testConnection } = require('../lib/googleCalendar');
+const { syncTasksToCalendar, testConnection, removeDuplicates } = require('../lib/googleCalendar');
 const { createHeaders } = require('../lib/helpers');
 
 module.exports = async function handler(req, res) {
@@ -32,10 +32,25 @@ module.exports = async function handler(req, res) {
     }
 
     // ============= ACTION CHECK =============
-    if (req.query.action === 'status') {
+    const action = req.query.action || 'sync';
+
+    if (action === 'status') {
         try {
             const status = await testConnection();
             return res.json(status);
+        } catch (e) {
+            return res.status(500).json({ success: false, error: e.message });
+        }
+    }
+
+    if (action === 'remove-duplicates') {
+        try {
+            console.log('--- ACTION: REMOVE DUPLICATES ---');
+            const result = await removeDuplicates();
+            return res.json({
+                ...result,
+                duration_ms: Date.now() - (req.startTime || Date.now())
+            });
         } catch (e) {
             return res.status(500).json({ success: false, error: e.message });
         }
