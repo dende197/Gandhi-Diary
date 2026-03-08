@@ -4,6 +4,7 @@
   "description": "G-Connect Backend — Vercel Serverless",
   "private": true,
   "dependencies": {
+    "@google-cloud/text-to-speech": "^6.4.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.45.0",
     "axios": "^1.7.0",

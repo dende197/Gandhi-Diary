@@ -11,18 +11,43 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const { message, history } = req.body;
+        const { message, history = [] } = req.body;
         if (!message) {
             return res.status(400).json({ error: 'Messaggio mancante' });
         }
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash',
+            systemInstruction: `
+Sei G-Connect AI, l'assistente personale mattutino di Andrea, uno studente italiano di 4a superiore scienze applicate.
+
+PERSONALITÀ:
+- Tono amichevole, diretto, mai eccessivamente formale.
+- Conciso: max 3 frasi per risposta.
+- Motivante ma senza essere stucchevole.
+- Ironico e intelligente quando appropriato.
+- Parli SEMPRE in italiano.
+
+COMPORTAMENTO:
+- Se ti chiede le notizie -> dai 1-2 notizie plausibili e interessanti.
+- Se ti chiede il meteo -> rispondi in base alla stagione attuale.
+- Se ti chiede una curiosità -> scientifica o tecnologica preferibilmente.
+- Se ti chiede di un compito -> aiutalo brevemente.
+- Se dice "ciao", "arrivederci", "a dopo", "bye" -> concludi con un saluto motivante tipo "Vai Andrea, spacca tutto oggi!".
+- Ricorda il contesto della conversazione precedente.
+
+IMPORTANTE: Non usare mai elenchi puntati o markdown. Parla come se stessi telefonando a un amico.
+            `
+        });
 
         const chat = model.startChat({
-            history: history || [],
+            history: history.map(m => ({
+                role: m.role,
+                parts: Array.isArray(m.parts) ? m.parts : [{ text: m.parts }]
+            })),
             generationConfig: {
-                maxOutputTokens: 200,
+                maxOutputTokens: 150,
             },
         });
 
