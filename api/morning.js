@@ -3,6 +3,7 @@ const { google } = require('googleapis');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const webpush = require('web-push');
 const { createClient } = require('@supabase/supabase-js');
+const axios = require('axios');
 
 // Configurazione WebPush
 webpush.setVapidDetails(
@@ -229,8 +230,7 @@ async function handlePush(req, res) {
 }
 
 async function handleModels(req, res) {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const result = await genAI.listModels();
-    // listModels returns an object with a 'models' property which is an array
-    return res.json({ success: true, models: result.models || result });
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`;
+    const response = await axios.get(url);
+    return res.json({ success: true, models: response.data.models });
 }
