@@ -90,23 +90,27 @@
     },
     {
       "source": "/api/morning-briefing",
-      "destination": "/api/morning-briefing"
+      "destination": "/api/morning-briefing.js"
     },
     {
       "source": "/api/morning-chat",
-      "destination": "/api/morning-chat"
+      "destination": "/api/morning-chat.js"
     },
     {
       "source": "/api/push-subscribe",
-      "destination": "/api/push-subscribe"
+      "destination": "/api/push-subscribe.js"
     },
     {
       "source": "/api/send-morning-push",
-      "destination": "/api/send-morning-push"
+      "destination": "/api/send-morning-push.js"
     },
     {
       "source": "/api/tts",
-      "destination": "/api/tts"
+      "destination": "/api/tts.js"
+    },
+    {
+      "source": "/morning",
+      "destination": "/morning.html"
     },
     {
       "source": "/.well-known/assetlinks.json",
