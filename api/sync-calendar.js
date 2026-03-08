@@ -31,6 +31,16 @@ module.exports = async function handler(req, res) {
         }
     }
 
+    // ============= ACTION CHECK =============
+    if (req.query.action === 'status') {
+        try {
+            const status = await testConnection();
+            return res.json(status);
+        } catch (e) {
+            return res.status(500).json({ success: false, error: e.message });
+        }
+    }
+
     // ============= GET ARGO CREDENTIALS =============
     const schoolCode = process.env.ARGO_SCHOOL_CODE;
     const argoUser = process.env.ARGO_USERNAME;
