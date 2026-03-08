@@ -81,16 +81,8 @@
       "destination": "/api/debug"
     },
     {
-      "source": "/api/fix-duplicates",
-      "destination": "/api/remove-duplicates"
-    },
-    {
-      "source": "/api/sync-calendar",
-      "destination": "/api/sync-calendar"
-    },
-    {
-      "source": "/api/clean-calendar",
-      "destination": "/api/clean-calendar"
+      "source": "/api/remove-duplicates",
+      "destination": "/api/dupes"
     },
     {
       "source": "/api/calendar/status",
