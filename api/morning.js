@@ -85,7 +85,7 @@ async function handleBriefing(req, res) {
         .join('\n') || 'Nessun impegno specifico oggi';
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const oggiNome = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'][romeTime.getDay()];
     const ora = romeTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -119,7 +119,7 @@ async function handleChat(req, res) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-1.5-flash',
         systemInstruction: `
 Sei G-Connect AI, l'assistente personale mattutino di Andrea, uno studente italiano di 4a superiore scienze applicate.
 
