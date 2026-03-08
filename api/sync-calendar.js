@@ -125,7 +125,7 @@ module.exports = async function handler(req, res) {
             duration_ms: duration,
             total_tasks_found: tasks.length,
             scanned_future_titles: (result.added > 0 || result.skipped > 0) ? tasks.map(t => `${t.due_date}: ${t.materia} - ${t.text.substring(0, 30)}...`) : [],
-            debug_logs: debug_logs.filter(l => l.includes('DEBUG TARGET'))
+            debug_logs: debug_logs.filter(l => l.includes('GLOBAL SEARCH') || l.includes('DEBUG TARGET'))
         });
 
     } catch (e) {
