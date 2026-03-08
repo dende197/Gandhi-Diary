@@ -10,7 +10,7 @@
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/send-morning-push",
+      "path": "/api/morning?action=push",
       "schedule": "50 6 * * 1-6"
     }
   ],
@@ -82,7 +82,7 @@
     },
     {
       "source": "/api/debug/profile-raw",
-      "destination": "/api/debug"
+      "destination": "/api/main?action=debug"
     },
     {
       "source": "/api/calendar/status",
@@ -90,23 +90,23 @@
     },
     {
       "source": "/api/morning-briefing",
-      "destination": "/api/morning-briefing.js"
+      "destination": "/api/morning?action=briefing"
     },
     {
       "source": "/api/morning-chat",
-      "destination": "/api/morning-chat.js"
+      "destination": "/api/morning?action=chat"
     },
     {
       "source": "/api/push-subscribe",
-      "destination": "/api/push-subscribe.js"
+      "destination": "/api/morning?action=subscribe"
     },
     {
       "source": "/api/send-morning-push",
-      "destination": "/api/send-morning-push.js"
+      "destination": "/api/morning?action=push"
     },
     {
       "source": "/api/tts",
-      "destination": "/api/tts.js"
+      "destination": "/api/morning?action=tts"
     },
     {
       "source": "/morning",

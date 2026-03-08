@@ -238,7 +238,7 @@
             updateWave();
 
             try {
-                const res = await fetch('/api/tts', {
+                const res = await fetch('/api/morning?action=tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ testo: text })
@@ -330,7 +330,7 @@
             statusEl.textContent = "AI sta pensando...";
 
             try {
-                const res = await fetch(`${API_BASE}/api/morning-chat`, {
+                const res = await fetch(`${API_BASE}/api/morning?action=chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message, history: chatHistory })
@@ -361,7 +361,7 @@
         async function startBriefing() {
             statusEl.textContent = "Generazione briefing...";
             try {
-                const res = await fetch(`${API_BASE}/api/morning-briefing`);
+                const res = await fetch(`${API_BASE}/api/morning?action=briefing`);
                 const data = await res.json();
 
                 if (data.success) {
