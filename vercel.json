@@ -8,6 +8,10 @@
     {
       "path": "/api/sync-calendar",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/send-morning-push",
+      "schedule": "50 6 * * 1-6"
     }
   ],
   "functions": {
