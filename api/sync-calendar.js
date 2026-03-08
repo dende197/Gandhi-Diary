@@ -43,19 +43,6 @@ module.exports = async function handler(req, res) {
         }
     }
 
-    if (action === 'remove-duplicates') {
-        try {
-            console.log('--- ACTION: REMOVE DUPLICATES ---');
-            const result = await removeDuplicates();
-            return res.json({
-                ...result,
-                duration_ms: Date.now() - (req.startTime || Date.now())
-            });
-        } catch (e) {
-            return res.status(500).json({ success: false, error: e.message });
-        }
-    }
-
     // ============= GET ARGO CREDENTIALS =============
     const schoolCode = process.env.ARGO_SCHOOL_CODE;
     const argoUser = process.env.ARGO_USERNAME;
