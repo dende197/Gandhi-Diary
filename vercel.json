@@ -85,6 +85,14 @@
       "destination": "/api/sync-calendar"
     },
     {
+      "source": "/api/clean-calendar",
+      "destination": "/api/clean-calendar"
+    },
+    {
+      "source": "/api/calendar/status",
+      "destination": "/api/sync-calendar?action=status"
+    },
+    {
       "source": "/.well-known/assetlinks.json",
       "destination": "/.well-known/assetlinks.json"
     }
