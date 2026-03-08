@@ -81,7 +81,7 @@
       "destination": "/api/debug"
     },
     {
-      "source": "/api/remove-duplicates",
+      "source": "/api/fix-duplicates",
       "destination": "/api/remove-duplicates"
     },
     {
