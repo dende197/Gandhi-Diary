@@ -32,6 +32,8 @@ module.exports = async function handler(req, res) {
                 return await handleSubscribe(req, res);
             case 'push':
                 return await handlePush(req, res);
+            case 'models':
+                return await handleModels(req, res);
             default:
                 return res.status(400).json({ error: 'Action mancante o non valida' });
         }
@@ -85,7 +87,7 @@ async function handleBriefing(req, res) {
         .join('\n') || 'Nessun impegno specifico oggi';
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const oggiNome = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'][romeTime.getDay()];
     const ora = romeTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -119,7 +121,7 @@ async function handleChat(req, res) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-latest',
         systemInstruction: `
 Sei G-Connect AI, l'assistente personale mattutino di Andrea, uno studente italiano di 4a superiore scienze applicate.
 
@@ -224,4 +226,11 @@ async function handlePush(req, res) {
     }
 
     return res.json({ success: true, sent, failed });
+}
+
+async function handleModels(req, res) {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const result = await genAI.listModels();
+    // listModels returns an object with a 'models' property which is an array
+    return res.json({ success: true, models: result.models || result });
 }
