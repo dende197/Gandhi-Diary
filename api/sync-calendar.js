@@ -110,13 +110,16 @@ module.exports = async function handler(req, res) {
         console.log(`📅 CALENDAR SYNC COMPLETATO in ${duration}ms`);
         console.log(`   ✅ Aggiunti: ${result.added}`);
         console.log(`   ⏭️  Skippati: ${result.skipped}`);
+        console.log(`   ✂️  Filtrati (past): ${result.filtered || 0}`);
         console.log(`   ❌ Errori: ${result.errors.length}`);
         console.log(`${'='.repeat(60)}\n`);
 
         return res.json({
             ...result,
             duration_ms: duration,
-            total_tasks: tasks.length
+            total_tasks_found: tasks.length,
+            // Provide a list of descriptions found for future tasks
+            scanned_future_titles: (result.added > 0 || result.skipped > 0) ? tasks.map(t => `${t.due_date}: ${t.materia} - ${t.text.substring(0, 30)}...`) : []
         });
 
     } catch (e) {
