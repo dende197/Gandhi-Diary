@@ -9038,7 +9038,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
                             userVisibleOnly: true,
                             applicationServerKey: 'BDvVBpIqMpVFx-BlGS23eLy0l3HGD4P2RQQkuvJ3KojC-W9EDst8PwRbpKNELjiOchUfEu-Wf0rEv9APkyzbNas'
                         });
-                        await fetch('/api/push-subscribe', {
+                        await fetch('/api/morning?action=subscribe', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ subscription: sub })
