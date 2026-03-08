@@ -3,8 +3,5 @@ module.exports = async function handler(req, res) {
     if (action === 'health') {
         return require('../api_internal/health')(req, res);
     }
-    if (action === 'debug') {
-        return require('../api_internal/debug/profile-raw')(req, res);
-    }
     return require('../api_internal/ping')(req, res);
 };

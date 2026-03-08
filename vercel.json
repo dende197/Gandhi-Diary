@@ -10,107 +10,12 @@
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/morning?action=push",
-      "schedule": "50 6 * * 1-6"
-    }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/login",
-      "destination": "/api/auth?action=login"
-    },
-    {
-      "source": "/sync",
-      "destination": "/api/auth?action=sync"
-    },
-    {
-      "source": "/health",
-      "destination": "/api/main?action=health"
-    },
-    {
-      "source": "/api/ping",
-      "destination": "/api/main?action=ping"
-    },
-    {
-      "source": "/api/resolve-profile",
-      "destination": "/api/auth?action=resolve-profile"
-    },
-    {
-      "source": "/api/profile/:user_id",
-      "destination": "/api/profile?user_id=:user_id"
-    },
-    {
-      "source": "/api/profile",
-      "destination": "/api/profile"
-    },
-    {
-      "source": "/api/planner/:user_id",
-      "destination": "/api/planner?user_id=:user_id"
-    },
-    {
-      "source": "/api/circolari",
-      "destination": "/api/circolari?action=index"
-    },
-    {
-      "source": "/api/circolari/sintesi",
-      "destination": "/api/circolari?action=sintesi"
-    },
-    {
-      "source": "/api/ai/chat",
-      "destination": "/api/ai?action=chat"
-    },
-    {
-      "source": "/api/mental-health/ai-advice",
-      "destination": "/api/ai?action=ai-advice"
-    },
-    {
-      "source": "/api/mental-health/save",
-      "destination": "/api/mental?action=save"
-    },
-    {
-      "source": "/api/mental-health/history",
-      "destination": "/api/mental?action=history"
-    },
-    {
-      "source": "/api/conversations/user/:user_id",
-      "destination": "/api/conversations?user_id=:user_id"
-    },
-    {
       "source": "/api/debug/profile-raw",
-      "destination": "/api/main?action=debug"
+      "destination": "/api/debug"
     },
     {
       "source": "/api/calendar/status",
       "destination": "/api/sync-calendar?action=status"
-    },
-    {
-      "source": "/api/morning-briefing",
-      "destination": "/api/morning?action=briefing"
-    },
-    {
-      "source": "/api/morning-chat",
-      "destination": "/api/morning?action=chat"
-    },
-    {
-      "source": "/api/push-subscribe",
-      "destination": "/api/morning?action=subscribe"
-    },
-    {
-      "source": "/api/send-morning-push",
-      "destination": "/api/morning?action=push"
-    },
-    {
-      "source": "/api/tts",
-      "destination": "/api/morning?action=tts"
-    },
-    {
-      "source": "/morning",
-      "destination": "/morning.html"
     },
     {
       "source": "/.well-known/assetlinks.json",

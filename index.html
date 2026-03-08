@@ -9026,31 +9026,6 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
             <i class="ph-bold ph-trash" style="color: rgba(255,100,100,0.8);"></i> Reset Totale
         </button>
     </div>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const reg = await navigator.serviceWorker.register('/sw.js');
-                    console.log('SW registrato:', reg.scope);
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        const sub = await reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: 'BDvVBpIqMpVFx-BlGS23eLy0l3HGD4P2RQQkuvJ3KojC-W9EDst8PwRbpKNELjiOchUfEu-Wf0rEv9APkyzbNas'
-                        });
-                        await fetch('/api/morning?action=subscribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ subscription: sub })
-                        });
-                        console.log('Push subscription salvata');
-                    }
-                } catch (e) {
-                    console.error('SW registration failed:', e);
-                }
-            });
-        }
-    </script>
 
 </body>
 
