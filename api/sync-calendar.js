@@ -11,12 +11,6 @@ const { syncTasksToCalendar, testConnection } = require('../lib/googleCalendar')
 const { createHeaders } = require('../lib/helpers');
 
 module.exports = async function handler(req, res) {
-    const debug_logs = [];
-    const originalLog = console.log;
-    console.log = (...args) => {
-        debug_logs.push(args.join(' '));
-        originalLog(...args);
-    };
     // ============= CORS =============
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -124,8 +118,7 @@ module.exports = async function handler(req, res) {
             ...result,
             duration_ms: duration,
             total_tasks_found: tasks.length,
-            scanned_future_titles: (result.added > 0 || result.skipped > 0) ? tasks.map(t => `${t.due_date}: ${t.materia} - ${t.text.substring(0, 30)}...`) : [],
-            debug_logs: debug_logs.filter(l => l.includes('GLOBAL SEARCH') || l.includes('DEBUG TARGET'))
+            scanned_future_titles: (result.added > 0 || result.skipped > 0) ? tasks.map(t => `${t.due_date}: ${t.materia} - ${t.text.substring(0, 30)}...`) : []
         });
 
     } catch (e) {
