@@ -1,39 +1,40 @@
         /* ============================================
-           G-CONNECT — PREMIUM GLASS DESIGN SYSTEM
-           Glassmorphic Dashboard — Aurora Dark Mode
+           G-CONNECT — PREMIUM DESIGN SYSTEM
+           Apple-Inspired — Light Mode
            ============================================ */
 
         :root {
             /* Background Layers */
-            --bg-body: #0c0e1a;
-            --bg-card: rgba(18, 21, 35, 0.55);
-            --bg-card-hover: rgba(25, 29, 48, 0.65);
-            --bg-input: rgba(12, 14, 26, 0.7);
+            --bg-body: #f5f5f7;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --bg-card-hover: rgba(255, 255, 255, 0.95);
+            --bg-input: rgba(0, 0, 0, 0.04);
+            --bg-input-focus: rgba(0, 0, 0, 0.06);
 
             /* Typography */
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-            --text-primary: #eef0f6;
-            --text-secondary: #8b8fa3;
-            --text-dim: #5c6178;
+            --text-primary: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --text-dim: #86868b;
 
             /* Accent Colors */
             --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.35);
+            --accent-glow: rgba(99, 102, 241, 0.25);
             --accent-warm: #f59e0b;
 
-            --blue: #3b82f6;
-            --green: #10b981;
-            --orange: #f59e0b;
-            --red: #ef4444;
-            --purple: #8b5cf6;
+            --blue: #0071e3;
+            --green: #28cd41;
+            --orange: #ff9f0a;
+            --red: #ff3b30;
+            --purple: #af52de;
 
             /* Glass System */
-            --card-border: 1px solid rgba(255, 255, 255, 0.08);
-            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-            --glass-bg: rgba(18, 21, 35, 0.55);
+            --card-border: 1px solid rgba(0, 0, 0, 0.06);
+            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            --glass-bg: rgba(255, 255, 255, 0.72);
             --glass-blur: blur(40px);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+            --glass-border: 1px solid rgba(0, 0, 0, 0.06);
 
             /* Radii */
             --radius-xl: 24px;
@@ -62,15 +63,15 @@
 
         /* DEFAULT */
         html {
-            color-scheme: dark;
-            background: #0c0e1a;
+            color-scheme: light;
+            background: #f5f5f7;
             height: auto;
             min-height: 100%;
         }
 
         body {
             font-family: var(--font-main);
-            background: #0c0e1a;
+            background: #f5f5f7;
             color: var(--text-primary);
             height: 100%;
             min-height: 100%;
@@ -82,26 +83,15 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Aurora gradient background — multi-blob ambient light */
+        /* Subtle ambient gradient */
         body::before {
             content: '';
             position: fixed;
             inset: 0;
             background:
-                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 60% at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
-                radial-gradient(ellipse 70% 50% at 50% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse 50% 40% at 90% 70%, rgba(168, 85, 247, 0.06) 0%, transparent 45%);
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        /* Lighter edge vignette — gives the "framed" panel look */
-        body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(30, 33, 55, 0.4) 100%);
+                radial-gradient(ellipse 80% 50% at 15% 5%, rgba(99, 102, 241, 0.07) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 60% at 85% 15%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse 70% 50% at 50% 90%, rgba(59, 130, 246, 0.04) 0%, transparent 45%);
             pointer-events: none;
             z-index: -1;
         }
@@ -131,15 +121,15 @@
 
         #scroll-thumb {
             width: 100%;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.12);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border-radius: 10px;
             position: absolute;
             top: 0;
             min-height: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.04);
         }
 
         .show-scrollbar {
@@ -156,9 +146,9 @@
 
         .view {
             width: 100%;
-            max-width: 1100px;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 100px 20px 100px 20px;
+            padding: 100px 40px 100px 40px;
         }
 
         /* Bloquea padding globale SOLO per vista AI */
@@ -194,25 +184,25 @@
         .card,
         .glass-panel {
             background: var(--bg-card);
-            backdrop-filter: blur(40px) saturate(160%);
-            -webkit-backdrop-filter: blur(40px) saturate(160%);
+            backdrop-filter: blur(40px) saturate(140%);
+            -webkit-backdrop-filter: blur(40px) saturate(140%);
             border: var(--card-border);
             border-radius: var(--radius-l);
-            box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            box-shadow: var(--card-shadow);
             padding: 24px;
-            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
         }
 
         .card:hover {
             background: var(--bg-card-hover);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
         }
 
         .glass-panel {
             background: var(--glass-bg);
-            backdrop-filter: blur(40px) saturate(160%);
-            -webkit-backdrop-filter: blur(40px) saturate(160%);
+            backdrop-filter: blur(40px) saturate(140%);
+            -webkit-backdrop-filter: blur(40px) saturate(140%);
         }
 
         /* === TOP NAVIGATION === */
@@ -243,13 +233,13 @@
         .nav-links {
             display: flex;
             gap: 6px;
-            background: rgba(18, 21, 35, 0.6);
+            background: rgba(255, 255, 255, 0.72);
             padding: 4px;
             border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             backdrop-filter: blur(40px) saturate(180%);
             -webkit-backdrop-filter: blur(40px) saturate(180%);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
         }
 
         .nav-item {
@@ -258,8 +248,8 @@
             gap: 8px;
             padding: 8px 18px;
             border-radius: 30px;
-            color: rgba(255, 255, 255, 0.6);
-            font-weight: 700;
+            color: var(--text-secondary);
+            font-weight: 600;
             font-size: 13px;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -269,16 +259,22 @@
         }
 
         .nav-item:hover {
-            color: white;
-            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            background: rgba(0, 0, 0, 0.04);
         }
 
         .nav-item.active {
             color: white;
-            background: rgba(99, 102, 241, 0.25);
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2), inset 0 0 10px rgba(99, 102, 241, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(99, 102, 241, 0.35);
+            background: var(--accent);
+            box-shadow: 0 2px 12px var(--accent-glow);
+            border: none;
+        }
+
+        .nav-item.active {
+            color: white;
+            background: var(--accent);
+            box-shadow: 0 2px 12px var(--accent-glow);
+            border: none;
         }
 
         .nav-item i {
@@ -296,13 +292,13 @@
         }
 
         .profile-trigger:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.04);
         }
 
         .profile-label {
             font-weight: 700;
             font-size: 14px;
-            color: white;
+            color: var(--text-primary);
             display: none;
         }
 
@@ -374,8 +370,8 @@
             width: 44px;
             height: 44px;
             border-radius: 22px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             color: white;
             cursor: pointer;
             display: flex;
@@ -392,7 +388,7 @@
         }
 
         .btn-icon-glass:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.1);
             transform: scale(1.05);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
@@ -418,12 +414,12 @@
             display: none;
             position: fixed;
             /* default fixed, overridden by JS anyway */
-            background: rgba(22, 22, 28, 0.97);
+            background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
             overflow: hidden;
             animation: fadeInDown 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
             /* NO min-width/max-width here — set by JS based on device */
@@ -439,7 +435,7 @@
             align-items: center;
             gap: 14px;
             padding: 16px 22px;
-            color: rgba(255, 255, 255, 0.92);
+            color: var(--text-primary);
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
@@ -453,11 +449,11 @@
         }
 
         .pd-item:hover {
-            background: rgba(255, 255, 255, 0.09);
+            background: rgba(0, 0, 0, 0.06);
         }
 
         .pd-item:active {
-            background: rgba(255, 255, 255, 0.14);
+            background: rgba(0, 0, 0, 0.1);
             transform: scale(0.97);
             transition: transform 0.05s;
         }
@@ -483,7 +479,7 @@
         @media (max-width: 768px) {
             :root {
                 --glass-blur: blur(12px);
-                --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+                --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
             }
 
             html,
@@ -509,8 +505,7 @@
             }
 
             .view {
-                padding: 85px 14px 100px 14px;
-                /* Fix top nav overlap (60px + 25px) */
+                padding: 85px 16px 100px 16px;
             }
 
             h1 {
@@ -610,10 +605,10 @@
                 backdrop-filter: blur(12px) saturate(150%);
                 -webkit-backdrop-filter: blur(12px) saturate(150%);
                 background: rgba(26, 26, 30, 0.65);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(0, 0, 0, 0.08);
                 border-radius: 20px;
                 padding: 20px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(0, 0, 0, 0.05);
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
             }
 
@@ -663,19 +658,19 @@
         }
 
         .focus-item {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(0, 0, 0, 0.02);
             border-radius: var(--radius-m);
             padding: 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.04);
             transition: background 0.2s;
         }
 
         .focus-item:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.05);
         }
 
         .circolare-card {
@@ -880,7 +875,7 @@
 
         .ai-prose code {
             background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 5px;
             padding: 1px 7px;
             font-size: 13px;
@@ -889,7 +884,7 @@
         }
 
         .ai-prose pre {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.06);
             border-radius: 10px;
             padding: 12px 14px;
             overflow-x: auto;
@@ -925,7 +920,7 @@
             border-spacing: 0;
             margin: 16px 0;
             font-size: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: 12px;
             overflow: hidden;
             background: rgba(10, 10, 15, 0.4);
@@ -937,7 +932,7 @@
             font-weight: 700;
             padding: 12px 14px;
             text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-size: 11px;
@@ -945,7 +940,7 @@
 
         .ai-prose td {
             padding: 12px 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             color: rgba(255, 255, 255, 0.8);
             vertical-align: middle;
             line-height: 1.5;
@@ -1032,11 +1027,11 @@
             padding: 48px 32px 42px;
             border-radius: var(--radius-xl);
             margin-bottom: 24px;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.12));
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
             backdrop-filter: blur(40px) saturate(150%);
             -webkit-backdrop-filter: blur(40px) saturate(150%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.12), inset 0 1px 0 rgba(0, 0, 0, 0.05);
             overflow: hidden;
             text-align: left;
         }
@@ -1072,7 +1067,7 @@
             width: 100%;
             height: 48px;
             background: var(--bg-input);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: var(--radius-m);
             color: var(--text-primary);
             padding: 0 16px;
@@ -1112,12 +1107,12 @@
         .registro-date-box {
             min-width: 50px;
             text-align: center;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(0, 0, 0, 0.02);
             padding: 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(0, 0, 0, 0.04);
         }
 
         .studio-entry {
@@ -1191,15 +1186,15 @@
         .modal-content {
             width: calc(100% - 32px);
             max-width: 440px;
-            background: rgba(18, 21, 35, 0.75);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(60px) saturate(180%);
             -webkit-backdrop-filter: blur(60px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: var(--radius-xl);
             padding: 24px;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(0, 0, 0, 0.05);
             transform: scale(0.96);
             transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
@@ -1271,8 +1266,8 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(0, 0, 0, 0.03);
             color: var(--text-secondary);
             cursor: pointer;
             display: flex;
@@ -1282,7 +1277,7 @@
         }
 
         .calendar-nav button:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.08);
         }
 
         .weekday-headers {
@@ -1312,7 +1307,7 @@
             min-height: 64px;
             padding: 6px;
             background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.03);
             border-radius: var(--radius-s);
             cursor: pointer;
             transition: all 0.15s ease;
@@ -1321,7 +1316,7 @@
         }
 
         .calendar-day:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.05);
         }
 
         .calendar-day.today {
@@ -1450,7 +1445,7 @@
 
         /* Stress card */
         .metric-card.stress {
-            background: rgba(20, 20, 20, 0.6);
+            background: rgba(255, 255, 255, 0.7);
             border: var(--glass-border);
             padding: 0;
             position: relative;
@@ -1490,15 +1485,15 @@
             bottom: 10px;
             font-size: 11px;
             color: var(--text-secondary);
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.06);
             padding: 3px 8px;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         /* Media card */
         .metric-card.media {
-            background: rgba(20, 20, 20, 0.6);
+            background: rgba(255, 255, 255, 0.7);
             border: var(--glass-border);
         }
 
@@ -1541,8 +1536,8 @@
             flex: 1;
             aspect-ratio: 1;
             border-radius: var(--radius-m);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(0, 0, 0, 0.03);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1561,8 +1556,8 @@
 
         /* === MENTAL HEALTH DASHBOARD === */
         .mh-metric-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: 20px;
             padding: 22px 24px;
             margin-bottom: 18px;
@@ -1578,7 +1573,7 @@
             appearance: none;
             width: 100%;
             height: 6px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.08);
             border-radius: 10px;
             outline: none;
         }
@@ -1590,7 +1585,7 @@
             background: white;
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
             border: 4px solid var(--accent);
         }
 
@@ -1684,14 +1679,14 @@
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.06);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
             color: white;
             font-size: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             flex-shrink: 0;
         }
 
@@ -1701,8 +1696,8 @@
             border-radius: 50%;
             overflow: hidden;
             flex-shrink: 0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1740,8 +1735,8 @@
             min-width: 180px;
             padding: 10px 16px;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(0, 0, 0, 0.03);
             color: var(--text-secondary);
             font-weight: 500;
             font-size: 14px;
@@ -1757,14 +1752,14 @@
         }
 
         .search-big:focus-within {
-            border-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(0, 0, 0, 0.1);
             background: var(--bg-input-focus);
         }
 
         .search-filter-pill {
             padding: 6px 14px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: 20px;
             font-size: 13px;
             font-weight: 500;
@@ -1786,11 +1781,11 @@
             gap: 6px;
             padding: 4px 10px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.04);
             color: var(--text-secondary);
             font-weight: 600;
             font-size: 11px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         /* === CIRCOLARI === */
@@ -1821,8 +1816,8 @@
 
         /* === LIST ITEMS === */
         .glass-list-item {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: var(--radius-m);
             padding: 14px;
             margin-bottom: 8px;
@@ -1916,8 +1911,8 @@
 
         .chat-input-area {
             padding: 14px;
-            background: rgba(0, 0, 0, 0.4);
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.06);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
             position: sticky;
             bottom: 0;
         }
@@ -1939,7 +1934,7 @@
         .bubble {
             padding: 10px 14px;
             border-radius: 16px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.05);
             max-width: 75%;
             color: var(--text-primary);
             font-size: 15px;
@@ -1953,8 +1948,8 @@
         }
 
         .left .bubble {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .chat-view {
@@ -1967,9 +1962,9 @@
         .chat-header {
             padding: 14px 16px;
             padding-top: calc(var(--safe-top) + 10px);
-            background: rgba(20, 20, 20, 0.8);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -2004,9 +1999,9 @@
 
         .msg-other {
             align-self: flex-start;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.05);
             color: var(--text-primary);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             border-bottom-left-radius: 4px;
         }
 
@@ -2055,8 +2050,8 @@
             min-height: 48px;
             max-height: 120px;
             border-radius: 24px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             padding: 12px 20px;
             color: white;
             font-size: 16px;
@@ -2067,8 +2062,8 @@
         }
 
         .chat-input:focus {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.08);
+            border-color: rgba(0, 0, 0, 0.08);
         }
 
         .chat-send-btn {
@@ -2105,7 +2100,7 @@
             box-shadow: none !important;
             backdrop-filter: none !important;
             border: none !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
             border-radius: 0 !important;
         }
 
@@ -2140,7 +2135,7 @@
             left: 0;
             width: 100%;
             height: 2px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.04);
             z-index: 1000;
             overflow: hidden;
             display: none;
@@ -2194,7 +2189,7 @@
         .loading-bar-container {
             width: 120px;
             height: 3px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.05);
             border-radius: 2px;
             overflow: hidden;
             position: relative;
