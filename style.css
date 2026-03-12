@@ -1,19 +1,19 @@
         /* ============================================
            G-CONNECT — PREMIUM GLASS DESIGN SYSTEM
-           Apple VisionOS Inspired — Soft Dark Mode
+           Glassmorphic Dashboard — Aurora Dark Mode
            ============================================ */
 
         :root {
             /* Background Layers */
-            --bg-body: #0f1117;
-            --bg-card: #171923;
-            --bg-card-hover: #1e2231;
-            --bg-input: #131520;
+            --bg-body: #0c0e1a;
+            --bg-card: rgba(18, 21, 35, 0.55);
+            --bg-card-hover: rgba(25, 29, 48, 0.65);
+            --bg-input: rgba(12, 14, 26, 0.7);
 
             /* Typography */
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-            --text-primary: #f0f0f5;
+            --text-primary: #eef0f6;
             --text-secondary: #8b8fa3;
             --text-dim: #5c6178;
 
@@ -29,17 +29,17 @@
             --purple: #8b5cf6;
 
             /* Glass System */
-            --card-border: 1px solid rgba(255, 255, 255, 0.06);
-            --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
-            --glass-bg: rgba(23, 25, 35, 0.75);
-            --glass-blur: blur(24px);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+            --card-border: 1px solid rgba(255, 255, 255, 0.08);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            --glass-bg: rgba(18, 21, 35, 0.55);
+            --glass-blur: blur(40px);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.08);
 
             /* Radii */
-            --radius-xl: 22px;
-            --radius-l: 16px;
-            --radius-m: 12px;
-            --radius-s: 8px;
+            --radius-xl: 24px;
+            --radius-l: 18px;
+            --radius-m: 14px;
+            --radius-s: 10px;
 
             /* Layout */
             --top-nav-height: 72px;
@@ -63,14 +63,14 @@
         /* DEFAULT */
         html {
             color-scheme: dark;
-            background: var(--bg-body);
+            background: #0c0e1a;
             height: auto;
             min-height: 100%;
         }
 
         body {
             font-family: var(--font-main);
-            background: var(--bg-body);
+            background: #0c0e1a;
             color: var(--text-primary);
             height: 100%;
             min-height: 100%;
@@ -82,15 +82,26 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Subtle gradient overlay for depth */
+        /* Aurora gradient background — multi-blob ambient light */
         body::before {
             content: '';
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 100vh;
-            background: radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 60%);
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 60% at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
+                radial-gradient(ellipse 70% 50% at 50% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 40% at 90% 70%, rgba(168, 85, 247, 0.06) 0%, transparent 45%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Lighter edge vignette — gives the "framed" panel look */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(30, 33, 55, 0.4) 100%);
             pointer-events: none;
             z-index: -1;
         }
@@ -179,27 +190,29 @@
             overscroll-behavior: contain;
         }
 
-        /* === CARDS & PANELS === */
+        /* === CARDS & PANELS — Glassmorphic === */
         .card,
         .glass-panel {
             background: var(--bg-card);
+            backdrop-filter: blur(40px) saturate(160%);
+            -webkit-backdrop-filter: blur(40px) saturate(160%);
             border: var(--card-border);
             border-radius: var(--radius-l);
-            box-shadow: var(--card-shadow);
+            box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
             padding: 24px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
         }
 
         .card:hover {
             background: var(--bg-card-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
 
         .glass-panel {
             background: var(--glass-bg);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
+            backdrop-filter: blur(40px) saturate(160%);
+            -webkit-backdrop-filter: blur(40px) saturate(160%);
         }
 
         /* === TOP NAVIGATION === */
@@ -230,13 +243,13 @@
         .nav-links {
             display: flex;
             gap: 6px;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(18, 21, 35, 0.6);
             padding: 4px;
             border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
         .nav-item {
@@ -262,10 +275,10 @@
 
         .nav-item.active {
             color: white;
-            background: rgba(139, 92, 246, 0.25);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), inset 0 0 10px rgba(139, 92, 246, 0.2);
+            background: rgba(99, 102, 241, 0.25);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2), inset 0 0 10px rgba(99, 102, 241, 0.15);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(139, 92, 246, 0.4);
+            border: 1px solid rgba(99, 102, 241, 0.35);
         }
 
         .nav-item i {
@@ -622,6 +635,8 @@
         /* === HOME COMPONENTS === */
         .metric-card {
             background: var(--bg-card);
+            backdrop-filter: blur(40px) saturate(160%);
+            -webkit-backdrop-filter: blur(40px) saturate(160%);
             border: var(--card-border);
             border-radius: var(--radius-l);
             padding: 20px;
@@ -631,12 +646,12 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
         }
 
         .metric-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
         }
 
         .metric-card .title {
@@ -1015,11 +1030,13 @@
         .hero-container {
             position: relative;
             padding: 48px 32px 42px;
-            border-radius: 24px;
+            border-radius: var(--radius-xl);
             margin-bottom: 24px;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.1));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.12));
+            backdrop-filter: blur(40px) saturate(150%);
+            -webkit-backdrop-filter: blur(40px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
             overflow: hidden;
             text-align: left;
         }
@@ -1174,15 +1191,15 @@
         .modal-content {
             width: calc(100% - 32px);
             max-width: 440px;
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(40px) saturate(140%);
-            -webkit-backdrop-filter: blur(40px) saturate(140%);
+            background: rgba(18, 21, 35, 0.75);
+            backdrop-filter: blur(60px) saturate(180%);
+            -webkit-backdrop-filter: blur(60px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius-xl);
             padding: 24px;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
             transform: scale(0.96);
             transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
