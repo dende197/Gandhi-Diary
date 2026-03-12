@@ -9,34 +9,33 @@
 - **Social Feed**: Bacheca per la classe/istituto (simulata).
 - **Market**: Mercatino libri usati (simulato).
 
-## 🚀 Installazione Locale
+## 🚀 Architettura & Deploy
 
-### 1. Backend (Python Server)
-Il server fa da ponte tra l'App e Argo.
+Il backend è basato su **Vercel Serverless Functions** (Node.js).
+
+### 1. Requisiti
+- Node.js 20.x
+- Account Vercel
+
+### 2. Sviluppo Locale
 ```bash
-# Crea un virtual environment (opzionale ma consigliato)
-python3 -m venv venv
-source venv/bin/activate
-
 # Installa le dipendenze
-pip install -r requirements.txt
+npm install
 
-# Avvia il server
-python3 server.py
-# Il server girerà su: http://127.0.0.1:5002
+# Avvia in modalità sviluppo con Vercel CLI
+vercel dev
 ```
 
-### 2. Frontend (App)
-Apri semplicemente il file `web/index.html` nel tuo browser (Chrome/Safari).
-
-## ☁️ Deploy (Render/Heroku)
-Il progetto è pronto per il deploy cloud.
+### 3. Deploy
+Il progetto è configurato per il deploy su **Vercel**.
 1. Carica questa cartella su **GitHub**.
-2. Collega la repository a **Render.com** (o Railway/Heroku).
-3. Il server verrà rilevato automaticamente grazie a `Procfile` e `requirements.txt`.
-4. Una volta online, aggiorna la variabile `API_BASE_URL` in `web/index.html` con il tuo nuovo indirizzo HTTPS.
+2. Collega la repository a **Vercel**.
+3. Le variabili d'ambiente (.env) devono essere configurate nel pannello di controllo Vercel.
+4. I cron job sono configurati automaticamente tramite `vercel.json`.
 
 ## 🛠 Tecnologie
 - **Frontend**: HTML5, Vanilla JS, CSS3 (No Frameworks).
-- **Backend**: Python, Flask.
-- **Argo API**: Libreria `argofamiglia`.
+- **Backend**: Node.js, Vercel Serverless Functions.
+- **Database**: Supabase.
+- **AI**: Groq SDK / Gemini API.
+- **Argo API**: Integrazione diretta con il registro.
