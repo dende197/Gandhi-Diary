@@ -12,6 +12,18 @@
   ],
   "rewrites": [
     {
+      "source": "/health",
+      "destination": "/api/main?action=health"
+    },
+    {
+      "source": "/login",
+      "destination": "/api/auth?action=login"
+    },
+    {
+      "source": "/sync",
+      "destination": "/api/auth?action=sync"
+    },
+    {
       "source": "/api/debug/profile-raw",
       "destination": "/api/debug"
     },
