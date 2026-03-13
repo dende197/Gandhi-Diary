@@ -50,6 +50,8 @@
         /* Minimal inline overrides only — main CSS in style.css */
 
     </style>
+    <!-- G-CONNECT PERF PATCH (v3.1) -->
+    <link rel="stylesheet" href="perf-patch.css">
 </head>
 
 <body style="margin:0; padding:0; background:var(--bg-body);">
@@ -259,7 +261,7 @@
                             unread: t.unread || false
                         };
                     });
-                    render();
+                    window.scheduleRender();
                     localStorage.setItem(lsKey('threads'), JSON.stringify(state.threads));
                 }
             } catch (e) {
@@ -634,7 +636,7 @@
                     performSync().catch(e => console.error("Boot Sync failed:", e));
                 } else {
                     state.view = 'login';
-                    render();
+                    window.scheduleRender();
                     hideBoot(); // Se login, nascondi subito
                 }
             } catch (e) {
@@ -642,7 +644,7 @@
                 hideBoot();
             } finally {
                 state.booting = false;
-                render();
+                window.scheduleRender();
                 hideBoot(); // 🔥 RESTORED: Hide boot in finally
                 updateOfflineBadge();
                 loadCircolari();
@@ -655,14 +657,14 @@
             console.log("🔐 Supabase Auth Event:", event);
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 state.isLoggedIn = true;
-                render();
+                window.scheduleRender();
             } else if (event === 'SIGNED_OUT') {
                 // 🔥 NON sloggare se abbiamo ancora una sessione Argo valida
                 if (!sessionManager.isLoggedIn()) {
                     state.isLoggedIn = false;
                     state.user.id = null;
                     state.view = 'login';
-                    render();
+                    window.scheduleRender();
                 } else {
                     console.log("🔐 SIGNED_OUT ignorato: sessione Argo ancora attiva.");
                 }
@@ -718,7 +720,7 @@
                     if (uid && uid !== 'guest') {
                         fetchPlannerRemote(true).then(() => {
                             if (state.view === 'mental_health' || state.view === 'planner') {
-                                render();
+                                window.scheduleRender();
                             }
                         });
                     }
@@ -925,7 +927,7 @@
 
             // Update UI immediately
             notifyPlannerChanged();
-            render();
+            window.scheduleRender();
 
             try {
                 // Force save empty state to server (bypasses anti-wipe)
@@ -1109,7 +1111,7 @@
                     state.didup.connected = true;
                     state.lastSync = new Date().toLocaleTimeString();
                     updateOfflineBadge();
-                    render();
+                    window.scheduleRender();
                 } else {
                     throw new Error("Sessione non valida");
                 }
@@ -1132,7 +1134,7 @@
                 state.syncing = false;
                 hideBoot && hideBoot();
                 // 🔥 SINGLE render after all sync data is merged
-                render && render();
+                render && window.scheduleRender();
             }
         }
 
@@ -1147,7 +1149,7 @@
                 if (data.success && data.circolari) {
                     state.circolari = data.circolari;
                     // 🔥 Targeted DOM update — NO full render() to avoid stutter
-                    if (state.view === 'home') render();
+                    if (state.view === 'home') window.scheduleRender();
                 }
             } catch (e) {
                 console.warn("⚠️ Impossibile caricare circolari:", e);
@@ -1172,7 +1174,7 @@
                     if (label) label.innerHTML = '✨ Sintesi completata!';
 
                     c.sintesi = data.sintesi;
-                    setTimeout(() => render(), 300); // Small delay to see the 100% state
+                    setTimeout(() => window.scheduleRender(), 300); // Small delay to see the 100% state
                 } else if (c) {
                     // Gestione specifica per tipo di errore
                     if (data.errorType === 'quotaExceeded') {
@@ -1187,7 +1189,7 @@
                         c.sintesi = "Impossibile generare la sintesi al momento.";
                         showToast('❌ Errore nella generazione della sintesi');
                     }
-                    render();
+                    window.scheduleRender();
                 }
             } catch (e) {
                 console.error("Sintesi Error:", e);
@@ -1195,7 +1197,7 @@
                 const c = state.circolari.find(x => x.id === id);
                 if (c) {
                     c.sintesi = "⚠️ Errore di connessione. Verifica la tua rete e riprova.";
-                    render();
+                    window.scheduleRender();
                 }
             }
         }
@@ -1326,7 +1328,7 @@
                     state.didup.connected = true;
                     state.lastSync = new Date().toLocaleTimeString();
                     updateOfflineBadge();
-                    render();
+                    window.scheduleRender();
                 } else {
                     throw new Error(data.error || "Silent login fallito");
                 }
@@ -1502,7 +1504,7 @@
             state.plannedTasks = migratedPlanned;
 
             saveTasks();
-            if (shouldRender) render();
+            if (shouldRender) window.scheduleRender();
         }
         // Router & Loader helpers
         const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'mental_health'];
@@ -1540,14 +1542,14 @@
                     onComplete: () => {
                         state.view = v;
                         saveNavigationState();
-                        render();
+                        window.scheduleRender();
                         window.scrollTo({ top: 0, behavior: 'instant' });
                     }
                 });
             } else {
                 state.view = v;
                 saveNavigationState();
-                render();
+                window.scheduleRender();
                 window.scrollTo({ top: 0, behavior: 'instant' });
             }
         }
@@ -1557,13 +1559,13 @@
             if (state.view !== v) {
                 state.view = v;
                 saveNavigationState();
-                render();
+                window.scheduleRender();
             }
         });
 
         let _renderRequest = null;
         // Safety: if booting hangs for >10s, force-unblock render
-        setTimeout(() => { if (state.booting) { console.warn('⚠️ Booting timeout — force-unblocking render'); state.booting = false; render(); } }, 10000);
+        setTimeout(() => { if (state.booting) { console.warn('⚠️ Booting timeout — force-unblocking render'); state.booting = false; window.scheduleRender(); } }, 10000);
 
         function render() {
             if (_renderRequest || state.booting) return;
@@ -1748,7 +1750,7 @@
 
                 state.view = 'login';
                 if (_threadsPoller) clearInterval(_threadsPoller);
-                render();
+                window.scheduleRender();
                 console.log('✅ Logout completato - Planner preservato su Supabase e localStorage');
             }
         }
@@ -1833,7 +1835,7 @@
 
                 state.lastSearchResults = null;
                 closeModal();
-                render();
+                window.scheduleRender();
                 hideBoot();
             } catch (error) {
                 hideBoot();
@@ -2120,7 +2122,7 @@
                 btn.style.opacity = '0.6';
             }
 
-            render();
+            window.scheduleRender();
         }
 
 
@@ -2285,7 +2287,7 @@
 
         function selectDay(day) {
             state.selectedDay = day;
-            render();
+            window.scheduleRender();
         }
 
 
@@ -2337,14 +2339,14 @@
             state.aiChatHistory = [];
             localStorage.setItem(lsKey('ai_chat'), '[]');
             state.aiResponse = '';
-            render();
+            window.scheduleRender();
         }
 
         function deleteAIChatMessage(index) {
             if (!confirm('Eliminare questo messaggio?')) return;
             state.aiChatHistory.splice(index, 1);
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            render();
+            window.scheduleRender();
         }
 
         let recognition = null;
@@ -2373,7 +2375,7 @@
             state.aiChatHistory.push({ role: 'user', text, ts: now });
             input.value = '';
             input.style.height = 'auto';
-            render();
+            window.scheduleRender();
             setTimeout(() => {
                 const chatDiv = document.getElementById('aiChatMessages');
                 if (chatDiv) {
@@ -2552,7 +2554,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
             }
 
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            render();
+            window.scheduleRender();
             setTimeout(() => {
                 const chatDiv = document.getElementById('aiChatMessages');
                 if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight;
@@ -2746,7 +2748,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
                 state.geminiKey = val;
                 localStorage.setItem('g_diary_gemini_key', val);
                 showToast('Chiave salvata! 🛡️');
-                render();
+                window.scheduleRender();
             }
         }
 
@@ -2790,14 +2792,14 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 
             saveTasks();
             closeModal();
-            render();
+            window.scheduleRender();
             showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
         }
 
         function removeExam(index) {
             state.exams.splice(index, 1);
             saveTasks();
-            render();
+            window.scheduleRender();
         }
 
 
@@ -2810,14 +2812,14 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
             state.backlog.push({ subject, topic });
             saveTasks();
             closeModal();
-            render();
+            window.scheduleRender();
             showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
         }
 
         function removeBacklog(index) {
             state.backlog.splice(index, 1);
             saveTasks();
-            render();
+            window.scheduleRender();
         }
 
         /* --- Fine Advanced Grades --- */
@@ -2872,7 +2874,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 
             if (!credentials.schoolCode || !credentials.username || !credentials.password) {
                 alert("Dati mancanti! Reinserisci le credenziali.");
-                if (!inputSchool) render();
+                if (!inputSchool) window.scheduleRender();
                 return;
             }
 
@@ -3087,7 +3089,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
                 closeModal();
                 alert(`✅ Benvenuto ${state.user.name}!`);
                 navigate('home');
-                render();
+                window.scheduleRender();
                 startThreadsPolling();
             });
         }
@@ -3152,7 +3154,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
                     done: false
                 });
                 localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
-                render();
+                window.scheduleRender();
             }
         }
 
@@ -3188,7 +3190,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 
             closeModal();
             showToast('Compito aggiunto! ✅');
-            render();
+            window.scheduleRender();
         }
 
         // === ADD REGISTRO TASK (verifica/orale/compito in classe) ===
@@ -3233,7 +3235,7 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 
             closeModal();
             showToast(`${tipo} aggiunta! 📝`);
-            render();
+            window.scheduleRender();
         }
 
         // === COMPETENCY INPUT MODAL (AI) with user prep level ===
@@ -3457,14 +3459,14 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
 
             saveTasks(); // Persist
             closeModal();
-            if (typeof render === 'function') render(); // Update Home card (wave etc)
+            if (typeof window.scheduleRender === 'function') window.scheduleRender(); // Update Home card (wave etc)
             showToast("Stress salvato con successo!");
         }
 
         function updateStressAndModal(lv) {
             setStressLevel(lv, false);
             showDetailedStressModal(); // Refresh UI
-            if (typeof render === 'function') render();
+            if (typeof window.scheduleRender === 'function') window.scheduleRender();
         }
 
         function saveDailyVent(text) {
@@ -3531,6 +3533,8 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
         </button>
     </div>
 
+    <!-- G-CONNECT JS PERF PATCH (v3.1 - scheduleRender, Quotes, Throttle) -->
+    <script src="perf-patch.js?v=2.6.4"></script>
 </body>
 
 </html>
