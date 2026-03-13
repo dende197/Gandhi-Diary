@@ -3403,5 +3403,41 @@
             }
         }, true);
 
+        /* ===== GLOBAL SAFETY EXPORTS (hotfix) ===== */
+        (function attachGlobals() {
+          const safeBind = (name, fn) => {
+            if (typeof window[name] !== 'function') window[name] = fn;
+          };
+
+          // 1) showProfileActions fallback
+          safeBind('showProfileActions', function showProfileActionsFallback() {
+            try {
+              if (typeof closeModal !== 'function' || typeof getModalContainer !== 'function') return;
+              const container = getModalContainer();
+              if (!container) return;
+              container.innerHTML = `
+                <div class="modal-overlay active" onclick="closeModal(event)">
+                  <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 360px; padding: 16px; border-radius: 20px; background: white; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                    <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">Profilo</div>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Sessione caricata parzialmente. Riprova a navigare nel profilo.</p>
+                    <button onclick="closeModal(); if(window.navigate) navigate('profile')" class="btn-primary" style="width:100%; margin-bottom:8px; border-radius: 12px; height: 48px; font-weight: 700;">Apri profilo</button>
+                    <button onclick="if(window.logout) logout()" style="width: 100%; height: 48px; border-radius: 12px; border: none; background: rgba(239, 68, 68, 0.05); color: var(--red); font-weight: 800; cursor: pointer;">Esci</button>
+                  </div>
+                </div>`;
+            } catch (e) {
+              console.error('showProfileActions fallback error', e);
+            }
+          });
+
+          // 2) isFutureOrToday fallback (timezone-safe)
+          safeBind('isFutureOrToday', function isFutureOrTodayFallback(dateStr) {
+            if (!dateStr) return false;
+            const today = (typeof getLocalDateString === 'function')
+              ? getLocalDateString(new Date())
+              : new Date().toISOString().slice(0, 10);
+            return String(dateStr) >= today;
+          });
+        })();
+
 }
 

@@ -24,6 +24,26 @@
       "destination": "/api/auth?action=sync"
     },
     {
+      "source": "/api/planner/:user_id",
+      "destination": "/api/planner"
+    },
+    {
+      "source": "/api/profile/:user_id",
+      "destination": "/api/profile"
+    },
+    {
+      "source": "/api/conversations/user/:user_id",
+      "destination": "/api/conversations"
+    },
+    {
+      "source": "/api/mental-health/:action",
+      "destination": "/api/mental?action=:action"
+    },
+    {
+      "source": "/api/ping",
+      "destination": "/api/ping"
+    },
+    {
       "source": "/api/debug/profile-raw",
       "destination": "/api/debug"
     },

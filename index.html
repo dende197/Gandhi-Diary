@@ -242,7 +242,7 @@
 
             try {
                 // v7.0 - Fetch from Relational API
-                const res = await fetch(`${API_BASE_URL}/api/conversations/user/${myId}`);
+                const res = await fetch(`${API_BASE_URL}/api/conversations/user/${encodeURIComponent(myId)}`);
                 const data = await res.json();
                 if (data.success) {
                     state.threads = (data.data || []).map(t => {
@@ -598,10 +598,19 @@
                     console.log("🩹 Boot: Sessione Supabase assente, avvio recovery silenzioso...");
                     try {
                         const school = argoSession.schoolCode.toUpperCase();
-                        const userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
-                        const pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
+                        let userName = "";
+                        let pass = "";
+                        try {
+                            userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
+                            pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
+                        } catch (e) {
+                            console.warn("🩹 Boot: Credenziali salvate corrotte, ignoro recovery");
+                            throw new Error("Invalid stored credentials");
+                        }
+
                         const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
-                        const supabasePassword = `Argo_${pass}_!`;
+                        // 🔥 RECONCILED: Use same hashing as Login success
+                        const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
 
                         const { data: arData, error: arErr } = await supabaseClient.auth.signInWithPassword({
                             email: supabaseEmail,
