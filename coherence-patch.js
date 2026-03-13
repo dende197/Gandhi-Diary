@@ -26,7 +26,7 @@
   ════════════════════════════════════════════════════════════════ */
   const T = {
     hero:       { duration: 0.45, delay: 0,    ease: 'power3.out' },
-    heroBig:    { duration: 0.45, delay: 0,    ease: 'power3.out', scaleFrom: 0.98 },
+    heroBig:    { duration: 0.45, delay: 0,    ease: 'power3.out', scaleFrom: 0.97 },
     mainCard:   { duration: 0.50, delay: 0.14, ease: 'back.out(1.2)' },
     tabBar:     { duration: 0.38, delay: 0.18, ease: 'power2.out' },
     calendar:   { duration: 0.42, delay: 0.24, ease: 'power2.out' },
@@ -179,7 +179,7 @@
        → hero, metric cards, tutto rifade l'animazione = scatto visibile
      
      Fix:
-       Intercettiamo loadCircolari e, instead of scheduleRender,
+       Intercettiamo loadCircolari e, invece di scheduleRender,
        aggiorniamo solo il .circolari-scroll nel DOM esistente.
        Se la home non è visibile, aggiorniamo state e basta
        (il prossimo render prenderà i dati aggiornati).
@@ -195,6 +195,20 @@
     window.loadCircolari = async function loadCircolari() {
       try {
         const res = await fetch(`${window.API_BASE_URL}/api/circolari`);
+
+        // Se il server non risponde OK (es. 404), fallback all'originale
+        if (!res.ok) {
+          console.warn(`⚠️ circolari: server ${res.status}, uso fallback originale`);
+          return _origLoadCircolari();
+        }
+
+        // Controlla che sia JSON prima di parsarlo
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          console.warn('⚠️ circolari: risposta non-JSON, uso fallback originale');
+          return _origLoadCircolari();
+        }
+
         const data = await res.json();
         if (!data.success || !data.circolari) return;
 
@@ -257,7 +271,8 @@
         }
 
       } catch (e) {
-        console.warn('⚠️ loadCircolari patch error:', e);
+        console.warn('⚠️ loadCircolari patch error, uso fallback:', e.message);
+        try { return _origLoadCircolari(); } catch (_) {}
       }
     };
 

@@ -144,113 +144,123 @@
       if (typeof gsapAnimateView === 'function') gsapAnimateView();
     }
 
-    // ── PLANNER: hero → tab selector → calendar/list → items
+    // ── Timing condivisi — identici alla home (patch-finale.js) ──
+    // home: hero 0.45s | cards 0.50s delay 0.18s stagger 0.08s
+    //       button 0.40s delay 0.36s | headers 0.35s delay 0.40s
+    //       circolari 0.38s delay 0.44s stagger 0.06s
+    const T = {
+      hero:     { duration: 0.45, delay: 0,    ease: 'power3.out' },
+      mainCard: { duration: 0.50, delay: 0.14, ease: 'back.out(1.2)' },
+      tabBar:   { duration: 0.38, delay: 0.18, ease: 'power2.out' },
+      calendar: { duration: 0.42, delay: 0.24, ease: 'power2.out' },
+      header:   { duration: 0.35, delay: 0.28, ease: 'power2.out' },
+      items:    { duration: 0.38, delay: 0.32, stagger: 0.055, ease: 'power2.out' },
+      generic:  { duration: 0.38, delay: 0,    ease: 'power2.out' },
+    };
+
+    // ── PLANNER: hero → tab → calendar → header → items ──────────
     function _enterPlanner() {
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out', clearProps: 'transform,opacity' } });
-
-      // Hero del planner (il div con gradiente viola)
+      // Hero (gradiente viola con titolo "Planner")
       const hero = document.querySelector('.view > div:first-child');
-      if (hero) {
-        tl.fromTo(hero,
-          { y: 14, opacity: 0, scale: 0.98 },
-          { y: 0,  opacity: 1, scale: 1, duration: 0.38 },
-          0
-        );
-      }
+      if (hero) gsap.fromTo(hero,
+        { y: 16, opacity: 0, scale: 0.98 },
+        { y: 0, opacity: 1, scale: 1,
+          duration: T.hero.duration, delay: T.hero.delay,
+          ease: T.hero.ease, clearProps: 'transform,opacity' }
+      );
 
-      // Tab selector (Registro / Piano di Studio)
+      // Tab selector Registro / Piano di Studio
       const tabBar = document.querySelector('.view > div[style*="border-radius: 40px"]');
-      if (tabBar) {
-        tl.fromTo(tabBar,
-          { y: 10, opacity: 0 },
-          { y: 0,  opacity: 1, duration: 0.32 },
-          0.10
-        );
-      }
+      if (tabBar) gsap.fromTo(tabBar,
+        { y: 12, opacity: 0 },
+        { y: 0, opacity: 1,
+          duration: T.tabBar.duration, delay: T.tabBar.delay,
+          ease: T.tabBar.ease, clearProps: 'transform,opacity' }
+      );
 
-      // Calendario o lista
+      // Calendario
       const calendar = document.getElementById('calendar');
-      if (calendar) {
-        tl.fromTo(calendar,
-          { y: 16, opacity: 0 },
-          { y: 0,  opacity: 1, duration: 0.36 },
-          0.18
-        );
-      }
+      if (calendar) gsap.fromTo(calendar,
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1,
+          duration: T.calendar.duration, delay: T.calendar.delay,
+          ease: T.calendar.ease, clearProps: 'transform,opacity' }
+      );
 
       // Section header (Scadenze DidUP / Piano di Studio)
       const sectionHeader = document.querySelector('.section-header');
-      if (sectionHeader) {
-        tl.fromTo(sectionHeader,
-          { y: 8, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.28 },
-          0.26
-        );
-      }
+      if (sectionHeader) gsap.fromTo(sectionHeader,
+        { y: 8, opacity: 0 },
+        { y: 0, opacity: 1,
+          duration: T.header.duration, delay: T.header.delay,
+          ease: T.header.ease, clearProps: 'transform,opacity' }
+      );
 
-      // Task items (stagger)
-      const agendaItems = document.querySelectorAll('#weekly-agenda-list .registro-card, #weekly-agenda-list .studio-entry, #weekly-agenda-list .card');
-      if (agendaItems.length) {
-        tl.fromTo(agendaItems,
-          { y: 12, opacity: 0 },
-          { y: 0,  opacity: 1, duration: 0.30, stagger: 0.05 },
-          0.30
-        );
-      }
+      // Task items — stagger identico alle circolari home
+      const agendaItems = document.querySelectorAll(
+        '#weekly-agenda-list .registro-card, ' +
+        '#weekly-agenda-list .studio-entry, ' +
+        '#weekly-agenda-list .card, ' +
+        '#weekly-agenda-list > div'
+      );
+      if (agendaItems.length) gsap.fromTo(agendaItems,
+        { y: 12, opacity: 0 },
+        { y: 0, opacity: 1,
+          duration: T.items.duration, delay: T.items.delay,
+          stagger: T.items.stagger, ease: T.items.ease,
+          clearProps: 'transform,opacity' }
+      );
     }
 
-    // ── VOTI: hero → media card grande → section header → subject cards stagger
+    // ── VOTI: hero → media card → header → subject cards ─────────
     function _enterVoti() {
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out', clearProps: 'transform,opacity' } });
-
       // Hero
       const hero = document.querySelector('.view > div:first-child');
-      if (hero) {
-        tl.fromTo(hero,
-          { y: 14, opacity: 0, scale: 0.98 },
-          { y: 0,  opacity: 1, scale: 1, duration: 0.38 },
-          0
-        );
-      }
+      if (hero) gsap.fromTo(hero,
+        { y: 16, opacity: 0, scale: 0.98 },
+        { y: 0, opacity: 1, scale: 1,
+          duration: T.hero.duration, delay: T.hero.delay,
+          ease: T.hero.ease, clearProps: 'transform,opacity' }
+      );
 
-      // Media globale card (il grande con il 64px)
+      // Media generale card (grande, con font 64px)
       const mediaCard = document.querySelector('.view .card[style*="linear-gradient"]');
-      if (mediaCard) {
-        tl.fromTo(mediaCard,
-          { y: 20, opacity: 0, scale: 0.96 },
-          { y: 0,  opacity: 1, scale: 1, duration: 0.42, ease: 'back.out(1.3)' },
-          0.12
-        );
-      }
+      if (mediaCard) gsap.fromTo(mediaCard,
+        { y: 22, opacity: 0, scale: 0.96 },
+        { y: 0, opacity: 1, scale: 1,
+          duration: T.mainCard.duration, delay: T.mainCard.delay,
+          ease: T.mainCard.ease, clearProps: 'transform,opacity' }
+      );
 
       // "Riepilogo Materie" header
       const subHeader = document.querySelector('.view > div[style*="margin-bottom: 20px"]');
-      if (subHeader) {
-        tl.fromTo(subHeader,
-          { y: 8, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.28 },
-          0.26
-        );
-      }
+      if (subHeader) gsap.fromTo(subHeader,
+        { y: 8, opacity: 0 },
+        { y: 0, opacity: 1,
+          duration: T.header.duration, delay: T.header.delay,
+          ease: T.header.ease, clearProps: 'transform,opacity' }
+      );
 
-      // Subject cards: stagger verticale
+      // Subject cards — slide da sinistra, stagger identico agli items planner
       const subjectCards = document.querySelectorAll('.subject-summary-card');
-      if (subjectCards.length) {
-        tl.fromTo(subjectCards,
-          { x: -8, opacity: 0 },
-          { x: 0,  opacity: 1, duration: 0.32, stagger: 0.055, ease: 'power2.out' },
-          0.32
-        );
-      }
+      if (subjectCards.length) gsap.fromTo(subjectCards,
+        { x: -10, opacity: 0 },
+        { x: 0, opacity: 1,
+          duration: T.items.duration, delay: T.items.delay,
+          stagger: T.items.stagger, ease: T.items.ease,
+          clearProps: 'transform,opacity' }
+      );
     }
 
-    // ── GENERIC: semplice fade+slide per profile, mental health, ecc.
+    // ── GENERIC: profile, mental health, ecc. ────────────────────
     function _enterGeneric() {
       const view = document.querySelector('.view');
       if (!view) return;
       gsap.fromTo(view,
         { y: 10, opacity: 0 },
-        { y: 0,  opacity: 1, duration: 0.32, ease: 'power2.out', clearProps: 'transform,opacity' }
+        { y: 0, opacity: 1,
+          duration: T.generic.duration, ease: T.generic.ease,
+          clearProps: 'transform,opacity' }
       );
     }
 
