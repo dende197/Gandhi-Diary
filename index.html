@@ -25,6 +25,18 @@
     <!-- GSAP Animation Engine -->
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/Observer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/Flip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/Draggable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/TextPlugin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/EasePack.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/CustomEase.min.js"></script>
+    <script>
+        // Register free GSAP plugins requested by user
+        gsap.registerPlugin(ScrollTrigger, Observer, Flip, Draggable, TextPlugin, RoughEase, ExpoScaleEase, SlowMo, CustomEase);
+        // Note: Premium (Club GSAP) plugins like DrawSVG, Physics2D, MorphSVG, SplitText, ScrollSmoother, etc. 
+        // omitted from CDN to prevent 404 blocking errors on GitHub Pages.
+    </script>
 
     <style>
         /* Minimal inline overrides only — main CSS in style.css */
