@@ -1374,6 +1374,7 @@
             const todayStr = getLocalDateString(getSchoolDate());
             return dateStr >= todayStr;
         }
+        window.isFutureOrToday = isFutureOrToday;
         function updateWeeklyAgendaView() {
             if (state.view !== 'planner') return;
             const el = document.getElementById('weekly-agenda-list');
@@ -1935,9 +1936,6 @@
         </div>`;
         }
         function showProfileActions() {
-            // ... the rest of the function remains untouched but the function is exported
-        }
-        window.showProfileActions = showProfileActions;
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
             modalContainer.innerHTML = `
@@ -1968,6 +1966,7 @@
             </div>
         </div>`;
         }
+        window.showProfileActions = showProfileActions;
         function renderSettings() {
             return `
             <div class="view">
@@ -3404,8 +3403,5 @@
             }
         }, true);
 
-
-// ESPORTAZIONI GLOBALI PER INDEX.HTML (Risolvono le ReferenceError nel Sync)
-window.isFutureOrToday = isFutureOrToday;
-window.showProfileActions = showProfileActions;
+}
 
