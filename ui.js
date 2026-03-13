@@ -468,6 +468,7 @@
                 ` : ''}
             </div>
         </div>`;
+        }
         function renderHome() {
             const todayStr = getLocalDateString();
             const plannedIds = state.plannedTasks[todayStr] || [];
@@ -3438,6 +3439,4 @@
             return String(dateStr) >= today;
           });
         })();
-
-}
 
