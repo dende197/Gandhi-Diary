@@ -109,9 +109,13 @@
 }
 
 /* Nav pill: visibile e leggero */
+/* Nav dock: premium liquid glass effect */
 .nav-links {
-  backdrop-filter: blur(20px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Cards standard */
@@ -219,14 +223,21 @@
    ─────────────────────────────────────────────────────────────── */
 
 .hero-container {
-  background: linear-gradient(140deg,
-    rgba(255, 255, 255, 0.96) 0%,
-    rgba(244, 245, 255, 0.90) 100%) !important;
-  border: 1px solid rgba(99, 102, 241, 0.10) !important;
-  box-shadow:
-    0 4px 16px rgba(99, 102, 241, 0.08),
-    0 16px 48px rgba(99, 102, 241, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+  background: linear-gradient(135deg, #af52de 0%, #8b5cf6 50%, #6366f1 100%) !important;
+  border: none !important;
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.3) !important;
+}
+
+.hero-title {
+  color: #ffffff !important;
+}
+
+.hero-subtitle {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.hero-status {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .hero-title {
@@ -375,4 +386,36 @@
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+/* ── LAYER 10: CONTRASTO PIANO DI STUDIO & REGISTRO ───────────
+   Sostituisce sfondi bianchi invisibili con card ad alto contrasto.
+   ─────────────────────────────────────────────────────────────── */
+
+.pd-item, 
+.registro-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.pd-item span, 
+.registro-card div {
+  color: var(--text-primary) !important;
+}
+
+/* Scrollbar premium "Liquid Glass" */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
 }

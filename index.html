@@ -43,8 +43,8 @@
             });
         }
     </script>
-    <script src="animations.js?v=2.6.3"></script>
-    <script src="ui.js?v=2.6.3"></script>
+    <script src="animations.js?v=2.6.5"></script>
+    <script src="ui.js?v=2.6.5"></script>
 
     <style>
         /* Minimal inline overrides only — main CSS in style.css */
@@ -58,7 +58,7 @@
 
     <!-- PREMIUM LOADER: masks micro-stutters, auto-dismiss after 3s -->
     <div id="app-loader"
-        style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.5s ease-out;">
+        style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.25s ease-out;">
         <div style="text-align:center;">
             <div
                 style="width:44px;height:44px;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;">
@@ -74,7 +74,7 @@
             var el = document.getElementById('app-loader');
             if (el) { 
                 el.style.opacity = '0'; 
-                setTimeout(function () { el.remove() }, 500); 
+                setTimeout(function () { el.remove() }, 250); 
                 clearTimeout(window._loaderTimer);
             }
         };
@@ -121,7 +121,7 @@
         };
 
         // 🚀 G-Diary v2.5.9 [Deep Debug - Runtime Error Elimination]
-        const APP_VERSION = '2.6.3';
+        const APP_VERSION = '2.6.5'; // Boot & Style Cohesion Patch v4.0
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -507,169 +507,144 @@
 
         // BOOT LIFECYCLE (MIGLIORATO: Esperto Session Persistence & Silent Recovery)
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const loadingText = document.querySelector('.boot-title span');
-                if (loadingText) loadingText.textContent = "Sincronizzazione...";
+    try {
+        // 1. Identità Immediata
+        const argoSession = sessionManager.load();
+        if (argoSession && argoSession.studentId) {
+            state.isLoggedIn = true;
+            state.user.id = argoSession.studentId;
+            const userCache = localStorage.getItem(lsKey('user'));
+            if (userCache) {
+                try {
+                    const parsed = JSON.parse(userCache);
+                    state.user = { ...state.user, ...parsed, id: argoSession.studentId };
+                } catch (e) {}
+            }
+            state.user.name = state.user.name || (argoSession.name && isValidName(argoSession.name) ? argoSession.name : 'Utente');
+            state.user.class = state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
+            state.user.specialization = state.user.specialization || argoSession.specialization;
+            state.user.avatar = state.user.avatar || argoSession.avatar;
+        }
 
-                // 1. Identità Immediata (Priorità Argo Session + Identity Cache)
-                const argoSession = sessionManager.load();
-                if (argoSession && argoSession.studentId) {
-                    state.isLoggedIn = true;
-                    state.user.id = argoSession.studentId;
+        // 2. Ripristino Vista
+        const hashView = currentViewFromHash();
+        const savedNavStr = localStorage.getItem(lsKey('nav_state'));
+        let savedNav = null;
+        try { savedNav = JSON.parse(savedNavStr); } catch {}
+        if (hashView && hashView !== 'login') {
+            state.view = hashView;
+            if (savedNav && savedNav.view === hashView) {
+                state.currentThreadId = savedNav.currentThreadId;
+                state.currentChatUser = savedNav.currentChatUser;
+                state.currentChatId = savedNav.currentChatId;
+                state.currentChatAvatar = savedNav.currentChatAvatar;
+                state.currentChatClass = savedNav.currentChatClass;
+                loadChatMessages(state.currentThreadId);
+            }
+        } else if (savedNav && savedNav.view && savedNav.view !== 'login') {
+            state.view = savedNav.view;
+            if (savedNav.view === 'chat') {
+                state.currentThreadId = savedNav.currentThreadId;
+                state.currentChatUser = savedNav.currentChatUser;
+                state.currentChatId = savedNav.currentChatId;
+                state.currentChatAvatar = savedNav.currentChatAvatar;
+                state.currentChatClass = savedNav.currentChatClass;
+                loadChatMessages(state.currentThreadId);
+            }
+        } else {
+            state.view = state.isLoggedIn ? 'home' : 'login';
+        }
 
-                    // 🔥 DUAL HYDRATION: Prova prima dalla specifica identity cache, poi dalla sessione
-                    const userCache = localStorage.getItem(lsKey('user'));
-                    if (userCache) {
-                        try {
-                            const parsed = JSON.parse(userCache);
-                            state.user = {
-                                ...state.user,
-                                ...parsed,
-                                id: argoSession.studentId // Mantieni l'ID della sessione attiva
-                            };
-                            console.log("💾 Boot: Identità caricata da identity cache");
-                        } catch (e) { }
-                    }
-
-                    // Merge finale con dati sessione (Argo names/class) MA solo se validi
-                    // 🔥 PRIORITY FIX: Se abbiamo dati manuali/cacheati (state.user), usiamo quelli.
-                    // Usiamo argoSession solo come fallback iniziale o per campi essenziali.
-                    state.user.name = state.user.name || (argoSession.name && isValidName(argoSession.name) ? argoSession.name : 'Utente');
-                    state.user.class = state.user.class || (argoSession.class && isValidClass(argoSession.class) ? argoSession.class : 'N/D');
-                    state.user.specialization = state.user.specialization || argoSession.specialization;
-                    state.user.avatar = state.user.avatar || argoSession.avatar;
-
-                    console.log("💾 Boot: Sessione unificata per:", state.user.id);
-                }
-
-                // 2. Ripristino Vista (Hash> nav_state> home/login)
-                const hashView = currentViewFromHash();
-                const savedNavStr = localStorage.getItem(lsKey('nav_state'));
-                let savedNav = null;
-                try { savedNav = JSON.parse(savedNavStr); } catch { }
-
-                if (hashView && hashView !== 'login') {
-                    state.view = hashView;
-                    if (savedNav && savedNav.view === hashView) {
-                        state.currentThreadId = savedNav.currentThreadId;
-                        state.currentChatUser = savedNav.currentChatUser;
-                        state.currentChatId = savedNav.currentChatId;
-                        state.currentChatAvatar = savedNav.currentChatAvatar;
-                        state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
-                        loadChatMessages(state.currentThreadId);
-                    }
-                } else if (savedNav && savedNav.view && savedNav.view !== 'login') {
-                    state.view = savedNav.view;
-                    if (savedNav.view === 'chat') {
-                        state.currentThreadId = savedNav.currentThreadId;
-                        state.currentChatUser = savedNav.currentChatUser;
-                        state.currentChatId = savedNav.currentChatId;
-                        state.currentChatAvatar = savedNav.currentChatAvatar; // 🔥 Restore avatar
-                        state.currentChatClass = savedNav.currentChatClass; // 🔥 RESTORE CLASS
-                        loadChatMessages(state.currentThreadId);
-                    }
-                } else {
-                    state.view = state.isLoggedIn ? 'home' : 'login';
-                }
-
-                // 3. Load Caches
-                ['tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'stress_levels', 'stress_vents'].forEach(key => {
-                    const cached = localStorage.getItem(lsKey(key));
-                    if (cached) {
-                        try {
-                            const parsed = JSON.parse(cached);
-                            state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : (key === 'stress_vents' ? 'stressVents' : key))] = parsed;
-                        } catch { }
-                    }
-                });
-
-                // Global caches removed (Social/Market)
-
-                // Primo render dai dati locali per rendere l'app subito pronta
-                state.booting = false;
-                render();
-                hideBoot(); // 🔥 RESTORED: Hide boot immediately
-
-
-                // 4. Controllo Supabase & Recovery Bridge
-                const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
-
-                if (sbSession) {
-                    loadProfileFromServer().catch(e => console.warn("Boot Profile Load failed:", e));
-                } else if (state.isLoggedIn && argoSession.storedUser) {
-                    console.log("🩹 Boot: Sessione Supabase assente, avvio recovery silenzioso...");
-                    try {
-                        const school = argoSession.schoolCode.toUpperCase();
-                        let userName = "";
-                        let pass = "";
-                        try {
-                            userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
-                            pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
-                        } catch (e) {
-                            console.warn("🩹 Boot: Credenziali salvate corrotte, ignoro recovery");
-                            throw new Error("Invalid stored credentials");
-                        }
-
-                        const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
-                        // 🔥 RECONCILED: Use same hashing as Login success
-                        const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
-
-                        const { data: arData, error: arErr } = await supabaseClient.auth.signInWithPassword({
-                            email: supabaseEmail,
-                            password: supabasePassword
-                        });
-
-                        if (arErr) {
-                            console.warn("🩹 Boot: Recovery fallito:", arErr.message);
-                            console.log("🩹 Boot: Using local identity fallback...");
-                        } else {
-                            console.log("✅ Boot: Sessione Supabase ripristinata!");
-                            loadProfileFromServer().catch(e => console.warn("Recovery Profile Load failed:", e));
-                        }
-                    } catch (e) {
-                        console.warn("🩹 Boot: Errore durante recovery:", e.message);
-                    }
-                }
-
-                if (state.isLoggedIn) {
-                    // Sincronizzazione remota in background
-                    performSync().catch(e => console.error("Boot Sync failed:", e));
-                } else {
-                    state.view = 'login';
-                    window.scheduleRender();
-                    hideBoot(); // Se login, nascondi subito
-                }
-            } catch (e) {
-                console.error("CRITICAL BOOT FAILURE:", e);
-                hideBoot();
-            } finally {
-                state.booting = false;
-                window.scheduleRender();
-                hideBoot(); // 🔥 RESTORED: Hide boot in finally
-                updateOfflineBadge();
-                loadCircolari();
-                flushOutbox().catch(e => console.warn("Boot: flushOutbox failed:", e));
+        // 3. Load Caches
+        ['tasks', 'planned_tasks', 'voti', 'promemoria', 'reminders', 'stress_levels', 'stress_vents'].forEach(key => {
+            const cached = localStorage.getItem(lsKey(key));
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    state[key === 'planned_tasks' ? 'plannedTasks' : (key === 'stress_levels' ? 'stressLevels' : (key === 'stress_vents' ? 'stressVents' : key))] = parsed;
+                } catch {}
             }
         });
+
+        // ── FIX 1: UN SOLO render() sincrono al boot ──────────────
+        state.booting = false;
+        render();
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                hideBoot();
+                if (window.removeLoader) window.removeLoader();
+            });
+        });
+
+        // 4. Supabase check
+        const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
+        if (sbSession) {
+            loadProfileFromServer().catch(e => console.warn("Boot Profile Load failed:", e));
+        } else if (state.isLoggedIn && argoSession?.storedUser) {
+            try {
+                const school = argoSession.schoolCode.toUpperCase();
+                let userName = "", pass = "";
+                try {
+                    userName = decodeURIComponent(escape(atob(argoSession.storedUser))).toLowerCase();
+                    pass = decodeURIComponent(escape(atob(argoSession.storedPass)));
+                } catch (e) {
+                    throw new Error("Invalid stored credentials");
+                }
+                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
+                const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
+                const { error: arErr } = await supabaseClient.auth.signInWithPassword({
+                    email: supabaseEmail, password: supabasePassword
+                });
+                if (!arErr) {
+                    loadProfileFromServer().catch(e => console.warn("Recovery Profile Load failed:", e));
+                }
+            } catch (e) {
+                console.warn("🩹 Boot: Recovery error:", e.message);
+            }
+        }
+
+        if (!state.isLoggedIn) {
+            state.view = 'login';
+            render();
+        }
+
+        // ── FIX 2: sync + circolari in parallelo, render unico finale ──
+        if (state.isLoggedIn) {
+            Promise.allSettled([
+                performSync().catch(e => console.error("Boot Sync failed:", e)),
+                loadCircolari().catch(e => console.warn("Boot Circolari failed:", e))
+            ]).then(() => {
+                scheduleRender(0);
+            });
+        }
+
+    } catch (e) {
+        console.error("CRITICAL BOOT FAILURE:", e);
+        state.booting = false;
+        hideBoot();
+        render();
+    } finally {
+        state.booting = false;
+        updateOfflineBadge();
+        flushOutbox().catch(e => console.warn("Boot: flushOutbox failed:", e));
+    }
+});
 
         // Listen for Auth changes (Safe logic)
         supabaseClient.auth.onAuthStateChange((event, session) => {
-            console.log("🔐 Supabase Auth Event:", event);
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                state.isLoggedIn = true;
-                window.scheduleRender();
-            } else if (event === 'SIGNED_OUT') {
-                // 🔥 NON sloggare se abbiamo ancora una sessione Argo valida
-                if (!sessionManager.isLoggedIn()) {
-                    state.isLoggedIn = false;
-                    state.user.id = null;
-                    state.view = 'login';
-                    window.scheduleRender();
-                } else {
-                    console.log("🔐 SIGNED_OUT ignorato: sessione Argo ancora attiva.");
-                }
-            }
-        });
+    console.log("🔐 Supabase Auth Event:", event);
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        state.isLoggedIn = true;
+        scheduleRender(150);
+    } else if (event === 'SIGNED_OUT') {
+        if (!sessionManager.isLoggedIn()) {
+            state.isLoggedIn = false;
+            state.user.id = null;
+            state.view = 'login';
+            render();
+        }
+    }
+});
 
         // ===== SESSION KEEP-ALIVE v2 =====
         // Rinfresca il token Supabase ogni 20 minuti e pinga il server
@@ -1111,7 +1086,7 @@
                     state.didup.connected = true;
                     state.lastSync = new Date().toLocaleTimeString();
                     updateOfflineBadge();
-                    window.scheduleRender();
+
                 } else {
                     throw new Error("Sessione non valida");
                 }
@@ -1134,7 +1109,7 @@
                 state.syncing = false;
                 hideBoot && hideBoot();
                 // 🔥 SINGLE render after all sync data is merged
-                render && window.scheduleRender();
+                scheduleRender(0);
             }
         }
 
@@ -1149,7 +1124,7 @@
                 if (data.success && data.circolari) {
                     state.circolari = data.circolari;
                     // 🔥 Targeted DOM update — NO full render() to avoid stutter
-                    if (state.view === 'home') window.scheduleRender();
+                    if (state.view === 'home') scheduleRender(100);
                 }
             } catch (e) {
                 console.warn("⚠️ Impossibile caricare circolari:", e);
@@ -1573,6 +1548,16 @@
                 _renderCore();
                 _renderRequest = null;
             });
+        }
+
+        let _scheduleRenderTimer = null;
+        function scheduleRender(delay = 80) {
+            clearTimeout(_scheduleRenderTimer);
+            if (delay === 0) {
+                render();
+            } else {
+                _scheduleRenderTimer = setTimeout(render, delay);
+            }
         }
 
         function _renderCore() {
@@ -3423,9 +3408,16 @@ SE CREI UN PIANO DI STUDIO (GIORNALIERO O MULTI-GIORNO):
         window.initHomeWidgets = initHomeWidgets;
 
         // Mostra loader anche al ritorno da refresh / bfcache
-        window.addEventListener('pageshow', () => {
-            showBoot("Ripristino pagina...");
-            setTimeout(hideBoot, 400);
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted) {
+                if (state.view === 'home') {
+                    requestAnimationFrame(() => {
+                        initStressWaveFromState();
+                        const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
+                        if (typeof renderMediaGauge === 'function') renderMediaGauge(mediaVal);
+                    });
+                }
+            }
         });
 
 
