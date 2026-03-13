@@ -25,27 +25,31 @@
     },
     {
       "source": "/api/planner/:user_id",
-      "destination": "/api/planner"
+      "destination": "/api/resources"
     },
     {
       "source": "/api/profile/:user_id",
-      "destination": "/api/profile"
+      "destination": "/api/resources"
     },
     {
       "source": "/api/conversations/user/:user_id",
-      "destination": "/api/conversations"
+      "destination": "/api/resources"
     },
     {
       "source": "/api/mental-health/:action",
       "destination": "/api/mental?action=:action"
     },
     {
-      "source": "/api/ping",
-      "destination": "/api/ping"
+      "source": "/api/ai/:action",
+      "destination": "/api/mental?action=:action"
     },
     {
-      "source": "/api/debug/profile-raw",
-      "destination": "/api/debug"
+      "source": "/api/ping",
+      "destination": "/api/main?action=ping"
+    },
+    {
+      "source": "/api/debug/:action",
+      "destination": "/api/main?action=:action"
     },
     {
       "source": "/api/calendar/status",
