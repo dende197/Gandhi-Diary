@@ -31,7 +31,7 @@
 
             /* Glass System */
             --card-border: 1px solid rgba(0, 0, 0, 0.06);
-            --card-shadow: 0 4px 16px rgba(139, 92, 246, 0.08); /* Purple tinted shadow for contrast */
+            --card-shadow: 0 6px 20px rgba(139, 92, 246, 0.12); /* Rich purple tinted shadow for contrast */
             --glass-bg: rgba(255, 255, 255, 0.75);
             --glass-blur: blur(20px);
             --glass-border: 1px solid rgba(0, 0, 0, 0.06);
@@ -2209,20 +2209,12 @@
    e micro-scatti al caricamento.
    ============================================================ */
 
-/* ── 1. PERFORMANCE: GPU compositing su tutti gli elementi animati ── */
+/* ── 1. PERFORMANCE: GPU compositing SOLO su contenitori essenziali (Evita memory crash) ── */
 .hero-container,
 .metric-card,
-.card,
-.nav-item,
 .modal-content,
 .modal-overlay,
-.circolare-card,
-.registro-card,
 .section-animate,
-.btn-primary,
-.btn-secondary,
-[class*="anim"],
-[class*="fade"],
 [class*="slide"] {
   will-change: transform, opacity;
   backface-visibility: hidden;
@@ -2236,9 +2228,9 @@
   will-change: auto;
 }
 
-/* ── 2. FIX HERO: Restore Vibrant Purple Gradient ── */
+/* ── 2. FIX HERO: Smooth Vibrant Purple Gradient ── */
 .hero-container {
-  background: linear-gradient(135deg, var(--purple) 0%, #9061f9 40%, var(--accent) 100%);
+  background: linear-gradient(135deg, #af52de 0%, #8b5cf6 50%, #6366f1 100%);
   border: none;
   box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s ease;

@@ -588,7 +588,7 @@
             <!-- HERO GRADIENT -->
             <div style="position: relative; padding: 28px 24px 24px; margin-bottom: 24px; z-index: 5;">
                 <div style="position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 24px; overflow: hidden;
-                    background: linear-gradient(135deg, var(--purple) 0%, #9061f9 40%, var(--accent) 100%);
+                    background: linear-gradient(135deg, #af52de 0%, #8b5cf6 50%, #6366f1 100%);
                     border: none;
                     box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
                     z-index: 0; pointer-events: none;">
@@ -1005,7 +1005,7 @@
 
             <!-- HERO GRADIENT -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, var(--purple) 0%, #9061f9 40%, var(--accent) 100%);
+                background: linear-gradient(135deg, #af52de 0%, #8b5cf6 50%, #6366f1 100%);
                 border: none;
                 box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
                 overflow: hidden;">
