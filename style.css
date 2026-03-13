@@ -5,18 +5,18 @@
 
         :root {
             /* Background Layers */
-            --bg-body: #f5f5f7;
-            --bg-card: rgba(255, 255, 255, 0.8);
-            --bg-card-hover: rgba(255, 255, 255, 0.95);
-            --bg-input: rgba(0, 0, 0, 0.04);
-            --bg-input-focus: rgba(0, 0, 0, 0.06);
+            --bg-body: #ebeced; /* Darker grey/blue for contrast against white cards */
+            --bg-card: rgba(255, 255, 255, 0.95); /* More opaque white */
+            --bg-card-hover: #ffffff;
+            --bg-input: rgba(0, 0, 0, 0.05);
+            --bg-input-focus: rgba(0, 0, 0, 0.08);
 
             /* Typography */
             --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-            --text-primary: #1d1d1f;
-            --text-secondary: #6e6e73;
-            --text-dim: #86868b;
+            --text-primary: #111113; /* Darker almost black */
+            --text-secondary: #4b4b50; /* Darker secondary */
+            --text-dim: #6e6e73; /* Darker dim */
 
             /* Accent Colors */
             --accent: #6366f1;
@@ -2237,22 +2237,16 @@
   will-change: auto;
 }
 
-/* ── 2. FIX HERO: testo visibile su background chiaro ── */
+/* ── 2. FIX HERO: Restore Vibrant Purple Gradient ── */
 .hero-container {
-  background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.08) 0%,
-    rgba(139, 92, 246, 0.05) 50%,
-    rgba(59, 130, 246, 0.06) 100%
-  ),
-  rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(99, 102, 241, 0.12);
-  box-shadow: 0 8px 40px rgba(99, 102, 241, 0.10), 
-              inset 0 1px 0 rgba(255,255,255,0.9);
-  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
+  background: linear-gradient(135deg, var(--purple) 0%, var(--accent) 100%);
+  border: none;
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.25);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s ease;
 }
 
 .hero-title {
-  color: var(--text-primary) !important;
+  color: #ffffff !important;
   font-size: 30px;
   font-weight: 900;
   letter-spacing: -0.8px;
@@ -2262,7 +2256,7 @@
 }
 
 .hero-subtitle {
-  color: var(--accent);
+  color: rgba(255, 255, 255, 0.8) !important;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -2272,7 +2266,7 @@
 }
 
 .hero-status {
-  color: var(--text-secondary) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
@@ -2280,12 +2274,12 @@
 }
 
 .hero-status button {
-  color: var(--text-dim) !important;
+  color: #ffffff !important;
   opacity: 1 !important;
   transition: color 0.2s, transform 0.2s;
 }
 .hero-status button:hover {
-  color: var(--accent) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
   transform: rotate(30deg) scale(1.1);
 }
 
