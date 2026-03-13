@@ -2202,3 +2202,318 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+/* ============================================================
+   G-CONNECT — PATCH v3.0 "Apple Refinement"
+   Risolve: colori widget grigi, testo hero invisibile,
+   saluto/nome/frase motivazionale, fluidità animazioni, 
+   e micro-scatti al caricamento.
+   ============================================================ */
+
+/* ── 1. PERFORMANCE: GPU compositing su tutti gli elementi animati ── */
+.hero-container,
+.metric-card,
+.card,
+.nav-item,
+.modal-content,
+.modal-overlay,
+.circolare-card,
+.registro-card,
+.section-animate,
+.btn-primary,
+.btn-secondary,
+[class*="anim"],
+[class*="fade"],
+[class*="slide"] {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Rimuovi will-change dopo l'animazione (riduce uso memoria) */
+.hero-container.anim-done,
+.metric-card.anim-done {
+  will-change: auto;
+}
+
+/* ── 2. FIX HERO: testo visibile su background chiaro ── */
+.hero-container {
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(139, 92, 246, 0.05) 50%,
+    rgba(59, 130, 246, 0.06) 100%
+  ),
+  rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  box-shadow: 0 8px 40px rgba(99, 102, 241, 0.10), 
+              inset 0 1px 0 rgba(255,255,255,0.9);
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.hero-title {
+  color: var(--text-primary) !important;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  margin-bottom: 8px;
+  animation: heroTitleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero-subtitle {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  margin-bottom: 8px;
+  animation: heroSubIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+
+.hero-status {
+  color: var(--text-secondary) !important;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  animation: heroStatusIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.hero-status button {
+  color: var(--text-dim) !important;
+  opacity: 1 !important;
+  transition: color 0.2s, transform 0.2s;
+}
+.hero-status button:hover {
+  color: var(--accent) !important;
+  transform: rotate(30deg) scale(1.1);
+}
+
+@keyframes heroTitleIn {
+  from { opacity: 0; transform: translateY(8px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+@keyframes heroSubIn {
+  from { opacity: 0; transform: translateY(6px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+@keyframes heroStatusIn {
+  from { opacity: 0; transform: translateY(4px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+/* ── 3. FIX WIDGETS: colori vivaci, non grigi ── */
+
+/* Widget MENTAL HEALTH */
+.metric-card[onclick*="mental_health"],
+.metric-card:first-child {
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(240, 245, 255, 0.85)
+  ) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08),
+              inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+/* Widget MEDIA VOTI */
+.metric-card[onclick*="voti"],
+.metric-card:last-child {
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(240, 255, 245, 0.85)
+  ) !important;
+  border: 1px solid rgba(40, 205, 65, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(40, 205, 65, 0.08),
+              inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+.metric-card .title {
+  color: var(--text-dim) !important;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.metric-card [style*="font-size:34px"],
+.metric-card [style*="font-size: 34px"] {
+  font-size: 36px !important;
+  font-weight: 900 !important;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.metric-card {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
+}
+.metric-card:hover {
+  transform: translateY(-4px) scale(1.01) translateZ(0) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12) !important;
+}
+.metric-card:active {
+  transform: scale(0.97) translateZ(0) !important;
+  transition: transform 0.08s !important;
+}
+
+/* ── 4. PULSANTE PROFILO: mostra saluto + nome ── */
+.profile-trigger {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.profile-trigger:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px) translateZ(0);
+}
+
+.profile-label {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.2;
+}
+
+.profile-greeting {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── 5. SEZIONE-ANIMATE ── */
+.section-animate {
+  animation: sectionIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform: translateZ(0);
+}
+
+@keyframes sectionIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px) translateZ(0);
+    filter: blur(2px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) translateZ(0);
+    filter: blur(0);
+  }
+}
+
+/* ── 6. RENDER() FLUIDO ── */
+#app {
+  isolation: isolate;
+}
+
+.view {
+  min-height: calc(100vh - 140px);
+  animation: viewFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform: translateZ(0);
+}
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateZ(0) translateY(4px); }
+  to   { opacity: 1; transform: translateZ(0) translateY(0); }
+}
+
+/* ── 7. CARD hover Apple-style ── */
+.card {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease !important;
+}
+
+.card:hover {
+  transform: translateY(-3px) translateZ(0) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.09) !important;
+}
+
+.card:active {
+  transform: scale(0.985) translateZ(0) !important;
+  transition: transform 0.06s !important;
+}
+
+/* ── 8. NAV: transizione active ── */
+.nav-item {
+  transition: background 0.2s cubic-bezier(0.2,0,0,1),
+              color 0.2s cubic-bezier(0.2,0,0,1),
+              transform 0.15s cubic-bezier(0.2,0,0,1),
+              box-shadow 0.2s ease !important;
+  transform: translateZ(0);
+}
+
+.nav-item:active {
+  transform: scale(0.93) translateZ(0) !important;
+  transition: transform 0.06s !important;
+}
+
+/* ── 9. BOTTONE AGGIUNGI COMPITO ── */
+button[onclick*="showQuickAddTaskModal"] {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(99, 102, 241, 0.18) !important;
+  color: var(--accent) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.08) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transform: translateZ(0);
+}
+button[onclick*="showQuickAddTaskModal"]:hover {
+  background: white !important;
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.14) !important;
+  transform: translateY(-2px) translateZ(0) !important;
+}
+
+/* ── 10. MODAL ── */
+.modal-content {
+  transform: scale(0.97) translateZ(0);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.22s ease !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.09),
+              inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1) translateZ(0);
+}
+
+/* ── 11. TOAST ── */
+@keyframes toastPop {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.92); }
+  70%  { transform: translateX(-50%) translateY(-3px) scale(1.02); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* ── 12. SCROLL PERFORMANCE ── */
+.circolari-scroll,
+#weekly-agenda-list,
+.ai-chat-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  contain: content;
+}
+
+/* ── 13. FIX GAUGE COLORI ── */
+.metric-card [style*="linear-gradient(90deg, var(--blue)"] {
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.35) !important;
+}

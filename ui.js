@@ -9,6 +9,29 @@
             const somma = validi.reduce((a, b) => a + b, 0);
             return (somma / validi.length).toFixed(2);
         }
+        function getMotivationalFallback() {
+            const quotes = [
+                "Un piccolo passo oggi vale più di dieci domani.",
+                "La costanza batte il talento quando il talento non è costante.",
+                "Fatto è meglio di perfetto.",
+                "Studia con calma, migliora ogni giorno.",
+                "La conoscenza è potere.",
+                "La curiosità è il motore dell'apprendimento.",
+                "Ogni errore è un passo verso la comprensione.",
+                "La disciplina è il ponte tra gli obiettivi e i risultati.",
+                "Un libro è un giardino tascabile.",
+                "Imparare senza riflettere è tempo perso."
+            ];
+            const day = new Date().getDate();
+            return quotes[day % quotes.length];
+        }
+        function getSafeUserName() {
+            const full = state?.user?.name?.trim();
+            if (!full) return "Studente";
+            const parts = full.split(/\s+/);
+            // Return only the last part (usually surname) or the first if it's single
+            return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+        }
         function gaugeClassForMedia(m) {
             if (m >= 6.5) return 'gauge-good';
             if (m >= 6.0) return 'gauge-warn';
@@ -174,9 +197,32 @@
             return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
         }
         function renderNav() {
+            const h = new Date().getHours();
+            let greeting = "Buonasera";
+            if (h < 12) greeting = "Buongiorno";
+            else if (h < 18) greeting = "Buon pomeriggio";
+
+            const fullName = state?.user?.name || '';
+            const shortName = getSafeUserName();
+
             return `
             <nav id="top-nav">
-                <div class="nav-content" style="justify-content: center;">
+                <div class="nav-content" style="justify-content: space-between;">
+                    ${state.isLoggedIn ? `
+                    <button class="profile-trigger" onclick="navigate('profile')" style="flex-shrink:0; background:none; border:none; cursor:pointer;">
+                        <div class="avatar" style="width:28px;height:28px;border-radius:50%;
+                            background:linear-gradient(135deg, var(--accent), var(--purple));
+                            display:flex;align-items:center;justify-content:center;
+                            color:white;font-size:11px;font-weight:800;flex-shrink:0;">
+                            ${shortName.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="profile-label">
+                            <span class="profile-greeting">${greeting}</span>
+                            <span class="profile-name">${shortName}</span>
+                        </div>
+                    </button>
+                    ` : '<div style="width:40px;"></div>'}
+
                     <div class="nav-links">
                         <button class="nav-item ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')">
                             <i class="ph-fill ph-house"></i> Home
@@ -188,6 +234,8 @@
                             <i class="ph ph-chart-line-up"></i> Voti
                         </button>
                     </div>
+                    
+                    <div style="width:${state.isLoggedIn ? '80px' : '40px'}; flex-shrink:0;"></div>
                 </div>
             </nav>`;
         }
@@ -420,95 +468,72 @@
                 ` : ''}
             </div>
         </div>`;
-        }
         function renderHome() {
             const todayStr = getLocalDateString();
             const plannedIds = state.plannedTasks[todayStr] || [];
             const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
             const media = calcolaMedia(state.voti);
+            
             const h = new Date().getHours();
             let greeting = "Buonasera";
             if (h < 12) greeting = "Buongiorno";
-            else if (h < 18) greeting = "Buon Pomeriggio";
-
-            const upcomingTasks = state.tasks
-                .filter(t => t.due_date && isFutureOrToday(t.due_date) && !t.id.startsWith('ai_'))
-                .sort((a, b) => (a.dateObj || 0) - (b.dateObj || 0))
-                .slice(0, 5);
+            else if (h < 18) greeting = "Buon pomeriggio";
 
             const stressVal = state.stressLevels?.[todayStr] || '-';
-            const stressNum = Number(stressVal) || 0;
-            const stressColor = stressVal === '-' ? 'var(--text-dim)' : (stressNum <= 3 ? 'var(--green)' : stressNum <= 6 ? 'var(--orange)' : 'var(--red)');
+            const stressNum = (typeof stressVal === 'object' ? stressVal.stress : Number(stressVal)) || 0;
+            const stressColor = stressVal === '-' ? 'var(--text-dim)' : (stressNum <= 3 ? 'var(--green)' : stressNum <= 4 ? 'var(--orange)' : 'var(--red)');
+
+            const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
 
             return `
         <div class="view">
-
-            <!-- HERO -->
             <div class="hero-container">
-                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
-                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
                 <div style="position: relative; z-index: 1;">
                     <p class="hero-subtitle">
                         ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
-                    <h1 class="hero-title" onclick="navigate('profile')" style="cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-                        ${greeting},<br>${state.user.name.includes(' ') ? state.user.name.split(' ').slice(1).join(' ') : state.user.name}
+                    <h1 class="hero-title" onclick="navigate('profile')" style="cursor: pointer;">
+                        ${greeting},<br>${getSafeUserName()}
                     </h1>
                     <p class="hero-status" style="display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:8px;">
-                        ${(() => {
-                    const quote = typeof getDailyQuote === 'function' ? getDailyQuote() : null;
-                    if (quote) {
-                        return `<span style="font-style:italic; opacity:0.8; flex:1;">"${quote}"</span>
-                                <button onclick="refreshDailyQuote(this); event.stopPropagation();" style="background:none; border:none; color:white; opacity:0.6; cursor:pointer; padding:4px; font-size:16px; transition:all 0.2s; margin-top:-4px;" title="Nuova frase" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
-                                    <i class="ph-bold ph-arrows-clockwise"></i>
-                                </button>`;
-                    }
-                    return `<span style="flex:1;">${plannedTasks.length > 0 ? `Hai <b style="color:white">${plannedTasks.length}</b> attività pianificate` : 'Pianifica la tua giornata di studio'}</span>`;
-                })()}
+                        <span style="font-style:italic; opacity:0.8; flex:1;">"${quote}"</span>
+                        <button onclick="refreshDailyQuote(this); event.stopPropagation();" style="background:none; border:none; cursor:pointer; padding:4px;" title="Nuova frase">
+                            <i class="ph-bold ph-arrows-clockwise"></i>
+                        </button>
                     </p>
                 </div>
             </div>
 
-
-
             <!-- METRICS -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
-                <div class="metric-card" onclick="navigate('mental_health')" style="cursor:pointer; border-radius:20px;
-                    background: linear-gradient(145deg, rgba(26,26,30,0.8), rgba(20,20,24,0.9));
-                    border:1px solid rgba(255,255,255,0.08);
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+                <div class="metric-card" onclick="navigate('mental_health')">
                     <div style="position: relative; z-index: 2;">
-                        <div class="title" style="margin-bottom:4px;">MENTAL HEALTH</div>
-                        <div style="font-size:34px; font-weight:800; color:${stressColor}; line-height:1;">
+                        <div class="title">MENTAL HEALTH</div>
+                        <div style="color:${stressColor};">
                             ${typeof stressVal === 'object' ? (stressVal.stress || '-') : stressVal}<span style="font-size:13px; color:var(--text-dim); padding-left:2px;">/5</span>
                         </div>
                     </div>
                     <canvas id="stressWaveCanvas" style="width:100%; height:40px; position:absolute; bottom:0; left:0; pointer-events:none; opacity: 0.6; z-index: 1;"></canvas>
                 </div>
-                <div class="metric-card" onclick="navigate('voti')" style="cursor:pointer; border-radius:20px;
-                    background: linear-gradient(145deg, rgba(26,26,30,0.8), rgba(20,20,24,0.9));
-                    border:1px solid rgba(255,255,255,0.08);
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="metric-card" onclick="navigate('voti')">
                     <div>
-                        <div class="title" style="margin-bottom:4px;">MEDIA</div>
-                        <div style="font-size:34px; font-weight:800; color:${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'}; line-height:1;">
+                        <div class="title">MEDIA</div>
+                        <div style="color:${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'};">
                             ${media || '-'}
                         </div>
                     </div>
-                    <div style="position:absolute; bottom:16px; left:20px; right:20px; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
-                        <div style="width:${(media / 10) * 100}%; height:100%; border-radius:3px; background:linear-gradient(90deg, var(--blue), var(--purple)); box-shadow:0 0 12px rgba(99,102,241,0.4);"></div>
+                    <div style="position:absolute; bottom:16px; left:20px; right:20px; height:5px; background:rgba(0,0,0,0.04); border-radius:3px; overflow:hidden;">
+                        <div style="width:${(media / 10) * 100}%; height:100%; border-radius:3px; background:linear-gradient(90deg, var(--blue), var(--purple));"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- FOCUS DI OGGI -->
             <!-- AGGIUNGI COMPITO RAPIDO -->
             <div style="margin-bottom: 24px;">
                 <button onclick="showQuickAddTaskModal()" style="width:100%; padding:18px; border-radius:18px;
-                    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
-                    border: 1px solid rgba(99,102,241,0.25); color: white; cursor: pointer;
+                    background: white; border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer;
                     display:flex; align-items:center; justify-content:center; gap:10px;
-                    font-size:15px; font-weight:700; transition: all 0.2s;">
+                    font-size:15px; font-weight:700;">
                     <i class="ph-bold ph-plus-circle" style="font-size:20px; color:var(--accent);"></i>
                     Aggiungi Compito
                 </button>
@@ -521,27 +546,27 @@
                         <i class="ph-fill ph-megaphone" style="color:var(--accent-warm);"></i> Circolari
                     </h2>
                     <button onclick="refreshCircolari()" style="cursor:pointer; color:var(--accent-warm); font-size:11px; font-weight:800;
-                        padding:6px 14px; border-radius:20px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2);
-                        display:flex; align-items:center; gap:6px; transition: all 0.2s;">
+                        padding:6px 14px; border-radius:20px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15);
+                        display:flex; align-items:center; gap:6px;">
                         <i class="ph-bold ph-arrow-clockwise"></i> AGGIORNA
                     </button>
                 </div>
-                <div style="display: flex; overflow-x: auto; gap: 10px; scroll-snap-type: x mandatory; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none;" class="circolari-scroll">
+                <div class="circolari-scroll" style="display: flex; overflow-x: auto; gap: 10px; scroll-snap-type: x mandatory; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
                     ${state.circolari.length === 0 ? `
-                        <div style="min-width: 100%; padding: 30px; text-align: center; background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px dashed rgba(255,255,255,0.1); flex-shrink: 0;">
+                        <div style="min-width: 100%; padding: 30px; text-align: center; background: rgba(0,0,0,0.02); border-radius: 20px; border: 1px dashed rgba(0,0,0,0.1); flex-shrink: 0;">
                             <div style="color: var(--text-dim); font-size: 13px; margin-bottom: 8px;">Nessuna circolare disponibile al momento</div>
                             <button onclick="refreshCircolari()" style="background:transparent; border:none; color:var(--accent-warm); font-weight:700; cursor:pointer;">Prova ad aggiornare</button>
                         </div>
                     ` : state.circolari.map((c, i) => `
                         <div onclick="mostraCircolare('${c.id}')" style="cursor:pointer; padding:18px; border-radius:20px;
-                            background:rgba(26,26,30,0.6); border:1px solid rgba(255,255,255,0.05);
+                            background:white; border:1px solid rgba(0,0,0,0.04);
                             display:flex; flex-direction:column; gap:8px; min-width: 220px; max-width: 240px; flex-shrink: 0; scroll-snap-align: start;
-                            transition:transform 0.15s, border-color 0.2s;">
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
                                 ${c.sintesi ? '<i class="ph-fill ph-check-circle" style="color:var(--green); font-size:14px;"></i>' : ''}
                             </div>
-                            <div style="font-size:15px; font-weight:700; color:white; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                            <div style="font-size:15px; font-weight:700; color:var(--text-primary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
                                 ${c.titolo}
                             </div>
                             <div style="font-size:11px; color:var(--text-dim); margin-top:auto; font-weight:600;">
@@ -3327,3 +3352,53 @@
             });
         }
 
+
+        // ── 3. PATCH: refreshDailyQuote ──
+        window.refreshDailyQuote = function (btnEl) {
+            window._quoteOffset = (window._quoteOffset || 0) + 1;
+            const quotes = [
+                "Un piccolo passo oggi vale più di dieci domani.",
+                "La costanza batte il talento quando il talento non è costante.",
+                "Fatto è meglio di perfetto.",
+                "Studia con calma, migliora ogni giorno.",
+                "La conoscenza è potere.",
+                "La curiosità è il motore dell'apprendimento.",
+                "Ogni errore è un passo verso la comprensione.",
+                "La disciplina è il ponte tra gli obiettivi e i risultati.",
+                "Un libro è un giardino tascabile.",
+                "Imparare senza riflettere è tempo perso.",
+            ];
+            const day = new Date().getDate();
+            const idx = (day + window._quoteOffset) % quotes.length;
+            
+            const heroStatus = document.querySelector('.hero-status span[style*="italic"]');
+            if (heroStatus) {
+                heroStatus.style.opacity = '0';
+                heroStatus.style.transform = 'translateY(-4px)';
+                heroStatus.style.transition = 'all 0.2s ease';
+                setTimeout(() => {
+                    heroStatus.textContent = `"${quotes[idx]}"`;
+                    heroStatus.style.opacity = '0.8';
+                    heroStatus.style.transform = 'translateY(0)';
+                }, 200);
+            }
+
+            if (btnEl) {
+                btnEl.style.transform = 'rotate(360deg)';
+                btnEl.style.transition = 'transform 0.4s cubic-bezier(0.16,1,0.3,1)';
+                setTimeout(() => {
+                    btnEl.style.transform = '';
+                    btnEl.style.transition = '';
+                }, 400);
+            }
+        };
+
+        // ── 4. PATCH: animationend listener ──
+        document.addEventListener('animationend', (e) => {
+            if (e.target.classList.contains('view') || 
+                e.target.classList.contains('hero-container')) {
+                e.target.classList.add('anim-done');
+            }
+        }, true);
+
+}
