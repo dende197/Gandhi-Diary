@@ -585,22 +585,22 @@
             return `
         <div class="view">
 
-            <!-- HERO GRADIENT (v1.1.67 Fix) -->
+            <!-- HERO GRADIENT -->
             <div style="position: relative; padding: 28px 24px 24px; margin-bottom: 24px; z-index: 5;">
                 <div style="position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 24px; overflow: hidden;
-                    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                    border: 1px solid rgba(255,255,255,0.1);
-                    box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                    background: linear-gradient(135deg, var(--purple) 0%, #9061f9 40%, var(--accent) 100%);
+                    border: none;
+                    box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
                     z-index: 0; pointer-events: none;">
-                    <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%);"></div>
-                    <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%);"></div>
+                    <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%);"></div>
+                    <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%);"></div>
                 </div>
 
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: nowrap;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">Planner</h1>
-                            <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
+                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: white;">Planner</h1>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 13px;">Organizza lo studio e le scadenze</p>
                         </div>
                         <div style="display: flex; gap: 6px; align-items: center; margin-left: auto;">
                             <!-- AI TUTOR -->
@@ -1003,19 +1003,19 @@
             return `
         <div class="view">
 
-            <!-- HERO GRADIENT (v1.1.32.14: AI & View Only) -->
+            <!-- HERO GRADIENT -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08), rgba(59,130,246,0.1));
-                border: 1px solid rgba(255,255,255,0.1);
-                box-shadow: 0 8px 32px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+                background: linear-gradient(135deg, var(--purple) 0%, #9061f9 40%, var(--accent) 100%);
+                border: none;
+                box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
                 overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%); pointer-events: none;"></div>
-                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%); pointer-events: none;"></div>
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">Media & Analisi</h1>
-                            <p style="color: var(--text-secondary); font-size: 13px;">Monitoraggio del rendimento</p>
+                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: white;">Media & Analisi</h1>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 13px;">Monitoraggio del rendimento</p>
                         </div>
                         <button onclick="performSync()" style="width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: white; cursor: pointer; display:flex; align-items:center; justify-content:center;">
                             <i class="ph-bold ph-arrow-clockwise"></i>
