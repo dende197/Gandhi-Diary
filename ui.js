@@ -1935,6 +1935,9 @@
         </div>`;
         }
         function showProfileActions() {
+            // ... the rest of the function remains untouched but the function is exported
+        }
+        window.showProfileActions = showProfileActions;
             const modalContainer = getModalContainer();
             if (!modalContainer) return;
             modalContainer.innerHTML = `
@@ -3401,4 +3404,8 @@
             }
         }, true);
 
-}
+
+// ESPORTAZIONI GLOBALI PER INDEX.HTML (Risolvono le ReferenceError nel Sync)
+window.isFutureOrToday = isFutureOrToday;
+window.showProfileActions = showProfileActions;
+
