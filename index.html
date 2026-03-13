@@ -59,7 +59,7 @@
 
     <!-- PREMIUM LOADER: masks micro-stutters, auto-dismiss after 3s -->
     <div id="app-loader"
-        style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.25s ease-out;">
+        style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s ease-out;">
         <div style="text-align:center;">
             <div
                 style="width:44px;height:44px;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;">
@@ -75,7 +75,7 @@
             var el = document.getElementById('app-loader');
             if (el) { 
                 el.style.opacity = '0'; 
-                setTimeout(function () { el.remove() }, 250); 
+                setTimeout(function () { el.remove() }, 220); 
                 clearTimeout(window._loaderTimer);
             }
         };
@@ -122,7 +122,7 @@
         };
 
         // 🚀 G-Diary v2.5.9 [Deep Debug - Runtime Error Elimination]
-        const APP_VERSION = '2.6.9'; // Performance & Robustness v4.2
+        const APP_VERSION = '2.7.0'; // Master Fluidity (Mega Patch)
 
         // 🛡️ Safety: Define updateLoader if it doesn't exist (prevents crash during sync)
         window.updateLoader = window.updateLoader || ((msg) => console.log(`[Sync] ${msg}`));
@@ -636,7 +636,7 @@
     console.log("🔐 Supabase Auth Event:", event);
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         state.isLoggedIn = true;
-        scheduleRender(150);
+        scheduleRender(200); // Wait for boot to finish (was 150)
     } else if (event === 'SIGNED_OUT') {
         if (!sessionManager.isLoggedIn()) {
             state.isLoggedIn = false;
@@ -1539,23 +1539,36 @@
             }
         });
 
+        // ── Rendering Deduplication Lock ──
+        let _lastRenderTime = 0;
+        const RENDER_MIN_GAP = 50; // ms
         let _renderRequest = null;
-        // Safety: if booting hangs for >10s, force-unblock render
-        setTimeout(() => { if (state.booting) { console.warn('⚠️ Booting timeout — force-unblocking render'); state.booting = false; window.scheduleRender(); } }, 10000);
+        let _scheduleRenderTimer = null;
 
         function render() {
             if (_renderRequest || state.booting) return;
+            const now = performance.now();
+            if (now - _lastRenderTime < RENDER_MIN_GAP) {
+                // Coalizza: rimanda invece di duplicare
+                clearTimeout(_scheduleRenderTimer);
+                _scheduleRenderTimer = setTimeout(() => {
+                    _lastRenderTime = performance.now();
+                    _renderCore();
+                }, RENDER_MIN_GAP);
+                return;
+            }
+            _lastRenderTime = now;
             _renderRequest = requestAnimationFrame(() => {
                 _renderCore();
                 _renderRequest = null;
             });
         }
 
-        let _scheduleRenderTimer = null;
         function scheduleRender(delay = 80) {
             clearTimeout(_scheduleRenderTimer);
             if (delay === 0) {
-                render();
+                // Garantisce deduplicazione anche con chiamate a 0ms
+                _scheduleRenderTimer = setTimeout(render, 16);
             } else {
                 _scheduleRenderTimer = setTimeout(render, delay);
             }

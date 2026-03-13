@@ -1,3 +1,65 @@
+
+// --- UI TRANSITION HELPERS (Added by Phase 25 Mega Patch) ---
+window.switchPlannerMode = function(mode) {
+  state.plannerMode = mode;
+  document.querySelectorAll('[data-planner-mode]').forEach(btn => {
+    const isActive = btn.dataset.plannerMode === mode;
+    btn.style.background = isActive ? 'rgba(139,92,246,0.25)' : 'transparent';
+    btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.6)';
+    btn.style.border = isActive ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent';
+  });
+  const list = document.getElementById('weekly-agenda-list');
+  if (list && typeof gsap !== 'undefined') {
+    gsap.to(list, { opacity: 0, y: 4, duration: 0.12, ease: 'power2.in',
+      onComplete: () => {
+        list.innerHTML = renderWeeklyAgenda();
+        gsap.fromTo(list, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' });
+      }
+    });
+  } else {
+    scheduleRender(0);
+  }
+};
+
+window.switchPlannerView = function(view) {
+  state.plannerView = view;
+  localStorage.setItem('g_diary_planner_view', view);
+  document.querySelectorAll('[data-planner-view]').forEach(btn => {
+    const isActive = btn.dataset.plannerView === view;
+    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
+    btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.5)';
+  });
+  const calContent = document.getElementById('calendar'); // Assuming planner body usually handles this
+  // We'll just do a fast fade out and re-render the whole planner body minus the top bar
+  const plannerScroll = document.querySelector('.planner-scroll');
+  if (plannerScroll && typeof gsap !== 'undefined') {
+      gsap.to(plannerScroll, { opacity:0, duration: 0.15, onComplete: () => {
+          scheduleRender(0);
+      }});
+  } else {
+      scheduleRender(0);
+  }
+};
+
+window.navigateSubject = function(subjName) {
+    const root = document.getElementById('app');
+    const currentView = root ? root.querySelector('.view') : null;
+    if (currentView && typeof gsap !== 'undefined') {
+        gsap.to(currentView, { opacity: 0, y: -8, scale: 0.99, duration: 0.15, ease: 'power2.in', onComplete: () => {
+            state.activeSubject = subjName;
+            scheduleRender(0);
+        }});
+    } else {
+        state.activeSubject = subjName;
+        scheduleRender(0);
+    }
+};
+
+window.closeSubject = function() {
+    window.navigateSubject(null);
+};
+// ------------------------------------------------------------
+
         function calcolaMedia(voti) {
             if (!voti || voti.length === 0) return null;
             const validi = voti.map(v => {
@@ -610,14 +672,14 @@
 
                             <!-- VIEW SWITCHER (Pill style) -->
                             <div style="background: rgba(255,255,255,0.03); border-radius: 30px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; height: 40px; align-items: center; backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
-                                <button onclick="state.plannerView='calendar'; render();" 
+                                <button onclick="window.switchPlannerView('calendar')" data-planner-view="calendar" 
                                     style="width: 34px; height: 34px; border-radius: 17px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; justify-content: center;
                                     background: ${uiMode === 'calendar' ? 'rgba(139,92,246,0.25)' : 'transparent'};
                                     color: ${uiMode === 'calendar' ? 'white' : 'rgba(255,255,255,0.6)'};
                                     ${uiMode === 'calendar' ? 'box-shadow: 0 0 15px rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);' : ''}">
                                     <i class="ph ph-calendar" style="font-size: 16px;"></i>
                                 </button>
-                                <button onclick="state.plannerView='list'; render();" 
+                                <button onclick="window.switchPlannerView('list')" data-planner-view="list" 
                                     style="width: 34px; height: 34px; border-radius: 17px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; justify-content: center;
                                     background: ${uiMode === 'list' ? 'rgba(139,92,246,0.25)' : 'transparent'};
                                     color: ${uiMode === 'list' ? 'white' : 'rgba(255,255,255,0.6)'};
@@ -659,14 +721,14 @@
 
 
             <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
-                <button onclick="state.plannerMode='registro'; render();" 
+                <button onclick="window.switchPlannerMode('registro')" data-planner-mode="registro" 
                     style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
                     background: ${state.plannerMode === 'registro' ? 'rgba(139,92,246,0.25)' : 'transparent'};
                     color: ${state.plannerMode === 'registro' ? 'white' : 'rgba(255,255,255,0.6)'};
                     ${state.plannerMode === 'registro' ? 'box-shadow: 0 0 20px rgba(139,92,246,0.3), inset 0 0 10px rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.4);' : ''}">
                     <i class="ph-fill ph-notebook" style="margin-right: 6px;"></i> Registro Scadenze
                 </button>
-                <button onclick="state.plannerMode='studio'; render();" 
+                <button onclick="window.switchPlannerMode('studio')" data-planner-mode="studio" 
                     style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
                     background: ${state.plannerMode === 'studio' ? 'rgba(139,92,246,0.25)' : 'transparent'};
                     color: ${state.plannerMode === 'studio' ? 'white' : 'rgba(255,255,255,0.6)'};
@@ -1636,7 +1698,7 @@
             return `
         <div class="view">
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
-                <button class="btn-icon-only" onclick="state.activeSubject = null; render();" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
+                <button class="btn-icon-only" onclick="window.closeSubject()" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
                     <i class="ph-bold ph-arrow-left"></i>
                 </button>
                 <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Dettaglio Materia</h1>
