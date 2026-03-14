@@ -2537,3 +2537,15 @@ body {
   scroll-snap-type: x mandatory;
 }
 
+
+/* ── PHASE 27: EXTREME FLUIDITY ACCELERATION ── */
+.view, .card, .metric-card, .hero-container, .nav-item {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.modal-content {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+}
