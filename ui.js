@@ -594,9 +594,9 @@ window.closeSubject = function() {
             <!-- AGGIUNGI COMPITO RAPIDO -->
             <div style="margin-bottom: 24px;">
                 <button onclick="showQuickAddTaskModal()" style="width:100%; padding:18px; border-radius:18px;
-                    background: white; border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer;
+                    background: var(--bg-card); border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer;
                     display:flex; align-items:center; justify-content:center; gap:10px;
-                    font-size:15px; font-weight:700;">
+                    font-size:15px; font-weight:700; box-shadow: 0 2px 8px rgba(99,102,241,0.06);">
                     <i class="ph-bold ph-plus-circle" style="font-size:20px; color:var(--accent);"></i>
                     Aggiungi Compito
                 </button>
@@ -622,9 +622,9 @@ window.closeSubject = function() {
                         </div>
                     ` : state.circolari.map((c, i) => `
                         <div onclick="mostraCircolare('${c.id}')" style="cursor:pointer; padding:18px; border-radius:20px;
-                            background:white; border:1px solid rgba(0,0,0,0.04);
+                            background:var(--bg-card); border:1px solid rgba(0,0,0,0.06);
                             display:flex; flex-direction:column; gap:8px; min-width: 220px; max-width: 240px; flex-shrink: 0; scroll-snap-align: start;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
                                 ${c.sintesi ? '<i class="ph-fill ph-check-circle" style="color:var(--green); font-size:14px;"></i>' : ''}
@@ -650,19 +650,20 @@ window.closeSubject = function() {
             <!-- HERO GRADIENT -->
             <div style="position: relative; padding: 28px 24px 24px; margin-bottom: 24px; z-index: 5;">
                 <div style="position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 24px; overflow: hidden;
-                    background: linear-gradient(135deg, #af52de 0%, #8b5cf6 50%, #6366f1 100%);
-                    border: none;
-                    box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
+                    background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(129,140,248,0.18) 35%, rgba(99,102,241,0.22) 70%, rgba(168,85,247,0.15) 100%);
+                    backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
+                    border: 1px solid rgba(139,92,246,0.12);
+                    box-shadow: 0 4px 24px rgba(139,92,246,0.10), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
                     z-index: 0; pointer-events: none;">
-                    <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%);"></div>
-                    <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%);"></div>
+                    <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%);"></div>
+                    <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%);"></div>
                 </div>
 
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: nowrap;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: white;">Planner</h1>
-                            <p style="color: rgba(255,255,255,0.8); font-size: 13px;">Organizza lo studio e le scadenze</p>
+                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: var(--text-primary);">Planner</h1>
+                            <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
                         </div>
                         <div style="display: flex; gap: 6px; align-items: center; margin-left: auto;">
                             <!-- AI TUTOR -->
@@ -671,20 +672,20 @@ window.closeSubject = function() {
                             </button>
 
                             <!-- VIEW SWITCHER (Pill style) -->
-                            <div style="background: rgba(255,255,255,0.03); border-radius: 30px; padding: 3px; display: flex; border: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; height: 40px; align-items: center; backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
+                            <div style="background: rgba(99,102,241,0.06); border-radius: 30px; padding: 3px; display: flex; border: 1px solid rgba(99,102,241,0.12); flex-shrink: 0; height: 40px; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);">
                                 <button onclick="window.switchPlannerView('calendar')" data-planner-view="calendar" 
                                     style="width: 34px; height: 34px; border-radius: 17px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; justify-content: center;
-                                    background: ${uiMode === 'calendar' ? 'rgba(139,92,246,0.25)' : 'transparent'};
-                                    color: ${uiMode === 'calendar' ? 'white' : 'rgba(255,255,255,0.6)'};
-                                    ${uiMode === 'calendar' ? 'box-shadow: 0 0 15px rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);' : ''}">
-                                    <i class="ph ph-calendar" style="font-size: 16px;"></i>
+                                    background: ${uiMode === 'calendar' ? 'white' : 'transparent'};
+                                    color: ${uiMode === 'calendar' ? 'var(--accent)' : 'var(--text-secondary)'};
+                                    ${uiMode === 'calendar' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
+                                    <i class="ph-bold ph-calendar" style="font-size: 16px;"></i>
                                 </button>
                                 <button onclick="window.switchPlannerView('list')" data-planner-view="list" 
                                     style="width: 34px; height: 34px; border-radius: 17px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; justify-content: center;
-                                    background: ${uiMode === 'list' ? 'rgba(139,92,246,0.25)' : 'transparent'};
-                                    color: ${uiMode === 'list' ? 'white' : 'rgba(255,255,255,0.6)'};
-                                    ${uiMode === 'list' ? 'box-shadow: 0 0 15px rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.4);' : ''}">
-                                    <i class="ph ph-list-bullets" style="font-size: 16px;"></i>
+                                    background: ${uiMode === 'list' ? 'white' : 'transparent'};
+                                    color: ${uiMode === 'list' ? 'var(--accent)' : 'var(--text-secondary)'};
+                                    ${uiMode === 'list' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
+                                    <i class="ph-bold ph-list-bullets" style="font-size: 16px;"></i>
                                 </button>
                             </div>
                         </div>
@@ -720,20 +721,20 @@ window.closeSubject = function() {
                 })()}
 
 
-            <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04);">
+            <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(99,102,241,0.06); padding: 4px; border-radius: 40px; border: 1px solid rgba(99,102,241,0.12); box-shadow: 0 4px 12px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6);">
                 <button onclick="window.switchPlannerMode('registro')" data-planner-mode="registro" 
                     style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-                    background: ${state.plannerMode === 'registro' ? 'rgba(139,92,246,0.25)' : 'transparent'};
-                    color: ${state.plannerMode === 'registro' ? 'white' : 'rgba(255,255,255,0.6)'};
-                    ${state.plannerMode === 'registro' ? 'box-shadow: 0 0 20px rgba(139,92,246,0.3), inset 0 0 10px rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.4);' : ''}">
-                    <i class="ph-fill ph-notebook" style="margin-right: 6px;"></i> Registro Scadenze
+                    background: ${state.plannerMode === 'registro' ? 'white' : 'transparent'};
+                    color: ${state.plannerMode === 'registro' ? 'var(--accent)' : 'var(--text-secondary)'};
+                    ${state.plannerMode === 'registro' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
+                    <i class="ph-bold ph-notebook" style="margin-right: 6px;"></i> Registro Scadenze
                 </button>
                 <button onclick="window.switchPlannerMode('studio')" data-planner-mode="studio" 
                     style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-                    background: ${state.plannerMode === 'studio' ? 'rgba(139,92,246,0.25)' : 'transparent'};
-                    color: ${state.plannerMode === 'studio' ? 'white' : 'rgba(255,255,255,0.6)'};
-                    ${state.plannerMode === 'studio' ? 'box-shadow: 0 0 20px rgba(139,92,246,0.3), inset 0 0 10px rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.4);' : ''}">
-                    <i class="ph-fill ph-graduation-cap" style="margin-right: 6px;"></i> Piano di Studio
+                    background: ${state.plannerMode === 'studio' ? 'white' : 'transparent'};
+                    color: ${state.plannerMode === 'studio' ? 'var(--accent)' : 'var(--text-secondary)'};
+                    ${state.plannerMode === 'studio' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
+                    <i class="ph-bold ph-graduation-cap" style="margin-right: 6px;"></i> Piano di Studio
                 </button>
             </div>
 
@@ -1067,19 +1068,20 @@ window.closeSubject = function() {
 
             <!-- HERO GRADIENT -->
             <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, #af52de 0%, #8b5cf6 50%, #6366f1 100%);
-                border: none;
-                box-shadow: 0 12px 32px rgba(139, 92, 246, 0.25);
+                background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(129,140,248,0.18) 35%, rgba(99,102,241,0.22) 70%, rgba(168,85,247,0.15) 100%);
+                backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
+                border: 1px solid rgba(139,92,246,0.12);
+                box-shadow: 0 4px 24px rgba(139,92,246,0.10), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
                 overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%); pointer-events: none;"></div>
-                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%); pointer-events: none;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%); pointer-events: none;"></div>
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: white;">Media & Analisi</h1>
-                            <p style="color: rgba(255,255,255,0.8); font-size: 13px;">Monitoraggio del rendimento</p>
+                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: var(--text-primary);">Media & Analisi</h1>
+                            <p style="color: var(--text-secondary); font-size: 13px;">Monitoraggio del rendimento</p>
                         </div>
-                        <button onclick="performSync()" style="width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: white; cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                        <button onclick="performSync()" style="width: 40px; height: 40px; border-radius: 20px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer; display:flex; align-items:center; justify-content:center;">
                             <i class="ph-bold ph-arrow-clockwise"></i>
                         </button>
                     </div>

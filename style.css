@@ -1044,6 +1044,8 @@
             margin-bottom: 10px;
             line-height: 1.1;
             color: white;
+            position: relative;
+            z-index: 1;
         }
 
         .hero-subtitle {
@@ -1079,7 +1081,7 @@
 
         input:focus {
             border-color: var(--accent);
-            background: #1e2229;
+            background: rgba(99, 102, 241, 0.04);
             outline: none;
         }
 

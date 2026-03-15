@@ -140,13 +140,13 @@
 
   // ── 3. UNIFIED ANIMATION SYSTEM (GSAP Orchestration) ─────────
   const T = {
-    hero:     { duration: 0.45, delay: 0,    ease: 'power3.out' },
-    mainCard: { duration: 0.50, delay: 0.14, ease: 'back.out(1.2)' },
-    tabBar:   { duration: 0.38, delay: 0.18, ease: 'power2.out' },
-    calendar: { duration: 0.42, delay: 0.24, ease: 'power2.out' },
-    header:   { duration: 0.35, delay: 0.28, ease: 'power2.out' },
-    items:    { duration: 0.38, delay: 0.32, stagger: 0.055, ease: 'power2.out' },
-    generic:  { duration: 0.38, delay: 0,    ease: 'power2.out' },
+    hero:     { duration: 0.55, delay: 0,    ease: 'power3.out' },
+    mainCard: { duration: 0.60, delay: 0.14, ease: 'back.out(1.2)' },
+    tabBar:   { duration: 0.45, delay: 0.18, ease: 'power2.out' },
+    calendar: { duration: 0.48, delay: 0.24, ease: 'power2.out' },
+    header:   { duration: 0.40, delay: 0.28, ease: 'power2.out' },
+    items:    { duration: 0.45, delay: 0.32, stagger: 0.065, ease: 'power2.out' },
+    generic:  { duration: 0.45, delay: 0,    ease: 'power2.out' },
   };
 
   function _animateViewEntrance(view) {
@@ -218,15 +218,26 @@
         if (!scroll) return;
         
         // Update chirurgico cross-fade
-        gsap.to(scroll, { opacity: 0, duration: 0.12, onComplete: () => {
+        gsap.to(scroll, { opacity: 0, duration: 0.15, onComplete: () => {
           scroll.innerHTML = data.circolari.map(c => `
-            <div onclick="mostraCircolare('${c.id}')" style="min-width:220px; opacity:0; transform:translateX(10px);">
-              <div style="font-size:11px; color:var(--accent); font-weight:800;">N. ${c.numero}</div>
-              <div style="font-size:15px; font-weight:700;">${c.titolo}</div>
+            <div onclick="mostraCircolare('${c.id}')" style="cursor:pointer; padding:18px; border-radius:20px;
+                background:var(--bg-card); border:1px solid rgba(0,0,0,0.06);
+                display:flex; flex-direction:column; gap:8px; min-width: 220px; max-width: 240px; flex-shrink: 0; scroll-snap-align: start;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04); opacity:0; transform:translateX(10px);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
+                    ${c.sintesi ? '<i class="ph-fill ph-check-circle" style="color:var(--green); font-size:14px;"></i>' : ''}
+                </div>
+                <div style="font-size:15px; font-weight:700; color:var(--text-primary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                    ${c.titolo}
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); margin-top:auto; font-weight:600;">
+                    <i class="ph ph-calendar-blank" style="vertical-align: middle; margin-right:4px;"></i> ${c.data}
+                </div>
             </div>
           `).join('');
-          gsap.to(scroll, { opacity: 1, duration: 0.12 });
-          gsap.fromTo(scroll.children, { x: 10, opacity: 0 }, { x: 0, opacity: 1, stagger: 0.05, duration: 0.3 });
+          gsap.to(scroll, { opacity: 1, duration: 0.15 });
+          gsap.fromTo(scroll.children, { x: 14, opacity: 0 }, { x: 0, opacity: 1, stagger: 0.06, duration: 0.4, ease: 'power2.out' });
         }});
       } catch(e) { _orig(); }
     };

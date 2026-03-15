@@ -229,10 +229,10 @@
         const newHTML = data.circolari.map(c => `
           <div onclick="mostraCircolare('${c.id}')"
                style="cursor:pointer; padding:18px; border-radius:20px;
-                      background:white; border:1px solid rgba(0,0,0,0.04);
+                      background:var(--bg-card); border:1px solid rgba(0,0,0,0.06);
                       display:flex; flex-direction:column; gap:8px;
                       min-width:220px; max-width:240px; flex-shrink:0;
-                      scroll-snap-align:start; box-shadow:0 4px 12px rgba(0,0,0,0.03);
+                      scroll-snap-align:start; box-shadow:0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04);
                       opacity:0; transform:translateX(12px);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
