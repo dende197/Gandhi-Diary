@@ -140,10 +140,61 @@
 }
 
 
-/* ── 5. HERO — SOFT AIRY GRADIENT (Cohesive Design) ────────────────
-   Gradiente tenue lavanda-viola che si fonde con il body caldo.
-   Stesso gradiente usato su Home, Planner e Voti per coerenza.
+/* ── 5. HERO — PREMIUM UNIFIED DESIGN (Cohesive & Airy) ───────────
+   Gradiente tenue e trasparenze comuni a Home, Planner e Voti.
    ─────────────────────────────────────────────────────────────── */
+
+.premium-hero {
+  position: relative;
+  padding: 28px 24px 24px !important;
+  border-radius: 24px !important;
+  margin-bottom: 24px !important;
+  background: linear-gradient(135deg,
+    rgba(139,92,246,0.14) 0%,
+    rgba(129,140,248,0.18) 35%,
+    rgba(99,102,241,0.22) 70%,
+    rgba(168,85,247,0.15) 100%) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  border: 1px solid rgba(139,92,246,0.12) !important;
+  box-shadow: 0 4px 24px rgba(139,92,246,0.10),
+              0 1px 4px rgba(0,0,0,0.04),
+              inset 0 1px 0 rgba(255,255,255,0.5) !important;
+  overflow: hidden;
+}
+
+/* Mesh glow comune */
+.premium-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.premium-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Home Hero inherits unified class */
+.hero-container {
+  /* Should use class="premium-hero hero-container" in HTML */
+  padding: 28px 24px 24px !important;
+  border-radius: 24px !important;
+  margin-bottom: 24px !important;
+}
+/* For browsers not supporting composes, let's just make it a class in HTML later */
 
 /* Body: warm lavender tint instead of ice white */
 html, body {
@@ -156,47 +207,9 @@ body::before {
     radial-gradient(ellipse 70% 50% at 50% 90%, rgba(168,85,247,0.05) 0%, transparent 45%) !important;
 }
 
-.hero-container {
-  background: linear-gradient(135deg,
-    rgba(139,92,246,0.15) 0%,
-    rgba(129,140,248,0.18) 35%,
-    rgba(99,102,241,0.22) 70%,
-    rgba(168,85,247,0.16) 100%) !important;
-  backdrop-filter: blur(24px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
-  border: 1px solid rgba(139,92,246,0.12) !important;
-  box-shadow: 0 4px 24px rgba(139,92,246,0.10),
-              0 1px 4px rgba(0,0,0,0.04),
-              inset 0 1px 0 rgba(255,255,255,0.5) !important;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Mesh glow ambientale */
-.hero-container::before {
-  content: '';
-  position: absolute;
-  top: -40%;
-  left: -15%;
-  width: 70%;
-  height: 160%;
-  background: radial-gradient(ellipse at center, rgba(139,92,246,0.12) 0%, transparent 65%);
-  pointer-events: none;
-}
-.hero-container::after {
-  content: '';
-  position: absolute;
-  bottom: -30%;
-  right: -10%;
-  width: 60%;
-  height: 130%;
-  background: radial-gradient(ellipse at center, rgba(129,140,248,0.10) 0%, transparent 60%);
-  pointer-events: none;
-}
-
 /* Testo: scuro su sfondo tenue per leggibilità */
-.hero-title  { color: var(--text-primary) !important; text-shadow: none !important; font-weight: 800 !important; letter-spacing: -0.5px !important; }
-.hero-subtitle { color: var(--accent) !important; font-weight: 700 !important; font-size: 12px !important; letter-spacing: 1.5px !important; }
+.hero-title  { color: var(--text-primary) !important; text-shadow: none !important; font-weight: 800 !important; letter-spacing: -0.5px !important; margin-bottom: 4px !important; }
+.hero-subtitle { color: var(--text-secondary) !important; font-weight: 700 !important; font-size: 13px !important; letter-spacing: normal !important; text-transform: none !important; opacity: 1 !important; }
 .hero-status   { color: var(--text-secondary) !important; font-weight: 500 !important; }
 .hero-status button { color: var(--accent) !important; font-weight: 600 !important; border-bottom: 1px solid rgba(99,102,241,0.2) !important; background: none !important; }
 .hero-status button:hover { color: var(--text-primary) !important; border-bottom: 1px solid var(--accent) !important; }

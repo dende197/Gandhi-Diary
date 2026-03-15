@@ -648,22 +648,12 @@ window.closeSubject = function() {
         <div class="view">
 
             <!-- HERO GRADIENT -->
-            <div style="position: relative; padding: 28px 24px 24px; margin-bottom: 24px; z-index: 5;">
-                <div style="position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 24px; overflow: hidden;
-                    background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(129,140,248,0.18) 35%, rgba(99,102,241,0.22) 70%, rgba(168,85,247,0.15) 100%);
-                    backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
-                    border: 1px solid rgba(139,92,246,0.12);
-                    box-shadow: 0 4px 24px rgba(139,92,246,0.10), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
-                    z-index: 0; pointer-events: none;">
-                    <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%);"></div>
-                    <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%);"></div>
-                </div>
-
+            <div class="premium-hero">
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: nowrap;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: var(--text-primary);">Planner</h1>
-                            <p style="color: var(--text-secondary); font-size: 13px;">Organizza lo studio e le scadenze</p>
+                            <h1 class="hero-title">Planner</h1>
+                            <p class="hero-subtitle">Organizza lo studio e le scadenze</p>
                         </div>
                         <div style="display: flex; gap: 6px; align-items: center; margin-left: auto;">
                             <!-- AI TUTOR -->
@@ -1067,19 +1057,12 @@ window.closeSubject = function() {
         <div class="view">
 
             <!-- HERO GRADIENT -->
-            <div style="position: relative; padding: 28px 24px 24px; border-radius: 24px; margin-bottom: 24px;
-                background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(129,140,248,0.18) 35%, rgba(99,102,241,0.22) 70%, rgba(168,85,247,0.15) 100%);
-                backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
-                border: 1px solid rgba(139,92,246,0.12);
-                box-shadow: 0 4px 24px rgba(139,92,246,0.10), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);
-                overflow: hidden;">
-                <div style="position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%); pointer-events: none;"></div>
-                <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%); pointer-events: none;"></div>
+            <div class="premium-hero">
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
-                            <h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; color: var(--text-primary);">Media & Analisi</h1>
-                            <p style="color: var(--text-secondary); font-size: 13px;">Monitoraggio del rendimento</p>
+                            <h1 class="hero-title">Media & Analisi</h1>
+                            <p class="hero-subtitle">Monitoraggio del rendimento</p>
                         </div>
                         <button onclick="performSync()" style="width: 40px; height: 40px; border-radius: 20px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer; display:flex; align-items:center; justify-content:center;">
                             <i class="ph-bold ph-arrow-clockwise"></i>

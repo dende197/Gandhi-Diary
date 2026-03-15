@@ -205,7 +205,8 @@
     const _orig = window.loadCircolari;
     window.loadCircolari = async function loadCircolari() {
       try {
-        const res = await fetch(`${window.API_BASE_URL}/api/circolari`);
+        const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : (window.API_BASE_URL || '');
+        const res = await fetch(`${baseUrl}/api/circolari`);
         if (!res.ok) return _orig();
         
         const data = await res.json();
@@ -219,11 +220,11 @@
         
         // Update chirurgico cross-fade
         gsap.to(scroll, { opacity: 0, duration: 0.15, onComplete: () => {
-          scroll.innerHTML = data.circolari.map(c => `
+          scroll.innerHTML = (state.circolari || []).map(c => `
             <div onclick="mostraCircolare('${c.id}')" style="cursor:pointer; padding:18px; border-radius:20px;
                 background:var(--bg-card); border:1px solid rgba(0,0,0,0.06);
                 display:flex; flex-direction:column; gap:8px; min-width: 220px; max-width: 240px; flex-shrink: 0; scroll-snap-align: start;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04); opacity:0; transform:translateX(10px);">
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                     <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
                     ${c.sintesi ? '<i class="ph-fill ph-check-circle" style="color:var(--green); font-size:14px;"></i>' : ''}

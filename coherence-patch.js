@@ -194,7 +194,8 @@
     const _origLoadCircolari = loadCircolari;
     window.loadCircolari = async function loadCircolari() {
       try {
-        const res = await fetch(`${window.API_BASE_URL}/api/circolari`);
+        const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : (window.API_BASE_URL || '');
+        const res = await fetch(`${baseUrl}/api/circolari`);
 
         // Se il server non risponde OK (es. 404), fallback all'originale
         if (!res.ok) {
