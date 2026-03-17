@@ -268,38 +268,27 @@ window.closeSubject = function() {
             const shortName = getSafeUserName();
 
             return `
-            <nav id="top-nav">
-                <div class="nav-content" style="justify-content: space-between;">
-                    ${state.isLoggedIn ? `
-                    <button class="profile-trigger" onclick="navigate('profile')" style="flex-shrink:0; background:none; border:none; cursor:pointer;">
-                        <div class="avatar" style="width:28px;height:28px;border-radius:50%;
-                            background:linear-gradient(135deg, var(--accent), var(--purple));
-                            display:flex;align-items:center;justify-content:center;
-                            color:white;font-size:11px;font-weight:800;flex-shrink:0;">
-                            ${shortName.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="profile-label">
-                            <span class="profile-greeting">${greeting}</span>
-                            <span class="profile-name">${shortName}</span>
-                        </div>
-                    </button>
-                    ` : '<div style="width:40px;"></div>'}
+        <!-- ── TOPBAR ──────────────────────────────────────────── -->
+        <div class="topbar">
+          <div class="logo">G-Connect</div>
 
-                    <div class="nav-links">
-                        <button class="nav-item ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')">
-                            <i class="ph-fill ph-house"></i> Home
-                        </button>
-                        <button class="nav-item ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')">
-                            <i class="ph ph-calendar"></i> Planner
-                        </button>
-                        <button class="nav-item ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')">
-                            <i class="ph ph-chart-line-up"></i> Voti
-                        </button>
-                    </div>
-                    
-                    <div style="width:${state.isLoggedIn ? '80px' : '40px'}; flex-shrink:0;"></div>
-                </div>
-            </nav>`;
+          <div class="nav-pills">
+            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')">Home</button>
+            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')">Planner</button>
+            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')">Voti</button>
+            <button class="nav-pill ${state.view === 'ai_assistant' ? 'active' : ''}" onclick="navigate('ai_assistant')">AI</button>
+            <button class="nav-pill ${state.view === 'mental_health' ? 'active' : ''}" onclick="navigate('mental_health')">Benessere</button>
+          </div>
+
+          <div class="topbar-right">
+            <span class="time-chip" id="live-time">
+                ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
+            </span>
+            ${state.isLoggedIn ? `
+            <div class="user-chip" id="user-chip" onclick="navigate('profile')">${shortName}</div>
+            ` : '<div style="width:40px;"></div>'}
+          </div>
+        </div>`;
         }
         function updatePlanTaskUI(taskId, isPlanned) {
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -535,110 +524,174 @@ window.closeSubject = function() {
             const todayStr = getLocalDateString();
             const plannedIds = state.plannedTasks[todayStr] || [];
             const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
-            const media = calcolaMedia(state.voti);
+            const mediaStr = calcolaMedia(state.voti) || '0';
+            const media = parseFloat(mediaStr);
             
             const h = new Date().getHours();
+            const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+            const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
             let greeting = "Buonasera";
-            if (h < 12) greeting = "Buongiorno";
-            else if (h < 18) greeting = "Buon pomeriggio";
-
-            const stressVal = state.stressLevels?.[todayStr] || '-';
-            const stressNum = (typeof stressVal === 'object' ? stressVal.stress : Number(stressVal)) || 0;
-            const stressColor = stressVal === '-' ? 'var(--text-dim)' : (stressNum <= 3 ? 'var(--green)' : stressNum <= 4 ? 'var(--orange)' : 'var(--red)');
+            if (h < 5) greeting = "Buonanotte";
+            else if (h < 12) greeting = "Buongiorno";
+            else if (h < 17) greeting = "Buon pomeriggio";
 
             const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
+            const shortName = getSafeUserName();
+            const dayOfWeek = days[new Date().getDay()].toUpperCase();
+
+            // Calcolo stats
+            const streak = state.streak || 0;
+            const totalTasks = state.tasks.length;
+            const completedTasks = state.tasks.filter(t => t.done).length;
+            const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks/totalTasks)*100) : 0;
+
+            // Prossima verifica (Cerchiamo il primo task NON completato di tipo VERIFICA o con data futura)
+            let nextExam = null;
+            let daysToExam = 0;
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            
+            const upcomingExams = state.tasks.filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= now)
+                                            .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
+            if (upcomingExams.length > 0) {
+                nextExam = upcomingExams[0];
+                const examDate = new Date(nextExam.due_date);
+                examDate.setHours(0,0,0,0);
+                const diffTime = Math.abs(examDate - now);
+                daysToExam = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            }
+
+            // Ultima Circolare
+            let lastCirc = { data: '--/--/----', titolo: 'Nessuna circolare', numero: '-' };
+            if (state.circolari && state.circolari.length > 0) {
+                lastCirc = state.circolari[0];
+            }
+
+            // Voti recenti
+            const recentGrades = state.voti ? state.voti.slice(-6).reverse() : [];
+            const previousMedia = state.lastMedia || media; // mock previous media for delta if not existing in state
+            const mediaDelta = (media - previousMedia).toFixed(1);
+            const mediaDeltaStr = mediaDelta > 0 ? `+${mediaDelta}` : mediaDelta;
+            const mediaDeltaColor = mediaDelta >= 0 ? 'var(--ing-dot)' : 'var(--lat-dot)';
 
             return `
-        <div class="view">
-            <div class="hero-container">
-                <div style="position: relative; z-index: 1;">
-                    <p class="hero-subtitle">
-                        ${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </p>
-                    <h1 class="hero-title" onclick="navigate('profile')" style="cursor: pointer;">
-                        ${greeting},<br>${getSafeUserName()}
-                    </h1>
-                    <p class="hero-status" style="display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:8px;">
-                        <span style="font-style:italic; opacity:0.8; flex:1;">"${quote}"</span>
-                        <button onclick="refreshDailyQuote(this); event.stopPropagation();" style="background:none; border:none; cursor:pointer; padding:4px;" title="Nuova frase">
-                            <i class="ph-bold ph-arrows-clockwise"></i>
-                        </button>
-                    </p>
-                </div>
+        <!-- ── DASHBOARD ───────────────────────────────────────── -->
+        <div class="dashboard view" style="padding: 20px 28px 48px;">
+
+          <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
+          <div class="row-3">
+
+            <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer;">
+              <div class="greeting-period" id="greeting-period">${dayOfWeek} · ${period}</div>
+              <div class="greeting-text" id="greeting-text">${greeting}, ${shortName}.</div>
+              <div class="greeting-quote">"${quote}"</div>
             </div>
 
-            <!-- METRICS -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
-                <div class="metric-card" onclick="navigate('mental_health')">
-                    <div style="position: relative; z-index: 2;">
-                        <div class="title">MENTAL HEALTH</div>
-                        <div style="color:${stressColor};">
-                            ${typeof stressVal === 'object' ? (stressVal.stress || '-') : stressVal}<span style="font-size:13px; color:var(--text-dim); padding-left:2px;">/5</span>
-                        </div>
-                    </div>
-                    <canvas id="stressWaveCanvas" style="width:100%; height:40px; position:absolute; bottom:0; left:0; pointer-events:none; opacity: 0.6; z-index: 1;"></canvas>
-                </div>
-                <div class="metric-card" onclick="navigate('voti')">
-                    <div>
-                        <div class="title">MEDIA</div>
-                        <div style="color:${media >= 6 ? 'var(--green)' : media >= 5 ? 'var(--orange)' : 'var(--red)'};">
-                            ${media || '-'}
-                        </div>
-                    </div>
-                    <div style="position:absolute; bottom:16px; left:20px; right:20px; height:5px; background:rgba(0,0,0,0.04); border-radius:3px; overflow:hidden;">
-                        <div style="width:${(media / 10) * 100}%; height:100%; border-radius:3px; background:linear-gradient(90deg, var(--blue), var(--purple));"></div>
-                    </div>
-                </div>
+            <div class="card streak-card">
+              <span class="slabel">Streak</span>
+              <div class="streak-num">${streak}</div>
+              <div class="streak-unit">giorni di fila</div>
+              <div class="sdots">
+                ${[...Array(7)].map((_, i) => {
+                    if (i < 6) return `<div class="sdot ${i < streak ? 'on' : ''}"></div>`;
+                    return `<div class="sdot today"></div>`;
+                }).join('')}
+              </div>
             </div>
 
-            <!-- AGGIUNGI COMPITO RAPIDO -->
-            <div style="margin-bottom: 24px;">
-                <button onclick="showQuickAddTaskModal()" style="width:100%; padding:18px; border-radius:18px;
-                    background: var(--bg-card); border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer;
-                    display:flex; align-items:center; justify-content:center; gap:10px;
-                    font-size:15px; font-weight:700; box-shadow: 0 2px 8px rgba(99,102,241,0.06);">
-                    <i class="ph-bold ph-plus-circle" style="font-size:20px; color:var(--accent);"></i>
-                    Aggiungi Compito
-                </button>
+            <div class="card verifica-card" ${nextExam ? `onclick="window.switchPlannerMode('registro'); navigate('planner');" style="cursor:pointer;"` : ''}>
+              <span class="slabel">Prossima verifica</span>
+              ${nextExam ? `
+              <span class="subj-badge" style="background:var(--${getSubjectAbbrev(nextExam.subject).toLowerCase()});color:var(--${getSubjectAbbrev(nextExam.subject).toLowerCase()}-t)">${getSubjectAbbrev(nextExam.subject)}</span>
+              <div class="verifica-title">${nextExam.text}</div>
+              <div class="countdown-row">
+                <span class="countdown-num">${daysToExam}</span>
+                <span class="countdown-unit">${daysToExam === 1 ? 'giorno' : 'giorni'}</span>
+              </div>
+              <div class="mini-bar-wrap">
+                <div class="mini-bar" style="width:${Math.max(10, 100 - (daysToExam * 5))}%; background:var(--${getSubjectAbbrev(nextExam.subject).toLowerCase()}-dot)"></div>
+              </div>` : `
+              <div class="verifica-title" style="color:var(--text-4); margin-top:20px;">Nessuna verifica in programma</div>
+              `}
             </div>
 
-            <!-- BACHECA (CIRCOLARI) -->
+          </div>
+
+          <!-- ROW 2: Media · Attività · Ultima Circolare -->
+          <div class="row-3">
+
+            <div class="card bigstat bs-media" onclick="navigate('voti')" style="cursor:pointer;">
+              <div>
+                <span class="slabel">Media voti</span>
+                <div class="bignum">${media.toFixed(1)}</div>
+                <div class="bigstat-sub">voti registrati: ${state.voti ? state.voti.length : 0}</div>
+              </div>
+              <div class="bigstat-bar"><div class="bigstat-fill" style="width:${(media / 10) * 100}%"></div></div>
+            </div>
+
+            <div class="card bigstat bs-pres" onclick="window.switchPlannerMode('studio'); navigate('planner');" style="cursor:pointer;">
+              <div>
+                <span class="slabel">Attività completate</span>
+                <div class="bignum">${taskCompletionRate}%</div>
+                <div class="bigstat-sub">sul totale caricato</div>
+              </div>
+              <div class="bigstat-bar"><div class="bigstat-fill" style="width:${taskCompletionRate}%"></div></div>
+            </div>
+
+            <div class="card circ-widget" ${state.circolari?.length > 0 ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''}>
+              <span class="slabel">Ultima circolare</span>
+              <div class="circ-date">${lastCirc.data}</div>
+              <div class="circ-title" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${lastCirc.titolo}</div>
+              <span class="circ-new">● ${lastCirc.numero !== '-' ? `N. ${lastCirc.numero}` : 'News'}</span>
+            </div>
+
+          </div>
+
+          <!-- ROW 3: Voti recenti · Task di oggi -->
+          <div class="row-2">
+
             <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                    <h2 style="font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;">
-                        <i class="ph-fill ph-megaphone" style="color:var(--accent-warm);"></i> Circolari
-                    </h2>
-                    <button onclick="refreshCircolari()" style="cursor:pointer; color:var(--accent-warm); font-size:11px; font-weight:800;
-                        padding:6px 14px; border-radius:20px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15);
-                        display:flex; align-items:center; gap:6px;">
-                        <i class="ph-bold ph-arrow-clockwise"></i> AGGIORNA
-                    </button>
+              <div class="section-label">Voti recenti</div>
+              <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''}>
+                ${recentGrades.length > 0 ? recentGrades.map(v => {
+                    const subAbbr = getSubjectAbbrev(v.materia || v.subject).toLowerCase();
+                    const val = parseFloat((v.valore || v.value || "0").toString().replace(',', '.'));
+                    return `
+                    <div class="grade-row">
+                      <span class="g-badge" style="background:var(--${subAbbr});color:var(--${subAbbr}-t)">${subAbbr.toUpperCase()}</span>
+                      <div class="g-bar-wrap"><div class="g-bar" style="width:${(val/10)*100}%;background:var(--${subAbbr}-dot)"></div></div>
+                      <span class="g-val" style="color:var(--${subAbbr}-t)">${val.toFixed(1)}</span>
+                    </div>`;
+                }).join('') : '<div class="empty">Nessun voto caricato</div>'}
+                
+                <div class="gpa-row">
+                  <span class="gpa-lbl">media</span>
+                  <span class="gpa-val">${media.toFixed(1)}</span>
+                  ${mediaDelta !== "0.0" ? `<span class="gpa-delta" style="color:${mediaDeltaColor};">${mediaDelta > 0 ? '↑' : '↓'} ${Math.abs(mediaDelta)}</span>` : ''}
                 </div>
-                <div class="circolari-scroll" style="display: flex; overflow-x: auto; gap: 10px; scroll-snap-type: x mandatory; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-                    ${state.circolari.length === 0 ? `
-                        <div style="min-width: 100%; padding: 30px; text-align: center; background: rgba(0,0,0,0.02); border-radius: 20px; border: 1px dashed rgba(0,0,0,0.1); flex-shrink: 0;">
-                            <div style="color: var(--text-dim); font-size: 13px; margin-bottom: 8px;">Nessuna circolare disponibile al momento</div>
-                            <button onclick="refreshCircolari()" style="background:transparent; border:none; color:var(--accent-warm); font-weight:700; cursor:pointer;">Prova ad aggiornare</button>
-                        </div>
-                    ` : state.circolari.map((c, i) => `
-                        <div onclick="mostraCircolare('${c.id}')" style="cursor:pointer; padding:18px; border-radius:20px;
-                            background:var(--bg-card); border:1px solid rgba(0,0,0,0.06);
-                            display:flex; flex-direction:column; gap:8px; min-width: 220px; max-width: 240px; flex-shrink: 0; scroll-snap-align: start;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
-                                ${c.sintesi ? '<i class="ph-fill ph-check-circle" style="color:var(--green); font-size:14px;"></i>' : ''}
-                            </div>
-                            <div style="font-size:15px; font-weight:700; color:var(--text-primary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
-                                ${c.titolo}
-                            </div>
-                            <div style="font-size:11px; color:var(--text-dim); margin-top:auto; font-weight:600;">
-                                <i class="ph ph-calendar-blank" style="vertical-align: middle; margin-right:4px;"></i> ${c.data}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
+              </div>
             </div>
+
+            <div>
+              <div class="tasks-header">
+                <div class="section-label">Oggi</div>
+                <button class="add-btn" onclick="showQuickAddTaskModal()">+ attività</button>
+              </div>
+              <div class="card" id="task-list">
+                ${plannedTasks.length > 0 ? plannedTasks.map(t => {
+                   const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
+                   return `
+                    <div class="task-row" onclick="toggleTaskFromHome('${t.id}')">
+                      <div class="chk ${t.done ? 'done' : ''}"></div>
+                      <span class="task-badge" style="background:var(--${subAbbr});color:var(--${subAbbr}-t)">${subAbbr.toUpperCase()}</span>
+                      <span class="task-text ${t.done ? 'done' : ''}">${t.text}</span>
+                      <span class="task-time">${t.due_date ? t.due_date.substring(11,16) || '—' : '—'}</span>
+                    </div>`;
+                }).join('') : '<div class="empty">Nessuna attività pianificata per oggi. Goditi il riposo!</div>'}
+              </div>
+            </div>
+
+          </div>
         </div>`;
         }
         function renderPlanner() {
