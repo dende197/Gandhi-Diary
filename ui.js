@@ -3540,3 +3540,630 @@ window.closeSubject = function() {
           });
         })();
 
+
+// ── RENDERING HEART & NAVIGATION SETTINGS ──
+window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'mental_health'];
+
+window.currentViewFromHash = function() {
+    const v = (location.hash || '').replace('#', '').trim();
+    return window.allowedViews.includes(v) ? v : null;
+};
+
+// ── Rendering Deduplication Lock ──
+let _lastRenderTime = 0;
+const RENDER_MIN_GAP = 50; // ms
+let _renderRequest = null;
+let _scheduleRenderTimer = null;
+
+window.render = function() {
+    if (_renderRequest || state.booting) return;
+    const now = performance.now();
+    if (now - _lastRenderTime < RENDER_MIN_GAP) {
+        clearTimeout(_scheduleRenderTimer);
+        _scheduleRenderTimer = setTimeout(() => {
+            _lastRenderTime = performance.now();
+            window._renderCore();
+        }, RENDER_MIN_GAP);
+        return;
+    }
+    _lastRenderTime = now;
+    _renderRequest = requestAnimationFrame(() => {
+        window._renderCore();
+        _renderRequest = null;
+    });
+};
+
+window.scheduleRender = function(delay = 80) {
+    clearTimeout(_scheduleRenderTimer);
+    if (delay === 0) {
+        _scheduleRenderTimer = setTimeout(window.render, 16);
+    } else {
+        _scheduleRenderTimer = setTimeout(window.render, delay);
+    }
+};
+
+window._renderCore = function() {
+    const root = document.getElementById('app');
+    const nav = document.getElementById('nav-container');
+    if (!root || !nav) return;
+
+    if (!state.isLoggedIn) {
+        root.innerHTML = renderLogin();
+        nav.innerHTML = '';
+        return;
+    }
+
+    nav.innerHTML = renderNav();
+
+    let html = '';
+    switch (state.view) {
+        case 'home': html = renderHome(); break;
+        case 'planner': html = renderPlanner(); break;
+        case 'voti': html = renderGradesView(); break;
+        case 'ai_assistant': html = renderAIAssistantView(); break;
+        case 'academic_profile': html = renderAcademicProfile(); break;
+        case 'profile': html = renderProfile(); break;
+        case 'mental_health': html = renderMentalHealthView(); break;
+        default: html = renderHome(); break;
+    }
+
+    root.innerHTML = html;
+    if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
+
+    requestAnimationFrame(() => {
+        if (state.view === 'home') {
+            const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
+            if (typeof initStressWaveFromState === 'function') initStressWaveFromState();
+            if (typeof renderMediaGauge === 'function') renderMediaGauge(mediaVal);
+        }
+        if (state.view === 'planner') {
+            if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+        }
+        if (state.view === 'voti' && typeof initGradesCharts === 'function') {
+            initGradesCharts();
+        }
+
+        if (typeof gsapAnimateView === 'function') {
+            gsapAnimateView();
+        }
+        if (window.removeLoader) window.removeLoader();
+    });
+};
+
+// ── UI HELPERS & PROFILE ──
+window.logout = async function() {
+    if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
+        const currentUserId = getUserId();
+        const currentLsPrefix = getActiveProfileKey();
+
+        if (currentUserId && currentUserId !== 'guest') {
+            localStorage.setItem(`${currentLsPrefix}:planned_tasks`, JSON.stringify(state.plannedTasks || {}));
+            localStorage.setItem(`${currentLsPrefix}:stress_levels`, JSON.stringify(state.stressLevels || {}));
+            localStorage.setItem(`${currentLsPrefix}:planner_updated_at`, new Date().toISOString());
+
+            try {
+                const payload = {
+                    plannedTasks: state.plannedTasks || {},
+                    stressLevels: state.stressLevels || {},
+                    plannedDetails: {},
+                    updatedAt: new Date().toISOString()
+                };
+                await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) { console.warn("Logout save failed", e); }
+        }
+
+        sessionManager.clear();
+        if (typeof supabaseClient !== 'undefined' && supabaseClient.auth) supabaseClient.auth.signOut();
+
+        state.isLoggedIn = false;
+        state.didup.connected = false;
+        state.user = { name: '', class: '' };
+        state.tasks = [];
+        state.voti = [];
+        state.promemoria = [];
+        state.isOffline = false;
+        state.lastSync = null;
+        state.plannedTasks = {};
+        state.stressLevels = {};
+
+        state.view = 'login';
+        if (window._threadsPoller) clearInterval(window._threadsPoller);
+        window.scheduleRender();
+    }
+};
+
+window.saveProfileToServer = async function(profileData) {
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE_URL}/api/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            userId: userId,
+            name: profileData.name || state.user.name,
+            class: profileData.class || state.user.class,
+            specialization: profileData.specialization || state.user.specialization,
+            avatar: null
+        })
+    });
+    return await response.json();
+};
+
+window.saveProfileChanges = async function() {
+    const newNameInput = document.getElementById('edit-user-name');
+    if (!newNameInput) return;
+    const newName = newNameInput.value.trim();
+    if (!newName) return alert("Inserisci almeno il nome");
+    
+    try {
+        if (typeof showBoot === 'function') showBoot("Salvataggio profilo...");
+        await window.saveProfileToServer({ name: newName });
+        state.user.name = newName;
+        localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+        closeModal();
+        window.scheduleRender();
+        if (typeof hideBoot === 'function') hideBoot();
+    } catch (error) {
+        if (typeof hideBoot === 'function') hideBoot();
+        alert("❌ Errore durante il salvataggio: " + error.message);
+    }
+};
+
+// ── QUOTES & MENTAL HEALTH ──
+const MOTIVATIONAL_QUOTES = [
+    "Il successo è la somma di piccoli sforzi, ripetuti giorno dopo giorno.",
+    "There is no tomorrow", "No risk, no story",
+    "Non contare i giorni, fai in modo che i giorni contino.",
+    "La perseveranza batte il talento quando il talento non persevera.",
+    "L'unico modo per fare un ottimo lavoro è amare quello che fai.",
+    "Il fallimento è solo l'opportunità di iniziare di nuovo con più intelligenza.",
+    "Il miglior momento per piantare un albero era 20 anni fa. Il secondo miglior momento è ora.",
+    "Non importa quanto vai piano, l'importante è che non ti fermi.",
+    "La tua unica limitazione è la tua immaginazione.",
+    "Fai oggi ciò che gli altri non faranno, così domani potrai fare ciò che gli altri non potranno.",
+    "La disciplina è fare ciò che va fatto, quando va fatto, anche se non ne hai voglia.",
+    "Ogni grande traguardo inizia con la decisione di provare.",
+    "Le difficoltà spesso preparano le persone comuni a un destino straordinario.",
+    "La motivazione ti dà la spinta, l'abitudine ti fa andare avanti.",
+    "Credi in te stesso e sarai a metà strada.",
+    "Se puoi sognarlo, puoi farlo.",
+    "Il successo non è definitivo, il fallimento non è fatale: ciò che conta è il coraggio di continuare.",
+    "Punta alla luna. Anche se sbagli, atterrerai tra le stelle.",
+    "Non aspettare che le condizioni siano perfette. Inizia dove sei, usa quello che hai, fai quello che puoi.",
+    "La tua mente è la tua risorsa più preziosa. Coltivala.",
+    "Ogni errore è una lezione appresa sul cammino verso il successo.",
+    "La pazienza è amara, ma il suo frutto è dolce.",
+    "Sogna in grande, lavora sodo, rimani umile.",
+    "Non smettere mai di imparare, perché la vita non smette mai di insegnare.",
+    "Il segreto per andare avanti è iniziare.",
+    "La qualità non è un atto, è un'abitudine.",
+    "Sii il cambiamento che vuoi vedere nel mondo.",
+    "Non paragonare il tuo inizio con la metà del film di qualcun altro.",
+    "Colui che sposta una montagna inizia portando via piccole pietre.",
+    "Il futuro appartiene a coloro che credono nella bellezza dei propri sogni.",
+    "La felicità non è qualcosa di pronto all'uso. Viene dalle tue stesse azioni.",
+    "L'ostacolo è la via.", "Rimani concentrato sui tuoi obiettivi, non sulle distrazioni.",
+    "Ogni giorno è una nuova opportunità per migliorare.",
+    "La forza non deriva dalla capacità fisica, ma da una volontà indomita.",
+    "Non fermarti quando sei stanco. Fermati quando hai finito.",
+    "L'eccellenza non si ottiene in un giorno, ma attraverso la costanza.",
+    "Trasforma le tue ferite in saggezza.",
+    "La vita è per il 10% cosa ti accade e per il 90% come reagisci.",
+    "Se vuoi qualcosa che non hai mai avuto, devi fare qualcosa che non hai mai fatto.",
+    "Agisci come se quello che fai facesse la differenza. La fa.",
+    "Non guardare l'orologio; fai quello che fa lui. Continua ad andare.",
+    "La tua velocità non conta finché non smetti di muoverti.",
+    "Il successo è camminare da un fallimento all'altro senza perdere l'entusiasmo.",
+    "Le persone che hanno successo sono quelle che si alzano e cercano le circostanze che vogliono.",
+    "Credere di poterlo fare è già metà del lavoro.",
+    "Non lasciare che ieri occupi troppo di oggi.",
+    "Se non ora, quando?",
+    "L'unico limite ai nostri traguardi di domani saranno i nostri dubbi di oggi.",
+    "Fai del tuo meglio, e il resto verrà da sé.",
+    "Sii orgoglioso di quanto sei arrivato lontano. Abbi fede in quanto lontano puoi andare."
+];
+
+window.getDailyQuote = function() {
+    const todayStr = getLocalDateString();
+    try {
+        const cached = JSON.parse(localStorage.getItem('mh_daily_quote') || '{}');
+        if (cached.quote && cached.date === todayStr) return cached.quote;
+    } catch (e) { }
+    const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+    localStorage.setItem('mh_daily_quote', JSON.stringify({ quote: randomQuote, date: todayStr }));
+    return randomQuote;
+};
+
+window.refreshDailyQuote = async function(btn) {
+    if (btn) {
+        const icon = btn.querySelector('i');
+        if (icon) icon.style.transform = 'rotate(360deg)';
+        btn.style.opacity = '0.3';
+    }
+    const todayStr = getLocalDateString();
+    const currentQuote = window.getDailyQuote();
+    let newQuote = currentQuote;
+    for (let i = 0; i < 5; i++) {
+        newQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+        if (newQuote !== currentQuote) break;
+    }
+    localStorage.setItem('mh_daily_quote', JSON.stringify({ quote: newQuote, date: todayStr }));
+    await new Promise(r => setTimeout(r, 400));
+    if (btn) {
+        const icon = btn.querySelector('i');
+        if (icon) icon.style.transform = 'rotate(0deg)';
+        btn.style.opacity = '0.6';
+    }
+    window.scheduleRender();
+};
+
+window.setStressLevel = function(lv, inModal = false) {
+    const todayStr = getLocalDateString();
+    if (typeof state.stressLevels[todayStr] !== 'object') {
+        state.stressLevels[todayStr] = { stress: lv, updatedAt: new Date().toISOString() };
+    } else {
+        state.stressLevels[todayStr].stress = lv;
+        state.stressLevels[todayStr].updatedAt = new Date().toISOString();
+    }
+    if (typeof saveTasks === 'function') saveTasks();
+    if (inModal) {
+        document.querySelectorAll('.stress-pill').forEach(p => {
+            p.classList.toggle('active', Number(p.getAttribute('data-stress')) === lv);
+        });
+    }
+    if (typeof initStressWaveFromState === 'function') initStressWaveFromState();
+};
+
+window.refreshCircolari = function() {
+    if (typeof showToast === 'function') showToast('Aggiornamento circolari...');
+    if (typeof loadCircolari === 'function') loadCircolari();
+};
+
+window.requestCircularSynthesis = async function(id, link) {
+    const btn = document.getElementById(`btn-sintesi-${id}`);
+    const box = document.getElementById(`sintesi-placeholder-${id}`);
+    if (btn) btn.style.display = 'none';
+    if (box) {
+        box.innerHTML = `
+            <div style="margin-top:10px;">
+                <p id="sintesi-progress-label-${id}" style="font-size:12px; color:var(--accent-warm); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Inizializzazione...</p>
+                <div style="width:100%; height:8px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent-warm), #FFD60A); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(255,159,10,0.3);"></div>
+                </div>
+            </div>`;
+    }
+    const label = document.getElementById(`sintesi-progress-label-${id}`);
+    const bar = document.getElementById(`sintesi-progress-bar-${id}`);
+    let progress = 0;
+    const stages = [
+        { limit: 25, text: "🔍 Scansione documento...", duration: 2000 },
+        { limit: 50, text: "📥 Download PDF...", duration: 3000 },
+        { limit: 75, text: "📄 Estrazione testo...", duration: 4000 },
+        { limit: 90, text: "🧠 Sintesi AI in corso...", duration: 6000 }
+    ];
+    let currentStage = 0;
+    const interval = setInterval(() => {
+        if (progress >= 90 || !bar) { clearInterval(interval); return; }
+        progress += (90 / 150);
+        bar.style.width = progress + '%';
+        if (currentStage < stages.length && progress > stages[currentStage].limit) {
+            if (label) label.innerText = stages[currentStage].text;
+            currentStage++;
+        }
+    }, 100);
+    if (typeof loadCircolareSintesi === 'function') await loadCircolareSintesi(id, link);
+    clearInterval(interval);
+};
+
+// ── PLANNER & QUESTS ──
+window.refreshPlanWeekModalContent = function() {
+    const contentEl = document.getElementById('plan-week-modal-content');
+    if (!contentEl) return;
+    const todayStr = getLocalDateString();
+    const todayDate = new Date();
+    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    const next7Days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(todayDate);
+        d.setDate(todayDate.getDate() + i);
+        const ds = getLocalDateString(d);
+        next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
+    }
+    contentEl.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin:0;">Pianifica Settimana</h2>
+            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
+            <div style="background: rgba(255,255,255,0.08); padding: 16px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 4px;">
+                <div style="font-size: 11px; font-weight: 800; color: var(--blue); text-transform: uppercase; margin-bottom: 8px;">Crea Quest Settimanale</div>
+                <div style="display: flex; gap: 8px;">
+                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 42px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 12px;">
+                    <select id="quest-date-select" style="width: 100px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 8px; font-weight:700;">
+                        ${next7Days.map(d => `<option value="${d.dateStr}">${d.label} ${d.dayNum}</option>`).join('')}
+                    </select>
+                    <button onclick="addCustomQuestFromInput()" style="width: 42px; height: 42px; background: var(--blue); color:white; border:none; border-radius: 12px; cursor:pointer;">
+                        <i class="ph-bold ph-plus"></i>
+                    </button>
+                </div>
+            </div>
+            ${state.tasks.filter(t => !t.done).map(t => {
+                const subjectColor = getSubjectColor(t.subject);
+                return `
+                <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-weight: 700; color: white; margin-bottom: 4px; text-align:left;">${t.text}</div>
+                    <div style="font-size: 11px; color: ${subjectColor}; font-weight:700; text-transform:uppercase; margin-bottom: 12px; text-align:left;">${t.subject}</div>
+                    <div style="display: flex; justify-content: space-between; gap: 4px;">
+                        ${next7Days.map(day => {
+                            const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
+                            const isToday = day.dateStr === todayStr;
+                            return `
+                            <div data-task-id="${t.id}" data-date="${day.dateStr}" 
+                                onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
+                                style="flex: 1; text-align:center; padding: 10px 4px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+                                background: ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.08)'};
+                                color: ${isPlanned ? 'black' : 'white'};
+                                border: ${isToday ? '2px solid var(--blue)' : '1px solid rgba(255,255,255,0.1)'};">
+                                <div style="font-size: 10px; opacity: 0.7;">${day.label}</div>
+                                <div style="font-weight: 700; font-size: 14px;">${day.dayNum}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+        <button onclick="closeModal()" class="btn-primary" style="margin-top: 20px;">Fatto</button>`;
+};
+
+window.updateWeekDayButton = function(taskId, dateStr) {
+    const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
+    document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
+        if (isPlanned) {
+            btn.style.background = 'var(--green)';
+            btn.style.borderColor = 'var(--green)';
+            btn.style.color = 'black';
+        } else {
+            btn.style.background = 'rgba(255,255,255,0.08)';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.color = 'white';
+        }
+    });
+};
+
+window.addCustomQuestFromInput = function() {
+    const textInput = document.getElementById('quest-text-input');
+    const dateSelect = document.getElementById('quest-date-select');
+    if (!textInput || !dateSelect) return;
+    const text = textInput.value.trim();
+    const dateStr = dateSelect.value;
+    if (!text) return showToast('Inserisci un compito!');
+    const quest = { id: 'quest-' + Date.now(), text, subject: 'QUEST', due_date: dateStr, done: false };
+    state.tasks.push(quest);
+    if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+    state.plannedTasks[dateStr].push(quest.id);
+    if (typeof saveTasks === 'function') saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
+    showToast('Compito aggiunto!');
+    textInput.value = '';
+    window.refreshPlanWeekModalContent();
+    if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
+};
+
+window.selectDay = function(day) {
+    state.selectedDay = day;
+    window.scheduleRender();
+};
+
+window.getVotiData = function() {
+    return (state.voti && state.voti.length > 0) ? state.voti : ((state.grades && state.grades.length > 0) ? state.grades : []);
+};
+
+window.getAllSubjects = function() {
+    const fromGrades = window.getVotiData().map(v => v.materia || v.subject).filter(Boolean);
+    const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
+    const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
+    const all = [...new Set([...fromGrades, ...fromTasks, ...fromExams])];
+    return all.length === 0 ? ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'] : all.sort();
+};
+
+window.submitExamForm = function() {
+    let subject = document.getElementById('examSubject').value;
+    if (subject === '__custom') {
+        subject = (document.getElementById('examCustomSubject').value || '').trim();
+        if (!subject) return showToast('Inserisci il nome della materia', '#ff453a');
+    }
+    const type = document.getElementById('examType').value;
+    const date = document.getElementById('examDate').value;
+    const topic = (document.getElementById('examTopic').value || '').trim();
+    if (!date) return showToast('Seleziona una data', '#ff453a');
+    state.exams.push({ subject, type, date, topic });
+    const examTask = { id: 'exam_' + Date.now(), text: `${type}: ${topic || subject}`, subject, due_date: date, done: false, isExam: true };
+    state.tasks.push(examTask);
+    if (typeof saveTasks === 'function') saveTasks();
+    closeModal();
+    window.scheduleRender();
+    showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
+};
+
+window.removeExam = function(index) {
+    state.exams.splice(index, 1);
+    if (typeof saveTasks === 'function') saveTasks();
+    window.scheduleRender();
+};
+
+window.submitBacklogForm = function() {
+    const subject = document.getElementById('backlogSubject').value;
+    const topic = (document.getElementById('backlogTopic').value || '').trim();
+    if (!topic) return showToast('Inserisci l\'argomento da recuperare', '#ff453a');
+    state.backlog.push({ subject, topic });
+    if (typeof saveTasks === 'function') saveTasks();
+    closeModal();
+    window.scheduleRender();
+    showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
+};
+
+window.removeBacklog = function(index) {
+    state.backlog.splice(index, 1);
+    if (typeof saveTasks === 'function') saveTasks();
+    window.scheduleRender();
+};
+
+// ── AI ASSISTANT HELPERS ──
+window.sendAIChatQuick = function(text) {
+    state.aiChatInputValue = '';
+    const input = document.getElementById('aiChatInput');
+    if (input) input.value = text;
+    window.sendAIChat();
+};
+
+window.clearAIChat = function() {
+    state.aiChatHistory = [];
+    localStorage.setItem(lsKey('ai_chat'), '[]');
+    state.aiResponse = '';
+    window.scheduleRender();
+};
+
+window.deleteAIChatMessage = function(index) {
+    if (!confirm('Eliminare questo messaggio?')) return;
+    state.aiChatHistory.splice(index, 1);
+    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+    window.scheduleRender();
+};
+
+window.stopVoiceInput = function() {
+    if (window.recognition) { window.recognition.stop(); window.recognition = null; }
+    const btn = document.getElementById('aiMicBtn');
+    if (btn) { btn.classList.remove('mic-active'); btn.innerHTML = '<i class="ph ph-microphone"></i>'; }
+};
+
+window.sendAIChat = async function() {
+    window.stopVoiceInput();
+    const input = document.getElementById('aiChatInput');
+    const text = (input?.value || '').trim();
+    if (!text) return;
+    state.aiChatInputValue = '';
+    const nowTs = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    state.aiChatHistory.push({ role: 'user', text, ts: nowTs });
+    if (input) { input.value = ''; input.style.height = 'auto'; }
+    window.scheduleRender();
+    setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'smooth' }); }, 100);
+
+    const today = new Date();
+    const todayStr = getLocalDateString();
+    const hour = today.getHours();
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+
+    const argoTasks = (state.tasks || []).filter(t => {
+        if (t.done || t.id.startsWith('ai_') || t.subject === 'QUEST') return false;
+        if (!t.due_date) return true;
+        if (hour >= 14 && t.due_date <= todayStr) return false;
+        return true;
+    }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
+
+    const thisWeekTasks = [], laterTasks = [];
+    argoTasks.forEach(t => {
+        const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
+        const dueDateStr = dueDate ? dueDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
+        const entry = `- [${t.subject}] ${t.text} → consegna: ${dueDateStr}`;
+        (dueDate && dueDate <= endOfWeek) ? thisWeekTasks.push(entry) : laterTasks.push(entry);
+    });
+
+    const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
+    const stressToday = state.stressLevels?.[todayStr] || null;
+    const stressHistory = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const ds = getLocalDateString(d);
+        const v = state.stressLevels?.[ds];
+        if (v && typeof v === 'object') stressHistory.push({ date: ds, ...v });
+    }
+    const avgStress = stressHistory.length ? (stressHistory.reduce((s, h) => s + (h.stress || 3), 0) / stressHistory.length).toFixed(1) : null;
+    const stressBlock = stressToday ? `🧠 BENESSERE STUDENTE:\n- Stress: ${stressToday.stress || '?'}/5\n- Stanchezza mentale: ${stressToday.fatigue || '?'}/5\n- Ore di sonno: ${stressToday.sleep || '?'}h\n- Media stress ultimi ${stressHistory.length} giorni: ${avgStress || 'N/D'}/5` : 'BENESSERE STUDENTE: nessun dato inserito oggi.';
+    const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).map(([date, ids]) => {
+        const dayTasks = ids.map(id => { const t = (state.tasks || []).find(x => x.id === id); return t ? `[${t.subject}] ${t.text}` : null; }).filter(Boolean);
+        return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
+    }).filter(Boolean).join('\n');
+
+    const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n${stressBlock}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. Tabella markdown per piani studio | Orario | Attività | Note | con grassetto **GIORNO YYYY-MM-DD**.`;
+
+    const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
+    state.aiChatHistory.forEach(msg => contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contents }) });
+        const data = await response.json();
+        if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            const hasPlan = /\b\d{1,2}[:.]\d{2}\b/.test(aiText) && /lune|mart|merc|giov|vend|sab|dom|\d{4}-\d{2}-\d{2}/i.test(aiText);
+            state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
+        } else {
+            state.aiChatHistory.push({ role: 'ai', text: '⚠️ IA momentaneamente non disponibile.', ts: nowTs });
+        }
+    } catch (e) { state.aiChatHistory.push({ role: 'ai', text: '⚠️ Errore di connessione.', ts: nowTs }); }
+
+    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+    window.scheduleRender();
+    setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight; }, 50);
+};
+
+window.applyAIPlanFromChat = function(msgIndex) {
+    const msg = state.aiChatHistory[msgIndex];
+    if (!msg || msg.role !== 'ai') return;
+    const todayStr = getLocalDateString();
+    let currentDate = todayStr, addedCount = 0;
+    const DAY_IT = { lune: 1, lunedì: 1, mart: 2, martedì: 2, merc: 3, mercoledì: 3, giov: 4, giovedì: 4, vend: 5, venerdì: 5, sab: 6, sabato: 6, dom: 0, domenica: 0 };
+
+    msg.text.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const cleanLine = trimmed.replace(/[#*_\[\]]/g, '').trim().toLowerCase();
+        
+        // Check for date/day header
+        let foundDate = null;
+        const isoMatch = trimmed.match(/(\d{4}-\d{2}-\d{2})/);
+        if (isoMatch) foundDate = isoMatch[1];
+        else {
+            for (const [key, dNum] of Object.entries(DAY_IT)) {
+                if (cleanLine.includes(key) && !/\d{1,2}[:.]\d{2}/.test(cleanLine)) {
+                    const d = new Date(); d.setDate(d.getDate() + (dNum - d.getDay()));
+                    foundDate = getLocalDateString(d); break;
+                }
+            }
+        }
+        if (foundDate) { currentDate = foundDate; return; }
+
+        const timeMatch = trimmed.match(/(\d{1,2})[.:](\d{2})/);
+        if (!timeMatch) return;
+        const timeStr = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+        let taskText = trimmed.replace(/^[#*\->\s•·]+/, '').replace(/\d{1,2}[.:]\d{2}(\s*[-–—]\s*\d{1,2}[.:]\d{2})?/, '').replace(/^[:\-–—\s]+/, '').trim();
+        if (/pausa|break|riposo/i.test(taskText) || taskText.length < 2) return;
+        
+        let subject = 'Studio', topic = taskText;
+        const bracketMatch = taskText.match(/^\[?([^\]\-–—:]+)[\]\-–—:\s]+(.+)$/);
+        if (bracketMatch) { subject = bracketMatch[1].trim(); topic = bracketMatch[2].trim(); }
+        subject = subject.replace(/[^\p{L}\s]/gu, '').trim();
+        subject = subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase();
+
+        const newTask = { id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5), subject, text: `[AI] ${timeStr} — ${topic}`, due_date: currentDate, done: false, created_at: new Date().toISOString() };
+        state.tasks.push(newTask);
+        if (!state.plannedTasks[currentDate]) state.plannedTasks[currentDate] = [];
+        state.plannedTasks[currentDate].push(newTask.id);
+        addedCount++;
+    });
+
+    if (addedCount > 0) {
+        if (typeof saveTasks === 'function') saveTasks();
+        if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(300);
+        showToast(`✅ ${addedCount} sessioni aggiunte al Planner!`, 'var(--green)');
+        setTimeout(() => window.navigate('planner'), 900);
+    } else showToast('⚠️ Nessuna sessione valida trovata nel messaggio.', 'var(--orange)');
+};
+
+window.saveGeminiKey = function() {
+    const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
+    if (val) { state.geminiKey = val; localStorage.setItem('g_diary_gemini_key', val); showToast('Chiave salvata! 🛡️'); window.scheduleRender(); }
+};

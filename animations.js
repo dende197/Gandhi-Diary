@@ -2,6 +2,44 @@
 // GSAP ANIMATION SYSTEM — Premium Transitions
 // ========================================
 
+// ── 1. PLUGIN REGISTRATION ──
+if (typeof gsap !== 'undefined') {
+    gsap.registerPlugin(ScrollTrigger, Observer, Flip, Draggable, TextPlugin, CustomEase, EasePack);
+}
+
+// ── 2. NAVIGATION & TRANSITIONS ──
+window.navigate = function(v) {
+    if (typeof allowedViews !== 'undefined' && !allowedViews.includes(v)) v = 'home';
+    if (v === state.view) return; // Already on this view
+
+    const targetHash = '#' + v;
+    if (window.location.hash !== targetHash) {
+        window.history.pushState(null, '', targetHash);
+    }
+
+    // GSAP exit animation before switching
+    const root = document.getElementById('app');
+    const currentView = root ? root.querySelector('.view') : null;
+    if (currentView && typeof gsap !== 'undefined') {
+        gsap.to(currentView, {
+            opacity: 0, y: -12, scale: 0.98,
+            duration: 0.2, ease: 'power2.in',
+            onComplete: () => {
+                state.view = v;
+                if (typeof saveNavigationState === 'function') saveNavigationState();
+                window.scheduleRender();
+                window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+        });
+    } else {
+        state.view = v;
+        if (typeof saveNavigationState === 'function') saveNavigationState();
+        window.scheduleRender();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+}
+
+
 function gsapAnimateView() {
     const root = document.getElementById('app');
     if (!root) return;

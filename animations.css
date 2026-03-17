@@ -1,0 +1,151 @@
+/* ============================================
+   G-CONNECT — ANIMATION SYSTEM
+   Centralized Keyframes & Motion Classes
+   ============================================ */
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes liquidIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.98) translateY(6px);
+        filter: blur(6px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes micPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes mhPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes msg-appear {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes progress-anim {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+@keyframes heroTitleIn {
+  from { opacity: 0; transform: translateY(8px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+@keyframes heroSubIn {
+  from { opacity: 0; transform: translateY(6px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+@keyframes heroStatusIn {
+  from { opacity: 0; transform: translateY(4px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+@keyframes sectionIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px) translateZ(0);
+    filter: blur(2px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) translateZ(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateZ(0) translateY(4px); }
+  to   { opacity: 1; transform: translateZ(0) translateY(0); }
+}
+
+@keyframes toastPop {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.92); }
+  70%  { transform: translateX(-50%) translateY(-3px) scale(1.02); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* Base Motion Classes */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.section-animate {
+    animation: sectionIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mic-active {
+    animation: micPulse 1.5s infinite;
+}
+
+.msg-appear {
+    animation: msg-appear 0.25s ease forwards;
+}

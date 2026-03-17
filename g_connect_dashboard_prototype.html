@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G-Connect — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F6F5F3;
+  --card: #ffffff;
+  --text: #141414;
+  --text-2: #3A3834;
+  --text-3: #908C86;
+  --text-4: #BCB8B2;
+  --border: #ECEAE6;
+  --nav-bg: #EDECEA;
+  --font: 'Inter', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --r: 18px;
+
+  --mat: #E8F4FD; --mat-t: #1A5F8A; --mat-dot: #3B9DD4;
+  --fis: #FDF0E8; --fis-t: #8A4A1A; --fis-dot: #D4843B;
+  --ing: #E8FDF2; --ing-t: #1A6B3A; --ing-dot: #2DB86A;
+  --ita: #F5E8FD; --ita-t: #5A1A8A; --ita-dot: #9B4DD4;
+  --sto: #FDF5E8; --sto-t: #7A5010; --sto-dot: #C8921E;
+  --lat: #FDE8E8; --lat-t: #8A1A1A; --lat-dot: #D44B4B;
+  --sci: #EAFDF5; --sci-t: #0F5E40; --sci-dot: #1DB87A;
+  --fil: #F0EEF8; --fil-t: #3A3070; --fil-dot: #7060C8;
+  --dev: #E8EEF7; --dev-t: #2A3F6A; --dev-dot: #5070B8;
+}
+
+html, body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOPBAR ─────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 54px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+}
+
+.logo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  flex: 1;
+}
+
+.nav-pills {
+  display: flex;
+  align-items: center;
+  background: var(--nav-bg);
+  border-radius: 13px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.nav-pill {
+  padding: 5px 15px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.nav-pill:hover { color: var(--text-2); }
+.nav-pill.active {
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.time-chip {
+  background: var(--nav-bg);
+  border-radius: 100px;
+  padding: 4px 11px;
+  font-size: 10px;
+  color: var(--text-3);
+  font-family: var(--mono);
+}
+
+.user-chip {
+  padding: 5px 13px;
+  background: var(--card);
+  border-radius: 100px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── DASHBOARD ───────────────────────────────────── */
+.dashboard {
+  padding: 20px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── GRIDS ───────────────────────────────────────── */
+.row-3 {
+  display: grid;
+  grid-template-columns: 1fr 130px 190px;
+  gap: 14px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ── CARD ────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+
+/* ── LABELS ──────────────────────────────────────── */
+.slabel {
+  font-size: 9px;
+  color: var(--text-4);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.section-label {
+  font-size: 9px;
+  color: var(--text-4);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  margin-bottom: 8px;
+}
+
+/* ── GREETING ────────────────────────────────────── */
+.greeting-card {
+  background: #141414 !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.13) !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.greeting-period {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #444;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.greeting-text {
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.greeting-quote {
+  font-size: 11px;
+  color: #555;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ── STREAK ──────────────────────────────────────── */
+.streak-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.streak-num {
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.streak-unit {
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+.sdots {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.sdot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #F0EDE8;
+}
+.sdot.on { background: #141414; }
+.sdot.today { background: #2DB86A; }
+
+/* ── VERIFICA ────────────────────────────────────── */
+.verifica-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.subj-badge {
+  display: inline-flex;
+  border-radius: 7px;
+  padding: 3px 9px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  margin-bottom: 7px;
+  align-self: flex-start;
+}
+
+.verifica-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+}
+
+.countdown-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.countdown-num {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.countdown-unit {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.mini-bar-wrap {
+  height: 3px;
+  background: #F0EDE8;
+  border-radius: 100px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.mini-bar {
+  height: 100%;
+  border-radius: 100px;
+  background: var(--mat-dot);
+}
+
+/* ── BIG STATS ───────────────────────────────────── */
+.bigstat {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.bignum {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.bigstat-sub {
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+.bigstat-bar {
+  height: 3px;
+  border-radius: 100px;
+  margin-top: 14px;
+  background: #F0EDE8;
+  overflow: hidden;
+}
+
+.bigstat-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+}
+
+.bs-media .bignum { color: #1A5F8A; }
+.bs-media .bigstat-sub { color: #5A9EC0; }
+.bs-media .bigstat-fill { background: #3B9DD4; }
+
+.bs-pres .bignum { color: #1A6B3A; }
+.bs-pres .bigstat-sub { color: #4A9C6A; }
+.bs-pres .bigstat-fill { background: #2DB86A; }
+
+/* ── CIRCOLARE WIDGET ────────────────────────────── */
+.circ-widget {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.circ-date {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-4);
+  margin-bottom: 6px;
+}
+
+.circ-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+
+.circ-new {
+  display: inline-flex;
+  margin-top: 12px;
+  background: #141414;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 9px;
+  border-radius: 100px;
+  padding: 3px 9px;
+  letter-spacing: 0.05em;
+  align-self: flex-start;
+}
+
+/* ── GRADE LIST ──────────────────────────────────── */
+.grade-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  border-bottom: 1px solid #F4F2EE;
+}
+.grade-row:last-child { border-bottom: none; }
+
+.g-badge {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 3px 6px;
+  flex-shrink: 0;
+  width: 34px;
+  text-align: center;
+}
+
+.g-bar-wrap {
+  flex: 1;
+  height: 3px;
+  background: #F0EDE8;
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.g-bar {
+  height: 100%;
+  border-radius: 100px;
+}
+
+.g-val {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  width: 26px;
+  text-align: right;
+}
+
+.gpa-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 10px;
+  margin-top: 2px;
+  border-top: 1px solid #F0EDE8;
+}
+
+.gpa-lbl {
+  font-size: 10px;
+  color: var(--text-4);
+  font-family: var(--mono);
+}
+
+.gpa-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.04em;
+}
+
+.gpa-delta {
+  font-size: 11px;
+  color: #2DB86A;
+  margin-left: auto;
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+/* ── TASKS ───────────────────────────────────────── */
+.tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.add-btn {
+  background: #141414;
+  border: none;
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-family: var(--font);
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.add-btn:hover { opacity: 0.82; }
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  border-bottom: 1px solid #F4F2EE;
+  cursor: pointer;
+  user-select: none;
+}
+.task-row:last-child { border-bottom: none; }
+
+.chk {
+  width: 17px; height: 17px;
+  border: 1.5px solid #DEDAD4;
+  border-radius: 5px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  background: var(--card);
+  position: relative;
+}
+
+.chk.done {
+  background: #141414;
+  border-color: #141414;
+}
+
+.chk.done::after {
+  content: '';
+  width: 7px; height: 4px;
+  border-left: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
+  transform: rotate(-45deg) translate(0,-1px);
+  display: block;
+}
+
+.task-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.task-text {
+  font-size: 12.5px;
+  color: var(--text-2);
+  flex: 1;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+
+.task-text.done {
+  color: var(--text-4);
+  text-decoration: line-through;
+}
+
+.task-time {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+/* ── EMPTY ───────────────────────────────────────── */
+.empty {
+  font-size: 12.5px;
+  color: var(--text-4);
+  padding: 16px 0;
+  text-align: center;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D0CCC6; border-radius: 100px; }
+* { scrollbar-width: thin; scrollbar-color: #D0CCC6 transparent; }
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 960px) {
+  .row-3 { grid-template-columns: 1fr 1fr; }
+  .row-3 > *:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .row-3, .row-2 { grid-template-columns: 1fr; }
+  .dashboard { padding: 14px 14px 40px; }
+  .topbar { padding: 0 14px; }
+  .time-chip { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ──────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="logo">G-Connect</div>
+
+  <div class="nav-pills">
+    <button class="nav-pill active">Home</button>
+    <button class="nav-pill">Planner</button>
+    <button class="nav-pill">Voti</button>
+    <button class="nav-pill">AI</button>
+    <button class="nav-pill">Benessere</button>
+  </div>
+
+  <div class="topbar-right">
+    <span class="time-chip" id="live-time">--:--</span>
+    <div class="user-chip" id="user-chip">Andrea</div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ───────────────────────────────────────── -->
+<div class="dashboard">
+
+  <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
+  <div class="row-3">
+
+    <div class="card greeting-card">
+      <div class="greeting-period" id="greeting-period">LUNEDÌ · MATTINA</div>
+      <div class="greeting-text" id="greeting-text">Buongiorno, Andrea.</div>
+      <div class="greeting-quote">"La disciplina è il ponte tra gli obiettivi e i risultati."</div>
+    </div>
+
+    <div class="card streak-card">
+      <span class="slabel">Streak</span>
+      <div class="streak-num">7</div>
+      <div class="streak-unit">giorni di fila</div>
+      <div class="sdots">
+        <div class="sdot on"></div>
+        <div class="sdot on"></div>
+        <div class="sdot on"></div>
+        <div class="sdot on"></div>
+        <div class="sdot on"></div>
+        <div class="sdot on"></div>
+        <div class="sdot today"></div>
+      </div>
+    </div>
+
+    <div class="card verifica-card">
+      <span class="slabel">Prossima verifica</span>
+      <span class="subj-badge" style="background:var(--mat);color:var(--mat-t)">MAT</span>
+      <div class="verifica-title">Derivate e studio di funzione</div>
+      <div class="countdown-row">
+        <span class="countdown-num">3</span>
+        <span class="countdown-unit">giorni</span>
+      </div>
+      <div class="mini-bar-wrap">
+        <div class="mini-bar" style="width:40%"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: Media · Attività · Ultima Circolare -->
+  <div class="row-3">
+
+    <div class="card bigstat bs-media">
+      <div>
+        <span class="slabel">Media voti</span>
+        <div class="bignum">7.8</div>
+        <div class="bigstat-sub">voti registrati: 18</div>
+      </div>
+      <div class="bigstat-bar"><div class="bigstat-fill" style="width:78%"></div></div>
+    </div>
+
+    <div class="card bigstat bs-pres">
+      <div>
+        <span class="slabel">Attività completate</span>
+        <div class="bignum">94%</div>
+        <div class="bigstat-sub">ultimi 30 giorni</div>
+      </div>
+      <div class="bigstat-bar"><div class="bigstat-fill" style="width:94%"></div></div>
+    </div>
+
+    <div class="card circ-widget">
+      <span class="slabel">Ultima circolare</span>
+      <div class="circ-date">17/03/2026</div>
+      <div class="circ-title">Assemblea d'istituto — aula magna ore 10:00</div>
+      <span class="circ-new">● nuova</span>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: Voti recenti · Task di oggi -->
+  <div class="row-2">
+
+    <div>
+      <div class="section-label">Voti recenti</div>
+      <div class="card">
+        <div class="grade-row">
+          <span class="g-badge" style="background:var(--mat);color:var(--mat-t)">MAT</span>
+          <div class="g-bar-wrap"><div class="g-bar" style="width:85%;background:var(--mat-dot)"></div></div>
+          <span class="g-val" style="color:var(--mat-t)">8.5</span>
+        </div>
+        <div class="grade-row">
+          <span class="g-badge" style="background:var(--fis);color:var(--fis-t)">FIS</span>
+          <div class="g-bar-wrap"><div class="g-bar" style="width:80%;background:var(--fis-dot)"></div></div>
+          <span class="g-val" style="color:var(--fis-t)">8.0</span>
+        </div>
+        <div class="grade-row">
+          <span class="g-badge" style="background:var(--ing);color:var(--ing-t)">ING</span>
+          <div class="g-bar-wrap"><div class="g-bar" style="width:90%;background:var(--ing-dot)"></div></div>
+          <span class="g-val" style="color:var(--ing-t)">9.0</span>
+        </div>
+        <div class="grade-row">
+          <span class="g-badge" style="background:var(--ita);color:var(--ita-t)">ITA</span>
+          <div class="g-bar-wrap"><div class="g-bar" style="width:70%;background:var(--ita-dot)"></div></div>
+          <span class="g-val" style="color:var(--ita-t)">7.0</span>
+        </div>
+        <div class="grade-row">
+          <span class="g-badge" style="background:var(--sto);color:var(--sto-t)">STO</span>
+          <div class="g-bar-wrap"><div class="g-bar" style="width:75%;background:var(--sto-dot)"></div></div>
+          <span class="g-val" style="color:var(--sto-t)">7.5</span>
+        </div>
+        <div class="grade-row">
+          <span class="g-badge" style="background:var(--lat);color:var(--lat-t)">LAT</span>
+          <div class="g-bar-wrap"><div class="g-bar" style="width:60%;background:var(--lat-dot)"></div></div>
+          <span class="g-val" style="color:var(--lat-t)">6.0</span>
+        </div>
+        <div class="gpa-row">
+          <span class="gpa-lbl">media</span>
+          <span class="gpa-val">7.8</span>
+          <span class="gpa-delta">↑ +0.3</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="tasks-header">
+        <div class="section-label">Oggi</div>
+        <button class="add-btn" onclick="addTask()">+ attività</button>
+      </div>
+      <div class="card" id="task-list">
+        <div class="task-row" onclick="toggle(this)">
+          <div class="chk done"></div>
+          <span class="task-badge" style="background:var(--mat);color:var(--mat-t)">MAT</span>
+          <span class="task-text done">Esercizi pag. 142 — funzioni derivabili</span>
+          <span class="task-time">08:00</span>
+        </div>
+        <div class="task-row" onclick="toggle(this)">
+          <div class="chk"></div>
+          <span class="task-badge" style="background:var(--fis);color:var(--fis-t)">FIS</span>
+          <span class="task-text">Studiare cap. 8 — campo elettrico</span>
+          <span class="task-time">14:00</span>
+        </div>
+        <div class="task-row" onclick="toggle(this)">
+          <div class="chk"></div>
+          <span class="task-badge" style="background:var(--ing);color:var(--ing-t)">ING</span>
+          <span class="task-text">Speaking exercise — unit 5</span>
+          <span class="task-time">16:30</span>
+        </div>
+        <div class="task-row" onclick="toggle(this)">
+          <div class="chk"></div>
+          <span class="task-badge" style="background:var(--lat);color:var(--lat-t)">LAT</span>
+          <span class="task-text">Versione Cicerone — De Amicitia pag. 88</span>
+          <span class="task-time">18:00</span>
+        </div>
+        <div class="task-row" onclick="toggle(this)">
+          <div class="chk"></div>
+          <span class="task-badge" style="background:var(--dev);color:var(--dev-t)">DEV</span>
+          <span class="task-text">Fix boot stutter — G-Connect v2</span>
+          <span class="task-time">21:00</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Greeting + clock ─────────────────────────────
+function update() {
+  const now = new Date();
+  const h = now.getHours();
+  const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+  const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
+  const greet = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 17 ? 'Buon pomeriggio' : 'Buona sera';
+  const pad = n => String(n).padStart(2, '0');
+
+  document.getElementById('greeting-period').textContent =
+    days[now.getDay()].toUpperCase() + ' · ' + period;
+  document.getElementById('greeting-text').textContent = greet + ', Andrea.';
+  document.getElementById('live-time').textContent =
+    pad(h) + ':' + pad(now.getMinutes());
+}
+update();
+setInterval(update, 30000);
+
+// ── Toggle task ───────────────────────────────────
+function toggle(row) {
+  const chk = row.querySelector('.chk');
+  const txt = row.querySelector('.task-text');
+  chk.classList.toggle('done');
+  txt.classList.toggle('done');
+}
+
+// ── Add task (placeholder) ────────────────────────
+function addTask() {
+  const list = document.getElementById('task-list');
+  const subjects = [
+    { key:'mat', label:'MAT' },
+    { key:'sto', label:'STO' },
+    { key:'sci', label:'SCI' },
+    { key:'fil', label:'FIL' },
+  ];
+  const s = subjects[Math.floor(Math.random() * subjects.length)];
+  const texts = [
+    'Ripassare gli appunti',
+    'Leggere il capitolo',
+    'Esercizi sul libro',
+    'Rivedere la verifica',
+  ];
+  const t = texts[Math.floor(Math.random() * texts.length)];
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.onclick = () => toggle(row);
+  row.innerHTML = `
+    <div class="chk"></div>
+    <span class="task-badge" style="background:var(--${s.key});color:var(--${s.key}-t)">${s.label}</span>
+    <span class="task-text">${t}</span>
+    <span class="task-time">—</span>
+  `;
+  list.appendChild(row);
+}
+</script>
+</body>
+</html>
