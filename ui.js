@@ -371,9 +371,14 @@ window.closeSubject = function() {
                 'LINGUA E LETTERATURA ITALIANA': 'ITA', 'LINGUA E CULTURA LATINA': 'LAT'
             };
             const key = cleanSubj.toUpperCase().trim();
+            console.log(`[Debug] Matching subject: "${key}"`);
+            
             if (abbrevs[key]) return abbrevs[key];
             for (let [full, short] of Object.entries(abbrevs)) {
-                if (key.includes(full)) return short;
+                if (key.includes(full)) {
+                    console.log(`[Debug] Partial match: "${full}" -> ${short}`);
+                    return short;
+                }
             }
             // Fallback smart
             if (key.includes('MATEM')) return 'MAT';
@@ -382,6 +387,7 @@ window.closeSubject = function() {
             if (key.includes('INGLE')) return 'ING';
             if (key.includes('LATIN')) return 'LAT';
 
+            console.warn(`[Debug] No match for: "${key}", using fallback.`);
             return key.substring(0, 3).toUpperCase();
         }
         function initPlannerCalendar() {
@@ -584,20 +590,20 @@ function renderHome() {
       <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
       <div style="display:grid; grid-template-columns:1fr 140px 185px; gap:16px; margin-bottom:16px;">
 
-        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
-          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px;">${dayOfWeek} &middot; ${period}</div>
-          <div style="font-size:26px; font-weight:700; color:#fff; letter-spacing:-0.03em; margin-bottom:6px;">${greeting}, ${shortName}.</div>
-          <div style="font-size:13px; color:rgba(255,255,255,0.35); font-style:italic;">&ldquo;${quote}&rdquo;</div>
+        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:24px 28px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
+          <div style="font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.03em; margin-bottom:4px;">${greeting}, ${shortName}.</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.4;">&ldquo;${quote}&rdquo;</div>
         </div>
 
-        <div class="card streak-card" style="border-radius:18px; padding:18px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:0;">
-          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">Streak</div>
-          <div style="font-size:38px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${streak}</div>
-          <div style="font-size:10.5px; color:#908C86; margin-top:3px;">giorni di fila</div>
-          <div style="display:flex; gap:4px; margin-top:10px;">${streakDots}</div>
+        <div class="card streak-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:0;">
+          <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:6px;">STREAK</div>
+          <div style="font-size:32px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${streak}</div>
+          <div style="font-size:10px; color:#908C86; margin-top:2px;">giorni</div>
+          <div style="display:flex; gap:3px; margin-top:8px;">${streakDots}</div>
         </div>
 
-        <div class="card verifica-card" style="border-radius:18px; padding:18px; display:flex; flex-direction:column; justify-content:center;">
+        <div class="card verifica-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center;">
           <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Prossima verifica</div>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom:7px;">
             <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:500;">${examAbbr}</span>
@@ -625,22 +631,22 @@ function renderHome() {
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card" style="border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card" style="border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Presenze</div>
-            <div style="font-size:42px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
-            <div style="font-size:11px; color:#4A9C6A; margin-top:5px;">${state.assenze != null ? state.assenze + ' assenze da inizio anno' : '3 assenze da inizio anno'}</div>
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">PRESENZE</div>
+            <div style="font-size:32px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
+            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${state.assenze != null ? state.assenze + ' assenze' : '3 assenze'}</div>
           </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Ultima circolare</div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#C0BBB4; margin-bottom:6px;">${lastCirc.data}</div>
-            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35;">${lastCirc.titolo}</div>
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ULTIMA CIRCOLARE</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
+            <div style="font-size:13px; font-weight:600; color:#141414; line-height:1.3;">${lastCirc.titolo}</div>
           </div>
-          <span style="display:inline-flex; margin-top:12px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">&bull; nuova</span>
+          <span style="display:inline-flex; margin-top:10px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:8px; border-radius:100px; padding:2px 8px; letter-spacing:0.05em; align-self:flex-start;">&bull; nuova</span>
         </div>
 
       </div>
@@ -649,37 +655,38 @@ function renderHome() {
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
 
         <div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:12px 16px;">
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:10px 14px;">
             <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace;">
               <thead>
                 <tr style="border-bottom:1px solid #F0EDE8;">
-                  <th style="padding:6px 0; text-align:left; font-size:9px; color:#BCB8B2; text-transform:uppercase;">Materia</th>
-                  <th style="padding:6px 0; text-align:right; font-size:9px; color:#BCB8B2; text-transform:uppercase;">Voto</th>
-                  <th style="padding:6px 0; text-align:right; font-size:9px; color:#BCB8B2; text-transform:uppercase;">Data</th>
+                  <th style="padding:4px 0; text-align:left; font-size:8px; color:#BCB8B2; text-transform:uppercase;">Materia</th>
+                  <th style="padding:4px 0; text-align:right; font-size:8px; color:#BCB8B2; text-transform:uppercase;">Voto</th>
+                  <th style="padding:4px 0; text-align:right; font-size:8px; color:#BCB8B2; text-transform:uppercase;">Data</th>
                 </tr>
               </thead>
               <tbody>
                 ${recentGrades.length ? recentGrades.map(v => {
-                  const abbr = getSubjectAbbrev(v.materia || v.subject);
+                  const subContent = v.materia || v.subject || 'N/A';
+                  const abbr = getSubjectAbbrev(subContent);
                   const key = abbr.toLowerCase();
                   const val = (v.valore || v.value || '—').toString();
                   const dateShort = (v.data || v.date || '').split('-').slice(1).reverse().join('/');
                   return `
                   <tr style="border-bottom:1px solid #F8F7F4;">
-                    <td style="padding:8px 0; vertical-align:middle;">
-                      <span style="font-size:10px; font-weight:700; border-radius:4px; padding:2px 5px; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
+                    <td style="padding:6px 0; vertical-align:middle;">
+                      <span style="font-size:9px; font-weight:700; border-radius:4px; padding:2px 5px; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
                     </td>
-                    <td style="padding:8px 0; text-align:right; font-size:14px; font-weight:800; color:#141414;">${val}</td>
-                    <td style="padding:8px 0; text-align:right; font-size:10px; color:#BCB8B2;">${dateShort}</td>
+                    <td style="padding:6px 0; text-align:right; font-size:13px; font-weight:800; color:#141414;">${val}</td>
+                    <td style="padding:6px 0; text-align:right; font-size:9px; color:#BCB8B2;">${dateShort}</td>
                   </tr>`;
-                }).join('') : '<tr><td colspan="3" style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Nessun voto</td></tr>'}
+                }).join('') : '<tr><td colspan="3" style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</td></tr>'}
               </tbody>
             </table>
             ${recentGrades.length ? `
-            <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:4px;">
-              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">Media Attuale</span>
-              <span style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
-              ${deltaStr ? `<span style="font-size:11px; font-weight:600; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
+            <div style="display:flex; align-items:baseline; gap:6px; padding-top:8px; margin-top:2px;">
+              <span style="font-size:9px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">Media</span>
+              <span style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
+              ${deltaStr ? `<span style="font-size:10px; font-weight:600; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
         </div>
@@ -943,7 +950,7 @@ function renderHome() {
                 <div style="display: flex; flex-direction: column; ${msg.role === 'user' ? 'align-items: flex-end;' : 'align-items: flex-start;'}">
                     <div style="max-width: 85%; padding: 16px; font-family: 'JetBrains Mono', monospace; border: 2px solid #000; border-radius: 4px; background: ${msg.role === 'user' ? '#000' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#000'}; font-size: 13px; line-height: 1.5;">
                         <div style="font-size: 9px; opacity: 0.5; margin-bottom: 8px; text-transform: uppercase;">${msg.role === 'user' ? 'User' : 'Tutor'} [${msg.ts || ''}]</div>
-                        <div class="ai-prose">
+                        <div class="ai-prose" style="color: inherit !important;">
                             ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
                         </div>
                         ${msg.hasPlan ? `
@@ -3085,11 +3092,13 @@ window.requestCircularSynthesis = async function(id, link) {
 
 window.loadCircolareSintesi = async function(id, link) {
     try {
+        console.log(`[Network] Sintesi Request: ${id}`);
         const response = await fetch(`${API_BASE_URL}/api/circolari/sintesi`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, link })
         });
+        console.log(`[Network] Sintesi Response status: ${response.status}`);
         const data = await response.json();
         if (data.success && data.sintesi) {
             const circolare = state.circolari.find(c => c.id === id);

@@ -62,6 +62,12 @@
             --top-nav-height: 72px;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+            /* Contrast System */
+            --text-on-light: #141414;
+            --text-on-dark: #FFFFFF;
+            --text-dim-on-light: #86868B;
+            --text-dim-on-dark: rgba(255,255,255,0.45);
         }
 
         /* === RESET === */
@@ -769,9 +775,9 @@
            AI PROSE — ChatGPT-quality formatting
            ============================================ */
         .ai-prose {
-            font-size: 14.5px;
-            color: #141414;
-            line-height: 1.72;
+            font-size: 14px;
+            color: var(--text-on-light);
+            line-height: 1.6;
             text-align: left;
             word-break: break-word;
             overflow-wrap: break-word;

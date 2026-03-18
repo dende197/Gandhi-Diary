@@ -137,64 +137,61 @@
     });
   }
 
-  // ── 3. UNIFIED ANIMATION SYSTEM (GSAP Orchestration) ─────────
-  const T = {
-    hero:     { duration: 0.55, delay: 0,    ease: 'power3.out' },
-    mainCard: { duration: 0.60, delay: 0.14, ease: 'back.out(1.2)' },
-    tabBar:   { duration: 0.45, delay: 0.18, ease: 'power2.out' },
-    calendar: { duration: 0.48, delay: 0.24, ease: 'power2.out' },
-    header:   { duration: 0.40, delay: 0.28, ease: 'power2.out' },
-    items:    { duration: 0.45, delay: 0.32, stagger: 0.065, ease: 'power2.out' },
-    generic:  { duration: 0.45, delay: 0,    ease: 'power2.out' },
-  };
-
+  // ── 3. UNIFIED ANIMATION SYSTEM (V6 STANDARD) ───────────────
   function _animateViewEntrance(view) {
     if (typeof gsap === 'undefined') return;
     
-    // Piccolo delay per permettere al browser di fare il paint del nuovo DOM
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (view === 'home') _animHome();
-        else if (view === 'planner') _animPlanner();
-        else if (view === 'voti') _animVoti();
-        else _animGeneric();
-      });
+      const viewEl = document.querySelector('.view');
+      if (!viewEl) return;
+
+      // 1. View Entrance (Fade + Slide + Scale)
+      gsap.fromTo(viewEl, 
+        { opacity: 0, y: 15, scale: 0.985 },
+        { 
+          opacity: 1, 
+          y: 0, 
+          scale: 1, 
+          duration: 0.5, 
+          ease: "power3.out",
+          clearProps: "transform"
+        }
+      );
+
+      // 2. Card Stagger (Inner Elements)
+      const cards = viewEl.querySelectorAll('.card, .subject-summary-card, .greeting-card, .streak-card, .verifica-card');
+      if (cards.length > 0) {
+        gsap.fromTo(cards,
+          { opacity: 0, y: 12 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.45,
+            stagger: 0.05,
+            ease: "power2.out",
+            delay: 0.1,
+            clearProps: "transform"
+          }
+        );
+      }
+
+      // 3. Row Stagger (List Content)
+      const items = viewEl.querySelectorAll('.task-row, .grade-row, .circolari-scroll > div, #weekly-agenda-list > div, .studio-entry');
+      if (items.length > 0) {
+        gsap.fromTo(items,
+          { opacity: 0, y: 8 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.4,
+            stagger: 0.03,
+            ease: "power1.out",
+            delay: 0.25,
+            clearProps: "all"
+          }
+        );
+      }
     });
-  }
-
-  function _animHome() {
-    // Greeting Card (the hero equivalent in the new dashboard)
-    const greeting = document.querySelector('.greeting-card');
-    if (greeting) gsap.fromTo(greeting, { y: 14, opacity: 0, scale: 0.98 }, { y: 0, opacity: 1, scale: 1, duration: 0.45, ease: 'power3.out', clearProps: 'transform' });
-
-    // Dashboard Cards (row-3 and row-2 cards)
-    const cards = document.querySelectorAll('.row-3 > .card, .row-2 > div > .card, .row-2 > .card');
-    if (cards.length) gsap.fromTo(cards, { y: 20, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)', delay: 0.18, clearProps: 'transform' });
-
-    // Task rows, grade rows, circolari scroll items
-    const items = document.querySelectorAll('.task-row, .grade-row, .circolari-scroll > div, #weekly-agenda-list > div');
-    if (items.length) gsap.fromTo(items, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.38, stagger: 0.05, ease: 'power2.out', delay: 0.4, clearProps: 'all' });
-  }
-
-  function _animPlanner() {
-    const hero = document.querySelector('.view > div:first-child');
-    if (hero) gsap.fromTo(hero, { y: 16, opacity: 0, scale: 0.98 }, { y: 0, opacity: 1, scale: 1, duration: T.hero.duration, ease: T.hero.ease });
-    
-    const items = document.querySelectorAll('#weekly-agenda-list > div, .registro-card, .studio-entry');
-    if (items.length) gsap.fromTo(items, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: T.items.duration, stagger: T.items.stagger, delay: T.items.delay, ease: T.items.ease });
-  }
-
-  function _animVoti() {
-    const hero = document.querySelector('.view > div:first-child');
-    if (hero) gsap.fromTo(hero, { y: 16, opacity: 0, scale: 0.98 }, { y: 0, opacity: 1, scale: 1, duration: T.hero.duration, ease: T.hero.ease });
-    
-    const subjects = document.querySelectorAll('.subject-summary-card');
-    if (subjects.length) gsap.fromTo(subjects, { x: -10, opacity: 0 }, { x: 0, opacity: 1, duration: T.items.duration, stagger: T.items.stagger, delay: T.items.delay, ease: T.items.ease });
-  }
-
-  function _animGeneric() {
-    const view = document.querySelector('.view');
-    if (view) gsap.fromTo(view, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: T.generic.duration, ease: T.generic.ease });
   }
 
   // ── 4. SURGICAL CIRCOLARI UPDATE ─────────────────────────────
