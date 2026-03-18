@@ -268,12 +268,10 @@ window.closeSubject = function() {
           
           <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;">G-Connect</div>
 
-          <div class="nav-pills" style="display: flex; gap: 8px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
-            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
-            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'};">Voti</button>
-            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'};">Circolari</button>
-            <button class="nav-pill ${state.view === 'planner' && state.uiMode === 'calendar' ? 'active' : ''}" onclick="window.switchPlannerView('calendar'); navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' && state.uiMode === 'calendar' ? 'white' : 'transparent'}; color: ${state.view === 'planner' && state.uiMode === 'calendar' ? 'black' : 'var(--text-dim)'};">Orario</button>
-            <button class="nav-pill ${state.view === 'planner' && state.uiMode === 'list' ? 'active' : ''}" onclick="window.switchPlannerView('list'); navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' && state.uiMode === 'list' ? 'white' : 'transparent'}; color: ${state.view === 'planner' && state.uiMode === 'list' ? 'black' : 'var(--text-dim)'};">Compiti</button>
+          <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
+            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
+            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
+            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
           </div>
 
           <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
@@ -571,33 +569,33 @@ window.closeSubject = function() {
 
             return `
         <!-- ── DASHBOARD V6 ───────────────────────────────────────── -->
-        <div class="dashboard view" style="padding: 10px 40px 48px; max-width: 1400px; margin: 0 auto;">
+        <div class="dashboard view" style="padding: 10px 40px 48px; max-width: 1200px; margin: 0 auto;">
 
           <!-- ROW 1: Greeting (Black) · Streak · Prossima Verifica -->
           <div style="display: grid; grid-template-columns: 1fr 140px 180px; gap: 20px; margin-bottom: 24px;">
             
-            <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background: #121214; color: white; display:flex; flex-direction:column; justify-content:center; padding: 48px; border-radius: 24px;">
-              <div class="greeting-period" style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px;">${dayOfWeek} · ${period}</div>
-              <div class="greeting-text" style="font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.03em;">${greeting}, ${shortName}.</div>
-              <div class="greeting-quote" style="font-size: 14px; color: rgba(255,255,255,0.4); font-style: italic; max-width: 500px;">"${quote}"</div>
+            <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background: #121214; color: white; display:flex; flex-direction:column; justify-content:center; padding: 40px; border-radius: 20px;">
+              <div class="greeting-period" style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;">${dayOfWeek} · ${period}</div>
+              <div class="greeting-text" style="font-size: 26px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.02em;">${greeting}, ${shortName}.</div>
+              <div class="greeting-quote" style="font-size: 13px; color: rgba(255,255,255,0.4); font-style: italic; max-width: 500px;">"${quote}"</div>
             </div>
 
-            <div class="card streak-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; border-radius: 24px;">
+            <div class="card streak-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px;">
               <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Streak</span>
-              <div class="streak-num" style="font-size: 42px; font-weight: 800; margin: 12px 0; color: var(--text-primary);">${streak}</div>
+              <div class="streak-num" style="font-size: 36px; font-weight: 800; margin: 8px 0; color: var(--text-primary);">${streak}</div>
               <div class="streak-unit" style="font-size: 11px; color: var(--text-dim); font-weight: 600;">giorni di fila</div>
-              <div class="sdots" style="display: flex; gap: 5px; margin-top: 16px;">
-                ${[...Array(7)].map((_, i) => `<div class="sdot" style="width:7px; height:7px; border-radius:50%; background: ${i < streak ? 'var(--green)' : 'rgba(0,0,0,0.08)'}"></div>`).join('')}
+              <div class="sdots" style="display: flex; gap: 4px; margin-top: 12px;">
+                ${[...Array(7)].map((_, i) => `<div class="sdot" style="width:6px; height:6px; border-radius:50%; background: ${i < streak ? 'var(--green)' : 'rgba(0,0,0,0.08)'}"></div>`).join('')}
               </div>
             </div>
 
-            <div class="card verifica-card" style="display: flex; flex-direction: column; justify-content: center; padding: 24px; border-radius: 24px;">
+            <div class="card verifica-card" style="display: flex; flex-direction: column; justify-content: center; padding: 20px; border-radius: 20px;">
               <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Prossima verifica</span>
-              <div style="background: rgba(0,113,227,0.1); color: var(--blue); font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; width: fit-content; margin: 16px 0 8px;">${nextExam ? getSubjectAbbrev(nextExam.subject).toUpperCase() : 'MAT'}</div>
-              <div class="verifica-title" style="font-size: 15px; font-weight: 800; margin-bottom: 12px; color: var(--text-primary); line-height: 1.3;">${nextExam ? nextExam.text : 'Nessuna in vista'}</div>
+              <div style="background: rgba(0,113,227,0.1); color: var(--blue); font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; width: fit-content; margin: 12px 0 6px;">${nextExam ? getSubjectAbbrev(nextExam.subject).toUpperCase() : 'MAT'}</div>
+              <div class="verifica-title" style="font-size: 14px; font-weight: 800; margin-bottom: 10px; color: var(--text-primary); line-height: 1.3;">${nextExam ? nextExam.text : 'Nessuna in vista'}</div>
               <div class="countdown-row" style="display: flex; align-items: baseline; gap: 6px;">
-                <span class="countdown-num" style="font-size: 32px; font-weight: 800; color: var(--text-primary);">${nextExam ? daysToExam : '--'}</span>
-                <span class="countdown-unit" style="font-size: 13px; color: var(--text-dim); font-weight: 700;">giorni</span>
+                <span class="countdown-num" style="font-size: 28px; font-weight: 800; color: var(--text-primary);">${nextExam ? daysToExam : '--'}</span>
+                <span class="countdown-unit" style="font-size: 12px; color: var(--text-dim); font-weight: 700;">giorni</span>
               </div>
             </div>
 
@@ -606,85 +604,90 @@ window.closeSubject = function() {
           <!-- ROW 2: Media · Presenze · Ultima Circolare -->
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 32px;">
 
-            <div class="card bigstat" onclick="navigate('voti')" style="cursor:pointer; padding: 28px; border-radius: 20px;">
+            <div class="card bigstat" onclick="navigate('voti')" style="cursor:pointer; padding: 24px; border-radius: 20px;">
               <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Media voti</span>
-              <div class="bignum" style="font-size: 48px; font-weight: 800; margin: 12px 0; color: var(--text-primary);">${media.toFixed(1)}</div>
+              <div class="bignum" style="font-size: 42px; font-weight: 800; margin: 8px 0; color: var(--text-primary); letter-spacing: -0.02em;">${media.toFixed(1)}</div>
               <div class="bigstat-sub" style="font-size: 12px; color: var(--blue); font-weight: 700;">${mediaDelta !== '0.0' ? (mediaDelta > 0 ? `+${mediaDelta}` : mediaDelta) : ''} rispetto al mese scorso</div>
-              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 24px; overflow: hidden;">
+              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 20px; overflow: hidden;">
                 <div class="bigstat-fill" style="height: 100%; width:${(media / 10) * 100}%; background: var(--blue); border-radius: 2px;"></div>
               </div>
             </div>
 
-            <div class="card bigstat" style="padding: 28px; border-radius: 20px;">
+            <div class="card bigstat" style="padding: 24px; border-radius: 20px;">
               <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Presenze</span>
-              <div class="bignum" style="font-size: 48px; font-weight: 800; margin: 12px 0; color: var(--text-primary);">94%</div>
+              <div class="bignum" style="font-size: 42px; font-weight: 800; margin: 8px 0; color: var(--text-primary); letter-spacing: -0.02em;">94%</div>
               <div class="bigstat-sub" style="font-size: 12px; color: var(--green); font-weight: 700;">3 assenze da inizio anno</div>
-              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 24px; overflow: hidden;">
+              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 20px; overflow: hidden;">
                 <div class="bigstat-fill" style="height: 100%; width:94%; background: var(--green); border-radius: 2px;"></div>
               </div>
             </div>
 
-            <div class="card circ-widget" ${state.circolari?.length > 0 ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="padding: 28px; border-radius: 20px;">
+            <div class="card circ-widget" ${state.circolari?.length > 0 ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="padding: 24px; border-radius: 20px; position: relative;">
               <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Ultima circolare</span>
-              <div class="circ-date" style="font-size: 12px; color: var(--text-dim); margin-top: 12px; font-weight: 600;">${lastCirc.data}</div>
-              <div class="circ-title" style="font-size: 15px; font-weight: 800; margin: 10px 0 20px; line-height: 1.4; color: var(--text-primary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${lastCirc.titolo}</div>
-              <span class="circ-new" style="background: rgba(0,0,0,0.9); color: white; padding: 6px 14px; border-radius: 10px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+              <div class="circ-date" style="font-size: 11px; color: var(--text-dim); margin-top: 10px; font-weight: 600;">${lastCirc.data}</div>
+              <div class="circ-title" style="font-size: 14px; font-weight: 800; margin: 8px 0; line-height: 1.4; color: var(--text-primary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${lastCirc.titolo}</div>
+              <span class="circ-new" style="background: rgba(0,0,0,0.9); color: white; padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; position: absolute; bottom: 20px; left: 24px;">
                  <i class="ph-fill ph-file-text"></i> NUOVA
               </span>
             </div>
 
           </div>
 
-          <!-- ROW 3: Voti recenti (Left) · Oggi (Right) -->
-          <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: start;">
+            <!-- ROW 3: Voti recenti (Left) · Oggi (Right) -->
+          <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: stretch;">
 
             <!-- Left Col: Voti Recenti -->
-            <div>
-              <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px;">Voti recenti</div>
-              <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="padding: 32px; border-radius: 24px;">
+            <div style="display: flex; flex-direction: column;">
+              <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px;">Voti recenti</div>
+              <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="padding: 24px; border-radius: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
                 ${recentGrades.length > 0 ? recentGrades.map(v => {
                     const subAbbr = getSubjectAbbrev(v.materia || v.subject).toLowerCase();
                     const val = parseFloat((v.valore || v.value || "0").toString().replace(',', '.'));
-                    const barColor = `var(--${subAbbr})`;
+                    const barColor = `var(--${subAbbr}, var(--blue))`;
                     return `
-                    <div class="grade-row" style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
-                      <span class="g-badge" style="width: 40px; font-size: 11px; font-weight: 800; color: var(--text-dim);">${subAbbr.toUpperCase()}</span>
-                      <div class="g-bar-wrap" style="flex: 1; height: 4px; background: rgba(0,0,0,0.03); border-radius: 2px; overflow: hidden;">
-                        <div class="g-bar" style="width:${(val/10)*100}%; height: 100%; background: ${barColor}; border-radius: 2px;"></div>
+                    <div class="grade-row" style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                      <span class="g-badge" style="width: 32px; font-size: 10px; background: color-mix(in srgb, ${barColor} 15%, transparent); text-align: center; color: ${barColor}; padding: 4px 0; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px;">${subAbbr.toUpperCase()}</span>
+                      <div class="g-bar-wrap" style="flex: 1; height: 3px; background: rgba(0,0,0,0.04); border-radius: 1.5px; overflow: hidden;">
+                        <div class="g-bar" style="width:${(val/10)*100}%; height: 100%; background: ${barColor}; border-radius: 1.5px;"></div>
                       </div>
-                      <span class="g-val" style="width: 30px; font-size: 15px; font-weight: 800; text-align: right; color: ${val >= 6 ? 'var(--text-primary)' : 'var(--red)'}">${val.toFixed(1)}</span>
+                      <span class="g-val" style="width: 25px; font-size: 14px; font-weight: 800; text-align: right; color: ${val >= 6 ? 'var(--text-primary)' : 'var(--red)'}">${val.toFixed(1)}</span>
                     </div>`;
-                }).join('') : '<div class="empty">Nessun voto caricato</div>'}
+                }).join('') : '<div class="empty" style="font-size: 13px; color: var(--text-dim);">Nessun voto caricato</div>'}
+                </div>
                 
-                <div class="gpa-row" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; align-items: baseline; gap: 12px;">
-                  <span class="gpa-lbl" style="font-size: 12px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">media</span>
-                  <span class="gpa-val" style="font-size: 28px; font-weight: 800; color: var(--text-primary);">${media.toFixed(1)}</span>
-                  ${mediaDelta !== "0.0" ? `<span class="gpa-delta" style="font-size: 13px; font-weight: 800; color:${mediaDeltaColor};"> ${mediaDelta > 0 ? '↑' : '↓'} ${Math.abs(mediaDelta)}</span>` : ''}
+                <div class="gpa-row" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; align-items: baseline; justify-content: space-between;">
+                  <div style="display: flex; align-items: baseline; gap: 8px;">
+                     <span class="gpa-lbl" style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">media</span>
+                     <span class="gpa-val" style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);">${media.toFixed(1)}</span>
+                  </div>
+                  ${mediaDelta !== "0.0" ? `<span class="gpa-delta" style="font-size: 12px; font-weight: 800; color:${mediaDeltaColor};"> ${mediaDelta > 0 ? '↑' : '↓'} ${Math.abs(mediaDelta)}</span>` : ''}
                 </div>
               </div>
             </div>
 
             <!-- Right Col: Oggi (Tasks) -->
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; flex-direction: column;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Oggi</div>
-                <button class="add-btn" onclick="showQuickAddTaskModal()" style="background: black; color: white; border: none; padding: 8px 18px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">+ attività</button>
+                <button class="add-btn" onclick="showQuickAddTaskModal()" style="background: black; color: white; border: none; padding: 6px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">+ attività</button>
               </div>
-              <div class="card" style="padding: 24px; border-radius: 24px; min-height: 440px;">
+              <div class="card" style="padding: 24px; border-radius: 20px; flex: 1;">
                 <div id="task-list">
                   ${weeklyTasks.slice(0, 6).map(t => {
                     const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
+                    const subColor = `var(--${subAbbr}, var(--blue))`;
                     return `
-                    <div style="display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
-                      <div class="task-check" onclick="toggleTask('${t.id}')" style="width: 24px; height: 24px; border: 2.5px solid rgba(0,0,0,0.1); border-radius: 8px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ${t.done ? 'var(--green)' : 'transparent'}; border-color: ${t.done ? 'var(--green)' : 'rgba(0,0,0,0.1)'};">
-                        ${t.done ? '<i class="ph-bold ph-check" style="color:white; font-size:12px;"></i>' : ''}
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.03);">
+                      <div class="task-check" onclick="toggleTask('${t.id}')" style="width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-radius: 6px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ${t.done ? 'var(--green)' : 'transparent'}; border-color: ${t.done ? 'var(--green)' : 'rgba(0,0,0,0.1)'}; transition: all 0.2s;">
+                        ${t.done ? '<i class="ph-bold ph-check" style="color:white; font-size:10px;"></i>' : ''}
                       </div>
-                      <div style="background: rgba(0,113,227,0.1); color: var(--blue); font-size: 10px; font-weight: 800; padding: 5px 8px; border-radius: 6px; flex-shrink: 0;">${subAbbr.toUpperCase()}</div>
-                      <div style="flex: 1; font-size: 15px; color: var(--text-primary); font-weight: 600; ${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.text}</div>
-                      <div style="font-size: 12px; color: var(--text-dim); font-weight: 700;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') : '08'}:00</div>
+                      <div style="color: ${subColor}; font-size: 9px; font-weight: 800; width: 32px; text-align: center; background: color-mix(in srgb, ${subColor} 15%, transparent); padding: 4px 6px; border-radius: 4px; flex-shrink: 0; letter-spacing: 0.5px;">${subAbbr.toUpperCase()}</div>
+                      <div style="flex: 1; font-size: 13px; color: var(--text-primary); font-weight: 600; ${t.done ? 'text-decoration: line-through; opacity: 0.4;' : 'opacity: 0.9'}">${t.text}</div>
+                      <div style="font-size: 11px; color: var(--text-dim); font-weight: 700;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') : '08'}:00</div>
                     </div>`;
                   }).join('')}
-                  ${weeklyTasks.length === 0 ? '<div style="text-align: center; padding: 60px 20px; color: var(--text-dim); font-weight: 600;">Nessun compito per oggi!<br><span style="font-size:12px; opacity:0.6;">Goditi il tempo libero ☕</span></div>' : ''}
+                  ${weeklyTasks.length === 0 ? '<div style="text-align: center; padding: 40px 20px; color: var(--text-dim); font-weight: 600; font-size: 13px;">Nessun compito per oggi!<br><span style="font-size:11px; opacity:0.6;">Goditi il tempo libero ☕</span></div>' : ''}
                 </div>
               </div>
             </div>

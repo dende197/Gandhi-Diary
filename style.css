@@ -30,6 +30,21 @@
             --red: #ff3b30;
             --purple: #af52de;
 
+            /* Subject Colors from Mockup */
+            --mat: #0071e3; /* Blue */
+            --fis: #d97706; /* Orange/Brownish */
+            --ing: #28cd41; /* Green */
+            --ita: #af52de; /* Purple */
+            --sto: #b45309; /* Dark Orange/Brown */
+            --lat: #ff3b30; /* Red */
+            --sci: #06b6d4; /* Cyan */
+            --art: #ec4899; /* Pink */
+            --mot: #14b8a6; /* Teal */
+            --inf: #6366f1; /* Indigo */
+            --ita-lett: #af52de;
+            --rel: #64748b; /* Slate */
+            --def: #94a3b8; /* Default Slate */
+
             /* Glass System */
             --card-border: 1px solid rgba(0, 0, 0, 0.06);
             --card-shadow: 0 6px 20px rgba(139, 92, 246, 0.12); /* Rich purple tinted shadow for contrast */
