@@ -3309,3 +3309,257 @@ html {
 #weekly-agenda-list {
   scroll-behavior: smooth;
 }
+
+/* ================================================================
+   G-CONNECT — DASHBOARD PATCH v6
+   Aggiungere IN FONDO a style.css
+   ================================================================ */
+
+/* ── 1. TOKEN COLORE MATERIA (sistema a triplet) ─────────────── */
+:root {
+  /* Ogni materia: sfondo tenue · testo scuro · barra vivace */
+  --mat:     #E8F4FD; --mat-t:  #1A5F8A; --mat-dot: #3B9DD4;
+  --fis:     #FDF0E8; --fis-t:  #8A4A1A; --fis-dot: #D4843B;
+  --ing:     #E8FDF2; --ing-t:  #1A6B3A; --ing-dot: #2DB86A;
+  --ita:     #F5E8FD; --ita-t:  #5A1A8A; --ita-dot: #9B4DD4;
+  --sto:     #FDF5E8; --sto-t:  #7A5010; --sto-dot: #C8921E;
+  --lat:     #FDE8E8; --lat-t:  #8A1A1A; --lat-dot: #D44B4B;
+  --sci:     #EAFDF5; --sci-t:  #0F5E40; --sci-dot: #1DB87A;
+  --fil:     #F0EEF8; --fil-t:  #3A3070; --fil-dot: #7060C8;
+  --dev:     #E8EEF7; --dev-t:  #2A3F6A; --dev-dot: #5070B8;
+  --geo:     #FDF5E8; --geo-t:  #7A5010; --geo-dot: #C8921E;
+  --rel:     #FDE8F5; --rel-t:  #7A1050; --rel-dot: #C82090;
+  --art:     #FFF0E8; --art-t:  #8A3010; --art-dot: #E06020;
+  --edf:     #F0FDE8; --edf-t:  #2A6010; --edf-dot: #50B020;
+  --inf:     #E8EFF8; --inf-t:  #1A3A7A; --inf-dot: #3060D0;
+  --chi:     #F8F0FD; --chi-t:  #5A1A7A; --chi-dot: #9040C8;
+
+  /* Background corpo dashboard */
+  --bg-dashboard: #F6F5F3;
+  --border-light: #ECEAE6;
+}
+
+/* ── 2. LAYOUT DASHBOARD ─────────────────────────────────────── */
+.dashboard.view {
+  background: var(--bg-dashboard) !important;
+  padding: 20px 32px 48px !important;
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+}
+
+/* ── 3. TOPBAR ───────────────────────────────────────────────── */
+.topbar {
+  background: var(--bg-dashboard, #F6F5F3) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  height: 56px !important;
+  padding: 0 32px !important;
+}
+
+.nav-pills {
+  background: #EDECEA !important;
+  border-radius: 13px !important;
+  padding: 4px !important;
+  gap: 2px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.nav-pill {
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  padding: 5px 15px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.nav-pill.active {
+  background: #ffffff !important;
+  color: #141414 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.08) !important;
+}
+
+/* ── 4. CARD BASE ────────────────────────────────────────────── */
+.card {
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05) !important;
+  border: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ── 5. GREETING CARD ────────────────────────────────────────── */
+.greeting-card {
+  background: #121214 !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.13) !important;
+}
+
+.greeting-period {
+  color: rgba(255,255,255,0.35) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.greeting-text {
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.03em !important;
+}
+
+.greeting-quote {
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.35) !important;
+  font-style: italic !important;
+}
+
+/* ── 6. SECTION LABELS ───────────────────────────────────────── */
+.slabel, .section-label {
+  font-size: 9.5px !important;
+  color: #BCB8B2 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 500 !important;
+}
+
+/* ── 7. BIG STAT NUMBERS ─────────────────────────────────────── */
+.bignum {
+  font-family: 'Inter', -apple-system, sans-serif !important;
+  letter-spacing: -0.05em !important;
+}
+
+/* ── 8. GRADE BADGE (colori materia) ─────────────────────────── */
+.g-badge {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  padding: 3px 6px !important;
+  width: 34px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+}
+
+.g-bar-wrap {
+  flex: 1 !important;
+  height: 3px !important;
+  background: #F0EDE8 !important;
+  border-radius: 100px !important;
+  overflow: hidden !important;
+}
+
+.g-bar {
+  height: 100% !important;
+  border-radius: 100px !important;
+}
+
+.g-val {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  width: 26px !important;
+  text-align: right !important;
+}
+
+/* ── 9. TASK BADGE ───────────────────────────────────────────── */
+.task-badge, [class*="task-badge"] {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  border-radius: 5px !important;
+  padding: 2px 6px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── 10. GPA ROW ─────────────────────────────────────────────── */
+.gpa-row {
+  border-top: 1px solid #F0EDE8 !important;
+  padding-top: 10px !important;
+  margin-top: 4px !important;
+}
+
+.gpa-lbl {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  color: #BCB8B2 !important;
+}
+
+.gpa-val {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.04em !important;
+  color: #141414 !important;
+}
+
+.gpa-delta {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #2DB86A !important;
+}
+
+/* ── 11. ADD BUTTON ──────────────────────────────────────────── */
+.add-btn {
+  background: #141414 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 100px !important;
+  padding: 6px 14px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s !important;
+}
+
+.add-btn:hover {
+  opacity: 0.82 !important;
+}
+
+/* ── 12. STREAK DOTS ─────────────────────────────────────────── */
+.sdot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #F0EDE8 !important;
+}
+
+.sdot.on { background: #141414 !important; }
+.sdot.today { background: #2DB86A !important; }
+
+/* ── 13. CIRCOLARE WIDGET ────────────────────────────────────── */
+.circ-widget {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.circ-date {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  color: #BCB8B2 !important;
+}
+
+.circ-title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #141414 !important;
+  line-height: 1.35 !important;
+}
+
+.circ-new {
+  background: #141414 !important;
+  color: #ffffff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 9px !important;
+  border-radius: 100px !important;
+  padding: 3px 9px !important;
+  letter-spacing: 0.05em !important;
+}

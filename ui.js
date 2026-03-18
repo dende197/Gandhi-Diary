@@ -515,187 +515,188 @@ window.closeSubject = function() {
         </div>`;
         }
 
-        function renderHome() {
-            const todayStr = getLocalDateString();
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const nextWeek = new Date(today);
-            nextWeek.setDate(today.getDate() + 7);
-            
-            const weeklyTasks = state.tasks
-                .filter(t => !t.done && t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= nextWeek)
-                .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+// ================================================================
+// G-CONNECT — renderHome() PATCH v6
+// ================================================================
 
-            const mediaStr = calcolaMedia(state.voti) || '0';
-            const media = parseFloat(mediaStr);
-            
-            const h = new Date().getHours();
-            const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
-            const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
-            let greeting = "Buonasera";
-            if (h < 12) greeting = "Buongiorno";
-            else if (h < 17) greeting = "Buon pomeriggio";
+function renderHome() {
+    const todayStr = getLocalDateString();
+    const today = new Date(); today.setHours(0,0,0,0);
 
-            const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
-            const shortName = getSafeUserName();
-            const dayOfWeek = days[new Date().getDay()].toUpperCase();
+    // Media
+    const mediaStr = calcolaMedia(state.voti) || '0';
+    const media = parseFloat(mediaStr);
 
-            const streak = state.streak || 0;
-            
-            let nextExam = null;
-            let daysToExam = 0;
-            const now = new Date();
-            now.setHours(0,0,0,0);
-            
-            const upcomingExams = state.tasks.filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= now)
-                                            .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
-            if (upcomingExams.length > 0) {
-                nextExam = upcomingExams[0];
-                const examDate = new Date(nextExam.due_date);
-                examDate.setHours(0,0,0,0);
-                const diffTime = Math.abs(examDate - now);
-                daysToExam = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            }
+    // Greeting
+    const h = new Date().getHours();
+    const days = ['Domenica','Lun\xecdì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+    const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
+    const greeting = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 17 ? 'Buon pomeriggio' : 'Buona sera';
+    const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
+    const shortName = getSafeUserName();
+    const dayOfWeek = days[new Date().getDay()].toUpperCase();
 
-            let lastCirc = { data: '--/--/----', titolo: 'Nessuna circolare', numero: '-' };
-            if (state.circolari && state.circolari.length > 0) {
-                lastCirc = state.circolari[0];
-            }
+    // Streak dots
+    const streak = state.streak || 0;
+    const streakDots = [...Array(7)].map((_, i) => {
+        const isLast = i === 6;
+        const filled = i < streak;
+        const bg = isLast && filled ? 'background:#2DB86A' : filled ? 'background:#141414' : 'background:#F0EDE8';
+        return `<div class="sdot ${filled ? 'on' : ''} ${isLast ? 'today' : ''}" style="width:8px;height:8px;border-radius:50%;${bg}"></div>`;
+    }).join('');
 
-            const recentGrades = state.voti ? state.voti.slice(-6).reverse() : [];
-            const previousMedia = state.lastMedia || media; 
-            const mediaDelta = (media - previousMedia).toFixed(1);
-            const mediaDeltaColor = mediaDelta >= 0 ? 'var(--green)' : 'var(--red)';
+    // Prossima verifica (da state.tasks con data futura)
+    const upcomingExams = (state.tasks || [])
+        .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today)
+        .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
+    const nextExam = upcomingExams[0] || null;
+    const daysToExam = nextExam ? Math.ceil((new Date(nextExam.due_date) - today) / 86400000) : null;
+    const examAbbr = nextExam ? getSubjectAbbrev(nextExam.subject) : 'MAT';
+    const examKey = examAbbr.toLowerCase();
 
-            return `
-        <!-- ── DASHBOARD V6 ───────────────────────────────────────── -->
-        <div class="dashboard view" style="padding: 10px 40px 48px; max-width: 1200px; margin: 0 auto;">
+    // Ultima circolare
+    const lastCirc = (state.circolari && state.circolari.length > 0)
+        ? state.circolari[0]
+        : { data: '--/--/----', titolo: 'Nessuna circolare', id: null };
 
-          <!-- ROW 1: Greeting (Black) · Streak · Prossima Verifica -->
-          <div style="display: grid; grid-template-columns: 1fr 140px 180px; gap: 20px; margin-bottom: 24px;">
-            
-            <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background: #121214; color: white; display:flex; flex-direction:column; justify-content:center; padding: 40px; border-radius: 20px;">
-              <div class="greeting-period" style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;">${dayOfWeek} · ${period}</div>
-              <div class="greeting-text" style="font-size: 26px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.02em;">${greeting}, ${shortName}.</div>
-              <div class="greeting-quote" style="font-size: 13px; color: rgba(255,255,255,0.4); font-style: italic; max-width: 500px;">"${quote}"</div>
-            </div>
+    // Presenze (mock o da state)
+    const presenze = state.assenze != null
+        ? Math.round((1 - state.assenze / (state.giorniScuola || 200)) * 100)
+        : 94;
 
-            <div class="card streak-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px;">
-              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Streak</span>
-              <div class="streak-num" style="font-size: 36px; font-weight: 800; margin: 8px 0; color: var(--text-primary);">${streak}</div>
-              <div class="streak-unit" style="font-size: 11px; color: var(--text-dim); font-weight: 600;">giorni di fila</div>
-              <div class="sdots" style="display: flex; gap: 4px; margin-top: 12px;">
-                ${[...Array(7)].map((_, i) => `<div class="sdot" style="width:6px; height:6px; border-radius:50%; background: ${i < streak ? 'var(--green)' : 'rgba(0,0,0,0.08)'}"></div>`).join('')}
-              </div>
-            </div>
+    // Voti recenti (ultimi 6)
+    const recentGrades = (state.voti || []).slice(-6).reverse();
 
-            <div class="card verifica-card" style="display: flex; flex-direction: column; justify-content: center; padding: 20px; border-radius: 20px;">
-              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Prossima verifica</span>
-              <div style="background: rgba(0,113,227,0.1); color: var(--blue); font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; width: fit-content; margin: 12px 0 6px;">${nextExam ? getSubjectAbbrev(nextExam.subject).toUpperCase() : 'MAT'}</div>
-              <div class="verifica-title" style="font-size: 14px; font-weight: 800; margin-bottom: 10px; color: var(--text-primary); line-height: 1.3;">${nextExam ? nextExam.text : 'Nessuna in vista'}</div>
-              <div class="countdown-row" style="display: flex; align-items: baseline; gap: 6px;">
-                <span class="countdown-num" style="font-size: 28px; font-weight: 800; color: var(--text-primary);">${nextExam ? daysToExam : '--'}</span>
-                <span class="countdown-unit" style="font-size: 12px; color: var(--text-dim); font-weight: 700;">giorni</span>
-              </div>
-            </div>
+    // Task di oggi
+    const todayTasks = (state.tasks || []).filter(t => {
+        if (t.id && t.id.startsWith('ai_')) return false;
+        if (t.subject === 'QUEST') return false;
+        const plannedToday = (state.plannedTasks && state.plannedTasks[todayStr]) || [];
+        return t.due_date === todayStr || plannedToday.includes(t.id);
+    });
 
+    // Media delta vs mese scorso
+    const prevMedia = state.lastMedia || media;
+    const delta = (media - prevMedia).toFixed(1);
+    const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
+    const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
+
+    return `
+    <div class="dashboard view" style="background:#F6F5F3; padding: 20px 32px 48px; max-width:1280px; margin:0 auto;">
+
+      <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
+      <div style="display:grid; grid-template-columns:1fr 140px 185px; gap:16px; margin-bottom:16px;">
+
+        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.35); font-weight:600; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px;">${dayOfWeek} &middot; ${period}</div>
+          <div style="font-size:26px; font-weight:700; color:#fff; letter-spacing:-0.03em; margin-bottom:6px;">${greeting}, ${shortName}.</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.35); font-style:italic;">&ldquo;${quote}&rdquo;</div>
+        </div>
+
+        <div class="card streak-card" style="border-radius:18px; padding:18px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:0;">
+          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">Streak</div>
+          <div style="font-size:38px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${streak}</div>
+          <div style="font-size:10.5px; color:#908C86; margin-top:3px;">giorni di fila</div>
+          <div style="display:flex; gap:4px; margin-top:10px;">${streakDots}</div>
+        </div>
+
+        <div class="card verifica-card" style="border-radius:18px; padding:18px; display:flex; flex-direction:column; justify-content:center;">
+          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Prossima verifica</div>
+          <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:500; margin-bottom:7px; align-self:flex-start;">${examAbbr}</span>
+          <div style="font-size:13px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:8px; flex:1;">${nextExam ? nextExam.text.substring(0,55) + (nextExam.text.length > 55 ? '...' : '') : 'Nessuna in vista'}</div>
+          <div style="display:flex; align-items:baseline; gap:4px;">
+            <span style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam ?? '--'}</span>
+            <span style="font-size:11px; color:#908C86;">giorni</span>
           </div>
+          ${nextExam ? `<div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;"><div style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div></div>` : ''}
+        </div>
 
-          <!-- ROW 2: Media · Presenze · Ultima Circolare -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+      </div>
 
-            <div class="card bigstat" onclick="navigate('voti')" style="cursor:pointer; padding: 24px; border-radius: 20px;">
-              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Media voti</span>
-              <div class="bignum" style="font-size: 42px; font-weight: 800; margin: 8px 0; color: var(--text-primary); letter-spacing: -0.02em;">${media.toFixed(1)}</div>
-              <div class="bigstat-sub" style="font-size: 12px; color: var(--blue); font-weight: 700;">${mediaDelta !== '0.0' ? (mediaDelta > 0 ? `+${mediaDelta}` : mediaDelta) : ''} rispetto al mese scorso</div>
-              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 20px; overflow: hidden;">
-                <div class="bigstat-fill" style="height: 100%; width:${(media / 10) * 100}%; background: var(--blue); border-radius: 2px;"></div>
-              </div>
-            </div>
+      <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
 
-            <div class="card bigstat" style="padding: 24px; border-radius: 20px;">
-              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Presenze</span>
-              <div class="bignum" style="font-size: 42px; font-weight: 800; margin: 8px 0; color: var(--text-primary); letter-spacing: -0.02em;">94%</div>
-              <div class="bigstat-sub" style="font-size: 12px; color: var(--green); font-weight: 700;">3 assenze da inizio anno</div>
-              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 20px; overflow: hidden;">
-                <div class="bigstat-fill" style="height: 100%; width:94%; background: var(--green); border-radius: 2px;"></div>
-              </div>
-            </div>
-
-            <div class="card circ-widget" ${state.circolari?.length > 0 ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="padding: 24px; border-radius: 20px; position: relative;">
-              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Ultima circolare</span>
-              <div class="circ-date" style="font-size: 11px; color: var(--text-dim); margin-top: 10px; font-weight: 600;">${lastCirc.data}</div>
-              <div class="circ-title" style="font-size: 14px; font-weight: 800; margin: 8px 0; line-height: 1.4; color: var(--text-primary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${lastCirc.titolo}</div>
-              <span class="circ-new" style="background: rgba(0,0,0,0.9); color: white; padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; position: absolute; bottom: 20px; left: 24px;">
-                 <i class="ph-fill ph-file-text"></i> NUOVA
-              </span>
-            </div>
-
+        <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
+            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(1) : '—'}</div>
+            <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti||[]).length}</div>
           </div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
+        </div>
 
-            <!-- ROW 3: Voti recenti (Left) · Oggi (Right) -->
-          <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: stretch;">
+        <div class="card" style="border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Presenze</div>
+            <div style="font-size:42px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
+            <div style="font-size:11px; color:#4A9C6A; margin-top:5px;">${state.assenze != null ? state.assenze + ' assenze da inizio anno' : '3 assenze da inizio anno'}</div>
+          </div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
+        </div>
 
-            <!-- Left Col: Voti Recenti -->
-            <div style="display: flex; flex-direction: column;">
-              <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px;">Voti recenti</div>
-              <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="padding: 24px; border-radius: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                ${recentGrades.length > 0 ? recentGrades.map(v => {
-                    const subAbbr = getSubjectAbbrev(v.materia || v.subject).toLowerCase();
-                    const val = parseFloat((v.valore || v.value || "0").toString().replace(',', '.'));
-                    const barColor = `var(--${subAbbr}, var(--blue))`;
-                    return `
-                    <div class="grade-row" style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
-                      <span class="g-badge" style="width: 32px; font-size: 10px; background: color-mix(in srgb, ${barColor} 15%, transparent); text-align: center; color: ${barColor}; padding: 4px 0; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px;">${subAbbr.toUpperCase()}</span>
-                      <div class="g-bar-wrap" style="flex: 1; height: 3px; background: rgba(0,0,0,0.04); border-radius: 1.5px; overflow: hidden;">
-                        <div class="g-bar" style="width:${(val/10)*100}%; height: 100%; background: ${barColor}; border-radius: 1.5px;"></div>
-                      </div>
-                      <span class="g-val" style="width: 25px; font-size: 14px; font-weight: 800; text-align: right; color: ${val >= 6 ? 'var(--text-primary)' : 'var(--red)'}">${val.toFixed(1)}</span>
-                    </div>`;
-                }).join('') : '<div class="empty" style="font-size: 13px; color: var(--text-dim);">Nessun voto caricato</div>'}
-                </div>
-                
-                <div class="gpa-row" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; align-items: baseline; justify-content: space-between;">
-                  <div style="display: flex; align-items: baseline; gap: 8px;">
-                     <span class="gpa-lbl" style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">media</span>
-                     <span class="gpa-val" style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);">${media.toFixed(1)}</span>
-                  </div>
-                  ${mediaDelta !== "0.0" ? `<span class="gpa-delta" style="font-size: 12px; font-weight: 800; color:${mediaDeltaColor};"> ${mediaDelta > 0 ? '↑' : '↓'} ${Math.abs(mediaDelta)}</span>` : ''}
-                </div>
-              </div>
-            </div>
+        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Ultima circolare</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#C0BBB4; margin-bottom:6px;">${lastCirc.data}</div>
+            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35;">${lastCirc.titolo}</div>
+          </div>
+          <span style="display:inline-flex; margin-top:12px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">&bull; nuova</span>
+        </div>
 
-            <!-- Right Col: Oggi (Tasks) -->
-            <div style="display: flex; flex-direction: column;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Oggi</div>
-                <button class="add-btn" onclick="showQuickAddTaskModal()" style="background: black; color: white; border: none; padding: 6px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">+ attività</button>
-              </div>
-              <div class="card" style="padding: 24px; border-radius: 20px; flex: 1;">
-                <div id="task-list">
-                  ${weeklyTasks.slice(0, 6).map(t => {
-                    const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
-                    const subColor = `var(--${subAbbr}, var(--blue))`;
-                    return `
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.03);">
-                      <div class="task-check" onclick="toggleTask('${t.id}')" style="width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-radius: 6px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ${t.done ? 'var(--green)' : 'transparent'}; border-color: ${t.done ? 'var(--green)' : 'rgba(0,0,0,0.1)'}; transition: all 0.2s;">
-                        ${t.done ? '<i class="ph-bold ph-check" style="color:white; font-size:10px;"></i>' : ''}
-                      </div>
-                      <div style="color: ${subColor}; font-size: 9px; font-weight: 800; width: 32px; text-align: center; background: color-mix(in srgb, ${subColor} 15%, transparent); padding: 4px 6px; border-radius: 4px; flex-shrink: 0; letter-spacing: 0.5px;">${subAbbr.toUpperCase()}</div>
-                      <div style="flex: 1; font-size: 13px; color: var(--text-primary); font-weight: 600; ${t.done ? 'text-decoration: line-through; opacity: 0.4;' : 'opacity: 0.9'}">${t.text}</div>
-                      <div style="font-size: 11px; color: var(--text-dim); font-weight: 700;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') : '08'}:00</div>
-                    </div>`;
-                  }).join('')}
-                  ${weeklyTasks.length === 0 ? '<div style="text-align: center; padding: 40px 20px; color: var(--text-dim); font-weight: 600; font-size: 13px;">Nessun compito per oggi!<br><span style="font-size:11px; opacity:0.6;">Goditi il tempo libero ☕</span></div>' : ''}
-                </div>
-              </div>
-            </div>
+      </div>
 
+      <!-- ROW 3: Voti recenti · Task di oggi -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+        <div>
+          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">Voti recenti</div>
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 20px;">
+            ${recentGrades.length ? recentGrades.map(v => {
+              const abbr = getSubjectAbbrev(v.materia || v.subject);
+              const key = abbr.toLowerCase();
+              const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
+              const pct = Math.min(100, (val/10)*100);
+              return `
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333); flex-shrink:0;">${abbr}</span>
+                <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:var(--${key}-dot,#888); border-radius:100px;"></div></div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:500; width:26px; text-align:right; color:var(--${key}-t,#333);">${val.toFixed(1)}</span>
+              </div>`;
+            }).join('') : '<div style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Nessun voto caricato</div>'}
+            ${recentGrades.length ? `
+            <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
+              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">media</span>
+              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
+              ${deltaStr ? `<span style="font-size:11px; font-weight:500; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
+            </div>` : ''}
           </div>
         </div>
-      `;
-    }
+
+        <div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Oggi</div>
+            <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:6px 14px; font-size:11.5px; font-weight:600; cursor:pointer; transition:opacity 0.15s;">+ attivit&agrave;</button>
+          </div>
+          <div class="card" style="border-radius:18px; padding:18px 20px;">
+            ${todayTasks.length ? todayTasks.slice(0,6).map(t => {
+              const abbr = getSubjectAbbrev(t.subject);
+              const key = abbr.toLowerCase();
+              return `
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
+                <div style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
+                  ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
+                <span style="font-size:12.5px; color:${t.done ? '#C8C4BE' : '#2A2825'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') + ':00' : ''}</span>
+              </div>`;
+            }).join('') : '<div style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Tutto pronto per oggi! &#x1F389;</div>'}
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+}
 
     function renderPlanner() {
         return `
