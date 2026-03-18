@@ -52,6 +52,10 @@
       "destination": "/api/main?action=:action"
     },
     {
+      "source": "/api/circolari/:action",
+      "destination": "/api/circolari?action=:action"
+    },
+    {
       "source": "/api/calendar/status",
       "destination": "/api/sync-calendar?action=status"
     }

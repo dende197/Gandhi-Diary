@@ -365,13 +365,23 @@ window.closeSubject = function() {
                 'STORIA': 'STO', 'GEOGRAFIA': 'GEO', 'FILOSOFIA': 'FIL',
                 'FISICA': 'FIS', 'SCIENZE': 'SCI', 'BIOLOGIA': 'BIO',
                 'CHIMICA': 'CHI', 'ARTE': 'ART', 'DISEGNO': 'DIS',
-                'RELIGIONE': 'REL', 'EDUCAZIONE FISICA': 'EDF', 'INFORMATICA': 'INF'
+                'RELIGIONE': 'REL', 'EDUCAZIONE FISICA': 'SCM', 'SCIENZE MOTORIE': 'SCM', 'INFORMATICA': 'INF',
+                'DIRITTO': 'DIR', 'ECONOMIA': 'ECO', 'FRANCESE': 'FRA', 'TEDESCO': 'TED', 'SPAGNOLO': 'SPA',
+                'FILOSOFIA E STORIA': 'STO', 'MATEMATICA E FISICA': 'MAT', 'SCIENZE NATURALI': 'SCI',
+                'LINGUA E LETTERATURA ITALIANA': 'ITA', 'LINGUA E CULTURA LATINA': 'LAT'
             };
             const key = cleanSubj.toUpperCase().trim();
             if (abbrevs[key]) return abbrevs[key];
             for (let [full, short] of Object.entries(abbrevs)) {
                 if (key.includes(full)) return short;
             }
+            // Fallback smart
+            if (key.includes('MATEM')) return 'MAT';
+            if (key.includes('FISIC')) return 'FIS';
+            if (key.includes('ITALIA')) return 'ITA';
+            if (key.includes('INGLE')) return 'ING';
+            if (key.includes('LATIN')) return 'LAT';
+
             return key.substring(0, 3).toUpperCase();
         }
         function initPlannerCalendar() {
@@ -841,20 +851,13 @@ function renderHome() {
                 </button>
             </div>
 
-            <!-- Global Media Card -->
-            <div class="card" style="background: #141414 !important; color: #FFF !important; padding: 32px; border: none; margin-bottom: 32px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-                <div>
-                    <div style="font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Media Generale</div>
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 72px; font-weight: 900; line-height: 1; letter-spacing: -0.05em; color: #FFF !important;">${media.toFixed(2)}</div>
-                </div>
-                <div style="text-align: right;">
-                    <button onclick="promptSetGoal('overall')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px 20px; color: white; cursor: pointer; transition: all 0.2s;">
-                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px;">Obiettivo</div>
-                        <div style="font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
-                            ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 14px;"></i>
-                        </div>
-                    </button>
-                </div>
+            <div style="margin-bottom: 24px; display: flex; justify-content: flex-end;">
+                <button onclick="promptSetGoal('overall')" style="background: #141414; border: none; border-radius: 12px; padding: 12px 20px; color: white; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: flex-end;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px;">Obiettivo Periodo</div>
+                    <div style="font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 14px;"></i>
+                    </div>
+                </button>
             </div>
 
             <div style="margin-bottom: 24px;">
