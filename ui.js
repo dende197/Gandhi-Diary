@@ -270,6 +270,7 @@ window.closeSubject = function() {
 
           <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
             <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
+            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' ? 'white' : 'transparent'}; color: ${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
             <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
             <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
           </div>
@@ -700,27 +701,30 @@ function renderHome() {
 
     function renderPlanner() {
         return `
-    <div class="planner view" style="padding: 10px 40px 48px; width: 100%; min-height: 100vh;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-            <div>
-                <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Agenda & Compiti</h1>
-                <p style="color: var(--text-dim); font-size: 14px; font-weight: 600;">Organizza la tua settimana di studio</p>
-            </div>
-            
-            <div style="display: flex; gap: 12px;">
-                <div class="view-switch" style="background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px; display: flex; gap: 4px;">
-                    <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: white; shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'background: transparent; color: var(--text-dim);'}">Calendario</button>
-                    <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: white; shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'background: transparent; color: var(--text-dim);'}">Elenco</button>
+    <div class="dashboard view" style="width: 100%;">
+        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
+                <div>
+                    <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary); margin-bottom: 8px;">Agenda & Compiti</h1>
+                    <p style="font-family: 'JetBrains Mono', monospace; color: var(--text-dim); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">// SYS.PLANNER_ACTIVE</p>
                 </div>
-                <button class="btn-primary" onclick="showQuickAddTaskModal()" style="height: 40px; padding: 0 20px; font-size: 13px;">
-                    <i class="ph-bold ph-plus"></i> Nuovo Compito
-                </button>
+                
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <div class="view-switch" style="background: rgba(0,0,0,0.06); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
+                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
+                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
+                    </div>
+                    <button onclick="showQuickAddTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
+                        <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Nuovo
+                    </button>
+                </div>
             </div>
 
             <div id="weekly-agenda-list" class="section-animate">
                 ${renderWeeklyAgenda()}
             </div>
-        </div> `;
+        </div> 
+    </div>`;
         }
         function formatFullDate(dateInput) {
             if (!dateInput) return '';
@@ -1752,15 +1756,12 @@ function renderHome() {
 
             if (state.plannerMode === 'registro') {
                 state.tasks.forEach(t => {
-                    // Fix: Include tasks that have a valid due_date, even if slightly in the past but relevant to current view
-                    // OR better: use exactly the same logic as the calendar but at an aggregate level
                     if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date && isFutureOrToday(t.due_date)) {
                         list.push({ ...t, displayDate: t.due_date });
                     }
                 });
             } else {
                 Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
-                    // Ensure planned tasks for today/future are shown
                     if (isFutureOrToday(dateStr)) {
                         ids.forEach(id => {
                             const t = state.tasks.find(tk => tk.id === id);
@@ -1774,142 +1775,85 @@ function renderHome() {
 
             if (!list.length) {
                 return `
-        <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px;">
-                <i class="ph ph-sparkle" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px;"></i>
-                <div style="font-size: 14px; font-weight: 500;">Tutto in ordine! Nessuna attività prevista.</div>
+        <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px; font-family: 'JetBrains Mono', monospace;">
+                <i class="ph ph-sparkle" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px; display: block;"></i>
+                <div style="font-size: 13px; font-weight: 700; text-transform: uppercase;">// EMPTY_SCHEDULE</div>
             </div> `;
             }
 
-            if (state.plannerMode === 'registro') {
-                // Group tasks by date
-                const grouped = {};
-                list.forEach(t => {
-                    if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
-                    grouped[t.displayDate].push(t);
-                });
-                const sortedDates = Object.keys(grouped).sort();
+            const grouped = {};
+            list.forEach(t => {
+                if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
+                grouped[t.displayDate].push(t);
+            });
+            const sortedDates = Object.keys(grouped).sort();
+
+            return `
+        <div style="display: flex; flex-direction: column; gap: 32px;">
+            ${sortedDates.map(dateStr => {
+                const d = parseArgoDate(dateStr);
+                const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
+                const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
+                const monthName = d.toLocaleDateString('it-IT', { month: 'short' });
+                const isToday = dateStr === getLocalDateString();
+                const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
+                
+                const labelColor = isToday ? '#34C759' : isTomorrow ? '#FF9F0A' : 'transparent';
+                const labelText = isToday ? 'TODAY' : isTomorrow ? 'BEYOND' : '';
+                const labelTag = isToday || isTomorrow
+                    ? `<span style="font-family: 'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${labelColor}; border: 1px solid ${labelColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">${labelText}</span>`
+                    : '';
 
                 return `
-        <div style="display: flex; flex-direction: column; gap: 20px;">
-            ${sortedDates.map(dateStr => {
-                    const d = parseArgoDate(dateStr);
-                    const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
-                    const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
-                    const monthName = d.toLocaleDateString('it-IT', { month: 'long' });
-                    const isToday = dateStr === getLocalDateString();
-                    const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
-                    const labelTag = isToday
-                        ? '<span style="font-size:10px;font-weight:800;color:#34C759;background:rgba(52,199,89,0.12);padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">Oggi</span>'
-                        : isTomorrow
-                            ? '<span style="font-size:10px;font-weight:800;color:#FF9F0A;background:rgba(255,159,10,0.12);padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">Domani</span>'
-                            : '';
-
-                    return `
-                <div>
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding:0 2px;">
-                        <div style="text-align:center; min-width:40px;">
-                            <div style="font-size:24px; font-weight:900; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1;">${dayNum}</div>
-                            <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">${monthName.slice(0, 3)}</div>
-                        </div>
-                        <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
-                        <div style="font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize;">${dayName}</div>
-                        ${labelTag}
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:12px; padding-left:4px;">
-                        ${grouped[dateStr].filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
-                        const subjColor = getSubjectColor(t.subject);
-                        const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
-                        return `
-                        <div style="flex-shrink:0; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.05)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius:18px; min-height:90px;">
-                            <div style="width:5px; background:${subjColor}; flex-shrink:0;"></div>
-                            <div style="flex:1; padding:18px 18px 20px 18px; min-width:0;">
-                                <div style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; opacity:0.9;">${cleanSubject}</div>
-                                <div data-task-text="${t.id}" style="font-size:16px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'var(--text-primary)'}; line-height:1.6; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${(t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').replace(/[\s|]+$/, '').trim()}</div>
-                            </div>
-                            <div style="padding:14px 16px; display:flex; align-items:center; flex-shrink:0;">
-                                <div data-task-toggle="${t.id}" data-subject-color="${subjColor}" onclick="toggleTask('${t.id}')" style="width:28px; height:28px; border-radius:50%; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.25)'}; background:${t.done ? 'var(--green)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
-                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size:13px; color:black;"></i>' : ''}
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                    </div>
-                </div>`;
-                }).join('')}
-        </div>`;
-            } else {
-                // Group studio tasks by date
-                const grouped = {};
-                list.forEach(t => {
-                    if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
-                    grouped[t.displayDate].push(t);
-                });
-                const sortedDates = Object.keys(grouped).sort();
-
-                if (!sortedDates.length) return `<div class="card" style="text-align:center;color:var(--text-dim);padding:50px 20px;"><i class="ph ph-graduation-cap" style="font-size:40px;opacity:0.2;margin-bottom:12px;display:block;"></i><div style="font-size:14px;font-weight:500;">Nessuna sessione pianificata.<br>Chiedi all'AI di organizzare la settimana!</div></div>`;
-
-                return `
-        <div style="display:flex; flex-direction:column; gap:24px;">
-            ${sortedDates.map(dateStr => {
-                    const d = parseArgoDate(dateStr);
-                    const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
-                    const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
-                    const monthName = d.toLocaleDateString('it-IT', { month: 'long' });
-                    const isToday = dateStr === getLocalDateString();
-                    const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
-                    const labelTag = isToday
-                        ? '<span style="font-size:10px;font-weight:800;color:#34C759;background:rgba(52,199,89,0.12);padding:2px 8px;border-radius:20px;">Oggi</span>'
-                        : isTomorrow
-                            ? '<span style="font-size:10px;font-weight:800;color:#FF9F0A;background:rgba(255,159,10,0.12);padding:2px 8px;border-radius:20px;">Domani</span>'
-                            : '';
-
-                    return `
             <div>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; padding:0 2px;">
-                    <div style="text-align:center; min-width:40px;">
-                        <div style="font-size:24px; font-weight:900; color:${isToday ? '#a855f7' : 'var(--text-primary)'}; line-height:1;">${dayNum}</div>
-                        <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">${monthName.slice(0, 3)}</div>
+                <!-- TE Date Header -->
+                <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; min-width:48px;">
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size:28px; font-weight:800; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1; letter-spacing:-0.05em;">${dayNum}</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">${monthName}</span>
                     </div>
-                    <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
-                    <div style="font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize;">${dayName}</div>
+                    <div style="flex:1; height:2px; background:#E5E5EA;"></div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size:13px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">${dayName}</div>
                     ${labelTag}
                 </div>
-                <div style="display:flex; flex-direction:column; gap:14px; padding-left:4px;">
+                
+                <!-- Tasks List -->
+                <div style="display:flex; flex-direction:column; gap:12px;">
                     ${grouped[dateStr].filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text || t.description || '')).map(t => {
-                        const subjColor = getSubjectColor(t.subject);
-                        const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
-                        const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-                        const timeStr = timeMatch ? timeMatch[1] : '';
-                        const displayText = (t.text || t.description || 'Sessione di studio')
-                            .replace(/^\[AI\]\s*/i, '')
-                            .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
-                            .replace(/\*/g, '')
-                            .replace(/[\s|]+$/, '')
-                            .trim();
+                    const subjColor = getSubjectColor(t.subject);
+                    const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
+                    const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+                    const timeStr = timeMatch ? timeMatch[1] : '';
+                    const displayText = (t.text || t.description || 'Task')
+                        .replace(/^\[AI\]\s*/i, '')
+                        .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
+                        .replace(/\*/g, '')
+                        .replace(/[\s|]+$/, '')
+                        .trim();
 
-                        return `
-                    <div style="flex-shrink:0; display:flex; align-items:stretch; background:${t.done ? 'rgba(168,85,247,0.06)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius:18px; min-height:100px;">
-                        <div style="width:5px; background:${subjColor}; flex-shrink:0;"></div>
-                        <div style="flex:1; padding:20px 18px 22px 18px; min-width:0;">
-                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
-                                <span style="font-size:11px; font-weight:800; color:${subjColor}; text-transform:uppercase; letter-spacing:0.8px; background:rgba(255,255,255,0.03); padding:2px 8px; border-radius:6px;">${cleanSubject}</span>
-                                ${timeStr ? `<span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:20px;">${timeStr}</span>` : ''}
+                    return `
+                    <div class="card" style="display:flex; align-items:stretch; background:${t.done ? 'var(--bg-body)' : 'var(--bg-card)'}; border: 1px solid ${t.done ? '#E5E5EA' : 'transparent'}; border-radius:12px; min-height:80px; box-shadow: ${t.done ? 'none' : '0 2px 12px rgba(0,0,0,0.04)'}; transition: transform 0.2s, box-shadow 0.2s; overflow: hidden;">
+                        <div style="width:6px; background:${t.done ? '#E5E5EA' : subjColor}; flex-shrink:0;"></div>
+                        
+                        <div style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+                                <span style="font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${t.done ? 'var(--text-dim)' : subjColor}; text-transform:uppercase; letter-spacing:0.1em; background:rgba(0,0,0,0.03); padding:2px 6px; border-radius:4px;">${cleanSubject}</span>
+                                ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:var(--text-dim); background:#E5E5EA; padding:2px 6px; border-radius:4px;">${timeStr}</span>` : ''}
                             </div>
-                            <div data-task-text="${t.id}" style="font-size:16px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.3)' : 'var(--text-primary)'}; line-height:1.6; word-break:break-word; ${t.done ? 'text-decoration:line-through;' : ''}">${displayText}</div>
-                            ${t.due_date && t.due_date !== dateStr ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">📋 Scade: ${parseArgoDate(t.due_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</div>` : ''}
+                            <div data-task-text="${t.id}" style="font-size:15px; font-weight:600; color:${t.done ? 'var(--text-dim)' : 'var(--text-primary)'}; line-height:1.4; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.6;' : ''}">${displayText}</div>
                         </div>
-                        <div style="padding:14px 16px; display:flex; align-items:center; flex-shrink:0;">
-                            <div data-task-toggle="${t.id}" data-subject-color="${subjColor}" onclick="toggleTask('${t.id}')" style="width:28px; height:28px; border-radius:50%; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.25)'}; background:${t.done ? 'var(--green)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
-                                ${t.done ? '<i class="ph-bold ph-check" style="font-size:13px; color:black;"></i>' : ''}
+                        
+                        <div style="padding:0 20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-left: 1px dashed #E5E5EA;">
+                            <div data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:32px; height:32px; border-radius:8px; border:2px solid ${t.done ? 'var(--text-primary)' : '#E5E5EA'}; background:${t.done ? 'var(--text-primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                                ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                         </div>
                     </div>`;
-                    }).join('')}
+                }).join('')}
                 </div>
             </div>`;
-                }).join('')}
+            }).join('')}
         </div>`;
-            }
         }
         function showPlanWeekModal() {
             const modalContainer = getModalContainer();
