@@ -809,6 +809,97 @@ window.closeSubject = function() {
             </div>
         </div> `;
         }
+        let _mhAICache = null;
+        let _mhSaveTimeout = null;
+
+        function getDailyQuote() {
+            const todayStr = getLocalDateString();
+            try {
+                const cached = JSON.parse(localStorage.getItem('mh_daily_quote') || '{}');
+                if (cached.quote && cached.date === todayStr) return cached.quote;
+            } catch (e) { }
+            return null;
+        }
+
+        async function fetchMHAIAdvice(forceRefresh = false) {
+            const todayStr = getLocalDateString();
+            if (!forceRefresh && _mhAICache && _mhAICache._date === todayStr) return _mhAICache;
+
+            const userData = state.user || {};
+            const recentGrades = (state.voti || []).slice(-5).map(v => `${v.materia}: ${v.voto}`).join(', ');
+            const taskCount = (state.tasks || []).filter(t => !t.done).length;
+            const upcomingExams = (state.tasks || []).filter(t => !t.done && t.hasValidDate).slice(0, 3).map(t => `${t.text} (${t.due_date})`).join(', ');
+            const mhData = state.stressLevels[todayStr] || { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
+
+            try {
+                const resp = await fetch(`${API_BASE_URL}/api/ai/mental-health-advice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pid: getUserId(),
+                        date: todayStr,
+                        mhData,
+                        recentGrades,
+                        taskCount,
+                        upcomingExams
+                    })
+                });
+                const result = await resp.json();
+                if (result.advice) {
+                    _mhAICache = { ...result, _date: todayStr };
+                    if (result.quote) {
+                        localStorage.setItem('mh_daily_quote', JSON.stringify({ quote: result.quote, date: todayStr }));
+                    }
+                    return _mhAICache;
+                }
+            } catch (e) { console.warn('MH AI advice fetch failed:', e.message); }
+            return null;
+        }
+
+        function saveMHToSupabase(data) {
+            const pid = getUserId();
+            if (!pid || pid === 'guest') return;
+            const todayStr = getLocalDateString();
+            fetch(`${API_BASE_URL}/api/mental-health/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profileId: pid,
+                    date: todayStr,
+                    stress: data.stress,
+                    fatigue: data.fatigue,
+                    sleep: data.sleep,
+                    load: data.load,
+                    note: data.note || ''
+                })
+            }).catch(e => console.warn('MH save failed:', e.message));
+        }
+
+        function updateMHMetric(key, val) {
+            const todayStr = getLocalDateString();
+            if (!state.stressLevels[todayStr] || typeof state.stressLevels[todayStr] !== 'object') {
+                state.stressLevels[todayStr] = { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
+            }
+            state.stressLevels[todayStr][key] = val;
+            if (typeof saveTasks === 'function') saveTasks();
+
+            if (_mhSaveTimeout) clearTimeout(_mhSaveTimeout);
+            _mhSaveTimeout = setTimeout(() => {
+                saveMHToSupabase(state.stressLevels[todayStr]);
+                fetchMHAIAdvice(true).then(() => { if (typeof render === 'function') render(); });
+            }, 1500);
+
+            if (typeof render === 'function') render();
+        }
+
+        function migrateStressData() {
+            if (typeof lsKey !== 'function') return;
+            const local = localStorage.getItem(lsKey('stress_levels'));
+            if (local) {
+                try { state.stressLevels = JSON.parse(local); } catch(e){}
+            }
+        }
+
         function renderMentalHealthView() {
             migrateStressData();
             const todayStr = getLocalDateString();

@@ -18,16 +18,16 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- External Assets -->
-    <link rel="stylesheet" href="dashboard-v6.css?v=2.9.0">
-    <link rel="stylesheet" href="style.css?v=2.9.0">
-    <link rel="stylesheet" href="animations.css?v=2.9.0">
+    <link rel="stylesheet" href="dashboard-v6.css?v=2.9.1">
+    <link rel="stylesheet" href="style.css?v=2.9.1">
+    <link rel="stylesheet" href="animations.css?v=2.9.1">
     <link rel="stylesheet" href="patch-finale.css">
     <link rel="stylesheet" href="nav-transition.css">
     
     <!-- External Logic Modules -->
-    <script src="animations.js?v=2.9.0" defer></script>
-    <script src="ui.js?v=2.9.0" defer></script>
-    <script src="fluidity-engine-v3.js?v=3.0.0" defer></script>
+    <script src="animations.js?v=2.9.1" defer></script>
+    <script src="ui.js?v=2.9.1" defer></script>
+    <script src="fluidity-engine-v3.js?v=3.0.2" defer></script>
 
     <style>
         /* Minimal inline overrides only */
@@ -69,8 +69,8 @@
     <div id="toasts"></div>
 
     <script>
-        // --- G-CONNECT SYSTEM CORE (v3.0) ---
-        const APP_VERSION = '2.9.0';
+        // --- G-CONNECT SYSTEM CORE (v3.0.2 - Repair Patch Final) ---
+        const APP_VERSION = '2.9.1';
         const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
         const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend-r5j1.vercel.app";
         window.API_BASE_URL = API_BASE_URL;
@@ -79,25 +79,18 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sY3V0Z2tmdW5icG1ybmJlem5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTg2NDgsImV4cCI6MjA4NDc3NDY0OH0.eWR7PxNsJjSGAM1WoaNseVkeQDpEqaUvO8xvXoDKLQg";
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let DIRECTORY = [
-            { name: 'Alessandro Russo', id: 'demo:alessandro:0', class: '5B', status: 'online' },
-            { name: 'Sofia Bianchi', id: 'demo:sofia:0', class: '3A', status: 'offline' },
-            { name: 'Luca Esposito', id: 'demo:luca:0', class: '4C', status: 'online' },
-            { name: 'Giulia Conti', id: 'demo:giulia:0', class: '5B', status: 'offline' },
-            { name: 'Matteo Ferri', id: 'demo:matteo:0', class: '2A', status: 'online' },
-            { name: 'Chiara Romano', id: 'demo:chiara:0', class: '1B', status: 'offline' },
-            { name: 'Proff. Esposito', id: 'demo:esposito:docente', class: 'Docente', status: 'online' }
-        ];
+        // 🛡️ GLOBAL VARIABLES FOR UI.JS & ANIMATIONS
+        let calendarState = { weekOffset: 0 };
+        let __stressWaveRAF = null;
+        let __mediaGaugeRAF = null;
+        let offlineBadge = null;
 
         // 🛡️ SESSION MANAGER
         const sessionManager = {
             save(sessionData) {
                 try {
                     const existing = this.load() || {};
-                    const merged = { ...existing };
-                    for (const [key, value] of Object.entries(sessionData)) {
-                        if (value !== null && value !== undefined) merged[key] = value;
-                    }
+                    const merged = { ...existing, ...sessionData };
                     localStorage.setItem('argo_session', JSON.stringify(merged));
                     localStorage.setItem('argo_is_logged_in', 'true');
                 } catch (e) { console.error("Session save error", e); }
@@ -113,6 +106,7 @@
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
                 localStorage.removeItem('argo_password');
+                localStorage.clear(); // Clear all for safety
             }
         };
 
@@ -122,20 +116,29 @@
             return `p:${s.schoolCode || 'noschool'}:${(s.userName || s.username || 'nouser').toLowerCase()}:${s.profileIndex ?? 0}`;
         }
         function lsKey(key) { return `${getActiveProfileKey()}:${key}`; }
+        window.lsKey = lsKey; // Required by ui.js
 
         function generatePid(school, user, index) {
             return `p:${school}:${user}:${index ?? 0}`.toLowerCase().replace(/\s+/g, '');
         }
         function getUserId() {
-            const session = sessionManager.load();
-            if (session && session.studentId) return session.studentId;
+            const s = sessionManager.load();
+            if (s && s.studentId) return s.studentId;
+            if (s && s.schoolCode && s.userName) return generatePid(s.schoolCode, s.userName, s.profileIndex);
             return 'guest';
         }
 
         // --- STATE ENGINE ---
         const state = {
             view: 'login',
-            user: { id: null, name: 'Utente', class: 'N/D' },
+            user: { id: null, name: 'Utente', class: 'N/D', avatar: null, specialization: null },
+            didup: { connected: false, lastUpdate: null },
+            aiChatHistory: [],
+            lastSync: null,
+            streak: 0,
+            activeSubject: null,
+            plannerMode: 'registro',
+            plannerView: 'calendar',
             isLoggedIn: false,
             isOffline: false,
             syncing: false,
@@ -151,6 +154,25 @@
             messages: {},
             threads: []
         };
+        window.state = state;
+
+        // --- UTILS ---
+        function parseArgoDate(dateStr) {
+            if (!dateStr) return null;
+            try {
+                const d = new Date(dateStr);
+                return isNaN(d.getTime()) ? null : d;
+            } catch (e) { return null; }
+        }
+
+        function updateTasks(newTasks) {
+            const aiTasks = (state.tasks || []).filter(t => (t.id && t.id.startsWith('ai_')) || t.subject === 'QUEST');
+            state.tasks = [...newTasks, ...aiTasks].map(t => {
+                const d = parseArgoDate(t.due_date);
+                return { ...t, hasValidDate: !!d };
+            });
+            localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+        }
 
         // --- GLOBAL SYNC ---
         async function performSync(sessionData) {
@@ -168,16 +190,21 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
                 if (data.success) {
-                    if (data.tasks) state.tasks = data.tasks;
-                    if (data.voti) state.voti = data.voti;
+                    if (data.tasks) updateTasks(data.tasks);
+                    if (data.voti) { state.voti = data.voti; localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti)); }
+                    if (data.streak !== undefined) state.streak = data.streak;
+                    if (data.circolari) state.circolari = data.circolari;
                     if (data.planner) {
                         state.plannedTasks = data.planner.plannedTasks || {};
                         state.stressLevels = data.planner.stressLevels || {};
                         state.stressVents = data.planner.stressVents || {};
                         state.prepLevels = data.planner.prepLevels || {};
                     }
-                    localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
-                    localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
+                    state.lastSync = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    state.didup.connected = true;
+                    localStorage.setItem(lsKey('streak'), state.streak);
+                    localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                    localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                     state.isOffline = false;
                 }
             } catch (e) {
@@ -187,25 +214,6 @@
                 state.syncing = false;
                 if (typeof window.scheduleRender === 'function') window.scheduleRender();
             }
-        }
-
-        async function savePlannerRemote() {
-            const userId = getUserId();
-            if (!userId || userId === 'guest') return;
-            const payload = {
-                plannedTasks: state.plannedTasks,
-                stressLevels: state.stressLevels,
-                stressVents: state.stressVents,
-                tasks: state.tasks,
-                updatedAt: new Date().toISOString()
-            };
-            try {
-                await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            } catch (e) { console.warn("Cloud save failed", e); }
         }
 
         // --- NAVIGATION ---
@@ -223,18 +231,31 @@
             }
         });
 
+        // --- ERROR HANDLING ---
+        window.onerror = function(msg, url, line, col, error) {
+            console.error("G-Connect Fatal:", msg, "at", line);
+            if (typeof showToast === 'function') showToast("⚠️ Errore UI: " + msg, "var(--red)");
+            return false;
+        };
+
         // --- BOOT ---
         document.addEventListener('DOMContentLoaded', async () => {
+            offlineBadge = document.getElementById('offline-badge');
+            
             const argoSession = sessionManager.load();
             if (argoSession && sessionManager.isLoggedIn()) {
                 state.isLoggedIn = true;
                 state.user.id = argoSession.studentId;
                 state.view = currentViewFromHash() || 'home';
                 
-                // Hydrate from localStorage for instant display
+                // Hydrate from localStorage
                 try {
                     state.tasks = JSON.parse(localStorage.getItem(lsKey('tasks'))) || [];
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
+                    state.streak = parseInt(localStorage.getItem(lsKey('streak'))) || 0;
+                    state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
+                    state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels'))) || {};
+                    state.didup.connected = true;
                 } catch(e) {}
                 
                 await performSync(argoSession);
@@ -243,10 +264,8 @@
             }
             state.booting = false;
             
-            // Initial trigger
             if (typeof window.render === 'function') window.render();
             
-            // Remove Loader
             const loader = document.getElementById('app-loader');
             if (loader) {
                 loader.style.opacity = '0';
@@ -259,6 +278,7 @@
         window.logout = () => { sessionManager.clear(); location.reload(); };
         window.performSync = performSync;
         window.saveTasks = () => localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+        window.getUserId = getUserId;
 
     </script>
 </body>
