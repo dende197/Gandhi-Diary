@@ -81,6 +81,7 @@
         // G-CONNECT CORE SYSTEM v3.0
         // ==============================================================================
         const APP_VERSION = '2.9.1';
+        console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
         const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
         const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend-r5j1.vercel.app";
         window.API_BASE_URL = API_BASE_URL;
@@ -247,6 +248,7 @@
         async function performSync(sessionData) {
             if (state.syncing) return;
             state.syncing = true;
+            console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
             updateLoader("Contatto Server...");
             if (!sessionData) sessionData = sessionManager.load();
             if (!sessionData) { state.syncing = false; return; }
