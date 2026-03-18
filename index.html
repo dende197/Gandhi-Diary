@@ -8,8 +8,8 @@
     <title>G-Diary v2.9.1</title>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#f5f5f7">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#0A0A0B">
     
     <!-- Premium Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700&family=Urbanist:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -159,9 +159,6 @@
             reminders: [],
             promemoria: [],
             plannedTasks: {},
-            stressLevels: {},
-            stressVents: {},
-            prepLevels: {},
             circolari: [],
             messages: {},
             threads: []
@@ -272,9 +269,7 @@
                     }
                     if (data.planner) {
                         state.plannedTasks = data.planner.plannedTasks || {};
-                        state.stressLevels = data.planner.stressLevels || {};
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
-                        localStorage.setItem(lsKey('stress_levels'), JSON.stringify(state.stressLevels));
                     }
                     state.lastSync = new Date().toLocaleTimeString();
                     state.didup.connected = true;
@@ -323,8 +318,6 @@
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
-                    state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels'))) || {};
-                    state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents'))) || {};
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','');
