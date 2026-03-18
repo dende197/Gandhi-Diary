@@ -582,7 +582,8 @@ function renderHome() {
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
     return `
-    <div class="dashboard view" style="background:#F6F5F3; padding: 20px 32px 48px; width: 100%; min-height: 100vh;">
+    <div class="dashboard view" style="width: 100%;">
+      <div>
 
       <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
       <div style="display:grid; grid-template-columns:1fr 140px 185px; gap:16px; margin-bottom:16px;">
@@ -695,6 +696,7 @@ function renderHome() {
         </div>
 
       </div>
+    </div>
     </div>`;
 }
 

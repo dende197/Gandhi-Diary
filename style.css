@@ -3342,7 +3342,6 @@ html {
 /* ── 2. LAYOUT DASHBOARD ─────────────────────────────────────── */
 .dashboard.view {
   background: var(--bg-dashboard) !important;
-  padding: 20px 32px 48px !important;
   width: 100% !important;
   min-height: 100vh !important;
 }
@@ -3562,4 +3561,25 @@ html {
   border-radius: 100px !important;
   padding: 3px 9px !important;
   letter-spacing: 0.05em !important;
+}
+
+/* ================================================================
+   FULLSCREEN FIX — aggiunto in fondo, sovrascrive tutto
+   ================================================================ */
+
+/* Il problema: .view { padding: 100px 40px } gonfiava la dashboard */
+.view.dashboard {
+  padding: 0 !important;
+  min-height: unset !important;
+  max-width: 100% !important;
+  background: #F6F5F3 !important;
+}
+
+/* Il contenuto interno gestisce il proprio padding */
+.view.dashboard > div {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 16px 28px 40px;
+  width: 100%;
+  box-sizing: border-box;
 }
