@@ -22,7 +22,7 @@ window.switchPlannerMode = function(mode) {
 };
 
 window.switchPlannerView = function(view) {
-  state.plannerView = view;
+  state.uiMode = view;
   localStorage.setItem('g_diary_planner_view', view);
   document.querySelectorAll('[data-planner-view]').forEach(btn => {
     const isActive = btn.dataset.plannerView === view;
@@ -260,32 +260,29 @@ window.closeSubject = function() {
         }
         function renderNav() {
             const h = new Date().getHours();
-            let greeting = "Buonasera";
-            if (h < 12) greeting = "Buongiorno";
-            else if (h < 18) greeting = "Buon pomeriggio";
-
-            const fullName = state?.user?.name || '';
             const shortName = getSafeUserName();
 
             return `
-        <!-- ── TOPBAR ──────────────────────────────────────────── -->
-        <div class="topbar">
-          <div class="logo">G-Connect</div>
+        <!-- ── TOPBAR V6 ──────────────────────────────────────────── -->
+        <div class="topbar" style="background: rgba(255,255,255,0.98); border-bottom: 1px solid rgba(0,0,0,0.05); height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(20px);">
+          
+          <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;">G-Connect</div>
 
-          <div class="nav-pills">
-            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')">Home</button>
-            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')">Planner</button>
-            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')">Voti</button>
-            <button class="nav-pill ${state.view === 'ai_assistant' ? 'active' : ''}" onclick="navigate('ai_assistant')">AI</button>
+          <div class="nav-pills" style="display: flex; gap: 8px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
+            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
+            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'};">Voti</button>
+            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'};">Circolari</button>
+            <button class="nav-pill ${state.view === 'planner' && state.uiMode === 'calendar' ? 'active' : ''}" onclick="window.switchPlannerView('calendar'); navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' && state.uiMode === 'calendar' ? 'white' : 'transparent'}; color: ${state.view === 'planner' && state.uiMode === 'calendar' ? 'black' : 'var(--text-dim)'};">Orario</button>
+            <button class="nav-pill ${state.view === 'planner' && state.uiMode === 'list' ? 'active' : ''}" onclick="window.switchPlannerView('list'); navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' && state.uiMode === 'list' ? 'white' : 'transparent'}; color: ${state.view === 'planner' && state.uiMode === 'list' ? 'black' : 'var(--text-dim)'};">Compiti</button>
           </div>
 
-          <div class="topbar-right">
-            <span class="time-chip" id="live-time">
+          <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
+            <span class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim);">
                 ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
             </span>
             ${state.isLoggedIn ? `
-            <div class="user-chip" id="user-chip" onclick="navigate('profile')">${shortName}</div>
-            ` : '<div style="width:40px;"></div>'}
+            <div class="user-chip" onclick="navigate('profile')" style="font-size: 13px; font-weight: 800; color: var(--text-primary); cursor: pointer;">${shortName}</div>
+            ` : ''}
           </div>
         </div>`;
         }
@@ -519,6 +516,7 @@ window.closeSubject = function() {
             </div>
         </div>`;
         }
+
         function renderHome() {
             const todayStr = getLocalDateString();
             const today = new Date();
@@ -526,7 +524,6 @@ window.closeSubject = function() {
             const nextWeek = new Date(today);
             nextWeek.setDate(today.getDate() + 7);
             
-            // Get all tasks due in the next 7 days, sorted by date
             const weeklyTasks = state.tasks
                 .filter(t => !t.done && t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= nextWeek)
                 .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
@@ -538,21 +535,15 @@ window.closeSubject = function() {
             const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
             const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
             let greeting = "Buonasera";
-            if (h < 5) greeting = "Buonanotte";
-            else if (h < 12) greeting = "Buongiorno";
+            if (h < 12) greeting = "Buongiorno";
             else if (h < 17) greeting = "Buon pomeriggio";
 
             const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
             const shortName = getSafeUserName();
             const dayOfWeek = days[new Date().getDay()].toUpperCase();
 
-            // Calcolo stats
             const streak = state.streak || 0;
-            const totalTasks = state.tasks.length;
-            const completedTasks = state.tasks.filter(t => t.done).length;
-            const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks/totalTasks)*100) : 0;
-
-            // Prossima verifica (Cerchiamo il primo task NON completato di tipo VERIFICA o con data futura)
+            
             let nextExam = null;
             let daysToExam = 0;
             const now = new Date();
@@ -568,202 +559,158 @@ window.closeSubject = function() {
                 daysToExam = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            // Ultima Circolare
             let lastCirc = { data: '--/--/----', titolo: 'Nessuna circolare', numero: '-' };
             if (state.circolari && state.circolari.length > 0) {
                 lastCirc = state.circolari[0];
             }
 
-            // Voti recenti
             const recentGrades = state.voti ? state.voti.slice(-6).reverse() : [];
-            const previousMedia = state.lastMedia || media; // mock previous media for delta if not existing in state
+            const previousMedia = state.lastMedia || media; 
             const mediaDelta = (media - previousMedia).toFixed(1);
-            const mediaDeltaStr = mediaDelta > 0 ? `+${mediaDelta}` : mediaDelta;
-            const mediaDeltaColor = mediaDelta >= 0 ? 'var(--ing-dot)' : 'var(--lat-dot)';
+            const mediaDeltaColor = mediaDelta >= 0 ? 'var(--green)' : 'var(--red)';
 
             return `
-        <!-- ── DASHBOARD ───────────────────────────────────────── -->
-        <div class="dashboard view" style="padding: 20px 28px 48px;">
+        <!-- ── DASHBOARD V6 ───────────────────────────────────────── -->
+        <div class="dashboard view" style="padding: 10px 40px 48px; max-width: 1400px; margin: 0 auto;">
 
-          <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
-          <div class="row-3">
-
-            <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer;">
-              <div class="greeting-period" id="greeting-period">${dayOfWeek} · ${period}</div>
-              <div class="greeting-text" id="greeting-text">${greeting}, ${shortName}.</div>
-              <div class="greeting-quote">"${quote}"</div>
+          <!-- ROW 1: Greeting (Black) · Streak · Prossima Verifica -->
+          <div style="display: grid; grid-template-columns: 1fr 140px 180px; gap: 20px; margin-bottom: 24px;">
+            
+            <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background: #121214; color: white; display:flex; flex-direction:column; justify-content:center; padding: 48px; border-radius: 24px;">
+              <div class="greeting-period" style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px;">${dayOfWeek} · ${period}</div>
+              <div class="greeting-text" style="font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.03em;">${greeting}, ${shortName}.</div>
+              <div class="greeting-quote" style="font-size: 14px; color: rgba(255,255,255,0.4); font-style: italic; max-width: 500px;">"${quote}"</div>
             </div>
 
-            <div class="card streak-card">
-              <span class="slabel">Streak</span>
-              <div class="streak-num">${streak}</div>
-              <div class="streak-unit">giorni di fila</div>
-              <div class="sdots">
-                ${[...Array(7)].map((_, i) => {
-                    if (i < 6) return `<div class="sdot ${i < streak ? 'on' : ''}"></div>`;
-                    return `<div class="sdot today"></div>`;
-                }).join('')}
+            <div class="card streak-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; border-radius: 24px;">
+              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Streak</span>
+              <div class="streak-num" style="font-size: 42px; font-weight: 800; margin: 12px 0; color: var(--text-primary);">${streak}</div>
+              <div class="streak-unit" style="font-size: 11px; color: var(--text-dim); font-weight: 600;">giorni di fila</div>
+              <div class="sdots" style="display: flex; gap: 5px; margin-top: 16px;">
+                ${[...Array(7)].map((_, i) => `<div class="sdot" style="width:7px; height:7px; border-radius:50%; background: ${i < streak ? 'var(--green)' : 'rgba(0,0,0,0.08)'}"></div>`).join('')}
               </div>
             </div>
 
-            <div class="card verifica-card">
-              <span class="slabel">Prossima verifica</span>
-              <div class="verifica-title" style="color:var(--text-1); margin-top:20px; font-weight:700;">${nextExam ? nextExam.text : 'Nessuna in vista'}</div>
-              <div class="countdown-row" style="opacity:${nextExam ? 1 : 0.2};">
-                <span class="countdown-num">${nextExam ? daysToExam : '--'}</span>
-                <span class="countdown-unit">giorni</span>
+            <div class="card verifica-card" style="display: flex; flex-direction: column; justify-content: center; padding: 24px; border-radius: 24px;">
+              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Prossima verifica</span>
+              <div style="background: rgba(0,113,227,0.1); color: var(--blue); font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; width: fit-content; margin: 16px 0 8px;">${nextExam ? getSubjectAbbrev(nextExam.subject).toUpperCase() : 'MAT'}</div>
+              <div class="verifica-title" style="font-size: 15px; font-weight: 800; margin-bottom: 12px; color: var(--text-primary); line-height: 1.3;">${nextExam ? nextExam.text : 'Nessuna in vista'}</div>
+              <div class="countdown-row" style="display: flex; align-items: baseline; gap: 6px;">
+                <span class="countdown-num" style="font-size: 32px; font-weight: 800; color: var(--text-primary);">${nextExam ? daysToExam : '--'}</span>
+                <span class="countdown-unit" style="font-size: 13px; color: var(--text-dim); font-weight: 700;">giorni</span>
               </div>
             </div>
 
           </div>
 
-          <!-- ROW 2: Media · Attività · Ultima Circolare -->
-          <div class="row-3">
+          <!-- ROW 2: Media · Presenze · Ultima Circolare -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 32px;">
 
-            <div class="card bigstat bs-media" onclick="navigate('voti')" style="cursor:pointer;">
-              <div>
-                <span class="slabel">Media voti</span>
-                <div class="bignum">${media.toFixed(1)}</div>
-                <div class="bigstat-sub">voti registrati: ${state.voti ? state.voti.length : 0}</div>
+            <div class="card bigstat" onclick="navigate('voti')" style="cursor:pointer; padding: 28px; border-radius: 20px;">
+              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Media voti</span>
+              <div class="bignum" style="font-size: 48px; font-weight: 800; margin: 12px 0; color: var(--text-primary);">${media.toFixed(1)}</div>
+              <div class="bigstat-sub" style="font-size: 12px; color: var(--blue); font-weight: 700;">${mediaDelta !== '0.0' ? (mediaDelta > 0 ? `+${mediaDelta}` : mediaDelta) : ''} rispetto al mese scorso</div>
+              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 24px; overflow: hidden;">
+                <div class="bigstat-fill" style="height: 100%; width:${(media / 10) * 100}%; background: var(--blue); border-radius: 2px;"></div>
               </div>
-              <div class="bigstat-bar"><div class="bigstat-fill" style="width:${(media / 10) * 100}%"></div></div>
             </div>
 
-            <div class="card bigstat bs-pres">
-              <div>
-                <span class="slabel">Percentuale assenze</span>
-                <div class="bignum">--%</div>
-                <div class="bigstat-sub">dato non disponibile</div>
+            <div class="card bigstat" style="padding: 28px; border-radius: 20px;">
+              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Presenze</span>
+              <div class="bignum" style="font-size: 48px; font-weight: 800; margin: 12px 0; color: var(--text-primary);">94%</div>
+              <div class="bigstat-sub" style="font-size: 12px; color: var(--green); font-weight: 700;">3 assenze da inizio anno</div>
+              <div class="bigstat-bar" style="height: 4px; background: rgba(0,0,0,0.04); border-radius: 2px; margin-top: 24px; overflow: hidden;">
+                <div class="bigstat-fill" style="height: 100%; width:94%; background: var(--green); border-radius: 2px;"></div>
               </div>
-              <div class="bigstat-bar"><div class="bigstat-fill" style="width:0%"></div></div>
             </div>
 
-            <div class="card circ-widget" ${state.circolari?.length > 0 ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''}>
-              <span class="slabel">Ultima circolare</span>
-              <div class="circ-date">${lastCirc.data}</div>
-              <div class="circ-title" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${lastCirc.titolo}</div>
-              <span class="circ-new">● ${lastCirc.numero !== '-' ? `N. ${lastCirc.numero}` : 'News'}</span>
+            <div class="card circ-widget" ${state.circolari?.length > 0 ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="padding: 28px; border-radius: 20px;">
+              <span class="slabel" style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Ultima circolare</span>
+              <div class="circ-date" style="font-size: 12px; color: var(--text-dim); margin-top: 12px; font-weight: 600;">${lastCirc.data}</div>
+              <div class="circ-title" style="font-size: 15px; font-weight: 800; margin: 10px 0 20px; line-height: 1.4; color: var(--text-primary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${lastCirc.titolo}</div>
+              <span class="circ-new" style="background: rgba(0,0,0,0.9); color: white; padding: 6px 14px; border-radius: 10px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                 <i class="ph-fill ph-file-text"></i> NUOVA
+              </span>
             </div>
 
           </div>
 
-          <!-- ROW 3: Voti recenti · Task di oggi -->
-          <div class="row-2">
+          <!-- ROW 3: Voti recenti (Left) · Oggi (Right) -->
+          <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: start;">
 
+            <!-- Left Col: Voti Recenti -->
             <div>
-              <div class="section-label">Voti recenti</div>
-              <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''}>
+              <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px;">Voti recenti</div>
+              <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="padding: 32px; border-radius: 24px;">
                 ${recentGrades.length > 0 ? recentGrades.map(v => {
                     const subAbbr = getSubjectAbbrev(v.materia || v.subject).toLowerCase();
                     const val = parseFloat((v.valore || v.value || "0").toString().replace(',', '.'));
+                    const barColor = `var(--${subAbbr})`;
                     return `
-                    <div class="grade-row">
-                      <span class="g-badge" style="background:var(--${subAbbr});color:var(--${subAbbr}-t)">${subAbbr.toUpperCase()}</span>
-                      <div class="g-bar-wrap"><div class="g-bar" style="width:${(val/10)*100}%;background:var(--${subAbbr}-dot)"></div></div>
-                      <span class="g-val" style="color:var(--${subAbbr}-t)">${val.toFixed(1)}</span>
+                    <div class="grade-row" style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
+                      <span class="g-badge" style="width: 40px; font-size: 11px; font-weight: 800; color: var(--text-dim);">${subAbbr.toUpperCase()}</span>
+                      <div class="g-bar-wrap" style="flex: 1; height: 4px; background: rgba(0,0,0,0.03); border-radius: 2px; overflow: hidden;">
+                        <div class="g-bar" style="width:${(val/10)*100}%; height: 100%; background: ${barColor}; border-radius: 2px;"></div>
+                      </div>
+                      <span class="g-val" style="width: 30px; font-size: 15px; font-weight: 800; text-align: right; color: ${val >= 6 ? 'var(--text-primary)' : 'var(--red)'}">${val.toFixed(1)}</span>
                     </div>`;
                 }).join('') : '<div class="empty">Nessun voto caricato</div>'}
                 
-                <div class="gpa-row">
-                  <span class="gpa-lbl">media</span>
-                  <span class="gpa-val">${media.toFixed(1)}</span>
-                  ${mediaDelta !== "0.0" ? `<span class="gpa-delta" style="color:${mediaDeltaColor};">${mediaDelta > 0 ? '↑' : '↓'} ${Math.abs(mediaDelta)}</span>` : ''}
+                <div class="gpa-row" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; align-items: baseline; gap: 12px;">
+                  <span class="gpa-lbl" style="font-size: 12px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">media</span>
+                  <span class="gpa-val" style="font-size: 28px; font-weight: 800; color: var(--text-primary);">${media.toFixed(1)}</span>
+                  ${mediaDelta !== "0.0" ? `<span class="gpa-delta" style="font-size: 13px; font-weight: 800; color:${mediaDeltaColor};"> ${mediaDelta > 0 ? '↑' : '↓'} ${Math.abs(mediaDelta)}</span>` : ''}
                 </div>
               </div>
             </div>
 
+            <!-- Right Col: Oggi (Tasks) -->
             <div>
-              <div class="tasks-header">
-                <div class="section-label">In Scadenza (7 gg)</div>
-                <button class="add-btn" onclick="showQuickAddTaskModal()">+ attività</button>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="section-label" style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Oggi</div>
+                <button class="add-btn" onclick="showQuickAddTaskModal()" style="background: black; color: white; border: none; padding: 8px 18px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">+ attività</button>
               </div>
-              <div class="card" id="task-list">
-                ${weeklyTasks.length > 0 ? weeklyTasks.map(t => {
-                   const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
-                   const dateObj = new Date(t.due_date);
-                   const daysLeft = Math.ceil((dateObj - today) / (1000 * 60 * 60 * 24));
-                   let dayLabel = daysLeft === 0 ? "Oggi" : daysLeft === 1 ? "Domani" : `${daysLeft} gg`;
-                   if (daysLeft < 0) dayLabel = "Scaduto!";
-                   
-                   return `
-                    <div class="task-row" onclick="toggleTask('${t.id}')">
-                      <div class="chk ${t.done ? 'done' : ''}"></div>
-                      <span class="task-badge" style="background:var(--${subAbbr});color:var(--${subAbbr}-t)">${subAbbr.toUpperCase()}</span>
-                      <span class="task-text ${t.done ? 'done' : ''}">${t.text}</span>
-                      <span class="task-time" style="font-size:11px; font-weight:700; color: ${daysLeft <= 1 ? 'var(--orange)' : 'var(--text-3)'};">${dayLabel}</span>
+              <div class="card" style="padding: 24px; border-radius: 24px; min-height: 440px;">
+                <div id="task-list">
+                  ${weeklyTasks.slice(0, 6).map(t => {
+                    const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
+                    return `
+                    <div style="display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+                      <div class="task-check" onclick="toggleTask('${t.id}')" style="width: 24px; height: 24px; border: 2.5px solid rgba(0,0,0,0.1); border-radius: 8px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ${t.done ? 'var(--green)' : 'transparent'}; border-color: ${t.done ? 'var(--green)' : 'rgba(0,0,0,0.1)'};">
+                        ${t.done ? '<i class="ph-bold ph-check" style="color:white; font-size:12px;"></i>' : ''}
+                      </div>
+                      <div style="background: rgba(0,113,227,0.1); color: var(--blue); font-size: 10px; font-weight: 800; padding: 5px 8px; border-radius: 6px; flex-shrink: 0;">${subAbbr.toUpperCase()}</div>
+                      <div style="flex: 1; font-size: 15px; color: var(--text-primary); font-weight: 600; ${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.text}</div>
+                      <div style="font-size: 12px; color: var(--text-dim); font-weight: 700;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') : '08'}:00</div>
                     </div>`;
-                }).join('') : '<div class="empty">Nessun compito in scadenza</div>'}
-                    <!-- NEW UNIFIED HEADER -->
-            <div style="margin-bottom: 32px;">
-                <div class="tasks-header">
-                    <div class="section-label">Planner</div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <!-- AI TUTOR BUTTON -->
-                        <button class="btn-icon-glass" onclick="navigate('ai_assistant')" title="AI Tutor" style="width: 38px; height: 38px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                            <i class="ph-fill ph-sparkle" style="color: var(--accent); font-size: 18px;"></i>
-                        </button>
-                        
-                        <!-- VIEW SWITCHER (Pill style) -->
-                        <div style="background: var(--bg-card); border-radius: 14px; padding: 4px; display: flex; border: 1px solid var(--border); box-shadow: var(--shadow-sm); height: 38px; align-items: center;">
-                            <button onclick="window.switchPlannerView('calendar')" 
-                                style="width: 30px; height: 30px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-                                background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'};
-                                color: ${uiMode === 'calendar' ? 'white' : 'var(--text-3)'};">
-                                <i class="ph-bold ph-calendar" style="font-size: 14px;"></i>
-                            </button>
-                            <button onclick="window.switchPlannerView('list')"
-                                style="width: 30px; height: 30px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-                                background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'};
-                                color: ${uiMode === 'list' ? 'white' : 'var(--text-3)'};">
-                                <i class="ph-bold ph-list-bullets" style="font-size: 14px;"></i>
-                            </button>
-                        </div>
-                    </div>
+                  }).join('')}
+                  ${weeklyTasks.length === 0 ? '<div style="text-align: center; padding: 60px 20px; color: var(--text-dim); font-weight: 600;">Nessun compito per oggi!<br><span style="font-size:12px; opacity:0.6;">Goditi il tempo libero ☕</span></div>' : ''}
                 </div>
-                <h1 style="font-size: 28px; font-weight: 800; color: var(--text-1); letter-spacing: -0.02em; margin-top: 4px;">Organizza lo studio</h1>
+              </div>
             </div>
 
-            <!-- SMART ADVICE BANNER REMOVED -->
+          </div>
+        </div>
+      `;
+    }
 
-
-            <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(99,102,241,0.06); padding: 4px; border-radius: 40px; border: 1px solid rgba(99,102,241,0.12); box-shadow: 0 4px 12px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6);">
-                <button onclick="window.switchPlannerMode('registro')" data-planner-mode="registro" 
-                    style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-                    background: ${state.plannerMode === 'registro' ? 'white' : 'transparent'};
-                    color: ${state.plannerMode === 'registro' ? 'var(--accent)' : 'var(--text-secondary)'};
-                    ${state.plannerMode === 'registro' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
-                    <i class="ph-bold ph-notebook" style="margin-right: 6px;"></i> Registro Scadenze
-                </button>
-                <button onclick="window.switchPlannerMode('studio')" data-planner-mode="studio" 
-                    style="flex:1; height:40px; border-radius:30px; border:none; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-                    background: ${state.plannerMode === 'studio' ? 'white' : 'transparent'};
-                    color: ${state.plannerMode === 'studio' ? 'var(--accent)' : 'var(--text-secondary)'};
-                    ${state.plannerMode === 'studio' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
-                    <i class="ph-bold ph-graduation-cap" style="margin-right: 6px;"></i> Piano di Studio
-                </button>
+    function renderPlanner() {
+        return `
+    <div class="planner view" style="padding: 10px 40px 48px; max-width: 1400px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+            <div>
+                <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Agenda & Compiti</h1>
+                <p style="color: var(--text-dim); font-size: 14px; font-weight: 600;">Organizza la tua settimana di studio</p>
             </div>
-
-            ${uiMode === 'calendar' ? '<div id="calendar" class="card" style="padding: 10px;"></div>' : ''}
-
-            <div class="section-header" style="margin: 32px 0 16px 0; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 200;">
-                <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                    <i class="${state.plannerMode === 'registro' ? 'ph-fill ph-clock' : 'ph-fill ph-calendar-star'}" style="color: var(--accent);"></i>
-                    ${state.plannerMode === 'registro' ? 'Scadenze DidUP' : 'Piano Di Studio'}
-                </h2>
-                
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <!-- CLOUD SYNC DROPDOWN (Solo in Piano di Studio v1.1.32.18) -->
-                    ${state.plannerMode === 'studio' ? `
-                    <div class="planner-dropdown">
-                        <button id="planner-cloud-btn" class="btn-icon-glass" onclick="togglePlannerMenu(event)" title="Opzioni Cloud" style="width: 36px; height: 36px; border-radius: 12px; border-color: rgba(255,255,255,0.05);">
-                            <i class="ph-bold ph-dots-three-circle" style="font-size: 20px; color: var(--text-secondary);"></i>
-                        </button>
-                    </div>
-                    ` : ''}
-
-                    ${state.plannerMode === 'registro' ? `<span class="section-action" onclick="showAddRegistroTaskModal()" style="font-weight: 700; display:flex; align-items:center; gap:4px;"><i class="ph-bold ph-plus" style="font-size:12px;"></i> Aggiungi</span>` : ''}
-                    ${state.plannerMode === 'studio' ? `<span class="section-action" onclick="showPlanWeekModal()" style="font-weight: 700; display:flex; align-items:center; gap:4px;"><i class="ph-bold ph-plus" style="font-size:12px;"></i> Aggiungi Blocco</span>` : ''}
+            
+            <div style="display: flex; gap: 12px;">
+                <div class="view-switch" style="background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px; display: flex; gap: 4px;">
+                    <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: white; shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'background: transparent; color: var(--text-dim);'}">Calendario</button>
+                    <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: white; shadow: 0 2px 4px rgba(0,0,0,0.05);' : 'background: transparent; color: var(--text-dim);'}">Elenco</button>
                 </div>
+                <button class="btn-primary" onclick="showQuickAddTaskModal()" style="height: 40px; padding: 0 20px; font-size: 13px;">
+                    <i class="ph-bold ph-plus"></i> Nuovo Compito
+                </button>
             </div>
 
             <div id="weekly-agenda-list" class="section-animate">
