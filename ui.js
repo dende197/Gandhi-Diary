@@ -582,7 +582,7 @@ function renderHome() {
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
     return `
-    <div class="dashboard view" style="background:#F6F5F3; padding: 20px 32px 48px; max-width:1280px; margin:0 auto;">
+    <div class="dashboard view" style="background:#F6F5F3; padding: 20px 32px 48px; width: 100%; min-height: 100vh;">
 
       <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
       <div style="display:grid; grid-template-columns:1fr 140px 185px; gap:16px; margin-bottom:16px;">
@@ -700,7 +700,7 @@ function renderHome() {
 
     function renderPlanner() {
         return `
-    <div class="planner view" style="padding: 10px 40px 48px; max-width: 1400px; margin: 0 auto;">
+    <div class="planner view" style="padding: 10px 40px 48px; width: 100%; min-height: 100vh;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
             <div>
                 <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Agenda & Compiti</h1>
