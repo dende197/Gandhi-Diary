@@ -55,7 +55,7 @@ module.exports = async function handler(req, res) {
             const numeroMatch = title.match(/n\.?\s*(\d+)/i);
             const numero = numeroMatch ? numeroMatch[1] : (i + 1);
 
-            if (title && link && circolari.length < 10) {
+            if (title && link && circolari.length < 15) {
                 circolari.push({
                     id: generateStableId(link),
                     titolo: title,

@@ -639,25 +639,37 @@ function renderHome() {
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
 
         <div>
-          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">Voti recenti</div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 20px;">
-            ${recentGrades.length ? recentGrades.map(v => {
-              const abbr = getSubjectAbbrev(v.materia || v.subject);
-              const key = abbr.toLowerCase();
-              const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-              const pct = Math.min(100, (val/10)*100);
-              return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
-                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333); flex-shrink:0;">${abbr}</span>
-                <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:var(--${key}-dot,#888); border-radius:100px;"></div></div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:500; width:26px; text-align:right; color:var(--${key}-t,#333);">${val.toFixed(1)}</span>
-              </div>`;
-            }).join('') : '<div style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Nessun voto caricato</div>'}
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:12px 16px;">
+            <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace;">
+              <thead>
+                <tr style="border-bottom:1px solid #F0EDE8;">
+                  <th style="padding:6px 0; text-align:left; font-size:9px; color:#BCB8B2; text-transform:uppercase;">Materia</th>
+                  <th style="padding:6px 0; text-align:right; font-size:9px; color:#BCB8B2; text-transform:uppercase;">Voto</th>
+                  <th style="padding:6px 0; text-align:right; font-size:9px; color:#BCB8B2; text-transform:uppercase;">Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recentGrades.length ? recentGrades.map(v => {
+                  const abbr = getSubjectAbbrev(v.materia || v.subject);
+                  const key = abbr.toLowerCase();
+                  const val = (v.valore || v.value || '—').toString();
+                  const dateShort = (v.data || v.date || '').split('-').slice(1).reverse().join('/');
+                  return `
+                  <tr style="border-bottom:1px solid #F8F7F4;">
+                    <td style="padding:8px 0; vertical-align:middle;">
+                      <span style="font-size:10px; font-weight:700; border-radius:4px; padding:2px 5px; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
+                    </td>
+                    <td style="padding:8px 0; text-align:right; font-size:14px; font-weight:800; color:#141414;">${val}</td>
+                    <td style="padding:8px 0; text-align:right; font-size:10px; color:#BCB8B2;">${dateShort}</td>
+                  </tr>`;
+                }).join('') : '<tr><td colspan="3" style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Nessun voto</td></tr>'}
+              </tbody>
+            </table>
             ${recentGrades.length ? `
-            <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
-              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">media</span>
-              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
-              ${deltaStr ? `<span style="font-size:11px; font-weight:500; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
+            <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:4px;">
+              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">Media Attuale</span>
+              <span style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
+              ${deltaStr ? `<span style="font-size:11px; font-weight:600; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
         </div>
@@ -829,11 +841,11 @@ function renderHome() {
                 </button>
             </div>
 
-            <!-- Global Media Card (TE Style) -->
-            <div class="card" style="background: #141414; padding: 32px; border: none; margin-bottom: 32px; border-radius: 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <!-- Global Media Card -->
+            <div class="card" style="background: #141414 !important; color: #FFF !important; padding: 32px; border: none; margin-bottom: 32px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
                 <div>
                     <div style="font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Media Generale</div>
-                    <div style="font-size: 72px; font-weight: 900; line-height: 1; letter-spacing: -0.05em;">${media.toFixed(2)}</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 72px; font-weight: 900; line-height: 1; letter-spacing: -0.05em; color: #FFF !important;">${media.toFixed(2)}</div>
                 </div>
                 <div style="text-align: right;">
                     <button onclick="promptSetGoal('overall')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px 20px; color: white; cursor: pointer; transition: all 0.2s;">
@@ -885,163 +897,71 @@ function renderHome() {
             const chat = state.aiChatHistory || [];
 
             return `
-        <div class="view ai-view" style="display:flex; flex-direction:column; height:100svh; padding: 0 !important;">
+        <div class="view ai-view" style="display:flex; flex-direction:column; height:calc(100vh - 64px); padding: 0 !important; background: var(--bg-body);">
             
-            <!-- HEADER FISSO -->
-            <div style="flex-shrink: 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(18,18,20,0.95); backdrop-filter: blur(10px); z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button onclick="navigate('planner')" style="background: none; border: none; color: var(--text-primary); cursor: pointer; padding: 4px; display: flex; align-items: center;" title="Torna indietro">
-                        <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
+            <!-- HEADER TE -->
+            <div style="flex-shrink: 0; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 2px solid #000; z-index: 10;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button onclick="navigate('planner')" style="background: #000; border: none; color: #FFF; cursor: pointer; width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center;" title="Back">
+                        <i class="ph-bold ph-arrow-left" style="font-size: 16px;"></i>
                     </button>
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green);"></div>
-                    <span style="font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">Tutor AI</span>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase;">OP-Z Tutor AI</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;">Connected / Signal 100%</span>
+                    </div>
                 </div>
-                <button onclick="if(confirm('Cancellare tutta la chat?')) clearAIChat()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px;">
-                    <i class="ph-bold ph-trash" style="font-size: 18px;"></i>
-                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="if(confirm('Reset memory?')) clearAIChat()" style="background: none; border: 1px solid #000; color: #000; cursor: pointer; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 4px;">
+                        Reset
+                    </button>
+                </div>
             </div>
 
-            <!-- CHAT SCROLLABLE: scroll isolato qui dentro -->
-            <div id="aiChatMessages" class="ai-chat-scroll-container">
+            <!-- CHAT SCROLLABLE -->
+            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 24px;">
                 ${chat.length === 0 ? `
-                <div style="text-align: center; padding: 60px 20px; animation: fadeIn 0.5s ease-out;">
-                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 24px; opacity: 0.9;">Come posso aiutarti oggi?</h2>
+                <div style="max-width: 500px; margin: 40px auto; text-align: left; font-family: 'JetBrains Mono', monospace; border: 2px solid #000; padding: 24px; background: #FFF;">
+                    <div style="font-size: 10px; color: #BCB8B2; margin-bottom: 12px;">// SYSTEM_INITIALIZATION_COMPLETE</div>
+                    <div style="font-size: 18px; font-weight: 800; line-height: 1.2; text-transform: uppercase; margin-bottom: 20px;">Pronto per l'organizzazione pomeridiana.</div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 360px; margin: 0 auto;">
-                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
-                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">📅</span>
-                            Pianifica Settimana
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: #F0F0F3; border: 1px solid #DCDCE0; border-radius: 4px; color: #141414; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer;">
+                            > Pianifica Settimana
                         </button>
-                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
-                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">📝</span>
-                            Prepariamoci
+                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: #F0F0F3; border: 1px solid #DCDCE0; border-radius: 4px; color: #141414; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer;">
+                            > Supporto Studio
                         </button>
-                        <button onclick="showCompetencyInputModal()" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
-                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">🎯</span>
-                            Competenze & Priorità
-                        </button>
-                        <button onclick="sendAIChatQuick('Dammi un consiglio sulla produttività 🚀')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); padding: 16px; font-size: 13px; font-weight: 500; text-align: left; transition: all 0.2s;">
-                            <span style="display: block; font-size: 20px; margin-bottom: 8px;">🚀</span>
-                            Produttività
+                        <button onclick="sendAIChatQuick('Consiglio produttività 🚀')" style="background: #F0F0F3; border: 1px solid #DCDCE0; border-radius: 4px; color: #141414; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer;">
+                            > Tip Produttività
                         </button>
                     </div>
                 </div>
                 ` : chat.map((msg, idx) => `
-                <div class="msg-appear" style="display:flex; flex-direction:column; ${msg.role === 'user' ? 'align-items:flex-end;' : 'align-items:flex-start;'} margin-bottom:2px;">
-
-                    ${msg.role === 'user' ? `
-                    <div style="max-width:82%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); border-radius:18px 18px 4px 18px; padding:11px 15px; color:white; font-size:14.5px; line-height:1.55; word-break:break-word;">
-                        ${msg.text}
-                    </div>
-                    ` : `
-                    <div style="width:100%; display:flex; flex-direction:column;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                            <div style="width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#a855f7); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(99,102,241,0.3);">
-                                <i class='ph-fill ph-sparkle' style='font-size:12px; color:white;'></i>
-                            </div>
-                            <span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.6px;">Tutor AI</span>
-                            <span style="font-size:10px; color:rgba(255,255,255,0.2);">${msg.ts || ''}</span>
-                        </div>
-                        <div class="ai-prose" style="padding-left:32px;">
+                <div style="display: flex; flex-direction: column; ${msg.role === 'user' ? 'align-items: flex-end;' : 'align-items: flex-start;'}">
+                    <div style="max-width: 85%; padding: 16px; font-family: 'JetBrains Mono', monospace; border: 2px solid #000; border-radius: 4px; background: ${msg.role === 'user' ? '#000' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#000'}; font-size: 13px; line-height: 1.5;">
+                        <div style="font-size: 9px; opacity: 0.5; margin-bottom: 8px; text-transform: uppercase;">${msg.role === 'user' ? 'User' : 'Tutor'} [${msg.ts || ''}]</div>
+                        <div class="ai-prose">
                             ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
                         </div>
                         ${msg.hasPlan ? `
-                        <div style="padding-left:32px; margin-top:14px;">
-                            <button onclick="applyAIPlanFromChat(${idx})" style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,#6366f1,#a855f7); color:white; border:none; border-radius:12px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity 0.15s; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
-                                <i class='ph-bold ph-calendar-plus' style='font-size:15px;'></i> Applica al Planner
-                            </button>
-                        </div>
-                        ` : ''}
-                        <div style="margin-top:12px; padding-left:32px; height:1px; background:rgba(255,255,255,0.05);"></div>
+                        <button onclick="applyAIPlanFromChat(${idx})" style="margin-top:16px; border:2px solid #000; background:#000; color:#FFF; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; text-transform:uppercase; cursor:pointer;">
+                            Applica Piano [ENTER]
+                        </button>` : ''}
                     </div>
-                    `}
-
                 </div>
                 `).join('')}
             </div>
 
-            <div class="chat-input-bar" style="
-                flex-shrink: 0;
-                width: 100%;
-                padding: 8px 0 16px 0; 
-                background: transparent;
-                display: flex;
-                justify-content: center;
-                z-index: 50;
-            ">
-                <div style="
-                        width: 92%;
-                        max-width: 540px;
-                        margin-left: auto;
-                        margin-right: auto;
-                        display: flex; 
-                        align-items: center; 
-                        background: rgba(30,30,30,0.85); 
-                        backdrop-filter: blur(12px);
-                        -webkit-backdrop-filter: blur(12px);
-                        border: 1px solid rgba(255,255,255,0.1); 
-                        border-radius: 20px; 
-                        padding: 4px 6px 4px 14px; 
-                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                        transition: border-color 0.2s, box-shadow 0.2s;
-                    "
-                    onfocuswithin="this.style.borderColor='rgba(255,255,255,0.3)'; this.style.boxShadow='0 4px 25px rgba(0,0,0,0.4)';"
-                    onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.3)';">
-
-                    <textarea id="aiChatInput" placeholder="Messaggio..."
-                        style="
-                                flex: 1;
-                                background: transparent; 
-                                border: none; 
-                                padding: 8px 0; 
-                                min-height: 20px; 
-                                max-height: 80px;
-                                font-size: 15px; 
-                                line-height: 1.4;
-                                resize: none;
-                                outline: none;
-                                color: white;
-                            "
-                        rows="1"
-                        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendAIChat()}"
-                        oninput="state.aiChatInputValue=this.value; this.style.height='auto'; const max=window.innerWidth<600?60:100; this.style.height=Math.min(this.scrollHeight,max)+'px';">${state.aiChatInputValue || ''}</textarea>
-
-                    <button id="aiMicBtn" onclick="toggleVoiceInput()" style="
-                            width: 32px; height: 32px; 
-                            background: rgba(255,255,255,0.05); 
-                            color: white; 
-                            border: none;
-                            border-radius: 50%;
-                            display: flex; 
-                            align-items: center; 
-                            justify-content: center;
-                            cursor: pointer;
-                            transition: all 0.2s;
-                        " title="Dettatura vocale">
-                        <i class="ph ph-microphone" style="font-size: 18px;"></i>
-                    </button>
-
-                    <button onclick="sendAIChat()" style="
-                            width: 32px; height: 32px; 
-                            padding: 0; 
-                            border: none; 
-                            background: white; 
-                            color: black; 
-                            border-radius: 50%; 
-                            display: flex; 
-                            align-items: center; 
-                            justify-content: center; 
-                            flex-shrink: 0; 
-                            margin-left: 8px;
-                            cursor: pointer;
-                            transition: transform 0.1s;
-                        "
-                        onmousedown="this.style.transform='scale(0.9)'"
-                        onmouseup="this.style.transform='scale(1)'">
-                        <i class="ph-bold ph-arrow-up" style="font-size: 16px;"></i>
+            <!-- INPUT BOX TE -->
+            <div style="flex-shrink: 0; padding: 24px 32px; background: #FFF; border-top: 2px solid #000;">
+                <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 12px; background: #F0F0F3; padding: 12px; border-radius: 6px; border: 1px solid #DCDCE0;">
+                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #000;">
+                    <button onclick="sendAIChat()" style="width: 44px; height: 44px; background: #000; border: none; color: #FFF; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <i class="ph-bold ph-paper-plane-right" style="font-size: 20px;"></i>
                     </button>
                 </div>
-            </div> `;
+            </div>
+        </div>`;
         }
         function renderAcademicProfile() {
             const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
@@ -3156,8 +3076,38 @@ window.requestCircularSynthesis = async function(id, link) {
             currentStage++;
         }
     }, 100);
-    if (typeof loadCircolareSintesi === 'function') await loadCircolareSintesi(id, link);
+    if (typeof window.loadCircolareSintesi === 'function') await window.loadCircolareSintesi(id, link);
     clearInterval(interval);
+};
+
+window.loadCircolareSintesi = async function(id, link) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/circolari/sintesi`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, link })
+        });
+        const data = await response.json();
+        if (data.success && data.sintesi) {
+            const circolare = state.circolari.find(c => c.id === id);
+            if (circolare) circolare.sintesi = data.sintesi;
+            
+            const box = document.getElementById(`sintesi-placeholder-${id}`);
+            if (box) {
+                box.innerHTML = `
+                    <div class="ai-prose" style="margin-top:12px; animation: fadeIn 0.4s ease-out;">
+                        ${marked.parse(data.sintesi)}
+                    </div>`;
+            }
+        } else {
+            const label = document.getElementById(`sintesi-progress-label-${id}`);
+            if (label) label.innerText = "❌ Sintesi fallita: " + (data.error || "Errore sconosciuto");
+        }
+    } catch (e) {
+        console.error("Synthesis error:", e);
+        const label = document.getElementById(`sintesi-progress-label-${id}`);
+        if (label) label.innerText = "❌ Errore di connessione.";
+    }
 };
 
 // ── PLANNER & QUESTS ──
@@ -3732,3 +3682,44 @@ function gsapAnimateNav() {
 
 /* Console LOG for GSAP */
 console.log('✅ GSAP Animations consolidated into ui.js');
+
+function renderCircolariView() {
+    const list = state.circolari || [];
+    // Mostriamo le ultime 15
+    const toShow = list.slice(0, 15);
+
+    return `
+<div class="dashboard view" style="width: 100%;">
+    <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto;">
+        
+        <header style="margin-bottom: 32px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">
+                Comunicazioni Ufficiali
+            </div>
+            <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; text-transform: uppercase; margin: 0; color: #141414; letter-spacing: -0.02em;">
+                Circolari [15]
+            </h1>
+        </header>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            ${toShow.length ? toShow.map(c => `
+            <div class="card" onclick="mostraCircolare('${c.id}')" style="cursor: pointer; padding: 24px; border-radius: 18px; display: flex; align-items: center; gap: 20px; transition: all 0.2s;">
+                <div style="width: 52px; height: 52px; border-radius: 12px; background: #F0F0F3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="ph-bold ph-file-text" style="font-size: 24px; color: #141414;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: var(--accent-warm); text-transform: uppercase; margin-bottom: 4px;">
+                        Circolare N. ${c.numero} &middot; ${c.data}
+                    </div>
+                    <div style="font-size: 16px; font-weight: 700; color: #141414; line-height: 1.4;">
+                        ${c.titolo}
+                    </div>
+                </div>
+                <i class="ph-bold ph-caret-right" style="font-size: 20px; color: #BCB8B2;"></i>
+            </div>
+            `).join('') : '<div class="card" style="padding: 40px; text-align: center; color: var(--text-dim);">Nessuna circolare trovata.</div>'}
+        </div>
+    </div>
+</div>`;
+}
+
