@@ -5,7 +5,7 @@
 
         :root {
             /* Background Layers */
-            --bg-body: #f5f5f7; /* Off-white in stile macOS */
+            --bg-body: #F6F5F3; /* Off-white in stile macOS */
             --bg-card: rgba(255, 255, 255, 0.98); 
             --bg-card-hover: #ffffff;
             --bg-input: rgba(0, 0, 0, 0.04);
