@@ -2194,7 +2194,6 @@
 }
 
 .view {
-  min-height: calc(100vh - 140px);
   animation: viewFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
   transform: translateZ(0);
 }
@@ -3569,17 +3568,12 @@ html {
 
 /* Il problema: .view { padding: 100px 40px } gonfiava la dashboard */
 .view.dashboard {
-  padding: 0 !important;
+  padding: 16px 32px 40px !important;
   min-height: unset !important;
   max-width: 100% !important;
   background: #F6F5F3 !important;
 }
 
-/* Il contenuto interno gestisce il proprio padding */
-.view.dashboard > div {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 16px 28px 40px;
-  width: 100%;
-  box-sizing: border-box;
+body::before {
+  display: none !important;
 }

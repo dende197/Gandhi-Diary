@@ -583,7 +583,6 @@ function renderHome() {
 
     return `
     <div class="dashboard view" style="width: 100%;">
-      <div>
 
       <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
       <div style="display:grid; grid-template-columns:1fr 140px 185px; gap:16px; margin-bottom:16px;">
@@ -696,7 +695,6 @@ function renderHome() {
         </div>
 
       </div>
-    </div>
     </div>`;
 }
 
