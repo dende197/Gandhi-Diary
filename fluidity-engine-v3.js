@@ -164,16 +164,16 @@
   }
 
   function _animHome() {
-    // Hero
-    const hero = document.querySelector('.hero-container');
-    if (hero) gsap.fromTo(hero, { y: 14, opacity: 0, scale: 0.98 }, { y: 0, opacity: 1, scale: 1, duration: 0.45, ease: 'power3.out', clearProps: 'transform' });
+    // Greeting Card (the hero equivalent in the new dashboard)
+    const greeting = document.querySelector('.greeting-card');
+    if (greeting) gsap.fromTo(greeting, { y: 14, opacity: 0, scale: 0.98 }, { y: 0, opacity: 1, scale: 1, duration: 0.45, ease: 'power3.out', clearProps: 'transform' });
 
-    // Metric Cards
-    const cards = document.querySelectorAll('.metric-card');
+    // Dashboard Cards (row-3 and row-2 cards)
+    const cards = document.querySelectorAll('.row-3 > .card, .row-2 > div > .card, .row-2 > .card');
     if (cards.length) gsap.fromTo(cards, { y: 20, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)', delay: 0.18, clearProps: 'transform' });
 
-    // Circolari & Agenda
-    const items = document.querySelectorAll('.circolari-scroll > div, #weekly-agenda-list > div');
+    // Task rows, grade rows, circolari scroll items
+    const items = document.querySelectorAll('.task-row, .grade-row, .circolari-scroll > div, #weekly-agenda-list > div');
     if (items.length) gsap.fromTo(items, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.38, stagger: 0.05, ease: 'power2.out', delay: 0.4, clearProps: 'all' });
   }
 

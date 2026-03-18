@@ -674,7 +674,7 @@ window.closeSubject = function() {
                 ${plannedTasks.length > 0 ? plannedTasks.map(t => {
                    const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
                    return `
-                    <div class="task-row" onclick="toggleTaskFromHome('${t.id}')">
+                    <div class="task-row" onclick="toggleTask('${t.id}')">
                       <div class="chk ${t.done ? 'done' : ''}"></div>
                       <span class="task-badge" style="background:var(--${subAbbr});color:var(--${subAbbr}-t)">${subAbbr.toUpperCase()}</span>
                       <span class="task-text ${t.done ? 'done' : ''}">${t.text}</span>
@@ -3583,7 +3583,8 @@ window.closeSubject = function() {
         // ── 4. PATCH: animationend listener ──
         document.addEventListener('animationend', (e) => {
             if (e.target.classList.contains('view') || 
-                e.target.classList.contains('hero-container')) {
+                e.target.classList.contains('hero-container') ||
+                e.target.classList.contains('greeting-card')) {
                 e.target.classList.add('anim-done');
             }
         }, true);
@@ -4278,7 +4279,7 @@ function gsapAnimateView() {
     );
 
     // 2. HERO — Apple-style cascading reveal
-    const hero = view.querySelector('.hero-container');
+    const hero = view.querySelector('.greeting-card');
     if (hero) {
         const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
         heroTl.fromTo(hero,
@@ -4286,8 +4287,8 @@ function gsapAnimateView() {
             { opacity: 1, y: 0, scale: 1, duration: 0.8 }
         );
 
-        // Title with character-by-character feel
-        const heroTitle = hero.querySelector('.hero-title');
+        // Greeting text elements
+        const heroTitle = hero.querySelector('.greeting-text');
         if (heroTitle) {
             heroTl.fromTo(heroTitle,
                 { opacity: 0, y: 20, filter: 'blur(4px)' },
@@ -4296,8 +4297,8 @@ function gsapAnimateView() {
             );
         }
 
-        // Subtitle and status with stagger
-        const heroMeta = hero.querySelectorAll('.hero-subtitle, .hero-status, .hero-quote');
+        // Period and quote with stagger
+        const heroMeta = hero.querySelectorAll('.greeting-period, .greeting-quote');
         if (heroMeta.length) {
             heroTl.fromTo(heroMeta,
                 { opacity: 0, y: 15 },
@@ -4309,8 +4310,8 @@ function gsapAnimateView() {
         master.add(heroTl, 0.1);
     }
 
-    // 3. METRIC CARDS — Spring stagger with scale bounce
-    const metricCards = view.querySelectorAll('.metric-card, .home-glass-card');
+    // 3. DASHBOARD CARDS — Spring stagger with scale bounce
+    const metricCards = view.querySelectorAll('.row-3 > .card, .row-2 > div > .card, .streak-card, .verifica-card, .bigstat, .circ-widget');
     if (metricCards.length) {
         master.fromTo(metricCards,
             { opacity: 0, y: 30, scale: 0.92 },

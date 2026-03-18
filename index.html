@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#f5f5f7">
     
     <!-- Premium Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Urbanist:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700&family=Urbanist:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     
     <!-- Logic Dependencies -->
@@ -154,6 +154,9 @@
             booting: true,
             tasks: [],
             voti: [],
+            exams: [],
+            backlog: [],
+            reminders: [],
             promemoria: [],
             plannedTasks: {},
             stressLevels: {},
@@ -193,14 +196,8 @@
             return 't_' + djb2(key);
         }
 
-        function calcolaMedia(voti) {
-            if (!voti || !voti.length) return "0.00";
-            const validi = voti.filter(v => v && (v.valore || v.value));
-            if (!validi.length) return "0.00";
-            const sum = validi.reduce((acc, v) => acc + parseFloat((v.valore || v.value).toString().replace(',','.')), 0);
-            return (sum / validi.length).toFixed(2);
-        }
-        window.calcolaMedia = calcolaMedia;
+        // calcolaMedia is defined in ui.js (returns null for empty — correct behavior)
+        // We just ensure it's exposed globally after ui.js loads
 
         // --- DOM MANIPULATION ---
         function updateLoader(msg) {
@@ -309,6 +306,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
             
+            // Assign offlineBadge reference for updateOfflineBadge()
+            offlineBadge = document.getElementById('offline-badge');
+            
             const session = sessionManager.load();
             if (session && sessionManager.isLoggedIn()) {
                 state.isLoggedIn = true;
@@ -321,8 +321,10 @@
                     state.user = JSON.parse(localStorage.getItem(lsKey('user'))) || state.user;
                     state.tasks = JSON.parse(localStorage.getItem(lsKey('tasks'))) || [];
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
+                    state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
                     state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels'))) || {};
+                    state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents'))) || {};
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','');
@@ -343,10 +345,388 @@
         // Global APIs
         window.navigate = (v) => { location.hash = v; };
         window.saveTasks = () => localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
-        window.getLocalDateString = (d) => {
+        // getLocalDateString is defined in ui.js (uses local timezone — correct)
+        // We just set a simple fallback until ui.js loads
+        window.getLocalDateString = window.getLocalDateString || function(d) {
             const date = d || new Date();
-            return date.toISOString().split('T')[0];
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         };
+
+        // --- TEMPORARY CREDENTIALS STORE ---
+        let tempCreds = { school: '', user: '', pass: '' };
+
+        // --- CRYPTO HELPER ---
+        async function hashPassword(password) {
+            if (!password) return '';
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        window.hashPassword = hashPassword;
+
+        // --- SERVER HEALTH CHECK ---
+        async function checkServerHealth(attempt = 1) {
+            const statusEl = document.getElementById('server-status');
+            if (!statusEl) return;
+            try {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), 3500);
+                const res = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                if (res.ok) {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
+                    statusEl.style.color = "var(--green)";
+                } else {
+                    throw new Error("Server error");
+                }
+            } catch (e) {
+                if (attempt < 15) {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
+                    setTimeout(() => checkServerHealth(attempt + 1), 2500);
+                } else {
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Offline (uso dati cached)`;
+                    statusEl.style.color = "var(--red)";
+                }
+            }
+        }
+        window.checkServerHealth = checkServerHealth;
+
+        // --- ARGO LOGIN & SYNC ---
+        async function performArgoSync(profileIndex = null, passedCreds = null) {
+            const inputSchool = document.getElementById('argo-school');
+            const inputUser = document.getElementById('argo-user');
+            const inputPass = document.getElementById('argo-pass');
+
+            const credentials = passedCreds || {
+                schoolCode: (inputSchool ? inputSchool.value : (tempCreds.school || "")).trim(),
+                username: (inputUser ? inputUser.value : (tempCreds.user || "")).trim(),
+                password: inputPass ? inputPass.value : (tempCreds.pass || "")
+            };
+
+            if (!credentials.schoolCode || !credentials.username || !credentials.password) {
+                alert("Dati mancanti! Reinserisci le credenziali.");
+                if (!inputSchool) window.scheduleRender();
+                return;
+            }
+
+            if (inputSchool) tempCreds = { school: credentials.schoolCode, user: credentials.username, pass: credentials.password };
+
+            if (typeof setLoginBtnText === 'function') setLoginBtnText("Connessione... ");
+
+            try {
+                const payload = {
+                    schoolCode: credentials.schoolCode,
+                    username: credentials.username,
+                    password: credentials.password,
+                    profileIndex: profileIndex
+                };
+
+                if (profileIndex === null) {
+                    const savedSession = sessionManager.load();
+                    if (savedSession && savedSession.profileIndex !== undefined) {
+                        payload.profileIndex = savedSession.profileIndex;
+                    }
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'MULTIPLE_PROFILES') {
+                    if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, credentials);
+                    return;
+                }
+
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error("⚠️ Argo ha bloccato la connessione (Errore 403). Attendi 5-10 minuti senza fare refresh e riprova.");
+                    }
+                    throw new Error(data.error || `Errore Server (${response.status})`);
+                }
+
+                if (data.success) {
+                    state.isOffline = false;
+                    if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
+                    handleLoginSuccess(data, credentials.password);
+                } else {
+                    throw new Error(data.error || "Login fallito");
+                }
+            } catch (e) {
+                console.error("❌ Login error:", e);
+                alert(e.name === 'AbortError' ? "⚠️ Tempo scaduto!" : "❌ Errore: " + e.message);
+                navigate('login');
+            } finally {
+                if (typeof setLoginBtnText === 'function') setLoginBtnText("Accedi");
+            }
+        }
+        window.performArgoSync = performArgoSync;
+
+        // --- HANDLE LOGIN SUCCESS ---
+        async function handleLoginSuccess(data, rawPassword) {
+            console.log("✅ Login OK, hydrating state...");
+            const user = data.session.userName;
+            const pass = rawPassword || tempCreds.pass;
+
+            // 1. Session Save
+            if (data.session) {
+                const sessionData = {
+                    ...data.session,
+                    storedUser: btoa(unescape(encodeURIComponent(user))),
+                    storedPass: btoa(unescape(encodeURIComponent(pass))),
+                    studentId: data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex),
+                    name: data.student?.name || data.selectedProfile?.name,
+                    class: data.student?.class || data.selectedProfile?.class,
+                    specialization: data.student?.specialization || data.selectedProfile?.specialization,
+                    avatar: data.student?.avatar || data.selectedProfile?.avatar
+                };
+                sessionManager.save(sessionData);
+            }
+
+            // 2. Identity Update
+            const incoming = data.student || data.selectedProfile || {};
+            const isValidName = (n) => n && typeof n === 'string' && n.trim().length >= 2 && /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(n.trim());
+            const isValidClass = (c) => c && String(c).trim().length >= 1 && String(c).trim().length <= 20;
+            state.user = {
+                ...state.user,
+                id: data.student?.id || (data.session ? generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex) : 'guest'),
+                name: (incoming.name && isValidName(incoming.name)) ? incoming.name : (state.user?.name || "Studente"),
+                class: (incoming.class && isValidClass(incoming.class)) ? incoming.class : (state.user?.class || "N/D"),
+                specialization: incoming.specialization || state.user?.specialization,
+                avatar: incoming.avatar || state.user?.avatar || null
+            };
+            localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
+
+            // 3. Supabase Auth Bridge
+            try {
+                const school = (data.session.schoolCode || '').toUpperCase();
+                const userName = data.session.userName.toLowerCase();
+                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
+                const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
+
+                let { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+                    email: supabaseEmail,
+                    password: supabasePassword
+                });
+
+                if (authErr && authErr.message?.includes('Invalid login')) {
+                    const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
+                        email: supabaseEmail,
+                        password: supabasePassword,
+                        options: { data: { name: state.user.name, class: state.user.class } }
+                    });
+                    if (!upErr && upData?.user) authData = upData;
+                }
+
+                if (authData?.user) {
+                    await supabaseClient.from('profiles').upsert({
+                        id: String(state.user.id).toLowerCase().replace(/\s+/g, ''),
+                        name: state.user.name,
+                        class: state.user.class,
+                        specialization: state.user.specialization,
+                        avatar: state.user.avatar || null,
+                        last_active: new Date().toISOString()
+                    });
+                }
+            } catch (ex) {
+                console.warn("⚠️ Supabase Bridge failed:", ex.message);
+            }
+
+            // 4. Planner Sync
+            state.syncing = false;
+            state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
+            state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
+            state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
+            state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
+            if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
+
+            // 5. Data Hydration
+            if (data.tasks) updateTasks(data.tasks, false);
+            if (data.voti) {
+                state.voti = Array.isArray(data.voti) ? data.voti : [];
+                localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
+            }
+
+            state.isLoggedIn = true;
+            state.didup.connected = true;
+            state.isOffline = false;
+            state.lastSync = new Date().toLocaleTimeString();
+            if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
+
+            Promise.all([
+                (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e))
+            ]).then(() => {
+                if (typeof closeModal === 'function') closeModal();
+                alert(`✅ Benvenuto ${state.user.name}!`);
+                navigate('home');
+                if (window.scheduleRender) window.scheduleRender();
+                if (typeof startThreadsPolling === 'function') startThreadsPolling();
+            });
+        }
+        window.handleLoginSuccess = handleLoginSuccess;
+
+        // --- PROFILE RESOLUTION ---
+        async function resolveProfileNamesAsync(profiles, credentials, container) {
+            try {
+                await Promise.all(profiles.map(async (p) => {
+                    try {
+                        const resp = await fetch(`${API_BASE_URL}/api/resolve-profile`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                schoolCode: credentials.schoolCode,
+                                username: credentials.username,
+                                password: credentials.password,
+                                profileIndex: p.index
+                            })
+                        });
+                        if (!resp.ok) return;
+                        const j = await resp.json();
+                        if (j.success) {
+                            p.name = j.name;
+                            p.class = j.class;
+                            const btn = container.querySelector(`.btn-profile[data-index="${p.index}"]`);
+                            if (btn) {
+                                const nameEl = btn.querySelector('.profile-name');
+                                const classEl = btn.querySelector('.profile-class');
+                                const avatarEl = btn.querySelector('.profile-avatar');
+                                if (nameEl) nameEl.textContent = j.name;
+                                if (classEl) classEl.textContent = j.class || 'N/D';
+                                if (avatarEl) avatarEl.textContent = (j.name || 'S')[0].toUpperCase();
+                            }
+                        }
+                    } catch (e) { console.warn(`⚠️ Errore risoluzione profilo ${p.index}:`, e); }
+                }));
+            } catch (e) { console.warn('⚠️ Impossibile risolvere nomi profili:', e); }
+        }
+        window.resolveProfileNamesAsync = resolveProfileNamesAsync;
+
+        // --- PROFILE SELECTION ---
+        async function selectProfile(profileIndex, credentials) {
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showBoot === 'function') showBoot('Sincronizzazione profilo...');
+            await performArgoSync(profileIndex, credentials);
+            hideBoot();
+        }
+        window.selectProfile = selectProfile;
+
+        // --- SWITCH PROFILE ---
+        async function switchProfile() {
+            const stored = sessionManager.load();
+            if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+                try {
+                    if (typeof showBoot === 'function') showBoot("Ricerca profili...");
+                    const user = decodeURIComponent(escape(atob(stored.storedUser)));
+                    const pass = decodeURIComponent(escape(atob(stored.storedPass)));
+
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            schoolCode: stored.schoolCode,
+                            username: user,
+                            password: pass,
+                            profileIndex: null
+                        })
+                    });
+
+                    const data = await response.json().catch(() => ({ success: false }));
+                    hideBoot();
+
+                    if (response.ok && data.status === 'MULTIPLE_PROFILES') {
+                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
+                    } else if (response.ok && data.success) {
+                        handleLoginSuccess(data, pass);
+                    } else {
+                        if (typeof openArgoLogin === 'function') openArgoLogin();
+                    }
+                } catch (e) {
+                    hideBoot();
+                    console.error("Errore switch profile:", e);
+                    if (typeof openArgoLogin === 'function') openArgoLogin();
+                }
+            } else {
+                if (typeof openArgoLogin === 'function') openArgoLogin();
+            }
+        }
+        window.switchProfile = switchProfile;
+
+        // --- QUICK ADD TASK ---
+        function submitQuickTask() {
+            const text = document.getElementById('quickTaskText')?.value?.trim();
+            const subject = document.getElementById('quickTaskSubject')?.value || 'Generale';
+            const dateVal = document.getElementById('quickTaskDate')?.value;
+            if (!text) { if (typeof showToast === 'function') showToast('Inserisci una descrizione!'); return; }
+
+            const taskId = 'manual_' + Date.now();
+            const newTask = { id: taskId, text, subject, done: false, due_date: dateVal, dateObj: new Date(dateVal) };
+            state.tasks.push(newTask);
+
+            if (!state.plannedTasks[dateVal]) state.plannedTasks[dateVal] = [];
+            state.plannedTasks[dateVal].push(taskId);
+
+            saveTasks();
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showToast === 'function') showToast('Compito aggiunto! ✅');
+            if (window.scheduleRender) window.scheduleRender();
+        }
+        window.submitQuickTask = submitQuickTask;
+
+        // --- REGISTRO TASK (verifica/orale/compito) ---
+        function selectRegistroTipo(tipo) {
+            window._registroTipo = tipo;
+            ['tipo-verifica', 'tipo-orale', 'tipo-compito'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) { b.style.border = '1px solid rgba(255,255,255,0.1)'; b.style.background = 'transparent'; b.style.color = 'var(--text-dim)'; }
+            });
+            const map = { 'Verifica': 'tipo-verifica', 'Interrogazione': 'tipo-orale', 'Compito in classe': 'tipo-compito' };
+            const active = document.getElementById(map[tipo]);
+            if (active) { active.style.border = '1px solid var(--accent)'; active.style.background = 'rgba(99,102,241,0.15)'; active.style.color = 'var(--accent)'; }
+        }
+        window.selectRegistroTipo = selectRegistroTipo;
+
+        function submitRegistroTask() {
+            const subject = document.getElementById('registroTaskSubject')?.value || 'Generale';
+            const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
+            const dateVal = document.getElementById('registroTaskDate')?.value;
+            const tipo = window._registroTipo || 'Verifica';
+            const text = args ? `${tipo}: ${args}` : tipo;
+            const taskId = 'registro_' + Date.now();
+            const newTask = { id: taskId, text, subject, done: false, due_date: dateVal, dateObj: parseArgoDate(dateVal) };
+            state.tasks.push(newTask);
+            saveTasks();
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showToast === 'function') showToast(`${tipo} aggiunta! 📝`);
+            if (window.scheduleRender) window.scheduleRender();
+        }
+        window.submitRegistroTask = submitRegistroTask;
+
+        // --- MANUAL REMINDER ---
+        function addManualReminder() {
+            const text = prompt("Cosa devi fare? (es. Compito Mate per il 20/01)");
+            if (text) {
+                state.reminders.push({ id: Date.now(), text, done: false });
+                localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
+                if (window.scheduleRender) window.scheduleRender();
+            }
+        }
+        window.addManualReminder = addManualReminder;
 
     </script>
 </body>
