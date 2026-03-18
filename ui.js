@@ -277,7 +277,6 @@ window.closeSubject = function() {
             <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')">Planner</button>
             <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')">Voti</button>
             <button class="nav-pill ${state.view === 'ai_assistant' ? 'active' : ''}" onclick="navigate('ai_assistant')">AI</button>
-            <button class="nav-pill ${state.view === 'mental_health' ? 'active' : ''}" onclick="navigate('mental_health')">Benessere</button>
           </div>
 
           <div class="topbar-right">
@@ -522,8 +521,16 @@ window.closeSubject = function() {
         }
         function renderHome() {
             const todayStr = getLocalDateString();
-            const plannedIds = state.plannedTasks[todayStr] || [];
-            const plannedTasks = state.tasks.filter(t => plannedIds.includes(t.id));
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            
+            // Get all tasks due in the next 7 days, sorted by date
+            const weeklyTasks = state.tasks
+                .filter(t => !t.done && t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= nextWeek)
+                .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
             const mediaStr = calcolaMedia(state.voti) || '0';
             const media = parseFloat(mediaStr);
             
@@ -600,10 +607,10 @@ window.closeSubject = function() {
             </div>
 
             <div class="card verifica-card">
-              <span class="slabel">Nuova verifica</span>
-              <div class="verifica-title" style="color:var(--text-4); margin-top:20px;">Caricamento modulo...</div>
-              <div class="countdown-row" style="opacity:0.2;">
-                <span class="countdown-num">--</span>
+              <span class="slabel">Prossima verifica</span>
+              <div class="verifica-title" style="color:var(--text-1); margin-top:20px; font-weight:700;">${nextExam ? nextExam.text : 'Nessuna in vista'}</div>
+              <div class="countdown-row" style="opacity:${nextExam ? 1 : 0.2};">
+                <span class="countdown-num">${nextExam ? daysToExam : '--'}</span>
                 <span class="countdown-unit">giorni</span>
               </div>
             </div>
@@ -667,94 +674,56 @@ window.closeSubject = function() {
 
             <div>
               <div class="tasks-header">
-                <div class="section-label">Oggi</div>
+                <div class="section-label">In Scadenza (7 gg)</div>
                 <button class="add-btn" onclick="showQuickAddTaskModal()">+ attività</button>
               </div>
               <div class="card" id="task-list">
-                ${plannedTasks.length > 0 ? plannedTasks.map(t => {
+                ${weeklyTasks.length > 0 ? weeklyTasks.map(t => {
                    const subAbbr = getSubjectAbbrev(t.subject).toLowerCase();
+                   const dateObj = new Date(t.due_date);
+                   const daysLeft = Math.ceil((dateObj - today) / (1000 * 60 * 60 * 24));
+                   let dayLabel = daysLeft === 0 ? "Oggi" : daysLeft === 1 ? "Domani" : `${daysLeft} gg`;
+                   if (daysLeft < 0) dayLabel = "Scaduto!";
+                   
                    return `
                     <div class="task-row" onclick="toggleTask('${t.id}')">
                       <div class="chk ${t.done ? 'done' : ''}"></div>
                       <span class="task-badge" style="background:var(--${subAbbr});color:var(--${subAbbr}-t)">${subAbbr.toUpperCase()}</span>
                       <span class="task-text ${t.done ? 'done' : ''}">${t.text}</span>
-                      <span class="task-time">${t.due_date ? t.due_date.substring(11,16) || '—' : '—'}</span>
+                      <span class="task-time" style="font-size:11px; font-weight:700; color: ${daysLeft <= 1 ? 'var(--orange)' : 'var(--text-3)'};">${dayLabel}</span>
                     </div>`;
-                }).join('') : '<div class="empty">Nessuna attività pianificata per oggi. Goditi il riposo!</div>'}
-              </div>
-            </div>
-
-          </div>
-        </div>`;
-        }
-        function renderPlanner() {
-            const uiMode = state.plannerView || 'calendar';
-
-            return `
-        <div class="view">
-
-            <!-- HERO GRADIENT -->
-            <div class="premium-hero">
-                <div style="position: relative; z-index: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: nowrap;">
-                        <div>
-                            <h1 class="hero-title">Planner</h1>
-                            <p class="hero-subtitle">Organizza lo studio e le scadenze</p>
-                        </div>
-                        <div style="display: flex; gap: 6px; align-items: center; margin-left: auto;">
-                            <!-- AI TUTOR -->
-                            <button class="btn-icon-glass" onclick="navigate('ai_assistant')" title="AI Tutor" style="width: 40px; height: 40px; border-radius: 20px;">
-                                <i class="ph-fill ph-sparkle" style="color: rgba(139,92,246,0.9); font-size: 18px;"></i>
+                }).join('') : '<div class="empty">Nessun compito in scadenza</div>'}
+                    <!-- NEW UNIFIED HEADER -->
+            <div style="margin-bottom: 32px;">
+                <div class="tasks-header">
+                    <div class="section-label">Planner</div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <!-- AI TUTOR BUTTON -->
+                        <button class="btn-icon-glass" onclick="navigate('ai_assistant')" title="AI Tutor" style="width: 38px; height: 38px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                            <i class="ph-fill ph-sparkle" style="color: var(--accent); font-size: 18px;"></i>
+                        </button>
+                        
+                        <!-- VIEW SWITCHER (Pill style) -->
+                        <div style="background: var(--bg-card); border-radius: 14px; padding: 4px; display: flex; border: 1px solid var(--border); box-shadow: var(--shadow-sm); height: 38px; align-items: center;">
+                            <button onclick="window.switchPlannerView('calendar')" 
+                                style="width: 30px; height: 30px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+                                background: ${uiMode === 'calendar' ? 'var(--accent)' : 'transparent'};
+                                color: ${uiMode === 'calendar' ? 'white' : 'var(--text-3)'};">
+                                <i class="ph-bold ph-calendar" style="font-size: 14px;"></i>
                             </button>
-
-                            <!-- VIEW SWITCHER (Pill style) -->
-                            <div style="background: rgba(99,102,241,0.06); border-radius: 30px; padding: 3px; display: flex; border: 1px solid rgba(99,102,241,0.12); flex-shrink: 0; height: 40px; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5);">
-                                <button onclick="window.switchPlannerView('calendar')" data-planner-view="calendar" 
-                                    style="width: 34px; height: 34px; border-radius: 17px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; justify-content: center;
-                                    background: ${uiMode === 'calendar' ? 'white' : 'transparent'};
-                                    color: ${uiMode === 'calendar' ? 'var(--accent)' : 'var(--text-secondary)'};
-                                    ${uiMode === 'calendar' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
-                                    <i class="ph-bold ph-calendar" style="font-size: 16px;"></i>
-                                </button>
-                                <button onclick="window.switchPlannerView('list')" data-planner-view="list" 
-                                    style="width: 34px; height: 34px; border-radius: 17px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; justify-content: center;
-                                    background: ${uiMode === 'list' ? 'white' : 'transparent'};
-                                    color: ${uiMode === 'list' ? 'var(--accent)' : 'var(--text-secondary)'};
-                                    ${uiMode === 'list' ? 'box-shadow: 0 2px 8px rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);' : ''}">
-                                    <i class="ph-bold ph-list-bullets" style="font-size: 16px;"></i>
-                                </button>
-                            </div>
+                            <button onclick="window.switchPlannerView('list')"
+                                style="width: 30px; height: 30px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+                                background: ${uiMode === 'list' ? 'var(--accent)' : 'transparent'};
+                                color: ${uiMode === 'list' ? 'white' : 'var(--text-3)'};">
+                                <i class="ph-bold ph-list-bullets" style="font-size: 14px;"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
+                <h1 style="font-size: 28px; font-weight: 800; color: var(--text-1); letter-spacing: -0.02em; margin-top: 4px;">Organizza lo studio</h1>
             </div>
 
-            <!-- SMART ADVICE BANNER (v1.1.68 Enhanced) -->
-            ${(() => {
-                    const todayStr = getLocalDateString();
-                    const mh = state.stressLevels[todayStr];
-                    if (mh && typeof mh === 'object' && (mh.stress >= 4 || mh.fatigue >= 4 || mh.sleep < 5)) {
-                        const ai = _mhAICache && _mhAICache._date === todayStr ? _mhAICache : null;
-                        const reason = mh.sleep < 5 ? `Hai dormito solo ${mh.sleep}h` :
-                            mh.stress >= 4 ? 'Il tuo stress è alto' : 'La tua stanchezza mentale è elevata';
-                        return `
-                    <div class="mh-advice-card" style="margin: 0 0 24px 0; animation: fadeInDown 0.4s ease;">
-                        <h4 style="margin:0 0 10px 0; font-size:14px; display:flex; align-items:center; gap:8px;">
-                            <i class="ph-fill ph-warning-octagon" style="color:#FF453A;"></i> Rischio Burnout Rilevato
-                        </h4>
-                        <p style="font-size:13px; opacity:0.9; margin:0 0 ${ai ? '12px' : '0'} 0; line-height:1.5;">
-                            ${reason}. Ti consigliamo di alleggerire il carico di oggi.
-                        </p>
-                        ${ai && ai.studyPlan ? `
-                        <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:12px; border-left:3px solid var(--accent);">
-                            <p style="margin:0; font-size:12px; line-height:1.5; color:rgba(255,255,255,0.75);">
-                                <strong style="color:var(--accent);">Piano suggerito:</strong> ${ai.studyPlan}
-                            </p>
-                        </div>` : ''}
-                    </div>`;
-                    }
-                    return '';
-                })()}
+            <!-- SMART ADVICE BANNER REMOVED -->
 
 
             <div style="display: flex; gap: 4px; margin-bottom: 24px; background: rgba(99,102,241,0.06); padding: 4px; border-radius: 40px; border: 1px solid rgba(99,102,241,0.12); box-shadow: 0 4px 12px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6);">
@@ -802,265 +771,6 @@ window.closeSubject = function() {
             </div>
         </div> `;
         }
-        let _mhAICache = null;
-        let _mhSaveTimeout = null;
-
-        function getDailyQuote() {
-            const todayStr = getLocalDateString();
-            try {
-                const cached = JSON.parse(localStorage.getItem('mh_daily_quote') || '{}');
-                if (cached.quote && cached.date === todayStr) return cached.quote;
-            } catch (e) { }
-            return null;
-        }
-
-        async function fetchMHAIAdvice(forceRefresh = false) {
-            const todayStr = getLocalDateString();
-            if (!forceRefresh && _mhAICache && _mhAICache._date === todayStr) return _mhAICache;
-
-            const userData = state.user || {};
-            const recentGrades = (state.voti || []).slice(-5).map(v => `${v.materia}: ${v.voto}`).join(', ');
-            const taskCount = (state.tasks || []).filter(t => !t.done).length;
-            const upcomingExams = (state.tasks || []).filter(t => !t.done && t.hasValidDate).slice(0, 3).map(t => `${t.text} (${t.due_date})`).join(', ');
-            const mhData = state.stressLevels[todayStr] || { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
-
-            try {
-                const resp = await fetch(`${API_BASE_URL}/api/ai/mental-health-advice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        pid: getUserId(),
-                        date: todayStr,
-                        mhData,
-                        recentGrades,
-                        taskCount,
-                        upcomingExams
-                    })
-                });
-                const result = await resp.json();
-                if (result.advice) {
-                    _mhAICache = { ...result, _date: todayStr };
-                    if (result.quote) {
-                        localStorage.setItem('mh_daily_quote', JSON.stringify({ quote: result.quote, date: todayStr }));
-                    }
-                    return _mhAICache;
-                }
-            } catch (e) { console.warn('MH AI advice fetch failed:', e.message); }
-            return null;
-        }
-
-        function saveMHToSupabase(data) {
-            const pid = getUserId();
-            if (!pid || pid === 'guest') return;
-            const todayStr = getLocalDateString();
-            fetch(`${API_BASE_URL}/api/mental-health/save`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    profileId: pid,
-                    date: todayStr,
-                    stress: data.stress,
-                    fatigue: data.fatigue,
-                    sleep: data.sleep,
-                    load: data.load,
-                    note: data.note || ''
-                })
-            }).catch(e => console.warn('MH save failed:', e.message));
-        }
-
-        function updateMHMetric(key, val) {
-            const todayStr = getLocalDateString();
-            if (!state.stressLevels[todayStr] || typeof state.stressLevels[todayStr] !== 'object') {
-                state.stressLevels[todayStr] = { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
-            }
-            state.stressLevels[todayStr][key] = val;
-            if (typeof saveTasks === 'function') saveTasks();
-
-            if (_mhSaveTimeout) clearTimeout(_mhSaveTimeout);
-            _mhSaveTimeout = setTimeout(() => {
-                saveMHToSupabase(state.stressLevels[todayStr]);
-                fetchMHAIAdvice(true).then(() => { if (typeof render === 'function') render(); });
-            }, 1500);
-
-            if (typeof render === 'function') render();
-        }
-
-        function migrateStressData() {
-            if (typeof lsKey !== 'function') return;
-            const local = localStorage.getItem(lsKey('stress_levels'));
-            if (local) {
-                try { state.stressLevels = JSON.parse(local); } catch(e){}
-            }
-        }
-
-        function renderMentalHealthView() {
-            migrateStressData();
-            const todayStr = getLocalDateString();
-            const data = state.stressLevels[todayStr] || { stress: 3, fatigue: 3, sleep: 7, load: 'medium', note: '' };
-
-            // AI Advice (cached or loading)
-            const aiData = _mhAICache && _mhAICache._date === todayStr ? _mhAICache : null;
-            const adviceHTML = aiData
-                ? `<div class="ai-prose" style="margin-bottom:12px;"><strong style="color:white; font-size:15px; display:block; margin-bottom:6px;">Consiglio AI:</strong> ${typeof marked !== 'undefined' ? marked.parse(aiData.advice || '') : (aiData.advice || '')}</div>
-                   <div class="ai-prose"><strong style="color:white; font-size:15px; display:block; margin-bottom:6px;">Piano Studio Suggerito:</strong> ${typeof marked !== 'undefined' ? marked.parse(aiData.studyPlan || '') : (aiData.studyPlan || '')}</div>`
-                : `<div style="display:flex; align-items:center; gap:10px;">
-                     <div class="mh-loading-dot"></div>
-                     <span style="opacity:0.7;">Analisi AI in corso...</span>
-                   </div>`;
-
-            const severityBadge = aiData
-                ? `<span class="mh-badge ${aiData.severity === 'high' ? 'mh-badge-high' : aiData.severity === 'medium' ? 'mh-badge-mid' : 'mh-badge-low'}">${aiData.severity === 'high' ? 'Attenzione' : aiData.severity === 'medium' ? 'Moderato' : 'Ottimo'}</span>`
-                : '';
-
-            // Trend 7 days (stress + sleep dual line)
-            const trendStress = [], trendSleep = [], labels = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                const ds = getLocalDateString(d);
-                const val = state.stressLevels[ds];
-                trendStress.push(typeof val === 'object' ? val.stress : (Number(val) || 0));
-                trendSleep.push(typeof val === 'object' ? val.sleep : 0);
-                labels.push(d.toLocaleDateString('it-IT', { weekday: 'short' }).substring(0, 3));
-            }
-            const stressPath = trendStress.map((v, i) => `${20 + (i / 6) * 260},${110 - (v / 5) * 80}`).join(' L ');
-            const sleepPath = trendSleep.map((v, i) => `${20 + (i / 6) * 260},${110 - (v / 12) * 80}`).join(' L ');
-
-            // Trigger AI fetch if not cached
-            if (!aiData) {
-                fetchMHAIAdvice().then(result => {
-                    if (result && state.view === 'mental_health') render();
-                });
-            }
-
-            return `
-            <div class="view animate-fade-in" style="padding: 100px 24px 120px 24px;">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <button type="button" onclick="navigate('home')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;">
-                            <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
-                        </button>
-                        <div>
-                            <h1 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.5px;">Benessere</h1>
-                            <p style="margin:2px 0 0; font-size:12px; color:var(--text-dim);">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DAILY CHECK-IN -->
-                <div class="glass-panel" style="padding:28px 24px; margin-bottom:24px; border-radius:24px; border-bottom: 2px solid rgba(255,255,255,0.03);">
-                    <h3 style="margin:0 0 24px 0; font-size:14px; opacity:0.6; text-transform:uppercase; letter-spacing:1.5px; display:flex; align-items:center; gap:8px;">
-                        <i class="ph-fill ph-heart-half" style="color:#FF6B8A;"></i> Check-in Giornaliero
-                    </h3>
-
-                    <div class="mh-metric-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:700; font-size:15px;">Livello di Stress</span>
-                            <span id="mh-badge-stress" class="mh-badge ${data.stress > 3 ? 'mh-badge-high' : data.stress > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.stress}/5</span>
-                        </div>
-                        <div class="mh-slider-container">
-                            <input type="range" min="1" max="5" value="${data.stress}" class="mh-slider" style="--slider-color: ${data.stress > 3 ? '#FF453A' : data.stress > 1 ? '#FF9F0A' : '#30D158'};" oninput="updateMHMetric('stress', parseInt(this.value)); this.style.setProperty('--slider-color', this.value > 3 ? '#FF453A' : this.value > 1 ? '#FF9F0A' : '#30D158'); document.getElementById('mh-badge-stress').className = 'mh-badge ' + (this.value > 3 ? 'mh-badge-high' : this.value > 1 ? 'mh-badge-mid' : 'mh-badge-low');">
-                            <div style="display:flex; justify-content:space-between; margin-top:6px;">
-                                <span style="font-size:10px; opacity:0.4;">Calmo</span>
-                                <span style="font-size:10px; opacity:0.4;">Molto stressato</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mh-metric-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:700; font-size:15px;">Stanchezza Mentale</span>
-                            <span id="mh-badge-fatigue" class="mh-badge ${data.fatigue > 3 ? 'mh-badge-high' : data.fatigue > 1 ? 'mh-badge-mid' : 'mh-badge-low'}">${data.fatigue}/5</span>
-                        </div>
-                        <div class="mh-slider-container">
-                            <input type="range" min="1" max="5" value="${data.fatigue}" class="mh-slider" oninput="updateMHMetric('fatigue', parseInt(this.value)); document.getElementById('mh-badge-fatigue').className = 'mh-badge ' + (this.value > 3 ? 'mh-badge-high' : this.value > 1 ? 'mh-badge-mid' : 'mh-badge-low');">
-                            <div style="display:flex; justify-content:space-between; margin-top:6px;">
-                                <span style="font-size:10px; opacity:0.4;">Fresco</span>
-                                <span style="font-size:10px; opacity:0.4;">Esausto</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mh-metric-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:700; font-size:15px;">Ore di Sonno</span>
-                            <span id="mh-badge-sleep" style="font-weight:800; font-size:18px; color:${data.sleep < 6 ? '#FF453A' : data.sleep < 7 ? '#FF9F0A' : 'var(--accent)'}">${data.sleep}h</span>
-                        </div>
-                        <div class="mh-slider-container">
-                            <input type="range" min="0" max="12" step="0.5" value="${data.sleep}" class="mh-slider" oninput="updateMHMetric('sleep', parseFloat(this.value)); document.getElementById('mh-badge-sleep').style.color = (this.value < 6 ? '#FF453A' : this.value < 7 ? '#FF9F0A' : 'var(--accent)');">
-                            <div style="display:flex; justify-content:space-between; margin-top:6px;">
-                                <span style="font-size:10px; opacity:0.4;">0h</span>
-                                <span style="font-size:10px; color:${data.sleep < 6 ? '#FF453A' : 'rgba(255,255,255,0.3)'}">${data.sleep < 6 ? '⚠️ Debito' : ''}</span>
-                                <span style="font-size:10px; opacity:0.4;">12h</span>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </div>
-
-                <!-- AI INSIGHT (Real Gemini) -->
-                <div class="mh-advice-card" style="margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                        <h3 style="margin:0; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:8px;">
-                            <i class="ph-fill ph-brain" style="color:#A78BFA;"></i> AI Insight
-                        </h3>
-                        ${severityBadge}
-                    </div>
-                    <div style="font-size:14px; line-height:1.7; color:rgba(255,255,255,0.85);">
-                        ${adviceHTML}
-                    </div>
-                    ${aiData && aiData.quote ? `
-                    <div style="margin-top:16px; padding:14px; background:rgba(255,255,255,0.03); border-radius:14px; border-left:3px solid var(--accent);">
-                        <p style="margin:0; font-size:13px; font-style:italic; color:rgba(255,255,255,0.7); line-height:1.5;">"${aiData.quote}"</p>
-                    </div>` : ''}
-                </div>
-
-                <!-- TREND CHART (Dual: Stress + Sleep) -->
-                <div class="glass-panel" style="padding:20px; border-radius:24px; margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <h3 style="margin:0; font-size:13px; opacity:0.5; text-transform:uppercase; letter-spacing:1px;">Andamento 7 Giorni</h3>
-                        <div style="display:flex; gap:12px; font-size:10px;">
-                            <span style="display:flex; align-items:center; gap:4px;"><span style="width:8px;height:3px;background:var(--accent);border-radius:2px;"></span> Stress</span>
-                            <span style="display:flex; align-items:center; gap:4px;"><span style="width:8px;height:3px;background:#30D158;border-radius:2px;"></span> Sonno</span>
-                        </div>
-                    </div>
-                    <div style="height:140px; width:100%; position:relative; overflow:visible;">
-                        <svg viewBox="0 0 300 140" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; overflow:visible;">
-                            <!-- Grid lines -->
-                            <line x1="20" y1="30" x2="280" y2="30" stroke="rgba(255,255,255,0.05)" />
-                            <line x1="20" y1="70" x2="280" y2="70" stroke="rgba(255,255,255,0.05)" />
-                            <line x1="20" y1="110" x2="280" y2="110" stroke="rgba(255,255,255,0.05)" />
-                            <!-- Stress line -->
-                            <path d="M ${stressPath}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                            <!-- Sleep line -->
-                            <path d="M ${sleepPath}" fill="none" stroke="#30D158" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />
-                            <!-- Dots -->
-                            ${trendStress.map((v, i) => {
-                                const cx = (20 + (i / 6) * 260).toFixed(1);
-                                const cy = (110 - (v / 5) * 80).toFixed(1);
-                                return `<circle cx="${cx}" cy="${cy}" r="3.5" fill="var(--accent)" />`;
-                            }).join('')}
-                        </svg>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; padding:0 8px; margin-top:4px;">
-                        ${labels.map(l => `<span style="font-size:10px; opacity:0.35; text-transform:capitalize;">${l}</span>`).join('')}
-                    </div>
-                </div>
-
-                <!-- NOTES -->
-                <div class="glass-panel" style="padding:20px; border-radius:24px;">
-                    <h3 style="margin:0 0 12px 0; font-size:14px; opacity:0.6; display:flex; align-items:center; gap:8px;">
-                        <i class="ph ph-note-pencil" style="color:var(--accent);"></i> Diario Breve
-                    </h3>
-                    <textarea 
-                        id="mh-note-textarea"
-                        style="width:100%; height:80px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:16px; color:white; font-family:inherit; font-size:14px; outline:none; resize:none; transition: border-color 0.2s;"
-                        placeholder="Cosa ti ha pesato oggi? Questo è privato e aiuta a riconoscere pattern..."
-                        onfocus="this.style.borderColor='rgba(99,102,241,0.4)'"
-                        onblur="this.style.borderColor='rgba(255,255,255,0.08)'; updateMHMetric('note', this.value)">${data.note || ''}</textarea>
-                </div>
-            </div>`;
-        }
         function formatFullDate(dateInput) {
             if (!dateInput) return '';
             const date = new Date(dateInput);
@@ -1071,48 +781,6 @@ window.closeSubject = function() {
             const year = date.getFullYear();
             const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
             return `${day} ${month} ${year} • ${time} `;
-        }
-        function showStressDetailsModal() {
-            const days = 14;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const points = [];
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-
-            for (let i = days - 1; i >= 0; i--) {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const iso = getLocalDateString(d);
-                const raw = state.stressLevels[iso];
-                const lv = typeof raw === 'object' ? (raw.stress || 0) : (Number(raw) || 0);
-                points.push({ date: iso, lv, x: ((days - 1 - i) / (days - 1)) * 280, y: 100 - (lv / 5) * 80 });
-            }
-            const path = points.map((p, idx) => (idx === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)} ` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)} `)).join(' ');
-
-            modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)">
-            <div class="modal-content glass-panel" style="max-width: 520px; padding: 20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h2 style="margin:0;">Stress • Ultimi ${days} giorni</h2>
-                    <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700;">Chiudi</button>
-                </div>
-                <div style="width:100%; height:160px; background: rgba(76,29,149,0.18); border:1px solid rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                    <svg viewBox="0 0 300 120" width="100%" height="100%" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="stressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.65" /><stop offset="100%" stop-color="#7c3aed" stop-opacity="0.0" />
-                            </linearGradient>
-                        </defs>
-                        <path d="${path}" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round" />
-                        <path d="${path} L 280 120 L 0 120 Z" fill="url(#stressGrad)" />
-                    </svg>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:12px;">
-                    ${[1, 2, 3, 4, 5].map(lv => `<button onclick="setStressLevel(${lv}, true)" class="btn-primary" style="flex:1; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color:white; font-weight:800;">${lv}</button>`).join('')}
-                </div>
-            </div>
-        </div> `;
         }
         function renderProfile() {
             return `
@@ -1193,19 +861,15 @@ window.closeSubject = function() {
             return `
         <div class="view">
 
-            <!-- HERO GRADIENT -->
-            <div class="premium-hero">
-                <div style="position: relative; z-index: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <h1 class="hero-title">Media & Analisi</h1>
-                            <p class="hero-subtitle">Monitoraggio del rendimento</p>
-                        </div>
-                        <button onclick="performSync()" style="width: 40px; height: 40px; border-radius: 20px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); color: var(--accent); cursor: pointer; display:flex; align-items:center; justify-content:center;">
-                            <i class="ph-bold ph-arrow-clockwise"></i>
-                        </button>
-                    </div>
+            <!-- NEW UNIFIED HEADER -->
+            <div style="margin-bottom: 32px;">
+                <div class="tasks-header">
+                    <div class="section-label">Media & Analisi</div>
+                    <button onclick="performSync()" style="width: 38px; height: 38px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border); color: var(--accent); cursor: pointer; display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
+                        <i class="ph-bold ph-arrow-clockwise"></i>
+                    </button>
                 </div>
+                <h1 style="font-size: 28px; font-weight: 800; color: var(--text-1); letter-spacing: -0.02em; margin-top: 4px;">Monitoraggio rendimento</h1>
             </div>
 
             <!--Global Media Card-->
@@ -1461,15 +1125,6 @@ window.closeSubject = function() {
                </div>
            </div>`;
         }
-        function initStressWaveFromState() {
-            const todayStr = getLocalDateString();
-            const mh = state.stressLevels[todayStr];
-            let level = 3; // Default
-            if (mh) {
-                level = typeof mh === 'object' ? (mh.stress || 3) : Number(mh);
-            }
-            renderStressWave(level);
-        }
         function renderMediaGauge(target = 0) {
             const canvas = document.getElementById('mediaGaugeCanvas');
             const valueEl = document.getElementById('mediaValue');
@@ -1620,56 +1275,6 @@ window.closeSubject = function() {
             const ctx = canvas.getContext('2d');
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             return { ctx, rect, dpr };
-        }
-        function renderStressWave(level = 5) {
-            if (__stressWaveRAF) cancelAnimationFrame(__stressWaveRAF);
-            const canvas = document.getElementById('stressWaveCanvas');
-            if (!canvas) return;
-            const { ctx, rect } = setupCanvas(canvas);
-            const W = rect.width, H = rect.height;
-
-            // Parametri onda in base al livello (Dynamic Speed)
-            const ampBase = 12;
-            const amp = ampBase * (0.5 + (level / 10) * 0.5);
-            const freq = 0.02;
-            const speed = 0.02 + (level / 10) * 0.08; // Più stress -> più veloce
-
-            let t = 0;
-
-            function strokeGradient() {
-                const g = ctx.createLinearGradient(0, 0, W, 0);
-                g.addColorStop(0.00, 'rgba(255,255,255,0.4)');
-                g.addColorStop(0.50, 'rgba(255,255,255,0.8)');
-                g.addColorStop(1.00, 'rgba(255,255,255,0.4)');
-                return g;
-            }
-
-            function draw() {
-                if (!document.getElementById('stressWaveCanvas')) {
-                    cancelAnimationFrame(__stressWaveRAF);
-                    __stressWaveRAF = null;
-                    return;
-                }
-                ctx.clearRect(0, 0, W, H);
-
-                ctx.lineWidth = 2.5;
-                ctx.strokeStyle = strokeGradient();
-                ctx.shadowColor = 'rgba(255,255,255,0.2)';
-                ctx.shadowBlur = 4;
-
-                ctx.beginPath();
-                const midY = H / 2;
-                for (let x = 0; x <= W; x += 4) {
-                    const y = midY + Math.sin(x * freq + t) * amp;
-                    if (x === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.stroke();
-
-                t += speed;
-                __stressWaveRAF = requestAnimationFrame(draw);
-            }
-            __stressWaveRAF = requestAnimationFrame(draw);
         }
         function initCustomScrollbar() {
             const scroller = document.getElementById('custom-scrollbar');
@@ -2354,33 +1959,6 @@ window.closeSubject = function() {
                 }).join('')}
         </div>`;
             }
-        }
-        function showStressModal() {
-            const todayStr = getLocalDateString();
-            const currentLevel = state.stressLevels[todayStr] || 0;
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-
-            modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)">
-            <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 420px; padding: 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-                    <h2 style="margin:0;">Stress Giornaliero</h2>
-                    <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px;"></i>
-                </div>
-                <div class="stress-level-grid">
-                    ${[1, 2, 3, 4, 5].map(lv => `
-                        <div class="stress-pill ${currentLevel === lv ? 'active' : ''}" 
-                            data-stress="${lv}" 
-                            onclick="setStressLevel(${lv}, true)">
-                            ${lv}
-                        </div>`).join('')}
-                </div>
-                <div style="display:flex; justify-content:center; margin-top: 16px;">
-                    <button onclick="closeModal()" class="btn-primary" style="max-width: 220px;">Conferma</button>
-                </div>
-            </div>
-        </div> `;
         }
         function showPlanWeekModal() {
             const modalContainer = getModalContainer();
@@ -3289,10 +2867,8 @@ window.closeSubject = function() {
                 }
             }
         }
-        function updateStressWidget(level) { renderStressWave(level); }
         function updateMediaWidget(value) { renderMediaGauge(value); }
-        function initHomeWidgets({ mediaValue = 7.64, stressLevel = 5 } = {}) {
-            renderStressWave(stressLevel);
+        function initHomeWidgets({ mediaValue = 7.64 } = {}) {
             renderMediaGauge(mediaValue);
         }
         function togglePollCreatorUI() {
@@ -3300,243 +2876,6 @@ window.closeSubject = function() {
             if (ui) {
                 ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
             }
-        }
-        function showDetailedStressModal(event) {
-            if (event) event.stopPropagation();
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-
-            const todayStr = getLocalDateString();
-
-            // Draft State Initialization
-            state.tempStress = {
-                level: state.stressLevels?.[todayStr] ?? 5,
-                vent: state.stressVents?.[todayStr] ?? ''
-            };
-
-            const historyDays = [];
-            const today = new Date();
-            for (let i = 0; i < 30; i++) {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const iso = getLocalDateString(d);
-                if (state.stressLevels?.[iso] || state.stressVents?.[iso]) {
-                    historyDays.push({
-                        date: iso,
-                        level: state.stressLevels?.[iso] || 5,
-                        vent: state.stressVents?.[iso] || '',
-                        displayDate: d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-                    });
-                }
-            }
-
-            modalContainer.innerHTML = `
-    <div class="modal-overlay active" onclick="closeModal(event)">
-      <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 550px; padding: 24px; background:#121212; border:1px solid rgba(255,255,255,0.1); border-radius:28px; max-height:90vh; overflow-y:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-          <h2 style="margin:0; font-size:22px; font-weight:800; color:white;">Analisi Stress</h2>
-          <button onclick="closeModal()" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.06); border:none; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            <i class="ph-bold ph-x" style="font-size:18px;"></i>
-         </button>
-       </div>
-
-        <div style="margin-bottom:24px;">
-            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Come ti senti oggi?</div>
-            <div style="display:flex; justify-content:space-between; gap:6px;">
-                ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lv => `
-                    <button class="stress-pill-btn" data-lv="${lv}" onclick="updateStressDraft(${lv})" 
-                        style="flex:1; height:40px; border-radius:10px; border:none; font-weight:800; font-size:14px; cursor:pointer; transition:all 0.2s;
-                        background: ${state.tempStress.level === lv ? 'var(--primary)' : 'rgba(255,255,255,0.06)'};
-                        color: ${state.tempStress.level === lv ? 'white' : 'rgba(255,255,255,0.4)'};">
-                        ${lv}
-                   </button>
-                `).join('')}
-           </div>
-       </div>
-
-        <div style="margin-bottom:24px;">
-            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Sfogo del giorno</div>
-            <textarea id="dailyVentInput" placeholder="Scrivi qui i tuoi pensieri..." 
-                oninput="state.tempStress.vent = this.value"
-                style="width:100%; height:80px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:12px; color:white; font-size:14px; outline:none; font-family:inherit; resize:none;">${state.tempStress.vent}</textarea>
-       </div>
-
-        <div style="margin-bottom:24px;">
-            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Trend</div>
-            <div style="background:rgba(255,255,255,0.03); border-radius:20px; padding:16px; border:1px solid rgba(255,255,255,0.04);">
-                <canvas id="weeklyDetailedChart" style="width:100%; height:120px;"></canvas>
-           </div>
-       </div>
-
-        <div style="margin-bottom:24px;">
-            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.4); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Storico Recente</div>
-            <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:8px; scrollbar-width:none;">
-                ${historyDays.length > 0 ? historyDays.map(h => `
-                    <div style="min-width:140px; background:rgba(255,255,255,0.04); border-radius:16px; padding:12px; border:1px solid rgba(255,255,255,0.06);">
-                        <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.3); margin-bottom:4px;">${h.displayDate}</div>
-                        <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:4px;">Livello ${h.level}</div>
-                        <div style="font-size:12px; color:rgba(255,255,255,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${h.vent || 'Nessun pensiero'}</div>
-                   </div>
-                `).join('') : '<div style="opacity:0.3; font-size:13px;">Nessun dato precedente</div>'}
-           </div>
-       </div>
-
-        <div style="display:flex; gap:12px;">
-            <button onclick="closeModal()" style="flex:1; height:50px; border-radius:16px; font-weight:700; background:rgba(255,255,255,0.06); border:none; color:white; cursor:pointer;">Annulla</button>
-            <button onclick="commitStressChanges()" class="btn-primary" style="flex:2; height:50px; border-radius:16px; font-weight:800; border:none; cursor:pointer;">SALVA</button>
-       </div>
-     </div>
-   </div>
-  `;
-            drawDetailedStressChart('weeklyDetailedChart');
-        }
-        function drawDetailedStressChart(canvasId) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-            const { ctx, rect } = setupCanvas(canvas);
-            const W = rect.width, H = rect.height;
-
-            const days = 7;
-            const today = new Date();
-            const series = [];
-            const labels = [];
-
-            const dayNames = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
-
-            for (let i = days - 1; i >= 0; i--) {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const iso = getLocalDateString(d);
-                const lv = Number(state.stressLevels?.[iso] ?? 5);
-                series.push(lv);
-                labels.push(dayNames[d.getDay()]);
-            }
-
-            ctx.clearRect(0, 0, W, H);
-
-            const padding = 25;
-            const stepX = (W - padding * 2) / (series.length - 1);
-            // Gradient area
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-            grad.addColorStop(1, 'rgba(99, 102, 241, 0)');
-            
-            ctx.beginPath();
-            series.forEach((v, i) => {
-                const x = padding + i * stepX;
-                const y = H - padding - (v / 10) * (H - padding * 2);
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.lineTo(padding + (series.length - 1) * stepX, H);
-            ctx.lineTo(padding, H);
-            ctx.closePath();
-            ctx.fillStyle = grad;
-            ctx.fill();
-
-            // Main line
-            ctx.beginPath();
-            ctx.strokeStyle = '#6366f1';
-            ctx.lineWidth = 3;
-            series.forEach((v, i) => {
-                const x = padding + i * stepX;
-                const y = H - padding - (v / 10) * (H - padding * 2);
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-
-            // Points (Bug 3 Fix)
-            series.forEach((v, i) => {
-                const x = padding + i * stepX;
-                const y = H - padding - (v / 10) * (H - padding * 2);
-                ctx.fillStyle = '#6366f1';
-                ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            });
-
-            // Labels
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.font = '800 10px Inter';
-            ctx.textAlign = 'center';
-            labels.forEach((l, i) => {
-                ctx.fillText(l, padding + i * stepX, H - 5);
-            });
-        }
-        function drawWeeklyStressChart(canvasId) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-
-            // DPR-safe
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.floor(rect.width * dpr);
-            canvas.height = Math.floor(rect.height * dpr);
-            const ctx = canvas.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            const W = rect.width, H = rect.height;
-
-            // Calcola ultimi 7 giorni
-            const days = 7;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const series = [];
-            for (let i = days - 1; i >= 0; i--) {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const iso = getLocalDateString(d);
-                const lv = Number(state.stressLevels?.[iso] ?? 0);
-                series.push({ date: iso, level: lv });
-            }
-
-            // Sfondo
-            ctx.clearRect(0, 0, W, H);
-            ctx.fillStyle = 'rgba(255,255,255,0.05)';
-            ctx.fillRect(0, 0, W, H);
-
-            // Assi
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(40, 16);
-            ctx.lineTo(40, H - 28);
-            ctx.lineTo(W - 12, H - 28);
-            ctx.stroke();
-
-            // Linea valori (0-10)
-            const minX = 52, maxX = W - 24;
-            const minY = 20, maxY = H - 40;
-            const stepX = (maxX - minX) / Math.max(1, series.length - 1);
-
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            
-            // Line
-            ctx.beginPath();
-            series.forEach((pt, i) => {
-                const x = minX + i * stepX;
-                const y = maxY - (pt.level / 10) * (maxY - minY);
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-
-            // Dots (Bug 3 Fix)
-            series.forEach((pt, i) => {
-                const x = minX + i * stepX;
-                const y = maxY - (pt.level / 10) * (maxY - minY);
-                ctx.fillStyle = '#ef4444';
-                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-            });
-
-            // Etichette giorno
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.font = '11px system-ui';
-            series.forEach((pt, i) => {
-                const x = minX + i * stepX;
-                const label = pt.date.slice(5); // MM-DD
-                ctx.fillText(label, x - 12, H - 10);
-            });
         }
 
 
@@ -3627,7 +2966,7 @@ window.closeSubject = function() {
 
 
 // ── RENDERING HEART & NAVIGATION SETTINGS ──
-window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'mental_health'];
+window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile'];
 
 window.currentViewFromHash = function() {
     const v = (location.hash || '').replace('#', '').trim();
@@ -3688,7 +3027,6 @@ window._renderCore = function() {
         case 'ai_assistant': html = renderAIAssistantView(); break;
         case 'academic_profile': html = renderAcademicProfile(); break;
         case 'profile': html = renderProfile(); break;
-        case 'mental_health': html = renderMentalHealthView(); break;
         default: html = renderHome(); break;
     }
 
@@ -3698,7 +3036,7 @@ window._renderCore = function() {
     requestAnimationFrame(() => {
         if (state.view === 'home') {
             const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
-            if (typeof initStressWaveFromState === 'function') initStressWaveFromState();
+
             if (typeof renderMediaGauge === 'function') renderMediaGauge(mediaVal);
         }
         if (state.view === 'planner') {
@@ -3723,13 +3061,11 @@ window.logout = async function() {
 
         if (currentUserId && currentUserId !== 'guest') {
             localStorage.setItem(`${currentLsPrefix}:planned_tasks`, JSON.stringify(state.plannedTasks || {}));
-            localStorage.setItem(`${currentLsPrefix}:stress_levels`, JSON.stringify(state.stressLevels || {}));
             localStorage.setItem(`${currentLsPrefix}:planner_updated_at`, new Date().toISOString());
 
             try {
                 const payload = {
                     plannedTasks: state.plannedTasks || {},
-                    stressLevels: state.stressLevels || {},
                     plannedDetails: {},
                     updatedAt: new Date().toISOString()
                 };
@@ -3753,7 +3089,6 @@ window.logout = async function() {
         state.isOffline = false;
         state.lastSync = null;
         state.plannedTasks = {};
-        state.stressLevels = {};
 
         state.view = 'login';
         if (window._threadsPoller) clearInterval(window._threadsPoller);
@@ -3883,23 +3218,6 @@ window.refreshDailyQuote = async function(btn) {
         btn.style.opacity = '0.6';
     }
     window.scheduleRender();
-};
-
-window.setStressLevel = function(lv, inModal = false) {
-    const todayStr = getLocalDateString();
-    if (typeof state.stressLevels[todayStr] !== 'object') {
-        state.stressLevels[todayStr] = { stress: lv, updatedAt: new Date().toISOString() };
-    } else {
-        state.stressLevels[todayStr].stress = lv;
-        state.stressLevels[todayStr].updatedAt = new Date().toISOString();
-    }
-    if (typeof saveTasks === 'function') saveTasks();
-    if (inModal) {
-        document.querySelectorAll('.stress-pill').forEach(p => {
-            p.classList.toggle('active', Number(p.getAttribute('data-stress')) === lv);
-        });
-    }
-    if (typeof initStressWaveFromState === 'function') initStressWaveFromState();
 };
 
 window.refreshCircolari = function() {
@@ -4158,21 +3476,13 @@ window.sendAIChat = async function() {
     });
 
     const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-    const stressToday = state.stressLevels?.[todayStr] || null;
-    const stressHistory = [];
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        const ds = getLocalDateString(d);
-        const v = state.stressLevels?.[ds];
-        if (v && typeof v === 'object') stressHistory.push({ date: ds, ...v });
-    }
-    const avgStress = stressHistory.length ? (stressHistory.reduce((s, h) => s + (h.stress || 3), 0) / stressHistory.length).toFixed(1) : null;
-    const stressBlock = stressToday ? `🧠 BENESSERE STUDENTE:\n- Stress: ${stressToday.stress || '?'}/5\n- Stanchezza mentale: ${stressToday.fatigue || '?'}/5\n- Ore di sonno: ${stressToday.sleep || '?'}h\n- Media stress ultimi ${stressHistory.length} giorni: ${avgStress || 'N/D'}/5` : 'BENESSERE STUDENTE: nessun dato inserito oggi.';
+
     const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).map(([date, ids]) => {
         const dayTasks = ids.map(id => { const t = (state.tasks || []).find(x => x.id === id); return t ? `[${t.subject}] ${t.text}` : null; }).filter(Boolean);
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
+    const stressBlock = '';
     const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n${stressBlock}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. Tabella markdown per piani studio | Orario | Attività | Note | con grassetto **GIORNO YYYY-MM-DD**.`;
 
     const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
@@ -4326,7 +3636,7 @@ function gsapAnimateView() {
     }
 
     // 4. GENERAL CARDS — Elastic entrance
-    const cards = view.querySelectorAll('.card, .glass-panel, .mh-metric-box, .subject-summary-card, .registro-card');
+    const cards = view.querySelectorAll('.card, .glass-panel, .subject-summary-card, .registro-card');
     if (cards.length) {
         master.fromTo(cards,
             { opacity: 0, y: 35, scale: 0.94 },

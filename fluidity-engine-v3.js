@@ -62,7 +62,7 @@
     if (typeof window.navigate !== 'function' || window.navigate._isV3) return;
 
     window.navigate = function navigate(v) {
-      const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'mental_health'];
+      const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile'];
       if (!allowedViews.includes(v)) v = 'home';
       if (v === state.view) return;
 
@@ -121,7 +121,6 @@
       case 'ai_assistant':    html = (typeof renderAIAssistantView === 'function') ? renderAIAssistantView() : ''; break;
       case 'academic_profile':html = (typeof renderAcademicProfile === 'function') ? renderAcademicProfile() : ''; break;
       case 'profile':         html = (typeof renderProfile === 'function') ? renderProfile() : ''; break;
-      case 'mental_health':   html = (typeof renderMentalHealthView === 'function') ? renderMentalHealthView() : ''; break;
       default:                html = (typeof renderHome === 'function') ? renderHome() : ''; break;
     }
     root.innerHTML = html;
@@ -129,7 +128,6 @@
     // Async hooks per canvas/charts
     requestAnimationFrame(() => {
       if (view === 'home') {
-        if (typeof initStressWaveFromState === 'function') initStressWaveFromState();
         const mediaVal = parseFloat((typeof calcolaMedia === 'function') ? calcolaMedia(state.voti) : 0) || 0;
         if (typeof renderMediaGauge === 'function') renderMediaGauge(mediaVal);
       }
