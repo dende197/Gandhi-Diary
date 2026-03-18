@@ -80,14 +80,14 @@
         /* DEFAULT */
         html {
             color-scheme: light;
-            background: #f5f5f7;
+            background: #F6F5F3;
             height: auto;
             min-height: 100%;
         }
 
         body {
             font-family: var(--font-main);
-            background: #f5f5f7;
+            background: #F6F5F3;
             color: var(--text-primary);
             height: 100%;
             min-height: 100%;
@@ -2990,7 +2990,7 @@ body {
 
 /* Body: warm lavender tint instead of ice white */
 html, body {
-  background: #f0eef6 !important;
+  background: #F6F5F3 !important;
 }
 body::before {
   background:
