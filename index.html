@@ -84,6 +84,7 @@
         const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
         const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend-r5j1.vercel.app";
         window.API_BASE_URL = API_BASE_URL;
+        console.log(`[Network] Active API: ${API_BASE_URL} (Local: ${IS_LOCAL})`);
 
         const SUPABASE_URL = "https://mlcutgkfunbpmrnbeznd.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sY3V0Z2tmdW5icG1ybmJlem5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTg2NDgsImV4cCI6MjA4NDc3NDY0OH0.eWR7PxNsJjSGAM1WoaNseVkeQDpEqaUvO8xvXoDKLQg";
