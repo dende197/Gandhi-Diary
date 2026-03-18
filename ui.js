@@ -24,21 +24,7 @@ window.switchPlannerMode = function(mode) {
 window.switchPlannerView = function(view) {
   state.uiMode = view;
   localStorage.setItem('g_diary_planner_view', view);
-  document.querySelectorAll('[data-planner-view]').forEach(btn => {
-    const isActive = btn.dataset.plannerView === view;
-    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
-    btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.5)';
-  });
-  const calContent = document.getElementById('calendar'); // Assuming planner body usually handles this
-  // We'll just do a fast fade out and re-render the whole planner body minus the top bar
-  const plannerScroll = document.querySelector('.planner-scroll');
-  if (plannerScroll && typeof gsap !== 'undefined') {
-      gsap.to(plannerScroll, { opacity:0, duration: 0.15, onComplete: () => {
-          scheduleRender(0);
-      }});
-  } else {
-      scheduleRender(0);
-  }
+  scheduleRender(0);
 };
 
 window.navigateSubject = function(subjName) {
@@ -603,7 +589,10 @@ function renderHome() {
 
         <div class="card verifica-card" style="border-radius:18px; padding:18px; display:flex; flex-direction:column; justify-content:center;">
           <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Prossima verifica</div>
-          <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:500; margin-bottom:7px; align-self:flex-start;">${examAbbr}</span>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom:7px;">
+            <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:500;">${examAbbr}</span>
+            ${nextExam ? `<span style="display:inline-flex; background:#FF4522; color:white; border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">WIP: SCRITTO/ORALE</span>` : ''}
+          </div>
           <div style="font-size:13px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:8px; flex:1;">${nextExam ? nextExam.text.substring(0,55) + (nextExam.text.length > 55 ? '...' : '') : 'Nessuna in vista'}</div>
           <div style="display:flex; align-items:baseline; gap:4px;">
             <span style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam ?? '--'}</span>
@@ -710,6 +699,16 @@ function renderHome() {
                 </div>
                 
                 <div style="display: flex; gap: 16px; align-items: center;">
+                    <!-- AI & Planning Buttons -->
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #E8EEF7; color: #2A3F6A; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-sparkle"></i> AI Chat
+                        </button>
+                        <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #F0F0F3; color: var(--text-secondary); border: 1px solid #E5E5EA; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-calendar-plus"></i> Pianifica
+                        </button>
+                    </div>
+
                     <div class="view-switch" style="background: rgba(0,0,0,0.06); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
                         <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
                         <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
@@ -720,11 +719,12 @@ function renderHome() {
                 </div>
             </div>
 
-            <div id="weekly-agenda-list" class="section-animate">
-                ${renderWeeklyAgenda()}
+            <div id="planner-main-content" class="section-animate">
+                ${state.uiMode === 'calendar' ? '<div id="calendar"></div>' : renderWeeklyAgenda()}
             </div>
         </div> 
-    </div>`;
+    </div>
+    ${state.uiMode === 'calendar' ? `<script>setTimeout(() => { if(typeof renderCustomCalendar === 'function') renderCustomCalendar(); }, 100);</script>` : ''}`;
         }
         function formatFullDate(dateInput) {
             if (!dateInput) return '';
@@ -814,68 +814,72 @@ function renderHome() {
             }).sort((a, b) => b.media - a.media);
 
             return `
-        <div class="view">
+    <div class="dashboard view" style="width: 100%;">
+        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
+            
+            <!-- V6 HEADER -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
+                <div>
+                    <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary); margin-bottom: 8px;">Voti & Rendimento</h1>
+                    <p style="font-family: 'JetBrains Mono', monospace; color: var(--text-dim); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">// SYS.GRADES_ANALYSIS</p>
+                </div>
+                
+                <button onclick="performSync()" style="width: 38px; height: 38px; border-radius: 12px; background: #141414; border: none; color: white; cursor: pointer; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s;">
+                    <i class="ph-bold ph-arrow-clockwise"></i>
+                </button>
+            </div>
 
-            <!-- NEW UNIFIED HEADER -->
-            <div style="margin-bottom: 32px;">
-                <div class="tasks-header">
-                    <div class="section-label">Media & Analisi</div>
-                    <button onclick="performSync()" style="width: 38px; height: 38px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border); color: var(--accent); cursor: pointer; display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
-                        <i class="ph-bold ph-arrow-clockwise"></i>
+            <!-- Global Media Card (TE Style) -->
+            <div class="card" style="background: #141414; padding: 32px; border: none; margin-bottom: 32px; border-radius: 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Media Generale</div>
+                    <div style="font-size: 72px; font-weight: 900; line-height: 1; letter-spacing: -0.05em;">${media.toFixed(2)}</div>
+                </div>
+                <div style="text-align: right;">
+                    <button onclick="promptSetGoal('overall')" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px 20px; color: white; cursor: pointer; transition: all 0.2s;">
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px;">Obiettivo</div>
+                        <div style="font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
+                            ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 14px;"></i>
+                        </div>
                     </button>
                 </div>
-                <h1 style="font-size: 28px; font-weight: 800; color: var(--text-1); letter-spacing: -0.02em; margin-top: 4px;">Monitoraggio rendimento</h1>
             </div>
 
-            <!--Global Media Card-->
-            <div class="card" style="background: linear-gradient(135deg, var(--accent) 0%, #4338ca 100%); padding: 32px; border: none; margin-bottom: 32px; box-shadow: 0 20px 40px var(--accent-glow);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <div style="color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Media Generale</div>
-                        <div style="font-size: 64px; font-weight: 900; color: white; line-height: 1; margin-top: 8px;">${media.toFixed(2)}</div>
-                    </div>
-                    <div style="text-align: right; cursor: pointer;" onclick="promptSetGoal('overall')">
-                        <div style="color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 800; text-transform: uppercase;">Obiettivo</div>
-                        <div style="font-size: 24px; font-weight: 800; color: white; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
-                            ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 14px; opacity: 0.7;"></i>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: 24px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.8);">
-                        <span>Progresso Obiettivo</span>
-                        <span>${Math.round((media / goal) * 100)}%</span>
-                    </div>
-                    <div style="height: 10px; background: rgba(0,0,0,0.2); border-radius: 5px; overflow: hidden;">
-                        <div style="width: ${Math.min(100, (media / goal) * 100)}%; height: 100%; background: white; box-shadow: 0 0 15px white;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                    <i class="ph-fill ph-book-open" style="color: var(--accent);"></i> Riepilogo Materie
+            <div style="margin-bottom: 24px;">
+                <h2 style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px;">
+                    <span style="flex:1; height:1px; background:#E5E5EA;"></span>
+                    Riepilogo Materie
+                    <span style="flex:1; height:1px; background:#E5E5EA;"></span>
                 </h2>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                 ${subjects.map(s => {
-                const subjColor = getSubjectColor(s.name);
+                const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
+                const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
+                const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
+                const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
+                
                 return `
-                    <div class="subject-summary-card" style="border-left-color: ${subjColor};" onclick="state.activeSubject='${s.name.replace(/'/g, "\\'")}'; render();" >
+                    <div class="card" style="padding: 24px; border-radius: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 20px;" onclick="state.activeSubject='${s.name.replace(/'/g, "\\'")}'; render();" >
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 14px; flex-shrink: 0;">
+                            ${getSubjectAbbrev(s.name)}
+                        </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">${s.name}</div>
-                            <div style="font-size: 12px; color: var(--text-dim);">${s.count} voti totali</div>
-                            <div class="mini-trend">
-                                ${s.trend.map(v => `<div class="trend-dot" style="background: ${v >= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${s.name}</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(1)}</div>
+                            <div style="display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px;">
+                                ${s.trend.map(v => `<div style="width: 4px; height: 4px; border-radius: 50%; background: ${v >= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
                             </div>
                         </div>
-                        <div class="grade-badge" style="color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}">${s.media.toFixed(1)}</div>
-                        <i class="ph ph-caret-right" style="color: var(--text-dim);"></i>
                     </div > `;
             }).join('')}
             </div>
-        </div> `;
+        </div> 
+    </div>`;
         }
         function renderAIAssistantView() {
             const chat = state.aiChatHistory || [];
