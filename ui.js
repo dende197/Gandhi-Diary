@@ -572,23 +572,29 @@ function renderHome() {
         return `<div class="sdot ${filled ? 'on' : ''} ${isLast ? 'today' : ''}" style="width:8px;height:8px;border-radius:50%;${bg}"></div>`;
     }).join('');
 
-    // Prossima verifica (scraped from DidUp)
+    // Prossima verifica (scraped from DidUp) — carousel
     const todayISO = today.toISOString().split('T')[0];
-    const upcomingVerifiche = (state.verifiche || [])
+    const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
     // Fallback to tasks if no verifiche scraped
-    const upcomingExams = (state.tasks || [])
+    const examTasks = (state.tasks || [])
         .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today && /verific|interrogazion|prova|test|compito\s+in\s+classe/i.test(t.text || ''))
-        .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
-
-    const nextVerifica = upcomingVerifiche[0] || null;
-    const nextExam = nextVerifica ? { subject: nextVerifica.materia, due_date: nextVerifica.data, text: nextVerifica.text, tipo: nextVerifica.tipo } : (upcomingExams[0] || null);
-    const daysToExam = nextExam ? Math.ceil((new Date(nextExam.due_date) - today) / 86400000) : null;
-    const examAbbr = nextExam ? getSubjectAbbrev(nextExam.subject || nextExam.materia) : 'N/D';
+        .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
+        .map(t => ({ materia: t.subject || t.materia, data: t.due_date, text: t.text, tipo: 'unknown', source: 'task' }));
+    const allUpcoming = allVerifiche.length > 0 ? allVerifiche : examTasks;
+    
+    // Carousel index
+    if (typeof window._verificheIdx === 'undefined') window._verificheIdx = 0;
+    if (window._verificheIdx >= allUpcoming.length) window._verificheIdx = 0;
+    const vIdx = window._verificheIdx;
+    const currentVerifica = allUpcoming[vIdx] || null;
+    const daysToExam = currentVerifica ? Math.ceil((new Date(currentVerifica.data) - today) / 86400000) : null;
+    const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia) : 'N/D';
     const examKey = examAbbr.toLowerCase();
-    const examTipo = nextExam?.tipo || 'unknown';
+    const examTipo = currentVerifica?.tipo || 'unknown';
     const examTipoLabel = examTipo === 'scritta' ? 'SCRITTA' : examTipo === 'orale' ? 'ORALE' : '';
+    const verificheCount = allUpcoming.length;
 
     // Ultima circolare
     const lastCirc = (state.circolari && state.circolari.length > 0)
@@ -605,8 +611,15 @@ function renderHome() {
         ? Math.max(0, Math.round((1 - totAssenze / (state.giorniScuola || 200)) * 100))
         : (state.assenze != null ? Math.round((1 - state.assenze / (state.giorniScuola || 200)) * 100) : 94);
 
-    // Voti recenti (ultimi 6)
-    const recentGrades = (state.voti || []).slice(-6).reverse();
+    // Voti recenti (ultimi 6, ordinati per data decrescente)
+    const recentGrades = (state.voti || [])
+        .filter(v => v.data || v.date)
+        .sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))
+        .slice(0, 6);
+
+    // Debug: log assenze data
+    console.log('[Debug] assenzeData:', JSON.stringify(state.assenzeData || 'null'));
+    console.log('[Debug] verifiche:', JSON.stringify((state.verifiche || []).length) + ' trovate');
 
     // Task di oggi
     const todayTasks = (state.tasks || []).filter(t => {
@@ -641,15 +654,22 @@ function renderHome() {
           <div style="display:flex; gap:3px; margin-top:8px;">${streakDots}</div>
         </div>
 
-        <div class="card verifica-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center;">
-          <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:6px;">PROSSIMA VERIFICA</div>
+        <div class="card verifica-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
+            ${verificheCount > 1 ? `<div style="display:flex; gap:4px;">
+              <button onclick="window._verificheIdx = Math.max(0, (window._verificheIdx||0)-1); if(window.scheduleRender) window.scheduleRender();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
+              <button onclick="window._verificheIdx = Math.min(${verificheCount - 1}, (window._verificheIdx||0)+1); if(window.scheduleRender) window.scheduleRender();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
+            </div>` : ''}
+          </div>
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom:5px;">
             <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;">${examAbbr}</span>
             ${examTipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>` : ''}
+            ${verificheCount > 1 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${vIdx + 1}/${verificheCount}</span>` : ''}
           </div>
-          <div style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${nextExam ? (nextExam.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
+          <div style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
           <div style="font-size:28px; font-weight:800; color:#141414; letter-spacing:-0.05em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}<span style="font-size:11px; font-weight:500; color:#908C86; margin-left:4px;">giorni</span></div>
-          ${nextExam ? `<div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;"><div style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div></div>` : ''}
+          ${currentVerifica ? `<div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;"><div style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div></div>` : ''}
         </div>
 
       </div>
