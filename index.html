@@ -267,6 +267,14 @@
                     if (data.tasks) updateTasks(data.tasks);
                     if (data.voti) { state.voti = data.voti; localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti)); }
                     if (data.circolari) state.circolari = data.circolari;
+                    if (data.assenzeData) {
+                        state.assenzeData = data.assenzeData;
+                        localStorage.setItem(lsKey('assenzeData'), JSON.stringify(state.assenzeData));
+                    }
+                    if (data.verifiche) {
+                        state.verifiche = data.verifiche;
+                        localStorage.setItem(lsKey('verifiche'), JSON.stringify(state.verifiche));
+                    }
                     if (data.student) {
                         state.user = { ...state.user, ...data.student };
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
@@ -278,6 +286,15 @@
                     state.lastSync = new Date().toLocaleTimeString();
                     state.didup.connected = true;
                     state.isOffline = false;
+
+                    // Show unjustified absence popup
+                    if (data.assenzeData && data.assenzeData.daGiustificare > 0) {
+                        setTimeout(() => {
+                            if (typeof showToast === 'function') {
+                                showToast(`⚠️ Hai ${data.assenzeData.daGiustificare} assenz${data.assenzeData.daGiustificare === 1 ? 'a' : 'e'} da giustificare`, 'warning');
+                            }
+                        }, 2000);
+                    }
                 }
             } catch (e) {
                 console.warn("Sync error:", e);
@@ -322,6 +339,8 @@
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
+                    state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
+                    state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','');

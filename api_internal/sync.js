@@ -4,7 +4,8 @@ const {
 const { getSupabase } = require('../lib/supabase');
 const {
     AdvancedArgo, resolveIdentityForProfile,
-    getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard, extractPromemoriaFromDashboard
+    getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
+    extractPromemoriaFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 
 module.exports = async function handler(req, res) {
@@ -49,6 +50,8 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
+        const assenzeData = extractAssenzeFromDashboard(dashboardData);
+        const verificheData = extractVerificheFromDashboard(dashboardData);
 
         let enrichedStudent = null;
         let plannerData = null;
@@ -135,6 +138,8 @@ module.exports = async function handler(req, res) {
             tasks,
             voti: grades,
             promemoria,
+            assenzeData,
+            verifiche: verificheData,
             new_tokens: { authToken, accessToken },
             planner: plannerData,
             student: enrichedStudent

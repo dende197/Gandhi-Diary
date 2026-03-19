@@ -5,7 +5,8 @@ const { getSupabase } = require('../lib/supabase');
 const {
     AdvancedArgo, enrichProfiles, resolveIdentityForProfile,
     resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb,
-    getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard, extractPromemoriaFromDashboard
+    getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
+    extractPromemoriaFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 
 module.exports = async function handler(req, res) {
@@ -83,6 +84,8 @@ module.exports = async function handler(req, res) {
         const gradesData = extractGradesFromDashboard(dashboardData);
         const tasksData = extractHomeworkFromDashboard(dashboardData);
         const announcementsData = extractPromemoriaFromDashboard(dashboardData);
+        const assenzeData = extractAssenzeFromDashboard(dashboardData);
+        const verificheData = extractVerificheFromDashboard(dashboardData);
 
         const pid = generatePid(school, username, targetIndex);
         let storedSpecialization = null;
@@ -132,7 +135,9 @@ module.exports = async function handler(req, res) {
             },
             tasks: tasksData,
             voti: gradesData,
-            promemoria: announcementsData
+            promemoria: announcementsData,
+            assenzeData,
+            verifiche: verificheData
         };
 
         if (targetProfile) {

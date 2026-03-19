@@ -163,9 +163,12 @@ window.closeSubject = function() {
                 }
             }
         }
-        function showToast(message) {
+        function showToast(message, type) {
             const existing = document.getElementById('g-toast');
             if (existing) existing.remove();
+
+            const bgColor = type === 'warning' ? '#FF9500' : type === 'error' ? '#FF3B30' : 'var(--blue)';
+            const icon = type === 'warning' ? 'ph-warning' : type === 'error' ? 'ph-x-circle' : 'ph-check-circle';
 
             const toast = document.createElement('div');
             toast.id = 'g-toast';
@@ -174,7 +177,7 @@ window.closeSubject = function() {
                 bottom: 160px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: var(--blue);
+                background: ${bgColor};
                 color: white;
                 padding: 12px 24px;
                 border-radius: 50px;
@@ -184,7 +187,7 @@ window.closeSubject = function() {
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
             `;
-            toast.innerHTML = '<i class="ph-bold ph-check-circle" style="margin-right:8px;"></i>' + message;
+            toast.innerHTML = `<i class="ph-bold ${icon}" style="margin-right:8px;"></i>` + message;
             document.body.appendChild(toast);
 
             setTimeout(() => {
@@ -192,7 +195,7 @@ window.closeSubject = function() {
                 toast.style.transform = 'translateX(-50%) translateY(20px)';
                 toast.style.transition = 'all 0.4s ease-in';
                 setTimeout(() => toast.remove(), 400);
-            }, 1800);
+            }, type === 'warning' ? 4000 : 1800);
         }
         function showBoot(text) {
             const el = document.getElementById('boot-overlay');
@@ -368,7 +371,17 @@ window.closeSubject = function() {
                 'RELIGIONE': 'REL', 'EDUCAZIONE FISICA': 'SCM', 'SCIENZE MOTORIE': 'SCM', 'INFORMATICA': 'INF',
                 'DIRITTO': 'DIR', 'ECONOMIA': 'ECO', 'FRANCESE': 'FRA', 'TEDESCO': 'TED', 'SPAGNOLO': 'SPA',
                 'FILOSOFIA E STORIA': 'STO', 'MATEMATICA E FISICA': 'MAT', 'SCIENZE NATURALI': 'SCI',
-                'LINGUA E LETTERATURA ITALIANA': 'ITA', 'LINGUA E CULTURA LATINA': 'LAT'
+                'LINGUA E LETTERATURA ITALIANA': 'ITA', 'LINGUA E CULTURA LATINA': 'LAT',
+                // DidUp long-form names
+                'LINGUA E LETT. ITALIANA': 'ITA', 'LINGUA E LETTER. ITALIANA': 'ITA',
+                'LINGUA E CULTURA STRANIERA': 'ING', 'LINGUA STRANIERA': 'ING',
+                'MATEM. CON INFORMATICA': 'MAT', 'MATEMATICA CON INFORMATICA': 'MAT',
+                'SCIENZE NAT. CHIM. BIO.': 'SCI', 'SC. NATURALI': 'SCI',
+                'DISEGNO E STORIA DELL\'ARTE': 'ART', 'STORIA DELL\'ARTE': 'ART',
+                'SCIENZE MOTORIE E SPORTIVE': 'SCM', 'SC. MOTORIE E SPORTIVE': 'SCM',
+                'GRECO': 'GRC', 'LATINO': 'LAT', 'LINGUA E CULTURA GRECA': 'GRC',
+                'GEOSTORIA': 'STO', 'STORIA E GEOGRAFIA': 'STO',
+                'IRC': 'REL', 'ED.CIVICA': 'CIV', 'EDUCAZIONE CIVICA': 'CIV'
             };
             const key = cleanSubj.toUpperCase().trim();
             console.log(`[Debug] Matching subject: "${key}"`);
@@ -386,6 +399,17 @@ window.closeSubject = function() {
             if (key.includes('ITALIA')) return 'ITA';
             if (key.includes('INGLE')) return 'ING';
             if (key.includes('LATIN')) return 'LAT';
+            if (key.includes('GREC')) return 'GRC';
+            if (key.includes('FILOS')) return 'FIL';
+            if (key.includes('STORI')) return 'STO';
+            if (key.includes('SCIEN')) return 'SCI';
+            if (key.includes('DISEG')) return 'DIS';
+            if (key.includes('RELIG')) return 'REL';
+            if (key.includes('FRANC')) return 'FRA';
+            if (key.includes('TEDES')) return 'TED';
+            if (key.includes('SPAGN')) return 'SPA';
+            if (key.includes('INFOR')) return 'INF';
+            if (key.includes('CHIMI')) return 'CHI';
 
             console.warn(`[Debug] No match for: "${key}", using fallback.`);
             return key.substring(0, 3).toUpperCase();
@@ -548,24 +572,38 @@ function renderHome() {
         return `<div class="sdot ${filled ? 'on' : ''} ${isLast ? 'today' : ''}" style="width:8px;height:8px;border-radius:50%;${bg}"></div>`;
     }).join('');
 
-    // Prossima verifica (da state.tasks con data futura)
+    // Prossima verifica (scraped from DidUp)
+    const todayISO = today.toISOString().split('T')[0];
+    const upcomingVerifiche = (state.verifiche || [])
+        .filter(v => v.data && v.data >= todayISO)
+        .sort((a, b) => a.data.localeCompare(b.data));
+    // Fallback to tasks if no verifiche scraped
     const upcomingExams = (state.tasks || [])
-        .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today)
+        .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today && /verific|interrogazion|prova|test|compito\s+in\s+classe/i.test(t.text || ''))
         .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
-    const nextExam = upcomingExams[0] || null;
+
+    const nextVerifica = upcomingVerifiche[0] || null;
+    const nextExam = nextVerifica ? { subject: nextVerifica.materia, due_date: nextVerifica.data, text: nextVerifica.text, tipo: nextVerifica.tipo } : (upcomingExams[0] || null);
     const daysToExam = nextExam ? Math.ceil((new Date(nextExam.due_date) - today) / 86400000) : null;
-    const examAbbr = nextExam ? getSubjectAbbrev(nextExam.subject) : 'MAT';
+    const examAbbr = nextExam ? getSubjectAbbrev(nextExam.subject || nextExam.materia) : 'N/D';
     const examKey = examAbbr.toLowerCase();
+    const examTipo = nextExam?.tipo || 'unknown';
+    const examTipoLabel = examTipo === 'scritta' ? 'SCRITTA' : examTipo === 'orale' ? 'ORALE' : '';
 
     // Ultima circolare
     const lastCirc = (state.circolari && state.circolari.length > 0)
         ? state.circolari[0]
         : { data: '--/--/----', titolo: 'Nessuna circolare', id: null };
 
-    // Presenze (mock o da state)
-    const presenze = state.assenze != null
-        ? Math.round((1 - state.assenze / (state.giorniScuola || 200)) * 100)
-        : 94;
+    // Presenze (from real assenzeData)
+    const ad = state.assenzeData || {};
+    const totAssenze = ad.totaleAssenze || 0;
+    const totRitardi = ad.totaleRitardi || 0;
+    const totUscite = ad.totaleUscite || 0;
+    const oreAssenza = ad.oreAssenzaTotali || 0;
+    const presenze = totAssenze > 0
+        ? Math.max(0, Math.round((1 - totAssenze / (state.giorniScuola || 200)) * 100))
+        : (state.assenze != null ? Math.round((1 - state.assenze / (state.giorniScuola || 200)) * 100) : 94);
 
     // Voti recenti (ultimi 6)
     const recentGrades = (state.voti || []).slice(-6).reverse();
@@ -604,16 +642,13 @@ function renderHome() {
         </div>
 
         <div class="card verifica-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center;">
-          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Prossima verifica</div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom:7px;">
-            <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:500;">${examAbbr}</span>
-            ${nextExam ? `<span style="display:inline-flex; background:#FF4522; color:white; border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">WIP: SCRITTO/ORALE</span>` : ''}
+          <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:6px;">PROSSIMA VERIFICA</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom:5px;">
+            <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;">${examAbbr}</span>
+            ${examTipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>` : ''}
           </div>
-          <div style="font-size:13px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:8px; flex:1;">${nextExam ? nextExam.text.substring(0,55) + (nextExam.text.length > 55 ? '...' : '') : 'Nessuna in vista'}</div>
-          <div style="display:flex; align-items:baseline; gap:4px;">
-            <span style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam ?? '--'}</span>
-            <span style="font-size:11px; color:#908C86;">giorni</span>
-          </div>
+          <div style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${nextExam ? (nextExam.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
+          <div style="font-size:28px; font-weight:800; color:#141414; letter-spacing:-0.05em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}<span style="font-size:11px; font-weight:500; color:#908C86; margin-left:4px;">giorni</span></div>
           ${nextExam ? `<div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;"><div style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div></div>` : ''}
         </div>
 
@@ -635,7 +670,7 @@ function renderHome() {
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">PRESENZE</div>
             <div style="font-size:32px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
-            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${state.assenze != null ? state.assenze + ' assenze' : '3 assenze'}</div>
+            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'}${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
           </div>
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
         </div>
@@ -655,37 +690,28 @@ function renderHome() {
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
 
         <div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:10px 14px;">
-            <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace;">
-              <thead>
-                <tr style="border-bottom:1px solid #F0EDE8;">
-                  <th style="padding:4px 0; text-align:left; font-size:8px; color:#BCB8B2; text-transform:uppercase;">Materia</th>
-                  <th style="padding:4px 0; text-align:right; font-size:8px; color:#BCB8B2; text-transform:uppercase;">Voto</th>
-                  <th style="padding:4px 0; text-align:right; font-size:8px; color:#BCB8B2; text-transform:uppercase;">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${recentGrades.length ? recentGrades.map(v => {
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:14px 18px;">
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">VOTI RECENTI</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+            ${recentGrades.length ? recentGrades.map(v => {
                   const subContent = v.materia || v.subject || 'N/A';
                   const abbr = getSubjectAbbrev(subContent);
                   const key = abbr.toLowerCase();
-                  const val = (v.valore || v.value || '—').toString();
-                  const dateShort = (v.data || v.date || '').split('-').slice(1).reverse().join('/');
+                  const val = parseFloat(v.valore || v.value || 0);
+                  const valStr = (v.valore || v.value || '—').toString();
+                  const pct = Math.min(100, (val / 10) * 100);
                   return `
-                  <tr style="border-bottom:1px solid #F8F7F4;">
-                    <td style="padding:6px 0; vertical-align:middle;">
-                      <span style="font-size:9px; font-weight:700; border-radius:4px; padding:2px 5px; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
-                    </td>
-                    <td style="padding:6px 0; text-align:right; font-size:13px; font-weight:800; color:#141414;">${val}</td>
-                    <td style="padding:6px 0; text-align:right; font-size:9px; color:#BCB8B2;">${dateShort}</td>
-                  </tr>`;
-                }).join('') : '<tr><td colspan="3" style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</td></tr>'}
-              </tbody>
-            </table>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:9px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
+                <div style="flex:1; height:4px; background:#F0EDE8; border-radius:100px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div></div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:#141414; min-width:28px; text-align:right;">${valStr}</span>
+              </div>`;
+                }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
+            </div>
             ${recentGrades.length ? `
-            <div style="display:flex; align-items:baseline; gap:6px; padding-top:8px; margin-top:2px;">
-              <span style="font-size:9px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">Media</span>
-              <span style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
+            <div style="display:flex; align-items:baseline; gap:6px; padding-top:10px; margin-top:6px; border-top:1px solid #F0EDE8;">
+              <span style="font-size:9px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">media</span>
+              <span style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
               ${deltaStr ? `<span style="font-size:10px; font-weight:600; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
