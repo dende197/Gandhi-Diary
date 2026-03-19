@@ -620,6 +620,14 @@ function renderHome() {
     // Debug: log assenze data
     console.log('[Debug] assenzeData:', JSON.stringify(state.assenzeData || 'null'));
     console.log('[Debug] verifiche:', JSON.stringify((state.verifiche || []).length) + ' trovate');
+    if (state.assenzeData?._debug) {
+        console.log('[Debug] Dashboard blocco keys:', JSON.stringify(state.assenzeData._debug.bloccoKeys));
+        console.log('[Debug] Raw nota sample:', JSON.stringify(state.assenzeData._debug.rawNotaSample));
+        // Log all debug keys
+        for (const [k, v] of Object.entries(state.assenzeData._debug)) {
+            if (k.startsWith('key_')) console.log(`[Debug] ${k}:`, JSON.stringify(v));
+        }
+    }
 
     // Task di oggi
     const todayTasks = (state.tasks || []).filter(t => {
@@ -690,7 +698,7 @@ function renderHome() {
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">PRESENZE</div>
             <div style="font-size:32px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
-            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'}${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
+            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
           </div>
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
         </div>
