@@ -668,10 +668,13 @@ function renderHome() {
         <div class="card verifica-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
-            ${verificheCount > 1 ? `<div style="display:flex; gap:4px;">
+            <div style="display:flex; gap:4px;">
+              ${verificheCount > 1 ? `
               <button onclick="window._verificheIdx = Math.max(0, (window._verificheIdx||0)-1); if(window.scheduleRender) window.scheduleRender();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
               <button onclick="window._verificheIdx = Math.min(${verificheCount - 1}, (window._verificheIdx||0)+1); if(window.scheduleRender) window.scheduleRender();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
-            </div>` : ''}
+              ` : ''}
+              <button onclick="mostraVerificheModal()" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0; margin-left:2px;"><i class="ph ph-list-bullets"></i></button>
+            </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom:5px;">
             <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;">${examAbbr}</span>
@@ -697,11 +700,11 @@ function renderHome() {
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card" style="border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">PRESENZE</div>
             <div style="font-size:32px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
-            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
+            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(1)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
           </div>
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
         </div>
@@ -730,12 +733,21 @@ function renderHome() {
                   const key = abbr.toLowerCase();
                   const val = parseFloat(v.valore || v.value || 0);
                   const valStr = (v.valore || v.value || '—').toString();
+                  const dObj = new Date(v.data || v.date);
+                  const dateStr = dObj.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
                   const pct = Math.min(100, (val / 10) * 100);
                   return `
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:9px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
-                <div style="flex:1; height:4px; background:#F0EDE8; border-radius:100px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div></div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:#141414; min-width:28px; text-align:right;">${valStr}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                    <span style="font-size:9px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">${dateStr}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414;">${valStr}</span>
+                  </div>
+                  <div style="height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                    <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
+                  </div>
+                </div>
               </div>`;
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
@@ -1418,6 +1430,117 @@ function renderHome() {
             </div>
         </div> `;
         }
+        function mostraAssenzeModal() {
+            const ad = state.assenzeData || { assenze:[], ritardi:[], uscite:[], totaleAssenze:0, totaleRitardi:0, totaleUscite:0, oreAssenzaTotali:0 };
+            const all = [...ad.assenze.map(x=>({...x, icon:'ph-calendar-x', color:'#EF4444'})), 
+                         ...ad.ritardi.map(x=>({...x, icon:'ph-clock-clockwise', color:'#F59E0B'})), 
+                         ...ad.uscite.map(x=>({...x, icon:'ph-clock-counter-clockwise', color:'#3B82F6'}))];
+            
+            all.sort((a,b) => new Date(b.data) - new Date(a.data));
+
+            const presenze = ad.totaleAssenze > 0
+                ? Math.max(0, Math.round((1 - ad.totaleAssenze / (state.giorniScuola || 200)) * 100))
+                : 94;
+
+            showModal(`
+            <div style="padding:24px; text-align: left;">
+                <header style="margin-bottom:24px;">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Presenze</div>
+                    <div style="display:flex; align-items:baseline; gap:12px;">
+                        <h2 style="margin:0; font-size:36px; font-weight:800;">${presenze}%</h2>
+                        <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(1)} ore totali</span>
+                    </div>
+                </header>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+                    <div style="background:rgba(239, 68, 68, 0.05); padding:16px; border-radius:16px; border:1px solid rgba(239, 68, 68, 0.1);">
+                        <div style="font-size:10px; color:#EF4444; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Assenze</div>
+                        <div style="font-size:20px; font-weight:800;">${ad.totaleAssenze}</div>
+                    </div>
+                    <div style="background:rgba(245, 158, 11, 0.05); padding:16px; border-radius:16px; border:1px solid rgba(245, 158, 11, 0.1);">
+                        <div style="font-size:10px; color:#F59E0B; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Ritardi/Uscite</div>
+                        <div style="font-size:20px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
+                    </div>
+                </div>
+
+                <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">Cronologia Eventi</div>
+                
+                <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
+                    ${all.length === 0 ? `<div style="text-align:center; padding:30px; color:var(--text-dim); font-size:13px;">Nessun evento registrato</div>` :
+                      all.map(a => `
+                        <div style="display:flex; align-items:center; gap:14px; padding:12px; background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid rgba(0,0,0,0.03);">
+                            <div style="width:36px; height:36px; border-radius:10px; background:${a.color}15; color:${a.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="ph-bold ${a.icon}" style="font-size:18px;"></i>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                                    <span style="font-size:13px; font-weight:700; color:var(--text-primary);">${new Date(a.data).toLocaleDateString('it-IT', {day:'numeric', month:'short'})}</span>
+                                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);">${a.oreEffettive ? a.oreEffettive.toFixed(1) : '?.?'}h</span>
+                                </div>
+                                <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
+                                    ${a.tipo.charAt(0).toUpperCase() + a.tipo.slice(1)}${a.nota ? ` • ${a.nota}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                      `).join('')}
+                </div>
+
+                <button onclick="closeModal()" style="width:100%; margin-top:24px; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+            </div>
+            `);
+        }
+        window.mostraAssenzeModal = mostraAssenzeModal;
+        
+        function mostraVerificheModal() {
+            const today = new Date();
+            const todayISO = today.toISOString().split('T')[0];
+            const allVerifiche = (state.verifiche || [])
+                .filter(v => v.data && v.data >= todayISO)
+                .sort((a, b) => a.data.localeCompare(b.data));
+            const examTasks = (state.tasks || [])
+                .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today && /verific|interrogazion|prova|test|compito\s+in\s+classe/i.test(t.text || ''))
+                .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
+                .map(t => ({ materia: t.subject || t.materia, data: t.due_date, text: t.text, tipo: 'unknown', source: 'task' }));
+            
+            const all = allVerifiche.length > 0 ? allVerifiche : examTasks;
+
+            showModal(`
+            <div style="padding:24px; text-align: left;">
+                <header style="margin-bottom:24px;">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Prossime Verifiche</div>
+                    <h2 style="margin:0; font-size:24px; font-weight:800;">Calendario Verifiche</h2>
+                </header>
+
+                <div style="max-height:450px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-right:4px;">
+                    ${all.length === 0 ? `<div style="text-align:center; padding:40px; color:var(--text-dim);">Nessuna verifica in programma</div>` :
+                      all.map(v => {
+                        const d = new Date(v.data);
+                        const days = Math.ceil((d - today) / 86400000);
+                        const abbr = getSubjectAbbrev(v.materia);
+                        const key = abbr.toLowerCase();
+                        return `
+                          <div style="padding:16px; background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                            <div style="width:48px; height:48px; border-radius:12px; background:var(--${key},var(--mat)); color:var(--${key}-t,var(--mat-t)); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; flex-shrink:0;">
+                                ${abbr}
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">${v.text || 'Verifica'}</div>
+                                <div style="font-size:11px; color:var(--text-dim);">${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-size:16px; font-weight:800; color:var(--text-primary); line-height:1;">${days}</div>
+                                <div style="font-size:9px; color:var(--text-dim); font-weight:600; text-transform:uppercase;">giorni</div>
+                            </div>
+                          </div>
+                        `;
+                      }).join('')}
+                </div>
+
+                <button onclick="closeModal()" style="width:100%; margin-top:24px; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+            </div>
+            `);
+        }
+        window.mostraVerificheModal = mostraVerificheModal;
 
 
 /* Remaining UI/Modal/Logic Functions */
