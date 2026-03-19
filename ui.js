@@ -619,7 +619,10 @@ function renderHome() {
 
     // Debug: log assenze data
     console.log('[Debug] assenzeData:', JSON.stringify(state.assenzeData || 'null'));
-    console.log('[Debug] verifiche:', JSON.stringify((state.verifiche || []).length) + ' trovate');
+    console.log('[Debug] verifiche:', (state.verifiche || []).length, 'trovate');
+    if (state.verifiche?.length > 0) {
+        console.log('[Debug] Verifiche sample (first 3):', JSON.stringify(state.verifiche.slice(0, 3)));
+    }
     if (state.assenzeData?._debug) {
         console.log('[Debug] Dashboard blocco keys:', JSON.stringify(state.assenzeData._debug.bloccoKeys));
         console.log('[Debug] Raw nota sample:', JSON.stringify(state.assenzeData._debug.rawNotaSample));
