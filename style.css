@@ -176,10 +176,8 @@
         /* Bloquea padding globale SOLO per vista AI */
         .view.ai-view {
             padding: 0 !important;
-            height: calc(100svh - 60px) !important;
-            /* Spazio reale sotto la nav */
-            margin-top: 60px;
-            /* Spazio per nav fissa */
+            height: calc(100svh - 64px) !important;
+            margin-top: 0 !important;   /* la topbar è sticky, non serve margin */
             overflow: hidden;
             border-radius: 0 !important;
             display: flex;
