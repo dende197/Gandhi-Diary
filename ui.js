@@ -702,11 +702,11 @@ function renderHome() {
 
         <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
-            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">PRESENZE</div>
-            <div style="font-size:32px; font-weight:700; color:#1A6B3A; letter-spacing:-0.05em; line-height:1;">${presenze}%</div>
-            <div style="font-size:10px; color:#4A9C6A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(1)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ASSENZE</div>
+            <div style="font-size:32px; font-weight:700; color:#8A1A1A; letter-spacing:-0.05em; line-height:1;">${((oreAssenza / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2)}%</div>
+            <div style="font-size:10px; color:#A64A4A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(1)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
           </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${presenze}%; background:#2DB86A; border-radius:100px;"></div></div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (oreAssenza / ((state.giorniScuola || 200) * 5)) * 100)}%; background:#EF4444; border-radius:100px;"></div></div>
         </div>
 
         <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
@@ -1438,16 +1438,14 @@ function renderHome() {
             
             all.sort((a,b) => new Date(b.data) - new Date(a.data));
 
-            const presenze = ad.totaleAssenze > 0
-                ? Math.max(0, Math.round((1 - ad.totaleAssenze / (state.giorniScuola || 200)) * 100))
-                : 94;
+            const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
 
             showModal(`
             <div style="padding:24px; text-align: left;">
                 <header style="margin-bottom:24px;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Presenze</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
                     <div style="display:flex; align-items:baseline; gap:12px;">
-                        <h2 style="margin:0; font-size:36px; font-weight:800;">${presenze}%</h2>
+                        <h2 style="margin:0; font-size:36px; font-weight:800; color:#EF4444;">${percAssenza}%</h2>
                         <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(1)} ore totali</span>
                     </div>
                 </header>
