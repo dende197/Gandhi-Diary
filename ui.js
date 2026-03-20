@@ -1379,52 +1379,58 @@ function renderHome() {
             const media = parseFloat(calcolaMedia(votiData)) || 0;
             const goal = state.goals?.[subjectName] || 8.0;
             const subjColor = getSubjectColor(subjectName);
+            const abbr = getSubjectAbbrev(subjectName);
+            const key = abbr.toLowerCase();
 
             return `
-        <div class="view">
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
-                <button class="btn-icon-only" onclick="window.closeSubject()" style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: var(--card-border); color: white;">
-                    <i class="ph-bold ph-arrow-left"></i>
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 100px;">
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 32px;">
+                <button onclick="window.closeSubject()" style="width: 48px; height: 48px; border-radius: 16px; background: #FFFFFF; border: 1px solid #141414; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s;">
+                    <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
                 </button>
-                <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Dettaglio Materia</h1>
+                <div>
+                    <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: #141414;">${subjectName}</h1>
+                    <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px;">// DETTAGLIO_MATERIA</div>
+                </div>
             </div>
 
-            <div class="card" style="border-left: 6px solid ${subjColor}; padding: 24px; margin-bottom: 32px;">
-                <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Materia</div>
-                <div style="font-size: 28px; font-weight: 800; color: var(--text-primary); margin-top: 4px;">${subjectName}</div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div class="card" style="background:#FFFFFF; border: 1px solid #141414; border-radius: 24px; padding: 28px; margin-bottom: 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
+                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: ${subjColor};"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
                     <div>
-                        <div style="font-size: 10px; color: var(--text-dim); font-weight: 800; text-transform: uppercase;">Media</div>
-                        <div style="font-size: 24px; font-weight: 800; color: ${media >= 6 ? 'var(--green)' : 'var(--red)'};">${media.toFixed(2)}</div>
+                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">MEDIA ATTUALE</div>
+                        <div style="font-size: 36px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.05em;">${media.toFixed(2)}</div>
                     </div>
                     <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
-                        <div style="font-size: 10px; color: var(--text-dim); font-weight: 800; text-transform: uppercase;">Obiettivo</div>
-                        <div style="font-size: 24px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 6px;">
-                            ${goal.toFixed(1)} <i class="ph-bold ph-pencil-simple" style="font-size: 14px;"></i>
+                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">OBIETTIVO</div>
+                        <div style="font-size: 36px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 10px; letter-spacing: -0.05em;">
+                            ${goal.toFixed(1)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div style="margin-bottom: 16px;">
-                <h2 style="font-size: 16px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Registro Voti</h2>
+            <div style="margin-bottom: 24px;">
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; gap: 12px;">
+                    STORICO VALUTAZIONI
+                    <span style="flex:1; height:1px; background:#E0DDD8;"></span>
+                </h2>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 14px; padding-bottom: 60px;">
                 ${votiData.map(v => {
                 const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
                 const isSuff = val >= 6;
                 return `
-                    <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
-                        <div style="width: 48px; height: 48px; border-radius: 12px; background: ${isSuff ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: ${isSuff ? 'var(--green)' : 'var(--red)'};">
+                    <div class="card" style="background:#FFFFFF; border: 1px solid #E0DDD8; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 20px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: ${isSuff ? 'rgba(40, 205, 65, 0.1)' : 'rgba(255, 59, 48, 0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: ${isSuff ? '#28CD41' : '#FF3B30'}; border: 1px solid ${isSuff ? 'rgba(40, 205, 65, 0.2)' : 'rgba(255, 59, 48, 0.2)'};">
                             ${v.valore || v.value}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${v.tipo || 'Voto'}</div>
-                            <div style="font-size: 12px; color: var(--text-dim);">${new Date(v.data || v.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                            <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${v.tipo || 'Valutazione'}</div>
+                            <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #908C86; text-transform: uppercase;">${new Date(v.data || v.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
                         </div>
-                        ${v.commento ? `<i class="ph ph-chat-text" style="color: var(--accent); font-size: 18px;" title="${v.commento}"></i>` : ''}
+                        ${v.commento ? `<i class="ph-bold ph-chat-circle-dots" style="color: #007AFF; font-size: 22px; cursor: help;" title="${v.commento}"></i>` : ''}
                     </div>`;
             }).join('')}
             </div>
@@ -1606,44 +1612,43 @@ function renderHome() {
             const date = parseArgoDate(dateStr);
             const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-            // Strict Semantic Filtering for Modal
             let tasksForDay = [];
             if (state.plannerMode === 'registro') {
-                // Show school tasks due this day
                 tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
             } else {
-                // Show ONLY tasks planned for this day
                 const plannedIds = state.plannedTasks[dateStr] || [];
                 tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id));
             }
             const isRegistro = state.plannerMode === 'registro';
+            
             container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:20px 20px 24px 20px; width:calc(100vw - 40px);">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:24px; border-radius:24px; background:#FFFFFF; color:#141414; border:1px solid #E0DDD8; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px;">
                             <div>
-                                <div style="font-size:11px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:6px; background: ${isRegistro ? 'rgba(0,122,255,0.05)' : 'rgba(255,45,85,0.05)'}; padding: 3px 10px; border-radius: 6px; display:inline-block;">
                                     ${isRegistro ? 'Scadenze Registro' : 'Organizzazione Studio'}
                                </div>
-                                <h2 style="margin:0; font-size:22px; text-transform:capitalize;">${formattedDate}</h2>
+                                <h2 style="margin:0; font-size:26px; font-weight:800; text-transform:capitalize; letter-spacing:-0.02em;">${formattedDate}</h2>
                            </div>
-                            <button onclick="closeModal()" style="background:rgba(255,255,255,0.05); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; cursor:pointer;">
-                                <i class="ph ph-x" style="font-size:20px;"></i>
+                            <button onclick="closeModal()" style="background:#F6F5F3; border:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#141414; cursor:pointer; transition: transform 0.2s;">
+                                <i class="ph ph-x" style="font-size:22px;"></i>
                            </button>
                        </div>
 
-                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:14px; max-height:65vh; overflow-y:auto; padding-right:4px; -webkit-overflow-scrolling:touch;">
+                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:16px; max-height:60vh; overflow-y:auto; padding-right:6px;">
                             ${tasksForDay.length === 0 ? `
-                                <div style="text-align:center; padding:48px 20px; color:var(--text-dim);">
-                                    <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 12px; opacity:0.15;"></i>
-                                    <div style="font-size:15px; font-weight:600; opacity:0.5;">Nessun compito per questa data</div>
+                                <div style="text-align:center; padding:56px 20px; color:#908C86;">
+                                    <i class="ph ph-calendar-blank" style="font-size:54px; display:block; margin:0 auto 16px; opacity:0.1;"></i>
+                                    <div style="font-size:16px; font-weight:600; opacity:0.6;">Nessun compito pianificato</div>
                                 </div>
                             ` : tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
-                const color = getSubjectColor(t.subject);
-                const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
+                const subContent = t.subject || 'N/A';
+                const abbr = getSubjectAbbrev(subContent);
+                const key = abbr.toLowerCase();
+                const color = getSubjectColor(subContent);
                 const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
                 const timeStr = timeMatch ? timeMatch[1] : '';
-                // Clear [AI], time patterns, all asterisks (*), and trailing separators (|)
                 const displayText = (t.text || '')
                     .replace(/^\[AI\]\s*/i, '')
                     .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
@@ -1651,18 +1656,18 @@ function renderHome() {
                     .replace(/[\s|]+$/, '')
                     .trim();
                 return `
-                                    <div style="flex-shrink:0; border-radius:18px; display:flex; align-items:stretch; background:${t.done ? 'rgba(52,199,89,0.06)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${t.done ? 'rgba(52,199,89,0.25)' : 'rgba(255,255,255,0.1)'}; min-height:110px;">
-                                        <div style="width:5px; background:${color}; flex-shrink:0;"></div>
-                                        <div style="flex:1; padding:22px 18px 24px 18px; min-width:0;">
-                                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-                                                <span style="font-size:11px; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.8px; background:rgba(255,255,255,0.03); padding:2px 8px; border-radius:6px;">${cleanSubject}</span>
-                                                ${timeStr ? `<span style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:20px;">${timeStr}</span>` : ''}
+                                    <div style="flex-shrink:0; border-radius:20px; display:flex; align-items:stretch; background:${t.done ? '#F6F5F3' : '#FFFFFF'}; border:1px solid ${t.done ? '#E0DDD8' : '#141414'}; box-shadow: ${t.done ? 'none' : '0 4px 12px rgba(0,0,0,0.03)'}; opacity: ${t.done ? 0.7 : 1}; transition: all 0.2s;">
+                                        <div style="width:6px; background:${color}; flex-shrink:0; border-radius:20px 0 0 20px;"></div>
+                                        <div style="flex:1; padding:20px 18px; min-width:0;">
+                                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:var(--${key}-t, #141414); text-transform:uppercase; letter-spacing:0.1em; background:var(--${key}, #EEE); padding:2px 8px; border-radius:6px;">${subContent}</span>
+                                                ${timeStr ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#908C86; background:#F6F5F3; padding:2px 8px; border-radius:20px;">${timeStr}</span>` : ''}
                                             </div>
-                                            <div style="font-size:16.5px; font-weight:600; color:${t.done ? 'rgba(255,255,255,0.35)' : 'white'}; line-height:1.65; word-break:break-word; ${t.done ? 'text-decoration:line-through line-through-color:rgba(255,255,255,0.2);' : ''}">${displayText}</div>
+                                            <div style="font-size:15px; font-weight:700; color:#141414; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through opacity:0.6;' : ''}">${displayText}</div>
                                         </div>
-                                        <div style="padding:16px 18px; display:flex; align-items:center; flex-shrink:0; background:rgba(255,255,255,0.01);">
-                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:44px; height:44px; border-radius:50%; background:${t.done ? 'var(--green)' : 'rgba(255,255,255,0.08)'}; border:2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
-                                                <i class="ph-bold ph-check" style="font-size:20px; color:${t.done ? 'black' : 'rgba(255,255,255,0.6)'};"></i>
+                                        <div style="padding:16px; display:flex; align-items:center; flex-shrink:0;">
+                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:40px; height:40px; border-radius:50%; background:${t.done ? '#141414' : '#F6F5F3'}; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                                <i class="ph-bold ph-check" style="font-size:20px; color:${t.done ? 'white' : '#B0AD A8'};"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -1671,8 +1676,8 @@ function renderHome() {
                        </div>
 
                         ${tasksForDay.length > 0 ? `
-                        <div style="margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <button onclick="closeModal()" class="btn-primary" style="width:100%; height:50px; border-radius:16px; font-weight:800; letter-spacing:0.5px;">OK, CHIUDI</button>
+                        <div style="margin-top:28px; padding-top:24px; border-top:1px solid #F0EDE8;">
+                            <button onclick="closeModal()" style="width:100%; height:52px; background:#141414; color:white; border:none; border-radius:18px; font-size:15px; font-weight:800; cursor:pointer; letter-spacing:0.5px; transition: transform 0.2s active {transform:scale(0.98);}">CHIUDI</button>
                        </div>
                         ` : ''}
                    </div>
@@ -1944,11 +1949,11 @@ function renderHome() {
                         .trim();
 
                     return `
-                    <div class="card" style="display:flex; align-items:stretch; background:${t.done ? 'var(--bg-body)' : 'var(--bg-card)'}; border: 1px solid ${t.done ? '#E5E5EA' : 'transparent'}; border-radius:12px; min-height:80px; box-shadow: ${t.done ? 'none' : '0 2px 12px rgba(0,0,0,0.04)'}; transition: transform 0.2s, box-shadow 0.2s; overflow: hidden;">
-                        <div style="width:6px; background:${t.done ? '#E5E5EA' : subjColor}; flex-shrink:0;"></div>
+                    <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#F6F5F3' : '#FFFFFF'}; border: 1px solid ${t.done ? '#E0DDD8' : '#141414'}; border-radius:16px; min-height:88px; box-shadow: ${t.done ? 'none' : '0 4px 12px rgba(0,0,0,0.03)'}; transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
+                        <div style="width:6px; background:${t.done ? '#E0DDD8' : subjColor}; flex-shrink:0;"></div>
                         
-                        <div style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+                        <div style="flex:1; padding:18px 22px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
                                 <span style="font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${t.done ? 'var(--text-dim)' : subjColor}; text-transform:uppercase; letter-spacing:0.1em; background:rgba(0,0,0,0.03); padding:2px 6px; border-radius:4px;">${cleanSubject}</span>
                                 ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:var(--text-dim); background:#E5E5EA; padding:2px 6px; border-radius:4px;">${timeStr}</span>` : ''}
                             </div>
@@ -3315,62 +3320,73 @@ window.refreshPlanWeekModalContent = function() {
         next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
     }
     contentEl.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin:0;">Pianifica Settimana</h2>
-            <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 24px;"></i>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
+            <h2 style="margin:0; font-family:'Inter', sans-serif; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: -0.02em;">Pianifica Settimana</h2>
+            <button onclick="closeModal()" style="background:#F0EDE8; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
+                <i class="ph ph-x" style="font-size: 18px;"></i>
+            </button>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
-            <div style="background: rgba(255,255,255,0.08); padding: 16px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 4px;">
-                <div style="font-size: 11px; font-weight: 800; color: var(--blue); text-transform: uppercase; margin-bottom: 8px;">Crea Quest Settimanale</div>
-                <div style="display: flex; gap: 8px;">
-                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 42px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 12px;">
-                    <select id="quest-date-select" style="width: 100px; background: rgba(0,0,0,0.2); color:white; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 8px; font-weight:700;">
+        <div style="display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 8px; padding-bottom: 20px;">
+            <div style="background: #FFFFFF; padding: 20px; border-radius: 20px; border: 1px solid #E0DE D8; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;">CREA QUEST SETTIMANALE</div>
+                <div style="display: flex; gap: 10px;">
+                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 44px; background: #F6F5F3; color:#141414; border: 1px solid #E0DDD8; border-radius: 12px; padding: 0 14px; font-size: 14px; outline: none; transition: border-color 0.2s;">
+                    <select id="quest-date-select" style="width: 105px; background: #F6F5F3; color:#141414; border: 1px solid #E0DDD8; border-radius: 12px; padding: 0 10px; font-weight:700; font-size: 13px; outline: none;">
                         ${next7Days.map(d => `<option value="${d.dateStr}">${d.label} ${d.dayNum}</option>`).join('')}
                     </select>
-                    <button onclick="addCustomQuestFromInput()" style="width: 42px; height: 42px; background: var(--blue); color:white; border:none; border-radius: 12px; cursor:pointer;">
-                        <i class="ph-bold ph-plus"></i>
+                    <button onclick="addCustomQuestFromInput()" style="width: 44px; height: 44px; background: #141414; color:white; border:none; border-radius: 12px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: transform 0.1s active {transform: scale(0.95);}">
+                        <i class="ph-bold ph-plus" style="font-size: 20px;"></i>
                     </button>
                 </div>
             </div>
             ${state.tasks.filter(t => !t.done).map(t => {
-                const subjectColor = getSubjectColor(t.subject);
+                const subContent = t.subject || 'N/A';
+                const abbr = getSubjectAbbrev(subContent);
+                const key = abbr.toLowerCase();
                 return `
-                <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-weight: 700; color: white; margin-bottom: 4px; text-align:left;">${t.text}</div>
-                    <div style="font-size: 11px; color: ${subjectColor}; font-weight:700; text-transform:uppercase; margin-bottom: 12px; text-align:left;">${t.subject}</div>
-                    <div style="display: flex; justify-content: space-between; gap: 4px;">
+                <div style="background: #FFFFFF; padding: 20px; border-radius: 20px; border: 1px solid #E0DDD8; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
+                        <div style="min-width: 0; flex:1;">
+                            <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: var(--${key}-t, #141414); text-transform: uppercase; letter-spacing: 0.1em; background: var(--${key}, #EEE); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 8px;">${subContent}</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #141414; line-height: 1.4; padding-right: 10px;">${t.text}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
                         ${next7Days.map(day => {
                             const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
                             const isToday = day.dateStr === todayStr;
                             return `
                             <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                 onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
-                                style="flex: 1; text-align:center; padding: 10px 4px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
-                                background: ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.08)'};
-                                color: ${isPlanned ? 'black' : 'white'};
-                                border: ${isToday ? '2px solid var(--blue)' : '1px solid rgba(255,255,255,0.1)'};">
-                                <div style="font-size: 10px; opacity: 0.7;">${day.label}</div>
-                                <div style="font-weight: 700; font-size: 14px;">${day.dayNum}</div>
+                                style="flex: 1; text-align:center; padding: 12px 4px; border-radius: 14px; cursor: pointer; transition: all 0.2s;
+                                background: ${isPlanned ? '#141414' : '#F6F5F3'};
+                                color: ${isPlanned ? 'white' : '#908C86'};
+                                border: ${isToday ? '2px solid #007AFF' : '1px solid #E0DDD8'};">
+                                <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; margin-bottom: 4px; opacity: ${isPlanned ? '0.6' : '1'};">${day.label.toUpperCase()}</div>
+                                <div style="font-weight: 800; font-size: 15px; letter-spacing: -0.02em;">${day.dayNum}</div>
                             </div>`;
                         }).join('')}
                     </div>
                 </div>`;
             }).join('')}
         </div>
-        <button onclick="closeModal()" class="btn-primary" style="margin-top: 20px;">Fatto</button>`;
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #F0EDE8;">
+            <button onclick="closeModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">Fatto</button>
+        </div>`;
 };
 
 window.updateWeekDayButton = function(taskId, dateStr) {
     const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
+    const todayStr = getLocalDateString();
     document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
         if (isPlanned) {
-            btn.style.background = 'var(--green)';
-            btn.style.borderColor = 'var(--green)';
-            btn.style.color = 'black';
-        } else {
-            btn.style.background = 'rgba(255,255,255,0.08)';
-            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.background = '#141414';
+            btn.style.borderColor = '#141414';
             btn.style.color = 'white';
+        } else {
+            btn.style.background = '#F6F5F3';
+            btn.style.borderColor = (dateStr === todayStr) ? '#007AFF' : '#E0DDD8';
+            btn.style.color = '#908C86';
         }
     });
 };
