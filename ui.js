@@ -811,8 +811,8 @@ function renderHome() {
                         <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
                         <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
                     </div>
-                    <button onclick="showQuickAddTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
-                        <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Nuovo
+                    <button onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
+                        <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Verifica
                     </button>
                 </div>
             </div>
@@ -2568,45 +2568,91 @@ function renderHome() {
                 : '<option value="Generale">Generale</option>';
 
             showModal(`
-                <div style="padding: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Nuova Scadenza</h2>
-                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px; opacity: 0.6;"></i>
+                <div style="padding: 28px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Nuova Verifica</h2>
+                        <button onclick="closeModal()" style="width: 32px; height: 32px; border-radius: 10px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-x" style="font-size: 14px;"></i></button>
                     </div>
-                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;">Aggiungi una verifica, interrogazione o compito in classe.</p>
-                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// AGGIUNGI_VERIFICA_O_ORALE</p>
+                    <div style="display: flex; flex-direction: column; gap: 18px;">
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Tipo</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                                <button id="tipo-verifica" onclick="selectRegistroTipo('Verifica')" style="padding: 10px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(99,102,241,0.15); color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer;">Verifica</button>
-                                <button id="tipo-orale" onclick="selectRegistroTipo('Interrogazione')" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Orale</button>
-                                <button id="tipo-compito" onclick="selectRegistroTipo('Compito in classe')" style="padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--text-dim); font-size: 12px; font-weight: 700; cursor: pointer;">Compito</button>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Tipo</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <button id="tipo-scritta" onclick="selectRegistroTipo('scritta')" style="padding: 14px; border-radius: 14px; border: 2px solid #141414; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">✏️ Scritta</button>
+                                <button id="tipo-orale" onclick="selectRegistroTipo('orale')" style="padding: 14px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">🎤 Orale</button>
                             </div>
                         </div>
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Materia</label>
-                            <select id="registroTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Materia</label>
+                            <select id="registroTaskSubject" style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; -webkit-appearance: none;">
                                 ${subjectOptions}
                             </select>
                         </div>
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Argomenti</label>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Argomenti</label>
                             <textarea id="registroTaskArgs" placeholder="Es. Capitoli 3-5, Equazioni 2° grado" rows="2"
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
+                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
                         </div>
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Data</label>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Data</label>
                             <input id="registroTaskDate" type="date" value="${getLocalDateString()}"
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
+                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box;" />
                         </div>
                     </div>
-                    <button onclick="submitRegistroTask()" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
-                        <i class="ph-bold ph-plus" style="margin-right: 6px;"></i> Aggiungi al Registro
+                    <button onclick="submitRegistroTask()" style="width: 100%; margin-top: 24px; padding: 16px; border-radius: 16px; border: none; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: transform 0.2s;">
+                        <i class="ph-bold ph-plus" style="margin-right: 8px;"></i> Aggiungi Verifica
                     </button>
                 </div>
         `);
-            window._registroTipo = 'Verifica';
+            window._registroTipo = 'scritta';
         }
+        // --- Registro Tipo Selection ---
+        window.selectRegistroTipo = function(tipo) {
+            window._registroTipo = tipo;
+            const btnSc = document.getElementById('tipo-scritta');
+            const btnOr = document.getElementById('tipo-orale');
+            if (btnSc && btnOr) {
+                if (tipo === 'scritta') {
+                    btnSc.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+                    btnOr.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+                } else {
+                    btnOr.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+                    btnSc.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+                }
+            }
+        };
+        // --- Submit Registro Task ---
+        window.submitRegistroTask = function() {
+            const subject = document.getElementById('registroTaskSubject')?.value;
+            const args = document.getElementById('registroTaskArgs')?.value.trim();
+            const dateStr = document.getElementById('registroTaskDate')?.value;
+            const tipo = window._registroTipo || 'scritta';
+            if (!subject || !dateStr) { alert('Compila materia e data.'); return; }
+            const tipoLabel = tipo === 'scritta' ? 'Verifica scritta' : 'Interrogazione orale';
+            const text = args ? `${tipoLabel}: ${args}` : tipoLabel;
+            // Add to verifiche array for the dashboard widget
+            if (!state.verifiche) state.verifiche = [];
+            state.verifiche.push({
+                materia: subject,
+                data: dateStr,
+                tipo: tipo,
+                text: text,
+                source: 'manual'
+            });
+            // Also add as a task so it appears in the calendar
+            const newTask = {
+                id: 'manual_' + Date.now(),
+                subject: subject,
+                text: text,
+                due_date: dateStr,
+                done: false,
+                hasValidDate: true
+            };
+            state.tasks.push(newTask);
+            saveState();
+            closeModal();
+            if (window.scheduleRender) window.scheduleRender();
+        };
         function showCompetencyInputModal() {
             const votiData = getVotiData();
             const subjectsMap = {};
