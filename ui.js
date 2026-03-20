@@ -976,7 +976,7 @@ function renderHome() {
             const chat = state.aiChatHistory || [];
 
             return `
-        <div class="view ai-view" style="display:flex; flex-direction:column; height:calc(100vh - 64px); padding: 0 !important; background: var(--bg-body);">
+        <div class="view ai-view" style="display:flex; flex-direction:column; height:calc(100vh - 120px); padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
             <div style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
@@ -1031,12 +1031,12 @@ function renderHome() {
                 `).join('')}
             </div>
 
-            <!-- INPUT BOX TE -->
-            <div style="flex-shrink: 0; padding: 16px 24px; background: #FFF; border-top: 1px solid #E0DDD8;">
-                <div style="max-width: 800px; margin: 0 auto; display: flex; gap: 10px; background: #F6F5F3; padding: 8px 10px; border-radius: 18px; border: 1px solid #E0DDD8;">
-                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding-left: 10px;">
-                    <button onclick="sendAIChat()" style="width: 38px; height: 38px; background: #141414; border: none; color: #FFF; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;">
-                        <i class="ph-bold ph-paper-plane-right" style="font-size: 18px;"></i>
+            <!-- INPUT BOX -->
+            <div style="flex-shrink: 0; padding: 8px 20px 12px; background: #FFF; border-top: 1px solid #E0DDD8;">
+                <div style="max-width: 700px; margin: 0 auto; display: flex; gap: 8px; background: #F6F5F3; padding: 6px 8px; border-radius: 16px; border: 1px solid #E0DDD8;">
+                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 10px;">
+                    <button onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="ph-bold ph-paper-plane-right" style="font-size: 16px;"></i>
                     </button>
                 </div>
             </div>
@@ -3365,6 +3365,13 @@ window.refreshPlanWeekModalContent = function() {
         const ds = getLocalDateString(d);
         next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
     }
+    const now2w = new Date(); now2w.setHours(0,0,0,0);
+    const twoWeeksLater = new Date(now2w); twoWeeksLater.setDate(now2w.getDate() + 14);
+    const calendarTasks = state.tasks.filter(t => {
+        if (t.done || !t.due_date || t.subject === 'QUEST' || t.id.startsWith('ai_')) return false;
+        const d = parseArgoDate(t.due_date);
+        return d >= now2w && d <= twoWeeksLater;
+    });
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
             <h2 style="margin:0; font-family:'Inter', sans-serif; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: -0.02em;">Pianifica Settimana</h2>
@@ -3373,10 +3380,8 @@ window.refreshPlanWeekModalContent = function() {
             </button>
         </div>
         <div style="display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 8px; padding-bottom: 20px;">
-            <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 32px; text-align: center; border-bottom: 1px solid #E0DDD8; padding-bottom: 16px;">
-                // SYS.PLANNER_CALENDAR_ACTIVE
-            </div>
-            ${state.tasks.filter(t => !t.done && t.due_date && t.subject !== 'QUEST' && !t.id.startsWith('ai_')).map(t => {
+            ${calendarTasks.length === 0 ? '<div style="text-align:center; padding:40px 20px; color:#908C86; font-family:JetBrains Mono, monospace; font-size:12px; text-transform:uppercase;">Nessun compito nelle prossime 2 settimane.</div>' : ''}
+            ${calendarTasks.map(t => {
                 const subContent = t.subject || 'N/A';
                 const abbr = getSubjectAbbrev(subContent);
                 const key = abbr.toLowerCase();
@@ -3575,7 +3580,7 @@ window.sendAIChat = async function() {
     }).filter(Boolean).join('\n');
 
     const stressBlock = '';
-    const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n${stressBlock}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. Tabella markdown per piani studio | Orario | Attività | Note | con grassetto **GIORNO YYYY-MM-DD**.`;
+    const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n${stressBlock}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. NON usare MAI tabelle markdown. Scrivi i piani come lista con elenchi puntati e grassetto per le date/materie, in stile discorsivo e leggibile. 3. Usa grassetto **testo** per evidenziare le cose importanti.`;
 
     const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
     state.aiChatHistory.forEach(msg => contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));
