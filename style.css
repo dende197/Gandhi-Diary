@@ -166,6 +166,10 @@
             min-height: 100vh;
         }
 
+        .main-container {
+            overflow: hidden;
+        }
+
         .view {
             width: 100%;
             max-width: 100%;
