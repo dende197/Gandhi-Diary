@@ -177,8 +177,9 @@
         .view.ai-view {
             padding: 0 !important;
             height: calc(100svh - 64px) !important;
+            max-height: calc(100svh - 64px) !important;
             margin-top: 0 !important;   /* la topbar è sticky, non serve margin */
-            overflow: hidden;
+            overflow: hidden !important;
             border-radius: 0 !important;
             display: flex;
             flex-direction: column;

@@ -3089,6 +3089,13 @@ window._renderCore = function() {
     }
 
     root.innerHTML = html;
+    
+    // Fix: Prevent page overflow when in AI view
+    if (state.view === 'ai_assistant') {
+        root.style.overflow = 'hidden';
+    } else {
+        root.style.overflow = '';
+    }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
     requestAnimationFrame(() => {
