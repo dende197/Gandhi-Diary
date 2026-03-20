@@ -979,51 +979,51 @@ function renderHome() {
         <div class="view ai-view" style="display:flex; flex-direction:column; height:calc(100vh - 64px); padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
-            <div style="flex-shrink: 0; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 2px solid #000; z-index: 10;">
+            <div style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <button onclick="navigate('planner')" style="background: #000; border: none; color: #FFF; cursor: pointer; width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center;" title="Back">
+                    <button onclick="navigate('planner')" style="background: #141414; border: none; color: #FFF; cursor: pointer; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" title="Back">
                         <i class="ph-bold ph-arrow-left" style="font-size: 16px;"></i>
                     </button>
                     <div style="display: flex; flex-direction: column;">
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase;">OP-Z Tutor AI</span>
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;">Connected / Signal 100%</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; color: #141414;">OP-Z Tutor AI</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em;">Connected / Signal 100%</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="if(confirm('Reset memory?')) clearAIChat()" style="background: none; border: 1px solid #000; color: #000; cursor: pointer; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 4px;">
+                    <button onclick="if(confirm('Reset memory?')) clearAIChat()" style="background: #F6F5F3; border: 1px solid #E0DDD8; color: #141414; cursor: pointer; padding: 6px 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; transition: all 0.2s;">
                         Reset
                     </button>
                 </div>
             </div>
 
             <!-- CHAT SCROLLABLE -->
-            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 24px;">
+            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px;">
                 ${chat.length === 0 ? `
-                <div style="max-width: 500px; margin: 40px auto; text-align: left; font-family: 'JetBrains Mono', monospace; border: 2px solid #000; padding: 24px; background: #FFF;">
-                    <div style="font-size: 10px; color: #BCB8B2; margin-bottom: 12px;">// SYSTEM_INITIALIZATION_COMPLETE</div>
-                    <div style="font-size: 18px; font-weight: 800; line-height: 1.2; text-transform: uppercase; margin-bottom: 20px;">Pronto per l'organizzazione pomeridiana.</div>
+                <div style="max-width: 500px; margin: 40px auto; text-align: left; font-family: 'JetBrains Mono', monospace; border: 1px solid #141414; border-radius: 20px; padding: 28px; background: #FFF; box-shadow: 0 8px 30px rgba(0,0,0,0.04);">
+                    <div style="font-size: 10px; color: #908C86; margin-bottom: 12px; font-weight: 800;">// SYSTEM_INITIALIZATION_COMPLETE</div>
+                    <div style="font-size: 18px; font-weight: 800; line-height: 1.2; text-transform: uppercase; margin-bottom: 24px; color: #141414;">Pronto per l'organizzazione pomeridiana.</div>
                     
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: #F0F0F3; border: 1px solid #DCDCE0; border-radius: 4px; color: #141414; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: #F6F5F3; border: 1px solid #E0DDD8; border-radius: 12px; color: #141414; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">
                             > Pianifica Settimana
                         </button>
-                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: #F0F0F3; border: 1px solid #DCDCE0; border-radius: 4px; color: #141414; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer;">
+                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: #F6F5F3; border: 1px solid #E0DDD8; border-radius: 12px; color: #141414; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">
                             > Supporto Studio
                         </button>
-                        <button onclick="sendAIChatQuick('Consiglio produttività 🚀')" style="background: #F0F0F3; border: 1px solid #DCDCE0; border-radius: 4px; color: #141414; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer;">
+                        <button onclick="sendAIChatQuick('Consiglio produttività 🚀')" style="background: #F6F5F3; border: 1px solid #E0DDD8; border-radius: 12px; color: #141414; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">
                             > Tip Produttività
                         </button>
                     </div>
                 </div>
                 ` : chat.map((msg, idx) => `
                 <div style="display: flex; flex-direction: column; ${msg.role === 'user' ? 'align-items: flex-end;' : 'align-items: flex-start;'}">
-                    <div style="max-width: 85%; padding: 16px; font-family: 'JetBrains Mono', monospace; border: 2px solid #000; border-radius: 4px; background: ${msg.role === 'user' ? '#000' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#000'}; font-size: 13px; line-height: 1.5;">
-                        <div style="font-size: 9px; opacity: 0.5; margin-bottom: 8px; text-transform: uppercase;">${msg.role === 'user' ? 'User' : 'Tutor'} [${msg.ts || ''}]</div>
+                    <div style="max-width: 85%; padding: 18px 22px; font-family: 'Inter', sans-serif; border: 1px solid ${msg.role === 'user' ? '#141414' : '#E0DDD8'}; border-radius: 20px; background: ${msg.role === 'user' ? '#141414' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#141414'}; font-size: 14px; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.5; margin-bottom: 10px; text-transform: uppercase; font-weight: 800;">${msg.role === 'user' ? 'User' : 'Tutor'} [${msg.ts || ''}]</div>
                         <div class="ai-prose" style="color: inherit !important;">
                             ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
                         </div>
                         ${msg.hasPlan ? `
-                        <button onclick="applyAIPlanFromChat(${idx})" style="margin-top:16px; border:2px solid #000; background:#000; color:#FFF; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; text-transform:uppercase; cursor:pointer;">
+                        <button onclick="applyAIPlanFromChat(${idx})" style="margin-top:18px; border:none; background:#007AFF; color:#FFF; padding:10px 20px; border-radius:12px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; text-transform:uppercase; cursor:pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.3); transition: transform 0.2s;">
                             Applica Piano [ENTER]
                         </button>` : ''}
                     </div>
@@ -1032,11 +1032,11 @@ function renderHome() {
             </div>
 
             <!-- INPUT BOX TE -->
-            <div style="flex-shrink: 0; padding: 24px 32px; background: #FFF; border-top: 2px solid #000;">
-                <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 12px; background: #F0F0F3; padding: 12px; border-radius: 6px; border: 1px solid #DCDCE0;">
-                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #000;">
-                    <button onclick="sendAIChat()" style="width: 44px; height: 44px; background: #000; border: none; color: #FFF; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                        <i class="ph-bold ph-paper-plane-right" style="font-size: 20px;"></i>
+            <div style="flex-shrink: 0; padding: 16px 24px; background: #FFF; border-top: 1px solid #E0DDD8;">
+                <div style="max-width: 800px; margin: 0 auto; display: flex; gap: 10px; background: #F6F5F3; padding: 8px 10px; border-radius: 18px; border: 1px solid #E0DDD8;">
+                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding-left: 10px;">
+                    <button onclick="sendAIChat()" style="width: 38px; height: 38px; background: #141414; border: none; color: #FFF; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;">
+                        <i class="ph-bold ph-paper-plane-right" style="font-size: 18px;"></i>
                     </button>
                 </div>
             </div>
@@ -3327,19 +3327,10 @@ window.refreshPlanWeekModalContent = function() {
             </button>
         </div>
         <div style="display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 8px; padding-bottom: 20px;">
-            <div style="background: #FFFFFF; padding: 20px; border-radius: 20px; border: 1px solid #E0DE D8; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;">CREA QUEST SETTIMANALE</div>
-                <div style="display: flex; gap: 10px;">
-                    <input id="quest-text-input" type="text" placeholder="Es: Andare in palestra..." style="flex:1; height: 44px; background: #F6F5F3; color:#141414; border: 1px solid #E0DDD8; border-radius: 12px; padding: 0 14px; font-size: 14px; outline: none; transition: border-color 0.2s;">
-                    <select id="quest-date-select" style="width: 105px; background: #F6F5F3; color:#141414; border: 1px solid #E0DDD8; border-radius: 12px; padding: 0 10px; font-weight:700; font-size: 13px; outline: none;">
-                        ${next7Days.map(d => `<option value="${d.dateStr}">${d.label} ${d.dayNum}</option>`).join('')}
-                    </select>
-                    <button onclick="addCustomQuestFromInput()" style="width: 44px; height: 44px; background: #141414; color:white; border:none; border-radius: 12px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: transform 0.1s active {transform: scale(0.95);}">
-                        <i class="ph-bold ph-plus" style="font-size: 20px;"></i>
-                    </button>
-                </div>
+            <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 32px; text-align: center; border-bottom: 1px solid #E0DDD8; padding-bottom: 16px;">
+                // SYS.PLANNER_CALENDAR_ACTIVE
             </div>
-            ${state.tasks.filter(t => !t.done).map(t => {
+            ${state.tasks.filter(t => !t.done && t.due_date && t.subject !== 'QUEST' && !t.id.startsWith('ai_')).map(t => {
                 const subContent = t.subject || 'N/A';
                 const abbr = getSubjectAbbrev(subContent);
                 const key = abbr.toLowerCase();
