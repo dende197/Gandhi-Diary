@@ -727,7 +727,7 @@ function renderHome() {
           <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px;">
             <div style="font-size:10px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">VOTI RECENTI</div>
             <div style="display:flex; flex-direction:column; gap:10px;">
-            ${recentGrades.length ? recentGrades.map(v => {
+            ${recentGrades.length ? recentGrades.slice(0, 5).map(v => {
                   const subContent = v.materia || v.subject || 'N/A';
                   const abbr = getSubjectAbbrev(subContent);
                   const key = abbr.toLowerCase();
@@ -739,15 +739,10 @@ function renderHome() {
                   return `
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
-                <div style="flex:1; min-width:0;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                    <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">${dateStr}</span>
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:#141414;">${valStr}</span>
-                  </div>
-                  <div style="height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                    <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
-                  </div>
+                <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                  <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
                 </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; width:28px; text-align:right; color:var(--${key}-t,#333);">${valStr}</span>
               </div>`;
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
