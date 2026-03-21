@@ -170,6 +170,22 @@
             overflow: hidden;
         }
 
+        body.is-ai-mode {
+            overflow: hidden !important;
+            height: 100svh !important;
+            position: fixed;
+            width: 100%;
+        }
+
+        body.is-ai-mode .main-container {
+            height: calc(100svh - 64px) !important;
+            overflow: hidden !important;
+        }
+
+        body.is-ai-mode #app {
+            height: 100% !important;
+        }
+
         .view {
             width: 100%;
             max-width: 100%;
@@ -180,15 +196,16 @@
         /* Bloquea padding globale SOLO per vista AI */
         .view.ai-view {
             padding: 0 !important;
-            height: calc(100svh - 64px) !important;
-            max-height: calc(100svh - 64px) !important;
-            margin-top: 0 !important;   /* la topbar è sticky, non serve margin */
+            height: 100% !important;
+            max-height: 100% !important;
+            margin-top: 0 !important;
             overflow: hidden !important;
             border-radius: 0 !important;
             display: flex;
             flex-direction: column;
             animation: none !important;
             transform: none !important;
+            background: var(--bg-body);
         }
 
         /* Scroll SOLO nei messaggi */
