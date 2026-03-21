@@ -739,10 +739,12 @@ function renderHome() {
                   return `
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
-                <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                  <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
+                <div style="flex:1; padding: 0 4px;">
+                  <div style="height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                    <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
+                  </div>
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; width:28px; text-align:right; color:var(--${key}-t,#333);">${valStr}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; width:28px; text-align:right; color:#141414;">${valStr}</span>
               </div>`;
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
