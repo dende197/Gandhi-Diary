@@ -196,6 +196,11 @@
             overflow: visible !important;
         }
 
+        .view:not(.ai-view) {
+            overflow-y: auto;
+            min-height: calc(100vh - 64px);
+        }
+
         /* Bloquea padding globale SOLO per vista AI */
         .view.ai-view {
             padding: 0 !important;

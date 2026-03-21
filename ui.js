@@ -3095,7 +3095,7 @@ window._renderCore = function() {
         root.style.overflow = 'hidden';
         document.body.classList.add('is-ai-mode');
     } else {
-        root.style.overflow = '';
+        root.style.overflow = 'visible';
         document.body.classList.remove('is-ai-mode');
     }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
