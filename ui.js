@@ -647,10 +647,10 @@ function renderHome() {
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
     return `
-    <div class="dashboard view" style="width: 100%;">
+    <div class="dashboard view" style="width: 100%; padding: 20px 28px 32px;">
 
       <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
-      <div style="display:grid; grid-template-columns:1fr 140px 185px; gap:16px; margin-bottom:16px;">
+      <div style="display:grid; grid-template-columns:1fr 120px 180px; gap:14px; margin-bottom:16px;">
 
         <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:24px 28px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
           <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
@@ -689,7 +689,7 @@ function renderHome() {
       </div>
 
       <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
 
         <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
@@ -721,7 +721,7 @@ function renderHome() {
       </div>
 
       <!-- ROW 3: Voti recenti · Task di oggi -->
-      <div style="display:grid; grid-template-columns:1.3fr 0.7fr; gap:16px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
 
         <div>
           <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px;">
