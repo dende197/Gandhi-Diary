@@ -173,8 +173,6 @@
         body.is-ai-mode {
             overflow: hidden !important;
             height: 100svh !important;
-            position: fixed;
-            width: 100%;
         }
 
         body.is-ai-mode .main-container {
