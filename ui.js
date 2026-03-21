@@ -721,12 +721,12 @@ function renderHome() {
       </div>
 
       <!-- ROW 3: Voti recenti · Task di oggi -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div style="display:grid; grid-template-columns:1.3fr 0.7fr; gap:16px;">
 
         <div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:14px 18px;">
-            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">VOTI RECENTI</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px;">
+            <div style="font-size:10px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">VOTI RECENTI</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
             ${recentGrades.length ? recentGrades.map(v => {
                   const subContent = v.materia || v.subject || 'N/A';
                   const abbr = getSubjectAbbrev(subContent);
@@ -738,11 +738,11 @@ function renderHome() {
                   const pct = Math.min(100, (val / 10) * 100);
                   return `
               <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:9px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
+                <span style="font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
                 <div style="flex:1; min-width:0;">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                    <span style="font-size:9px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">${dateStr}</span>
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414;">${valStr}</span>
+                    <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">${dateStr}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:#141414;">${valStr}</span>
                   </div>
                   <div style="height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
                     <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
@@ -753,8 +753,8 @@ function renderHome() {
             </div>
             ${recentGrades.length ? `
             <div style="display:flex; align-items:baseline; gap:6px; padding-top:10px; margin-top:6px; border-top:1px solid #F0EDE8;">
-              <span style="font-size:9px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">media</span>
-              <span style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
+              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">media</span>
+              <span style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
               ${deltaStr ? `<span style="font-size:10px; font-weight:600; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
