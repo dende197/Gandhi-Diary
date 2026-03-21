@@ -723,22 +723,22 @@ function renderHome() {
       <!-- ROW 3: Voti recenti · Task di oggi -->
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
 
-        <div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px;">
-            <div style="font-size:10px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">VOTI RECENTI</div>
-            <div style="display:flex; flex-direction:column; gap:10px;">
-            ${recentGrades.length ? recentGrades.slice(0, 5).map(v => {
+        <div style="display:flex; flex-direction:column; min-height:0;">
+          <div style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Voti Recenti</div>
+          </div>
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:20px 24px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="display:flex; flex-direction:column; gap:14px;">
+            ${recentGrades.length ? recentGrades.slice(0, 6).map(v => {
                   const subContent = v.materia || v.subject || 'N/A';
                   const abbr = getSubjectAbbrev(subContent);
                   const key = abbr.toLowerCase();
                   const val = parseFloat(v.valore || v.value || 0);
                   const valStr = (v.valore || v.value || '—').toString();
-                  const dObj = new Date(v.data || v.date);
-                  const dateStr = dObj.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
                   const pct = Math.min(100, (val / 10) * 100);
                   return `
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:2px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:9px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:4px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333); letter-spacing:0.04em;">${abbr}</span>
                 <div style="flex:1; padding: 0 4px;">
                   <div style="height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
                     <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
@@ -749,31 +749,33 @@ function renderHome() {
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
             ${recentGrades.length ? `
-            <div style="display:flex; align-items:baseline; gap:6px; padding-top:10px; margin-top:6px; border-top:1px solid #F0EDE8;">
-              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">media</span>
-              <span style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
-              ${deltaStr ? `<span style="font-size:10px; font-weight:600; margin-left:auto; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
+            <div style="display:flex; align-items:baseline; justify-content:space-between; padding-top:16px; margin-top:20px; border-top:1px solid #F0EDE8;">
+              <div style="display:flex; align-items:baseline; gap:6px;">
+                <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">media</span>
+                <span style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
+              </div>
+              ${deltaStr ? `<span style="font-size:10px; font-weight:600; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
         </div>
 
-        <div>
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div style="display:flex; flex-direction:column; min-height:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Oggi</div>
-            <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:6px 14px; font-size:11.5px; font-weight:600; cursor:pointer; transition:opacity 0.15s;">+ attivit&agrave;</button>
+            <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:0 12px; height:24px; font-size:11px; font-weight:600; cursor:pointer; transition:opacity 0.15s; display:flex; align-items:center;">+ attività</button>
           </div>
-          <div class="card" style="border-radius:18px; padding:18px 20px;">
+          <div class="card" style="border-radius:18px; padding:20px 24px; flex:1; overflow-y:auto;">
             ${todayTasks.length ? todayTasks.slice(0,6).map(t => {
               const abbr = getSubjectAbbrev(t.subject);
               const key = abbr.toLowerCase();
               return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
+              <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
                 <div style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
-                <span style="font-size:12.5px; color:${t.done ? '#C8C4BE' : '#2A2825'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') + ':00' : ''}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; border-radius:4px; padding:3px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444); letter-spacing:0.04em;">${abbr}</span>
+                <span style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') + ':00' : ''}</span>
               </div>`;
             }).join('') : '<div style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Tutto pronto per oggi! &#x1F389;</div>'}
           </div>
