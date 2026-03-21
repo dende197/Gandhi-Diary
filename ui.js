@@ -976,7 +976,7 @@ function renderHome() {
             const chat = state.aiChatHistory || [];
 
             return `
-        <div class="view ai-view" style="display:flex; flex-direction:column; height:calc(100vh - 64px); max-height:calc(100vh - 64px); padding: 0 !important; background: var(--bg-body);">
+        <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
             <div style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
