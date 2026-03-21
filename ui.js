@@ -1032,10 +1032,10 @@ function renderHome() {
             </div>
 
             <!-- INPUT BOX -->
-            <div style="flex-shrink: 0; padding: 8px 20px; padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); background: var(--bg-body); border-top: none;">
-                <div style="max-width: 700px; margin: 0 auto; display: flex; gap: 8px; background: #F6F5F3; padding: 6px 8px; border-radius: 16px; border: 1px solid #E0DDD8;">
-                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 10px;">
-                    <button onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <div style="flex-shrink: 0; position: sticky; bottom: 0; padding: 12px 24px 16px; background: #FFFFFF; border-top: 1px solid #E0DDD8;">
+                <div style="max-width: 700px; margin: 0 auto; display: flex; gap: 8px; background: #F6F5F3; padding: 6px 8px; border-radius: 50px; border: 1px solid #E0DDD8;">
+                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 14px;">
+                    <button onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i class="ph-bold ph-paper-plane-right" style="font-size: 16px;"></i>
                     </button>
                 </div>
