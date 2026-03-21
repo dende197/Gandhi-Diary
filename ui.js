@@ -3090,13 +3090,28 @@ window._renderCore = function() {
 
     root.innerHTML = html;
     
-    // Fix: Prevent page overflow and ghosting when in AI view
+    // Fix: Dynamic AI view height — measured from real navbar, not hardcoded
     if (state.view === 'ai_assistant') {
-        root.style.overflow = 'hidden';
         document.body.classList.add('is-ai-mode');
+        document.body.style.overflow = 'hidden';
+        document.body.style.height = '100svh';
+        root.style.overflow = 'hidden';
+        root.style.height = '100%';
+        requestAnimationFrame(() => {
+            const navEl = document.getElementById('nav-container');
+            const navH = navEl ? navEl.getBoundingClientRect().height : 64;
+            const aiView = root.querySelector('.ai-view');
+            if (aiView) {
+                aiView.style.height = (window.innerHeight - navH) + 'px';
+                aiView.style.maxHeight = (window.innerHeight - navH) + 'px';
+            }
+        });
     } else {
-        root.style.overflow = 'visible';
         document.body.classList.remove('is-ai-mode');
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        root.style.overflow = 'visible';
+        root.style.height = '';
     }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
