@@ -632,12 +632,15 @@ function renderHome() {
         }
     }
 
-    // Task di oggi
-    const todayTasks = (state.tasks || []).filter(t => {
+    // Task di domani
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrow);
+    const tomorrowTasks = (state.tasks || []).filter(t => {
         if (t.id && t.id.startsWith('ai_')) return false;
         if (t.subject === 'QUEST') return false;
-        const plannedToday = (state.plannedTasks && state.plannedTasks[todayStr]) || [];
-        return t.due_date === todayStr || plannedToday.includes(t.id);
+        const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
+        return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
     });
 
     // Media delta vs mese scorso
@@ -757,23 +760,23 @@ function renderHome() {
 
         <div style="display:flex; flex-direction:column; min-height:0;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Oggi</div>
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Domani</div>
             <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:0 12px; height:24px; font-size:11px; font-weight:600; cursor:pointer; transition:opacity 0.15s; display:flex; align-items:center;">+ attività</button>
           </div>
-          <div class="card" style="border-radius:18px; padding:16px 18px; flex:1; overflow-y:auto;">
-            ${todayTasks.length ? todayTasks.slice(0,6).map(t => {
+          <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
+            ${tomorrowTasks.length ? tomorrowTasks.map(t => {
               const abbr = getSubjectAbbrev(t.subject);
               const key = abbr.toLowerCase();
               return `
               <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
-                <div style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
+                <div data-task-toggle="${t.id}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
-                <span style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
+                <span data-task-text="${t.id}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') + ':00' : ''}</span>
               </div>`;
-            }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito pianificato.</div>'}
+            }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito per domani.</div>'}
           </div>
         </div>
 
@@ -2517,6 +2520,9 @@ function renderHome() {
                     const completedToday = todayTasks.filter(t => t.done).length;
                     badge.textContent = `${completedToday}/${todayTasks.length}`;
                 }
+
+                // Re-render home for proportional widget sizing
+                if (state.view === 'home') scheduleRender();
             }
         }
         function showQuickAddTaskModal() {
