@@ -652,20 +652,20 @@ function renderHome() {
       <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
       <div style="display:grid; grid-template-columns:1fr 120px 180px; gap:14px; margin-bottom:16px;">
 
-        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:24px 28px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
-          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
-          <div style="font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.03em; margin-bottom:4px;">${greeting}, ${shortName}.</div>
-          <div style="font-size:12px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.4;">&ldquo;${quote}&rdquo;</div>
+        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
+          <div style="font-size:19px; font-weight:700; color:#fff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
         </div>
 
-        <div class="card streak-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:0;">
-          <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:6px;">STREAK</div>
-          <div style="font-size:32px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${streak}</div>
-          <div style="font-size:10px; color:#908C86; margin-top:2px;">giorni</div>
-          <div style="display:flex; gap:3px; margin-top:8px;">${streakDots}</div>
+        <div class="card streak-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column;">
+          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">Streak</div>
+          <div style="font-size:38px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${streak}</div>
+          <div style="font-size:10.5px; color:#908C86; margin-top:3px;">giorni di fila</div>
+          <div style="display:flex; gap:4px; margin-top:10px;">${streakDots}</div>
         </div>
 
-        <div class="card verifica-card" style="border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:center; position:relative;">
+        <div class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
             <div style="display:flex; gap:4px;">
@@ -682,7 +682,7 @@ function renderHome() {
             ${verificheCount > 1 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${vIdx + 1}/${verificheCount}</span>` : ''}
           </div>
           <div style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
-          <div style="font-size:28px; font-weight:800; color:#141414; letter-spacing:-0.05em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}<span style="font-size:11px; font-weight:500; color:#908C86; margin-left:4px;">giorni</span></div>
+          <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
           ${currentVerifica ? `<div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;"><div style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div></div>` : ''}
         </div>
 
@@ -691,7 +691,7 @@ function renderHome() {
       <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
 
-        <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:20px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
             <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(1) : '—'}</div>
@@ -700,7 +700,7 @@ function renderHome() {
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ASSENZE</div>
             <div style="font-size:32px; font-weight:700; color:#8A1A1A; letter-spacing:-0.05em; line-height:1;">${((oreAssenza / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2)}%</div>
@@ -709,13 +709,13 @@ function renderHome() {
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (oreAssenza / ((state.giorniScuola || 200) * 5)) * 100)}%; background:#EF4444; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 20px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ULTIMA CIRCOLARE</div>
             <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
-            <div style="font-size:13px; font-weight:600; color:#141414; line-height:1.3;">${lastCirc.titolo}</div>
+            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${lastCirc.titolo}</div>
           </div>
-          <span style="display:inline-flex; margin-top:10px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:8px; border-radius:100px; padding:2px 8px; letter-spacing:0.05em; align-self:flex-start;">&bull; nuova</span>
+          <span style="display:inline-flex; margin-top:14px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
         </div>
 
       </div>
@@ -727,8 +727,8 @@ function renderHome() {
           <div style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Voti Recenti</div>
           </div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:20px 24px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-            <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 18px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="display:flex; flex-direction:column;">
             ${recentGrades.length ? recentGrades.slice(0, 6).map(v => {
                   const subContent = v.materia || v.subject || 'N/A';
                   const abbr = getSubjectAbbrev(subContent);
@@ -737,24 +737,20 @@ function renderHome() {
                   const valStr = (v.valore || v.value || '—').toString();
                   const pct = Math.min(100, (val / 10) * 100);
                   return `
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:9px; font-weight:700; font-family:'JetBrains Mono',monospace; width:28px; text-align:center; border-radius:4px; padding:4px 0; background:var(--${key},#EEE); color:var(--${key}-t,#333); letter-spacing:0.04em;">${abbr}</span>
-                <div style="flex:1; padding: 0 4px;">
-                  <div style="height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                    <div style="height:100%; width:${pct}%; background:var(--${key},#3B9DD4); border-radius:100px; transition:width 0.5s ease;"></div>
-                  </div>
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; flex-shrink:0; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
+                <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                  <div style="height:100%; width:${pct}%; background:var(--${key}-dot,#3B9DD4); border-radius:100px;"></div>
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; width:28px; text-align:right; color:#141414;">${valStr}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:500; width:26px; text-align:right; color:var(--${key}-t,#333);">${valStr}</span>
               </div>`;
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
             ${recentGrades.length ? `
-            <div style="display:flex; align-items:baseline; justify-content:space-between; padding-top:16px; margin-top:20px; border-top:1px solid #F0EDE8;">
-              <div style="display:flex; align-items:baseline; gap:6px;">
-                <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace; text-transform:uppercase;">media</span>
-                <span style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
-              </div>
-              ${deltaStr ? `<span style="font-size:10px; font-weight:600; font-family:'JetBrains Mono',monospace; color:${deltaColor};">${deltaStr}</span>` : ''}
+            <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
+              <span style="font-size:10px; color:#C0BBB4; font-family:'JetBrains Mono',monospace;">media</span>
+              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
+              ${deltaStr ? `<span style="font-size:11px; color:#2DB86A; margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:500;">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
         </div>
@@ -764,20 +760,20 @@ function renderHome() {
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Oggi</div>
             <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:0 12px; height:24px; font-size:11px; font-weight:600; cursor:pointer; transition:opacity 0.15s; display:flex; align-items:center;">+ attività</button>
           </div>
-          <div class="card" style="border-radius:18px; padding:20px 24px; flex:1; overflow-y:auto;">
+          <div class="card" style="border-radius:18px; padding:16px 18px; flex:1; overflow-y:auto;">
             ${todayTasks.length ? todayTasks.slice(0,6).map(t => {
               const abbr = getSubjectAbbrev(t.subject);
               const key = abbr.toLowerCase();
               return `
-              <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
                 <div style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; border-radius:4px; padding:3px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444); letter-spacing:0.04em;">${abbr}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
                 <span style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') + ':00' : ''}</span>
               </div>`;
-            }).join('') : '<div style="font-size:12.5px; color:#C0BBB4; padding:16px 0; text-align:center;">Tutto pronto per oggi! &#x1F389;</div>'}
+            }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito pianificato.</div>'}
           </div>
         </div>
 

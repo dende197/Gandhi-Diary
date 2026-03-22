@@ -2471,7 +2471,7 @@ body {
 /* ── GRIDS ───────────────────────────────────────── */
 .row-3 {
   display: grid;
-  grid-template-columns: 1fr 130px 190px;
+  grid-template-columns: 1fr 120px 180px;
   gap: 14px;
   margin-bottom: 14px;
 }
@@ -3621,7 +3621,7 @@ html {
 
 /* Il problema: .view { padding: 100px 40px } gonfiava la dashboard */
 .view.dashboard {
-  padding: 16px 32px 40px !important;
+  padding: 20px 28px 32px !important;
   min-height: unset !important;
   max-width: 100% !important;
   background: #F6F5F3 !important;
