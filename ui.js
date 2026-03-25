@@ -1183,50 +1183,20 @@ function renderHome() {
             const el = document.getElementById('weekly-agenda-list');
             if (!el) return;
 
-            const plannedWithDates = [];
-            Object.entries(state.plannedTasks || {}).forEach(([dateStr, taskIds]) => {
-                taskIds.forEach(id => {
-                    const task = state.tasks.find(t => t.id === id);
-                    if (task) plannedWithDates.push({ ...task, plannedDate: dateStr });
-                });
-            });
-
-            plannedWithDates.sort((a, b) => new Date(a.plannedDate) - new Date(b.plannedDate));
-
-            // Filtra solo date da oggi in poi (non mostrare compiti passati)
-            const filtered = plannedWithDates.filter(t => isFutureOrToday(t.plannedDate));
-
-            const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-            const html = filtered.length > 0
-                ? filtered.map(t => {
-                    const d = parseArgoDate(t.plannedDate);
-                    const dayLabel = `${dayNamesShort[d.getDay()]} ${d.getDate()}`;
-                    const subjectColor = getSubjectColor(t.subject);
-                    return `
-                                <div class="glass-list-item" style="display:flex; align-items:center; gap:12px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
-                                    <div style="min-width:50px; font-size:11px; font-weight:800; color: var(--orange); text-transform: uppercase;">${dayLabel}</div>
-                                    <div 
-                                        class="task-checkbox ${t.done ? 'checked' : ''}"
-                                        data-task-toggle="${t.id}"
-                                        onclick="toggleTask('${t.id}')" 
-                                        style="width:20px; height:20px; border:2px solid ${t.done ? 'var(--green)' : subjectColor}; background:${t.done ? 'var(--green)' : 'transparent'}; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
-                                        ${t.done ? '<i class="ph-bold ph-check" style="font-size:12px; color:black;"></i>' : ''}
-                                   </div>
-                                    <div style="flex:1; min-width:0;">
-                                        <div data-task-text="${t.id}" style="font-size:14px; color:white; font-weight:500; ${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">
-                                            ${t.text}
-                                       </div>
-                                        <div style="font-size:10px; color:${subjectColor}; font-weight:700; text-transform:uppercase;">${t.subject}</div>
-                                   </div>
-                               </div>
-                            `;
-                }).join('')
-                : `<div style="text-align:center; opacity:0.5; font-size:13px; padding:10px;">Nessun compito pianificato.</div>`;
+            // Re-render using the same function for consistent HTML
+            const newContent = renderWeeklyAgenda();
+            const temp = document.createElement('div');
+            temp.innerHTML = newContent;
+            const newList = temp.querySelector('#weekly-agenda-list');
 
             el.style.opacity = '0';
             el.style.transition = 'opacity 0.15s ease-out';
             setTimeout(() => {
-                el.innerHTML = html;
+                if (newList) {
+                    el.innerHTML = newList.innerHTML;
+                } else {
+                    el.innerHTML = newContent;
+                }
                 el.style.opacity = '1';
             }, 100);
         }
@@ -1914,7 +1884,7 @@ function renderHome() {
             const sortedDates = Object.keys(grouped).sort();
 
             return `
-        <div style="display: flex; flex-direction: column; gap: 32px;">
+        <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">
             ${sortedDates.map(dateStr => {
                 const d = parseArgoDate(dateStr);
                 const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
@@ -2496,9 +2466,16 @@ function renderHome() {
                 // === SURGICAL DOM UPDATE ===
                 // Update all checkboxes for this task ID without rebuilding
                 document.querySelectorAll(`[data-task-toggle="${id}"]`).forEach(cb => {
-                    cb.style.borderColor = t.done ? 'var(--green)' : cb.dataset.subjectColor || 'rgba(255,255,255,0.2)';
-                    cb.style.background = t.done ? 'var(--green)' : 'transparent';
-                    cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:12px; color:black;"></i>' : '';
+                    const isPlanner = cb.closest('.planner-content') || cb.closest('#weekly-agenda-list');
+                    if (isPlanner) {
+                        cb.style.borderColor = t.done ? '#141414' : '#E5E5EA';
+                        cb.style.background = t.done ? '#141414' : 'transparent';
+                        cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : '';
+                    } else {
+                        cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
+                        cb.style.background = t.done ? '#141414' : '#fff';
+                        cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
+                    }
                     cb.style.transform = 'scale(0.85)';
                     setTimeout(() => { cb.style.transform = 'scale(1)'; }, 120);
                 });
@@ -2506,6 +2483,7 @@ function renderHome() {
                 document.querySelectorAll(`[data-task-text="${id}"]`).forEach(el => {
                     el.style.textDecoration = t.done ? 'line-through' : 'none';
                     el.style.opacity = t.done ? '0.5' : '1';
+                    el.style.color = t.done ? '#C8C4BE' : '';
                 });
 
                 // Update Home's Focus di Oggi toggle checkboxes (inline onclick) 
@@ -2516,7 +2494,19 @@ function renderHome() {
                 if (calendarEl && calendarEl._fullCalendar) {
                     syncCalendarEvents(calendarEl._fullCalendar);
                 }
-                if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+                if (state.view === 'planner' && typeof renderCustomCalendar === 'function') renderCustomCalendar();
+
+                // Refresh weekly agenda in-place if on planner
+                if (state.view === 'planner') {
+                    const agendaEl = document.getElementById('weekly-agenda-list');
+                    if (agendaEl) {
+                        const newContent = renderWeeklyAgenda();
+                        const temp = document.createElement('div');
+                        temp.innerHTML = newContent;
+                        const newList = temp.querySelector('#weekly-agenda-list');
+                        if (newList) agendaEl.innerHTML = newList.innerHTML;
+                    }
+                }
 
                 // Update completed badge
                 const badge = document.querySelector('[data-completed-badge]');
@@ -2533,7 +2523,7 @@ function renderHome() {
                     badge.textContent = `${completedToday}/${todayTasks.length}`;
                 }
 
-                // Re-render home for proportional widget sizing
+                // Re-render home Domani widget in-place (no full page rebuild)
                 if (state.view === 'home') scheduleRender();
             }
         }
