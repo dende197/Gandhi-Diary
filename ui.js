@@ -147,8 +147,8 @@ window.closeSubject = function() {
             const container = getModalContainer();
             if (!container) return;
             container.innerHTML = `
-            <div class="modal-overlay active" onclick="closeModal(event)">
-                <div class="modal-content ${className}" onclick="event.stopPropagation()">
+            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                <div class="modal-content ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:90vh;overflow-y:auto;width:calc(100% - 32px);">
                     ${html}
                 </div>
             </div>
@@ -317,32 +317,32 @@ window.closeSubject = function() {
         function updateHomeView() {
             if (state.view !== 'home') return;
 
-            const plannerWidget = document.getElementById('today-planner-widget');
-            if (plannerWidget) {
-                const todayStr = getLocalDateString();
-                const todayPlanned = state.plannedTasks[todayStr] || [];
-                const plannedTasks = state.tasks.filter(t => todayPlanned.includes(t.id));
+            const domaniCard = document.getElementById('domani-task-list');
+            if (domaniCard) {
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = getLocalDateString(tomorrow);
+                const tomorrowTasks = (state.tasks || []).filter(t => {
+                    if (t.id && t.id.startsWith('ai_')) return false;
+                    if (t.subject === 'QUEST') return false;
+                    const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
+                    return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
+                });
 
-                const tasksHTML = plannedTasks.length > 0 ?
-                    plannedTasks.map(t => {
-                        const subjectColor = getSubjectColor(t.subject);
-                        return `
-                            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; border-left: 3px solid ${subjectColor};">
-                                <div style="flex: 1; min-width: 0;">
-                                    <div style="font-weight: 600; font-size: 14px; color: white; margin-bottom: 2px;">${t.text}</div>
-                                    <div style="font-size: 11px; color: ${subjectColor}; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${t.subject}</div>
-                               </div>
-                           </div>
-                        `;
-                    }).join('') :
-                    '<div style="text-align: center; opacity: 0.5; font-size: 13px; padding: 10px;">Nessun compito pianificato.</div>';
-
-                plannerWidget.style.transition = 'opacity 0.2s ease-out';
-                plannerWidget.style.opacity = '0';
-                setTimeout(() => {
-                    plannerWidget.innerHTML = tasksHTML;
-                    plannerWidget.style.opacity = '1';
-                }, 200);
+                tomorrowTasks.forEach(t => {
+                    const cb = domaniCard.querySelector(`[data-task-toggle="${t.id}"]`);
+                    const txt = domaniCard.querySelector(`[data-task-text="${t.id}"]`);
+                    if (cb) {
+                        cb.style.background = t.done ? '#141414' : '#fff';
+                        cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
+                        cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
+                    }
+                    if (txt) {
+                        txt.style.textDecoration = t.done ? 'line-through' : 'none';
+                        txt.style.color = t.done ? '#C8C4BE' : '#141414';
+                    }
+                });
             }
 
             updatePlannerCounter();
@@ -1600,8 +1600,8 @@ function renderHome() {
             const isRegistro = state.plannerMode === 'registro';
             
             container.innerHTML = `
-                <div class="modal-overlay active" onclick="closeModal(event)">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:24px; border-radius:24px; background:#FFFFFF; color:#141414; border:1px solid #E0DDD8; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:24px; border-radius:24px; background:#FFFFFF; color:#141414; border:1px solid #E0DDD8; box-shadow: 0 10px 40px rgba(0,0,0,0.1); width: calc(100% - 32px); max-height: 90vh; overflow-y: auto;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px;">
                             <div>
                                 <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:6px; background: ${isRegistro ? 'rgba(0,122,255,0.05)' : 'rgba(255,45,85,0.05)'}; padding: 3px 10px; border-radius: 6px; display:inline-block;">
@@ -1694,8 +1694,17 @@ function renderHome() {
             if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
             if (typeof updateHomeView === 'function') updateHomeView();
 
-            // lista "Agenda della settimana" in Planner
-            if (typeof updateWeeklyAgendaView === 'function') updateWeeklyAgendaView();
+            // ✅ FIX: Aggiorna la weekly agenda list in-place (nessun full re-render)
+            if (state.view === 'planner') {
+                const agendaEl = document.getElementById('weekly-agenda-list');
+                if (agendaEl) {
+                    const newContent = renderWeeklyAgenda();
+                    const temp = document.createElement('div');
+                    temp.innerHTML = newContent;
+                    const newList = temp.querySelector('#weekly-agenda-list');
+                    if (newList) agendaEl.innerHTML = newList.innerHTML;
+                }
+            }
 
             // ✅ Aggiorna il calendario custom
             if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
@@ -1955,17 +1964,17 @@ function renderHome() {
             if (!modalContainer) return;
 
             modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)">
-            <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="width: 100%; max-width: 450px; padding: 24px;">
+        <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+            <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="position:relative;z-index:99991;width: 100%; max-width: 450px; padding: 24px; max-height: 90vh; overflow-y: auto;">
             </div>
         </div> `;
             refreshPlanWeekModalContent();
         }
         function togglePlanDay(taskId, dateStr) {
-            if (event) event.stopPropagation();
-            // ✅ FIX: Usa confronto stringa timezone-safe
+            if (typeof event !== 'undefined' && event && event.stopPropagation) event.stopPropagation();
+
             const todayStr = getLocalDateString();
-            if (dateStr < todayStr) return; // Solo i giorni passati sono bloccati, oggi è OK
+            if (dateStr < todayStr) return;
 
             if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
             const index = state.plannedTasks[dateStr].indexOf(taskId);
@@ -1977,8 +1986,21 @@ function renderHome() {
 
             saveTasks();
             if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
-            updateWeekDayButton(taskId, dateStr);
-            notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
+
+            // ✅ FIX: Immediate surgical DOM update — border shorthand, background, color
+            const isNowPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
+            document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
+                btn.style.background = isNowPlanned ? '#141414' : '#F6F5F3';
+                btn.style.color = isNowPlanned ? 'white' : '#908C86';
+                btn.style.border = isNowPlanned
+                    ? '2px solid #141414'
+                    : (dateStr === todayStr ? '2px solid #007AFF' : '1px solid #E0DDD8');
+                // Spring feedback
+                btn.style.transform = 'scale(0.9)';
+                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.transition = 'all 0.25s cubic-bezier(0.2,0.8,0.2,1)'; }, 80);
+            });
+
+            notifyPlannerChanged();
         }
         function showVotiView() {
             modalContainer.innerHTML = `
@@ -2523,8 +2545,8 @@ function renderHome() {
                     badge.textContent = `${completedToday}/${todayTasks.length}`;
                 }
 
-                // Re-render home Domani widget in-place (no full page rebuild)
-                if (state.view === 'home') scheduleRender();
+                // ✅ FIX: Update home view surgically, no full scheduleRender
+                if (state.view === 'home' && typeof updateHomeView === 'function') updateHomeView();
             }
         }
         function showQuickAddTaskModal() {
