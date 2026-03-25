@@ -1675,7 +1675,7 @@ function renderHome() {
 
             // Persistenza locale e remota automatica
             saveTasks();
-            debouncedSavePlannerRemote(500); // ✨ Ripristinato auto-sync 🚀
+            if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
 
             // Aggiorna UI Calendario
             const calendarEl = document.getElementById('calendar');
@@ -1976,7 +1976,7 @@ function renderHome() {
             }
 
             saveTasks();
-            debouncedSavePlannerRemote(500); // ✨ Ripristinato auto-sync 🚀
+            if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
             updateWeekDayButton(taskId, dateStr);
             notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
         }
