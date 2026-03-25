@@ -57,6 +57,11 @@ window.closeSubject = function() {
             const somma = validi.reduce((a, b) => a + b, 0);
             return (somma / validi.length).toFixed(2);
         }
+        function isGiustifica(val) {
+            if (!val && val !== 0) return true;
+            const s = val.toString().replace(',', '.').trim();
+            return s === '' || s === '-' || s === '—' || isNaN(parseFloat(s));
+        }
         function getMotivationalFallback() {
             const quotes = [
                 "Un piccolo passo oggi vale più di dieci domani.",
@@ -736,16 +741,18 @@ function renderHome() {
                   const subContent = v.materia || v.subject || 'N/A';
                   const abbr = getSubjectAbbrev(subContent);
                   const key = abbr.toLowerCase();
-                  const val = parseFloat(v.valore || v.value || 0);
-                  const valStr = (v.valore || v.value || '—').toString();
-                  const pct = Math.min(100, (val / 10) * 100);
+                  const rawVal = v.valore || v.value || '';
+                  const giu = isGiustifica(rawVal);
+                  const val = giu ? 0 : parseFloat(rawVal);
+                  const valStr = giu ? 'GIU' : rawVal.toString();
+                  const pct = giu ? 0 : Math.min(100, (val / 10) * 100);
                   return `
               <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; flex-shrink:0; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
                 <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
                   <div style="height:100%; width:${pct}%; background:var(--${key}-dot,#3B9DD4); border-radius:100px;"></div>
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:500; width:26px; text-align:right; color:var(--${key}-t,#333);">${valStr}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:${giu ? '9' : '12.5'}px; font-weight:500; width:${giu ? '30' : '26'}px; text-align:right; color:${giu ? '#BCB8B2' : `var(--${key}-t,#333)`};">${valStr}</span>
               </div>`;
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
@@ -1417,12 +1424,15 @@ function renderHome() {
 
             <div style="display: flex; flex-direction: column; gap: 14px; padding-bottom: 60px;">
                 ${votiData.map(v => {
-                const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-                const isSuff = val >= 6;
+                const rawVal = v.valore || v.value || '0';
+                const giu = isGiustifica(rawVal);
+                const val = giu ? 0 : parseFloat(rawVal.toString().replace(',', '.'));
+                const isSuff = !giu && val >= 6;
+                const displayVal = giu ? 'GIU' : (v.valore || v.value);
                 return `
                     <div class="card" style="background:#FFFFFF; border: 1px solid #E0DDD8; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 20px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                        <div style="width: 56px; height: 56px; border-radius: 16px; background: ${isSuff ? 'rgba(40, 205, 65, 0.1)' : 'rgba(255, 59, 48, 0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: ${isSuff ? '#28CD41' : '#FF3B30'}; border: 1px solid ${isSuff ? 'rgba(40, 205, 65, 0.2)' : 'rgba(255, 59, 48, 0.2)'};">
-                            ${v.valore || v.value}
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: ${giu ? 'rgba(188,184,178,0.1)' : (isSuff ? 'rgba(40, 205, 65, 0.1)' : 'rgba(255, 59, 48, 0.1)')}; display: flex; align-items: center; justify-content: center; font-size: ${giu ? '14' : '22'}px; font-weight: 800; color: ${giu ? '#BCB8B2' : (isSuff ? '#28CD41' : '#FF3B30')}; border: 1px solid ${giu ? 'rgba(188,184,178,0.2)' : (isSuff ? 'rgba(40, 205, 65, 0.2)' : 'rgba(255, 59, 48, 0.2)')};">
+                            ${displayVal}
                         </div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${v.tipo || 'Valutazione'}</div>
@@ -2037,12 +2047,14 @@ function renderHome() {
                </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     ${votiData.map(v => {
-                const val = (v.valore || v.value || '').toString();
+                const rawVal = (v.valore || v.value || '').toString();
+                const giu = isGiustifica(rawVal);
+                const displayVal = giu ? 'GIU' : rawVal;
                 const mat = v.materia || v.subject || 'Materia';
-                const color = parseFloat(val.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)';
+                const color = giu ? '#BCB8B2' : (parseFloat(rawVal.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)');
                 return `
                         <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
-                            <div style="width:54px; height:54px; border-radius:12px; background:${color}15; border:1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:${color};">${val}</div>
+                            <div style="width:54px; height:54px; border-radius:12px; background:${color}15; border:1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${color};">${displayVal}</div>
                             <div style="flex:1; text-align:left;">
                                 <div style="font-weight:700; font-size:16px; color:white;">${mat}</div>
                                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
