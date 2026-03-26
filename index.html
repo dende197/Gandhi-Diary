@@ -94,7 +94,6 @@
 
         // Global Variable Shims for ui.js
         let calendarState = { weekOffset: 0 };
-        let __stressWaveRAF = null;
         let __mediaGaugeRAF = null;
         let offlineBadge = null;
 
@@ -165,6 +164,7 @@
             circolari: [],
             messages: {},
             threads: [],
+            googleConnected: false,
             uiMode: 'calendar'
         };
         window.state = state;
@@ -357,6 +357,18 @@
                 const loader = document.getElementById('app-loader');
                 if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 450); }
             }, 100);
+
+            // Handle Google OAuth callback
+            if (window.location.hash.includes('google=success')) {
+                state.googleConnected = true;
+                setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
+                history.replaceState(null, '', '/#profile');
+            }
+
+            // Check Google connection status
+            if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
+                window.checkGoogleStatus();
+            }
         });
 
         // Global APIs
@@ -568,8 +580,6 @@
             // 4. Planner Sync
             state.syncing = false;
             state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
-            state.stressLevels = JSON.parse(localStorage.getItem(lsKey('stress_levels')) || '{}');
-            state.stressVents = JSON.parse(localStorage.getItem(lsKey('stress_vents')) || '{}');
             state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
             if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
 
@@ -593,7 +603,6 @@
                 alert(`✅ Benvenuto ${state.user.name}!`);
                 navigate('home');
                 if (window.scheduleRender) window.scheduleRender();
-                if (typeof startThreadsPolling === 'function') startThreadsPolling();
             });
         }
         window.handleLoginSuccess = handleLoginSuccess;

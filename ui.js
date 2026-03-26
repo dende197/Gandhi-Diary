@@ -42,7 +42,63 @@ window.navigateSubject = function(subjName) {
 };
 
 window.closeSubject = function() {
-    window.navigateSubject(null);
+    state.activeSubject = null;
+    scheduleRender();
+};
+// --- Google Calendar OAuth2 (Universal) ---
+window.connectGoogle = function() {
+    const userId = window.getUserId();
+    if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
+    window.location.href = `${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}&redirect=true`;
+};
+
+window.syncGoogleCalendar = async function() {
+    const btn = event?.currentTarget;
+    const originalHtml = btn?.innerHTML || '';
+    try {
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Sync...'; }
+        const userId = window.getUserId();
+        const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
+        const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, session, tasks: state.tasks })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Sincronizzati ${data.added || 0} compiti su Google Calendar!`, 'var(--green)');
+        } else {
+            throw new Error(data.error || 'Sync fallito');
+        }
+    } catch (err) {
+        console.error('Google Sync Error:', err);
+        showToast(err.message || 'Errore durante il sync', 'var(--red)');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+    }
+};
+
+window.disconnectGoogle = async function() {
+    try {
+        const userId = window.getUserId();
+        const res = await fetch(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+        if (data.success) {
+            state.googleConnected = false;
+            showToast('Google Calendar disconnesso.', 'var(--orange)');
+            window.scheduleRender();
+        }
+    } catch (e) { showToast('Errore disconnessione Google', 'var(--red)'); }
+};
+
+window.checkGoogleStatus = async function() {
+    try {
+        const userId = window.getUserId();
+        if (!userId || userId === 'guest') return;
+        const res = await fetch(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+        state.googleConnected = data.connected || false;
+    } catch (e) { state.googleConnected = false; }
 };
 // ------------------------------------------------------------
 
@@ -842,17 +898,17 @@ function renderHome() {
         }
         function renderProfile() {
             return `
-        <div class="view">
-            <div style="margin-bottom: 24px;">
-                <h1 style="font-size: 28px; font-weight: 800;">Il Mio Account</h1>
-                <p style="color: var(--text-secondary); font-size: 14px;">Gestisci le tue impostazioni e preferenze</p>
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 100px 16px 120px 16px;">
+            <div style="margin-bottom: 32px;">
+                <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); margin: 0;">Il Mio Account</h1>
+                <p style="color: var(--text-secondary); font-size: 15px; margin-top: 4px; font-weight: 500;">Gestisci le tue impostazioni e preferenze di studio</p>
             </div>
 
-            <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px;">
+            <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 ${renderAvatar(state.user.name, 96)}
                 <div style="margin-top: 16px;">
-                    <div style="font-size: 24px; font-weight: 800; color: var(--text-primary);">${state.user.name || 'Utente'}</div>
-                    <div style="font-size: 14px; font-weight: 650; color: var(--accent); background: rgba(99, 102, 241, 0.1); padding: 4px 16px; border-radius: 20px; display: inline-block; margin-top: 8px;">
+                    <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${state.user.name || 'Utente'}</div>
+                    <div style="font-size: 13px; font-weight: 800; color: var(--accent); background: rgba(99, 102, 241, 0.08); padding: 6px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
                         CLASSE ${(normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : '')}
                     </div>
                 </div>
@@ -860,7 +916,7 @@ function renderHome() {
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px;">
                 <!-- Connection Card -->
-                <div class="card" style="padding: 24px;">
+                <div class="card" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
                     <div style="display: flex; gap: 16px;">
                         <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--green);">
                             <i class="ph-fill ph-plugs-connected" style="font-size: 24px;"></i>
@@ -872,20 +928,34 @@ function renderHome() {
                             </div>
                         </div>
                     </div>
-                    ${state.lastSync ? `<div style="font-size: 12px; color: var(--text-dim); margin-top: 16px;">Sincronizzato: ${state.lastSync}</div>` : ''}
+                    ${state.lastSync ? `<div style="font-size: 12px; color: var(--text-dim); margin-top: 16px; font-weight: 500;">Ultimo Sync: ${state.lastSync}</div>` : ''}
                 </div>
 
-                <!-- App Stats Card -->
-                <div class="card" style="padding: 24px;">
+                <!-- Google Calendar Card (Universal OAuth2) -->
+                <div class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
                     <div style="display: flex; gap: 16px;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(99, 102, 241, 0.1); display: flex; align-items: center; justify-content: center; color: var(--accent);">
-                            <i class="ph-fill ph-chart-line" style="font-size: 24px;"></i>
+                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(234, 67, 53, 0.1); display: flex; align-items: center; justify-content: center; color: #EA4335;">
+                            <i class="ph-fill ph-calendar-check" style="font-size: 24px;"></i>
                         </div>
-                        <div>
-                            <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Performance</div>
-                            <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">Ottimizzata</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Google Calendar</div>
+                            <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
+                                ${state.googleConnected ? 'Collegato ✓' : 'Non collegato'}
+                            </div>
                         </div>
                     </div>
+                    ${state.googleConnected ? `
+                    <button class="btn-primary" onclick="window.syncGoogleCalendar()" style="height: 40px; font-size: 13px; gap: 8px; background: #EA4335; border: none;">
+                        <i class="ph-bold ph-arrows-clockwise"></i> Sincronizza Compiti
+                    </button>
+                    <button onclick="window.disconnectGoogle()" style="height: 36px; font-size: 12px; background: transparent; border: 1px solid rgba(234,67,53,0.3); color: #EA4335; border-radius: 10px; cursor: pointer; font-weight: 700;">
+                        <i class="ph-bold ph-sign-out"></i> Disconnetti Google
+                    </button>
+                    ` : `
+                    <button class="btn-primary" onclick="window.connectGoogle()" style="height: 44px; font-size: 13px; gap: 8px; background: #EA4335; border: none; font-weight: 700;">
+                        <i class="ph-bold ph-google-logo"></i> Accedi con Google
+                    </button>
+                    `}
                 </div>
             </div>
 
@@ -3239,7 +3309,7 @@ window.saveProfileChanges = async function() {
     }
 };
 
-// ── QUOTES & MENTAL HEALTH ──
+// ── QUOTES ──
 const MOTIVATIONAL_QUOTES = [
     "Il successo è la somma di piccoli sforzi, ripetuti giorno dopo giorno.",
     "There is no tomorrow", "No risk, no story",
@@ -3628,8 +3698,7 @@ window.sendAIChat = async function() {
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
-    const stressBlock = '';
-    const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n${stressBlock}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. NON usare MAI tabelle markdown. Scrivi i piani come lista con elenchi puntati e grassetto per le date/materie, in stile discorsivo e leggibile. 3. Usa grassetto **testo** per evidenziare le cose importanti.`;
+    const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. NON usare MAI tabelle markdown. Scrivi i piani come lista con elenchi puntati e grassetto per le date/materie, in stile discorsivo e leggibile. 3. Usa grassetto **testo** per evidenziare le cose importanti.`;
 
     const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
     state.aiChatHistory.forEach(msg => contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));

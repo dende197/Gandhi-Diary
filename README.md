@@ -6,8 +6,7 @@
 - **Design Premium**: Interfaccia stile iOS/Glassmorphism.
 - **Argo Integration**: Login sicuro e sincronizzazione Compiti.
 - **Planner**: Gestione attività scolastiche.
-- **Social Feed**: Bacheca per la classe/istituto (simulata).
-- **Market**: Mercatino libri usati (simulato).
+- **Planner**: Gestione attività scolastiche.
 
 ## 🚀 Architettura & Deploy
 

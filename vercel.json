@@ -1,15 +1,5 @@
 {
   "version": 2,
-  "crons": [
-    {
-      "path": "/api/sync-calendar",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/sync-calendar",
-      "schedule": "0 23 * * *"
-    }
-  ],
   "rewrites": [
     {
       "source": "/health",
@@ -32,16 +22,8 @@
       "destination": "/api/resources"
     },
     {
-      "source": "/api/conversations/user/:user_id",
-      "destination": "/api/resources"
-    },
-    {
-      "source": "/api/mental-health/:action",
-      "destination": "/api/mental?action=:action"
-    },
-    {
       "source": "/api/ai/:action",
-      "destination": "/api/mental?action=:action"
+      "destination": "/api/ai"
     },
     {
       "source": "/api/ping",
@@ -54,10 +36,6 @@
     {
       "source": "/api/circolari/:action",
       "destination": "/api/circolari?action=:action"
-    },
-    {
-      "source": "/api/calendar/status",
-      "destination": "/api/sync-calendar?action=status"
     }
   ],
   "headers": [
