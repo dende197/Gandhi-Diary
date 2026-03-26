@@ -21,8 +21,8 @@ let _supabase = null;
 function getSupabase() {
     if (!_supabase) {
         const url = process.env.SUPABASE_URL || 'https://mlcutgkfunbpmrnbeznd.supabase.co';
-        const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-        if (!key) throw new Error('SUPABASE_SERVICE_KEY o SUPABASE_ANON_KEY non configurata');
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+        if (!key) throw new Error('Chiave Supabase non trovata su Vercel (controlla SUPABASE_SERVICE_ROLE_KEY)');
         _supabase = createClient(url, key);
     }
     return _supabase;
