@@ -142,8 +142,12 @@ module.exports = async function handler(req, res) {
                 const userId = req.query.state; // Retrieved from OAuth state
                 const error = req.query.error;
 
+                console.log(`[Google OAuth] Callback received for user: ${userId}`);
+                if (!GOOGLE_CLIENT_ID) console.error('[Google OAuth] ERRORE: GOOGLE_CLIENT_ID mancante');
+                if (!GOOGLE_CLIENT_SECRET) console.error('[Google OAuth] ERRORE: GOOGLE_CLIENT_SECRET mancante');
+
                 if (error) {
-                    console.error('Google OAuth error:', error);
+                    console.error('[Google OAuth] Error from Google:', error);
                     return res.redirect('/?google=error&reason=' + encodeURIComponent(error));
                 }
 
@@ -151,14 +155,23 @@ module.exports = async function handler(req, res) {
                     return res.status(400).json({ success: false, error: 'Parametri mancanti (code o state)' });
                 }
 
-                const oauth2 = getOAuth2Client();
-                const { tokens } = await oauth2.getToken(code);
-                
-                await saveTokens(userId, tokens);
-                console.log(`✅ Google Calendar collegato per utente: ${userId}`);
+                try {
+                    const oauth2 = getOAuth2Client();
+                    console.log(`[Google OAuth] Scambio codice con redirect_uri: ${REDIRECT_URI}`);
+                    const { tokens } = await oauth2.getToken(code);
+                    
+                    await saveTokens(userId, tokens);
+                    console.log(`✅ Google Calendar collegato per utente: ${userId}`);
 
-                // Redirect alla PWA con successo
-                return res.redirect('/#profile?google=success');
+                    // Redirect alla PWA con successo
+                    return res.redirect('/#profile?google=success');
+                } catch (tokenErr) {
+                    console.error('[Google OAuth] Token exchange failed:', tokenErr.message);
+                    if (tokenErr.message.includes('invalid_client')) {
+                        console.error('[Google OAuth] SUGGERIMENTO: Controlla che GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET siano corretti su Vercel.');
+                    }
+                    throw tokenErr;
+                }
             }
 
             // ============= STATUS =============
