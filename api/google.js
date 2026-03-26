@@ -129,6 +129,10 @@ module.exports = async function handler(req, res) {
                     state: userId // Pass userId through OAuth state
                 });
 
+                if (req.query.redirect === 'true') {
+                    return res.redirect(url);
+                }
+
                 return res.json({ success: true, url });
             }
 
