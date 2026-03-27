@@ -314,7 +314,6 @@
                 const data = await res.json();
                 if (data.success && data.circolari) {
                     state.circolari = data.circolari;
-                    if (window.scheduleRender) window.scheduleRender(100);
                 }
             } catch (e) { console.warn("Circolari load failed", e); }
         }
@@ -345,8 +344,7 @@
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','');
-                await performSync(session);
-                loadCircolari();
+                await Promise.all([performSync(session), loadCircolari()]);
             } else {
                 state.view = 'login';
             }
