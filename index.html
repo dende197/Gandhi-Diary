@@ -353,9 +353,16 @@
             
             state.booting = false;
             setTimeout(() => {
-                if (window.render) window.render();
                 const loader = document.getElementById('app-loader');
-                if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 450); }
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 450);
+                }
+                // Render solo se l'utente NON è loggato (login screen),
+                // perché in quel caso performSync non viene chiamato
+                if (!state.isLoggedIn) {
+                    if (window.render) window.render();
+                }
             }, 100);
 
             // Handle Google OAuth callback

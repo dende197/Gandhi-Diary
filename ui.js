@@ -930,11 +930,6 @@ function renderHome() {
         function renderProfile() {
             return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 100px 16px 120px 16px;">
-            <div style="margin-bottom: 32px;">
-                <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); margin: 0;">Il Mio Account</h1>
-                <p style="color: var(--text-secondary); font-size: 15px; margin-top: 4px; font-weight: 500;">Gestisci le tue impostazioni e preferenze di studio</p>
-            </div>
-
             <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 ${renderAvatar(state.user.name, 96)}
                 <div style="margin-top: 16px;">
@@ -947,46 +942,44 @@ function renderHome() {
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px;">
                 <!-- Connection Card -->
-                <div class="card" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div style="display: flex; gap: 16px;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--green);">
-                            <i class="ph-fill ph-plugs-connected" style="font-size: 24px;"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Connessione DidUP</div>
-                            <div style="font-size: 16px; font-weight: 800; color: ${state.didup.connected ? 'var(--green)' : 'var(--red)'}; margin-top: 2px;">
-                                ${state.didup.connected ? 'COLLEGATO' : 'NON COLLEGATO'}
-                            </div>
+                <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 12px;">
+                    <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--green);">
+                        <i class="ph-fill ph-plugs-connected" style="font-size: 24px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Connessione DidUP</div>
+                        <div style="font-size: 16px; font-weight: 800; color: ${state.didup.connected ? 'var(--green)' : 'var(--red)'}; margin-top: 2px;">
+                            ${state.didup.connected ? 'COLLEGATO' : 'NON COLLEGATO'}
                         </div>
                     </div>
-                    ${state.lastSync ? `<div style="font-size: 12px; color: var(--text-dim); margin-top: 16px; font-weight: 500;">Ultimo Sync: ${state.lastSync}</div>` : ''}
+                    ${state.lastSync ? `<div style="font-size: 12px; color: var(--text-dim); font-weight: 500;">Ultimo Sync: ${state.lastSync}</div>` : ''}
                 </div>
 
                 <!-- Google Calendar Card (Universal OAuth2) -->
-                <div class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
-                    <div style="display: flex; gap: 16px;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(234, 67, 53, 0.1); display: flex; align-items: center; justify-content: center; color: #EA4335;">
-                            <i class="ph-fill ph-calendar-check" style="font-size: 24px;"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Google Calendar</div>
-                            <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
-                                ${state.googleConnected ? 'Collegato ✓' : 'Non collegato'}
-                            </div>
+                <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 16px;">
+                    <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(234, 67, 53, 0.1); display: flex; align-items: center; justify-content: center; color: #EA4335;">
+                        <i class="ph-fill ph-calendar-check" style="font-size: 24px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Google Calendar</div>
+                        <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
+                            ${state.googleConnected ? 'Collegato ✓' : 'Non collegato'}
                         </div>
                     </div>
+                    <div style="display: flex; flex-direction: column; width: 100%; gap: 8px;">
                     ${state.googleConnected ? `
-                    <button class="btn-primary" onclick="window.syncGoogleCalendar()" style="height: 40px; font-size: 13px; gap: 8px; background: #EA4335; border: none;">
-                        <i class="ph-bold ph-arrows-clockwise"></i> Sincronizza Compiti
-                    </button>
-                    <button onclick="window.disconnectGoogle()" style="height: 36px; font-size: 12px; background: transparent; border: 1px solid rgba(234,67,53,0.3); color: #EA4335; border-radius: 10px; cursor: pointer; font-weight: 700;">
-                        <i class="ph-bold ph-sign-out"></i> Disconnetti Google
-                    </button>
+                        <button class="btn-primary" onclick="window.syncGoogleCalendar()" style="height: 40px; font-size: 13px; gap: 8px; background: #EA4335; border: none; width: 100%; justify-content: center;">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Sincronizza Compiti
+                        </button>
+                        <button onclick="window.disconnectGoogle()" style="height: 36px; font-size: 12px; background: transparent; border: 1px solid rgba(234,67,53,0.3); color: #EA4335; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; justify-content: center;">
+                            <i class="ph-bold ph-sign-out"></i> Disconnetti Google
+                        </button>
                     ` : `
-                    <button class="btn-primary" onclick="window.connectGoogle()" style="height: 44px; font-size: 13px; gap: 8px; background: #EA4335; border: none; font-weight: 700;">
-                        <i class="ph-bold ph-google-logo"></i> Accedi con Google
-                    </button>
+                        <button class="btn-primary" onclick="window.connectGoogle()" style="height: 44px; font-size: 13px; gap: 8px; background: #EA4335; border: none; font-weight: 700; width: 100%; justify-content: center;">
+                            <i class="ph-bold ph-google-logo"></i> Accedi con Google
+                        </button>
                     `}
+                    </div>
                 </div>
             </div>
 
