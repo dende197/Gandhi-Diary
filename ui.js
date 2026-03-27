@@ -56,17 +56,21 @@ window.syncGoogleCalendar = async function() {
     const btn = event?.currentTarget;
     const originalHtml = btn?.innerHTML || '';
     try {
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Sync...'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Aggiornamento...'; }
         const userId = window.getUserId();
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
+        // Includi la password salvata per permettere al server di fare login Argo fresco
+        const password = localStorage.getItem('argo_password') || session.password || '';
+        const fullSession = { ...session, password };
+        // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, session, tasks: state.tasks })
+            body: JSON.stringify({ userId, session: fullSession })
         });
         const data = await res.json();
         if (data.success) {
-            showToast(`✅ Sincronizzati ${data.added || 0} compiti su Google Calendar!`, 'var(--green)');
+            showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'var(--green)');
         } else {
             throw new Error(data.error || 'Sync fallito');
         }
