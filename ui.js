@@ -3216,22 +3216,15 @@ window._renderCore = function() {
         document.body.style.height = '100svh';
         root.style.overflow = 'hidden';
         root.style.height = '100%';
-        
-        const updateAIHeight = () => {
+        requestAnimationFrame(() => {
             const navEl = document.getElementById('nav-container');
             const navH = navEl ? navEl.getBoundingClientRect().height : 64;
-            document.documentElement.style.setProperty('--nav-h', navH + 'px');
-            
             const aiView = root.querySelector('.ai-view');
             if (aiView) {
-                // Use svh for mobile stability
-                aiView.style.height = `calc(100svh - ${navH}px)`;
-                aiView.style.maxHeight = `calc(100svh - ${navH}px)`;
+                aiView.style.height = (window.innerHeight - navH) + 'px';
+                aiView.style.maxHeight = (window.innerHeight - navH) + 'px';
             }
-        };
-
-        requestAnimationFrame(updateAIHeight);
-        setTimeout(updateAIHeight, 50); // Second pass for stability
+        });
     } else {
         document.body.classList.remove('is-ai-mode');
         document.body.style.overflow = '';
