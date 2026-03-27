@@ -249,17 +249,34 @@
             // Filter state.tasks and localTasks to find existing manual tasks
             const manualTasks = (state.tasks || localTasks).filter(t => 
                 (t.id && (t.id.startsWith('registro_') || t.id.startsWith('ai_'))) || 
-                t.subject === 'QUEST'
+                t.subject === 'QUEST' || 
+                (t.id && t.id.startsWith('manual_'))
             );
             
             // Merge: formatted (Argo) + unique manual tasks
-            const manualIds = new Set(manualTasks.map(m => m.id));
-            state.tasks = [...formatted, ...manualTasks];
+            const combined = [...formatted, ...manualTasks];
             
+            // Final Deduplicate (by true ID)
+            const unique = [];
+            const idsSeen = new Set();
+            combined.forEach(task => {
+                if (!idsSeen.has(task.id)) {
+                    unique.push(task);
+                    idsSeen.add(task.id);
+                }
+            });
+
+            state.tasks = unique;
             localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
             if (shouldRender && window.scheduleRender) window.scheduleRender();
         }
         window.updateTasks = updateTasks;
+
+        function saveTasks() {
+            localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+            if (typeof saveTasksToSupabase === 'function') saveTasksToSupabase();
+        }
+        window.saveTasks = saveTasks;
 
         // Function to push manual tasks to Supabase
         async function saveTasksToSupabase() {

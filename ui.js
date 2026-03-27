@@ -2764,38 +2764,8 @@ function renderHome() {
                 }
             }
         };
-        // --- Submit Registro Task ---
-        window.submitRegistroTask = function() {
-            const subject = document.getElementById('registroTaskSubject')?.value;
-            const args = document.getElementById('registroTaskArgs')?.value.trim();
-            const dateStr = document.getElementById('registroTaskDate')?.value;
-            const tipo = window._registroTipo || 'scritta';
-            if (!subject || !dateStr) { alert('Compila materia e data.'); return; }
-            const tipoLabel = tipo === 'scritta' ? 'Verifica scritta' : 'Interrogazione orale';
-            const text = args ? `${tipoLabel}: ${args}` : tipoLabel;
-            // Add to verifiche array for the dashboard widget
-            if (!state.verifiche) state.verifiche = [];
-            state.verifiche.push({
-                materia: subject,
-                data: dateStr,
-                tipo: tipo,
-                text: text,
-                source: 'manual'
-            });
-            // Also add as a task so it appears in the calendar
-            const newTask = {
-                id: 'manual_' + Date.now(),
-                subject: subject,
-                text: text,
-                due_date: dateStr,
-                done: false,
-                hasValidDate: true
-            };
-            state.tasks.push(newTask);
-            saveState();
-            closeModal();
-            if (window.scheduleRender) window.scheduleRender();
-        };
+        // --- Submit Registro Task (Handled in index.html) ---
+        // (Moved to correct global scope with Supabase integration in index.html)
         function showCompetencyInputModal() {
             const votiData = getVotiData();
             const subjectsMap = {};
