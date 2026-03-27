@@ -3194,6 +3194,22 @@ window._renderCore = function() {
 
     nav.innerHTML = renderNav();
 
+    // Fix: Set AI mode class BEFORE innerHTML so CSS rules are active during first layout
+    const isAI = state.view === 'ai_assistant';
+    if (isAI) {
+        document.body.classList.add('is-ai-mode');
+        document.body.style.overflow = 'hidden';
+        document.body.style.height = '100svh';
+        root.style.overflow = 'hidden';
+        root.style.height = '100%';
+    } else {
+        document.body.classList.remove('is-ai-mode');
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        root.style.overflow = 'visible';
+        root.style.height = '';
+    }
+
     let html = '';
     switch (state.view) {
         case 'home': html = renderHome(); break;
@@ -3207,30 +3223,6 @@ window._renderCore = function() {
     }
 
     root.innerHTML = html;
-    
-    // Fix: Dynamic AI view height — measured from real navbar, not hardcoded
-    if (state.view === 'ai_assistant') {
-        document.body.classList.add('is-ai-mode');
-        document.body.style.overflow = 'hidden';
-        document.body.style.height = '100svh';
-        root.style.overflow = 'hidden';
-        root.style.height = '100%';
-        requestAnimationFrame(() => {
-            const navEl = document.getElementById('nav-container');
-            const navH = navEl ? navEl.getBoundingClientRect().height : 64;
-            const aiView = root.querySelector('.ai-view');
-            if (aiView) {
-                aiView.style.height = (window.innerHeight - navH) + 'px';
-                aiView.style.maxHeight = (window.innerHeight - navH) + 'px';
-            }
-        });
-    } else {
-        document.body.classList.remove('is-ai-mode');
-        document.body.style.overflow = '';
-        document.body.style.height = '';
-        root.style.overflow = 'visible';
-        root.style.height = '';
-    }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
     requestAnimationFrame(() => {

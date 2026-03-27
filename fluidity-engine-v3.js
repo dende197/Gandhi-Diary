@@ -115,6 +115,22 @@
     const root = document.getElementById('app');
     if (!root) return;
     
+    // Fix: Set AI mode class BEFORE innerHTML so CSS rules are active during first layout
+    const isAI = view === 'ai_assistant';
+    if (isAI) {
+      document.body.classList.add('is-ai-mode');
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100svh';
+      root.style.overflow = 'hidden';
+      root.style.height = '100%';
+    } else {
+      document.body.classList.remove('is-ai-mode');
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      root.style.overflow = 'visible';
+      root.style.height = '';
+    }
+
     let html = '';
     switch (view) {
       case 'home':            html = (typeof renderHome === 'function') ? renderHome() : ''; break;
