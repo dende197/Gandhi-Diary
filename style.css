@@ -163,7 +163,7 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            min-height: calc(100vh - 64px);
+            min-height: calc(100vh - var(--nav-h, 64px));
         }
 
         body.is-ai-mode {
@@ -172,7 +172,7 @@
         }
 
         body.is-ai-mode .main-container {
-            height: calc(100svh - 64px) !important;
+            height: calc(100svh - var(--nav-h, 64px)) !important;
             overflow: hidden !important;
         }
 
@@ -198,7 +198,7 @@
 
         .view:not(.ai-view) {
             overflow-y: auto;
-            min-height: calc(100vh - 64px);
+            min-height: calc(100vh - var(--nav-h, 64px));
         }
 
         /* Bloquea padding globale SOLO per vista AI */
