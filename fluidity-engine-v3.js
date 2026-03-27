@@ -16,42 +16,44 @@
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;
   const RENDER_MIN_GAP = 50; // ms: impedisce doppi render da burst asincroni
-  let _renderRequest = null;
-  let _scheduleTimer = null;
 
   // Sostituiamo il motore di rendering globale
   const _installCoreRender = () => {
     if (typeof window.render !== 'function' || window.render._isV3) return;
     
+    // Cancel any pending timers from ui.js before we take over
+    clearTimeout(window._gRenderTimer);
+    if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+    
     // Salviamo l'originale _renderCore (quello che scrive l'HTML)
     const _origRenderCore = window._renderCore;
     
-    // Ridefiniamo render() con lock e rAF
+    // Ridefiniamo render() con lock e rAF — usa shared globals
     window.render = function render() {
-      if (_renderRequest || state.booting) return;
+      if (window._gRenderRAF || state.booting) return;
       
       const now = performance.now();
       if (now - _lastRenderTime < RENDER_MIN_GAP) {
         // Coalizza: se arriva un altro render troppo presto, lo slittiamo
-        clearTimeout(_scheduleTimer);
-        _scheduleTimer = setTimeout(window.render, RENDER_MIN_GAP);
+        clearTimeout(window._gRenderTimer);
+        window._gRenderTimer = setTimeout(window.render, RENDER_MIN_GAP);
         return;
       }
       
       _lastRenderTime = now;
-      _renderRequest = requestAnimationFrame(() => {
+      window._gRenderRAF = requestAnimationFrame(() => {
         if (typeof _origRenderCore === 'function') _origRenderCore();
-        _renderRequest = null;
+        window._gRenderRAF = null;
       });
     };
     window.render._isV3 = true;
 
-    // Ridefiniamo scheduleRender()
+    // Ridefiniamo scheduleRender() — usa shared globals
     window.scheduleRender = function scheduleRender(delay = 80) {
-      clearTimeout(_scheduleTimer);
+      clearTimeout(window._gRenderTimer);
       // delay=0 -> aspetta comunque un frame per permettere il raggruppamento (deduplication)
       const d = delay <= 0 ? 16 : delay;
-      _scheduleTimer = setTimeout(window.render, d);
+      window._gRenderTimer = setTimeout(window.render, d);
     };
 
     console.log('✅ Fluidity Engine: Core Render Lock installed.');

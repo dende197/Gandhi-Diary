@@ -105,8 +105,8 @@ window.checkGoogleStatus = async function() {
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`);
         const data = await res.json();
         state.googleConnected = data.connected || false;
-        // Aggiorna la UI per mostrare "Collegato ✓"
-        window.scheduleRender();
+        // State updated silently — profile view reads state.googleConnected on navigation
+        // No full re-render needed (eliminates double render on boot)
     } catch (e) { state.googleConnected = false; }
 };
 
@@ -3143,7 +3143,7 @@ function renderHome() {
 
 
 // ── RENDERING HEART & NAVIGATION SETTINGS ──
-window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile'];
+window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
 
 window.currentViewFromHash = function() {
     const v = (location.hash || '').replace('#', '').trim();
@@ -3153,33 +3153,31 @@ window.currentViewFromHash = function() {
 // ── Rendering Deduplication Lock ──
 let _lastRenderTime = 0;
 const RENDER_MIN_GAP = 50; // ms
-let _renderRequest = null;
-let _scheduleRenderTimer = null;
+// Shared globals so fluidity-engine-v3.js can cancel/take over timers
+window._gRenderRAF = null;
+window._gRenderTimer = null;
 
 window.render = function() {
-    if (_renderRequest || state.booting) return;
+    if (window._gRenderRAF || state.booting) return;
     const now = performance.now();
     if (now - _lastRenderTime < RENDER_MIN_GAP) {
-        clearTimeout(_scheduleRenderTimer);
-        _scheduleRenderTimer = setTimeout(() => {
-            _lastRenderTime = performance.now();
-            window._renderCore();
-        }, RENDER_MIN_GAP);
+        clearTimeout(window._gRenderTimer);
+        window._gRenderTimer = setTimeout(window.render, RENDER_MIN_GAP);
         return;
     }
     _lastRenderTime = now;
-    _renderRequest = requestAnimationFrame(() => {
+    window._gRenderRAF = requestAnimationFrame(() => {
         window._renderCore();
-        _renderRequest = null;
+        window._gRenderRAF = null;
     });
 };
 
 window.scheduleRender = function(delay = 80) {
-    clearTimeout(_scheduleRenderTimer);
+    clearTimeout(window._gRenderTimer);
     if (delay === 0) {
-        _scheduleRenderTimer = setTimeout(window.render, 16);
+        window._gRenderTimer = setTimeout(window.render, 16);
     } else {
-        _scheduleRenderTimer = setTimeout(window.render, delay);
+        window._gRenderTimer = setTimeout(window.render, delay);
     }
 };
 
@@ -3204,6 +3202,7 @@ window._renderCore = function() {
         case 'ai_assistant': html = renderAIAssistantView(); break;
         case 'academic_profile': html = renderAcademicProfile(); break;
         case 'profile': html = renderProfile(); break;
+        case 'circolari': html = (typeof renderCircolariView === 'function') ? renderCircolariView() : renderHome(); break;
         default: html = renderHome(); break;
     }
 

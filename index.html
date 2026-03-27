@@ -265,7 +265,7 @@
                 
                 if (data.success) {
                     updateLoader("Analisi Dati...");
-                    if (data.tasks) updateTasks(data.tasks);
+                    if (data.tasks) updateTasks(data.tasks, false);
                     if (data.voti) { state.voti = data.voti; localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti)); }
                     if (data.circolari) state.circolari = data.circolari;
                     if (data.assenzeData) {
