@@ -39,6 +39,15 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 function getOAuth2Client() {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+    
+    console.log('=== OAuth Debug ===');
+    console.log('CLIENT_ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.slice(0, 30) + '...' : 'MANCANTE');
+    console.log('CLIENT_SECRET ends with:', GOOGLE_CLIENT_SECRET ? '...' + GOOGLE_CLIENT_SECRET.slice(-4) : 'MANCANTE');
+    console.log('REDIRECT_URI:', REDIRECT_URI);
+    console.log('==================');
+    
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
 }
 
