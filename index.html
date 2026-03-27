@@ -823,10 +823,11 @@
             const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
             const dateVal = document.getElementById('registroTaskDate')?.value;
             const tipo = window._registroTipo || 'scritta'; // 'scritta' or 'orale'
+            const userId = typeof getUserId === 'function' ? getUserId() : 'guest';
             
-            if (state.isLoggedIn && state.user && state.user.id) {
+            if (state.isLoggedIn && userId !== 'guest') {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/verifiche/${encodeURIComponent(state.user.id)}`, {
+                    const res = await fetch(`${API_BASE_URL}/api/verifiche/${encodeURIComponent(userId)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ subject, date: dateVal, type: tipo, args })
@@ -863,7 +864,14 @@
             }
 
             setTimeout(() => {
-                if (typeof closeModal === 'function') closeModal();
+                // Modal closing logic
+                if (typeof closeModal === 'function') {
+                    closeModal();
+                } else {
+                    const modals = document.getElementById('modals');
+                    if (modals) modals.innerHTML = '';
+                }
+
                 if (typeof showToast === 'function') showToast(`Verifica ${tipo} registrata! 📝`);
                 if (window.scheduleRender) window.scheduleRender();
             }, 600);
