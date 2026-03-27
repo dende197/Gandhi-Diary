@@ -802,7 +802,14 @@
         }
         window.selectRegistroTipo = selectRegistroTipo;
 
-        function submitRegistroTask() {
+        async function submitRegistroTask() {
+            const btn = document.getElementById('submit-registro-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Registrazione...';
+            }
+
             const subject = document.getElementById('registroTaskSubject')?.value || 'Generale';
             const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
             const dateVal = document.getElementById('registroTaskDate')?.value;
@@ -818,11 +825,29 @@
                 due_date: dateVal, 
                 hasValidDate: !isNaN(dateObj.getTime())
             };
+
+            // Simulate a small delay for feedback if logged in (syncing)
+            if (state.isLoggedIn) {
+                await new Promise(r => setTimeout(r, 450));
+            }
+
             state.tasks.push(newTask);
             saveTasks();
-            if (typeof closeModal === 'function') closeModal();
-            if (typeof showToast === 'function') showToast(`${tipo} aggiunta! 📝`);
-            if (window.scheduleRender) window.scheduleRender();
+
+            if (btn) {
+                btn.innerHTML = '<i class="ph-bold ph-check"></i> Aggiunta!';
+                btn.style.background = '#28A745';
+                btn.style.opacity = '1';
+                if (window.gsap) {
+                    gsap.from(btn, { scale: 0.9, duration: 0.4, ease: "back.out(2)" });
+                }
+            }
+
+            setTimeout(() => {
+                if (typeof closeModal === 'function') closeModal();
+                if (typeof showToast === 'function') showToast(`${tipo} aggiunta! 📝`);
+                if (window.scheduleRender) window.scheduleRender();
+            }, 600);
         }
         window.submitRegistroTask = submitRegistroTask;
 
