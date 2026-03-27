@@ -151,6 +151,10 @@ module.exports = async function handler(req, res) {
                 const userId = req.query.state; // Retrieved from OAuth state
                 const error = req.query.error;
 
+                console.log('[OAuth] Code ricevuto:', code?.slice(0, 20));
+                console.log('[OAuth] Code length:', code?.length);
+                console.log('[OAuth] Timestamp:', Date.now());
+
                 console.log(`[Google OAuth] Callback received for user: ${userId}`);
                 if (!GOOGLE_CLIENT_ID) console.error('[Google OAuth] ERRORE: GOOGLE_CLIENT_ID mancante');
                 if (!GOOGLE_CLIENT_SECRET) console.error('[Google OAuth] ERRORE: GOOGLE_CLIENT_SECRET mancante');
