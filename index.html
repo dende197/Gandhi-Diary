@@ -367,7 +367,12 @@
 
             // Check Google connection status
             if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
-                window.checkGoogleStatus();
+                window.checkGoogleStatus().then(() => {
+                    // Se collegato, salviamo/aggiorniamo le credenziali Argo per il sync background
+                    if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
+                        window.saveArgoToSupabase();
+                    }
+                });
             }
         });
 

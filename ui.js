@@ -98,7 +98,31 @@ window.checkGoogleStatus = async function() {
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`);
         const data = await res.json();
         state.googleConnected = data.connected || false;
+        // Aggiorna la UI per mostrare "Collegato ✓"
+        window.scheduleRender();
     } catch (e) { state.googleConnected = false; }
+};
+
+window.saveArgoToSupabase = async function() {
+    try {
+        const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
+        const userId = window.getUserId();
+        if (!userId || userId === 'guest' || !session.userName) return;
+
+        await fetch(`${window.API_BASE_URL}/api/google?action=save-argo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId,
+                schoolCode: session.schoolCode,
+                username: session.userName || session.username,
+                password: session.password
+            })
+        });
+        console.log('✅ Credenziali Argo salvate per sync background');
+    } catch (e) {
+        console.error('Errore salvataggio Argo su Supabase:', e);
+    }
 };
 // ------------------------------------------------------------
 

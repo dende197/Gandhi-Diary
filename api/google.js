@@ -263,6 +263,27 @@ module.exports = async function handler(req, res) {
                 });
             }
 
+            // ============= SAVE ARGO CREDENTIALS =============
+            case 'save-argo': {
+                const { userId, schoolCode, username, password } = req.body || {};
+                if (!userId || !schoolCode || !username || !password) {
+                    return res.status(400).json({ success: false, error: 'Dati Argo mancanti' });
+                }
+
+                const { error } = await getSupabase()
+                    .from('google_tokens')
+                    .update({
+                        argo_school_code: schoolCode,
+                        argo_username: username,
+                        argo_password: password,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', userId);
+
+                if (error) throw error;
+                return res.json({ success: true, message: 'Credenziali Argo salvate' });
+            }
+
             // ============= DISCONNECT =============
             case 'disconnect': {
                 const userId = req.query.userId || req.body?.userId;
