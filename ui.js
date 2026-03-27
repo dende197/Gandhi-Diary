@@ -674,7 +674,15 @@ function renderHome() {
         .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today && /verific|interrogazion|prova|test|compito\s+in\s+classe/i.test(t.text || ''))
         .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
         .map(t => ({ materia: t.subject || t.materia, data: t.due_date, text: t.text, tipo: 'unknown', source: 'task' }));
-    const allUpcoming = allVerifiche.length > 0 ? allVerifiche : examTasks;
+    // Combined and deduplicated Verifiche (from DidUp + manual Tasks)
+    const combined = [...allVerifiche, ...examTasks];
+    const seen = new Set();
+    const allUpcoming = combined.filter(v => {
+        const key = `${v.data}||${(v.materia || '').toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).sort((a,b) => a.data.localeCompare(b.data));
     
     // Carousel index
     if (typeof window._verificheIdx === 'undefined') window._verificheIdx = 0;
@@ -1578,7 +1586,14 @@ function renderHome() {
                 .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
                 .map(t => ({ materia: t.subject || t.materia, data: t.due_date, text: t.text, tipo: 'unknown', source: 'task' }));
             
-            const all = allVerifiche.length > 0 ? allVerifiche : examTasks;
+            const combined = [...allVerifiche, ...examTasks];
+            const seen = new Set();
+            const all = combined.filter(v => {
+                const key = `${v.data}||${(v.materia || '').toLowerCase() || ''}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            }).sort((a,b) => (a.data || '').localeCompare(b.data || ''));
 
             showModal(`
             <div style="padding:24px; text-align: left;">
