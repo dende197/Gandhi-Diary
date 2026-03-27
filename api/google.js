@@ -222,18 +222,32 @@ module.exports = async function handler(req, res) {
                 
                 if (!tasks && session) {
                     // Fetch fresh tasks from Argo
+                    let schoolCode = session.schoolCode;
+                    let userName = session.userName || session.username;
+                    let password = session.password;
+                    
+                    // Fallback: se la password non arriva dal client, usa le credenziali Argo salvate in Supabase
+                    if (!password && tokenRow) {
+                        schoolCode = tokenRow.argo_school_code || schoolCode;
+                        userName = tokenRow.argo_username || userName;
+                        password = tokenRow.argo_password;
+                    }
+                    
+                    if (!password) {
+                        return res.status(400).json({ 
+                            success: false, 
+                            error: 'Password Argo non disponibile. Rieffettua il login nella PWA.' 
+                        });
+                    }
+                    
                     try {
-                        const loginRes = await AdvancedArgo.rawLogin(
-                            session.schoolCode, 
-                            session.userName || session.username,
-                            session.password
-                        );
+                        const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
                         const { access_token, profiles } = loginRes;
                         if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
                         
                         const authToken = profiles[0].token;
                         const subjectId = profiles[0].idSoggetto;
-                        const headers = createHeaders(session.schoolCode, access_token, authToken, subjectId);
+                        const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
                         const dashboardData = await getDashboard(headers);
                         tasks = extractHomeworkFromDashboard(dashboardData);
                     } catch (argoErr) {

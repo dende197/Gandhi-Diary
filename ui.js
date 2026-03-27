@@ -59,8 +59,11 @@ window.syncGoogleCalendar = async function() {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Aggiornamento...'; }
         const userId = window.getUserId();
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
-        // Includi la password salvata per permettere al server di fare login Argo fresco
-        const password = localStorage.getItem('argo_password') || session.password || '';
+        // La password è salvata come base64 in storedPass
+        let password = '';
+        try {
+            if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
+        } catch(e) { console.warn('Decode storedPass failed'); }
         const fullSession = { ...session, password };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
