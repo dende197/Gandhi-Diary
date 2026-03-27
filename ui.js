@@ -669,13 +669,12 @@ function renderHome() {
     const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
-    // Fallback to tasks if no verifiche scraped
-    const examTasks = (state.tasks || [])
-        .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today && /verific|interrogazion|prova|test|compito\s+in\s+classe/i.test(t.text || ''))
-        .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
-        .map(t => ({ materia: t.subject || t.materia, data: t.due_date, text: t.text, tipo: 'unknown', source: 'task' }));
-    // Combined and deduplicated Verifiche (from DidUp + manual Tasks)
-    const combined = [...allVerifiche, ...examTasks];
+    // Manual Verifiche from dedicated database table
+    const manualExams = (state.manualVerifiche || [])
+        .filter(v => !v.done && v.date && v.date >= todayISO)
+        .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
+    
+    const combined = [...allVerifiche, ...manualExams];
     const seen = new Set();
     const allUpcoming = combined.filter(v => {
         const key = `${v.data}||${(v.materia || '').toLowerCase()}`;
@@ -1581,12 +1580,12 @@ function renderHome() {
             const allVerifiche = (state.verifiche || [])
                 .filter(v => v.data && v.data >= todayISO)
                 .sort((a, b) => a.data.localeCompare(b.data));
-            const examTasks = (state.tasks || [])
-                .filter(t => !t.done && t.hasValidDate && new Date(t.due_date) >= today && /verific|interrogazion|prova|test|compito\s+in\s+classe/i.test(t.text || ''))
-                .sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
-                .map(t => ({ materia: t.subject || t.materia, data: t.due_date, text: t.text, tipo: 'unknown', source: 'task' }));
+            // Manual Verifiche from dedicated database table
+            const manualExams = (state.manualVerifiche || [])
+                .filter(v => !v.done && v.date && v.date >= todayISO)
+                .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
             
-            const combined = [...allVerifiche, ...examTasks];
+            const combined = [...allVerifiche, ...manualExams];
             const seen = new Set();
             const all = combined.filter(v => {
                 const key = `${v.data}||${(v.materia || '').toLowerCase() || ''}`;
@@ -1615,12 +1614,19 @@ function renderHome() {
                                 ${abbr}
                             </div>
                             <div style="flex:1; min-width:0;">
-                                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">${v.text || 'Verifica'}</div>
-                                <div style="font-size:11px; color:var(--text-dim);">${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">${v.text || (v.tipo === 'scritta' ? 'Verifica Scritta' : 'Interrogazione Orale')}</div>
+                                <div style="font-size:11px; color:var(--text-dim);">${v.materia} · ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</div>
                             </div>
-                            <div style="text-align:right; flex-shrink:0;">
-                                <div style="font-size:16px; font-weight:800; color:var(--text-primary); line-height:1;">${days}</div>
-                                <div style="font-size:9px; color:var(--text-dim); font-weight:600; text-transform:uppercase;">giorni</div>
+                            <div style="text-align:right; flex-shrink:0; display:flex; align-items:center; gap:12px;">
+                                ${v.source === 'manual' ? `
+                                    <button onclick="deleteManualVerifica('${v.id}')" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:4px; opacity:0.6; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                                        <i class="ph-bold ph-trash" style="font-size:16px;"></i>
+                                    </button>
+                                ` : ''}
+                                <div style="min-width:40px;">
+                                    <div style="font-size:16px; font-weight:800; color:var(--text-primary); line-height:1;">${days}</div>
+                                    <div style="font-size:9px; color:var(--text-dim); font-weight:600; text-transform:uppercase;">giorni</div>
+                                </div>
                             </div>
                           </div>
                         `;

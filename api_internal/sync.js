@@ -125,7 +125,16 @@ module.exports = async function handler(req, res) {
                         prepLevels: parseJsonb(plannerRow.prep_levels, {}),
                         updatedAt: plannerRow.updated_at
                     };
-                    debugLog('✅ Planner data included in sync for:', pid);
+                    // 3. Fetch Manual Verifiche (Dedicated Table)
+                    const { data: manualVerifiche, error: mvError } = await supabase
+                        .from('manual_verifiche')
+                        .select('*')
+                        .eq('user_id', pid);
+                        
+                    if (!mvError && manualVerifiche) {
+                        plannerData.manualVerifiche = manualVerifiche;
+                        debugLog('✅ Manual Verifiche included in sync:', manualVerifiche.length);
+                    }
                 }
 
             } catch (e) {

@@ -304,11 +304,17 @@
                 if (data.success) {
                     updateLoader("Analisi Dati...");
                     
-                    // 1. Process Planner Data FIRST (contains remote manual tasks)
+                    // 1. Process Planner Data FIRST (contains remote manual tasks & verifiche)
                     if (data.planner) {
                         state.plannedTasks = data.planner.plannedTasks || {};
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                         
+                        // Handle manual verifiche from dedicated table
+                        if (data.planner.manualVerifiche) {
+                            state.manualVerifiche = data.planner.manualVerifiche;
+                            localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
+                        }
+
                         // If we have remote manual tasks, use them to initialize state.tasks
                         // before updateTasks merges them with fresh Argo data
                         if (data.planner.tasks && Array.isArray(data.planner.tasks)) {
@@ -396,6 +402,9 @@
                 try {
                     state.user = JSON.parse(localStorage.getItem(lsKey('user'))) || state.user;
                     state.tasks = JSON.parse(localStorage.getItem(lsKey('tasks'))) || [];
+                    state.lastMedia = parseFloat(localStorage.getItem(lsKey('lastMedia'))) || 0;
+                    state.manualVerifiche = JSON.parse(localStorage.getItem(lsKey('manual_verifiche')) || '[]');
+                    state.syncing = false;
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
@@ -813,29 +822,39 @@
             const subject = document.getElementById('registroTaskSubject')?.value || 'Generale';
             const args = document.getElementById('registroTaskArgs')?.value?.trim() || '';
             const dateVal = document.getElementById('registroTaskDate')?.value;
-            const tipo = window._registroTipo || 'Verifica';
-            const text = args ? `${tipo}: ${args}` : tipo;
-            const dateObj = parseArgoDate(dateVal);
-            const taskId = 'registro_' + Date.now();
-            const newTask = { 
-                id: taskId, 
-                text, 
-                subject, 
-                done: false, 
-                due_date: dateVal, 
-                hasValidDate: !isNaN(dateObj.getTime())
-            };
-
-            // Simulate a small delay for feedback if logged in (syncing)
-            if (state.isLoggedIn) {
-                await new Promise(r => setTimeout(r, 450));
+            const tipo = window._registroTipo || 'scritta'; // 'scritta' or 'orale'
+            
+            if (state.isLoggedIn && state.user && state.user.id) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/verifiche/${encodeURIComponent(state.user.id)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subject, date: dateVal, type: tipo, args })
+                    });
+                    const result = await res.json();
+                    if (result.success && result.data) {
+                        state.manualVerifiche.push(result.data);
+                        localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
+                    }
+                } catch (e) {
+                    console.error("Failed to sync verifica:", e);
+                }
+            } else {
+                // Fallback local if not logged in
+                const newTask = { 
+                    id: 'manual_' + Date.now(), 
+                    subject, 
+                    date: dateVal, 
+                    type: tipo, 
+                    args,
+                    done: false
+                };
+                state.manualVerifiche.push(newTask);
+                localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
             }
 
-            state.tasks.push(newTask);
-            saveTasks();
-
             if (btn) {
-                btn.innerHTML = '<i class="ph-bold ph-check"></i> Aggiunta!';
+                btn.innerHTML = '<i class="ph-bold ph-check"></i> Registrata!';
                 btn.style.background = '#28A745';
                 btn.style.opacity = '1';
                 if (window.gsap) {
@@ -845,11 +864,40 @@
 
             setTimeout(() => {
                 if (typeof closeModal === 'function') closeModal();
-                if (typeof showToast === 'function') showToast(`${tipo} aggiunta! 📝`);
+                if (typeof showToast === 'function') showToast(`Verifica ${tipo} registrata! 📝`);
                 if (window.scheduleRender) window.scheduleRender();
             }, 600);
         }
         window.submitRegistroTask = submitRegistroTask;
+
+        async function deleteManualVerifica(id) {
+            if (!confirm("Sei sicuro di voler eliminare questa verifica?")) return;
+            
+            if (state.isLoggedIn && state.user && state.user.id && !id.startsWith('manual_')) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/verifiche/${encodeURIComponent(state.user.id)}?id=${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (!res.ok) throw new Error("Delete failed");
+                } catch (e) {
+                    console.error("Failed to delete remote verifica:", e);
+                    if (typeof showToast === 'function') showToast("Errore eliminazione server", "error");
+                    return;
+                }
+            }
+            
+            state.manualVerifiche = state.manualVerifiche.filter(v => (v.id || v.id_manuale) !== id);
+            localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
+            
+            if (typeof showToast === 'function') showToast("Verifica eliminata");
+            if (window.scheduleRender) window.scheduleRender();
+            
+            // Re-open/refresh modal if it was open
+            if (typeof mostraVerificheModal === 'function') {
+                setTimeout(mostraVerificheModal, 10);
+            }
+        }
+        window.deleteManualVerifica = deleteManualVerifica;
 
         // --- MANUAL REMINDER ---
         function addManualReminder() {
