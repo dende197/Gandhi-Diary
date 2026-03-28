@@ -844,7 +844,7 @@
             
             if (state.isLoggedIn && userId !== 'guest') {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/verifiche/${encodeURIComponent(userId)}`, {
+                    const res = await fetch(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(userId)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ subject, date: dateVal, type: tipo, args })
@@ -853,9 +853,25 @@
                     if (result.success && result.data) {
                         state.manualVerifiche.push(result.data);
                         localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
+                    } else {
+                        throw new Error(result.error || 'Errore server');
                     }
                 } catch (e) {
                     console.error("Failed to sync verifica:", e);
+                    if (btn) { 
+                        btn.innerHTML = '<i class="ph-bold ph-x"></i> Errore'; 
+                        btn.style.background = 'var(--red, #FF3B30)'; 
+                        btn.style.opacity = '1'; 
+                    }
+                    setTimeout(() => {
+                        if (typeof closeModal === 'function') closeModal();
+                        else {
+                            const modals = document.getElementById('modals');
+                            if (modals) modals.innerHTML = '';
+                        }
+                    }, 1200);
+                    if (typeof showToast === 'function') showToast('Errore salvataggio verifica', 'error');
+                    return;
                 }
             } else {
                 // Fallback local if not logged in
@@ -900,7 +916,7 @@
             
             if (state.isLoggedIn && state.user && state.user.id && !id.startsWith('manual_')) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/verifiche/${encodeURIComponent(state.user.id)}?id=${id}`, {
+                    const res = await fetch(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(state.user.id)}?id=${id}`, {
                         method: 'DELETE'
                     });
                     if (!res.ok) throw new Error("Delete failed");
