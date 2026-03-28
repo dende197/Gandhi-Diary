@@ -3628,3 +3628,21 @@ html {
 body::before {
   display: none !important;
 }
+
+/* ── OBIETTIVO CARD: mantieni sfondo scuro ── */
+.card[onclick*="promptSetGoal"] {
+  background: #121214 !important;
+  color: white !important;
+}
+.card[onclick*="promptSetGoal"] * {
+  color: white !important;
+}
+.card[onclick*="promptSetGoal"] [style*="color:rgba(255,255,255,0.35)"],
+.card[onclick*="promptSetGoal"] [style*="color:rgba(255,255,255,0.45)"],
+.card[onclick*="promptSetGoal"] [style*="color:rgba(255,255,255,0.5)"] {
+  color: rgba(255,255,255,0.45) !important;
+}
+.card[onclick*="promptSetGoal"] [style*="color:#2DB86A"],
+.card[onclick*="promptSetGoal"] [style*="color: #2DB86A"] {
+  color: #2DB86A !important;
+}
