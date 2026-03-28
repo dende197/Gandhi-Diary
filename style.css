@@ -3629,20 +3629,25 @@ body::before {
   display: none !important;
 }
 
-/* ── OBIETTIVO CARD: mantieni sfondo scuro ── */
+/* ── OBIETTIVO CARD: testo scuro su sfondo bianco ── */
 .card[onclick*="promptSetGoal"] {
-  background: #121214 !important;
-  color: white !important;
+  background: white !important;
+  color: #141414 !important;
 }
 .card[onclick*="promptSetGoal"] * {
-  color: white !important;
+  color: #141414 !important;
 }
-.card[onclick*="promptSetGoal"] [style*="color:rgba(255,255,255,0.35)"],
-.card[onclick*="promptSetGoal"] [style*="color:rgba(255,255,255,0.45)"],
-.card[onclick*="promptSetGoal"] [style*="color:rgba(255,255,255,0.5)"] {
-  color: rgba(255,255,255,0.45) !important;
+.card[onclick*="promptSetGoal"] [style*="rgba(255,255,255,0.35)"],
+.card[onclick*="promptSetGoal"] [style*="rgba(255,255,255,0.45)"],
+.card[onclick*="promptSetGoal"] [style*="rgba(255,255,255,0.5)"],
+.card[onclick*="promptSetGoal"] [style*="rgba(255,255,255,0.4)"] {
+  color: #908C86 !important;
 }
-.card[onclick*="promptSetGoal"] [style*="color:#2DB86A"],
-.card[onclick*="promptSetGoal"] [style*="color: #2DB86A"] {
-  color: #2DB86A !important;
+.card[onclick*="promptSetGoal"] [style*="background:rgba(255,255,255,0.06)"],
+.card[onclick*="promptSetGoal"] [style*="background: rgba(255,255,255,0.06)"] {
+  background: rgba(0,0,0,0.04) !important;
+}
+.card[onclick*="promptSetGoal"] [style*="background:rgba(255,255,255,0.07)"],
+.card[onclick*="promptSetGoal"] [style*="background: rgba(255,255,255,0.07)"] {
+  background: rgba(0,0,0,0.05) !important;
 }
