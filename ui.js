@@ -1028,7 +1028,7 @@ function renderHome() {
                 }
 
                 return `
-                <div class="card" onclick="promptSetGoal('overall')" style="cursor: pointer; margin-bottom: 40px; border-radius: 18px; padding: 24px; display: flex; align-items: center; justify-content: space-between; background: #121214; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transition: transform 0.2s;">
+                <div class="card goal-card" onclick="promptSetGoal('overall')" style="cursor: pointer; margin-bottom: 40px; border-radius: 18px; padding: 24px; display: flex; align-items: center; justify-content: space-between; transition: transform 0.2s;">
                     <div style="display: flex; gap: 16px; align-items: center;">
                         <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white;">
                             <i class="ph-fill ph-target"></i>
