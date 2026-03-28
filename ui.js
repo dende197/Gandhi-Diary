@@ -767,13 +767,13 @@ function renderHome() {
           <div style="display:flex; gap:4px; margin-top:10px;">${streakDots}</div>
         </div>
 
-        <div class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative;">
+        <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
             <div style="display:flex; gap:4px;">
               ${verificheCount > 1 ? `
-              <button onclick="window._verificheIdx = Math.max(0, (window._verificheIdx||0)-1); if(window.scheduleRender) window.scheduleRender();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
-              <button onclick="window._verificheIdx = Math.min(${verificheCount - 1}, (window._verificheIdx||0)+1); if(window.scheduleRender) window.scheduleRender();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
+              <button onclick="window._verificheIdx = Math.max(0, (window._verificheIdx||0)-1); if(window.refreshVerificheWidget) window.refreshVerificheWidget();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
+              <button onclick="window._verificheIdx = Math.min(${verificheCount - 1}, (window._verificheIdx||0)+1); if(window.refreshVerificheWidget) window.refreshVerificheWidget();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
               ` : ''}
               <button onclick="mostraVerificheModal()" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0; margin-left:2px;"><i class="ph ph-list-bullets"></i></button>
             </div>
@@ -1638,6 +1638,76 @@ function renderHome() {
             `);
         }
         window.mostraVerificheModal = mostraVerificheModal;
+
+        window.refreshVerificheWidget = function() {
+            const widget = document.getElementById('widget-verifiche');
+            if (!widget) { if (window.scheduleRender) window.scheduleRender(); return; }
+
+            const today = new Date();
+            today.setHours(12, 0, 0, 0);
+            const todayISO = today.toISOString().split('T')[0];
+            
+            // Re-derive data
+            const argoVerifiche = (state.verifiche || [])
+                .filter(v => v.data && v.data >= todayISO)
+                .sort((a,b) => a.data.localeCompare(b.data));
+            
+            const manualExams = (state.manualVerifiche || [])
+                .filter(v => !v.done && v.date && v.date >= todayISO)
+                .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
+            
+            const seen = new Set();
+            const combined = [...argoVerifiche, ...manualExams].filter(v => {
+                const key = `${v.data}||${(v.materia||'').toLowerCase()}`;
+                if(seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            }).sort((a,b) => (a.data||'').localeCompare(b.data||''));
+
+            const verificheCount = combined.length;
+            let vIdx = Math.max(0, Math.min(window._verificheIdx || 0, verificheCount - 1));
+            window._verificheIdx = vIdx;
+            const exam = combined[vIdx];
+
+            let innerHTML = '';
+            if (!exam) {
+                innerHTML = `
+                    <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">VERIFICHE</div>
+                    <div style="font-size:12px; color:#BCB8B2; margin-top:4px;">Nessuna verifica</div>`;
+            } else {
+                const examAbbr = typeof getSubjectAbbrev === 'function' ? getSubjectAbbrev(exam.materia) : (exam.materia||'?').substring(0,3).toUpperCase();
+                const examKey = examAbbr.toLowerCase();
+                const examTipoLabel = exam.tipo === 'scritta' ? 'SCRITTA' : exam.tipo === 'orale' ? 'ORALE' : (exam.tipo || '').toUpperCase();
+                const examDate = new Date(exam.data);
+                examDate.setHours(12, 0, 0, 0);
+                const daysLeft = Math.ceil((examDate - today) / 86400000);
+                const examDateStr = examDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+                const examDesc = exam.text || exam.materia || '';
+                
+                innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
+                        <div style="display:flex; gap:4px;">
+                            ${verificheCount > 1 ? `
+                            <button onclick="window._verificheIdx = Math.max(0, (window._verificheIdx||0)-1); window.refreshVerificheWidget();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
+                            <button onclick="window._verificheIdx = Math.min(${verificheCount - 1}, (window._verificheIdx||0)+1); window.refreshVerificheWidget();" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
+                            ` : ''}
+                            <button onclick="mostraVerificheModal()" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0; margin-left:2px;"><i class="ph ph-list-bullets"></i></button>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+                        <span style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;">${examAbbr}</span>
+                        ${examTipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>` : ''}
+                        ${verificheCount > 1 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${vIdx+1}/${verificheCount}</span>` : ''}
+                    </div>
+                    <div style="font-size:13px; font-weight:700; color:#141414; line-height:1.3; margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${examDesc}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:auto;">
+                        <div style="font-size:10px; color:#908C86;">${examDateStr}</div>
+                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysLeft}<span style="font-size:9px; font-weight:600; color:#BCB8B2; margin-left:2px;">gg</span></div>
+                    </div>`;
+            }
+            widget.innerHTML = innerHTML;
+        };
 
 
 /* Remaining UI/Modal/Logic Functions */
