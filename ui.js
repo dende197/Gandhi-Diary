@@ -1018,9 +1018,9 @@ function renderHome() {
                 let goalMessage = '';
                 
                 if (media >= goal) {
-                    goalMessage = '<span style="color: var(--green); font-weight: 700;">Obiettivo raggiunto! Stai andando alla grande 🎉</span>';
+                    goalMessage = '<span style="color: var(--green); font-weight: 700;">Obiettivo raggiunto! Stai andando alla grande &#127881;</span>';
                 } else if (neededGrade > 10) {
-                    goalMessage = `Per l'obiettivo serve media di <strong>${neededGrade.toFixed(1)}</strong>. <span style="opacity: 0.7;">Serviranno più valutazioni.</span>`;
+                    goalMessage = `Per l'obiettivo serve media di <strong>${neededGrade.toFixed(1)}</strong>. <span style="opacity: 0.7;">Serviranno pi\u00f9 valutazioni.</span>`;
                 } else if (neededGrade > 0) {
                     goalMessage = `Punta al <strong>${neededGrade.toFixed(1)}</strong> nella prossima verifica per l'obiettivo.`;
                 } else {
