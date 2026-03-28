@@ -360,9 +360,6 @@ window.saveArgoToSupabase = async function() {
             <span class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim);">
                 ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
             </span>
-            ${state.isLoggedIn ? `
-            <div class="user-chip" onclick="navigate('profile')" style="font-size: 13px; font-weight: 800; color: var(--text-primary); cursor: pointer;">${shortName}</div>
-            ` : ''}
           </div>
         </div>`;
         }
@@ -930,8 +927,7 @@ function renderHome() {
             return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 100px 16px 120px 16px;">
             <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
-                ${renderAvatar(state.user.name, 96)}
-                <div style="margin-top: 16px;">
+                <div>
                     <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${state.user.name || 'Utente'}</div>
                     <div style="font-size: 13px; font-weight: 800; color: var(--accent); background: rgba(99, 102, 241, 0.08); padding: 6px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
                         CLASSE ${(normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : '')}
