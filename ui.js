@@ -1028,19 +1028,19 @@ function renderHome() {
                 }
 
                 return `
-                <div class="card goal-card" onclick="promptSetGoal('overall')" style="cursor: pointer; margin-bottom: 40px; border-radius: 18px; padding: 24px; display: flex; align-items: center; justify-content: space-between; transition: transform 0.2s;">
-                    <div style="display: flex; gap: 16px; align-items: center;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white;">
+                <div class="card" onclick="promptSetGoal('overall')" style="cursor: pointer; margin-bottom: 40px; border-radius: 20px; padding: 26px; display: flex; align-items: center; justify-content: space-between; background: white; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 40px rgba(0,0,0,0.04); transition: transform 0.2s;">
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        <div style="width: 54px; height: 54px; border-radius: 14px; background: rgba(59, 130, 246, 0.08); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #2563EB;">
                             <i class="ph-fill ph-target"></i>
                         </div>
                         <div>
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Obiettivo Periodo</div>
-                            <div style="font-size: 24px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;">
-                                ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 16px; opacity: 0.4;"></i>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Obiettivo Periodo</div>
+                            <div style="font-size: 26px; font-weight: 800; color: #141414; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px;">
+                                ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 16px; color: #BCB8B2;"></i>
                             </div>
                         </div>
                     </div>
-                    <div style="text-align: right; font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.4; max-width: 250px;">
+                    <div style="text-align: right; font-size: 14px; color: #141414; line-height: 1.4; max-width: 250px; font-weight: 600;">
                         ${goalMessage}
                     </div>
                 </div>

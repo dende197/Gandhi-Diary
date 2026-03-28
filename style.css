@@ -3447,12 +3447,6 @@ html {
   box-shadow: 0 2px 12px rgba(0,0,0,0.13) !important;
 }
 
-.goal-card {
-  background: #121214 !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-}
-
 .greeting-period {
   color: rgba(255,255,255,0.35) !important;
   font-size: 10px !important;
@@ -3633,4 +3627,14 @@ html {
 
 body::before {
   display: none !important;
+}
+
+/* ── OBIETTIVO CARD: fix testo su sfondo chiaro ── */
+.card[onclick*="promptSetGoal"],
+.card[onclick*="promptSetGoal"] * {
+  color: #141414 !important;
+}
+.card[onclick*="promptSetGoal"] [style*="opacity: 0.7"],
+.card[onclick*="promptSetGoal"] [style*="opacity:0.7"] {
+  color: #908C86 !important;
 }
