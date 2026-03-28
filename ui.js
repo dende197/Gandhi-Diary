@@ -878,11 +878,8 @@ function renderHome() {
         return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
-                <div>
-                    <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary); margin-bottom: 8px;">Agenda & Compiti</h1>
-                    <p style="font-family: 'JetBrains Mono', monospace; color: var(--text-dim); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">// SYS.PLANNER_ACTIVE</p>
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
+                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Agenda & Compiti</h1>
                 
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
@@ -1010,25 +1007,45 @@ function renderHome() {
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             
             <!-- V6 HEADER -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
-                <div>
-                    <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary); margin-bottom: 8px;">Voti & Rendimento</h1>
-                    <p style="font-family: 'JetBrains Mono', monospace; color: var(--text-dim); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">// SYS.GRADES_ANALYSIS</p>
-                </div>
-                
-                <button onclick="performSync()" style="width: 38px; height: 38px; border-radius: 12px; background: #141414; border: none; color: white; cursor: pointer; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s;">
-                    <i class="ph-bold ph-arrow-clockwise"></i>
-                </button>
+            <div style="margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
+                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Voti & Rendimento</h1>
             </div>
 
-            <div style="margin-bottom: 24px; display: flex; justify-content: flex-end;">
-                <button onclick="promptSetGoal('overall')" style="background: #141414; border: none; border-radius: 12px; padding: 12px 20px; color: white; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: flex-end;">
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px;">Obiettivo Periodo</div>
-                    <div style="font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                        ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 14px;"></i>
+            ${(() => {
+                const count = votiData.length;
+                const currentSum = count * media;
+                let neededGrade = (goal * (count + 1)) - currentSum;
+                let goalMessage = '';
+                
+                if (media >= goal) {
+                    goalMessage = '<span style="color: var(--green); font-weight: 700;">Obiettivo raggiunto! Stai andando alla grande 🎉</span>';
+                } else if (neededGrade > 10) {
+                    goalMessage = `Per l'obiettivo serve media di <strong>${neededGrade.toFixed(1)}</strong>. <span style="opacity: 0.7;">Serviranno più valutazioni.</span>`;
+                } else if (neededGrade > 0) {
+                    goalMessage = `Punta al <strong>${neededGrade.toFixed(1)}</strong> nella prossima verifica per l'obiettivo.`;
+                } else {
+                    goalMessage = "<span style='color: var(--green); font-weight: 700;'>Sei in linea con l'obiettivo.</span>";
+                }
+
+                return `
+                <div class="card" onclick="promptSetGoal('overall')" style="cursor: pointer; margin-bottom: 40px; border-radius: 18px; padding: 24px; display: flex; align-items: center; justify-content: space-between; background: #121214; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transition: transform 0.2s;">
+                    <div style="display: flex; gap: 16px; align-items: center;">
+                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white;">
+                            <i class="ph-fill ph-target"></i>
+                        </div>
+                        <div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Obiettivo Periodo</div>
+                            <div style="font-size: 24px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;">
+                                ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 16px; opacity: 0.4;"></i>
+                            </div>
+                        </div>
                     </div>
-                </button>
-            </div>
+                    <div style="text-align: right; font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.4; max-width: 250px;">
+                        ${goalMessage}
+                    </div>
+                </div>
+                `;
+            })()}
 
             <div style="margin-bottom: 24px;">
                 <h2 style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px;">
@@ -4077,7 +4094,6 @@ console.log('✅ GSAP Animations consolidated into ui.js');
 
 function renderCircolariView() {
     const list = state.circolari || [];
-    // Mostriamo le ultime 15
     const toShow = list.slice(0, 15);
 
     return `
