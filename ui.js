@@ -4112,7 +4112,7 @@ function renderCircolariView() {
                 Comunicazioni Ufficiali
             </div>
             <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; text-transform: uppercase; margin: 0; color: #141414; letter-spacing: -0.02em;">
-                Circolari [15]
+                Circolari
             </h1>
         </header>
 
