@@ -1014,42 +1014,72 @@ function renderHome() {
             ${(() => {
                 const count = votiData.length;
                 const currentSum = count * media;
-                let neededGrade = (goal * (count + 1)) - currentSum;
-                let goalMessage = '';
-                
-                if (media >= goal) {
-                    goalMessage = '<span>Obiettivo raggiunto! Stai andando alla grande &#127881;</span>';
-                } else if (neededGrade > 0 && neededGrade <= 10) {
-                    goalMessage = `Punta al <strong>${neededGrade.toFixed(1)}</strong> nella prossima verifica per l'obiettivo.`;
+
+                // Calcola scenari: quanti voti di X servono per raggiungere goal
+                const buildScenarios = () => {
+                    const grades = [10, 9, 8, 7];
+                    return grades.map(g => {
+                        // dopo N voti tutti uguali a g: (currentSum + g*N) / (count + N) >= goal
+                        // g*N - goal*N >= goal*count - currentSum
+                        // N*(g - goal) >= goal*count - currentSum
+                        const deficit = goal * count - currentSum;
+                        if (g <= goal) {
+                            // g <= goal: impossibile solo con g (media scende o stagna)
+                            if (deficit <= 0) return { grade: g, n: 1, reachable: true }; // già ok
+                            return null;
+                        }
+                        const n = Math.ceil(deficit / (g - goal));
+                        if (n < 1) return { grade: g, n: 1, reachable: true };
+                        if (n > 20) return null; // troppi, non mostrare
+                        return { grade: g, n, reachable: true };
+                    }).filter(Boolean).slice(0, 3);
+                };
+
+                const alreadyDone = media >= goal;
+                const scenarios = alreadyDone ? [] : buildScenarios();
+                const gap = goal - media;
+
+                let statusLine = '';
+                let scenariosHtml = '';
+
+                if (alreadyDone) {
+                    statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
                 } else {
-                    const nextTwo = (goal * (count + 2) - currentSum) / 2;
-                    const nextThree = (goal * (count + 3) - currentSum) / 3;
-                    
-                    if (nextTwo <= 10) {
-                        goalMessage = `Per l'obiettivo servono due <strong>${nextTwo.toFixed(1)}</strong>.`;
-                    } else if (nextThree <= 10) {
-                        goalMessage = `Per l'obiettivo servono tre <strong>${nextThree.toFixed(1)}</strong>.`;
+                    statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
+                    if (scenarios.length > 0) {
+                        scenariosHtml = scenarios.map(s => `
+                            <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.06); border-radius:10px; margin-top:6px;">
+                                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">
+                                    ${s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
+                                </span>
+                                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
+                                    ≥ ${s.grade}
+                                </span>
+                            </div>`).join('');
                     } else {
-                        goalMessage = `Servono diversi voti alti (media <strong>${nextThree.toFixed(1)}</strong>) per l'obiettivo.`;
+                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">Continua a registrare voti per vedere le proiezioni.</div>`;
                     }
                 }
 
                 return `
-                <div class="card" onclick="promptSetGoal('overall')" style="cursor: pointer; margin-bottom: 40px; border-radius: 20px; padding: 26px; display: flex; align-items: center; justify-content: space-between; background: white; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 40px rgba(0,0,0,0.04); transition: transform 0.2s;">
-                    <div style="display: flex; gap: 20px; align-items: center;">
-                        <div style="width: 54px; height: 54px; border-radius: 14px; background: rgba(59, 130, 246, 0.08); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #2563EB;">
+                <div class="card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:40px; border-radius:18px; padding:24px; display:flex; align-items:flex-start; gap:24px; background:#121214; box-shadow:0 10px 30px rgba(0,0,0,0.15); transition:transform 0.2s;">
+                    <div style="display:flex; gap:14px; align-items:flex-start; flex-shrink:0;">
+                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:22px; color:white; flex-shrink:0;">
                             <i class="ph-fill ph-target"></i>
                         </div>
                         <div>
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Obiettivo Periodo</div>
-                            <div style="font-size: 26px; font-weight: 800; color: #141414; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; font-family: var(--font-main), sans-serif;">
-                                ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 16px; color: #BCB8B2;"></i>
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:4px;">Obiettivo</div>
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
+                                ${goal.toFixed(1)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
                             </div>
+                            <div style="margin-top:8px;">${statusLine}</div>
                         </div>
                     </div>
-                    <div style="text-align: right; font-size: 14px; color: #141414; line-height: 1.4; max-width: 250px; font-weight: 600; font-family: var(--font-main), sans-serif;">
-                        ${goalMessage}
-                    </div>
+                    ${!alreadyDone ? `
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:2px;">Come arrivarci</div>
+                        ${scenariosHtml}
+                    </div>` : ''}
                 </div>
                 `;
             })()}
