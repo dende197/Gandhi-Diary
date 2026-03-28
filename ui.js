@@ -751,22 +751,14 @@ function renderHome() {
     return `
     <div class="dashboard view" style="width: 100%; padding: 20px 28px 32px;">
 
-      <!-- ROW 1: Greeting · Streak · Prossima Verifica -->
-      <div style="display:grid; grid-template-columns:1fr 120px 180px; gap:14px; margin-bottom:16px;">
-
+      <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
+      <div style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
         <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
           <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
           <div style="font-size:19px; font-weight:700; color:#fff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
           <div style="font-size:11px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
         </div>
-
-        <div class="card streak-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column;">
-          <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">Streak</div>
-          <div style="font-size:38px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${streak}</div>
-          <div style="font-size:10.5px; color:#908C86; margin-top:3px;">giorni di fila</div>
-          <div style="display:flex; gap:4px; margin-top:10px;">${streakDots}</div>
-        </div>
-
+ 
         <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
@@ -787,7 +779,7 @@ function renderHome() {
           <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
           <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
         </div>
-
+ 
       </div>
 
       <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
