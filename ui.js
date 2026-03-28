@@ -1017,22 +1017,24 @@ function renderHome() {
 
                 // Calcola scenari: quanti voti di X servono per raggiungere goal
                 const buildScenarios = () => {
-                    const grades = [10, 9, 8, 7];
-                    return grades.map(g => {
-                        // dopo N voti tutti uguali a g: (currentSum + g*N) / (count + N) >= goal
-                        // g*N - goal*N >= goal*count - currentSum
-                        // N*(g - goal) >= goal*count - currentSum
-                        const deficit = goal * count - currentSum;
-                        if (g <= goal) {
-                            // g <= goal: impossibile solo con g (media scende o stagna)
-                            if (deficit <= 0) return { grade: g, n: 1, reachable: true }; // già ok
-                            return null;
-                        }
+                    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+                    const deficit = goal * count - currentSum;
+                    const results = [];
+                    for (const g of grades) {
+                        if (g <= goal) continue; // voto <= obiettivo: matematicamente impossibile
                         const n = Math.ceil(deficit / (g - goal));
-                        if (n < 1) return { grade: g, n: 1, reachable: true };
-                        if (n > 20) return null; // troppi, non mostrare
-                        return { grade: g, n, reachable: true };
-                    }).filter(Boolean).slice(0, 3);
+                        if (n < 1 || n > 30) continue;
+                        results.push({ grade: g, n });
+                        if (results.length === 3) break;
+                    }
+                    // Se nessuno scenario con voti normali funziona, mostra il minimo teorico
+                    if (results.length === 0) {
+                        const minNeeded = (goal * (count + 1)) - currentSum;
+                        if (minNeeded <= 10) {
+                            results.push({ grade: Math.ceil(minNeeded * 10) / 10, n: 1, exact: true });
+                        }
+                    }
+                    return results;
                 };
 
                 const alreadyDone = media >= goal;
@@ -1050,10 +1052,10 @@ function renderHome() {
                         scenariosHtml = scenarios.map(s => `
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.06); border-radius:10px; margin-top:6px;">
                                 <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">
-                                    ${s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
+                                    ${s.exact ? 'prossimo voto esatto' : s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
                                 </span>
                                 <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
-                                    ≥ ${s.grade}
+                                    ${s.exact ? '' : '≥ '}${Number.isInteger(s.grade) ? s.grade : s.grade.toFixed(1)}
                                 </span>
                             </div>`).join('');
                     } else {
