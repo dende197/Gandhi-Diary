@@ -1018,13 +1018,20 @@ function renderHome() {
                 let goalMessage = '';
                 
                 if (media >= goal) {
-                    goalMessage = '<span style="color: var(--green); font-weight: 700;">Obiettivo raggiunto! Stai andando alla grande &#127881;</span>';
-                } else if (neededGrade > 10) {
-                    goalMessage = `Per l'obiettivo serve media di <strong>${neededGrade.toFixed(1)}</strong>. <span style="opacity: 0.7;">Serviranno pi\u00f9 valutazioni.</span>`;
-                } else if (neededGrade > 0) {
+                    goalMessage = '<span>Obiettivo raggiunto! Stai andando alla grande &#127881;</span>';
+                } else if (neededGrade > 0 && neededGrade <= 10) {
                     goalMessage = `Punta al <strong>${neededGrade.toFixed(1)}</strong> nella prossima verifica per l'obiettivo.`;
                 } else {
-                    goalMessage = "<span style='color: var(--green); font-weight: 700;'>Sei in linea con l'obiettivo.</span>";
+                    const nextTwo = (goal * (count + 2) - currentSum) / 2;
+                    const nextThree = (goal * (count + 3) - currentSum) / 3;
+                    
+                    if (nextTwo <= 10) {
+                        goalMessage = `Per l'obiettivo servono due <strong>${nextTwo.toFixed(1)}</strong>.`;
+                    } else if (nextThree <= 10) {
+                        goalMessage = `Per l'obiettivo servono tre <strong>${nextThree.toFixed(1)}</strong>.`;
+                    } else {
+                        goalMessage = `Servono diversi voti alti (media <strong>${nextThree.toFixed(1)}</strong>) per l'obiettivo.`;
+                    }
                 }
 
                 return `
@@ -1035,12 +1042,12 @@ function renderHome() {
                         </div>
                         <div>
                             <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Obiettivo Periodo</div>
-                            <div style="font-size: 26px; font-weight: 800; color: #141414; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px;">
+                            <div style="font-size: 26px; font-weight: 800; color: #141414; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; font-family: var(--font-main), sans-serif;">
                                 ${goal.toFixed(1)} <i class="ph ph-pencil-simple" style="font-size: 16px; color: #BCB8B2;"></i>
                             </div>
                         </div>
                     </div>
-                    <div style="text-align: right; font-size: 14px; color: #141414; line-height: 1.4; max-width: 250px; font-weight: 600;">
+                    <div style="text-align: right; font-size: 14px; color: #141414; line-height: 1.4; max-width: 250px; font-weight: 600; font-family: var(--font-main), sans-serif;">
                         ${goalMessage}
                     </div>
                 </div>
