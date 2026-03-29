@@ -746,7 +746,7 @@ function renderHome() {
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
     return `
-    <div class="dashboard view" style="width: 100%; padding: 20px 28px 32px;">
+    <div class="dashboard view" style="width: 100%;">
 
       <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
       <div style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
@@ -922,7 +922,7 @@ function renderHome() {
         }
         function renderProfile() {
             return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 100px 16px 120px 16px;">
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
             <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
                     <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${state.user.name || 'Utente'}</div>
@@ -1203,7 +1203,7 @@ function renderHome() {
             const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
             return `
-            <div class="view" style="padding-top: 60px;">
+            <div class="view">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Profilo Accademico</h1>
                     <p style="font-size: 15px; color: var(--text-secondary);">Analisi e impostazioni studio</p>
@@ -1510,7 +1510,7 @@ function renderHome() {
             const key = abbr.toLowerCase();
 
             return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 100px;">
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
             <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 32px;">
                 <button onclick="window.closeSubject()" style="width: 48px; height: 48px; border-radius: 16px; background: #FFFFFF; border: 1px solid #141414; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s;">
                     <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
@@ -2460,7 +2460,7 @@ function renderHome() {
 
             if (exams.length === 0) {
                 return `
-                    <div class="view" style="padding-top: 60px;">
+                    <div class="view">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Verifiche</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
                             <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
@@ -2476,7 +2476,7 @@ function renderHome() {
             }
 
             return `
-                <div class="view" style="padding-top: 60px;">
+                <div class="view">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
                             <h1 style="font-size: 28px; color: var(--text-primary);">Verifiche</h1>
@@ -2527,7 +2527,7 @@ function renderHome() {
 
             if (backlog.length === 0) {
                 return `
-                    <div class="view" style="padding-top: 60px;">
+                    <div class="view">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Arretrati</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
                             <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
@@ -2543,7 +2543,7 @@ function renderHome() {
             }
 
             return `
-                <div class="view" style="padding-top: 60px;">
+                <div class="view">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
                             <h1 style="font-size: 28px; color: var(--text-primary);">Arretrati</h1>

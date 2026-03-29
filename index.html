@@ -84,7 +84,7 @@
         const APP_VERSION = '2.9.2';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
         const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        const API_BASE_URL = IS_LOCAL ? "http://localhost:5001" : "https://g-connect-backend-r5j1.vercel.app";
+        const API_BASE_URL = IS_LOCAL ? 'http://localhost:3000' : 'https://g-connect-backend-r5j1.vercel.app';
         window.API_BASE_URL = API_BASE_URL;
         console.log(`[Network] Active API: ${API_BASE_URL} (Local: ${IS_LOCAL})`);
 
