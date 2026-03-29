@@ -4130,6 +4130,7 @@
           color: #908C86;
           font-size: 18px;
           pointer-events: none;
+          z-index: 2;
         }
 
         .agenda-search-input {

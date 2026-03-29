@@ -2113,18 +2113,16 @@ function renderHome() {
 
             if (state.plannerMode === 'registro') {
                 state.tasks.forEach(t => {
-                    if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date && isFutureOrToday(t.due_date)) {
+                    if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date) {
                         list.push({ ...t, displayDate: t.due_date });
                     }
                 });
             } else {
                 Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
-                    if (isFutureOrToday(dateStr)) {
-                        ids.forEach(id => {
-                            const t = state.tasks.find(tk => tk.id === id);
-                            if (t) list.push({ ...t, displayDate: dateStr });
-                        });
-                    }
+                    ids.forEach(id => {
+                        const t = state.tasks.find(tk => tk.id === id);
+                        if (t) list.push({ ...t, displayDate: dateStr });
+                    });
                 });
             }
 
@@ -2151,7 +2149,7 @@ function renderHome() {
             const searchHeader = `
                 <div class="agenda-search-container">
                     <div class="search-input-wrapper">
-                        <i class="ph ph-magnifying-glass"></i>
+                        <i class="ph-bold ph-magnifying-glass"></i>
                         <input type="text" 
                                class="agenda-search-input" 
                                placeholder="Cerca tra i tuoi compiti..." 
