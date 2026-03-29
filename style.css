@@ -847,27 +847,26 @@
         .ai-prose ul,
         .ai-prose ol {
           margin: 8px 0 16px 0;
-          padding-left: 24px;
+          padding-left: 0 !important;
+          list-style: none !important;
         }
-
+    
         .ai-prose li {
           margin-bottom: 8px;
           line-height: 1.6;
           color: inherit;
           opacity: 0.95;
+          list-style: none !important;
         }
-
+    
         .ai-prose li::marker {
-          color: var(--accent);
-          font-weight: 700;
+          display: none !important;
+          content: none !important;
         }
-
-        .ai-prose ul>li {
-          list-style-type: disc;
-        }
-
+    
+        .ai-prose ul>li,
         .ai-prose ol>li {
-          list-style-type: decimal;
+          list-style-type: none !important;
         }
 
         .ai-prose strong,
