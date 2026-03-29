@@ -4108,3 +4108,105 @@
             padding: 24px 20px;
           }
         }
+
+        /* === AGENDA SEARCH & FILTERS === */
+        .agenda-search-container {
+          margin-bottom: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          animation: fadeIn 0.4s ease-out;
+        }
+
+        .search-input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .search-input-wrapper i {
+          position: absolute;
+          left: 16px;
+          color: #908C86;
+          font-size: 18px;
+          pointer-events: none;
+        }
+
+        .agenda-search-input {
+          width: 100%;
+          height: 52px;
+          background: #FFFFFF;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          border-radius: 14px;
+          padding: 0 16px 0 48px;
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          font-weight: 500;
+          color: #141414 !important;
+          outline: none;
+          transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        }
+
+        .agenda-search-input:focus {
+          border-color: #6366f1;
+          box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08);
+          transform: translateY(-1px);
+        }
+
+        .agenda-search-input::placeholder {
+          color: #C8C5C0;
+        }
+
+        .agenda-filters-scroll {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 4px 2px 12px 2px;
+          margin: -4px -2px 0 -2px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .agenda-filters-scroll::-webkit-scrollbar {
+          display: none;
+        }
+
+        .filter-chip {
+          white-space: nowrap;
+          padding: 8px 16px;
+          background: #FFFFFF;
+          border: 1px solid rgba(0, 0, 0, 0.04);
+          border-radius: 10px;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          color: #908C86;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .filter-chip i {
+          font-size: 14px;
+          opacity: 0.8;
+        }
+
+        .filter-chip:hover {
+          background: #F6F5F3;
+          border-color: rgba(0, 0, 0, 0.1);
+          transform: translateY(-1px);
+        }
+
+        .filter-chip.active {
+          background: #141414;
+          color: #FFFFFF;
+          border-color: #141414;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-chip.active i {
+          color: #6366f1;
+        }

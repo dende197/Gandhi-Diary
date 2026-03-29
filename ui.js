@@ -1,4 +1,32 @@
 
+// --- AGENDA SEARCH & FILTER HELPERS ---
+window.handleAgendaSearch = function(event) {
+    state.agendaSearchQuery = event.target.value;
+    refreshAgenda();
+};
+
+window.setAgendaFilter = function(subject) {
+    state.agendaSearchSubject = subject;
+    refreshAgenda();
+};
+
+window.refreshAgenda = function() {
+    const list = document.getElementById('weekly-agenda-list');
+    if (list) {
+        list.innerHTML = renderWeeklyAgenda();
+        // Focus back on search input if it existed to maintain typing flow
+        const searchInput = list.querySelector('.agenda-search-input');
+        if (searchInput) {
+            searchInput.focus();
+            const val = searchInput.value;
+            searchInput.value = '';
+            searchInput.value = val; // Move cursor to end
+        }
+    } else {
+        scheduleRender(0);
+    }
+};
+
 // --- UI TRANSITION HELPERS (Added by Phase 25 Mega Patch) ---
 window.switchPlannerMode = function(mode) {
   state.plannerMode = mode;
@@ -2079,16 +2107,59 @@ function renderHome() {
 
             list.sort((a, b) => parseArgoDate(a.displayDate) - parseArgoDate(b.displayDate));
 
-            if (!list.length) {
+            // --- LIVE FILTERING LOGIC ---
+            const query = (state.agendaSearchQuery || "").toLowerCase().trim();
+            const filterSubject = state.agendaSearchSubject || "all";
+            
+            const filteredList = list.filter(t => {
+                const matchesQuery = !query || 
+                    (t.text || "").toLowerCase().includes(query) || 
+                    (t.subject || "").toLowerCase().includes(query);
+                
+                const matchesSubject = filterSubject === "all" || 
+                    (t.subject || "").toLowerCase().trim() === filterSubject.toLowerCase().trim();
+                
+                return matchesQuery && matchesSubject;
+            });
+
+            // Extract unique subjects for chips
+            const allSubjects = [...new Set(list.map(t => t.subject?.trim()).filter(Boolean))].sort();
+
+            const searchHeader = `
+                <div class="agenda-search-container">
+                    <div class="search-input-wrapper">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="text" 
+                               class="agenda-search-input" 
+                               placeholder="Cerca tra i tuoi compiti..." 
+                               value="${state.agendaSearchQuery || ''}"
+                               oninput="handleAgendaSearch(event)">
+                    </div>
+                    <div class="agenda-filters-scroll">
+                        <div class="filter-chip ${filterSubject === 'all' ? 'active' : ''}" onclick="setAgendaFilter('all')">
+                            <i class="ph ph-rows"></i> Tutti
+                        </div>
+                        ${allSubjects.map(s => `
+                            <div class="filter-chip ${filterSubject === s ? 'active' : ''}" onclick="setAgendaFilter('${s.replace(/'/g, "\\'")}')">
+                                ${s}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            if (!filteredList.length) {
                 return `
-        <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px; font-family: 'JetBrains Mono', monospace;">
-                <i class="ph ph-sparkle" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px; display: block;"></i>
-                <div style="font-size: 13px; font-weight: 700; text-transform: uppercase;">// EMPTY_SCHEDULE</div>
-            </div> `;
+                ${searchHeader}
+                <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px; font-family: 'Inter', sans-serif; background: rgba(0,0,0,0.02); border: 1px dashed rgba(0,0,0,0.05);">
+                    <i class="ph ph-magnifying-glass" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px; display: block;"></i>
+                    <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">// NESSUN RISULTATO</div>
+                    <p style="font-size: 12px; margin-top: 4px; opacity: 0.6;">Prova a cambiare i filtri o la ricerca</p>
+                </div> `;
             }
 
             const grouped = {};
-            list.forEach(t => {
+            filteredList.forEach(t => {
                 if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
                 grouped[t.displayDate].push(t);
             });
@@ -2096,6 +2167,7 @@ function renderHome() {
 
             return `
         <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">
+            ${searchHeader}
             ${sortedDates.map(dateStr => {
                 const d = parseArgoDate(dateStr);
                 const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
