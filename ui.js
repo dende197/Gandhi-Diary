@@ -1798,25 +1798,26 @@ function renderHome() {
             const isRegistro = state.plannerMode === 'registro';
             
             container.innerHTML = `
-                <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-                    <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:440px; padding:24px; border-radius:24px; background:#FFFFFF; color:#141414; border:1px solid #E0DDD8; box-shadow: 0 10px 40px rgba(0,0,0,0.1); width: calc(100% - 32px); max-height: 90vh; overflow-y: auto;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px;">
-                            <div>
-                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:6px; background: ${isRegistro ? 'rgba(0,122,255,0.05)' : 'rgba(255,45,85,0.05)'}; padding: 3px 10px; border-radius: 6px; display:inline-block;">
-                                    ${isRegistro ? 'Scadenze Registro' : 'Organizzazione Studio'}
-                               </div>
-                                <h2 style="margin:0; font-size:26px; font-weight:800; text-transform:capitalize; letter-spacing:-0.02em;">${formattedDate}</h2>
-                           </div>
-                            <button onclick="closeModal()" style="background:#F6F5F3; border:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#141414; cursor:pointer; transition: transform 0.2s;">
-                                <i class="ph ph-x" style="font-size:22px;"></i>
-                           </button>
-                       </div>
+                <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+                    <div class="modal-content" onclick="event.stopPropagation()" style="font-family:'Inter',system-ui,-apple-system,sans-serif; max-width:440px; padding:28px; border-radius:22px; background:#FFFFFF; color:#141414; border:1px solid rgba(0,0,0,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.04); width: calc(100% - 32px); max-height: 90vh; display:flex; flex-direction:column;">
 
-                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:16px; max-height:60vh; overflow-y:auto; padding-right:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-shrink:0;">
+                            <div>
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:8px; background: ${isRegistro ? 'rgba(0,122,255,0.06)' : 'rgba(255,45,85,0.06)'}; padding: 4px 10px; border-radius: 8px; display:inline-block;">
+                                    ${isRegistro ? 'Scadenze Registro' : 'Organizzazione Studio'}
+                                </div>
+                                <h2 style="font-family:'Inter',system-ui,-apple-system,sans-serif; margin:0; font-size:24px; font-weight:800; text-transform:capitalize; letter-spacing:-0.03em; color:#141414;">${formattedDate}</h2>
+                            </div>
+                            <button onclick="closeModal()" style="background:#F6F5F3; border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#908C86; cursor:pointer; transition: all 0.2s; flex-shrink:0;" onmouseover="this.style.background='#EDEBE7';this.style.color='#141414'" onmouseout="this.style.background='#F6F5F3';this.style.color='#908C86'">
+                                <i class="ph ph-x" style="font-size:18px;"></i>
+                            </button>
+                        </div>
+
+                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1; min-height:0; padding-right:4px;">
                             ${tasksForDay.length === 0 ? `
                                 <div style="text-align:center; padding:56px 20px; color:#908C86;">
-                                    <i class="ph ph-calendar-blank" style="font-size:54px; display:block; margin:0 auto 16px; opacity:0.1;"></i>
-                                    <div style="font-size:16px; font-weight:600; opacity:0.6;">Nessun compito pianificato</div>
+                                    <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 14px; opacity:0.12;"></i>
+                                    <div style="font-family:'Inter',system-ui,sans-serif; font-size:15px; font-weight:600; opacity:0.5;">Nessun compito pianificato</div>
                                 </div>
                             ` : tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
                 const subContent = t.subject || 'N/A';
@@ -1832,18 +1833,18 @@ function renderHome() {
                     .replace(/[\s|]+$/, '')
                     .trim();
                 return `
-                                    <div style="flex-shrink:0; border-radius:20px; display:flex; align-items:stretch; background:${t.done ? '#F6F5F3' : '#FFFFFF'}; border:1px solid ${t.done ? '#E0DDD8' : '#141414'}; box-shadow: ${t.done ? 'none' : '0 4px 12px rgba(0,0,0,0.03)'}; opacity: ${t.done ? 0.7 : 1}; transition: all 0.2s;">
-                                        <div style="width:6px; background:${color}; flex-shrink:0; border-radius:20px 0 0 20px;"></div>
-                                        <div style="flex:1; padding:20px 18px; min-width:0;">
-                                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:var(--${key}-t, #141414); text-transform:uppercase; letter-spacing:0.1em; background:var(--${key}, #EEE); padding:2px 8px; border-radius:6px;">${subContent}</span>
-                                                ${timeStr ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#908C86; background:#F6F5F3; padding:2px 8px; border-radius:20px;">${timeStr}</span>` : ''}
+                                    <div style="flex-shrink:0; border-radius:16px; display:flex; align-items:stretch; overflow:hidden; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.08)'}; box-shadow: 0 1px 4px rgba(0,0,0,0.04); opacity: ${t.done ? 0.65 : 1}; transition: all 0.2s;">
+                                        <div style="width:4px; background:${color}; flex-shrink:0;"></div>
+                                        <div style="flex:1; padding:16px 16px; min-width:0;">
+                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${subContent}</span>
+                                                ${timeStr ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${timeStr}</span>` : ''}
                                             </div>
-                                            <div style="font-size:15px; font-weight:700; color:#141414; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through opacity:0.6;' : ''}">${displayText}</div>
+                                            <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${displayText}</div>
                                         </div>
-                                        <div style="padding:16px; display:flex; align-items:center; flex-shrink:0;">
-                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:40px; height:40px; border-radius:50%; background:${t.done ? '#141414' : '#F6F5F3'}; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
-                                                <i class="ph-bold ph-check" style="font-size:20px; color:${t.done ? 'white' : '#B0AD A8'};"></i>
+                                        <div style="padding:12px 14px; display:flex; align-items:center; flex-shrink:0;">
+                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                                <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'white' : '#C8C5C0'};"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -1852,8 +1853,8 @@ function renderHome() {
                        </div>
 
                         ${tasksForDay.length > 0 ? `
-                        <div style="margin-top:28px; padding-top:24px; border-top:1px solid #F0EDE8;">
-                            <button onclick="closeModal()" style="width:100%; height:52px; background:#141414; color:white; border:none; border-radius:18px; font-size:15px; font-weight:800; cursor:pointer; letter-spacing:0.5px; transition: transform 0.2s active {transform:scale(0.98);}">CHIUDI</button>
+                        <div style="margin-top:20px; padding-top:16px; border-top:1px solid #F0EDE8; flex-shrink:0;">
+                            <button onclick="closeModal()" style="font-family:'Inter',system-ui,-apple-system,sans-serif; width:100%; height:48px; background:#141414; color:white; border:none; border-radius:14px; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:0.3px; transition: all 0.2s;" onmouseover="this.style.background='#2A2A2A'" onmouseout="this.style.background='#141414'">Chiudi</button>
                        </div>
                         ` : ''}
                    </div>
