@@ -441,10 +441,21 @@
                     loader.style.opacity = '0';
                     setTimeout(() => loader.remove(), 450);
                 }
-                // Render solo se l'utente NON è loggato (login screen),
-                // perché in quel caso performSync non viene chiamato
-                if (!state.isLoggedIn) {
-                    if (window.render) window.render();
+                
+                // FINAL BOOT RENDER:
+                // We always attempt a render here to ensure the UI is visible.
+                // If performSync finished before ui.js was ready, this is our safety net.
+                if (window.render) {
+                    window.render();
+                } else {
+                    // Safety fallback if ui.js is still loading
+                    const checkRender = setInterval(() => {
+                        if (window.render) {
+                            window.render();
+                            clearInterval(checkRender);
+                        }
+                    }, 50);
+                    setTimeout(() => clearInterval(checkRender), 5000);
                 }
             }, 100);
 
