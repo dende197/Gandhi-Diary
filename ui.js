@@ -344,24 +344,23 @@ window.saveArgoToSupabase = async function() {
             const shortName = getSafeUserName();
 
             return `
-    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(246, 245, 243, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.1); z-index: 1000; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 32px;">
-            <div style="width: 160px; display: flex; align-items: center;">
-                <div id="loading-spinner" class="spinner" style="display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.05); border-top: 2px solid var(--accent-warm); border-radius: 50%;"></div>
-            </div>
+    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
+            <div id="loading-spinner" class="spinner" style="display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.05); border-top: 2px solid var(--accent-warm); border-radius: 50%;"></div>
+        </div>
 
-            <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 14px;">
-                <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 10px; padding: 7px 18px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'};">Panoramica</button>
-                <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius: 10px; padding: 7px 18px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' ? 'white' : 'transparent'}; color: ${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'};">Agenda</button>
-                <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 10px; padding: 7px 18px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'};">Voti</button>
-                <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 10px; padding: 7px 18px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'};">Circolari</button>
-            </div>
+          <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
+            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
+            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' ? 'white' : 'transparent'}; color: ${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
+            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
+            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
+          </div>
 
-            <div class="topbar-right" style="display: flex; align-items: center; gap: 8px; width: 160px; justify-content: flex-end;">
-                <span class="time-chip" style="font-size: 13px; font-weight: 700; color: #908C86; font-family:'JetBrains Mono',monospace;">
-                    ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
-                </span>
-            </div>
-        </header>`;
+          <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
+            <span class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim);">
+                ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
+            </span>
+          </div>
+        </div>`;
         }
         function updatePlanTaskUI(taskId, isPlanned) {
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -636,19 +635,21 @@ window.saveArgoToSupabase = async function() {
 // ================================================================
 
 function renderHome() {
-    const today = new Date();
-    const todayISO = today.toISOString().split('T')[0];
-    const mediaVal = calcolaMedia(state.voti || []);
-    const media = parseFloat(mediaVal) || 0;
-    
-    // Greeting & Time
-    const h = today.getHours();
-    const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+    const todayStr = getLocalDateString();
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    // Media
+    const mediaStr = calcolaMedia(state.voti) || '0';
+    const media = parseFloat(mediaStr);
+
+    // Greeting
+    const h = new Date().getHours();
+    const days = ['Domenica','Lun\xecdì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
     const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
     const greeting = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 17 ? 'Buon pomeriggio' : 'Buona sera';
     const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
     const shortName = getSafeUserName();
-    const dayOfWeek = days[today.getDay()].toUpperCase();
+    const dayOfWeek = days[new Date().getDay()].toUpperCase();
 
     // Streak dots
     const streak = state.streak || 0;
@@ -659,10 +660,12 @@ function renderHome() {
         return `<div class="sdot ${filled ? 'on' : ''} ${isLast ? 'today' : ''}" style="width:8px;height:8px;border-radius:50%;${bg}"></div>`;
     }).join('');
 
-    // Prossima verifica logic
+    // Prossima verifica (scraped from DidUp) — carousel
+    const todayISO = today.toISOString().split('T')[0];
     const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
+    // Manual Verifiche from dedicated database table
     const manualExams = (state.manualVerifiche || [])
         .filter(v => !v.done && v.date && v.date >= todayISO)
         .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
@@ -676,42 +679,53 @@ function renderHome() {
         return true;
     }).sort((a,b) => a.data.localeCompare(b.data));
     
-    const vIdx = state._vIdx || 0;
+    // Carousel index
+    if (typeof window._verificheIdx === 'undefined') window._verificheIdx = 0;
+    if (window._verificheIdx >= allUpcoming.length) window._verificheIdx = 0;
+    const vIdx = window._verificheIdx;
     const currentVerifica = allUpcoming[vIdx] || null;
-    const verificheCount = allUpcoming.length;
-    let daysToExam = null;
-    if (currentVerifica) {
-        const target = new Date(currentVerifica.data || currentVerifica.date);
-        const diff = target - today;
-        daysToExam = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    }
-    const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia || currentVerifica.subject) : '';
+    const daysToExam = currentVerifica ? Math.ceil((new Date(currentVerifica.data) - today) / 86400000) : null;
+    const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia) : 'N/D';
     const examKey = examAbbr.toLowerCase();
     const examTipo = currentVerifica?.tipo || 'unknown';
-    const examTipoLabel = examTipo.includes('scritt') ? 'SCRITTO' : examTipo.includes('oral') ? 'ORALE' : 'ALTRO';
+    const examTipoLabel = examTipo === 'scritta' ? 'SCRITTA' : examTipo === 'orale' ? 'ORALE' : '';
+    const verificheCount = allUpcoming.length;
 
     // Ultima circolare
     const lastCirc = (state.circolari && state.circolari.length > 0)
         ? state.circolari[0]
-        : { id: null, titolo: 'Nessuna circolare', data: '--/--/----' };
+        : { data: '--/--/----', titolo: 'Nessuna circolare', id: null };
 
-    // Presenze
+    // Presenze (from real assenzeData)
     const ad = state.assenzeData || {};
     const totAssenze = ad.totaleAssenze || 0;
     const totRitardi = ad.totaleRitardi || 0;
     const totUscite = ad.totaleUscite || 0;
     const oreAssenza = ad.oreAssenzaTotali || 0;
+    const presenze = totAssenze > 0
+        ? Math.max(0, Math.round((1 - totAssenze / (state.giorniScuola || 200)) * 100))
+        : (state.assenze != null ? Math.round((1 - state.assenze / (state.giorniScuola || 200)) * 100) : 94);
 
-    // Media delta
-    const prevMedia = state.lastMedia || media;
-    const delta = (media - prevMedia).toFixed(2);
-    const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
-
-    // Voti recenti
+    // Voti recenti (ultimi 6, ordinati per data decrescente)
     const recentGrades = (state.voti || [])
         .filter(v => v.data || v.date)
         .sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))
         .slice(0, 6);
+
+    // Debug: log assenze data
+    console.log('[Debug] assenzeData:', JSON.stringify(state.assenzeData || 'null'));
+    console.log('[Debug] verifiche:', (state.verifiche || []).length, 'trovate');
+    if (state.verifiche?.length > 0) {
+        console.log('[Debug] Verifiche sample (first 3):', JSON.stringify(state.verifiche.slice(0, 3)));
+    }
+    if (state.assenzeData?._debug) {
+        console.log('[Debug] Dashboard blocco keys:', JSON.stringify(state.assenzeData._debug.bloccoKeys));
+        console.log('[Debug] Raw nota sample:', JSON.stringify(state.assenzeData._debug.rawNotaSample));
+        // Log all debug keys
+        for (const [k, v] of Object.entries(state.assenzeData._debug)) {
+            if (k.startsWith('key_')) console.log(`[Debug] ${k}:`, JSON.stringify(v));
+        }
+    }
 
     // Task di domani
     const tomorrow = new Date(today);
@@ -724,29 +738,26 @@ function renderHome() {
         return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
     });
 
-    return `
-    <div class="dashboard view" style="width: 100%; padding: 80px 28px 32px;">
+    // Media delta vs mese scorso
+    const prevMedia = state.lastMedia || media;
+    const delta = (media - prevMedia).toFixed(2);
+    const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
+    const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
-      <!-- ROW 1: Greeting · Streak · Verifica -->
-      <div style="display:grid; grid-template-columns:1fr 180px 283px; gap:14px; margin-bottom:16px;">
+    return `
+    <div class="dashboard view" style="width: 100%; padding: 20px 28px 32px;">
+
+      <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
+      <div style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
         <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
           <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
           <div style="font-size:19px; font-weight:700; color:#fff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
           <div style="font-size:11px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
         </div>
-
-        <div class="card streak-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; justify-content:space-between;">
-           <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">STREAK</div>
-           <div style="display:flex; align-items:baseline; gap:3px;">
-             <span style="font-size:28px; font-weight:700; color:#141414;">${streak}</span>
-             <span style="font-size:10px; color:#908C86;">giorni di fila</span>
-           </div>
-           <div style="display:flex; justify-content:space-between; gap:2px; padding:0 1px;">${streakDots}</div>
-        </div>
-
+ 
         <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">PROSSIMA VERIFICA</div>
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
             <div style="display:flex; gap:4px;">
               ${verificheCount > 1 ? `
               <button onclick="window._navVerifica(-1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
@@ -756,45 +767,45 @@ function renderHome() {
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom:5px;">
-            <span id="vw-abbr" style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:6px; padding:2px 7px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500;">${examAbbr}</span>
-            <span id="vw-tipo" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2;">${examTipoLabel}</span>
+            <span id="vw-abbr" style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;">${examAbbr}</span>
+            <span id="vw-tipo" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>
             <span id="vw-counter" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${verificheCount > 1 ? `${vIdx + 1}/${verificheCount}` : ''}</span>
           </div>
-          <div id="vw-desc" style="font-size:13px; font-weight:600; color:#141414; line-height:1.2;">${currentVerifica ? (currentVerifica.text || '').substring(0, 50) : 'Nessuna verifica'}</div>
-          <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:32px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:10px; color:#908C86;">giorni</span></div>
+          <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
+          <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
           <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
         </div>
-
+ 
       </div>
 
-      <!-- ROW 2: Media Voti · Presenze · Circolari -->
+      <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
 
         <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
-            <div style="font-size:42px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(2) : '—'}</div>
-            <div style="font-size:11px; color:#908C86; margin-top:5px;">voti registrati: ${(state.voti||[]).length}</div>
+            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(2) : '—'}</div>
+            <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti||[]).length}</div>
           </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#141414; border-radius:100px;"></div></div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
         </div>
 
         <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Presenze</div>
-            <div style="font-size:42px; font-weight:700; color:#141414; letter-spacing:-0.05em; line-height:1;">${((1 - (oreAssenza / ((state.giorniScuola || 200) * 5))) * 100).toFixed(0)}%</div>
-            <div style="font-size:11px; color:#908C86; margin-top:5px;">${totAssenze} assenze da inizio anno</div>
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ASSENZE</div>
+            <div style="font-size:32px; font-weight:700; color:#8A1A1A; letter-spacing:-0.05em; line-height:1;">${((oreAssenza / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2)}%</div>
+            <div style="font-size:10px; color:#A64A4A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(1)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
           </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.max(0, (1 - (oreAssenza / ((state.giorniScuola || 200) * 5))) * 100)}%; background:#2DB86A; border-radius:100px;"></div></div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (oreAssenza / ((state.giorniScuola || 200) * 5)) * 100)}%; background:#EF4444; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Ultima Circolare</div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#BCB8B2; margin-bottom:4px;">${lastCirc.data}</div>
-            <div style="font-size:13px; font-weight:600; color:#141414; line-height:1.3;">${lastCirc.titolo}</div>
+            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ULTIMA CIRCOLARE</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
+            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${lastCirc.titolo}</div>
           </div>
-          <button style="border:none; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:4px 10px; letter-spacing:0.05em; cursor:pointer; align-self:flex-start;">● nuova</button>
+          <span style="display:inline-flex; margin-top:14px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
         </div>
 
       </div>
@@ -804,7 +815,7 @@ function renderHome() {
 
         <div style="display:flex; flex-direction:column; min-height:0;">
           <div style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VOTI RECENTI</div>
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Voti Recenti</div>
           </div>
           <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 18px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
             <div style="display:flex; flex-direction:column;">
@@ -819,17 +830,17 @@ function renderHome() {
                   const pct = giu ? 0 : Math.min(100, (val / 10) * 100);
                   return `
               <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
-                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:6px; padding:3px 6px; flex-shrink:0; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; flex-shrink:0; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
                 <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
                   <div style="height:100%; width:${pct}%; background:var(--${key}-dot,#3B9DD4); border-radius:100px;"></div>
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:${giu ? '9' : '12.5'}px; font-weight:500; width:${giu ? '30' : '26'}px; text-align:right;">${valStr}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:${giu ? '9' : '12.5'}px; font-weight:500; width:${giu ? '30' : '26'}px; text-align:right; color:${giu ? '#BCB8B2' : `var(--${key}-t,#333)`};">${valStr}</span>
               </div>`;
                 }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
             ${recentGrades.length ? `
             <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
-              <span style="font-size:10px; color:#BCB8B2; font-family:'JetBrains Mono',monospace;">media</span>
+              <span style="font-size:10px; color:#C0BBB4; font-family:'JetBrains Mono',monospace;">media</span>
               <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
               ${deltaStr ? `<span style="font-size:11px; color:#2DB86A; margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:500;">${deltaStr}</span>` : ''}
             </div>` : ''}
@@ -837,6 +848,11 @@ function renderHome() {
         </div>
 
         <div style="display:flex; flex-direction:column; min-height:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
+            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Domani</div>
+            <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:0 12px; height:24px; font-size:11px; font-weight:600; cursor:pointer; transition:opacity 0.15s; display:flex; align-items:center;">+ attività</button>
+          </div>
+          <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
             ${tomorrowTasks.length ? tomorrowTasks.map(t => {
               const abbr = getSubjectAbbrev(t.subject);
               const key = abbr.toLowerCase();
@@ -860,7 +876,7 @@ function renderHome() {
     function renderPlanner() {
         return `
     <div class="dashboard view" style="width: 100%;">
-        <div class="planner-content" style="padding: 80px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
+        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
                 <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Agenda & Compiti</h1>
                 
@@ -987,7 +1003,7 @@ function renderHome() {
 
             return `
     <div class="dashboard view" style="width: 100%;">
-        <div class="planner-content" style="padding: 80px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
+        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             
             <!-- V6 HEADER -->
             <div style="margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
@@ -1706,7 +1722,7 @@ function renderHome() {
             if (!c) return;
 
             showModal(`
-            <div style="padding:36px 40px; text-align:left; width:min(760px, 90vw);">
+            <div style="padding:28px; text-align: left;">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
                     <div>
                         <p style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; margin-bottom:4px;">
@@ -1725,7 +1741,7 @@ function renderHome() {
                     <h3 style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#141414; font-weight:800; margin-bottom:20px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.1em;">
                         <i class="ph-bold ph-sparkle" style="color:var(--accent-warm);"></i> Sintesi AI Premium
                     </h3>
-                    <div class="sintesi-content" style="font-family:'Inter',-apple-system,sans-serif; font-size:15px; color:#141414; line-height:1.75;">
+                    <div class="sintesi-content" style="font-size:15px; color:#141414; line-height:1.7; font-weight:500;">
                         ${c.sintesi ? marked.parse(c.sintesi) : `
                             <div id="sintesi-placeholder-${c.id}">
                                 <p style="color:#908C86; font-size:14px; margin-bottom:20px; font-weight:400;">La sintesi non è stata ancora generata per questa circolare.</p>
