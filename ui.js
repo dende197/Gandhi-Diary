@@ -574,7 +574,10 @@ window.saveArgoToSupabase = async function() {
                 html += `
                     <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
                          onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
-                        <div class="day-number">${tempDate.getDate()}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                            <div class="day-number">${tempDate.getDate()}</div>
+                            ${isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : ''}
+                        </div>
                         <div class="day-events">
                             ${dayTasks.slice(0, 3).map(t => {
                     const color = getSubjectColor(t.subject);
@@ -2110,13 +2113,13 @@ function renderHome() {
                 return `
             <div>
                 <!-- TE Date Header -->
-                <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-                    <div style="display:flex; flex-direction:column; align-items:center; min-width:48px;">
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size:28px; font-weight:800; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1; letter-spacing:-0.05em;">${dayNum}</span>
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size:11px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">${monthName}</span>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; min-width:44px;">
+                        <span style="font-family: 'Inter', sans-serif; font-size:24px; font-weight:800; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1; letter-spacing:-0.04em;">${dayNum}</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-top:2px;">${monthName}</span>
                     </div>
-                    <div style="flex:1; height:2px; background:#E5E5EA;"></div>
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size:13px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em;">${dayName}</div>
+                    <div style="flex:1; height:1px; background:rgba(0,0,0,0.05);"></div>
+                    <div style="font-family: 'Inter', sans-serif; font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize; letter-spacing:-0.01em;">${dayName}</div>
                     ${labelTag}
                 </div>
                 
@@ -2135,19 +2138,19 @@ function renderHome() {
                         .trim();
 
                     return `
-                    <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#F6F5F3' : '#FFFFFF'}; border: 1px solid ${t.done ? '#E0DDD8' : '#141414'}; border-radius:16px; min-height:88px; box-shadow: ${t.done ? 'none' : '0 4px 12px rgba(0,0,0,0.03)'}; transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
-                        <div style="width:6px; background:${t.done ? '#E0DDD8' : subjColor}; flex-shrink:0;"></div>
+                    <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
+                        <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
-                        <div style="flex:1; padding:18px 22px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
-                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
-                                <span style="font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${t.done ? 'var(--text-dim)' : subjColor}; text-transform:uppercase; letter-spacing:0.1em; background:rgba(0,0,0,0.03); padding:2px 6px; border-radius:4px;">${cleanSubject}</span>
-                                ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:var(--text-dim); background:#E5E5EA; padding:2px 6px; border-radius:4px;">${timeStr}</span>` : ''}
+                        <div style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+                                <span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${cleanSubject}</span>
+                                ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${timeStr}</span>` : ''}
                             </div>
-                            <div data-task-text="${t.id}" style="font-size:15px; font-weight:600; color:${t.done ? 'var(--text-dim)' : 'var(--text-primary)'}; line-height:1.4; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.6;' : ''}">${displayText}</div>
+                            <div data-task-text="${t.id}" style="font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${displayText}</div>
                         </div>
                         
-                        <div style="padding:0 20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-left: 1px dashed #E5E5EA;">
-                            <div data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:32px; height:32px; border-radius:8px; border:2px solid ${t.done ? 'var(--text-primary)' : '#E5E5EA'}; background:${t.done ? 'var(--text-primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                        <div style="padding:0 16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
+                            <div data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                         </div>

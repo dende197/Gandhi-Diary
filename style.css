@@ -1250,15 +1250,12 @@
 
 
         /* === CALENDAR === */
-        /* === CALENDAR === */
         .custom-calendar {
           background: #FFFFFF;
-          border-radius: var(--radius-l);
-          overflow: hidden;
-          margin-bottom: 24px;
-          padding: 16px;
-          border: 1px solid #E0DDD8;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+          border-radius: 18px;
+          padding: 18px;
+          border: 1px solid rgba(0, 0, 0, 0.04);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
         }
 
         .calendar-header {
@@ -1270,12 +1267,12 @@
         }
 
         .calendar-title {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 15px;
+          font-family: 'Inter', system-ui, sans-serif;
+          font-size: 14px;
           font-weight: 800;
           color: #141414;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+          text-transform: capitalize;
+          letter-spacing: -0.02em;
         }
 
         .calendar-nav {
@@ -1284,12 +1281,12 @@
         }
 
         .calendar-nav button {
-          width: 36px;
-          height: 36px;
-          border-radius: 12px;
-          border: 1px solid #E0DDD8;
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.06);
           background: #F6F5F3;
-          color: #141414;
+          color: #908C86;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1314,12 +1311,12 @@
         .weekday-header {
           text-align: center;
           padding: 4px 0;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 10px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          color: #908C86;
+          font-family: 'Inter', system-ui, sans-serif;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: capitalize;
+          letter-spacing: -0.01em;
+          color: #C8C5C0;
         }
 
         .calendar-days {
@@ -1329,30 +1326,30 @@
         }
 
         .calendar-day {
-          min-height: 72px;
-          padding: 8px;
-          background: #F6F5F3;
-          border: 1px solid #E0DDD8;
-          border-radius: 14px;
+          min-height: 80px;
+          padding: 10px;
+          background: #FAFAF9;
+          border: 1px solid rgba(0, 0, 0, 0.04);
+          border-radius: 16px;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+          transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
           display: flex;
           flex-direction: column;
           position: relative;
+          overflow: hidden;
         }
 
         .calendar-day:hover {
           background: #FFFFFF;
-          border-color: #141414;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-          z-index: 2;
+          border-color: rgba(0, 0, 0, 0.12);
+          transform: translateY(-3px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+          z-index: 10;
         }
 
         .calendar-day.today {
-          background: #FFFFFF;
-          border: 2px solid #007AFF;
-          box-shadow: 0 4px 15px rgba(0, 113, 227, 0.1);
+          background: #F0F7FF;
+          border: 1px solid rgba(0, 122, 255, 0.3);
         }
 
         .calendar-day.other-month {
@@ -1365,11 +1362,12 @@
         }
 
         .day-number {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 14px;
+          font-family: 'Inter', system-ui, sans-serif;
+          font-size: 13px;
           font-weight: 800;
           color: #141414;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
+          letter-spacing: -0.03em;
         }
 
         .calendar-day.today .day-number {
@@ -1385,19 +1383,22 @@
         }
 
         .event-badge {
-          font-size: 9px;
-          font-weight: 600;
-          padding: 2px 5px;
-          border-radius: 4px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 8px;
+          font-weight: 800;
+          padding: 3px 6px;
+          border-radius: 6px;
           color: white;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          line-height: 1;
         }
 
         .event-badge.done {
-          opacity: 0.4;
+          opacity: 0.35;
           text-decoration: line-through;
+          filter: grayscale(0.5);
         }
 
         .more-events {
