@@ -1,5 +1,11 @@
-
 // --- AGENDA SEARCH & FILTER HELPERS ---
+setInterval(() => {
+    const clock = document.getElementById('topbar-clock');
+    if (clock) {
+        clock.innerText = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+}, 1000);
+
 window.scrollToSearch = function () {
     // If we're not in the agenda view, go there first
     if (state.view !== 'planner' && state.view !== 'home_diary') {
@@ -408,8 +414,8 @@ function renderNav() {
           </div>
 
           <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
-            <span class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim);">
-                ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
+            <span id="topbar-clock" class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums;">
+                ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           </div>
         </div>`;
