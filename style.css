@@ -3620,7 +3620,8 @@ html {
 
 /* Il problema: .view { padding: 100px 40px } gonfiava la dashboard */
 .view.dashboard {
-  padding: 61px 28px 32px !important;
+  padding: 59px 28px 32px !important;
+  padding-top: calc(56px + 3px) !important;
   min-height: unset !important;
   max-width: 100% !important;
   background: #F6F5F3 !important;
