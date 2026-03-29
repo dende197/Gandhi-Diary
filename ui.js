@@ -2126,7 +2126,7 @@ function renderHome() {
                 });
             }
 
-            list.sort((a, b) => parseArgoDate(a.displayDate) - parseArgoDate(b.displayDate));
+            list.sort((a, b) => parseArgoDate(b.displayDate) - parseArgoDate(a.displayDate));
 
             // --- LIVE FILTERING LOGIC ---
             const query = (state.agendaSearchQuery || "").toLowerCase().trim();
@@ -2184,7 +2184,7 @@ function renderHome() {
                 if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
                 grouped[t.displayDate].push(t);
             });
-            const sortedDates = Object.keys(grouped).sort();
+            const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b) - parseArgoDate(a));
 
             return `
         <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">
