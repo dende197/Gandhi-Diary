@@ -2141,7 +2141,7 @@ function renderHome() {
                     (t.subject || "").toLowerCase().trim() === filterSubject.toLowerCase().trim();
                 
                 return matchesQuery && matchesSubject;
-            });
+            }).sort((a, b) => parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime());
 
             // Extract unique subjects for chips
             const allSubjects = [...new Set(list.map(t => t.subject?.trim()).filter(Boolean))].sort();
@@ -2184,7 +2184,7 @@ function renderHome() {
                 if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
                 grouped[t.displayDate].push(t);
             });
-            const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b) - parseArgoDate(a));
+            const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b).getTime() - parseArgoDate(a).getTime());
 
             return `
         <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">
