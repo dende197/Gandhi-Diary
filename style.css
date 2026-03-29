@@ -861,11 +861,16 @@
     
         .ai-prose li::marker {
           display: none !important;
-          content: none !important;
+          content: "" !important;
+          font-size: 0 !important;
+          width: 0 !important;
+          height: 0 !important;
+          color: transparent !important;
         }
     
-        .ai-prose ul>li,
-        .ai-prose ol>li {
+        .ai-prose ul > li,
+        .ai-prose ol > li {
+          list-style: none !important;
           list-style-type: none !important;
         }
 
@@ -4042,7 +4047,9 @@
         
         .circolare-main .ai-prose li::marker {
           display: none !important;
-          content: "";
+          content: "" !important;
+          font-size: 0 !important;
+          color: transparent !important;
         }
 
         /* Utility Buttons Engineering */
