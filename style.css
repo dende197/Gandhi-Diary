@@ -3917,10 +3917,23 @@
           box-shadow: 0 30px 90px rgba(0,0,0,0.2) !important;
         }
 
+        /* CIRCOLARE MODAL STANDARDIZED */
+        .modal-content.circolare-modal {
+          width: 900px !important;
+          max-width: 95vw !important;
+          height: 600px !important;
+          max-height: 90vh !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          display: flex;
+          flex-direction: column;
+        }
+
         .circolare-layout {
           display: grid;
           grid-template-columns: 320px 1fr;
-          min-height: 520px;
+          height: 100%;
+          width: 100%;
         }
 
         .circolare-side {
@@ -3930,13 +3943,15 @@
           display: flex;
           flex-direction: column;
           gap: 24px;
+          overflow-y: auto;
         }
 
         .circolare-main {
           background: #FFFFFF;
           padding: 32px 36px;
           overflow-y: auto;
-          max-height: 85vh;
+          height: 100%;
+          position: relative;
         }
 
         /* Progress Bar Sintesi Professional */
@@ -3957,6 +3972,7 @@
           letter-spacing: 0.1em !important;
           margin-bottom: 12px;
           display: block;
+          text-align: center;
         }
 
         .sintesi-progress-bg {
@@ -3975,7 +3991,7 @@
         }
 
         /* Sintesi AI Typography Refinement */
-        .ai-prose h1, .ai-prose h2, .ai-prose h3 {
+        .circolare-main .ai-prose h1, .circolare-main .ai-prose h2, .circolare-main .ai-prose h3 {
           font-family: 'JetBrains Mono', monospace !important;
           font-size: 11px !important;
           font-weight: 800 !important;
@@ -3989,22 +4005,23 @@
           gap: 12px;
         }
 
-        .ai-prose h1::after, .ai-prose h2::after, .ai-prose h3::after {
+        .circolare-main .ai-prose h1::after, .circolare-main .ai-prose h2::after, .circolare-main .ai-prose h3::after {
           content: "";
           flex: 1;
           height: 1px;
           background: #F0EDE8;
         }
 
-        .ai-prose p {
+        .circolare-main .ai-prose p {
           font-size: 15px !important;
           line-height: 1.7 !important;
           color: #141414 !important;
           margin-bottom: 20px !important;
         }
 
-        .ai-prose ul {
+        .circolare-main .ai-prose ul {
           list-style: none !important;
+          list-style-type: none !important;
           padding: 0 !important;
           display: flex;
           flex-direction: column;
@@ -4012,7 +4029,9 @@
           margin-bottom: 24px !important;
         }
 
-        .ai-prose li {
+        .circolare-main .ai-prose li {
+          list-style: none !important;
+          list-style-type: none !important;
           background: #F6F5F3;
           border: 1px solid #ECEAE6;
           padding: 14px 18px;
@@ -4020,6 +4039,11 @@
           font-size: 14px;
           color: #141414;
           position: relative;
+        }
+        
+        .circolare-main .ai-prose li::marker {
+          display: none !important;
+          content: "";
         }
 
         /* Utility Buttons Engineering */
@@ -4055,10 +4079,25 @@
           .modal-content.circolare-modal {
             width: calc(100vw - 24px) !important;
             max-width: calc(100vw - 24px) !important;
-            padding: 16px !important;
+            height: calc(100vh - 40px) !important; 
+            max-height: calc(100vh - 40px) !important;
           }
 
           .circolare-layout {
             grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
+            overflow: hidden;
+          }
+          
+          .circolare-side {
+            padding: 24px;
+            border-right: none;
+            border-bottom: 1px solid #E0DDD8;
+            flex-shrink: 0;
+            overflow-y: visible;
+          }
+          
+          .circolare-main {
+            padding: 24px 20px;
           }
         }

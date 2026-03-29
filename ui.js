@@ -1757,9 +1757,9 @@ function renderHome() {
                 </aside>
 
                 <section class="circolare-main">
-                    <div id="sintesi-box-${c.id}">
+                    <div id="sintesi-box-${c.id}" style="height: 100%;">
                         ${c.sintesi ? `<div class="ai-prose">${marked.parse(c.sintesi)}</div>` : `
-                            <div id="sintesi-placeholder-${c.id}" style="display:flex; flex-direction:column; gap:20px; align-items:center; text-align:center; padding:100px 0;">
+                            <div id="sintesi-placeholder-${c.id}" style="height: 100%; display:flex; flex-direction:column; gap:20px; align-items:center; justify-content:center; text-align:center;">
                                 <div style="width:56px; height:56px; border-radius:18px; background:#F6F5F3; display:flex; align-items:center; justify-content:center; color:#DEDAD4;">
                                     <i class="ph-bold ph-sparkle" style="font-size:28px;"></i>
                                 </div>
