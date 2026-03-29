@@ -1,5 +1,25 @@
 
 // --- AGENDA SEARCH & FILTER HELPERS ---
+window.scrollToSearch = function() {
+    // If we're not in the agenda view, go there first
+    if (state.view !== 'planner' && state.view !== 'home_diary') {
+        navigate('planner');
+    }
+    
+    // Switch to list mode if we are in calendar mode
+    if (state.uiMode !== 'list') {
+        switchPlannerView('list');
+    }
+
+    setTimeout(() => {
+        const searchInput = document.querySelector('.agenda-search-input');
+        if (searchInput) {
+            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            searchInput.focus();
+        }
+    }, 300);
+};
+
 window.handleAgendaSearch = function(event) {
     state.agendaSearchQuery = event.target.value;
     refreshAgenda();
@@ -915,6 +935,9 @@ function renderHome() {
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
                     <div style="display: flex; gap: 8px;">
+                        <button onclick="scrollToSearch()" style="height: 36px; width: 36px; background: #F6F5F3; border: 1px solid #E5E5EA; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Cerca compiti">
+                            <i class="ph-bold ph-magnifying-glass" style="font-size: 16px; color: var(--text-dim);"></i>
+                        </button>
                         <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #E8EEF7; color: #2A3F6A; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-sparkle"></i> AI Chat
                         </button>
