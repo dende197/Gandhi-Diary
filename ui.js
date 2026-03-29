@@ -343,21 +343,23 @@ window.saveArgoToSupabase = async function() {
             const h = new Date().getHours();
 
             return `
-    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 64px; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.06); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 0 32px;">
+    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
+            <div style="width: 40px; display: flex; align-items: center;">
+                <div id="loading-spinner" class="spinner" style="display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.05); border-top: 2px solid var(--accent-warm); border-radius: 50%;"></div>
+            </div>
 
-          <div id="loading-spinner" class="spinner" style="display:none; position:absolute; left:32px; width:18px; height:18px; border:2px solid rgba(0,0,0,0.05); border-top:2px solid var(--accent-warm); border-radius:50%;"></div>
+            <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
+                <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
+                <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' ? 'white' : 'transparent'}; color: ${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
+                <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
+                <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
+            </div>
 
-          <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
-            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'home' ? 'white' : 'transparent'}; color:${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
-            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'planner' ? 'white' : 'transparent'}; color:${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
-            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'voti' ? 'white' : 'transparent'}; color:${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
-            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'circolari' ? 'white' : 'transparent'}; color:${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
-          </div>
-
-          <span class="time-chip" style="position:absolute; right:32px; font-size:13px; font-weight:700; color:var(--text-dim); font-family:'JetBrains Mono',monospace;">
-              ${String(h).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}
-          </span>
-
+            <div class="topbar-right" style="display: flex; align-items: center; gap: 24px; min-width: 40px; justify-content: flex-end;">
+                <span class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim); font-family:'JetBrains Mono',monospace;">
+                    ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
+                </span>
+            </div>
         </header>`;
         }
         function updatePlanTaskUI(taskId, isPlanned) {
