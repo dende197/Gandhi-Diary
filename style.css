@@ -3901,57 +3901,150 @@
         }
 
         /* Modal circolare desktop-oriented */
+        /* Modal circolare — Layout Ingegneristico v2 */
         .modal-content.circolare-modal {
-          max-width: min(1000px, calc(100vw - 48px)) !important;
-          width: min(1000px, calc(100vw - 48px)) !important;
-          padding: 24px !important;
-          border-radius: 24px !important;
+          max-width: min(1000px, calc(100vw - 32px)) !important;
+          width: min(1000px, calc(100vw - 32px)) !important;
+          padding: 0 !important;
+          border-radius: 20px !important;
           background: #FFFFFF !important;
-          border: 1px solid #E0DDD8 !important;
+          border: 1px solid #141414 !important;
+          overflow: hidden !important;
+          box-shadow: 0 30px 90px rgba(0,0,0,0.2) !important;
         }
 
         .circolare-layout {
           display: grid;
-          grid-template-columns: 310px 1fr;
-          gap: 20px;
-          align-items: start;
+          grid-template-columns: 320px 1fr;
+          min-height: 520px;
         }
 
         .circolare-side {
           background: #F6F5F3;
-          border: 1px solid #ECEAE6;
-          border-radius: 18px;
-          padding: 20px;
+          border-right: 1px solid #E0DDD8;
+          padding: 32px 28px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 24px;
         }
 
         .circolare-main {
           background: #FFFFFF;
-          border: 1px solid #ECEAE6;
-          border-radius: 18px;
-          padding: 24px;
-          min-height: 400px;
+          padding: 32px 36px;
+          overflow-y: auto;
+          max-height: 85vh;
         }
 
-        .sintesi-content,
-        .ai-prose {
-          font-family: var(--font-main) !important;
-          color: #141414 !important;
-          line-height: 1.7 !important;
-          font-size: 15px !important;
+        /* Progress Bar Sintesi Professional */
+        .sintesi-progress-container {
+          margin-top: 24px;
+          padding: 20px;
+          background: #F6F5F3;
+          border: 1px dashed #DEDAD4;
+          border-radius: 14px;
         }
 
-        .sintesi-content h1,
-        .sintesi-content h2,
-        .sintesi-content h3 {
+        .sintesi-progress-label {
           font-family: 'JetBrains Mono', monospace !important;
-          text-transform: uppercase;
-          letter-spacing: .05em;
+          font-size: 10px !important;
+          font-weight: 800 !important;
+          color: #908C86 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.1em !important;
+          margin-bottom: 12px;
+          display: block;
+        }
+
+        .sintesi-progress-bg {
+          width: 100%;
+          height: 4px;
+          background: #E0DDD8;
+          border-radius: 100px;
+          overflow: hidden;
+        }
+
+        .sintesi-progress-fill {
+          height: 100%;
+          background: #141414;
+          border-radius: 100px;
+          transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Sintesi AI Typography Refinement */
+        .ai-prose h1, .ai-prose h2, .ai-prose h3 {
+          font-family: 'JetBrains Mono', monospace !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.12em !important;
           color: #141414 !important;
-          margin-top: 20px;
-          margin-bottom: 10px;
+          margin-top: 32px !important;
+          margin-bottom: 16px !important;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .ai-prose h1::after, .ai-prose h2::after, .ai-prose h3::after {
+          content: "";
+          flex: 1;
+          height: 1px;
+          background: #F0EDE8;
+        }
+
+        .ai-prose p {
+          font-size: 15px !important;
+          line-height: 1.7 !important;
+          color: #141414 !important;
+          margin-bottom: 20px !important;
+        }
+
+        .ai-prose ul {
+          list-style: none !important;
+          padding: 0 !important;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-bottom: 24px !important;
+        }
+
+        .ai-prose li {
+          background: #F6F5F3;
+          border: 1px solid #ECEAE6;
+          padding: 14px 18px;
+          border-radius: 12px;
+          font-size: 14px;
+          color: #141414;
+          position: relative;
+        }
+
+        /* Utility Buttons Engineering */
+        .btn-engineering {
+          background: #141414 !important;
+          color: #FFFFFF !important;
+          border: none !important;
+          font-family: 'JetBrains Mono', monospace !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+          border-radius: 12px !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 10px !important;
+          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        }
+
+        .btn-engineering:hover {
+          background: #333333 !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        }
+
+        .btn-engineering:active {
+          transform: scale(0.97) !important;
         }
 
         @media (max-width: 850px) {

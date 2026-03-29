@@ -785,7 +785,7 @@ function renderHome() {
         <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
-            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(1) : '—'}</div>
+            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(2) : '—'}</div>
             <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti||[]).length}</div>
           </div>
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
@@ -842,7 +842,7 @@ function renderHome() {
             ${recentGrades.length ? `
             <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
               <span style="font-size:10px; color:#C0BBB4; font-family:'JetBrains Mono',monospace;">media</span>
-              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
+              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
               ${deltaStr ? `<span style="font-size:11px; color:#2DB86A; margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:500;">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
@@ -1116,7 +1116,7 @@ function renderHome() {
                             <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(1)}</div>
+                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(2)}</div>
                             <div style="display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px;">
                                 ${s.trend.map(v => `<div style="width: 4px; height: 4px; border-radius: 50%; background: ${v >= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
                             </div>
@@ -1531,7 +1531,7 @@ function renderHome() {
                     <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
                         <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">OBIETTIVO</div>
                         <div style="font-size: 36px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 10px; letter-spacing: -0.05em;">
-                            ${goal.toFixed(1)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
+                            ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
                         </div>
                     </div>
                 </div>
@@ -1728,28 +1728,28 @@ function renderHome() {
             showModal(`
             <div class="circolare-layout">
                 <aside class="circolare-side">
-                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom: 20px;">
+                    <div style="display:flex; flex-direction:column; gap:8px;">
                         <p style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#908C86; text-transform:uppercase; letter-spacing:0.1em; margin:0;">
-                            Circolare N. ${c.numero}
+                            // CIRCOLARE_DOC N. ${c.numero}
                         </p>
-                        <h2 style="font-size:20px; font-weight:700; color:#141414; line-height:1.2; margin:0; letter-spacing:-0.01em;">
+                        <h2 style="font-size:20px; font-weight:800; color:#141414; line-height:1.2; margin:0; letter-spacing:-0.02em;">
                             ${c.titolo}
                         </h2>
-                        <p style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#BCB8B2; margin-top:4px;">
+                        <p style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#BCB8B2; margin-top:4px; display:flex; align-items:center; gap:6px;">
                             <i class="ph-bold ph-calendar"></i> ${c.data}
                         </p>
                     </div>
                     
-                    <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-top:auto;">
                         <button onclick="window.open('${c.link}', '_blank')" 
-                            style="width:100%; padding:14px; border-radius:12px; background:#141414; 
-                            color:#FFF; font-weight:700; border:none; cursor:pointer; 
+                            style="width:100%; height:48px; border-radius:12px; background:#141414; 
+                            color:#FFF; font-weight:800; border:none; cursor:pointer; 
                             display:flex; align-items:center; justify-content:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; transition: all 0.2s;">
-                            <i class="ph-bold ph-arrow-square-out" style="font-size:16px;"></i>
-                            Documento
+                            <i class="ph-bold ph-file-pdf" style="font-size:18px;"></i>
+                            Apri Documento
                         </button>
                         <button onclick="closeModal()" 
-                            style="width:100%; padding:12px; border-radius:12px; background:rgba(0,0,0,0.04); 
+                            style="width:100%; height:44px; border-radius:12px; background:rgba(0,0,0,0.04); 
                             color:#908C86; font-weight:700; border:none; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase;">
                             Chiudi
                         </button>
@@ -1757,18 +1757,21 @@ function renderHome() {
                 </aside>
 
                 <section class="circolare-main">
-                    <h3 style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#908C86; margin-bottom:16px; margin-top:0;">
-                        Sintesi Premium AI
-                    </h3>
-                    <div id="sintesi-box-${c.id}" class="sintesi-content">
-                        ${c.sintesi ? marked.parse(c.sintesi) : `
-                            <div id="sintesi-placeholder-${c.id}" style="display:flex; flex-direction:column; gap:16px; align-items:center; text-align:center; padding:60px 0;">
-                                <p style="color:#BCB8B2; font-size:14px; margin:0; max-width: 240px;">Analisi in tempo reale disponibile tramite motore neurale.</p>
+                    <div id="sintesi-box-${c.id}">
+                        ${c.sintesi ? `<div class="ai-prose">${marked.parse(c.sintesi)}</div>` : `
+                            <div id="sintesi-placeholder-${c.id}" style="display:flex; flex-direction:column; gap:20px; align-items:center; text-align:center; padding:100px 0;">
+                                <div style="width:56px; height:56px; border-radius:18px; background:#F6F5F3; display:flex; align-items:center; justify-content:center; color:#DEDAD4;">
+                                    <i class="ph-bold ph-sparkle" style="font-size:28px;"></i>
+                                </div>
+                                <div>
+                                    <p style="color:#141414; font-size:15px; font-weight:700; margin:0 0 4px 0;">Analisi AI Disponibile</p>
+                                    <p style="color:#908C86; font-size:13px; margin:0; max-width: 260px;">Genera una sintesi dei punti chiave tramite il nostro motore neurale.</p>
+                                </div>
                                 <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
                                     id="btn-sintesi-${c.id}"
-                                    style="background:#141414; border:none; color:#FFF; 
-                                    padding:12px 24px; border-radius:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase;">
-                                    <i class="ph-bold ph-sparkle"></i> Genera Sintesi
+                                    class="btn-engineering"
+                                    style="padding:12px 28px;">
+                                    <i class="ph-bold ph-cpu"></i> Elabora Sintesi
                                 </button>
                             </div>
                         `}
@@ -2886,7 +2889,7 @@ function renderHome() {
                                     <span style="background: ${s.color}; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;"></span>
                                     <div style="flex: 1; min-width: 0;">
                                         <div style="font-size: 15px; font-weight: 700; color: white;">${s.name}</div>
-                                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${s.count > 0 ? `Media: ${s.media.toFixed(1)} · ${s.priority}` : 'Nessun voto'}</div>
+                                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${s.count > 0 ? `Media: ${s.media.toFixed(2)} · ${s.priority}` : 'Nessun voto'}</div>
                                     </div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 2px;">
@@ -3493,14 +3496,14 @@ window.refreshCircolari = function() {
 
 window.requestCircularSynthesis = async function(id, link) {
     const btn = document.getElementById(`btn-sintesi-${id}`);
-    const box = document.getElementById(`sintesi-placeholder-${id}`);
+    const placeholder = document.getElementById(`sintesi-placeholder-${id}`);
     if (btn) btn.style.display = 'none';
-    if (box) {
-        box.innerHTML = `
-            <div style="margin-top:10px;">
-                <p id="sintesi-progress-label-${id}" style="font-size:12px; color:var(--accent-warm); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Inizializzazione...</p>
-                <div style="width:100%; height:8px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px; border: 1px solid rgba(255,255,255,0.05);">
-                    <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent-warm), #FFD60A); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(255,159,10,0.3);"></div>
+    if (placeholder) {
+        placeholder.innerHTML = `
+            <div class="sintesi-progress-container" style="width:100%; max-width:300px; margin:0 auto; text-align:left;">
+                <span id="sintesi-progress-label-${id}" class="sintesi-progress-label">INITIALIZING_ENGINE</span>
+                <div class="sintesi-progress-bg">
+                    <div id="sintesi-progress-bar-${id}" class="sintesi-progress-fill" style="width:0%;"></div>
                 </div>
             </div>`;
     }
@@ -3508,15 +3511,15 @@ window.requestCircularSynthesis = async function(id, link) {
     const bar = document.getElementById(`sintesi-progress-bar-${id}`);
     let progress = 0;
     const stages = [
-        { limit: 25, text: "🔍 Scansione documento...", duration: 2000 },
-        { limit: 50, text: "📥 Download PDF...", duration: 3000 },
-        { limit: 75, text: "📄 Estrazione testo...", duration: 4000 },
-        { limit: 90, text: "🧠 Sintesi AI in corso...", duration: 6000 }
+        { limit: 25, text: "SCANNING_METADATA", duration: 1500 },
+        { limit: 50, text: "FETCHING_PDF_STREAM", duration: 2500 },
+        { limit: 75, text: "EXTRACTING_TEXT_LAYER", duration: 3500 },
+        { limit: 90, text: "NEURAL_SYNTHESIS_RUNNING", duration: 5000 }
     ];
     let currentStage = 0;
     const interval = setInterval(() => {
         if (progress >= 90 || !bar) { clearInterval(interval); return; }
-        progress += (90 / 150);
+        progress += (90 / 120);
         bar.style.width = progress + '%';
         if (currentStage < stages.length && progress > stages[currentStage].limit) {
             if (label) label.innerText = stages[currentStage].text;
@@ -3535,27 +3538,32 @@ window.loadCircolareSintesi = async function(id, link) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, link })
         });
-        console.log(`[Network] Sintesi Response status: ${response.status}`);
         const data = await response.json();
         if (data.success && data.sintesi) {
             const circolare = state.circolari.find(c => c.id === id);
             if (circolare) circolare.sintesi = data.sintesi;
             
-            const box = document.getElementById(`sintesi-placeholder-${id}`);
+            const box = document.getElementById(`sintesi-box-${id}`);
             if (box) {
                 box.innerHTML = `
-                    <div class="ai-prose" style="margin-top:12px; animation: fadeIn 0.4s ease-out;">
+                    <div class="ai-prose" style="animation: fadeIn 0.4s ease-out;">
                         ${marked.parse(data.sintesi)}
                     </div>`;
             }
         } else {
             const label = document.getElementById(`sintesi-progress-label-${id}`);
-            if (label) label.innerText = "❌ Sintesi fallita: " + (data.error || "Errore sconosciuto");
+            if (label) {
+                label.innerText = "ERROR: ANALYSIS_FAILED";
+                label.style.color = "var(--red)";
+            }
         }
     } catch (e) {
         console.error("Synthesis error:", e);
         const label = document.getElementById(`sintesi-progress-label-${id}`);
-        if (label) label.innerText = "❌ Errore di connessione.";
+        if (label) {
+            label.innerText = "ERROR: NETWORK_TIMEOUT";
+            label.style.color = "var(--red)";
+        }
     }
 };
 
