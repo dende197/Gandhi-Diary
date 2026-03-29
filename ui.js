@@ -341,26 +341,24 @@ window.saveArgoToSupabase = async function() {
         }
         function renderNav() {
             const h = new Date().getHours();
-            const shortName = getSafeUserName();
 
             return `
-    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
-            <div id="loading-spinner" class="spinner" style="display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.05); border-top: 2px solid var(--accent-warm); border-radius: 50%;"></div>
-        </div>
+    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 64px; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.06); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 0 32px;">
+
+          <div id="loading-spinner" class="spinner" style="display:none; position:absolute; left:32px; width:18px; height:18px; border:2px solid rgba(0,0,0,0.05); border-top:2px solid var(--accent-warm); border-radius:50%;"></div>
 
           <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
-            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
-            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' ? 'white' : 'transparent'}; color: ${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
-            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
-            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
+            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'home' ? 'white' : 'transparent'}; color:${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
+            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'planner' ? 'white' : 'transparent'}; color:${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
+            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'voti' ? 'white' : 'transparent'}; color:${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
+            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius:8px; padding:6px 16px; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; background:${state.view === 'circolari' ? 'white' : 'transparent'}; color:${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow:${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
           </div>
 
-          <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
-            <span class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim);">
-                ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
-            </span>
-          </div>
-        </div>`;
+          <span class="time-chip" style="position:absolute; right:32px; font-size:13px; font-weight:700; color:var(--text-dim); font-family:'JetBrains Mono',monospace;">
+              ${String(h).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}
+          </span>
+
+        </header>`;
         }
         function updatePlanTaskUI(taskId, isPlanned) {
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1722,7 +1720,7 @@ function renderHome() {
             if (!c) return;
 
             showModal(`
-            <div style="padding:28px; text-align: left;">
+            <div style="padding:36px 40px; text-align:left; width:min(760px, 90vw);">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
                     <div>
                         <p style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; margin-bottom:4px;">
@@ -1741,7 +1739,7 @@ function renderHome() {
                     <h3 style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#141414; font-weight:800; margin-bottom:20px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.1em;">
                         <i class="ph-bold ph-sparkle" style="color:var(--accent-warm);"></i> Sintesi AI Premium
                     </h3>
-                    <div class="sintesi-content" style="font-size:15px; color:#141414; line-height:1.7; font-weight:500;">
+                    <div class="sintesi-content" style="font-family:'Inter',-apple-system,sans-serif; font-size:15px; color:#141414; line-height:1.75;">
                         ${c.sintesi ? marked.parse(c.sintesi) : `
                             <div id="sintesi-placeholder-${c.id}">
                                 <p style="color:#908C86; font-size:14px; margin-bottom:20px; font-weight:400;">La sintesi non è stata ancora generata per questa circolare.</p>
