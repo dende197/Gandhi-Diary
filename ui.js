@@ -743,7 +743,7 @@ function renderHome() {
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
     return `
-    <div class="dashboard view" style="width: 100%; padding: 20px 28px 32px;">
+    <div class="dashboard view" style="width: 100%; padding: 80px 28px 32px;">
 
       <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
       <div style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
@@ -874,7 +874,7 @@ function renderHome() {
     function renderPlanner() {
         return `
     <div class="dashboard view" style="width: 100%;">
-        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
+        <div class="planner-content" style="padding: 80px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
                 <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Agenda & Compiti</h1>
                 
@@ -1001,7 +1001,7 @@ function renderHome() {
 
             return `
     <div class="dashboard view" style="width: 100%;">
-        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
+        <div class="planner-content" style="padding: 80px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             
             <!-- V6 HEADER -->
             <div style="margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
