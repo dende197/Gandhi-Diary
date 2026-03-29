@@ -1,11 +1,11 @@
 
 // --- AGENDA SEARCH & FILTER HELPERS ---
-window.scrollToSearch = function() {
+window.scrollToSearch = function () {
     // If we're not in the agenda view, go there first
     if (state.view !== 'planner' && state.view !== 'home_diary') {
         navigate('planner');
     }
-    
+
     // Switch to list mode if we are in calendar mode
     if (state.uiMode !== 'list') {
         switchPlannerView('list');
@@ -20,17 +20,17 @@ window.scrollToSearch = function() {
     }, 300);
 };
 
-window.handleAgendaSearch = function(event) {
+window.handleAgendaSearch = function (event) {
     state.agendaSearchQuery = event.target.value;
     refreshAgenda();
 };
 
-window.setAgendaFilter = function(subject) {
+window.setAgendaFilter = function (subject) {
     state.agendaSearchSubject = subject;
     refreshAgenda();
 };
 
-window.refreshAgenda = function() {
+window.refreshAgenda = function () {
     const list = document.getElementById('weekly-agenda-list');
     if (list) {
         list.innerHTML = renderWeeklyAgenda();
@@ -48,59 +48,62 @@ window.refreshAgenda = function() {
 };
 
 // --- UI TRANSITION HELPERS (Added by Phase 25 Mega Patch) ---
-window.switchPlannerMode = function(mode) {
-  state.plannerMode = mode;
-  document.querySelectorAll('[data-planner-mode]').forEach(btn => {
-    const isActive = btn.dataset.plannerMode === mode;
-    btn.style.background = isActive ? 'rgba(139,92,246,0.25)' : 'transparent';
-    btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.6)';
-    btn.style.border = isActive ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent';
-  });
-  const list = document.getElementById('weekly-agenda-list');
-  if (list && typeof gsap !== 'undefined') {
-    gsap.to(list, { opacity: 0, y: 4, duration: 0.12, ease: 'power2.in',
-      onComplete: () => {
-        list.innerHTML = renderWeeklyAgenda();
-        gsap.fromTo(list, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' });
-      }
+window.switchPlannerMode = function (mode) {
+    state.plannerMode = mode;
+    document.querySelectorAll('[data-planner-mode]').forEach(btn => {
+        const isActive = btn.dataset.plannerMode === mode;
+        btn.style.background = isActive ? 'rgba(139,92,246,0.25)' : 'transparent';
+        btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.6)';
+        btn.style.border = isActive ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent';
     });
-  } else {
+    const list = document.getElementById('weekly-agenda-list');
+    if (list && typeof gsap !== 'undefined') {
+        gsap.to(list, {
+            opacity: 0, y: 4, duration: 0.12, ease: 'power2.in',
+            onComplete: () => {
+                list.innerHTML = renderWeeklyAgenda();
+                gsap.fromTo(list, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' });
+            }
+        });
+    } else {
+        scheduleRender(0);
+    }
+};
+
+window.switchPlannerView = function (view) {
+    state.uiMode = view;
+    localStorage.setItem('g_diary_planner_view', view);
     scheduleRender(0);
-  }
 };
 
-window.switchPlannerView = function(view) {
-  state.uiMode = view;
-  localStorage.setItem('g_diary_planner_view', view);
-  scheduleRender(0);
-};
-
-window.navigateSubject = function(subjName) {
+window.navigateSubject = function (subjName) {
     const root = document.getElementById('app');
     const currentView = root ? root.querySelector('.view') : null;
     if (currentView && typeof gsap !== 'undefined') {
-        gsap.to(currentView, { opacity: 0, y: -8, scale: 0.99, duration: 0.15, ease: 'power2.in', onComplete: () => {
-            state.activeSubject = subjName;
-            scheduleRender(0);
-        }});
+        gsap.to(currentView, {
+            opacity: 0, y: -8, scale: 0.99, duration: 0.15, ease: 'power2.in', onComplete: () => {
+                state.activeSubject = subjName;
+                scheduleRender(0);
+            }
+        });
     } else {
         state.activeSubject = subjName;
         scheduleRender(0);
     }
 };
 
-window.closeSubject = function() {
+window.closeSubject = function () {
     state.activeSubject = null;
     scheduleRender();
 };
 // --- Google Calendar OAuth2 (Universal) ---
-window.connectGoogle = function() {
+window.connectGoogle = function () {
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
     window.location.href = `${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}&redirect=true`;
 };
 
-window.syncGoogleCalendar = async function() {
+window.syncGoogleCalendar = async function () {
     const btn = event?.currentTarget;
     const originalHtml = btn?.innerHTML || '';
     try {
@@ -111,7 +114,7 @@ window.syncGoogleCalendar = async function() {
         let password = '';
         try {
             if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
-        } catch(e) { console.warn('Decode storedPass failed'); }
+        } catch (e) { console.warn('Decode storedPass failed'); }
         const fullSession = { ...session, password };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
@@ -133,7 +136,7 @@ window.syncGoogleCalendar = async function() {
     }
 };
 
-window.disconnectGoogle = async function() {
+window.disconnectGoogle = async function () {
     try {
         const userId = window.getUserId();
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`);
@@ -146,7 +149,7 @@ window.disconnectGoogle = async function() {
     } catch (e) { showToast('Errore disconnessione Google', 'var(--red)'); }
 };
 
-window.checkGoogleStatus = async function() {
+window.checkGoogleStatus = async function () {
     try {
         const userId = window.getUserId();
         if (!userId || userId === 'guest') return;
@@ -158,7 +161,7 @@ window.checkGoogleStatus = async function() {
     } catch (e) { state.googleConnected = false; }
 };
 
-window.saveArgoToSupabase = async function() {
+window.saveArgoToSupabase = async function () {
     try {
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
         const userId = window.getUserId();
@@ -181,138 +184,138 @@ window.saveArgoToSupabase = async function() {
 };
 // ------------------------------------------------------------
 
-        function calcolaMedia(voti) {
-            if (!voti || voti.length === 0) return null;
-            const validi = voti.map(v => {
-                let s = (v.valore || v.value || "").toString().replace(',', '.');
-                return parseFloat(s);
-            }).filter(n => !isNaN(n));
+function calcolaMedia(voti) {
+    if (!voti || voti.length === 0) return null;
+    const validi = voti.map(v => {
+        let s = (v.valore || v.value || "").toString().replace(',', '.');
+        return parseFloat(s);
+    }).filter(n => !isNaN(n));
 
-            if (validi.length === 0) return null;
-            const somma = validi.reduce((a, b) => a + b, 0);
-            return (somma / validi.length).toFixed(2);
-        }
-        function isGiustifica(val) {
-            if (!val && val !== 0) return true;
-            const s = val.toString().replace(',', '.').trim();
-            return s === '' || s === '-' || s === '—' || isNaN(parseFloat(s));
-        }
-        function getMotivationalFallback() {
-            const quotes = [
-                "Un piccolo passo oggi vale più di dieci domani.",
-                "La costanza batte il talento quando il talento non è costante.",
-                "Fatto è meglio di perfetto.",
-                "Studia con calma, migliora ogni giorno.",
-                "La conoscenza è potere.",
-                "La curiosità è il motore dell'apprendimento.",
-                "Ogni errore è un passo verso la comprensione.",
-                "La disciplina è il ponte tra gli obiettivi e i risultati.",
-                "Un libro è un giardino tascabile.",
-                "Imparare senza riflettere è tempo perso."
-            ];
-            const day = new Date().getDate();
-            return quotes[day % quotes.length];
-        }
-        function getSafeUserName() {
-            const full = state?.user?.name?.trim();
-            if (!full) return "Studente";
-            const parts = full.split(/\s+/);
-            // Return only the last part (usually surname) or the first if it's single
-            return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
-        }
-        function gaugeClassForMedia(m) {
-            if (m >= 6.5) return 'gauge-good';
-            if (m >= 6.0) return 'gauge-warn';
-            return 'gauge-bad';
-        }
-        function getSpecializationFullName(spec, rawClass = '') {
-            // 🔥 HEURISTIC & PRIORITY: Estrai codici dalla classe
-            const classMatch = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|CAT|AFM|ITI)\b/);
-            const classCode = classMatch ? classMatch[1] : null;
+    if (validi.length === 0) return null;
+    const somma = validi.reduce((a, b) => a + b, 0);
+    return (somma / validi.length).toFixed(2);
+}
+function isGiustifica(val) {
+    if (!val && val !== 0) return true;
+    const s = val.toString().replace(',', '.').trim();
+    return s === '' || s === '-' || s === '—' || isNaN(parseFloat(s));
+}
+function getMotivationalFallback() {
+    const quotes = [
+        "Un piccolo passo oggi vale più di dieci domani.",
+        "La costanza batte il talento quando il talento non è costante.",
+        "Fatto è meglio di perfetto.",
+        "Studia con calma, migliora ogni giorno.",
+        "La conoscenza è potere.",
+        "La curiosità è il motore dell'apprendimento.",
+        "Ogni errore è un passo verso la comprensione.",
+        "La disciplina è il ponte tra gli obiettivi e i risultati.",
+        "Un libro è un giardino tascabile.",
+        "Imparare senza riflettere è tempo perso."
+    ];
+    const day = new Date().getDate();
+    return quotes[day % quotes.length];
+}
+function getSafeUserName() {
+    const full = state?.user?.name?.trim();
+    if (!full) return "Studente";
+    const parts = full.split(/\s+/);
+    // Return only the last part (usually surname) or the first if it's single
+    return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+}
+function gaugeClassForMedia(m) {
+    if (m >= 6.5) return 'gauge-good';
+    if (m >= 6.0) return 'gauge-warn';
+    return 'gauge-bad';
+}
+function getSpecializationFullName(spec, rawClass = '') {
+    // 🔥 HEURISTIC & PRIORITY: Estrai codici dalla classe
+    const classMatch = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|CAT|AFM|ITI)\b/);
+    const classCode = classMatch ? classMatch[1] : null;
 
-            // Se abbiamo un codice nella classe, ha la precedenza su quello del DB
-            // (perché spesso il DB è rimasto a un vecchio fallback 'SA')
-            const code = classCode || spec;
+    // Se abbiamo un codice nella classe, ha la precedenza su quello del DB
+    // (perché spesso il DB è rimasto a un vecchio fallback 'SA')
+    const code = classCode || spec;
 
-            const maps = {
-                'SA': 'Scienze Applicate',
-                'LC': 'Liceo Classico',
-                'SU': 'Scienze Umane',
-                'LL': 'Liceo Linguistico',
-                'LS': 'Liceo Scientifico',
-                'EC': 'Economico Sociale',
-                'CAT': 'Costruzioni Ambiente Territorio',
-                'AFM': 'Amministrazione Finanza Marketing',
-                'ITI': 'Istituto Tecnico Industriale'
-            };
-            return maps[code] || code || 'Indirizzo N/D';
-        }
-        function getLocalDateString(date = new Date()) {
-            const d = new Date(date);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-        function getSchoolDate() {
-            // Return a Date object normalized to Italy (UTC+1 or UTC+2)
-            const now = new Date();
-            const italyStr = now.toLocaleString("en-US", { timeZone: "Europe/Rome" });
-            return new Date(italyStr);
-        }
-        function updateOfflineBadge() {
-            if (!offlineBadge) return;
-            if (state.isOffline) {
-                console.log("⚠️ Mostro offline badge");
-                offlineBadge.classList.add('show');
-            } else {
-                offlineBadge.classList.remove('show');
-            }
-        }
-        function getModalContainer() {
-            let el = document.getElementById('modal-container');
-            if (!el) {
-                el = document.createElement('div');
-                el.id = 'modal-container';
-                document.body.appendChild(el);
-            }
-            return el;
-        }
-        function showModal(html, className = '') {
-            const container = getModalContainer();
-            if (!container) return;
-            container.innerHTML = `
+    const maps = {
+        'SA': 'Scienze Applicate',
+        'LC': 'Liceo Classico',
+        'SU': 'Scienze Umane',
+        'LL': 'Liceo Linguistico',
+        'LS': 'Liceo Scientifico',
+        'EC': 'Economico Sociale',
+        'CAT': 'Costruzioni Ambiente Territorio',
+        'AFM': 'Amministrazione Finanza Marketing',
+        'ITI': 'Istituto Tecnico Industriale'
+    };
+    return maps[code] || code || 'Indirizzo N/D';
+}
+function getLocalDateString(date = new Date()) {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+function getSchoolDate() {
+    // Return a Date object normalized to Italy (UTC+1 or UTC+2)
+    const now = new Date();
+    const italyStr = now.toLocaleString("en-US", { timeZone: "Europe/Rome" });
+    return new Date(italyStr);
+}
+function updateOfflineBadge() {
+    if (!offlineBadge) return;
+    if (state.isOffline) {
+        console.log("⚠️ Mostro offline badge");
+        offlineBadge.classList.add('show');
+    } else {
+        offlineBadge.classList.remove('show');
+    }
+}
+function getModalContainer() {
+    let el = document.getElementById('modal-container');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'modal-container';
+        document.body.appendChild(el);
+    }
+    return el;
+}
+function showModal(html, className = '') {
+    const container = getModalContainer();
+    if (!container) return;
+    container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
                 <div class="modal-content ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:90vh;overflow-y:auto;width:calc(100% - 32px);">
                     ${html}
                 </div>
             </div>
         `;
+}
+function closeModal(event) {
+    if (event) event.stopPropagation();
+    const container = document.getElementById('modal-container');
+    if (container) {
+        // Animazione uscita
+        const overlay = container.querySelector('.modal-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => { container.innerHTML = ''; }, 200);
+        } else {
+            container.innerHTML = '';
         }
-        function closeModal(event) {
-            if (event) event.stopPropagation();
-            const container = document.getElementById('modal-container');
-            if (container) {
-                // Animazione uscita
-                const overlay = container.querySelector('.modal-overlay');
-                if (overlay) {
-                    overlay.style.opacity = '0';
-                    setTimeout(() => { container.innerHTML = ''; }, 200);
-                } else {
-                    container.innerHTML = '';
-                }
-            }
-        }
-        function showToast(message, type) {
-            const existing = document.getElementById('g-toast');
-            if (existing) existing.remove();
+    }
+}
+function showToast(message, type) {
+    const existing = document.getElementById('g-toast');
+    if (existing) existing.remove();
 
-            const bgColor = type === 'warning' ? '#FF9500' : type === 'error' ? '#FF3B30' : 'var(--blue)';
-            const icon = type === 'warning' ? 'ph-warning' : type === 'error' ? 'ph-x-circle' : 'ph-check-circle';
+    const bgColor = type === 'warning' ? '#FF9500' : type === 'error' ? '#FF3B30' : 'var(--blue)';
+    const icon = type === 'warning' ? 'ph-warning' : type === 'error' ? 'ph-x-circle' : 'ph-check-circle';
 
-            const toast = document.createElement('div');
-            toast.id = 'g-toast';
-            toast.style = `
+    const toast = document.createElement('div');
+    toast.id = 'g-toast';
+    toast.style = `
                 position: fixed;
                 bottom: 160px;
                 left: 50%;
@@ -327,75 +330,75 @@ window.saveArgoToSupabase = async function() {
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
             `;
-            toast.innerHTML = `<i class="ph-bold ${icon}" style="margin-right:8px;"></i>` + message;
-            document.body.appendChild(toast);
+    toast.innerHTML = `<i class="ph-bold ${icon}" style="margin-right:8px;"></i>` + message;
+    document.body.appendChild(toast);
 
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(-50%) translateY(20px)';
-                toast.style.transition = 'all 0.4s ease-in';
-                setTimeout(() => toast.remove(), 400);
-            }, type === 'warning' ? 4000 : 1800);
-        }
-        function showBoot(text) {
-            const el = document.getElementById('boot-overlay');
-            if (!el) return;
-            if (text) {
-                const t = el.querySelector('.boot-title');
-                if (t) t.textContent = text;
-            }
-            el.style.display = 'flex';
-            el.classList.remove('hidden');
-        }
-        function hideBoot() {
-            const el = document.getElementById('boot-overlay');
-            if (el) {
-                el.classList.add('hidden');
-                setTimeout(() => { el.style.display = 'none'; }, 300);
-            }
-            // Also dismiss app-loader if still visible
-            const loader = document.getElementById('app-loader');
-            if (loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 500);
-            }
-        }
-        function normalizeClassUi(cls) {
-            if (!cls) return null;
-            const txt = String(cls).toUpperCase().trim();
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        toast.style.transition = 'all 0.4s ease-in';
+        setTimeout(() => toast.remove(), 400);
+    }, type === 'warning' ? 4000 : 1800);
+}
+function showBoot(text) {
+    const el = document.getElementById('boot-overlay');
+    if (!el) return;
+    if (text) {
+        const t = el.querySelector('.boot-title');
+        if (t) t.textContent = text;
+    }
+    el.style.display = 'flex';
+    el.classList.remove('hidden');
+}
+function hideBoot() {
+    const el = document.getElementById('boot-overlay');
+    if (el) {
+        el.classList.add('hidden');
+        setTimeout(() => { el.style.display = 'none'; }, 300);
+    }
+    // Also dismiss app-loader if still visible
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 500);
+    }
+}
+function normalizeClassUi(cls) {
+    if (!cls) return null;
+    const txt = String(cls).toUpperCase().trim();
 
-            // Estrai numero + sezione base (es. "5E")
-            const baseMatch = txt.match(/\b([1-5])\s*([A-Z]{1,2})\b/);
-            if (!baseMatch) return null;
+    // Estrai numero + sezione base (es. "5E")
+    const baseMatch = txt.match(/\b([1-5])\s*([A-Z]{1,2})\b/);
+    if (!baseMatch) return null;
 
-            const base = baseMatch[1] + baseMatch[2]; // "5E"
+    const base = baseMatch[1] + baseMatch[2]; // "5E"
 
-            // Estrai indirizzo se presente (es. "SA", "SU", "LS")
-            const indirizzoMatch = txt.match(/\(([A-Z]{2,4})\)|\b(SA|SU|LS|LC|LL|LA|LM|AFM|ITI|CAT)\b/i);
-            const indirizzo = indirizzoMatch ? (indirizzoMatch[1] || indirizzoMatch[2]).toUpperCase() : null;
+    // Estrai indirizzo se presente (es. "SA", "SU", "LS")
+    const indirizzoMatch = txt.match(/\(([A-Z]{2,4})\)|\b(SA|SU|LS|LC|LL|LA|LM|AFM|ITI|CAT)\b/i);
+    const indirizzo = indirizzoMatch ? (indirizzoMatch[1] || indirizzoMatch[2]).toUpperCase() : null;
 
-            return indirizzo ? `${base} ${indirizzo}` : base; // "5E SA" o "5E"
-        }
-        function isValidClass(cls) {
-            if (!cls) return false;
-            const s = String(cls).trim().toUpperCase();
-            return s.length >= 1 && s.length <= 20;
-        }
-        function isValidName(name) {
-            if (!name || typeof name !== 'string') return false;
-            const trimmed = name.trim();
-            if (trimmed.length < 2) return false;
-            return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
-        }
-        function renderNav() {
-            const h = new Date().getHours();
-            const shortName = getSafeUserName();
+    return indirizzo ? `${base} ${indirizzo}` : base; // "5E SA" o "5E"
+}
+function isValidClass(cls) {
+    if (!cls) return false;
+    const s = String(cls).trim().toUpperCase();
+    return s.length >= 1 && s.length <= 20;
+}
+function isValidName(name) {
+    if (!name || typeof name !== 'string') return false;
+    const trimmed = name.trim();
+    if (trimmed.length < 2) return false;
+    return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
+}
+function renderNav() {
+    const h = new Date().getHours();
+    const shortName = getSafeUserName();
 
-            return `
+    return `
         <!-- ── TOPBAR V6 ──────────────────────────────────────────── -->
         <div class="topbar" style="background: var(--bg-body); border-bottom: 1px solid var(--border-light); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(20px);">
           
-          <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;">G-Connect</div>
+          <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;"></div>
 
           <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
             <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
@@ -410,177 +413,177 @@ window.saveArgoToSupabase = async function() {
             </span>
           </div>
         </div>`;
+}
+function updatePlanTaskUI(taskId, isPlanned) {
+    const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (!taskElement) return;
+
+    const checkbox = taskElement.querySelector('.plan-checkbox, [data-plan-checkbox]');
+    const container = taskElement;
+
+    if (checkbox) {
+        if (isPlanned) {
+            checkbox.style.background = 'var(--green, #30D158)';
+            checkbox.style.borderColor = 'var(--green, #30D158)';
+            checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>';
+        } else {
+            checkbox.style.background = 'transparent';
+            checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
+            checkbox.innerHTML = '';
         }
-        function updatePlanTaskUI(taskId, isPlanned) {
-            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-            if (!taskElement) return;
 
-            const checkbox = taskElement.querySelector('.plan-checkbox, [data-plan-checkbox]');
-            const container = taskElement;
+        checkbox.style.transform = 'scale(0.85) translateZ(0)';
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                checkbox.style.transform = 'scale(1) translateZ(0)';
+            }, 50);
+        });
+    }
 
-            if (checkbox) {
-                if (isPlanned) {
-                    checkbox.style.background = 'var(--green, #30D158)';
-                    checkbox.style.borderColor = 'var(--green, #30D158)';
-                    checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>';
-                } else {
-                    checkbox.style.background = 'transparent';
-                    checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
-                    checkbox.innerHTML = '';
-                }
+    if (container) {
+        container.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        container.style.borderLeftColor = isPlanned ? 'var(--green, #30D158)' : 'rgba(255,255,255,0.05)';
+        container.style.background = isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)';
+    }
+}
+function updatePlannerCounter() {
+    // Function retired: replaced numeric badge with static green '+'
+}
+function updateHomeView() {
+    if (state.view !== 'home') return;
 
-                checkbox.style.transform = 'scale(0.85) translateZ(0)';
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        checkbox.style.transform = 'scale(1) translateZ(0)';
-                    }, 50);
-                });
+    const domaniCard = document.getElementById('domani-task-list');
+    if (domaniCard) {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = getLocalDateString(tomorrow);
+        const tomorrowTasks = (state.tasks || []).filter(t => {
+            if (t.id && t.id.startsWith('ai_')) return false;
+            if (t.subject === 'QUEST') return false;
+            const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
+            return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
+        });
+
+        tomorrowTasks.forEach(t => {
+            const cb = domaniCard.querySelector(`[data-task-toggle="${t.id}"]`);
+            const txt = domaniCard.querySelector(`[data-task-text="${t.id}"]`);
+            if (cb) {
+                cb.style.background = t.done ? '#141414' : '#fff';
+                cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
+                cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
             }
-
-            if (container) {
-                container.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-                container.style.borderLeftColor = isPlanned ? 'var(--green, #30D158)' : 'rgba(255,255,255,0.05)';
-                container.style.background = isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)';
+            if (txt) {
+                txt.style.textDecoration = t.done ? 'line-through' : 'none';
+                txt.style.color = t.done ? '#C8C4BE' : '#141414';
             }
-        }
-        function updatePlannerCounter() {
-            // Function retired: replaced numeric badge with static green '+'
-        }
-        function updateHomeView() {
-            if (state.view !== 'home') return;
+        });
+    }
 
-            const domaniCard = document.getElementById('domani-task-list');
-            if (domaniCard) {
-                const today = new Date();
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const tomorrowStr = getLocalDateString(tomorrow);
-                const tomorrowTasks = (state.tasks || []).filter(t => {
-                    if (t.id && t.id.startsWith('ai_')) return false;
-                    if (t.subject === 'QUEST') return false;
-                    const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
-                    return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
-                });
-
-                tomorrowTasks.forEach(t => {
-                    const cb = domaniCard.querySelector(`[data-task-toggle="${t.id}"]`);
-                    const txt = domaniCard.querySelector(`[data-task-text="${t.id}"]`);
-                    if (cb) {
-                        cb.style.background = t.done ? '#141414' : '#fff';
-                        cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
-                        cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
-                    }
-                    if (txt) {
-                        txt.style.textDecoration = t.done ? 'line-through' : 'none';
-                        txt.style.color = t.done ? '#C8C4BE' : '#141414';
-                    }
-                });
-            }
-
-            updatePlannerCounter();
-        }
-        function buildCalendarEventsFromState() {
-            return (state.tasks || [])
-                .filter(t => t.due_date && t.hasValidDate)
-                .map(t => {
-                    const color = getSubjectColor(t.subject || 'Generico');
-                    // 🚀 SENIOR FIX: Truncate subject to 4 chars for extreme legibility
-                    const sub = (t.subject || 'GEN').substring(0, 4).toUpperCase();
-                    return {
-                        title: `${sub}: ${t.text}`,
-                        start: t.due_date,
-                        color: t.done ? '#30D158' : color,
-                        textColor: '#fff',
-                        extendedProps: { fullText: t.text, subject: t.subject }
-                    };
-                });
-        }
-        function getSubjectAbbrev(subject) {
-            if (!subject) return 'GEN';
-            let cleanSubj = subject.replace(/[*_\[\]]/g, '').trim();
-            if (!cleanSubj) return 'GEN';
-
-            const abbrevs = {
-                'ITALIANO': 'ITA', 'MATEMATICA': 'MAT', 'INGLESSE': 'ING', 'INGLESE': 'ING',
-                'STORIA': 'STO', 'GEOGRAFIA': 'GEO', 'FILOSOFIA': 'FIL',
-                'FISICA': 'FIS', 'SCIENZE': 'SCI', 'BIOLOGIA': 'BIO',
-                'CHIMICA': 'CHI', 'ARTE': 'ART', 'DISEGNO': 'DIS',
-                'RELIGIONE': 'REL', 'EDUCAZIONE FISICA': 'SCM', 'SCIENZE MOTORIE': 'SCM', 'INFORMATICA': 'INF',
-                'DIRITTO': 'DIR', 'ECONOMIA': 'ECO', 'FRANCESE': 'FRA', 'TEDESCO': 'TED', 'SPAGNOLO': 'SPA',
-                'FILOSOFIA E STORIA': 'STO', 'MATEMATICA E FISICA': 'MAT', 'SCIENZE NATURALI': 'SCI',
-                'LINGUA E LETTERATURA ITALIANA': 'ITA', 'LINGUA E CULTURA LATINA': 'LAT',
-                // DidUp long-form names
-                'LINGUA E LETT. ITALIANA': 'ITA', 'LINGUA E LETTER. ITALIANA': 'ITA',
-                'LINGUA E CULTURA STRANIERA': 'ING', 'LINGUA STRANIERA': 'ING',
-                'MATEM. CON INFORMATICA': 'MAT', 'MATEMATICA CON INFORMATICA': 'MAT',
-                'SCIENZE NAT. CHIM. BIO.': 'SCI', 'SC. NATURALI': 'SCI',
-                'DISEGNO E STORIA DELL\'ARTE': 'ART', 'STORIA DELL\'ARTE': 'ART',
-                'SCIENZE MOTORIE E SPORTIVE': 'SCM', 'SC. MOTORIE E SPORTIVE': 'SCM',
-                'GRECO': 'GRC', 'LATINO': 'LAT', 'LINGUA E CULTURA GRECA': 'GRC',
-                'GEOSTORIA': 'STO', 'STORIA E GEOGRAFIA': 'STO',
-                'IRC': 'REL', 'ED.CIVICA': 'CIV', 'EDUCAZIONE CIVICA': 'CIV'
+    updatePlannerCounter();
+}
+function buildCalendarEventsFromState() {
+    return (state.tasks || [])
+        .filter(t => t.due_date && t.hasValidDate)
+        .map(t => {
+            const color = getSubjectColor(t.subject || 'Generico');
+            // 🚀 SENIOR FIX: Truncate subject to 4 chars for extreme legibility
+            const sub = (t.subject || 'GEN').substring(0, 4).toUpperCase();
+            return {
+                title: `${sub}: ${t.text}`,
+                start: t.due_date,
+                color: t.done ? '#30D158' : color,
+                textColor: '#fff',
+                extendedProps: { fullText: t.text, subject: t.subject }
             };
-            const key = cleanSubj.toUpperCase().trim();
-            console.log(`[Debug] Matching subject: "${key}"`);
-            
-            if (abbrevs[key]) return abbrevs[key];
-            for (let [full, short] of Object.entries(abbrevs)) {
-                if (key.includes(full)) {
-                    console.log(`[Debug] Partial match: "${full}" -> ${short}`);
-                    return short;
-                }
-            }
-            // Fallback smart
-            if (key.includes('MATEM')) return 'MAT';
-            if (key.includes('FISIC')) return 'FIS';
-            if (key.includes('ITALIA')) return 'ITA';
-            if (key.includes('INGLE')) return 'ING';
-            if (key.includes('LATIN')) return 'LAT';
-            if (key.includes('GREC')) return 'GRC';
-            if (key.includes('FILOS')) return 'FIL';
-            if (key.includes('STORI')) return 'STO';
-            if (key.includes('SCIEN')) return 'SCI';
-            if (key.includes('DISEG')) return 'DIS';
-            if (key.includes('RELIG')) return 'REL';
-            if (key.includes('FRANC')) return 'FRA';
-            if (key.includes('TEDES')) return 'TED';
-            if (key.includes('SPAGN')) return 'SPA';
-            if (key.includes('INFOR')) return 'INF';
-            if (key.includes('CHIMI')) return 'CHI';
+        });
+}
+function getSubjectAbbrev(subject) {
+    if (!subject) return 'GEN';
+    let cleanSubj = subject.replace(/[*_\[\]]/g, '').trim();
+    if (!cleanSubj) return 'GEN';
 
-            console.warn(`[Debug] No match for: "${key}", using fallback.`);
-            return key.substring(0, 3).toUpperCase();
+    const abbrevs = {
+        'ITALIANO': 'ITA', 'MATEMATICA': 'MAT', 'INGLESSE': 'ING', 'INGLESE': 'ING',
+        'STORIA': 'STO', 'GEOGRAFIA': 'GEO', 'FILOSOFIA': 'FIL',
+        'FISICA': 'FIS', 'SCIENZE': 'SCI', 'BIOLOGIA': 'BIO',
+        'CHIMICA': 'CHI', 'ARTE': 'ART', 'DISEGNO': 'DIS',
+        'RELIGIONE': 'REL', 'EDUCAZIONE FISICA': 'SCM', 'SCIENZE MOTORIE': 'SCM', 'INFORMATICA': 'INF',
+        'DIRITTO': 'DIR', 'ECONOMIA': 'ECO', 'FRANCESE': 'FRA', 'TEDESCO': 'TED', 'SPAGNOLO': 'SPA',
+        'FILOSOFIA E STORIA': 'STO', 'MATEMATICA E FISICA': 'MAT', 'SCIENZE NATURALI': 'SCI',
+        'LINGUA E LETTERATURA ITALIANA': 'ITA', 'LINGUA E CULTURA LATINA': 'LAT',
+        // DidUp long-form names
+        'LINGUA E LETT. ITALIANA': 'ITA', 'LINGUA E LETTER. ITALIANA': 'ITA',
+        'LINGUA E CULTURA STRANIERA': 'ING', 'LINGUA STRANIERA': 'ING',
+        'MATEM. CON INFORMATICA': 'MAT', 'MATEMATICA CON INFORMATICA': 'MAT',
+        'SCIENZE NAT. CHIM. BIO.': 'SCI', 'SC. NATURALI': 'SCI',
+        'DISEGNO E STORIA DELL\'ARTE': 'ART', 'STORIA DELL\'ARTE': 'ART',
+        'SCIENZE MOTORIE E SPORTIVE': 'SCM', 'SC. MOTORIE E SPORTIVE': 'SCM',
+        'GRECO': 'GRC', 'LATINO': 'LAT', 'LINGUA E CULTURA GRECA': 'GRC',
+        'GEOSTORIA': 'STO', 'STORIA E GEOGRAFIA': 'STO',
+        'IRC': 'REL', 'ED.CIVICA': 'CIV', 'EDUCAZIONE CIVICA': 'CIV'
+    };
+    const key = cleanSubj.toUpperCase().trim();
+    console.log(`[Debug] Matching subject: "${key}"`);
+
+    if (abbrevs[key]) return abbrevs[key];
+    for (let [full, short] of Object.entries(abbrevs)) {
+        if (key.includes(full)) {
+            console.log(`[Debug] Partial match: "${full}" -> ${short}`);
+            return short;
         }
-        function initPlannerCalendar() {
-            renderCustomCalendar();
-        }
-        function syncCalendarEvents() {
-            renderCustomCalendar();
-        }
-        function renderCustomCalendar() {
-            const calendarEl = document.getElementById('calendar');
-            if (!calendarEl) return;
+    }
+    // Fallback smart
+    if (key.includes('MATEM')) return 'MAT';
+    if (key.includes('FISIC')) return 'FIS';
+    if (key.includes('ITALIA')) return 'ITA';
+    if (key.includes('INGLE')) return 'ING';
+    if (key.includes('LATIN')) return 'LAT';
+    if (key.includes('GREC')) return 'GRC';
+    if (key.includes('FILOS')) return 'FIL';
+    if (key.includes('STORI')) return 'STO';
+    if (key.includes('SCIEN')) return 'SCI';
+    if (key.includes('DISEG')) return 'DIS';
+    if (key.includes('RELIG')) return 'REL';
+    if (key.includes('FRANC')) return 'FRA';
+    if (key.includes('TEDES')) return 'TED';
+    if (key.includes('SPAGN')) return 'SPA';
+    if (key.includes('INFOR')) return 'INF';
+    if (key.includes('CHIMI')) return 'CHI';
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+    console.warn(`[Debug] No match for: "${key}", using fallback.`);
+    return key.substring(0, 3).toUpperCase();
+}
+function initPlannerCalendar() {
+    renderCustomCalendar();
+}
+function syncCalendarEvents() {
+    renderCustomCalendar();
+}
+function renderCustomCalendar() {
+    const calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
 
-            // Calcola il lunedì della settimana corrente
-            const d = today.getDay();
-            const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
-            const startOfCurrentWeek = new Date(new Date(today).setDate(diffToMonday));
-            startOfCurrentWeek.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            // Data di inizio basata sull'offset (settimane)
-            const startDate = new Date(startOfCurrentWeek);
-            startDate.setDate(startOfCurrentWeek.getDate() + (calendarState.weekOffset * 7));
+    // Calcola il lunedì della settimana corrente
+    const d = today.getDay();
+    const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
+    const startOfCurrentWeek = new Date(new Date(today).setDate(diffToMonday));
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
 
-            const endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 13);
+    // Data di inizio basata sull'offset (settimane)
+    const startDate = new Date(startOfCurrentWeek);
+    startDate.setDate(startOfCurrentWeek.getDate() + (calendarState.weekOffset * 7));
 
-            const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
-            const weekLabel = `Settimana ${startDate.getDate()} ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} ${monthNames[endDate.getMonth()]}`;
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 13);
 
-            let html = `
+    const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+    const weekLabel = `Settimana ${startDate.getDate()} ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} ${monthNames[endDate.getMonth()]}`;
+
+    let html = `
                 <div class="custom-calendar">
                     <div class="calendar-header">
                         <div class="calendar-title">${weekLabel}</div>
@@ -601,25 +604,25 @@ window.saveArgoToSupabase = async function() {
                     <div class="calendar-days">
             `;
 
-            const todayISO = getLocalDateString(today);
+    const todayISO = getLocalDateString(today);
 
-            const tempDate = new Date(startDate);
-            for (let i = 0; i < 14; i++) {
-                const dateStr = getLocalDateString(tempDate);
-                const isToday = dateStr === todayISO;
-                const isPast = tempDate < today && !isToday;
+    const tempDate = new Date(startDate);
+    for (let i = 0; i < 14; i++) {
+        const dateStr = getLocalDateString(tempDate);
+        const isToday = dateStr === todayISO;
+        const isPast = tempDate < today && !isToday;
 
-                let dayTasks = [];
-                if (state.plannerMode === 'registro') {
-                    // Badge based on DUE DATE - Show all except AI and manual quests
-                    dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
-                } else {
-                    // Badge based on PLANNED DATE
-                    const plannedIds = state.plannedTasks[dateStr] || [];
-                    dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id));
-                }
+        let dayTasks = [];
+        if (state.plannerMode === 'registro') {
+            // Badge based on DUE DATE - Show all except AI and manual quests
+            dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
+        } else {
+            // Badge based on PLANNED DATE
+            const plannedIds = state.plannedTasks[dateStr] || [];
+            dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id));
+        }
 
-                html += `
+        html += `
                     <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
                          onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
@@ -628,40 +631,40 @@ window.saveArgoToSupabase = async function() {
                         </div>
                         <div class="day-events">
                             ${dayTasks.slice(0, 3).map(t => {
-                    const color = getSubjectColor(t.subject);
-                    const abbrev = getSubjectAbbrev(t.subject);
-                    return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
-                }).join('')}
+            const color = getSubjectColor(t.subject);
+            const abbrev = getSubjectAbbrev(t.subject);
+            return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
+        }).join('')}
                             ${dayTasks.length > 3 ? `<div class="more-events">+${dayTasks.length - 3}</div>` : ''}
                        </div>
                    </div>
                 `;
-                tempDate.setDate(tempDate.getDate() + 1);
-            }
+        tempDate.setDate(tempDate.getDate() + 1);
+    }
 
-            html += `</div></div>`;
-            calendarEl.innerHTML = html;
-        }
-        function navigateCalendar(dir) {
-            calendarState.weekOffset += dir;
-            renderCustomCalendar();
-        }
-        function handleDayClick(dateStr) {
-            if (typeof renderDayDetailModal === 'function') {
-                renderDayDetailModal(dateStr);
-            }
-        }
-        function renderLogin() {
-            const savedSession = sessionManager.load();
-            const hasSession = savedSession && sessionManager.isLoggedIn();
+    html += `</div></div>`;
+    calendarEl.innerHTML = html;
+}
+function navigateCalendar(dir) {
+    calendarState.weekOffset += dir;
+    renderCustomCalendar();
+}
+function handleDayClick(dateStr) {
+    if (typeof renderDayDetailModal === 'function') {
+        renderDayDetailModal(dateStr);
+    }
+}
+function renderLogin() {
+    const savedSession = sessionManager.load();
+    const hasSession = savedSession && sessionManager.isLoggedIn();
 
-            return `
+    return `
         <div class="view" style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;">
             <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--accent), var(--blue)); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 16px var(--accent-glow);">
                 <i class="ph-fill ph-student" style="font-size: 40px; color: white;"></i>
             </div>
             
-            <h1 style="font-size: 32px; font-weight: 800; margin: 0;">G-Connect</h1>
+            <h1 style="font-size: 32px; font-weight: 800; margin: 0;"></h1>
             <p style="color: var(--text-secondary); font-size: 16px; margin: 8px 0 40px 0; max-width: 280px;">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
             
             <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 16px;">
@@ -680,7 +683,7 @@ window.saveArgoToSupabase = async function() {
                 ` : ''}
             </div>
         </div>`;
-        }
+}
 
 // ================================================================
 // G-CONNECT — renderHome() PATCH v6
@@ -688,7 +691,7 @@ window.saveArgoToSupabase = async function() {
 
 function renderHome() {
     const todayStr = getLocalDateString();
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
 
     // Media
     const mediaStr = calcolaMedia(state.voti) || '0';
@@ -696,7 +699,7 @@ function renderHome() {
 
     // Greeting
     const h = new Date().getHours();
-    const days = ['Domenica','Lun\xecdì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+    const days = ['Domenica', 'Lun\xecdì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
     const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
     const greeting = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 17 ? 'Buon pomeriggio' : 'Buona sera';
     const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
@@ -721,7 +724,7 @@ function renderHome() {
     const manualExams = (state.manualVerifiche || [])
         .filter(v => !v.done && v.date && v.date >= todayISO)
         .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
-    
+
     const combined = [...allVerifiche, ...manualExams];
     const seen = new Set();
     const allUpcoming = combined.filter(v => {
@@ -729,8 +732,8 @@ function renderHome() {
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
-    }).sort((a,b) => a.data.localeCompare(b.data));
-    
+    }).sort((a, b) => a.data.localeCompare(b.data));
+
     // Carousel index
     if (typeof window._verificheIdx === 'undefined') window._verificheIdx = 0;
     if (window._verificheIdx >= allUpcoming.length) window._verificheIdx = 0;
@@ -825,7 +828,7 @@ function renderHome() {
           </div>
           <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
           <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
-          <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5,100 - daysToExam*8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
+          <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5, 100 - daysToExam * 8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
         </div>
  
       </div>
@@ -837,9 +840,9 @@ function renderHome() {
           <div>
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
             <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(2) : '—'}</div>
-            <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti||[]).length}</div>
+            <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti || []).length}</div>
           </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
+          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (media / 10) * 100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
         </div>
 
         <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
@@ -872,15 +875,15 @@ function renderHome() {
           <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 18px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
             <div style="display:flex; flex-direction:column;">
             ${recentGrades.length ? recentGrades.slice(0, 6).map(v => {
-                  const subContent = v.materia || v.subject || 'N/A';
-                  const abbr = getSubjectAbbrev(subContent);
-                  const key = abbr.toLowerCase();
-                  const rawVal = v.valore || v.value || '';
-                  const giu = isGiustifica(rawVal);
-                  const val = giu ? 0 : parseFloat(rawVal);
-                  const valStr = giu ? 'GIU' : rawVal.toString();
-                  const pct = giu ? 0 : Math.min(100, (val / 10) * 100);
-                  return `
+        const subContent = v.materia || v.subject || 'N/A';
+        const abbr = getSubjectAbbrev(subContent);
+        const key = abbr.toLowerCase();
+        const rawVal = v.valore || v.value || '';
+        const giu = isGiustifica(rawVal);
+        const val = giu ? 0 : parseFloat(rawVal);
+        const valStr = giu ? 'GIU' : rawVal.toString();
+        const pct = giu ? 0 : Math.min(100, (val / 10) * 100);
+        return `
               <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; flex-shrink:0; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
                 <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
@@ -888,7 +891,7 @@ function renderHome() {
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:${giu ? '9' : '12.5'}px; font-weight:500; width:${giu ? '30' : '26'}px; text-align:right; color:${giu ? '#BCB8B2' : `var(--${key}-t,#333)`};">${valStr}</span>
               </div>`;
-                }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
+    }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
             ${recentGrades.length ? `
             <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
@@ -906,18 +909,18 @@ function renderHome() {
           </div>
           <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
             ${tomorrowTasks.length ? tomorrowTasks.map(t => {
-              const abbr = getSubjectAbbrev(t.subject);
-              const key = abbr.toLowerCase();
-              return `
+        const abbr = getSubjectAbbrev(t.subject);
+        const key = abbr.toLowerCase();
+        return `
               <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
                 <div data-task-toggle="${t.id}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
                 <span data-task-text="${t.id}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2,'0') + ':00' : ''}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2, '0') + ':00' : ''}</span>
               </div>`;
-            }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito per domani.</div>'}
+    }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito per domani.</div>'}
           </div>
         </div>
 
@@ -925,8 +928,8 @@ function renderHome() {
     </div>`;
 }
 
-    function renderPlanner() {
-        return `
+function renderPlanner() {
+    return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
@@ -962,20 +965,20 @@ function renderHome() {
         </div> 
     </div>
     ${state.uiMode === 'calendar' ? `<script>setTimeout(() => { if(typeof renderCustomCalendar === 'function') renderCustomCalendar(); }, 100);</script>` : ''}`;
-        }
-        function formatFullDate(dateInput) {
-            if (!dateInput) return '';
-            const date = new Date(dateInput);
-            if (isNaN(date.getTime())) return '';
-            const months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-            const day = date.getDate();
-            const month = months[date.getMonth()];
-            const year = date.getFullYear();
-            const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-            return `${day} ${month} ${year} • ${time} `;
-        }
-        function renderProfile() {
-            return `
+}
+function formatFullDate(dateInput) {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '';
+    const months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    return `${day} ${month} ${year} • ${time} `;
+}
+function renderProfile() {
+    return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
             <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
@@ -1035,28 +1038,28 @@ function renderHome() {
                 </button>
             </div>
         </div> `;
-        }
-        function renderGradesView() {
-            if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
+}
+function renderGradesView() {
+    if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
-            const votiData = getVotiData();
-            const media = parseFloat(calcolaMedia(votiData)) || 0;
-            const goal = state.goals?.overall || 8.0;
+    const votiData = getVotiData();
+    const media = parseFloat(calcolaMedia(votiData)) || 0;
+    const goal = state.goals?.overall || 8.0;
 
-            const subjectsMap = {};
-            votiData.forEach(v => {
-                const sub = v.materia || v.subject || 'Altro';
-                if (!subjectsMap[sub]) subjectsMap[sub] = [];
-                subjectsMap[sub].push(v);
-            });
+    const subjectsMap = {};
+    votiData.forEach(v => {
+        const sub = v.materia || v.subject || 'Altro';
+        if (!subjectsMap[sub]) subjectsMap[sub] = [];
+        subjectsMap[sub].push(v);
+    });
 
-            const subjects = Object.entries(subjectsMap).map(([name, list]) => {
-                const subMedia = parseFloat(calcolaMedia(list)) || 0;
-                const trend = list.slice(-5).map(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')));
-                return { name, media: subMedia, count: list.length, trend };
-            }).sort((a, b) => b.media - a.media);
+    const subjects = Object.entries(subjectsMap).map(([name, list]) => {
+        const subMedia = parseFloat(calcolaMedia(list)) || 0;
+        const trend = list.slice(-5).map(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')));
+        return { name, media: subMedia, count: list.length, trend };
+    }).sort((a, b) => b.media - a.media);
 
-            return `
+    return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             
@@ -1066,44 +1069,44 @@ function renderHome() {
             </div>
 
             ${(() => {
-                const count = votiData.length;
-                const currentSum = count * media;
+            const count = votiData.length;
+            const currentSum = count * media;
 
-                // Calcola scenari: quanti voti di X servono per raggiungere goal
-                const buildScenarios = () => {
-                    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
-                    const deficit = goal * count - currentSum;
-                    const results = [];
-                    for (const g of grades) {
-                        if (g <= goal) continue; // voto <= obiettivo: matematicamente impossibile
-                        const n = Math.ceil(deficit / (g - goal));
-                        if (n < 1 || n > 100) continue; // Alzato limite a 100 per coprire casi difficili
-                        results.push({ grade: g, n });
-                        if (results.length === 3) break;
+            // Calcola scenari: quanti voti di X servono per raggiungere goal
+            const buildScenarios = () => {
+                const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+                const deficit = goal * count - currentSum;
+                const results = [];
+                for (const g of grades) {
+                    if (g <= goal) continue; // voto <= obiettivo: matematicamente impossibile
+                    const n = Math.ceil(deficit / (g - goal));
+                    if (n < 1 || n > 100) continue; // Alzato limite a 100 per coprire casi difficili
+                    results.push({ grade: g, n });
+                    if (results.length === 3) break;
+                }
+                // Se nessuno scenario con voti normali funziona, mostra il minimo teorico
+                if (results.length === 0) {
+                    const minNeeded = (goal * (count + 1)) - currentSum;
+                    if (minNeeded <= 10) {
+                        results.push({ grade: Math.ceil(minNeeded * 10) / 10, n: 1, exact: true });
                     }
-                    // Se nessuno scenario con voti normali funziona, mostra il minimo teorico
-                    if (results.length === 0) {
-                        const minNeeded = (goal * (count + 1)) - currentSum;
-                        if (minNeeded <= 10) {
-                            results.push({ grade: Math.ceil(minNeeded * 10) / 10, n: 1, exact: true });
-                        }
-                    }
-                    return results;
-                };
+                }
+                return results;
+            };
 
-                const alreadyDone = media >= goal;
-                const scenarios = alreadyDone ? [] : buildScenarios();
-                const gap = goal - media;
+            const alreadyDone = media >= goal;
+            const scenarios = alreadyDone ? [] : buildScenarios();
+            const gap = goal - media;
 
-                let statusLine = '';
-                let scenariosHtml = '';
+            let statusLine = '';
+            let scenariosHtml = '';
 
-                if (alreadyDone) {
-                    statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
-                } else {
-                    statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
-                    if (scenarios.length > 0) {
-                        scenariosHtml = scenarios.map(s => `
+            if (alreadyDone) {
+                statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
+            } else {
+                statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
+                if (scenarios.length > 0) {
+                    scenariosHtml = scenarios.map(s => `
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.06); border-radius:10px; margin-top:6px;">
                                 <div style="display:flex; flex-direction:column; gap:2px;">
                                     <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">
@@ -1115,14 +1118,14 @@ function renderHome() {
                                     ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
                                 </span>
                             </div>`).join('');
-                    } else {
-                        // Se goal è > 10 o irraggiungibile anche con cento 10
-                        const isImpossible = goal > 10 || (count > 0 && (count*10 + currentSum)/(count+100) < goal);
-                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
-                    }
+                } else {
+                    // Se goal è > 10 o irraggiungibile anche con cento 10
+                    const isImpossible = goal > 10 || (count > 0 && (count * 10 + currentSum) / (count + 100) < goal);
+                    scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
                 }
+            }
 
-                return `
+            return `
                 <div class="card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:40px; border-radius:18px; padding:24px; display:flex; align-items:flex-start; gap:24px; background:#121214; box-shadow:0 10px 30px rgba(0,0,0,0.15); transition:transform 0.2s;">
                     <div style="display:flex; gap:14px; align-items:flex-start; flex-shrink:0;">
                         <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:22px; color:white; flex-shrink:0;">
@@ -1143,7 +1146,7 @@ function renderHome() {
                     </div>` : ''}
                 </div>
                 `;
-            })()}
+        })()}
 
             <div style="margin-bottom: 24px;">
                 <h2 style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px;">
@@ -1155,12 +1158,12 @@ function renderHome() {
 
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                 ${subjects.map(s => {
-                const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
-                const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
-                const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
-                const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
-                
-                return `
+            const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
+            const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
+            const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
+            const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
+
+            return `
                     <div class="card" style="padding: 24px; border-radius: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 20px;" onclick="state.activeSubject='${s.name.replace(/'/g, "\\'")}'; render();" >
                         <div style="width: 52px; height: 52px; border-radius: 14px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 14px; flex-shrink: 0;">
                             ${getSubjectAbbrev(s.name)}
@@ -1176,15 +1179,15 @@ function renderHome() {
                             </div>
                         </div>
                     </div > `;
-            }).join('')}
+        }).join('')}
             </div>
         </div> 
     </div>`;
-        }
-        function renderAIAssistantView() {
-            const chat = state.aiChatHistory || [];
+}
+function renderAIAssistantView() {
+    const chat = state.aiChatHistory || [];
 
-            return `
+    return `
         <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
@@ -1252,11 +1255,11 @@ function renderHome() {
                 </div>
             </div>
         </div>`;
-        }
-        function renderAcademicProfile() {
-            const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
+}
+function renderAcademicProfile() {
+    const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
-            return `
+    return `
             <div class="view">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Profilo Accademico</h1>
@@ -1286,284 +1289,284 @@ function renderHome() {
                     <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Seleziona le materie in cui hai più difficoltà.</p>
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
                         ${subjects.length > 0 ? subjects.map(s => {
-                const active = state.difficulty.includes(s);
-                const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
-            }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
+        const active = state.difficulty.includes(s);
+        const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
+    }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
                    </div>
                </div>
            </div>`;
+}
+function renderMediaGauge(target = 0) {
+    const canvas = document.getElementById('mediaGaugeCanvas');
+    const valueEl = document.getElementById('mediaValue');
+    if (!canvas || !valueEl) return;
+
+    const { ctx, rect } = setupCanvas(canvas);
+    const W = rect.width, H = rect.height;
+    const cx = W / 2, cy = H * 0.95;
+    const radius = Math.min(W, H * 2) / 2.3;
+    const start = Math.PI;
+    const endMax = 2 * Math.PI;
+    const lineW = 12;
+
+    if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
+
+    function arcGradient(val) {
+        const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
+        if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
+        else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
+        else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
+        return g;
+    }
+
+    function drawFrame(currentVal) {
+        ctx.clearRect(0, 0, W, H);
+        ctx.lineWidth = lineW;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
+
+        const progress = (currentVal / 10);
+        const end = start + progress * Math.PI;
+        ctx.strokeStyle = arcGradient(currentVal);
+        ctx.shadowColor = 'rgba(0,0,0,0.15)';
+        ctx.shadowBlur = 4;
+        ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
+
+        const knobX = cx + radius * Math.cos(end);
+        const knobY = cy + radius * Math.sin(end);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 6;
+        ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
+
+        valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
+        valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
+    }
+
+    // Se siamo già a target, disegna frame fisso e stop
+    if (state.__mediaGauge.target === target && Math.abs(state.__mediaGauge.current - target) < 0.005) {
+        state.__mediaGauge.current = target;
+        drawFrame(target);
+        if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
+        __mediaGaugeRAF = null;
+        return;
+    }
+
+    state.__mediaGauge.target = target;
+    if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
+
+    function animate() {
+        if (!document.getElementById('mediaGaugeCanvas')) {
+            __mediaGaugeRAF = null;
+            return;
         }
-        function renderMediaGauge(target = 0) {
-            const canvas = document.getElementById('mediaGaugeCanvas');
-            const valueEl = document.getElementById('mediaValue');
-            if (!canvas || !valueEl) return;
-
-            const { ctx, rect } = setupCanvas(canvas);
-            const W = rect.width, H = rect.height;
-            const cx = W / 2, cy = H * 0.95;
-            const radius = Math.min(W, H * 2) / 2.3;
-            const start = Math.PI;
-            const endMax = 2 * Math.PI;
-            const lineW = 12;
-
-            if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
-
-            function arcGradient(val) {
-                const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-                if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
-                else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
-                else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
-                return g;
-            }
-
-            function drawFrame(currentVal) {
-                ctx.clearRect(0, 0, W, H);
-                ctx.lineWidth = lineW;
-                ctx.lineCap = 'round';
-                ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-                ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
-
-                const progress = (currentVal / 10);
-                const end = start + progress * Math.PI;
-                ctx.strokeStyle = arcGradient(currentVal);
-                ctx.shadowColor = 'rgba(0,0,0,0.15)';
-                ctx.shadowBlur = 4;
-                ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
-
-                const knobX = cx + radius * Math.cos(end);
-                const knobY = cy + radius * Math.sin(end);
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 6;
-                ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
-
-                valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
-                valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
-            }
-
-            // Se siamo già a target, disegna frame fisso e stop
-            if (state.__mediaGauge.target === target && Math.abs(state.__mediaGauge.current - target) < 0.005) {
-                state.__mediaGauge.current = target;
-                drawFrame(target);
-                if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
-                __mediaGaugeRAF = null;
-                return;
-            }
-
-            state.__mediaGauge.target = target;
-            if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
-
-            function animate() {
-                if (!document.getElementById('mediaGaugeCanvas')) {
-                    __mediaGaugeRAF = null;
-                    return;
-                }
-                const diff = target - state.__mediaGauge.current;
-                if (Math.abs(diff) < 0.005) {
-                    state.__mediaGauge.current = target;
-                    drawFrame(target);
-                    __mediaGaugeRAF = null;
-                    saveTasks(); // Persisti lo stato finale
-                    return;
-                }
-                state.__mediaGauge.current += diff * 0.08;
-                drawFrame(state.__mediaGauge.current);
-                __mediaGaugeRAF = requestAnimationFrame(animate);
-            }
-
-            // Disegna subito il primo frame per evitare flicker (blank canvas)
-            drawFrame(state.__mediaGauge.current);
-            __mediaGaugeRAF = requestAnimationFrame(animate);
+        const diff = target - state.__mediaGauge.current;
+        if (Math.abs(diff) < 0.005) {
+            state.__mediaGauge.current = target;
+            drawFrame(target);
+            __mediaGaugeRAF = null;
+            saveTasks(); // Persisti lo stato finale
+            return;
         }
+        state.__mediaGauge.current += diff * 0.08;
+        drawFrame(state.__mediaGauge.current);
+        __mediaGaugeRAF = requestAnimationFrame(animate);
+    }
+
+    // Disegna subito il primo frame per evitare flicker (blank canvas)
+    drawFrame(state.__mediaGauge.current);
+    __mediaGaugeRAF = requestAnimationFrame(animate);
+}
 
 
 /* Remaining UI Functions */
-        function isFutureOrToday(dateStr) {
-            if (!dateStr) return false;
-            const todayStr = getLocalDateString(getSchoolDate());
-            return dateStr >= todayStr;
+function isFutureOrToday(dateStr) {
+    if (!dateStr) return false;
+    const todayStr = getLocalDateString(getSchoolDate());
+    return dateStr >= todayStr;
+}
+window.isFutureOrToday = isFutureOrToday;
+function updateWeeklyAgendaView() {
+    if (state.view !== 'planner') return;
+    const el = document.getElementById('weekly-agenda-list');
+    if (!el) return;
+
+    // Re-render using the same function for consistent HTML
+    const newContent = renderWeeklyAgenda();
+    const temp = document.createElement('div');
+    temp.innerHTML = newContent;
+    const newList = temp.querySelector('#weekly-agenda-list');
+
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.15s ease-out';
+    setTimeout(() => {
+        if (newList) {
+            el.innerHTML = newList.innerHTML;
+        } else {
+            el.innerHTML = newContent;
         }
-        window.isFutureOrToday = isFutureOrToday;
-        function updateWeeklyAgendaView() {
-            if (state.view !== 'planner') return;
-            const el = document.getElementById('weekly-agenda-list');
-            if (!el) return;
+        el.style.opacity = '1';
+    }, 100);
+}
+function setupCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, rect, dpr };
+}
+function initCustomScrollbar() {
+    const scroller = document.getElementById('custom-scrollbar');
+    const thumb = document.getElementById('scroll-thumb');
+    if (!scroller || !thumb) return;
 
-            // Re-render using the same function for consistent HTML
-            const newContent = renderWeeklyAgenda();
-            const temp = document.createElement('div');
-            temp.innerHTML = newContent;
-            const newList = temp.querySelector('#weekly-agenda-list');
+    let fadeTimeout;
+    let isScrolling = false;
 
-            el.style.opacity = '0';
-            el.style.transition = 'opacity 0.15s ease-out';
-            setTimeout(() => {
-                if (newList) {
-                    el.innerHTML = newList.innerHTML;
-                } else {
-                    el.innerHTML = newContent;
-                }
-                el.style.opacity = '1';
-            }, 100);
+    function updateScroll() {
+        const viewportHeight = window.innerHeight;
+        const totalHeight = document.documentElement.scrollHeight;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Don't show if content fits in one screen
+        if (totalHeight <= viewportHeight + 20) {
+            scroller.classList.remove('show-scrollbar');
+            return;
         }
-        function setupCanvas(canvas) {
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.floor(rect.width * dpr);
-            canvas.height = Math.floor(rect.height * dpr);
-            const ctx = canvas.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            return { ctx, rect, dpr };
-        }
-        function initCustomScrollbar() {
-            const scroller = document.getElementById('custom-scrollbar');
-            const thumb = document.getElementById('scroll-thumb');
-            if (!scroller || !thumb) return;
 
-            let fadeTimeout;
-            let isScrolling = false;
+        scroller.classList.add('show-scrollbar');
 
-            function updateScroll() {
-                const viewportHeight = window.innerHeight;
-                const totalHeight = document.documentElement.scrollHeight;
-                const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        // Calculate thumb height proportionally
+        const thumbHeight = Math.max(60, (viewportHeight / totalHeight) * viewportHeight);
+        const scrollPercent = scrollY / (totalHeight - viewportHeight);
+        const thumbTop = scrollPercent * (viewportHeight - thumbHeight - 20); // 20px padding
 
-                // Don't show if content fits in one screen
-                if (totalHeight <= viewportHeight + 20) {
-                    scroller.classList.remove('show-scrollbar');
-                    return;
-                }
+        thumb.style.height = thumbHeight + 'px';
+        thumb.style.transform = `translateY(${thumbTop + 10}px)`; // Offset for floating look
 
-                scroller.classList.add('show-scrollbar');
+        clearTimeout(fadeTimeout);
+        fadeTimeout = setTimeout(() => {
+            scroller.classList.remove('show-scrollbar');
+        }, 1800);
+    }
 
-                // Calculate thumb height proportionally
-                const thumbHeight = Math.max(60, (viewportHeight / totalHeight) * viewportHeight);
-                const scrollPercent = scrollY / (totalHeight - viewportHeight);
-                const thumbTop = scrollPercent * (viewportHeight - thumbHeight - 20); // 20px padding
+    // Listen to root scroll
+    window.addEventListener('scroll', updateScroll, { passive: true });
+    window.addEventListener('resize', updateScroll);
 
-                thumb.style.height = thumbHeight + 'px';
-                thumb.style.transform = `translateY(${thumbTop + 10}px)`; // Offset for floating look
+    // Watch for internal height changes
+    const observer = new MutationObserver(updateScroll);
+    observer.observe(document.body, { childList: true, subtree: true });
 
-                clearTimeout(fadeTimeout);
-                fadeTimeout = setTimeout(() => {
-                    scroller.classList.remove('show-scrollbar');
-                }, 1800);
-            }
-
-            // Listen to root scroll
-            window.addEventListener('scroll', updateScroll, { passive: true });
-            window.addEventListener('resize', updateScroll);
-
-            // Watch for internal height changes
-            const observer = new MutationObserver(updateScroll);
-            observer.observe(document.body, { childList: true, subtree: true });
-
-            updateScroll();
-        }
+    updateScroll();
+}
 
 
 /* Chart Functions */
-        function initGradesCharts() {
-            const canvas = document.getElementById('gradesTrendCanvas');
-            if (!canvas) return;
+function initGradesCharts() {
+    const canvas = document.getElementById('gradesTrendCanvas');
+    if (!canvas) return;
 
-            const { ctx, rect } = setupCanvas(canvas);
-            const W = rect.width, H = rect.height;
+    const { ctx, rect } = setupCanvas(canvas);
+    const W = rect.width, H = rect.height;
 
-            let votiData = [...getVotiData()];
-            if (state.activeSubject) {
-                votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
-            }
-            // Sort by absolute time
-            votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
+    let votiData = [...getVotiData()];
+    if (state.activeSubject) {
+        votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
+    }
+    // Sort by absolute time
+    votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
 
-            if (votiData.length < 2) {
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.font = '700 13px Rubik';
-                ctx.textAlign = 'center';
-                ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
-                return;
-            }
+    if (votiData.length < 2) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '700 13px Rubik';
+        ctx.textAlign = 'center';
+        ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
+        return;
+    }
 
-            // High Precision: Calculate progressive moving average
-            let sum = 0;
-            const points = votiData.map((v, i) => {
-                const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
-                sum += val;
-                return {
-                    val: sum / (i + 1),
-                    raw: val,
-                    date: v.data || v.date
-                };
-            });
+    // High Precision: Calculate progressive moving average
+    let sum = 0;
+    const points = votiData.map((v, i) => {
+        const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
+        sum += val;
+        return {
+            val: sum / (i + 1),
+            raw: val,
+            date: v.data || v.date
+        };
+    });
 
-            const padding = 30;
-            const scrollX = 0; // Future: horizontal scrolling for many points
-            const stepX = (W - padding * 2) / (points.length - 1);
+    const padding = 30;
+    const scrollX = 0; // Future: horizontal scrolling for many points
+    const stepX = (W - padding * 2) / (points.length - 1);
 
-            const values = points.map(p => p.val);
-            const minV = Math.max(0, Math.min(...values) - 0.5);
-            const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
+    const values = points.map(p => p.val);
+    const minV = Math.max(0, Math.min(...values) - 0.5);
+    const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
 
-            function getY(val) {
-                return (H - padding * 1.5) - (val / 10) * (H - padding * 2.5);
-            }
+    function getY(val) {
+        return (H - padding * 1.5) - (val / 10) * (H - padding * 2.5);
+    }
 
-            // Area Gradient
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
-            grad.addColorStop(1, 'rgba(37, 99, 235, 0)');
+    // Area Gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
+    grad.addColorStop(1, 'rgba(37, 99, 235, 0)');
 
-            // Draw Area
-            ctx.beginPath();
-            ctx.moveTo(padding, getY(series[0]));
-            for (let i = 1; i < series.length; i++) {
-                ctx.lineTo(padding + i * stepX, getY(series[i]));
-            }
-            ctx.lineTo(W - padding, H - padding * 1.5);
-            ctx.lineTo(padding, H - padding * 1.5);
-            ctx.closePath();
-            ctx.fillStyle = grad;
-            ctx.fill();
+    // Draw Area
+    ctx.beginPath();
+    ctx.moveTo(padding, getY(series[0]));
+    for (let i = 1; i < series.length; i++) {
+        ctx.lineTo(padding + i * stepX, getY(series[i]));
+    }
+    ctx.lineTo(W - padding, H - padding * 1.5);
+    ctx.lineTo(padding, H - padding * 1.5);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
 
-            // Draw Line
-            ctx.beginPath();
-            ctx.moveTo(padding, getY(series[0]));
-            for (let i = 1; i < series.length; i++) {
-                ctx.lineTo(padding + i * stepX, getY(series[i]));
-            }
-            ctx.strokeStyle = 'var(--primary)';
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.stroke();
+    // Draw Line
+    ctx.beginPath();
+    ctx.moveTo(padding, getY(series[0]));
+    for (let i = 1; i < series.length; i++) {
+        ctx.lineTo(padding + i * stepX, getY(series[i]));
+    }
+    ctx.strokeStyle = 'var(--primary)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
 
-            // Dots & Labels
-            series.forEach((val, i) => {
-                const x = padding + i * stepX;
-                const y = getY(val);
+    // Dots & Labels
+    series.forEach((val, i) => {
+        const x = padding + i * stepX;
+        const y = getY(val);
 
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
-                ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
 
-                // Draw Day Label
-                ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                ctx.font = '800 10px inherit';
-                ctx.textAlign = 'center';
-                ctx.fillText(labels[i], x, H - 5);
-            });
-        }
-        function renderSubjectDetailView(subjectName) {
-            const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
-            const media = parseFloat(calcolaMedia(votiData)) || 0;
-            const goal = state.goals?.[subjectName] || 8.0;
-            const subjColor = getSubjectColor(subjectName);
-            const abbr = getSubjectAbbrev(subjectName);
-            const key = abbr.toLowerCase();
+        // Draw Day Label
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '800 10px inherit';
+        ctx.textAlign = 'center';
+        ctx.fillText(labels[i], x, H - 5);
+    });
+}
+function renderSubjectDetailView(subjectName) {
+    const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
+    const media = parseFloat(calcolaMedia(votiData)) || 0;
+    const goal = state.goals?.[subjectName] || 8.0;
+    const subjColor = getSubjectColor(subjectName);
+    const abbr = getSubjectAbbrev(subjectName);
+    const key = abbr.toLowerCase();
 
-            return `
+    return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
             <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 32px;">
                 <button onclick="window.closeSubject()" style="width: 48px; height: 48px; border-radius: 16px; background: #FFFFFF; border: 1px solid #141414; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s;">
@@ -1600,12 +1603,12 @@ function renderHome() {
 
             <div style="display: flex; flex-direction: column; gap: 14px; padding-bottom: 60px;">
                 ${votiData.map(v => {
-                const rawVal = v.valore || v.value || '0';
-                const giu = isGiustifica(rawVal);
-                const val = giu ? 0 : parseFloat(rawVal.toString().replace(',', '.'));
-                const isSuff = !giu && val >= 6;
-                const displayVal = giu ? 'GIU' : (v.valore || v.value);
-                return `
+        const rawVal = v.valore || v.value || '0';
+        const giu = isGiustifica(rawVal);
+        const val = giu ? 0 : parseFloat(rawVal.toString().replace(',', '.'));
+        const isSuff = !giu && val >= 6;
+        const displayVal = giu ? 'GIU' : (v.valore || v.value);
+        return `
                     <div class="card" style="background:#FFFFFF; border: 1px solid #E0DDD8; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 20px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                         <div style="width: 56px; height: 56px; border-radius: 16px; background: ${giu ? 'rgba(188,184,178,0.1)' : (isSuff ? 'rgba(40, 205, 65, 0.1)' : 'rgba(255, 59, 48, 0.1)')}; display: flex; align-items: center; justify-content: center; font-size: ${giu ? '14' : '22'}px; font-weight: 800; color: ${giu ? '#BCB8B2' : (isSuff ? '#28CD41' : '#FF3B30')}; border: 1px solid ${giu ? 'rgba(188,184,178,0.2)' : (isSuff ? 'rgba(40, 205, 65, 0.2)' : 'rgba(255, 59, 48, 0.2)')};">
                             ${displayVal}
@@ -1616,21 +1619,21 @@ function renderHome() {
                         </div>
                         ${v.commento ? `<i class="ph-bold ph-chat-circle-dots" style="color: #007AFF; font-size: 22px; cursor: help;" title="${v.commento}"></i>` : ''}
                     </div>`;
-            }).join('')}
+    }).join('')}
             </div>
         </div> `;
-        }
-        function mostraAssenzeModal() {
-            const ad = state.assenzeData || { assenze:[], ritardi:[], uscite:[], totaleAssenze:0, totaleRitardi:0, totaleUscite:0, oreAssenzaTotali:0 };
-            const all = [...ad.assenze.map(x=>({...x, icon:'ph-calendar-x', color:'#EF4444'})), 
-                         ...ad.ritardi.map(x=>({...x, icon:'ph-clock-clockwise', color:'#F59E0B'})), 
-                         ...ad.uscite.map(x=>({...x, icon:'ph-clock-counter-clockwise', color:'#3B82F6'}))];
-            
-            all.sort((a,b) => new Date(b.data) - new Date(a.data));
+}
+function mostraAssenzeModal() {
+    const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0 };
+    const all = [...ad.assenze.map(x => ({ ...x, icon: 'ph-calendar-x', color: '#EF4444' })),
+    ...ad.ritardi.map(x => ({ ...x, icon: 'ph-clock-clockwise', color: '#F59E0B' })),
+    ...ad.uscite.map(x => ({ ...x, icon: 'ph-clock-counter-clockwise', color: '#3B82F6' }))];
 
-            const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
+    all.sort((a, b) => new Date(b.data) - new Date(a.data));
 
-            showModal(`
+    const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
+
+    showModal(`
             <div style="padding:24px; text-align: left;">
                 <header style="margin-bottom:24px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
@@ -1655,14 +1658,14 @@ function renderHome() {
                 
                 <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
                     ${all.length === 0 ? `<div style="text-align:center; padding:30px; color:var(--text-dim); font-size:13px;">Nessun evento registrato</div>` :
-                      all.map(a => `
+            all.map(a => `
                         <div style="display:flex; align-items:center; gap:14px; padding:12px; background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid rgba(0,0,0,0.03);">
                             <div style="width:36px; height:36px; border-radius:10px; background:${a.color}15; color:${a.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                                 <i class="ph-bold ${a.icon}" style="font-size:18px;"></i>
                             </div>
                             <div style="flex:1; min-width:0;">
                                 <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                                    <span style="font-size:13px; font-weight:700; color:var(--text-primary);">${new Date(a.data).toLocaleDateString('it-IT', {day:'numeric', month:'short'})}</span>
+                                    <span style="font-size:13px; font-weight:700; color:var(--text-primary);">${new Date(a.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
                                     <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);">${a.oreEffettive ? a.oreEffettive.toFixed(2) : '?.??'}h</span>
                                 </div>
                                 <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
@@ -1676,30 +1679,30 @@ function renderHome() {
                 <button onclick="closeModal()" style="width:100%; margin-top:24px; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
             </div>
             `);
-        }
-        window.mostraAssenzeModal = mostraAssenzeModal;
-        
-        function mostraVerificheModal() {
-            const today = new Date();
-            const todayISO = today.toISOString().split('T')[0];
-            const allVerifiche = (state.verifiche || [])
-                .filter(v => v.data && v.data >= todayISO)
-                .sort((a, b) => a.data.localeCompare(b.data));
-            // Manual Verifiche from dedicated database table
-            const manualExams = (state.manualVerifiche || [])
-                .filter(v => !v.done && v.date && v.date >= todayISO)
-                .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
-            
-            const combined = [...allVerifiche, ...manualExams];
-            const seen = new Set();
-            const all = combined.filter(v => {
-                const key = `${v.data}||${(v.materia || '').toLowerCase() || ''}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            }).sort((a,b) => (a.data || '').localeCompare(b.data || ''));
+}
+window.mostraAssenzeModal = mostraAssenzeModal;
 
-            showModal(`
+function mostraVerificheModal() {
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0];
+    const allVerifiche = (state.verifiche || [])
+        .filter(v => v.data && v.data >= todayISO)
+        .sort((a, b) => a.data.localeCompare(b.data));
+    // Manual Verifiche from dedicated database table
+    const manualExams = (state.manualVerifiche || [])
+        .filter(v => !v.done && v.date && v.date >= todayISO)
+        .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
+
+    const combined = [...allVerifiche, ...manualExams];
+    const seen = new Set();
+    const all = combined.filter(v => {
+        const key = `${v.data}||${(v.materia || '').toLowerCase() || ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+
+    showModal(`
             <div style="padding:24px; text-align: left;">
                 <header style="margin-bottom:24px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Prossime Verifiche</div>
@@ -1708,12 +1711,12 @@ function renderHome() {
 
                 <div style="max-height:450px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-right:4px;">
                     ${all.length === 0 ? `<div style="text-align:center; padding:40px; color:var(--text-dim);">Nessuna verifica in programma</div>` :
-                      all.map(v => {
-                        const d = new Date(v.data);
-                        const days = Math.ceil((d - today) / 86400000);
-                        const abbr = getSubjectAbbrev(v.materia);
-                        const key = abbr.toLowerCase();
-                        return `
+            all.map(v => {
+                const d = new Date(v.data);
+                const days = Math.ceil((d - today) / 86400000);
+                const abbr = getSubjectAbbrev(v.materia);
+                const key = abbr.toLowerCase();
+                return `
                           <div style="padding:16px; background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
                             <div style="width:48px; height:48px; border-radius:12px; background:var(--${key},var(--mat)); color:var(--${key}-t,var(--mat-t)); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; flex-shrink:0;">
                                 ${abbr}
@@ -1735,51 +1738,51 @@ function renderHome() {
                             </div>
                           </div>
                         `;
-                      }).join('')}
+            }).join('')}
                 </div>
 
                 <button onclick="closeModal()" style="width:100%; margin-top:24px; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
             </div>
             `);
-        }
-        window.mostraVerificheModal = mostraVerificheModal;
+}
+window.mostraVerificheModal = mostraVerificheModal;
 
-        window._navVerifica = function(dir) {
-            const today = new Date(); today.setHours(0,0,0,0);
-            const todayISO = today.toISOString().split('T')[0];
-            const argoV = (state.verifiche || []).filter(v => v.data && v.data >= todayISO).sort((a,b) => a.data.localeCompare(b.data));
-            const manualV = (state.manualVerifiche || []).filter(v => !v.done && v.date && v.date >= todayISO).map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type }));
-            const seen = new Set();
-            const all = [...argoV, ...manualV].filter(v => { const k = `${v.data}||${(v.materia||'').toLowerCase()}`; if(seen.has(k)) return false; seen.add(k); return true; }).sort((a,b) => a.data.localeCompare(b.data));
-            if (all.length <= 1) return;
-            window._verificheIdx = Math.max(0, Math.min(all.length - 1, (window._verificheIdx || 0) + dir));
-            const v = all[window._verificheIdx];
-            if (!v) return;
+window._navVerifica = function (dir) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString().split('T')[0];
+    const argoV = (state.verifiche || []).filter(v => v.data && v.data >= todayISO).sort((a, b) => a.data.localeCompare(b.data));
+    const manualV = (state.manualVerifiche || []).filter(v => !v.done && v.date && v.date >= todayISO).map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type }));
+    const seen = new Set();
+    const all = [...argoV, ...manualV].filter(v => { const k = `${v.data}||${(v.materia || '').toLowerCase()}`; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.data.localeCompare(b.data));
+    if (all.length <= 1) return;
+    window._verificheIdx = Math.max(0, Math.min(all.length - 1, (window._verificheIdx || 0) + dir));
+    const v = all[window._verificheIdx];
+    if (!v) return;
 
-            const abbr = typeof getSubjectAbbrev === 'function' ? getSubjectAbbrev(v.materia) : (v.materia||'').substring(0,3).toUpperCase();
-            const key = abbr.toLowerCase();
-            const tipoLabel = v.tipo === 'scritta' ? 'SCRITTA' : v.tipo === 'orale' ? 'ORALE' : (v.tipo||'').toUpperCase();
-            const examDate = new Date(v.data);
-            const daysLeft = Math.ceil((examDate - today) / 86400000);
-            const desc = (v.text || v.materia || '').substring(0, 45);
+    const abbr = typeof getSubjectAbbrev === 'function' ? getSubjectAbbrev(v.materia) : (v.materia || '').substring(0, 3).toUpperCase();
+    const key = abbr.toLowerCase();
+    const tipoLabel = v.tipo === 'scritta' ? 'SCRITTA' : v.tipo === 'orale' ? 'ORALE' : (v.tipo || '').toUpperCase();
+    const examDate = new Date(v.data);
+    const daysLeft = Math.ceil((examDate - today) / 86400000);
+    const desc = (v.text || v.materia || '').substring(0, 45);
 
-            const el = (id) => document.getElementById(id);
-            const abbrEl = el('vw-abbr');
-            if (abbrEl) { abbrEl.textContent = abbr; abbrEl.style.background = `var(--${key},var(--mat))`; abbrEl.style.color = `var(--${key}-t,var(--mat-t))`; }
-            const tipoEl = el('vw-tipo'); if (tipoEl) tipoEl.textContent = tipoLabel;
-            const counterEl = el('vw-counter'); if (counterEl) counterEl.textContent = `${window._verificheIdx + 1}/${all.length}`;
-            const descEl = el('vw-desc'); if (descEl) descEl.textContent = desc;
-            const daysEl = el('vw-days'); if (daysEl) daysEl.textContent = daysLeft;
-            const barFill = el('vw-bar-fill'); if (barFill) { barFill.style.width = Math.max(5, 100 - daysLeft * 8) + '%'; barFill.style.background = `var(--${key}-dot,var(--mat-dot))`; }
-        };
+    const el = (id) => document.getElementById(id);
+    const abbrEl = el('vw-abbr');
+    if (abbrEl) { abbrEl.textContent = abbr; abbrEl.style.background = `var(--${key},var(--mat))`; abbrEl.style.color = `var(--${key}-t,var(--mat-t))`; }
+    const tipoEl = el('vw-tipo'); if (tipoEl) tipoEl.textContent = tipoLabel;
+    const counterEl = el('vw-counter'); if (counterEl) counterEl.textContent = `${window._verificheIdx + 1}/${all.length}`;
+    const descEl = el('vw-desc'); if (descEl) descEl.textContent = desc;
+    const daysEl = el('vw-days'); if (daysEl) daysEl.textContent = daysLeft;
+    const barFill = el('vw-bar-fill'); if (barFill) { barFill.style.width = Math.max(5, 100 - daysLeft * 8) + '%'; barFill.style.background = `var(--${key}-dot,var(--mat-dot))`; }
+};
 
 
 /* Remaining UI/Modal/Logic Functions */
-        function mostraCircolare(id) {
-            const c = state.circolari.find(x => x.id === id);
-            if (!c) return;
+function mostraCircolare(id) {
+    const c = state.circolari.find(x => x.id === id);
+    if (!c) return;
 
-            showModal(`
+    showModal(`
             <div class="circolare-layout">
                 <aside class="circolare-side">
                     <div style="display:flex; flex-direction:column; gap:8px;">
@@ -1834,24 +1837,24 @@ function renderHome() {
             </div>
             `, 'circolare-modal');
 
-        }
-        function renderDayDetailModal(dateStr) {
-            const container = getModalContainer();
-            if (!container) return;
+}
+function renderDayDetailModal(dateStr) {
+    const container = getModalContainer();
+    if (!container) return;
 
-            const date = parseArgoDate(dateStr);
-            const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+    const date = parseArgoDate(dateStr);
+    const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-            let tasksForDay = [];
-            if (state.plannerMode === 'registro') {
-                tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
-            } else {
-                const plannedIds = state.plannedTasks[dateStr] || [];
-                tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id));
-            }
-            const isRegistro = state.plannerMode === 'registro';
-            
-            container.innerHTML = `
+    let tasksForDay = [];
+    if (state.plannerMode === 'registro') {
+        tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
+    } else {
+        const plannedIds = state.plannedTasks[dateStr] || [];
+        tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id));
+    }
+    const isRegistro = state.plannerMode === 'registro';
+
+    container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
                     <div class="modal-content" onclick="event.stopPropagation()" style="font-family:'Inter',system-ui,-apple-system,sans-serif; max-width:440px; padding:28px; border-radius:22px; background:#FFFFFF; color:#141414; border:1px solid rgba(0,0,0,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.04); width: calc(100% - 32px); max-height: 90vh; display:flex; flex-direction:column;">
 
@@ -1874,19 +1877,19 @@ function renderHome() {
                                     <div style="font-family:'Inter',system-ui,sans-serif; font-size:15px; font-weight:600; opacity:0.5;">Nessun compito pianificato</div>
                                 </div>
                             ` : tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
-                const subContent = t.subject || 'N/A';
-                const abbr = getSubjectAbbrev(subContent);
-                const key = abbr.toLowerCase();
-                const color = getSubjectColor(subContent);
-                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-                const timeStr = timeMatch ? timeMatch[1] : '';
-                const displayText = (t.text || '')
-                    .replace(/^\[AI\]\s*/i, '')
-                    .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
-                    .replace(/\*/g, '')
-                    .replace(/[\s|]+$/, '')
-                    .trim();
-                return `
+        const subContent = t.subject || 'N/A';
+        const abbr = getSubjectAbbrev(subContent);
+        const key = abbr.toLowerCase();
+        const color = getSubjectColor(subContent);
+        const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+        const timeStr = timeMatch ? timeMatch[1] : '';
+        const displayText = (t.text || '')
+            .replace(/^\[AI\]\s*/i, '')
+            .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
+            .replace(/\*/g, '')
+            .replace(/[\s|]+$/, '')
+            .trim();
+        return `
                                     <div style="flex-shrink:0; border-radius:16px; display:flex; align-items:stretch; overflow:hidden; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.08)'}; box-shadow: 0 1px 4px rgba(0,0,0,0.04); opacity: ${t.done ? 0.65 : 1}; transition: all 0.2s;">
                                         <div style="width:4px; background:${color}; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
@@ -1903,7 +1906,7 @@ function renderHome() {
                                         </div>
                                     </div>
                                 `;
-            }).join('')}
+    }).join('')}
                        </div>
 
                         ${tasksForDay.length > 0 ? `
@@ -1914,102 +1917,102 @@ function renderHome() {
                    </div>
                </div>
             `;
+}
+function togglePlanInModal(dateStr, taskId) {
+    // Utilizziamo la logica esistente ma aggiorniamo il modale
+    if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+    const index = state.plannedTasks[dateStr].indexOf(taskId);
+
+    if (index > -1) {
+        state.plannedTasks[dateStr].splice(index, 1);
+    } else {
+        state.plannedTasks[dateStr].push(taskId);
+    }
+
+    // Persistenza locale e remota automatica
+    saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
+
+    // Aggiorna UI Calendario
+    const calendarEl = document.getElementById('calendar');
+    if (calendarEl && calendarEl._fullCalendar) {
+        syncCalendarEvents(calendarEl._fullCalendar);
+    }
+
+    // Riaffresca il contenuto del modale per mostrare il check
+    renderDayDetailModal(dateStr);
+
+    // Feedback Home
+    notifyPlannerChanged();
+}
+function notifyPlannerChanged() {
+    // badge sul bottone Organizza Oggi e Dashboard
+    if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
+    if (typeof updateHomeView === 'function') updateHomeView();
+
+    // ✅ FIX: Aggiorna la weekly agenda list in-place (nessun full re-render)
+    if (state.view === 'planner') {
+        const agendaEl = document.getElementById('weekly-agenda-list');
+        if (agendaEl) {
+            const newContent = renderWeeklyAgenda();
+            const temp = document.createElement('div');
+            temp.innerHTML = newContent;
+            const newList = temp.querySelector('#weekly-agenda-list');
+            if (newList) agendaEl.innerHTML = newList.innerHTML;
         }
-        function togglePlanInModal(dateStr, taskId) {
-            // Utilizziamo la logica esistente ma aggiorniamo il modale
-            if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
-            const index = state.plannedTasks[dateStr].indexOf(taskId);
+    }
 
-            if (index > -1) {
-                state.plannedTasks[dateStr].splice(index, 1);
-            } else {
-                state.plannedTasks[dateStr].push(taskId);
-            }
+    // ✅ Aggiorna il calendario custom
+    if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
 
-            // Persistenza locale e remota automatica
-            saveTasks();
-            if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
+    // colori/stato eventi calendario
+    const calendarEl = document.getElementById('calendar');
+    if (calendarEl && calendarEl._fullCalendar) {
+        syncCalendarEvents(calendarEl._fullCalendar);
+        calendarEl._fullCalendar.updateSize();
+    }
+}
+function getSubjectColor(subject) {
+    let s = (subject || '').trim();
+    s = s.replace(/[*_\[\]]/g, '').trim();
+    if (!s) return '#0A84FF';
 
-            // Aggiorna UI Calendario
-            const calendarEl = document.getElementById('calendar');
-            if (calendarEl && calendarEl._fullCalendar) {
-                syncCalendarEvents(calendarEl._fullCalendar);
-            }
+    const lower = s.toLowerCase();
+    if (lower.includes('ita')) return '#FF2D55';
+    if (lower.includes('mat')) return '#0A84FF';
+    if (lower.includes('ing')) return '#BF5AF2';
+    if (lower.includes('storia') || lower.includes('geo')) return '#FF9F0A';
+    if (lower.includes('scienza') || lower.includes('biol')) return '#30D158';
+    if (lower.includes('fisica')) return '#64D2FF';
+    if (lower.includes('arte')) return '#FF375F';
+    if (lower.includes('ed')) return '#FFD60A';
+    if (lower.includes('rel')) return '#64D2FF';
 
-            // Riaffresca il contenuto del modale per mostrare il check
-            renderDayDetailModal(dateStr);
+    // 🚀 SENIOR FIX: Hash-based color for UNIQUE identification
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        hash = s.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash % 360);
+    return `hsl(${h}, 85%, 65%)`; // Vibrant, distinct Colors
+}
+function renderAvatar(displayName, size = 44) {
+    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-            // Feedback Home
-            notifyPlannerChanged();
-        }
-        function notifyPlannerChanged() {
-            // badge sul bottone Organizza Oggi e Dashboard
-            if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
-            if (typeof updateHomeView === 'function') updateHomeView();
+    // Generate stable pastel color from name
+    const hash = Array.from(displayName).reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+    const hue = Math.abs(hash % 360);
+    const bg = `hsl(${hue}, 60%, 45%)`;
 
-            // ✅ FIX: Aggiorna la weekly agenda list in-place (nessun full re-render)
-            if (state.view === 'planner') {
-                const agendaEl = document.getElementById('weekly-agenda-list');
-                if (agendaEl) {
-                    const newContent = renderWeeklyAgenda();
-                    const temp = document.createElement('div');
-                    temp.innerHTML = newContent;
-                    const newList = temp.querySelector('#weekly-agenda-list');
-                    if (newList) agendaEl.innerHTML = newList.innerHTML;
-                }
-            }
-
-            // ✅ Aggiorna il calendario custom
-            if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
-
-            // colori/stato eventi calendario
-            const calendarEl = document.getElementById('calendar');
-            if (calendarEl && calendarEl._fullCalendar) {
-                syncCalendarEvents(calendarEl._fullCalendar);
-                calendarEl._fullCalendar.updateSize();
-            }
-        }
-        function getSubjectColor(subject) {
-            let s = (subject || '').trim();
-            s = s.replace(/[*_\[\]]/g, '').trim();
-            if (!s) return '#0A84FF';
-
-            const lower = s.toLowerCase();
-            if (lower.includes('ita')) return '#FF2D55';
-            if (lower.includes('mat')) return '#0A84FF';
-            if (lower.includes('ing')) return '#BF5AF2';
-            if (lower.includes('storia') || lower.includes('geo')) return '#FF9F0A';
-            if (lower.includes('scienza') || lower.includes('biol')) return '#30D158';
-            if (lower.includes('fisica')) return '#64D2FF';
-            if (lower.includes('arte')) return '#FF375F';
-            if (lower.includes('ed')) return '#FFD60A';
-            if (lower.includes('rel')) return '#64D2FF';
-
-            // 🚀 SENIOR FIX: Hash-based color for UNIQUE identification
-            let hash = 0;
-            for (let i = 0; i < s.length; i++) {
-                hash = s.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const h = Math.abs(hash % 360);
-            return `hsl(${h}, 85%, 65%)`; // Vibrant, distinct Colors
-        }
-        function renderAvatar(displayName, size = 44) {
-            const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
-            // Generate stable pastel color from name
-            const hash = Array.from(displayName).reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
-            const hue = Math.abs(hash % 360);
-            const bg = `hsl(${hue}, 60%, 45%)`;
-
-            return `
+    return `
             <div style="width:${size}px; height:${size}px; background:${bg}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:${size * 0.4}px; border:2px solid rgba(255,255,255,0.15); flex-shrink:0; pointer-events:none;">
                 ${initials}
             </div>`;
-        }
-        function showEditProfileModal() {
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-            modalContainer.innerHTML = `
+}
+function showEditProfileModal() {
+    const modalContainer = getModalContainer();
+    if (!modalContainer) return;
+    modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 440px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -2036,11 +2039,11 @@ function renderHome() {
                 </div>
             </div>
         </div>`;
-        }
-        function showProfileActions() {
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-            modalContainer.innerHTML = `
+}
+function showProfileActions() {
+    const modalContainer = getModalContainer();
+    if (!modalContainer) return;
+    modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 380px; padding: 8px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);">
                 <!-- User Profile Summary -->
@@ -2067,10 +2070,10 @@ function renderHome() {
                 </div>
             </div>
         </div>`;
-        }
-        window.showProfileActions = showProfileActions;
-        function renderSettings() {
-            return `
+}
+window.showProfileActions = showProfileActions;
+function renderSettings() {
+    return `
             <div class="view">
                 <div style="margin-bottom: 24px;">
                     <h1 style="font-size: 28px; color: var(--text-primary);">Impostazioni</h1>
@@ -2105,48 +2108,48 @@ function renderHome() {
                </div>
            </div>
             `;
-        }
-        function renderWeeklyAgenda() {
-            const list = [];
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+}
+function renderWeeklyAgenda() {
+    const list = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            if (state.plannerMode === 'registro') {
-                state.tasks.forEach(t => {
-                    if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date) {
-                        list.push({ ...t, displayDate: t.due_date });
-                    }
-                });
-            } else {
-                Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
-                    ids.forEach(id => {
-                        const t = state.tasks.find(tk => tk.id === id);
-                        if (t) list.push({ ...t, displayDate: dateStr });
-                    });
-                });
+    if (state.plannerMode === 'registro') {
+        state.tasks.forEach(t => {
+            if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date) {
+                list.push({ ...t, displayDate: t.due_date });
             }
+        });
+    } else {
+        Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
+            ids.forEach(id => {
+                const t = state.tasks.find(tk => tk.id === id);
+                if (t) list.push({ ...t, displayDate: dateStr });
+            });
+        });
+    }
 
-            list.sort((a, b) => parseArgoDate(b.displayDate) - parseArgoDate(a.displayDate));
+    list.sort((a, b) => parseArgoDate(b.displayDate) - parseArgoDate(a.displayDate));
 
-            // --- LIVE FILTERING LOGIC ---
-            const query = (state.agendaSearchQuery || "").toLowerCase().trim();
-            const filterSubject = state.agendaSearchSubject || "all";
-            
-            const filteredList = list.filter(t => {
-                const matchesQuery = !query || 
-                    (t.text || "").toLowerCase().includes(query) || 
-                    (t.subject || "").toLowerCase().includes(query);
-                
-                const matchesSubject = filterSubject === "all" || 
-                    (t.subject || "").toLowerCase().trim() === filterSubject.toLowerCase().trim();
-                
-                return matchesQuery && matchesSubject;
-            }).sort((a, b) => parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime());
+    // --- LIVE FILTERING LOGIC ---
+    const query = (state.agendaSearchQuery || "").toLowerCase().trim();
+    const filterSubject = state.agendaSearchSubject || "all";
 
-            // Extract unique subjects for chips
-            const allSubjects = [...new Set(list.map(t => t.subject?.trim()).filter(Boolean))].sort();
+    const filteredList = list.filter(t => {
+        const matchesQuery = !query ||
+            (t.text || "").toLowerCase().includes(query) ||
+            (t.subject || "").toLowerCase().includes(query);
 
-            const searchHeader = `
+        const matchesSubject = filterSubject === "all" ||
+            (t.subject || "").toLowerCase().trim() === filterSubject.toLowerCase().trim();
+
+        return matchesQuery && matchesSubject;
+    }).sort((a, b) => parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime());
+
+    // Extract unique subjects for chips
+    const allSubjects = [...new Set(list.map(t => t.subject?.trim()).filter(Boolean))].sort();
+
+    const searchHeader = `
                 <div class="agenda-search-container">
                     <div class="search-input-wrapper">
                         <i class="ph-bold ph-magnifying-glass"></i>
@@ -2169,41 +2172,41 @@ function renderHome() {
                 </div>
             `;
 
-            if (!filteredList.length) {
-                return `
+    if (!filteredList.length) {
+        return `
                 ${searchHeader}
                 <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px; font-family: 'Inter', sans-serif; background: rgba(0,0,0,0.02); border: 1px dashed rgba(0,0,0,0.05);">
                     <i class="ph ph-magnifying-glass" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px; display: block;"></i>
                     <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">// NESSUN RISULTATO</div>
                     <p style="font-size: 12px; margin-top: 4px; opacity: 0.6;">Prova a cambiare i filtri o la ricerca</p>
                 </div> `;
-            }
+    }
 
-            const grouped = {};
-            filteredList.forEach(t => {
-                if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
-                grouped[t.displayDate].push(t);
-            });
-            const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b).getTime() - parseArgoDate(a).getTime());
+    const grouped = {};
+    filteredList.forEach(t => {
+        if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
+        grouped[t.displayDate].push(t);
+    });
+    const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b).getTime() - parseArgoDate(a).getTime());
 
-            return `
+    return `
         <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">
             ${searchHeader}
             ${sortedDates.map(dateStr => {
-                const d = parseArgoDate(dateStr);
-                const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
-                const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
-                const monthName = d.toLocaleDateString('it-IT', { month: 'short' });
-                const isToday = dateStr === getLocalDateString();
-                const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
-                
-                const labelColor = isToday ? '#34C759' : isTomorrow ? '#FF9F0A' : 'transparent';
-                const labelText = isToday ? 'TODAY' : isTomorrow ? 'BEYOND' : '';
-                const labelTag = isToday || isTomorrow
-                    ? `<span style="font-family: 'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${labelColor}; border: 1px solid ${labelColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">${labelText}</span>`
-                    : '';
+        const d = parseArgoDate(dateStr);
+        const dayNum = d.toLocaleDateString('it-IT', { day: 'numeric' });
+        const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
+        const monthName = d.toLocaleDateString('it-IT', { month: 'short' });
+        const isToday = dateStr === getLocalDateString();
+        const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
 
-                return `
+        const labelColor = isToday ? '#34C759' : isTomorrow ? '#FF9F0A' : 'transparent';
+        const labelText = isToday ? 'TODAY' : isTomorrow ? 'BEYOND' : '';
+        const labelTag = isToday || isTomorrow
+            ? `<span style="font-family: 'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${labelColor}; border: 1px solid ${labelColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">${labelText}</span>`
+            : '';
+
+        return `
             <div>
                 <!-- TE Date Header -->
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
@@ -2219,18 +2222,18 @@ function renderHome() {
                 <!-- Tasks List -->
                 <div style="display:flex; flex-direction:column; gap:12px;">
                     ${grouped[dateStr].filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text || t.description || '')).map(t => {
-                    const subjColor = getSubjectColor(t.subject);
-                    const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
-                    const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-                    const timeStr = timeMatch ? timeMatch[1] : '';
-                    const displayText = (t.text || t.description || 'Task')
-                        .replace(/^\[AI\]\s*/i, '')
-                        .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
-                        .replace(/\*/g, '')
-                        .replace(/[\s|]+$/, '')
-                        .trim();
+            const subjColor = getSubjectColor(t.subject);
+            const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
+            const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+            const timeStr = timeMatch ? timeMatch[1] : '';
+            const displayText = (t.text || t.description || 'Task')
+                .replace(/^\[AI\]\s*/i, '')
+                .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
+                .replace(/\*/g, '')
+                .replace(/[\s|]+$/, '')
+                .trim();
 
-                    return `
+            return `
                     <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
                         <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
@@ -2248,57 +2251,57 @@ function renderHome() {
                             </div>
                         </div>
                     </div>`;
-                }).join('')}
+        }).join('')}
                 </div>
             </div>`;
-            }).join('')}
+    }).join('')}
         </div>`;
-        }
-        function showPlanWeekModal() {
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
+}
+function showPlanWeekModal() {
+    const modalContainer = getModalContainer();
+    if (!modalContainer) return;
 
-            modalContainer.innerHTML = `
+    modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
             <div id="plan-week-modal-content" class="modal-content glass-panel" onclick="event.stopPropagation()" style="position:relative;z-index:99991;width: 100%; max-width: 450px; padding: 24px; max-height: 90vh; overflow-y: auto;">
             </div>
         </div> `;
-            refreshPlanWeekModalContent();
-        }
-        function togglePlanDay(taskId, dateStr) {
-            if (typeof event !== 'undefined' && event && event.stopPropagation) event.stopPropagation();
+    refreshPlanWeekModalContent();
+}
+function togglePlanDay(taskId, dateStr) {
+    if (typeof event !== 'undefined' && event && event.stopPropagation) event.stopPropagation();
 
-            const todayStr = getLocalDateString();
-            if (dateStr < todayStr) return;
+    const todayStr = getLocalDateString();
+    if (dateStr < todayStr) return;
 
-            if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
-            const index = state.plannedTasks[dateStr].indexOf(taskId);
-            if (index > -1) {
-                state.plannedTasks[dateStr].splice(index, 1);
-            } else {
-                state.plannedTasks[dateStr].push(taskId);
-            }
+    if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
+    const index = state.plannedTasks[dateStr].indexOf(taskId);
+    if (index > -1) {
+        state.plannedTasks[dateStr].splice(index, 1);
+    } else {
+        state.plannedTasks[dateStr].push(taskId);
+    }
 
-            saveTasks();
-            if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
+    saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
 
-            // ✅ FIX: Immediate surgical DOM update — border shorthand, background, color
-            const isNowPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
-            document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
-                btn.style.background = isNowPlanned ? '#141414' : '#F6F5F3';
-                btn.style.color = isNowPlanned ? 'white' : '#908C86';
-                btn.style.border = isNowPlanned
-                    ? '2px solid #141414'
-                    : (dateStr === todayStr ? '2px solid #007AFF' : '1px solid #E0DDD8');
-                // Spring feedback
-                btn.style.transform = 'scale(0.9)';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.transition = 'all 0.25s cubic-bezier(0.2,0.8,0.2,1)'; }, 80);
-            });
+    // ✅ FIX: Immediate surgical DOM update — border shorthand, background, color
+    const isNowPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
+    document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
+        btn.style.background = isNowPlanned ? '#141414' : '#F6F5F3';
+        btn.style.color = isNowPlanned ? 'white' : '#908C86';
+        btn.style.border = isNowPlanned
+            ? '2px solid #141414'
+            : (dateStr === todayStr ? '2px solid #007AFF' : '1px solid #E0DDD8');
+        // Spring feedback
+        btn.style.transform = 'scale(0.9)';
+        setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.transition = 'all 0.25s cubic-bezier(0.2,0.8,0.2,1)'; }, 80);
+    });
 
-            notifyPlannerChanged();
-        }
-        function showVotiView() {
-            modalContainer.innerHTML = `
+    notifyPlannerChanged();
+}
+function showVotiView() {
+    modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
@@ -2310,22 +2313,22 @@ function renderHome() {
                 </div>
             </div>
            </div> `;
-        }
-        function renderVoti() {
-            const votiData = (state.voti && state.voti.length > 0) ? state.voti :
-                ((state.grades && state.grades.length > 0) ? state.grades : []);
+}
+function renderVoti() {
+    const votiData = (state.voti && state.voti.length > 0) ? state.voti :
+        ((state.grades && state.grades.length > 0) ? state.grades : []);
 
-            if (votiData.length === 0) {
-                return `
+    if (votiData.length === 0) {
+        return `
         <div style="text-align:center; padding: 48px 24px; color: var(--text-muted);">
                     <i class="ph ph-graduation-cap" style="font-size: 56px; opacity: 0.2; margin-bottom: 16px; display: block;"></i>
                     <p style="margin-bottom:20px; font-size:16px;">Nessun voto registrato.</p>
                     <button onclick="performArgoSync()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto;">Sincronizza DidUP</button>
                </div> `;
-            }
+    }
 
-            const media = calcolaMedia(votiData);
-            return `
+    const media = calcolaMedia(votiData);
+    return `
         <div class="view">
                 <div class="card" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(79, 70, 229, 0.4)); border: 1px solid var(--blue); padding: 24px; text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">Media Generale</div>
@@ -2334,12 +2337,12 @@ function renderHome() {
                </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     ${votiData.map(v => {
-                const rawVal = (v.valore || v.value || '').toString();
-                const giu = isGiustifica(rawVal);
-                const displayVal = giu ? 'GIU' : rawVal;
-                const mat = v.materia || v.subject || 'Materia';
-                const color = giu ? '#BCB8B2' : (parseFloat(rawVal.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)');
-                return `
+        const rawVal = (v.valore || v.value || '').toString();
+        const giu = isGiustifica(rawVal);
+        const displayVal = giu ? 'GIU' : rawVal;
+        const mat = v.materia || v.subject || 'Materia';
+        const color = giu ? '#BCB8B2' : (parseFloat(rawVal.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)');
+        return `
                         <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${color}15; border:1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${color};">${displayVal}</div>
                             <div style="flex:1; text-align:left;">
@@ -2347,18 +2350,18 @@ function renderHome() {
                                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
                            </div>
                        </div>`;
-            }).join('')}
+    }).join('')}
                </div>
            </div> `;
-        }
-        function showBachecaModal() {
-            // ⭐ Prova prima promemoria, poi announcements
-            const dataBacheca = state.promemoria && state.promemoria.length > 0 ? state.promemoria :
-                (state.announcements && state.announcements.length > 0 ? state.announcements : []);
+}
+function showBachecaModal() {
+    // ⭐ Prova prima promemoria, poi announcements
+    const dataBacheca = state.promemoria && state.promemoria.length > 0 ? state.promemoria :
+        (state.announcements && state.announcements.length > 0 ? state.announcements : []);
 
-            console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
+    console.log("📢 Rendering bacheca - state.promemoria:", state.promemoria?.length || 0, "state.announcements:", state.announcements?.length || 0);
 
-            modalContainer.innerHTML = `
+    modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
                 <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
@@ -2367,7 +2370,7 @@ function renderHome() {
                 </div>
                 <div style="padding: 20px; display:flex; flex-direction:column; gap:12px;">
                     ${dataBacheca.length === 0 ?
-                    `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
+            `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
                         <i class="ph ph-megaphone" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
                         Nessun avviso in bacheca<br>
                         <span style="font-size: 12px; margin-top: 8px; display: block;">Gli avvisi verranno caricati dopo la sincronizzazione con DidUP</span>
@@ -2375,14 +2378,14 @@ function renderHome() {
                             <i class="ph ph-arrow-clockwise"></i> Sincronizza Ora
                        </button>
                    </div>` :
-                    dataBacheca.map(item => {
-                        const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
-                        const autore = item.autore || item.docente || 'Docente';
-                        const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
-                        const testo = item.testo || item.text || item.descrizione || item.description || '';
-                        const url = item.url || item.allegato || null;
+            dataBacheca.map(item => {
+                const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
+                const autore = item.autore || item.docente || 'Docente';
+                const oggetto = item.oggetto || item.titolo || item.title || 'Avviso';
+                const testo = item.testo || item.text || item.descrizione || item.description || '';
+                const url = item.url || item.allegato || null;
 
-                        return `
+                return `
                                 <div class="glass-list-item" style="border-left: 4px solid var(--orange); background: rgba(255, 159, 10, 0.08);">
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                                         <div style="padding:4px 8px; background: rgba(255, 159, 10, 0.2); border-radius:6px; display:flex; gap:6px; align-items:center;">
@@ -2400,36 +2403,36 @@ function renderHome() {
                                    </a>` : ''}
                                </div>
                             `;
-                    }).join('')
-                }
+            }).join('')
+        }
                 </div>
             </div>
            </div> `;
+}
+function promptSetGoal(type) {
+    const currentGoal = state.goals?.[type] || 8.0;
+    const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
+    if (res !== null) {
+        const val = parseFloat(res.replace(',', '.'));
+        if (!isNaN(val) && val > 0 && val <= 10) {
+            if (!state.goals) state.goals = {};
+            state.goals[type] = val;
+            saveTasks(); // Persist standard
+            render();
+        } else {
+            alert("Inserisci un valore valido tra 1 e 10");
         }
-        function promptSetGoal(type) {
-            const currentGoal = state.goals?.[type] || 8.0;
-            const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
-            if (res !== null) {
-                const val = parseFloat(res.replace(',', '.'));
-                if (!isNaN(val) && val > 0 && val <= 10) {
-                    if (!state.goals) state.goals = {};
-                    state.goals[type] = val;
-                    saveTasks(); // Persist standard
-                    render();
-                } else {
-                    alert("Inserisci un valore valido tra 1 e 10");
-                }
-            }
-        }
-        function renderFocusTimer() {
-            const mins = Math.floor(pomodoroState.timeLeft / 60);
-            const secs = pomodoroState.timeLeft % 60;
-            const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
-            const isFocus = pomodoroState.mode === 'focus';
-            const modeLabel = isFocus ? 'Focus' : 'Pausa';
-            const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
+    }
+}
+function renderFocusTimer() {
+    const mins = Math.floor(pomodoroState.timeLeft / 60);
+    const secs = pomodoroState.timeLeft % 60;
+    const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
+    const isFocus = pomodoroState.mode === 'focus';
+    const modeLabel = isFocus ? 'Focus' : 'Pausa';
+    const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
 
-            return `
+    return `
         <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
@@ -2445,87 +2448,87 @@ function renderHome() {
                     </button>
                 </div>
             </div> `;
-        }
-        function togglePomodoro() {
-            if (pomodoroState.running) {
+}
+function togglePomodoro() {
+    if (pomodoroState.running) {
+        clearInterval(pomodoroState.interval);
+        pomodoroState.running = false;
+    } else {
+        pomodoroState.running = true;
+        pomodoroState.interval = setInterval(() => {
+            pomodoroState.timeLeft--;
+            if (pomodoroState.timeLeft <= 0) {
                 clearInterval(pomodoroState.interval);
                 pomodoroState.running = false;
-            } else {
-                pomodoroState.running = true;
-                pomodoroState.interval = setInterval(() => {
-                    pomodoroState.timeLeft--;
-                    if (pomodoroState.timeLeft <= 0) {
-                        clearInterval(pomodoroState.interval);
-                        pomodoroState.running = false;
-                        if (pomodoroState.mode === 'focus') {
-                            pomodoroState.mode = 'break';
-                            pomodoroState.timeLeft = 5 * 60;
-                            showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
-                        } else {
-                            pomodoroState.mode = 'focus';
-                            pomodoroState.timeLeft = 25 * 60;
-                            showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
-                        }
-                    }
-                    const container = document.getElementById('pomodoroContainer');
-                    if (container) container.innerHTML = renderFocusTimer();
-                }, 1000);
+                if (pomodoroState.mode === 'focus') {
+                    pomodoroState.mode = 'break';
+                    pomodoroState.timeLeft = 5 * 60;
+                    showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
+                } else {
+                    pomodoroState.mode = 'focus';
+                    pomodoroState.timeLeft = 25 * 60;
+                    showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
+                }
             }
             const container = document.getElementById('pomodoroContainer');
             if (container) container.innerHTML = renderFocusTimer();
+        }, 1000);
+    }
+    const container = document.getElementById('pomodoroContainer');
+    if (container) container.innerHTML = renderFocusTimer();
+}
+function toggleVoiceInput() {
+    const btn = document.getElementById('aiMicBtn');
+    const input = document.getElementById('aiChatInput');
+
+    if (!recognition) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Il tuo browser non supporta il riconoscimento vocale.");
+            return;
         }
-        function toggleVoiceInput() {
-            const btn = document.getElementById('aiMicBtn');
-            const input = document.getElementById('aiChatInput');
+        recognition = new SpeechRecognition();
+        recognition.lang = 'it-IT';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
 
-            if (!recognition) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) {
-                    alert("Il tuo browser non supporta il riconoscimento vocale.");
-                    return;
-                }
-                recognition = new SpeechRecognition();
-                recognition.lang = 'it-IT';
-                recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
+        recognition.onstart = () => {
+            if (btn) btn.classList.add('mic-active');
+            if (btn) btn.innerHTML = '<i class="ph-fill ph-microphone"></i>';
+        };
 
-                recognition.onstart = () => {
-                    if (btn) btn.classList.add('mic-active');
-                    if (btn) btn.innerHTML = '<i class="ph-fill ph-microphone"></i>';
-                };
-
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    if (input) {
-                        input.value = (input.value ? input.value + ' ' : '') + transcript;
-                        state.aiChatInputValue = input.value;
-                        // Trigger resize
-                        input.style.height = 'auto';
-                        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
-                    }
-                };
-
-                recognition.onerror = (event) => {
-                    console.error('Speech recognition error:', event.error);
-                    stopVoiceInput();
-                };
-
-                recognition.onend = () => {
-                    stopVoiceInput();
-                };
-
-                recognition.start();
-            } else {
-                stopVoiceInput();
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            if (input) {
+                input.value = (input.value ? input.value + ' ' : '') + transcript;
+                state.aiChatInputValue = input.value;
+                // Trigger resize
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 100) + 'px';
             }
-        }
-        function promptAddBacklog() { showAddBacklogModal(); }
-        function showAddBacklogModal() {
-            const container = getModalContainer();
-            if (!container) return;
-            const subjects = getAllSubjects();
+        };
 
-            container.innerHTML = `
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            stopVoiceInput();
+        };
+
+        recognition.onend = () => {
+            stopVoiceInput();
+        };
+
+        recognition.start();
+    } else {
+        stopVoiceInput();
+    }
+}
+function promptAddBacklog() { showAddBacklogModal(); }
+function showAddBacklogModal() {
+    const container = getModalContainer();
+    if (!container) return;
+    const subjects = getAllSubjects();
+
+    container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -2552,14 +2555,14 @@ function renderHome() {
                    </div>
                </div>
            </div>`;
-        }
-        function renderVerifiche() {
-            const exams = state.exams || [];
-            // Sort by date
-            exams.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+function renderVerifiche() {
+    const exams = state.exams || [];
+    // Sort by date
+    exams.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            if (exams.length === 0) {
-                return `
+    if (exams.length === 0) {
+        return `
                     <div class="view">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Verifiche</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
@@ -2573,9 +2576,9 @@ function renderHome() {
                            </button>
                        </div>
                    </div>`;
-            }
+    }
 
-            return `
+    return `
                 <div class="view">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
@@ -2589,13 +2592,13 @@ function renderHome() {
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         ${exams.map((e, index) => {
-                const dateObj = new Date(e.date);
-                const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'short' });
-                const dayNum = dateObj.getDate();
-                const monthName = dateObj.toLocaleDateString('it-IT', { month: 'short' });
-                const color = getSubjectColor(e.subject);
+        const dateObj = new Date(e.date);
+        const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'short' });
+        const dayNum = dateObj.getDate();
+        const monthName = dateObj.toLocaleDateString('it-IT', { month: 'short' });
+        const color = getSubjectColor(e.subject);
 
-                return `
+        return `
                             <div class="glass-panel" style="padding: 20px; display: flex; align-items: flex-start; gap: 16px;">
                                 <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(255,255,255,0.05);">
                                     <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${monthName}</span>
@@ -2618,15 +2621,15 @@ function renderHome() {
                                </div>
                            </div>
                             `;
-            }).join('')}
+    }).join('')}
                    </div>
                </div>`;
-        }
-        function renderRecoveries() {
-            const backlog = state.backlog || [];
+}
+function renderRecoveries() {
+    const backlog = state.backlog || [];
 
-            if (backlog.length === 0) {
-                return `
+    if (backlog.length === 0) {
+        return `
                     <div class="view">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Arretrati</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
@@ -2640,9 +2643,9 @@ function renderHome() {
                            </button>
                        </div>
                    </div>`;
-            }
+    }
 
-            return `
+    return `
                 <div class="view">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <div>
@@ -2668,11 +2671,11 @@ function renderHome() {
                         `).join('')}
                    </div>
                </div>`;
-        }
-        function openArgoLogin() {
-            const modalContainer = getModalContainer();
-            if (!modalContainer) return;
-            modalContainer.innerHTML = `
+}
+function openArgoLogin() {
+    const modalContainer = getModalContainer();
+    if (!modalContainer) return;
+    modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;">
                 <div style="text-align:center; margin-bottom:20px;">
@@ -2694,14 +2697,14 @@ function renderHome() {
                 <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
             </div>
         </div>`;
-            checkServerHealth();
-        }
-        function showProfileSelectionModal(profiles, credentials) {
-            console.log("👥 Mostro modale selezione profili:", profiles);
-            const container = getModalContainer();
-            if (!container) return;
+    checkServerHealth();
+}
+function showProfileSelectionModal(profiles, credentials) {
+    console.log("👥 Mostro modale selezione profili:", profiles);
+    const container = getModalContainer();
+    if (!container) return;
 
-            container.innerHTML = `
+    container.innerHTML = `
         <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
             <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <div style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -2731,126 +2734,126 @@ function renderHome() {
             </div>
         </div>`;
 
-            // Event Delegation
-            const list = container.querySelector('.profiles-list');
-            list.addEventListener('click', async (ev) => {
-                const btn = ev.target.closest('.btn-profile');
-                if (!btn) return;
+    // Event Delegation
+    const list = container.querySelector('.profiles-list');
+    list.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('.btn-profile');
+        if (!btn) return;
 
-                // Disabilita UI
-                const allBtns = list.querySelectorAll('.btn-profile');
-                allBtns.forEach(b => {
-                    b.disabled = true;
-                    b.style.opacity = '0.5';
-                    b.style.pointerEvents = 'none';
-                });
+        // Disabilita UI
+        const allBtns = list.querySelectorAll('.btn-profile');
+        allBtns.forEach(b => {
+            b.disabled = true;
+            b.style.opacity = '0.5';
+            b.style.pointerEvents = 'none';
+        });
 
-                btn.style.opacity = '1';
-                btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
+        btn.style.opacity = '1';
+        btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
 
-                await selectProfile(parseInt(btn.dataset.index, 10), credentials);
-            }, { once: true });
+        await selectProfile(parseInt(btn.dataset.index, 10), credentials);
+    }, { once: true });
 
-            // Risolvi i nomi veri in background
-            resolveProfileNamesAsync(profiles, credentials, container);
+    // Risolvi i nomi veri in background
+    resolveProfileNamesAsync(profiles, credentials, container);
+}
+function setLoginBtnText(txt) {
+    const btn = document.getElementById('login-btn') ||
+        document.querySelector('.login-btn') ||
+        document.querySelector('#loginBtn') ||
+        document.querySelector('button[onclick*="performArgoSync"]') ||
+        document.querySelector('button[type="submit"]');
+
+    if (!btn) return;
+
+    btn.innerText = txt;
+    btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
+}
+function toggleTask(id) {
+    if (event) event.stopPropagation();
+
+    let t = state.tasks.find(x => x.id === id);
+    if (!t) t = state.reminders.find(x => x.id === id);
+
+    if (t) {
+        t.done = !t.done;
+        saveTasks();
+        if (state.reminders && state.reminders.find(x => x.id === id)) {
+            localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
         }
-        function setLoginBtnText(txt) {
-            const btn = document.getElementById('login-btn') ||
-                document.querySelector('.login-btn') ||
-                document.querySelector('#loginBtn') ||
-                document.querySelector('button[onclick*="performArgoSync"]') ||
-                document.querySelector('button[type="submit"]');
 
-            if (!btn) return;
 
-            btn.innerText = txt;
-            btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
+        // === SURGICAL DOM UPDATE ===
+        // Update all checkboxes for this task ID without rebuilding
+        document.querySelectorAll(`[data-task-toggle="${id}"]`).forEach(cb => {
+            const isPlanner = cb.closest('.planner-content') || cb.closest('#weekly-agenda-list');
+            if (isPlanner) {
+                cb.style.borderColor = t.done ? '#141414' : '#E5E5EA';
+                cb.style.background = t.done ? '#141414' : 'transparent';
+                cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : '';
+            } else {
+                cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
+                cb.style.background = t.done ? '#141414' : '#fff';
+                cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
+            }
+            cb.style.transform = 'scale(0.85)';
+            setTimeout(() => { cb.style.transform = 'scale(1)'; }, 120);
+        });
+        // Update text strikethrough
+        document.querySelectorAll(`[data-task-text="${id}"]`).forEach(el => {
+            el.style.textDecoration = t.done ? 'line-through' : 'none';
+            el.style.opacity = t.done ? '0.5' : '1';
+            el.style.color = t.done ? '#C8C4BE' : '';
+        });
+
+        // Update Home's Focus di Oggi toggle checkboxes (inline onclick) 
+        updatePlanTaskUI(id, t.done);
+
+        // Sync calendar events (lightweight, no full re-render)
+        const calendarEl = document.getElementById('calendar');
+        if (calendarEl && calendarEl._fullCalendar) {
+            syncCalendarEvents(calendarEl._fullCalendar);
         }
-        function toggleTask(id) {
-            if (event) event.stopPropagation();
+        if (state.view === 'planner' && typeof renderCustomCalendar === 'function') renderCustomCalendar();
 
-            let t = state.tasks.find(x => x.id === id);
-            if (!t) t = state.reminders.find(x => x.id === id);
-
-            if (t) {
-                t.done = !t.done;
-                saveTasks();
-                if (state.reminders && state.reminders.find(x => x.id === id)) {
-                    localStorage.setItem(lsKey('reminders'), JSON.stringify(state.reminders));
-                }
-
-
-                // === SURGICAL DOM UPDATE ===
-                // Update all checkboxes for this task ID without rebuilding
-                document.querySelectorAll(`[data-task-toggle="${id}"]`).forEach(cb => {
-                    const isPlanner = cb.closest('.planner-content') || cb.closest('#weekly-agenda-list');
-                    if (isPlanner) {
-                        cb.style.borderColor = t.done ? '#141414' : '#E5E5EA';
-                        cb.style.background = t.done ? '#141414' : 'transparent';
-                        cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : '';
-                    } else {
-                        cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
-                        cb.style.background = t.done ? '#141414' : '#fff';
-                        cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
-                    }
-                    cb.style.transform = 'scale(0.85)';
-                    setTimeout(() => { cb.style.transform = 'scale(1)'; }, 120);
-                });
-                // Update text strikethrough
-                document.querySelectorAll(`[data-task-text="${id}"]`).forEach(el => {
-                    el.style.textDecoration = t.done ? 'line-through' : 'none';
-                    el.style.opacity = t.done ? '0.5' : '1';
-                    el.style.color = t.done ? '#C8C4BE' : '';
-                });
-
-                // Update Home's Focus di Oggi toggle checkboxes (inline onclick) 
-                updatePlanTaskUI(id, t.done);
-
-                // Sync calendar events (lightweight, no full re-render)
-                const calendarEl = document.getElementById('calendar');
-                if (calendarEl && calendarEl._fullCalendar) {
-                    syncCalendarEvents(calendarEl._fullCalendar);
-                }
-                if (state.view === 'planner' && typeof renderCustomCalendar === 'function') renderCustomCalendar();
-
-                // Refresh weekly agenda in-place if on planner
-                if (state.view === 'planner') {
-                    const agendaEl = document.getElementById('weekly-agenda-list');
-                    if (agendaEl) {
-                        const newContent = renderWeeklyAgenda();
-                        const temp = document.createElement('div');
-                        temp.innerHTML = newContent;
-                        const newList = temp.querySelector('#weekly-agenda-list');
-                        if (newList) agendaEl.innerHTML = newList.innerHTML;
-                    }
-                }
-
-                // Update completed badge
-                const badge = document.querySelector('[data-completed-badge]');
-                if (badge) {
-                    const todayTasks = state.tasks.filter(t => {
-                        if (!t.dateObj) return false;
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const d = new Date(t.dateObj);
-                        d.setHours(0, 0, 0, 0);
-                        return d.getTime() === today.getTime();
-                    });
-                    const completedToday = todayTasks.filter(t => t.done).length;
-                    badge.textContent = `${completedToday}/${todayTasks.length}`;
-                }
-
-                // ✅ FIX: Update home view surgically, no full scheduleRender
-                if (state.view === 'home' && typeof updateHomeView === 'function') updateHomeView();
+        // Refresh weekly agenda in-place if on planner
+        if (state.view === 'planner') {
+            const agendaEl = document.getElementById('weekly-agenda-list');
+            if (agendaEl) {
+                const newContent = renderWeeklyAgenda();
+                const temp = document.createElement('div');
+                temp.innerHTML = newContent;
+                const newList = temp.querySelector('#weekly-agenda-list');
+                if (newList) agendaEl.innerHTML = newList.innerHTML;
             }
         }
-        function showQuickAddTaskModal() {
-            const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
-            const subjectOptions = subjects.length > 0
-                ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
-                : '<option value="Generale">Generale</option>';
 
-            showModal(`
+        // Update completed badge
+        const badge = document.querySelector('[data-completed-badge]');
+        if (badge) {
+            const todayTasks = state.tasks.filter(t => {
+                if (!t.dateObj) return false;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const d = new Date(t.dateObj);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() === today.getTime();
+            });
+            const completedToday = todayTasks.filter(t => t.done).length;
+            badge.textContent = `${completedToday}/${todayTasks.length}`;
+        }
+
+        // ✅ FIX: Update home view surgically, no full scheduleRender
+        if (state.view === 'home' && typeof updateHomeView === 'function') updateHomeView();
+    }
+}
+function showQuickAddTaskModal() {
+    const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+    const subjectOptions = subjects.length > 0
+        ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+        : '<option value="Generale">Generale</option>';
+
+    showModal(`
                 <div style="padding: 24px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Aggiungi Compito</h2>
@@ -2880,14 +2883,14 @@ function renderHome() {
                     </button>
                 </div>
         `);
-        }
-        function showAddRegistroTaskModal() {
-            const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
-            const subjectOptions = subjects.length > 0
-                ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
-                : '<option value="Generale">Generale</option>';
+}
+function showAddRegistroTaskModal() {
+    const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+    const subjectOptions = subjects.length > 0
+        ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+        : '<option value="Generale">Generale</option>';
 
-            showModal(`
+    showModal(`
                 <div style="padding: 28px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Nuova Verifica</h2>
@@ -2927,50 +2930,50 @@ function renderHome() {
                     </style>
                 </div>
         `);
-            window._registroTipo = 'scritta';
+    window._registroTipo = 'scritta';
+}
+// --- Registro Tipo Selection ---
+window.selectRegistroTipo = function (tipo) {
+    window._registroTipo = tipo;
+    const btnSc = document.getElementById('tipo-scritta');
+    const btnOr = document.getElementById('tipo-orale');
+    if (btnSc && btnOr) {
+        if (tipo === 'scritta') {
+            btnSc.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+            btnOr.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+        } else {
+            btnOr.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+            btnSc.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
         }
-        // --- Registro Tipo Selection ---
-        window.selectRegistroTipo = function(tipo) {
-            window._registroTipo = tipo;
-            const btnSc = document.getElementById('tipo-scritta');
-            const btnOr = document.getElementById('tipo-orale');
-            if (btnSc && btnOr) {
-                if (tipo === 'scritta') {
-                    btnSc.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
-                    btnOr.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
-                } else {
-                    btnOr.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
-                    btnSc.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
-                }
-            }
-        };
-        // --- Submit Registro Task (Handled in index.html) ---
-        // (Moved to correct global scope with Supabase integration in index.html)
-        function showCompetencyInputModal() {
-            const votiData = getVotiData();
-            const subjectsMap = {};
-            votiData.forEach(v => {
-                const sub = v.materia || v.subject || 'Altro';
-                if (!subjectsMap[sub]) subjectsMap[sub] = [];
-                subjectsMap[sub].push(v);
-            });
+    }
+};
+// --- Submit Registro Task (Handled in index.html) ---
+// (Moved to correct global scope with Supabase integration in index.html)
+function showCompetencyInputModal() {
+    const votiData = getVotiData();
+    const subjectsMap = {};
+    votiData.forEach(v => {
+        const sub = v.materia || v.subject || 'Altro';
+        if (!subjectsMap[sub]) subjectsMap[sub] = [];
+        subjectsMap[sub].push(v);
+    });
 
-            // Also gather all known subjects from tasks (in case there are subjects with no grades yet)
-            const allSubjects = new Set(Object.keys(subjectsMap));
-            state.tasks.forEach(t => { if (t.subject) allSubjects.add(t.subject); });
+    // Also gather all known subjects from tasks (in case there are subjects with no grades yet)
+    const allSubjects = new Set(Object.keys(subjectsMap));
+    state.tasks.forEach(t => { if (t.subject) allSubjects.add(t.subject); });
 
-            const subjectsList = [...allSubjects].map(name => {
-                const list = subjectsMap[name] || [];
-                const media = list.length > 0 ? (parseFloat(calcolaMedia(list)) || 0) : 0;
-                const color = getSubjectColor(name);
-                const savedLevel = (state.prepLevels || {})[name] || 3;
-                const priority = media < 6 ? '🔴 Recupero' : media < 7 ? '🟡 Migliorabile' : '🟢 Buona';
-                return { name, media, color, priority, count: list.length, savedLevel };
-            }).sort((a, b) => a.media - b.media);
+    const subjectsList = [...allSubjects].map(name => {
+        const list = subjectsMap[name] || [];
+        const media = list.length > 0 ? (parseFloat(calcolaMedia(list)) || 0) : 0;
+        const color = getSubjectColor(name);
+        const savedLevel = (state.prepLevels || {})[name] || 3;
+        const priority = media < 6 ? '🔴 Recupero' : media < 7 ? '🟡 Migliorabile' : '🟢 Buona';
+        return { name, media, color, priority, count: list.length, savedLevel };
+    }).sort((a, b) => a.media - b.media);
 
-            const levelLabels = { 1: 'Per niente pronto', 2: 'Poco pronto', 3: 'Sufficiente', 4: 'Abbastanza pronto', 5: 'Molto pronto' };
+    const levelLabels = { 1: 'Per niente pronto', 2: 'Poco pronto', 3: 'Sufficiente', 4: 'Abbastanza pronto', 5: 'Molto pronto' };
 
-            showModal(`
+    showModal(`
                 <div style="padding: 24px; max-height: 80vh; overflow-y: auto;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <h2 style="margin: 0; font-size: 20px; font-weight: 800;">🎯 Competenze & Priorità</h2>
@@ -3010,13 +3013,13 @@ function renderHome() {
                     </button>
                 </div>
         `);
-        }
-        function showOrganizeStudyModal() {
-            const todayStr = getLocalDateString(getSchoolDate());
-            const plannedIds = state.plannedTasks[todayStr] || [];
-            const allPendingTasks = state.tasks.filter(t => !t.done);
+}
+function showOrganizeStudyModal() {
+    const todayStr = getLocalDateString(getSchoolDate());
+    const plannedIds = state.plannedTasks[todayStr] || [];
+    const allPendingTasks = state.tasks.filter(t => !t.done);
 
-            modalContainer.innerHTML = `
+    modalContainer.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 450px; padding: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -3027,9 +3030,9 @@ function renderHome() {
                     
                     <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; max-height: 450px; overflow-y: auto;">
                         ${allPendingTasks.length > 0 ? allPendingTasks.map(t => {
-                const isPlanned = plannedIds.includes(t.id);
-                const subjectColor = getSubjectColor(t.subject);
-                return `
+        const isPlanned = plannedIds.includes(t.id);
+        const subjectColor = getSubjectColor(t.subject);
+        return `
                                 <div class="glass-list-item" style="padding: 18px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-left: 4px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.05)'}; background: ${isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)'};" onclick="togglePlanTask('${t.id}')">
                                     <div class="plan-checkbox ${isPlanned ? 'checked' : ''}" style="width: 28px; height: 28px; border-radius: 8px; background: ${isPlanned ? 'var(--green)' : 'transparent'}; border: 2px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         ${isPlanned ? '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>' : ''}
@@ -3040,91 +3043,91 @@ function renderHome() {
                                     </div>
                                 </div>
                             `;
-            }).join('') : '<div style="text-align: center; opacity: 0.5; padding: 40px;">Nessun compito in sospeso.</div>'}
+    }).join('') : '<div style="text-align: center; opacity: 0.5; padding: 40px;">Nessun compito in sospeso.</div>'}
                     </div>
                     <button onclick="closeModal()" class="btn-primary" style="width: 100%; padding: 16px; font-size: 16px; font-weight: 700;">Salva Agenda</button>
                 </div>
             </div>
         `;
+}
+function togglePlannerMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('planner-cloud-menu');
+    const btn = document.getElementById('planner-cloud-btn') || event?.currentTarget || event?.target?.closest('button');
+    if (!menu || !btn) return;
+
+    const isVisible = menu.classList.contains('active');
+
+    // Chiudi tutti gli altri eventuali dropdown prima
+    document.querySelectorAll('.planner-dropdown-content').forEach(el => {
+        if (el !== menu) {
+            el.classList.remove('active');
+            el.style.display = 'none';
         }
-        function togglePlannerMenu(event) {
-            if (event) event.stopPropagation();
-            const menu = document.getElementById('planner-cloud-menu');
-            const btn = document.getElementById('planner-cloud-btn') || event?.currentTarget || event?.target?.closest('button');
-            if (!menu || !btn) return;
+    });
 
-            const isVisible = menu.classList.contains('active');
+    if (!isVisible) {
+        // 🚀 TELETRASPORTO: Esci dai contenitori padri (v1.1.56)
+        if (menu.parentElement !== document.body) {
+            document.body.appendChild(menu);
+        }
 
-            // Chiudi tutti gli altri eventuali dropdown prima
-            document.querySelectorAll('.planner-dropdown-content').forEach(el => {
-                if (el !== menu) {
-                    el.classList.remove('active');
-                    el.style.display = 'none';
-                }
-            });
+        // Calcola posizione esatta sullo schermo 
+        const isMobile = window.innerWidth <= 768;
+        const menuWidth = isMobile ? 240 : 300;
 
-            if (!isVisible) {
-                // 🚀 TELETRASPORTO: Esci dai contenitori padri (v1.1.56)
-                if (menu.parentElement !== document.body) {
-                    document.body.appendChild(menu);
-                }
+        const updatePosition = () => {
+            const rect = btn.getBoundingClientRect();
+            const isMobile = window.innerWidth <= 768;
+            const menuWidth = isMobile ? 240 : 300;
 
-                // Calcola posizione esatta sullo schermo 
-                const isMobile = window.innerWidth <= 768;
-                const menuWidth = isMobile ? 240 : 300;
+            // Calculate left position anchored to button's right edge (v1.1.58)
+            let leftPos = rect.right - menuWidth;
+            // Prevent overflow on left edge
+            if (leftPos < 8) leftPos = 8;
+            // Prevent overflow on right edge
+            if (leftPos + menuWidth > window.innerWidth - 8) {
+                leftPos = window.innerWidth - menuWidth - 8;
+            }
 
-                const updatePosition = () => {
-                    const rect = btn.getBoundingClientRect();
-                    const isMobile = window.innerWidth <= 768;
-                    const menuWidth = isMobile ? 240 : 300;
+            // Perfect Positioning (v1.1.64): Absolute relative to document to scroll NATURALLY
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
 
-                    // Calculate left position anchored to button's right edge (v1.1.58)
-                    let leftPos = rect.right - menuWidth;
-                    // Prevent overflow on left edge
-                    if (leftPos < 8) leftPos = 8;
-                    // Prevent overflow on right edge
-                    if (leftPos + menuWidth > window.innerWidth - 8) {
-                        leftPos = window.innerWidth - menuWidth - 8;
-                    }
+            menu.style.setProperty('position', 'absolute', 'important');
+            menu.style.setProperty('top', (scrollY + rect.bottom + 8) + 'px', 'important');
+            menu.style.setProperty('left', (scrollX + leftPos) + 'px', 'important');
+            menu.style.setProperty('right', 'auto', 'important');
+            menu.style.setProperty('z-index', '2147483647', 'important');
+            menu.style.setProperty('width', menuWidth + 'px', 'important');
+            menu.style.setProperty('min-width', menuWidth + 'px', 'important');
+            menu.style.setProperty('display', 'flex', 'important');
+            menu.style.setProperty('flex-direction', 'column', 'important');
+        };
 
-                    // Perfect Positioning (v1.1.64): Absolute relative to document to scroll NATURALLY
-                    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-                    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        updatePosition();
+        menu.classList.add('active');
 
-                    menu.style.setProperty('position', 'absolute', 'important');
-                    menu.style.setProperty('top', (scrollY + rect.bottom + 8) + 'px', 'important');
-                    menu.style.setProperty('left', (scrollX + leftPos) + 'px', 'important');
-                    menu.style.setProperty('right', 'auto', 'important');
-                    menu.style.setProperty('z-index', '2147483647', 'important');
-                    menu.style.setProperty('width', menuWidth + 'px', 'important');
-                    menu.style.setProperty('min-width', menuWidth + 'px', 'important');
-                    menu.style.setProperty('display', 'flex', 'important');
-                    menu.style.setProperty('flex-direction', 'column', 'important');
-                };
-
-                updatePosition();
-                menu.classList.add('active');
-
-                // Gestore chiusura universale
-                const closeHandler = (e) => {
-                    if (!menu.contains(e.target) && !btn.contains(e.target)) {
-                        menu.classList.remove('active');
-                        menu.style.display = 'none';
-                        document.removeEventListener('click', closeHandler);
-                    }
-                };
-
-                setTimeout(() => {
-                    document.addEventListener('click', closeHandler);
-                }, 10);
-            } else {
+        // Gestore chiusura universale
+        const closeHandler = (e) => {
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
                 menu.classList.remove('active');
                 menu.style.display = 'none';
+                document.removeEventListener('click', closeHandler);
             }
-        }
-        function showTasksBySubjectModal() {
-            const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
-            modalContainer.innerHTML = `
+        };
+
+        setTimeout(() => {
+            document.addEventListener('click', closeHandler);
+        }, 10);
+    } else {
+        menu.classList.remove('active');
+        menu.style.display = 'none';
+    }
+}
+function showTasksBySubjectModal() {
+    const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
+    modalContainer.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)">
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 500px; padding: 24px; max-height: 85vh; overflow-y: auto;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -3133,9 +3136,9 @@ function renderHome() {
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 24px;">
                         ${subjects.map(s => {
-                const subjectTasks = state.tasks.filter(t => t.subject === s);
-                const color = getSubjectColor(s);
-                return `
+        const subjectTasks = state.tasks.filter(t => t.subject === s);
+        const color = getSubjectColor(s);
+        return `
                                 <div style="border-left: 4px solid ${color}; padding-left: 16px;">
                                     <h3 style="color: ${color}; text-transform: uppercase; font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                                         <i class="ph-fill ph-book-open"></i> ${s}
@@ -3156,142 +3159,142 @@ function renderHome() {
                                     </div>
                                 </div>
                             `;
-            }).join('')}
+    }).join('')}
                     </div>
                     <button onclick="closeModal()" class="btn-primary" style="margin-top: 30px; width: 100%;">Chiudi</button>
                 </div>
             </div>
         `;
-        }
-        function togglePlanTask(id) {
-            if (event) event.stopPropagation();
+}
+function togglePlanTask(id) {
+    if (event) event.stopPropagation();
 
-            const todayStr = getLocalDateString(getSchoolDate());
-            if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
+    const todayStr = getLocalDateString(getSchoolDate());
+    if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
 
-            const index = state.plannedTasks[todayStr].indexOf(id);
-            if (index > -1) {
-                state.plannedTasks[todayStr].splice(index, 1);
-            } else {
-                state.plannedTasks[todayStr].push(id);
-            }
+    const index = state.plannedTasks[todayStr].indexOf(id);
+    if (index > -1) {
+        state.plannedTasks[todayStr].splice(index, 1);
+    } else {
+        state.plannedTasks[todayStr].push(id);
+    }
 
-            saveTasks();
+    saveTasks();
 
-            updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
-            updatePlannerCounter();
-            notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
-        }
-        function updateTaskUI(taskId, isDone) {
-            const checkbox = document.querySelector(`[data-task-toggle="${taskId}"]`);
-            const taskText = document.querySelector(`[data-task-text="${taskId}"]`);
+    updatePlanTaskUI(id, state.plannedTasks[todayStr].includes(id));
+    updatePlannerCounter();
+    notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
+}
+function updateTaskUI(taskId, isDone) {
+    const checkbox = document.querySelector(`[data-task-toggle="${taskId}"]`);
+    const taskText = document.querySelector(`[data-task-text="${taskId}"]`);
 
-            if (checkbox) {
-                checkbox.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+    if (checkbox) {
+        checkbox.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 
-                if (isDone) {
-                    checkbox.style.background = 'var(--green, #30D158)';
-                    checkbox.style.borderColor = 'var(--green, #30D158)';
-                    checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>';
-                } else {
-                    checkbox.style.background = 'transparent';
-                    checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
-                    checkbox.innerHTML = '';
-                }
-
-                checkbox.style.transform = 'scale(0.85) translateZ(0)';
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        checkbox.style.transform = 'scale(1) translateZ(0)';
-                    }, 50);
-                });
-            }
-
-            if (taskText) {
-                taskText.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-                if (isDone) {
-                    taskText.style.opacity = '0.5';
-                    taskText.style.textDecoration = 'line-through';
-                } else {
-                    taskText.style.opacity = '1';
-                    taskText.style.textDecoration = 'none';
-                }
-            }
-        }
-        function updateMediaWidget(value) { renderMediaGauge(value); }
-        function initHomeWidgets({ mediaValue = 7.64 } = {}) {
-            renderMediaGauge(mediaValue);
-        }
-        function togglePollCreatorUI() {
-            const ui = document.getElementById('poll-creator-ui');
-            if (ui) {
-                ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
-            }
+        if (isDone) {
+            checkbox.style.background = 'var(--green, #30D158)';
+            checkbox.style.borderColor = 'var(--green, #30D158)';
+            checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>';
+        } else {
+            checkbox.style.background = 'transparent';
+            checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
+            checkbox.innerHTML = '';
         }
 
+        checkbox.style.transform = 'scale(0.85) translateZ(0)';
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                checkbox.style.transform = 'scale(1) translateZ(0)';
+            }, 50);
+        });
+    }
 
-        // ── 3. PATCH: refreshDailyQuote ──
-        window.refreshDailyQuote = function (btnEl) {
-            window._quoteOffset = (window._quoteOffset || 0) + 1;
-            const quotes = [
-                "Un piccolo passo oggi vale più di dieci domani.",
-                "La costanza batte il talento quando il talento non è costante.",
-                "Fatto è meglio di perfetto.",
-                "Studia con calma, migliora ogni giorno.",
-                "La conoscenza è potere.",
-                "La curiosità è il motore dell'apprendimento.",
-                "Ogni errore è un passo verso la comprensione.",
-                "La disciplina è il ponte tra gli obiettivi e i risultati.",
-                "Un libro è un giardino tascabile.",
-                "Imparare senza riflettere è tempo perso.",
-            ];
-            const day = new Date().getDate();
-            const idx = (day + window._quoteOffset) % quotes.length;
-            
-            const heroStatus = document.querySelector('.hero-status span[style*="italic"]');
-            if (heroStatus) {
-                heroStatus.style.opacity = '0';
-                heroStatus.style.transform = 'translateY(-4px)';
-                heroStatus.style.transition = 'all 0.2s ease';
-                setTimeout(() => {
-                    heroStatus.textContent = `"${quotes[idx]}"`;
-                    heroStatus.style.opacity = '0.8';
-                    heroStatus.style.transform = 'translateY(0)';
-                }, 200);
-            }
+    if (taskText) {
+        taskText.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        if (isDone) {
+            taskText.style.opacity = '0.5';
+            taskText.style.textDecoration = 'line-through';
+        } else {
+            taskText.style.opacity = '1';
+            taskText.style.textDecoration = 'none';
+        }
+    }
+}
+function updateMediaWidget(value) { renderMediaGauge(value); }
+function initHomeWidgets({ mediaValue = 7.64 } = {}) {
+    renderMediaGauge(mediaValue);
+}
+function togglePollCreatorUI() {
+    const ui = document.getElementById('poll-creator-ui');
+    if (ui) {
+        ui.style.display = (ui.style.display === 'none' || ui.style.display === '') ? 'block' : 'none';
+    }
+}
 
-            if (btnEl) {
-                btnEl.style.transform = 'rotate(360deg)';
-                btnEl.style.transition = 'transform 0.4s cubic-bezier(0.16,1,0.3,1)';
-                setTimeout(() => {
-                    btnEl.style.transform = '';
-                    btnEl.style.transition = '';
-                }, 400);
-            }
-        };
 
-        // ── 4. PATCH: animationend listener ──
-        document.addEventListener('animationend', (e) => {
-            if (e.target.classList.contains('view') || 
-                e.target.classList.contains('hero-container') ||
-                e.target.classList.contains('greeting-card')) {
-                e.target.classList.add('anim-done');
-            }
-        }, true);
+// ── 3. PATCH: refreshDailyQuote ──
+window.refreshDailyQuote = function (btnEl) {
+    window._quoteOffset = (window._quoteOffset || 0) + 1;
+    const quotes = [
+        "Un piccolo passo oggi vale più di dieci domani.",
+        "La costanza batte il talento quando il talento non è costante.",
+        "Fatto è meglio di perfetto.",
+        "Studia con calma, migliora ogni giorno.",
+        "La conoscenza è potere.",
+        "La curiosità è il motore dell'apprendimento.",
+        "Ogni errore è un passo verso la comprensione.",
+        "La disciplina è il ponte tra gli obiettivi e i risultati.",
+        "Un libro è un giardino tascabile.",
+        "Imparare senza riflettere è tempo perso.",
+    ];
+    const day = new Date().getDate();
+    const idx = (day + window._quoteOffset) % quotes.length;
 
-        /* ===== GLOBAL SAFETY EXPORTS (hotfix) ===== */
-        (function attachGlobals() {
-          const safeBind = (name, fn) => {
-            if (typeof window[name] !== 'function') window[name] = fn;
-          };
+    const heroStatus = document.querySelector('.hero-status span[style*="italic"]');
+    if (heroStatus) {
+        heroStatus.style.opacity = '0';
+        heroStatus.style.transform = 'translateY(-4px)';
+        heroStatus.style.transition = 'all 0.2s ease';
+        setTimeout(() => {
+            heroStatus.textContent = `"${quotes[idx]}"`;
+            heroStatus.style.opacity = '0.8';
+            heroStatus.style.transform = 'translateY(0)';
+        }, 200);
+    }
 
-          // 1) showProfileActions fallback
-          safeBind('showProfileActions', function showProfileActionsFallback() {
-            try {
-              if (typeof closeModal !== 'function' || typeof getModalContainer !== 'function') return;
-              const container = getModalContainer();
-              if (!container) return;
-              container.innerHTML = `
+    if (btnEl) {
+        btnEl.style.transform = 'rotate(360deg)';
+        btnEl.style.transition = 'transform 0.4s cubic-bezier(0.16,1,0.3,1)';
+        setTimeout(() => {
+            btnEl.style.transform = '';
+            btnEl.style.transition = '';
+        }, 400);
+    }
+};
+
+// ── 4. PATCH: animationend listener ──
+document.addEventListener('animationend', (e) => {
+    if (e.target.classList.contains('view') ||
+        e.target.classList.contains('hero-container') ||
+        e.target.classList.contains('greeting-card')) {
+        e.target.classList.add('anim-done');
+    }
+}, true);
+
+/* ===== GLOBAL SAFETY EXPORTS (hotfix) ===== */
+(function attachGlobals() {
+    const safeBind = (name, fn) => {
+        if (typeof window[name] !== 'function') window[name] = fn;
+    };
+
+    // 1) showProfileActions fallback
+    safeBind('showProfileActions', function showProfileActionsFallback() {
+        try {
+            if (typeof closeModal !== 'function' || typeof getModalContainer !== 'function') return;
+            const container = getModalContainer();
+            if (!container) return;
+            container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
                   <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 360px; padding: 16px; border-radius: 20px; background: white; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
                     <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">Profilo</div>
@@ -3300,26 +3303,26 @@ function renderHome() {
                     <button onclick="if(window.logout) logout()" style="width: 100%; height: 48px; border-radius: 12px; border: none; background: rgba(239, 68, 68, 0.05); color: var(--red); font-weight: 800; cursor: pointer;">Esci</button>
                   </div>
                 </div>`;
-            } catch (e) {
-              console.error('showProfileActions fallback error', e);
-            }
-          });
+        } catch (e) {
+            console.error('showProfileActions fallback error', e);
+        }
+    });
 
-          // 2) isFutureOrToday fallback (timezone-safe)
-          safeBind('isFutureOrToday', function isFutureOrTodayFallback(dateStr) {
-            if (!dateStr) return false;
-            const today = (typeof getLocalDateString === 'function')
-              ? getLocalDateString(new Date())
-              : new Date().toISOString().slice(0, 10);
-            return String(dateStr) >= today;
-          });
-        })();
+    // 2) isFutureOrToday fallback (timezone-safe)
+    safeBind('isFutureOrToday', function isFutureOrTodayFallback(dateStr) {
+        if (!dateStr) return false;
+        const today = (typeof getLocalDateString === 'function')
+            ? getLocalDateString(new Date())
+            : new Date().toISOString().slice(0, 10);
+        return String(dateStr) >= today;
+    });
+})();
 
 
 // ── RENDERING HEART & NAVIGATION SETTINGS ──
 window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
 
-window.currentViewFromHash = function() {
+window.currentViewFromHash = function () {
     const v = (location.hash || '').replace('#', '').trim();
     return window.allowedViews.includes(v) ? v : null;
 };
@@ -3331,7 +3334,7 @@ const RENDER_MIN_GAP = 50; // ms
 window._gRenderRAF = null;
 window._gRenderTimer = null;
 
-window.render = function() {
+window.render = function () {
     if (window._gRenderRAF || state.booting) return;
     const now = performance.now();
     if (now - _lastRenderTime < RENDER_MIN_GAP) {
@@ -3346,7 +3349,7 @@ window.render = function() {
     });
 };
 
-window.scheduleRender = function(delay = 80) {
+window.scheduleRender = function (delay = 80) {
     clearTimeout(window._gRenderTimer);
     if (delay === 0) {
         window._gRenderTimer = setTimeout(window.render, 16);
@@ -3355,7 +3358,7 @@ window.scheduleRender = function(delay = 80) {
     }
 };
 
-window._renderCore = function() {
+window._renderCore = function () {
     const root = document.getElementById('app');
     const nav = document.getElementById('nav-container');
     if (!root || !nav) return;
@@ -3420,7 +3423,7 @@ window._renderCore = function() {
 };
 
 // ── UI HELPERS & PROFILE ──
-window.logout = async function() {
+window.logout = async function () {
     if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
         const currentUserId = getUserId();
         const currentLsPrefix = getActiveProfileKey();
@@ -3462,7 +3465,7 @@ window.logout = async function() {
     }
 };
 
-window.saveProfileToServer = async function(profileData) {
+window.saveProfileToServer = async function (profileData) {
     const userId = getUserId();
     const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: 'PUT',
@@ -3478,12 +3481,12 @@ window.saveProfileToServer = async function(profileData) {
     return await response.json();
 };
 
-window.saveProfileChanges = async function() {
+window.saveProfileChanges = async function () {
     const newNameInput = document.getElementById('edit-user-name');
     if (!newNameInput) return;
     const newName = newNameInput.value.trim();
     if (!newName) return alert("Inserisci almeno il nome");
-    
+
     try {
         if (typeof showBoot === 'function') showBoot("Salvataggio profilo...");
         await window.saveProfileToServer({ name: newName });
@@ -3552,7 +3555,7 @@ const MOTIVATIONAL_QUOTES = [
     "Sii orgoglioso di quanto sei arrivato lontano. Abbi fede in quanto lontano puoi andare."
 ];
 
-window.getDailyQuote = function() {
+window.getDailyQuote = function () {
     const todayStr = getLocalDateString();
     try {
         const cached = JSON.parse(localStorage.getItem('mh_daily_quote') || '{}');
@@ -3563,7 +3566,7 @@ window.getDailyQuote = function() {
     return randomQuote;
 };
 
-window.refreshDailyQuote = async function(btn) {
+window.refreshDailyQuote = async function (btn) {
     if (btn) {
         const icon = btn.querySelector('i');
         if (icon) icon.style.transform = 'rotate(360deg)';
@@ -3586,12 +3589,12 @@ window.refreshDailyQuote = async function(btn) {
     window.scheduleRender();
 };
 
-window.refreshCircolari = function() {
+window.refreshCircolari = function () {
     if (typeof showToast === 'function') showToast('Aggiornamento circolari...');
     if (typeof loadCircolari === 'function') loadCircolari();
 };
 
-window.requestCircularSynthesis = async function(id, link) {
+window.requestCircularSynthesis = async function (id, link) {
     const btn = document.getElementById(`btn-sintesi-${id}`);
     const placeholder = document.getElementById(`sintesi-placeholder-${id}`);
     if (btn) btn.style.display = 'none';
@@ -3627,7 +3630,7 @@ window.requestCircularSynthesis = async function(id, link) {
     clearInterval(interval);
 };
 
-window.loadCircolareSintesi = async function(id, link) {
+window.loadCircolareSintesi = async function (id, link) {
     try {
         console.log(`[Network] Sintesi Request: ${id}`);
         const response = await fetch(`${API_BASE_URL}/api/circolari/sintesi`, {
@@ -3639,7 +3642,7 @@ window.loadCircolareSintesi = async function(id, link) {
         if (data.success && data.sintesi) {
             const circolare = state.circolari.find(c => c.id === id);
             if (circolare) circolare.sintesi = data.sintesi;
-            
+
             const box = document.getElementById(`sintesi-box-${id}`);
             if (box) {
                 box.innerHTML = `
@@ -3665,7 +3668,7 @@ window.loadCircolareSintesi = async function(id, link) {
 };
 
 // ── PLANNER & QUESTS ──
-window.refreshPlanWeekModalContent = function() {
+window.refreshPlanWeekModalContent = function () {
     const contentEl = document.getElementById('plan-week-modal-content');
     if (!contentEl) return;
     const todayStr = getLocalDateString();
@@ -3678,7 +3681,7 @@ window.refreshPlanWeekModalContent = function() {
         const ds = getLocalDateString(d);
         next7Days.push({ date: d, dateStr: ds, label: dayLabels[d.getDay()], dayNum: d.getDate() });
     }
-    const now2w = new Date(); now2w.setHours(0,0,0,0);
+    const now2w = new Date(); now2w.setHours(0, 0, 0, 0);
     const twoWeeksLater = new Date(now2w); twoWeeksLater.setDate(now2w.getDate() + 14);
     const calendarTasks = state.tasks.filter(t => {
         if (t.done || !t.due_date || t.subject === 'QUEST' || t.id.startsWith('ai_')) return false;
@@ -3695,10 +3698,10 @@ window.refreshPlanWeekModalContent = function() {
         <div style="display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 8px; padding-bottom: 20px;">
             ${calendarTasks.length === 0 ? '<div style="text-align:center; padding:40px 20px; color:#908C86; font-family:JetBrains Mono, monospace; font-size:12px; text-transform:uppercase;">Nessun compito nelle prossime 2 settimane.</div>' : ''}
             ${calendarTasks.map(t => {
-                const subContent = t.subject || 'N/A';
-                const abbr = getSubjectAbbrev(subContent);
-                const key = abbr.toLowerCase();
-                return `
+        const subContent = t.subject || 'N/A';
+        const abbr = getSubjectAbbrev(subContent);
+        const key = abbr.toLowerCase();
+        return `
                 <div style="background: #FFFFFF; padding: 20px; border-radius: 20px; border: 1px solid #E0DDD8; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
                         <div style="min-width: 0; flex:1;">
@@ -3708,9 +3711,9 @@ window.refreshPlanWeekModalContent = function() {
                     </div>
                     <div style="display: flex; gap: 6px;">
                         ${next7Days.map(day => {
-                            const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
-                            const isToday = day.dateStr === todayStr;
-                            return `
+            const isPlanned = state.plannedTasks[day.dateStr] && state.plannedTasks[day.dateStr].includes(t.id);
+            const isToday = day.dateStr === todayStr;
+            return `
                             <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                 onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
                                 style="flex: 1; text-align:center; padding: 12px 4px; border-radius: 14px; cursor: pointer; transition: all 0.2s;
@@ -3720,17 +3723,17 @@ window.refreshPlanWeekModalContent = function() {
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; margin-bottom: 4px; opacity: ${isPlanned ? '0.6' : '1'};">${day.label.toUpperCase()}</div>
                                 <div style="font-weight: 800; font-size: 15px; letter-spacing: -0.02em;">${day.dayNum}</div>
                             </div>`;
-                        }).join('')}
+        }).join('')}
                     </div>
                 </div>`;
-            }).join('')}
+    }).join('')}
         </div>
         <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #F0EDE8;">
             <button onclick="closeModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">Fatto</button>
         </div>`;
 };
 
-window.updateWeekDayButton = function(taskId, dateStr) {
+window.updateWeekDayButton = function (taskId, dateStr) {
     const isPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
     const todayStr = getLocalDateString();
     document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
@@ -3746,7 +3749,7 @@ window.updateWeekDayButton = function(taskId, dateStr) {
     });
 };
 
-window.addCustomQuestFromInput = function() {
+window.addCustomQuestFromInput = function () {
     const textInput = document.getElementById('quest-text-input');
     const dateSelect = document.getElementById('quest-date-select');
     if (!textInput || !dateSelect) return;
@@ -3765,16 +3768,16 @@ window.addCustomQuestFromInput = function() {
     if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
 };
 
-window.selectDay = function(day) {
+window.selectDay = function (day) {
     state.selectedDay = day;
     window.scheduleRender();
 };
 
-window.getVotiData = function() {
+window.getVotiData = function () {
     return (state.voti && state.voti.length > 0) ? state.voti : ((state.grades && state.grades.length > 0) ? state.grades : []);
 };
 
-window.getAllSubjects = function() {
+window.getAllSubjects = function () {
     const fromGrades = window.getVotiData().map(v => v.materia || v.subject).filter(Boolean);
     const fromTasks = (state.tasks || []).map(t => t.subject).filter(Boolean);
     const fromExams = (state.exams || []).map(e => e.subject).filter(Boolean);
@@ -3782,7 +3785,7 @@ window.getAllSubjects = function() {
     return all.length === 0 ? ['Italiano', 'Matematica', 'Inglese', 'Storia', 'Scienze', 'Fisica', 'Filosofia', 'Arte', 'Ed. Fisica', 'Religione'] : all.sort();
 };
 
-window.submitExamForm = function() {
+window.submitExamForm = function () {
     let subject = document.getElementById('examSubject').value;
     if (subject === '__custom') {
         subject = (document.getElementById('examCustomSubject').value || '').trim();
@@ -3801,13 +3804,13 @@ window.submitExamForm = function() {
     showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
 };
 
-window.removeExam = function(index) {
+window.removeExam = function (index) {
     state.exams.splice(index, 1);
     if (typeof saveTasks === 'function') saveTasks();
     window.scheduleRender();
 };
 
-window.submitBacklogForm = function() {
+window.submitBacklogForm = function () {
     const subject = document.getElementById('backlogSubject').value;
     const topic = (document.getElementById('backlogTopic').value || '').trim();
     if (!topic) return showToast('Inserisci l\'argomento da recuperare', '#ff453a');
@@ -3818,41 +3821,41 @@ window.submitBacklogForm = function() {
     showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
 };
 
-window.removeBacklog = function(index) {
+window.removeBacklog = function (index) {
     state.backlog.splice(index, 1);
     if (typeof saveTasks === 'function') saveTasks();
     window.scheduleRender();
 };
 
 // ── AI ASSISTANT HELPERS ──
-window.sendAIChatQuick = function(text) {
+window.sendAIChatQuick = function (text) {
     state.aiChatInputValue = '';
     const input = document.getElementById('aiChatInput');
     if (input) input.value = text;
     window.sendAIChat();
 };
 
-window.clearAIChat = function() {
+window.clearAIChat = function () {
     state.aiChatHistory = [];
     localStorage.setItem(lsKey('ai_chat'), '[]');
     state.aiResponse = '';
     window.scheduleRender();
 };
 
-window.deleteAIChatMessage = function(index) {
+window.deleteAIChatMessage = function (index) {
     if (!confirm('Eliminare questo messaggio?')) return;
     state.aiChatHistory.splice(index, 1);
     localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
     window.scheduleRender();
 };
 
-window.stopVoiceInput = function() {
+window.stopVoiceInput = function () {
     if (window.recognition) { window.recognition.stop(); window.recognition = null; }
     const btn = document.getElementById('aiMicBtn');
     if (btn) { btn.classList.remove('mic-active'); btn.innerHTML = '<i class="ph ph-microphone"></i>'; }
 };
 
-window.sendAIChat = async function() {
+window.sendAIChat = async function () {
     window.stopVoiceInput();
     const input = document.getElementById('aiChatInput');
     const text = (input?.value || '').trim();
@@ -3914,7 +3917,7 @@ window.sendAIChat = async function() {
     setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight; }, 50);
 };
 
-window.applyAIPlanFromChat = function(msgIndex) {
+window.applyAIPlanFromChat = function (msgIndex) {
     const msg = state.aiChatHistory[msgIndex];
     if (!msg || msg.role !== 'ai') return;
     const todayStr = getLocalDateString();
@@ -3925,7 +3928,7 @@ window.applyAIPlanFromChat = function(msgIndex) {
         const trimmed = line.trim();
         if (!trimmed) return;
         const cleanLine = trimmed.replace(/[#*_\[\]]/g, '').trim().toLowerCase();
-        
+
         // Check for date/day header
         let foundDate = null;
         const isoMatch = trimmed.match(/(\d{4}-\d{2}-\d{2})/);
@@ -3945,7 +3948,7 @@ window.applyAIPlanFromChat = function(msgIndex) {
         const timeStr = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
         let taskText = trimmed.replace(/^[#*\->\s•·]+/, '').replace(/\d{1,2}[.:]\d{2}(\s*[-–—]\s*\d{1,2}[.:]\d{2})?/, '').replace(/^[:\-–—\s]+/, '').trim();
         if (/pausa|break|riposo/i.test(taskText) || taskText.length < 2) return;
-        
+
         let subject = 'Studio', topic = taskText;
         const bracketMatch = taskText.match(/^\[?([^\]\-–—:]+)[\]\-–—:\s]+(.+)$/);
         if (bracketMatch) { subject = bracketMatch[1].trim(); topic = bracketMatch[2].trim(); }
@@ -3967,7 +3970,7 @@ window.applyAIPlanFromChat = function(msgIndex) {
     } else showToast('⚠️ Nessuna sessione valida trovata nel messaggio.', 'var(--orange)');
 };
 
-window.saveGeminiKey = function() {
+window.saveGeminiKey = function () {
     const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
     if (val) { state.geminiKey = val; localStorage.setItem('g_diary_gemini_key', val); showToast('Chiave salvata! 🛡️'); window.scheduleRender(); }
 };
