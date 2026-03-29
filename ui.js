@@ -638,7 +638,8 @@ window.saveArgoToSupabase = async function() {
 function renderHome() {
     const today = new Date();
     const todayISO = today.toISOString().split('T')[0];
-    const media = calculateWeightedMedia();
+    const mediaVal = calcolaMedia(state.voti || []);
+    const media = parseFloat(mediaVal) || 0;
     
     // Greeting & Time
     const h = today.getHours();
