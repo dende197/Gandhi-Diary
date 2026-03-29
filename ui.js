@@ -345,7 +345,7 @@ window.saveArgoToSupabase = async function() {
 
             return `
         <!-- ── TOPBAR V6 ──────────────────────────────────────────── -->
-        <div class="topbar" style="background: rgba(255,255,255,0.98); border-bottom: 1px solid rgba(0,0,0,0.05); height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(20px);">
+        <div class="topbar" style="background: var(--bg-body); border-bottom: 1px solid var(--border-light); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(20px);">
           
           <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;">G-Connect</div>
 
@@ -1186,13 +1186,15 @@ function renderHome() {
                 `).join('')}
             </div>
 
-            <!-- INPUT BOX -->
+            <!-- INPUT BOX (Centered) -->
             <div style="flex-shrink: 0; padding: 12px 24px 16px; background: #FFFFFF; border-top: 1px solid #E0DDD8;">
-                <div style="max-width: 700px; margin: 0 auto; display: flex; gap: 8px; background: #F6F5F3; padding: 6px 8px; border-radius: 50px; border: 1px solid #E0DDD8;">
+                <div class="ai-input-shell">
+                  <div class="ai-input-dock">
                     <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 14px;">
                     <button onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i class="ph-bold ph-paper-plane-right" style="font-size: 16px;"></i>
                     </button>
+                  </div>
                 </div>
             </div>
         </div>`;
@@ -1724,56 +1726,56 @@ function renderHome() {
             if (!c) return;
 
             showModal(`
-            <div style="padding:28px; text-align: left;">
-                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
-                    <div>
-                        <p style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; margin-bottom:4px;">
+            <div class="circolare-layout">
+                <aside class="circolare-side">
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom: 20px;">
+                        <p style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#908C86; text-transform:uppercase; letter-spacing:0.1em; margin:0;">
                             Circolare N. ${c.numero}
                         </p>
-                        <div style="flex:1;">
-                            <div class="line-clamp-2" style="font-size:16px; font-weight:700; color:var(--text-primary); line-height:1.4; margin-bottom:8px;">
-                                ${c.titolo}
-                            </div>
-                        </div>
+                        <h2 style="font-size:20px; font-weight:700; color:#141414; line-height:1.2; margin:0; letter-spacing:-0.01em;">
+                            ${c.titolo}
+                        </h2>
+                        <p style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#BCB8B2; margin-top:4px;">
+                            <i class="ph-bold ph-calendar"></i> ${c.data}
+                        </p>
                     </div>
-                </div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <button onclick="window.open('${c.link}', '_blank')" 
+                            style="width:100%; padding:14px; border-radius:12px; background:#141414; 
+                            color:#FFF; font-weight:700; border:none; cursor:pointer; 
+                            display:flex; align-items:center; justify-content:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; transition: all 0.2s;">
+                            <i class="ph-bold ph-arrow-square-out" style="font-size:16px;"></i>
+                            Documento
+                        </button>
+                        <button onclick="closeModal()" 
+                            style="width:100%; padding:12px; border-radius:12px; background:rgba(0,0,0,0.04); 
+                            color:#908C86; font-weight:700; border:none; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase;">
+                            Chiudi
+                        </button>
+                    </div>
+                </aside>
 
-                <div id="sintesi-box-${c.id}" style="background:rgba(255,159,10,0.06); border:1px solid rgba(255,159,10,0.15); 
-                    padding:22px; border-radius:22px; margin-bottom:24px;">
-                    <h3 style="font-size:14px; color:var(--accent-warm); font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.5px;">
-                        <i class="ph-bold ph-sparkle"></i> Sintesi Premium
+                <section class="circolare-main">
+                    <h3 style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#908C86; margin-bottom:16px; margin-top:0;">
+                        Sintesi Premium AI
                     </h3>
-                    <div class="sintesi-content">
+                    <div id="sintesi-box-${c.id}" class="sintesi-content">
                         ${c.sintesi ? marked.parse(c.sintesi) : `
-                            <div id="sintesi-placeholder-${c.id}">
-                                <p style="color:var(--text-secondary); font-size:14px; margin-bottom:15px;">La sintesi non è stata ancora generata per questa circolare.</p>
+                            <div id="sintesi-placeholder-${c.id}" style="display:flex; flex-direction:column; gap:16px; align-items:center; text-align:center; padding:60px 0;">
+                                <p style="color:#BCB8B2; font-size:14px; margin:0; max-width: 240px;">Analisi in tempo reale disponibile tramite motore neurale.</p>
                                 <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
                                     id="btn-sintesi-${c.id}"
-                                    style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-primary); 
-                                    padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px;">
-                                    <i class="ph-bold ph-magic-wand"></i> Sintetizza Circolare ✨
+                                    style="background:#141414; border:none; color:#FFF; 
+                                    padding:12px 24px; border-radius:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase;">
+                                    <i class="ph-bold ph-sparkle"></i> Genera Sintesi
                                 </button>
                             </div>
                         `}
                     </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr; gap:12px;">
-                    <button onclick="window.open('${c.link}', '_blank')" 
-                        style="width:100%; padding:16px; border-radius:16px; background:var(--accent-warm); 
-                        color:black; font-weight:800; border:none; cursor:pointer; 
-                        display:flex; align-items:center; justify-content:center; gap:10px; font-size:15px; transition: all 0.2s;">
-                        <i class="ph-bold ph-arrow-square-out" style="font-size:20px;"></i>
-                        Leggi Documento Originale
-                    </button>
-                    <button onclick="closeModal()" 
-                        style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.05); 
-                        color:var(--text-secondary); font-weight:700; border:none; cursor:pointer;">
-                        Chiudi
-                    </button>
-                </div>
+                </section>
             </div>
-        `);
+            `, 'circolare-modal');
 
         }
         function renderDayDetailModal(dateStr) {
