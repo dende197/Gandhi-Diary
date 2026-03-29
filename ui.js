@@ -344,9 +344,10 @@ window.saveArgoToSupabase = async function() {
             const shortName = getSafeUserName();
 
             return `
-    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.05); z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
-            <div id="loading-spinner" class="spinner" style="display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.05); border-top: 2px solid var(--accent-warm); border-radius: 50%;"></div>
-        </div>
+        <!-- ── TOPBAR V6 ──────────────────────────────────────────── -->
+        <div class="topbar" style="background: rgba(255,255,255,0.98); border-bottom: 1px solid rgba(0,0,0,0.05); height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(20px);">
+          
+          <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;">G-Connect</div>
 
           <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
             <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
@@ -740,7 +741,7 @@ function renderHome() {
 
     // Media delta vs mese scorso
     const prevMedia = state.lastMedia || media;
-    const delta = (media - prevMedia).toFixed(2);
+    const delta = (media - prevMedia).toFixed(1);
     const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
@@ -784,7 +785,7 @@ function renderHome() {
         <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
-            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(2) : '—'}</div>
+            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(1) : '—'}</div>
             <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti||[]).length}</div>
           </div>
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,(media/10)*100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
@@ -841,7 +842,7 @@ function renderHome() {
             ${recentGrades.length ? `
             <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
               <span style="font-size:10px; color:#C0BBB4; font-family:'JetBrains Mono',monospace;">media</span>
-              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
+              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(1)}</span>
               ${deltaStr ? `<span style="font-size:11px; color:#2DB86A; margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:500;">${deltaStr}</span>` : ''}
             </div>` : ''}
           </div>
@@ -1016,19 +1017,22 @@ function renderHome() {
 
                 // Calcola scenari: quanti voti di X servono per raggiungere goal
                 const buildScenarios = () => {
-                    if (goal > 10) return [{ impossible: true }];
-                    const deficit = goal * count - currentSum;
-                    // Con infiniti 10 non si raggiunge mai se deficit/1 > 10-goal (impossibile matematicamente)
-                    if (deficit > 0 && (10 - goal) <= 0) return [{ impossible: true }];
                     const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+                    const deficit = goal * count - currentSum;
                     const results = [];
                     for (const g of grades) {
-                        if (g <= goal) continue;
+                        if (g <= goal) continue; // voto <= obiettivo: matematicamente impossibile
                         const n = Math.ceil(deficit / (g - goal));
-                        if (n < 1) continue;
-                        // Nessun limite su n: mostra sempre, anche se sono 50 voti
+                        if (n < 1 || n > 100) continue; // Alzato limite a 100 per coprire casi difficili
                         results.push({ grade: g, n });
                         if (results.length === 3) break;
+                    }
+                    // Se nessuno scenario con voti normali funziona, mostra il minimo teorico
+                    if (results.length === 0) {
+                        const minNeeded = (goal * (count + 1)) - currentSum;
+                        if (minNeeded <= 10) {
+                            results.push({ grade: Math.ceil(minNeeded * 10) / 10, n: 1, exact: true });
+                        }
                     }
                     return results;
                 };
@@ -1044,25 +1048,23 @@ function renderHome() {
                     statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
                 } else {
                     statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
-                    if (scenarios.length > 0 && scenarios[0].impossible) {
-                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">Obiettivo non raggiungibile (supera il massimo).</div>`;
-                    } else if (scenarios.length > 0) {
-                        scenariosHtml = scenarios.map(s => {
-                            const label = s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`;
-                            const tag = s.n > 15 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#FF9500; text-transform:uppercase; letter-spacing:0.04em; display:block; margin-top:2px;">lungo termine</span>` : s.n > 5 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em; display:block; margin-top:2px;">medio termine</span>` : '';
-                            return `
+                    if (scenarios.length > 0) {
+                        scenariosHtml = scenarios.map(s => `
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.06); border-radius:10px; margin-top:6px;">
-                                <div>
-                                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">${label}</span>
-                                    ${tag}
+                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">
+                                        ${s.exact ? 'prossimo voto esatto' : s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
+                                    </span>
+                                    ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
                                 </div>
-                                <span style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:800; color:white;">
-                                    ≥ ${Number.isInteger(s.grade) ? s.grade : s.grade.toFixed(1)}
+                                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
+                                    ${s.exact ? '' : '≥ '}${Number.isInteger(s.grade) ? s.grade : s.grade.toFixed(1)}
                                 </span>
-                            </div>`;
-                        }).join('');
+                            </div>`).join('');
                     } else {
-                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">Registra altri voti per vedere le proiezioni.</div>`;
+                        // Se goal è > 10 o irraggiungibile anche con cento 10
+                        const isImpossible = goal > 10 || (count > 0 && (count*10 + currentSum)/(count+100) < goal);
+                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
                     }
                 }
 
@@ -1075,7 +1077,7 @@ function renderHome() {
                         <div>
                             <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:4px;">Obiettivo</div>
                             <div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
-                                ${goal.toFixed(2)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
+                                ${goal.toFixed(1)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
                             </div>
                             <div style="margin-top:8px;">${statusLine}</div>
                         </div>
@@ -1114,7 +1116,7 @@ function renderHome() {
                             <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(2)}</div>
+                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(1)}</div>
                             <div style="display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px;">
                                 ${s.trend.map(v => `<div style="width: 4px; height: 4px; border-radius: 50%; background: ${v >= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
                             </div>
@@ -1527,7 +1529,7 @@ function renderHome() {
                     <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
                         <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">OBIETTIVO</div>
                         <div style="font-size: 36px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 10px; letter-spacing: -0.05em;">
-                            ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
+                            ${goal.toFixed(1)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
                         </div>
                     </div>
                 </div>
@@ -1736,19 +1738,20 @@ function renderHome() {
                     </div>
                 </div>
 
-                <div id="sintesi-box-${c.id}" style="background:#F9F9FB; border:1px solid #E5E5EA; 
-                    padding:28px; border-radius:24px; margin-bottom:28px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-                    <h3 style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#141414; font-weight:800; margin-bottom:20px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.1em;">
-                        <i class="ph-bold ph-sparkle" style="color:var(--accent-warm);"></i> Sintesi AI Premium
+                <div id="sintesi-box-${c.id}" style="background:rgba(255,159,10,0.06); border:1px solid rgba(255,159,10,0.15); 
+                    padding:22px; border-radius:22px; margin-bottom:24px;">
+                    <h3 style="font-size:14px; color:var(--accent-warm); font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:0.5px;">
+                        <i class="ph-bold ph-sparkle"></i> Sintesi Premium
                     </h3>
-                    <div class="sintesi-content" style="font-size:15px; color:#141414; line-height:1.7; font-weight:500;">
+                    <div class="sintesi-content">
                         ${c.sintesi ? marked.parse(c.sintesi) : `
                             <div id="sintesi-placeholder-${c.id}">
-                                <p style="color:#908C86; font-size:14px; margin-bottom:20px; font-weight:400;">La sintesi non è stata ancora generata per questa circolare.</p>
-                                <button class="btn-primary" onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
+                                <p style="color:var(--text-secondary); font-size:14px; margin-bottom:15px;">La sintesi non è stata ancora generata per questa circolare.</p>
+                                <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
                                     id="btn-sintesi-${c.id}"
-                                    style="padding:12px 20px; border-radius:14px; font-weight:800; border:none; background:#141414; color:white; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:13px; transition: all 0.2s;">
-                                    <i class="ph-bold ph-magic-wand"></i> Genera Sintesi Inteligente ✨
+                                    style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-primary); 
+                                    padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px;">
+                                    <i class="ph-bold ph-magic-wand"></i> Sintetizza Circolare ✨
                                 </button>
                             </div>
                         `}
@@ -2881,7 +2884,7 @@ function renderHome() {
                                     <span style="background: ${s.color}; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;"></span>
                                     <div style="flex: 1; min-width: 0;">
                                         <div style="font-size: 15px; font-weight: 700; color: white;">${s.name}</div>
-                                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${s.count > 0 ? `Media: ${s.media.toFixed(2)} · ${s.priority}` : 'Nessun voto'}</div>
+                                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${s.count > 0 ? `Media: ${s.media.toFixed(1)} · ${s.priority}` : 'Nessun voto'}</div>
                                     </div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 2px;">
@@ -3493,9 +3496,9 @@ window.requestCircularSynthesis = async function(id, link) {
     if (box) {
         box.innerHTML = `
             <div style="margin-top:10px;">
-                <p id="sintesi-progress-label-${id}" style="font-size:11px; color:#141414; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Inizializzazione...</p>
-                <div style="width:100%; height:6px; background:#E5E5EA; overflow:hidden; border-radius:10px; border: 1px solid #D1D1D6;">
-                    <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, #141414, #444); transition: width 0.5s ease;"></div>
+                <p id="sintesi-progress-label-${id}" style="font-size:12px; color:var(--accent-warm); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Inizializzazione...</p>
+                <div style="width:100%; height:8px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent-warm), #FFD60A); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(255,159,10,0.3);"></div>
                 </div>
             </div>`;
     }
