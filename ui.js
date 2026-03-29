@@ -741,7 +741,7 @@ function renderHome() {
 
     // Media delta vs mese scorso
     const prevMedia = state.lastMedia || media;
-    const delta = (media - prevMedia).toFixed(1);
+    const delta = (media - prevMedia).toFixed(2);
     const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
     const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
 
@@ -795,7 +795,7 @@ function renderHome() {
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ASSENZE</div>
             <div style="font-size:32px; font-weight:700; color:#8A1A1A; letter-spacing:-0.05em; line-height:1;">${((oreAssenza / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2)}%</div>
-            <div style="font-size:10px; color:#A64A4A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(1)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
+            <div style="font-size:10px; color:#A64A4A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(2)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
           </div>
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (oreAssenza / ((state.giorniScuola || 200) * 5)) * 100)}%; background:#EF4444; border-radius:100px;"></div></div>
         </div>
@@ -1058,7 +1058,7 @@ function renderHome() {
                                     ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
                                 </div>
                                 <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
-                                    ${s.exact ? '' : '≥ '}${Number.isInteger(s.grade) ? s.grade : s.grade.toFixed(1)}
+                                    ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
                                 </span>
                             </div>`).join('');
                     } else {
@@ -1077,7 +1077,7 @@ function renderHome() {
                         <div>
                             <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:4px;">Obiettivo</div>
                             <div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
-                                ${goal.toFixed(1)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
+                                ${goal.toFixed(2)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
                             </div>
                             <div style="margin-top:8px;">${statusLine}</div>
                         </div>
@@ -1582,7 +1582,7 @@ function renderHome() {
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
                     <div style="display:flex; align-items:baseline; gap:12px;">
                         <h2 style="margin:0; font-size:36px; font-weight:800; color:#EF4444;">${percAssenza}%</h2>
-                        <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(1)} ore totali</span>
+                        <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(2)} ore totali</span>
                     </div>
                 </header>
 
@@ -1609,7 +1609,7 @@ function renderHome() {
                             <div style="flex:1; min-width:0;">
                                 <div style="display:flex; justify-content:space-between; align-items:baseline;">
                                     <span style="font-size:13px; font-weight:700; color:var(--text-primary);">${new Date(a.data).toLocaleDateString('it-IT', {day:'numeric', month:'short'})}</span>
-                                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);">${a.oreEffettive ? a.oreEffettive.toFixed(1) : '?.?'}h</span>
+                                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);">${a.oreEffettive ? a.oreEffettive.toFixed(2) : '?.??'}h</span>
                                 </div>
                                 <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
                                     ${a.tipo.charAt(0).toUpperCase() + a.tipo.slice(1)}${a.nota ? ` • ${a.nota}` : ''}
