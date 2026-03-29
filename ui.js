@@ -357,12 +357,9 @@ window.saveArgoToSupabase = async function() {
             </div>
 
             <div class="topbar-right" style="display: flex; align-items: center; gap: 8px; width: 160px; justify-content: flex-end;">
-                <div style="background: white; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 12px; font-weight: 700; color: #141414;">${shortName}</span>
-                    <span class="time-chip" style="font-size: 12px; font-weight: 700; color: #908C86; font-family:'JetBrains Mono',monospace;">
-                        ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
-                    </span>
-                </div>
+                <span class="time-chip" style="font-size: 13px; font-weight: 700; color: #908C86; font-family:'JetBrains Mono',monospace;">
+                    ${String(h).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}
+                </span>
             </div>
         </header>`;
         }
