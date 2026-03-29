@@ -636,21 +636,18 @@ window.saveArgoToSupabase = async function() {
 // ================================================================
 
 function renderHome() {
-    const todayStr = getLocalDateString();
-    const today = new Date(); today.setHours(0,0,0,0);
-
-    // Media
-    const mediaStr = calcolaMedia(state.voti) || '0';
-    const media = parseFloat(mediaStr);
-
-    // Greeting
-    const h = new Date().getHours();
-    const days = ['Domenica','Lun\xecdì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0];
+    const media = calculateWeightedMedia();
+    
+    // Greeting & Time
+    const h = today.getHours();
+    const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
     const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
     const greeting = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 17 ? 'Buon pomeriggio' : 'Buona sera';
     const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
     const shortName = getSafeUserName();
-    const dayOfWeek = days[new Date().getDay()].toUpperCase();
+    const dayOfWeek = days[today.getDay()].toUpperCase();
 
     // Streak dots
     const streak = state.streak || 0;
@@ -661,12 +658,10 @@ function renderHome() {
         return `<div class="sdot ${filled ? 'on' : ''} ${isLast ? 'today' : ''}" style="width:8px;height:8px;border-radius:50%;${bg}"></div>`;
     }).join('');
 
-    // Prossima verifica (scraped from DidUp) — carousel
-    const todayISO = today.toISOString().split('T')[0];
+    // Prossima verifica logic
     const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
-    // Manual Verifiche from dedicated database table
     const manualExams = (state.manualVerifiche || [])
         .filter(v => !v.done && v.date && v.date >= todayISO)
         .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
@@ -680,33 +675,42 @@ function renderHome() {
         return true;
     }).sort((a,b) => a.data.localeCompare(b.data));
     
-    // Carousel index
-    if (typeof window._verificheIdx === 'undefined') window._verificheIdx = 0;
-    if (window._verificheIdx >= allUpcoming.length) window._verificheIdx = 0;
-    const vIdx = window._verificheIdx;
+    const vIdx = state._vIdx || 0;
     const currentVerifica = allUpcoming[vIdx] || null;
-    const daysToExam = currentVerifica ? Math.ceil((new Date(currentVerifica.data) - today) / 86400000) : null;
-    const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia) : 'N/D';
+    const verificheCount = allUpcoming.length;
+    let daysToExam = null;
+    if (currentVerifica) {
+        const target = new Date(currentVerifica.data || currentVerifica.date);
+        const diff = target - today;
+        daysToExam = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+    const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia || currentVerifica.subject) : '';
     const examKey = examAbbr.toLowerCase();
     const examTipo = currentVerifica?.tipo || 'unknown';
-    const examTipoLabel = examTipo === 'scritta' ? 'SCRITTA' : examTipo === 'orale' ? 'ORALE' : '';
-    const verificheCount = allUpcoming.length;
+    const examTipoLabel = examTipo.includes('scritt') ? 'SCRITTO' : examTipo.includes('oral') ? 'ORALE' : 'ALTRO';
 
     // Ultima circolare
     const lastCirc = (state.circolari && state.circolari.length > 0)
         ? state.circolari[0]
-        : { data: '--/--/----', titolo: 'Nessuna circolare', id: null };
+        : { id: null, titolo: 'Nessuna circolare', data: '--/--/----' };
 
-    // Presenze (from real assenzeData)
+    // Presenze
     const ad = state.assenzeData || {};
     const totAssenze = ad.totaleAssenze || 0;
     const totRitardi = ad.totaleRitardi || 0;
     const totUscite = ad.totaleUscite || 0;
     const oreAssenza = ad.oreAssenzaTotali || 0;
-    // Media delta vs mese scorso
+
+    // Media delta
     const prevMedia = state.lastMedia || media;
     const delta = (media - prevMedia).toFixed(2);
     const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
+
+    // Voti recenti
+    const recentGrades = (state.voti || [])
+        .filter(v => v.data || v.date)
+        .sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))
+        .slice(0, 6);
 
     // Task di domani
     const tomorrow = new Date(today);
