@@ -214,7 +214,7 @@
         }
 
         .view:not(.ai-view) {
-          overflow-y: auto;
+          overflow: visible;
           min-height: calc(100vh - 64px);
         }
 
