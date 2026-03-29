@@ -1016,22 +1016,19 @@ function renderHome() {
 
                 // Calcola scenari: quanti voti di X servono per raggiungere goal
                 const buildScenarios = () => {
-                    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+                    if (goal > 10) return [{ impossible: true }];
                     const deficit = goal * count - currentSum;
+                    // Con infiniti 10 non si raggiunge mai se deficit/1 > 10-goal (impossibile matematicamente)
+                    if (deficit > 0 && (10 - goal) <= 0) return [{ impossible: true }];
+                    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
                     const results = [];
                     for (const g of grades) {
-                        if (g <= goal) continue; // voto <= obiettivo: matematicamente impossibile
+                        if (g <= goal) continue;
                         const n = Math.ceil(deficit / (g - goal));
-                        if (n < 1 || n > 100) continue; // Alzato limite a 100 per coprire casi difficili
+                        if (n < 1) continue;
+                        // Nessun limite su n: mostra sempre, anche se sono 50 voti
                         results.push({ grade: g, n });
                         if (results.length === 3) break;
-                    }
-                    // Se nessuno scenario con voti normali funziona, mostra il minimo teorico
-                    if (results.length === 0) {
-                        const minNeeded = (goal * (count + 1)) - currentSum;
-                        if (minNeeded <= 10) {
-                            results.push({ grade: Math.ceil(minNeeded * 10) / 10, n: 1, exact: true });
-                        }
                     }
                     return results;
                 };
@@ -1047,23 +1044,25 @@ function renderHome() {
                     statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
                 } else {
                     statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
-                    if (scenarios.length > 0) {
-                        scenariosHtml = scenarios.map(s => `
+                    if (scenarios.length > 0 && scenarios[0].impossible) {
+                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">Obiettivo non raggiungibile (supera il massimo).</div>`;
+                    } else if (scenarios.length > 0) {
+                        scenariosHtml = scenarios.map(s => {
+                            const label = s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`;
+                            const tag = s.n > 15 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#FF9500; text-transform:uppercase; letter-spacing:0.04em; display:block; margin-top:2px;">lungo termine</span>` : s.n > 5 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em; display:block; margin-top:2px;">medio termine</span>` : '';
+                            return `
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.06); border-radius:10px; margin-top:6px;">
-                                <div style="display:flex; flex-direction:column; gap:2px;">
-                                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">
-                                        ${s.exact ? 'prossimo voto esatto' : s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
-                                    </span>
-                                    ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
+                                <div>
+                                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">${label}</span>
+                                    ${tag}
                                 </div>
-                                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
-                                    ${s.exact ? '' : '≥ '}${Number.isInteger(s.grade) ? s.grade : s.grade.toFixed(2)}
+                                <span style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:800; color:white;">
+                                    ≥ ${Number.isInteger(s.grade) ? s.grade : s.grade.toFixed(1)}
                                 </span>
-                            </div>`).join('');
+                            </div>`;
+                        }).join('');
                     } else {
-                        // Se goal è > 10 o irraggiungibile anche con cento 10
-                        const isImpossible = goal > 10 || (count > 0 && (count*10 + currentSum)/(count+100) < goal);
-                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
+                        scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">Registra altri voti per vedere le proiezioni.</div>`;
                     }
                 }
 
