@@ -344,7 +344,7 @@ window.saveArgoToSupabase = async function() {
             const shortName = getSafeUserName();
 
             return `
-    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(246, 245, 243, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.1); z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
+    <header class="top-nav" style="position: fixed; top: 0; left: 0; right: 0; height: 72px; background: rgba(246, 245, 243, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,0.1); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 0 32px;">
             <div style="width: 160px; display: flex; align-items: center;">
                 <div id="loading-spinner" class="spinner" style="display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.05); border-top: 2px solid var(--accent-warm); border-radius: 50%;"></div>
             </div>
@@ -702,6 +702,7 @@ function renderHome() {
     const totAssenze = ad.totaleAssenze || 0;
     const totRitardi = ad.totaleRitardi || 0;
     const totUscite = ad.totaleUscite || 0;
+    const oreAssenza = ad.oreAssenzaTotali || 0;
     // Media delta vs mese scorso
     const prevMedia = state.lastMedia || media;
     const delta = (media - prevMedia).toFixed(2);
