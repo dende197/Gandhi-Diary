@@ -3494,9 +3494,9 @@ window.requestCircularSynthesis = async function(id, link) {
     if (box) {
         box.innerHTML = `
             <div style="margin-top:10px;">
-                <p id="sintesi-progress-label-${id}" style="font-size:12px; color:var(--accent-warm); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Inizializzazione...</p>
-                <div style="width:100%; height:8px; background:rgba(255,255,255,0.05); overflow:hidden; border-radius:10px; border: 1px solid rgba(255,255,255,0.05);">
-                    <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent-warm), #FFD60A); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(255,159,10,0.3);"></div>
+                <p id="sintesi-progress-label-${id}" style="font-size:11px; color:#141414; font-weight:800; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">Inizializzazione...</p>
+                <div style="width:100%; height:6px; background:#E5E5EA; overflow:hidden; border-radius:10px; border: 1px solid #D1D1D6;">
+                    <div id="sintesi-progress-bar-${id}" style="width:0%; height:100%; background:linear-gradient(90deg, #141414, #444); transition: width 0.5s ease;"></div>
                 </div>
             </div>`;
     }
