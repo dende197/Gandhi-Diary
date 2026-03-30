@@ -843,7 +843,7 @@ function renderHome() {
           <div style="font-size:11px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
         </div>
  
-        <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative;">
+        <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative; height: 154px; overflow: hidden;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
             <div style="display:flex; gap:4px;">
@@ -859,7 +859,7 @@ function renderHome() {
             <span id="vw-tipo" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>
             <span id="vw-counter" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${verificheCount > 1 ? `${vIdx + 1}/${verificheCount}` : ''}</span>
           </div>
-          <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
+          <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px; height:32px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
           <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
           <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5, 100 - daysToExam * 8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
         </div>
