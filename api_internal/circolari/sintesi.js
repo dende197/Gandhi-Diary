@@ -5,12 +5,39 @@ const { handleCors, USER_AGENT, debugLog } = require('../../lib/helpers');
 const { getGroq } = require('../../lib/groq');
 const { getSintesiFromCache, setSintesiInCache } = require('../../lib/sintesiCache');
 
+// Returns the allowed hostname for circolari links (derived from SCHOOL_CIRCOLARI_URL).
+function _getAllowedHostname() {
+    try {
+        const base = process.env.SCHOOL_CIRCOLARI_URL || 'https://www.liceogandhi.edu.it/';
+        return new URL(base).hostname.toLowerCase();
+    } catch {
+        return 'www.liceogandhi.edu.it';
+    }
+}
+
+// Validates that `link` is a safe HTTPS URL pointing to the school's own domain.
+function isAllowedCircolariLink(link) {
+    try {
+        const parsed = new URL(link);
+        if (parsed.protocol !== 'https:') return false;
+        const allowed = _getAllowedHostname();
+        return parsed.hostname.toLowerCase() === allowed;
+    } catch {
+        return false;
+    }
+}
+
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const { link, id } = req.body;
     if (!link) return res.status(400).json({ success: false, error: 'Link mancante', errorType: 'badRequest' });
+
+    // SSRF protection: only allow links from the configured school domain over HTTPS.
+    if (!isAllowedCircolariLink(link)) {
+        return res.status(400).json({ success: false, error: 'Link non consentito', errorType: 'badRequest' });
+    }
 
     // Cache check
     if (id) {
@@ -31,7 +58,14 @@ module.exports = async function handler(req, res) {
             });
             if (pdfLinks.length > 0) {
                 const bestLink = pdfLinks.find(url => url.toLowerCase().includes('circolare') || url.toLowerCase().includes('comunicato')) || pdfLinks[0];
-                finalPdfUrl = (bestLink.startsWith('http') ? bestLink : `https://www.liceogandhi.edu.it${bestLink}`).trim();
+                const schoolBase = `https://${_getAllowedHostname()}`;
+                const resolvedUrl = (bestLink.startsWith('http') ? bestLink : `${schoolBase}${bestLink.startsWith('/') ? bestLink : '/' + bestLink}`).trim();
+                // Only follow PDF links that stay within the school's own domain.
+                if (isAllowedCircolariLink(resolvedUrl)) {
+                    finalPdfUrl = resolvedUrl;
+                } else {
+                    textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
+                }
             } else {
                 textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
             }

@@ -10,10 +10,14 @@
  *   ?action=status      → Verifica se l'utente ha Google collegato
  */
 
+const crypto = require('crypto');
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
-const { createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword } = require('../lib/helpers');
+const {
+    createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword,
+    handleCors, verifySessionToken, normalizeUserId, SESSION_TOKEN_HEX_LENGTH
+} = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Config ---
@@ -25,15 +29,64 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
         : 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback');
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
 
 function getOAuth2Client() {
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
 }
 
+function getOAuthStateKey() {
+    const key = process.env.ARGO_ENCRYPTION_KEY || '';
+    if (!HEX_TOKEN_REGEX.test(key)) return null;
+    return Buffer.from(key, 'hex');
+}
+
+function encodeBase64Url(str) {
+    return Buffer.from(str, 'utf8').toString('base64url');
+}
+
+function decodeBase64Url(str) {
+    return Buffer.from(str, 'base64url').toString('utf8');
+}
+
+function signOAuthState(payload) {
+    const key = getOAuthStateKey();
+    if (!key) return null;
+    const encodedPayload = encodeBase64Url(JSON.stringify(payload));
+    const signature = crypto.createHmac('sha256', key).update(encodedPayload).digest('hex');
+    return `${encodedPayload}.${signature}`;
+}
+
+function verifyAndParseOAuthState(rawState) {
+    const key = getOAuthStateKey();
+    if (!key || !rawState) return null;
+    const dot = rawState.lastIndexOf('.');
+    if (dot <= 0) return null;
+    const encodedPayload = rawState.slice(0, dot);
+    const signature = rawState.slice(dot + 1);
+    if (!HEX_TOKEN_REGEX.test(signature)) return null;
+
+    const expected = crypto.createHmac('sha256', key).update(encodedPayload).digest('hex');
+    const sigBuf = Buffer.from(signature, 'hex');
+    const expBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
+
+    try {
+        const parsed = JSON.parse(decodeBase64Url(encodedPayload));
+        if (!parsed || typeof parsed !== 'object' || !parsed.userId) return null;
+        if (!parsed.ts || (Date.now() - Number(parsed.ts)) > OAUTH_STATE_TTL_MS) return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
 // --- Token Storage (Supabase) ---
 async function saveTokens(userId, tokens, argoCreds = null) {
+    const normalizedUserId = normalizeUserId(userId);
     const upsertData = {
-        user_id: userId,
+        user_id: normalizedUserId,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expiry_date: tokens.expiry_date || null,
@@ -56,20 +109,22 @@ async function saveTokens(userId, tokens, argoCreds = null) {
 }
 
 async function loadTokens(userId) {
+    const normalizedUserId = normalizeUserId(userId);
     const { data, error } = await getSupabase()
         .from('google_tokens')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', normalizedUserId)
         .single();
     if (error || !data) return null;
     return data;
 }
 
 async function deleteTokens(userId) {
+    const normalizedUserId = normalizeUserId(userId);
     const { error } = await getSupabase()
         .from('google_tokens')
         .delete()
-        .eq('user_id', userId);
+        .eq('user_id', normalizedUserId);
     if (error) throw new Error(`Supabase delete error: ${error.message}`);
 }
 
@@ -99,11 +154,7 @@ function getAuthenticatedClient(tokenRow) {
 
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
-    // CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (handleCors(req, res)) return;
 
     const action = req.query.action || 'status';
 
@@ -115,16 +166,43 @@ module.exports = async function handler(req, res) {
                 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
                     return res.status(500).json({ success: false, error: 'Google OAuth non configurato sul server' });
                 }
+                if (req.method !== 'GET' && req.method !== 'POST') {
+                    return res.status(405).json({ success: false, error: 'Method not allowed' });
+                }
 
                 const userId = req.query.userId || req.body?.userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+
+                const normalizedUserId = normalizeUserId(userId);
+                if (!verifySessionToken(req, normalizedUserId)) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
+                let argoCreds = null;
+                if (req.query.state) {
+                    try {
+                        const decoded = JSON.parse(Buffer.from(req.query.state, 'base64').toString('utf8'));
+                        if (decoded?.argo && typeof decoded.argo === 'object') argoCreds = decoded.argo;
+                    } catch (e) {
+                        debugLog('[Google OAuth] Invalid state payload from client', e.message);
+                    }
+                }
+
+                const signedState = signOAuthState({
+                    userId: normalizedUserId,
+                    argo: argoCreds,
+                    ts: Date.now()
+                });
+                if (!signedState) {
+                    return res.status(500).json({ success: false, error: 'OAuth state signing key non configurata' });
+                }
 
                 const oauth2 = getOAuth2Client();
                 const url = oauth2.generateAuthUrl({
                     access_type: 'offline',
                     scope: SCOPES,
                     prompt: 'consent',
-                    state: req.query.state || userId // Pass JSON state if provided, otherwise userId
+                    state: signedState
                 });
 
                 if (req.query.redirect === 'true') {
@@ -137,26 +215,12 @@ module.exports = async function handler(req, res) {
             // ============= CALLBACK =============
             case 'callback': {
                 const code = req.query.code;
-                const stateParam = req.query.state; // Can be userId (old) or base64 JSON (new)
+                const stateParam = req.query.state;
                 const error = req.query.error;
 
-                let userId = stateParam;
-                let argoCreds = null;
-
-                // Try to parse state as base64 JSON
-                if (stateParam) {
-                    try {
-                        const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString('utf-8'));
-                        if (decoded && decoded.userId) {
-                            userId = decoded.userId;
-                            argoCreds = decoded.argo;
-                            debugLog('[Google OAuth] Parsed JSON state', { userId });
-                        }
-                    } catch (e) {
-                        // Fallback: state is just the userId string
-                        debugLog('[Google OAuth] State is simple string (userId)', stateParam);
-                    }
-                }
+                const parsedState = verifyAndParseOAuthState(stateParam);
+                const userId = parsedState?.userId || null;
+                const argoCreds = parsedState?.argo || null;
 
                 debugLog('[OAuth] Code received', { codePrefix: code?.slice(0, 10) });
                 if (error) {
@@ -165,7 +229,7 @@ module.exports = async function handler(req, res) {
                 }
 
                 if (!code || !userId) {
-                    return res.status(400).json({ success: false, error: 'Parametri mancanti (code o state)' });
+                    return res.status(400).json({ success: false, error: 'Parametri mancanti o state non valido/scaduto' });
                 }
 
                 try {
@@ -191,6 +255,10 @@ module.exports = async function handler(req, res) {
                 const userId = req.query.userId || req.body?.userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
 
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
                 const tokenRow = await loadTokens(userId);
                 return res.json({
                     success: true,
@@ -206,6 +274,10 @@ module.exports = async function handler(req, res) {
                 const session = body.session; // Argo session
 
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
 
                 // 1. Load Google tokens
                 const tokenRow = await loadTokens(userId);
@@ -283,6 +355,10 @@ module.exports = async function handler(req, res) {
                     return res.status(400).json({ success: false, error: 'Dati Argo mancanti' });
                 }
 
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
                 const { error } = await getSupabase()
                     .from('google_tokens')
                     .update({
@@ -291,7 +367,7 @@ module.exports = async function handler(req, res) {
                         argo_password: encryptArgoPassword(password),
                         updated_at: new Date().toISOString()
                     })
-                    .eq('user_id', userId);
+                    .eq('user_id', normalizeUserId(userId));
 
                 if (error) throw error;
                 return res.json({ success: true, message: 'Credenziali Argo salvate' });
@@ -301,6 +377,10 @@ module.exports = async function handler(req, res) {
             case 'disconnect': {
                 const userId = req.query.userId || req.body?.userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
 
                 // Optionally revoke the token
                 try {

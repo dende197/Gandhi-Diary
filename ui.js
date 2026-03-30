@@ -117,25 +117,21 @@ window.closeSubject = function () {
 window.connectGoogle = function () {
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
-    
-    // Get Argo credentials to bundle them in the OAuth state
-    const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
-    let password = '';
-    try {
-        if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
-    } catch (e) { console.warn('Decode storedPass failed in connectGoogle'); }
 
-    const stateObj = {
-        userId: userId,
-        argo: {
-            schoolCode: session.schoolCode,
-            username: session.userName || session.username,
-            password: password
-        }
-    };
-    
-    const base64State = btoa(unescape(encodeURIComponent(JSON.stringify(stateObj))));
-    window.location.href = `${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}&redirect=true&state=${encodeURIComponent(base64State)}`;
+    fetch(`${window.API_BASE_URL}/api/google?action=auth-url`, {
+        method: 'POST',
+        headers: getSessionHeaders(),
+        body: JSON.stringify({ userId })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (!data?.success || !data?.url) throw new Error(data?.error || 'Autorizzazione Google fallita');
+            window.location.href = data.url;
+        })
+        .catch(err => {
+            console.error('Google auth-url error:', err);
+            showToast(err.message || 'Errore collegamento Google', 'var(--red)');
+        });
 };
 
 window.syncGoogleCalendar = async function () {
@@ -154,7 +150,7 @@ window.syncGoogleCalendar = async function () {
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getSessionHeaders(),
             body: JSON.stringify({ userId, session: fullSession })
         });
         const data = await res.json();
@@ -174,7 +170,10 @@ window.syncGoogleCalendar = async function () {
 window.disconnectGoogle = async function () {
     try {
         const userId = window.getUserId();
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`);
+        const res = await fetch(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`, {
+            method: 'GET',
+            headers: getSessionHeaders()
+        });
         const data = await res.json();
         if (data.success) {
             state.googleConnected = false;
@@ -188,7 +187,10 @@ window.checkGoogleStatus = async function () {
     try {
         const userId = window.getUserId();
         if (!userId || userId === 'guest') return;
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`);
+        const res = await fetch(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`, {
+            method: 'GET',
+            headers: getSessionHeaders()
+        });
         const data = await res.json();
         state.googleConnected = data.connected || false;
         // State updated silently — profile view reads state.googleConnected on navigation
@@ -213,7 +215,7 @@ window.saveArgoToSupabase = async function () {
 
         await fetch(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getSessionHeaders(),
             body: JSON.stringify({
                 userId,
                 schoolCode: session.schoolCode,
@@ -3469,7 +3471,7 @@ window.logout = async function () {
                 };
                 await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getSessionHeaders(),
                     body: JSON.stringify(payload)
                 });
             } catch (e) { console.warn("Logout save failed", e); }
@@ -3498,7 +3500,7 @@ window.saveProfileToServer = async function (profileData) {
     const userId = getUserId();
     const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getSessionHeaders(),
         body: JSON.stringify({
             userId: userId,
             name: profileData.name || state.user.name,
@@ -4313,4 +4315,3 @@ function renderCircolariView() {
     </div>
 </div>`;
 }
-
