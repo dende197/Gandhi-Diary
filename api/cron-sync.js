@@ -1,6 +1,6 @@
 /**
  * api/cron-sync.js
- * Universal Background Sync — triggered by Vercel Crons.
+ * Universal Background Sync — triggered by GitHub Actions (hourly).
  * Loops through all users with Google and Argo credentials and performs sync.
  */
 
@@ -15,23 +15,6 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback';
 const BEARER_PREFIX = 'Bearer ';
-// Target local execution slots requested by product requirements:
-// midnight (00:00) and afternoon refresh (14:00), Europe/Rome.
-const TARGET_ROME_HOURS = new Set([0, 14]);
-const TARGET_MINUTE_WINDOW = 20;
-
-function getRomeTime() {
-    const timeParts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/Rome',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }).formatToParts(new Date());
-    return {
-        hour: Number(timeParts.find(p => p.type === 'hour')?.value || '0'),
-        minute: Number(timeParts.find(p => p.type === 'minute')?.value || '0')
-    };
-}
 
 function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
@@ -73,16 +56,6 @@ module.exports = async function handler(req, res) {
     const cronSecret = bearerToken || req.headers['x-vercel-cron-secret'] || req.query.secret;
     if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
-    const { hour: hourRome, minute: minuteRome } = getRomeTime();
-    const isTargetSlot = minuteRome < TARGET_MINUTE_WINDOW && TARGET_ROME_HOURS.has(hourRome);
-    if (!isTargetSlot) {
-        return res.json({
-            success: true,
-            skipped: true,
-            reason: `Outside target slot (${hourRome}:${String(minuteRome).padStart(2, '0')} Europe/Rome)`
-        });
     }
 
     console.log('[Cron] Starting Universal Sync...');
