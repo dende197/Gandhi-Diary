@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
                 // Try to parse state as base64 JSON
                 if (stateParam) {
                     try {
-                        const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString());
+                        const decoded = JSON.parse(decodeURIComponent(escape(Buffer.from(stateParam, 'base64').toString('binary'))));
                         if (decoded && decoded.userId) {
                             userId = decoded.userId;
                             argoCreds = decoded.argo;

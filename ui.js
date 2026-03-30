@@ -123,7 +123,7 @@ window.connectGoogle = function () {
         }
     };
     
-    const base64State = btoa(JSON.stringify(stateObj));
+    const base64State = btoa(unescape(encodeURIComponent(JSON.stringify(stateObj))));
     window.location.href = `${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}&redirect=true&state=${encodeURIComponent(base64State)}`;
 };
 
