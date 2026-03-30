@@ -36,6 +36,10 @@
       "destination": "/api/ai"
     },
     {
+      "source": "/api/config",
+      "destination": "/api/main?action=config"
+    },
+    {
       "source": "/api/ping",
       "destination": "/api/main?action=ping"
     },
@@ -53,16 +57,12 @@
       "source": "/api/(.*)",
       "headers": [
         {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
           "key": "Access-Control-Allow-Methods",
           "value": "GET,POST,PUT,DELETE,OPTIONS"
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token"
+          "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token, x-session-token"
         }
       ]
     }

@@ -87,9 +87,20 @@
         window.API_BASE_URL = API_BASE_URL;
         console.log(`[Network] Connected directly to: ${API_BASE_URL}`);
 
-        const SUPABASE_URL = "https://mlcutgkfunbpmrnbeznd.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sY3V0Z2tmdW5icG1ybmJlem5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTg2NDgsImV4cCI6MjA4NDc3NDY0OH0.eWR7PxNsJjSGAM1WoaNseVkeQDpEqaUvO8xvXoDKLQg";
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Supabase client is initialised lazily once config is loaded from the backend
+        let supabaseClient = null;
+        async function getSupabaseClient() {
+            if (supabaseClient) return supabaseClient;
+            try {
+                const cfg = await fetch(`${API_BASE_URL}/api/config`).then(r => r.json());
+                if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
+                    supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+                }
+            } catch (e) {
+                console.warn('[Config] Could not load Supabase config:', e.message);
+            }
+            return supabaseClient;
+        }
 
         // Global Variable Shims for ui.js
         let calendarState = { weekOffset: 0 };
@@ -137,6 +148,14 @@
             return s.studentId || generatePid(s.schoolCode, s.userName, s.profileIndex);
         }
         window.getUserId = getUserId;
+
+        function getSessionHeaders(extra = {}) {
+            const s = sessionManager.load();
+            const headers = { 'Content-Type': 'application/json', ...extra };
+            if (s && s.sessionToken) headers['x-session-token'] = s.sessionToken;
+            return headers;
+        }
+        window.getSessionHeaders = getSessionHeaders;
 
         // --- STATE ENGINE ---
         const state = {
@@ -292,7 +311,7 @@
             try {
                 await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(state.user.id)}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getSessionHeaders(),
                     body: JSON.stringify({ tasks: manualTasks })
                 });
                 console.log("✅ Manual tasks synced to Supabase");
@@ -636,7 +655,8 @@
                     name: data.student?.name || data.selectedProfile?.name,
                     class: data.student?.class || data.selectedProfile?.class,
                     specialization: data.student?.specialization || data.selectedProfile?.specialization,
-                    avatar: data.student?.avatar || data.selectedProfile?.avatar
+                    avatar: data.student?.avatar || data.selectedProfile?.avatar,
+                    sessionToken: data.sessionToken || null
                 };
                 sessionManager.save(sessionData);
             }
@@ -662,13 +682,16 @@
                 const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
                 const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
 
-                let { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+                const sb = await getSupabaseClient();
+                if (!sb) throw new Error('Supabase non disponibile');
+
+                let { data: authData, error: authErr } = await sb.auth.signInWithPassword({
                     email: supabaseEmail,
                     password: supabasePassword
                 });
 
                 if (authErr && authErr.message?.includes('Invalid login')) {
-                    const { data: upData, error: upErr } = await supabaseClient.auth.signUp({
+                    const { data: upData, error: upErr } = await sb.auth.signUp({
                         email: supabaseEmail,
                         password: supabasePassword,
                         options: { data: { name: state.user.name, class: state.user.class } }
@@ -677,7 +700,7 @@
                 }
 
                 if (authData?.user) {
-                    await supabaseClient.from('profiles').upsert({
+                    await sb.from('profiles').upsert({
                         id: String(state.user.id).toLowerCase().replace(/\s+/g, ''),
                         name: state.user.name,
                         class: state.user.class,
@@ -858,7 +881,7 @@
                 try {
                     const res = await fetch(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(userId)}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: getSessionHeaders(),
                         body: JSON.stringify({ subject, date: dateVal, type: tipo, args })
                     });
                     const result = await res.json();
@@ -929,7 +952,8 @@
             if (state.isLoggedIn && state.user && state.user.id && !id.startsWith('manual_')) {
                 try {
                     const res = await fetch(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(state.user.id)}?id=${id}`, {
-                        method: 'DELETE'
+                        method: 'DELETE',
+                        headers: getSessionHeaders()
                     });
                     if (!res.ok) throw new Error("Delete failed");
                 } catch (e) {

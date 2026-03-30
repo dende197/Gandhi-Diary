@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -118,6 +118,7 @@ module.exports = async function handler(req, res) {
 
         const resp = {
             success: true,
+            sessionToken: generateSessionToken(pid),
             session: {
                 schoolCode: school,
                 authToken,

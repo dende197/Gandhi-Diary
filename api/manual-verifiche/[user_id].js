@@ -1,5 +1,5 @@
 const { getSupabase } = require('../../lib/supabase');
-const { handleCors } = require('../../lib/helpers');
+const { handleCors, verifySessionToken } = require('../../lib/helpers');
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
@@ -8,6 +8,11 @@ module.exports = async function handler(req, res) {
     if (!user_id) return res.status(400).json({ success: false, error: 'user_id mancante' });
 
     const userId = decodeURIComponent(user_id).toLowerCase().replace(/\s+/g, '');
+
+    if (!verifySessionToken(req, userId)) {
+        return res.status(403).json({ success: false, error: 'Non autorizzato' });
+    }
+
     const supabase = getSupabase();
     if (!supabase) return res.status(500).json({ success: false, error: 'Supabase not configured' });
 
