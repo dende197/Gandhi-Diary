@@ -14,7 +14,10 @@ const crypto = require('crypto');
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
-const { createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword, handleCors, verifySessionToken, normalizeUserId } = require('../lib/helpers');
+const {
+    createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword,
+    handleCors, verifySessionToken, normalizeUserId, SESSION_TOKEN_HEX_LENGTH
+} = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Config ---
@@ -27,6 +30,7 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
 
 function getOAuth2Client() {
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
@@ -34,7 +38,7 @@ function getOAuth2Client() {
 
 function getOAuthStateKey() {
     const key = process.env.ARGO_ENCRYPTION_KEY || '';
-    if (!/^[0-9a-fA-F]{64}$/.test(key)) return null;
+    if (!HEX_TOKEN_REGEX.test(key)) return null;
     return Buffer.from(key, 'hex');
 }
 
@@ -61,7 +65,7 @@ function verifyAndParseOAuthState(rawState) {
     if (dot <= 0) return null;
     const encodedPayload = rawState.slice(0, dot);
     const signature = rawState.slice(dot + 1);
-    if (!/^[0-9a-fA-F]{64}$/.test(signature)) return null;
+    if (!HEX_TOKEN_REGEX.test(signature)) return null;
 
     const expected = crypto.createHmac('sha256', key).update(encodedPayload).digest('hex');
     const sigBuf = Buffer.from(signature, 'hex');
@@ -161,6 +165,9 @@ module.exports = async function handler(req, res) {
             case 'auth-url': {
                 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
                     return res.status(500).json({ success: false, error: 'Google OAuth non configurato sul server' });
+                }
+                if (req.method !== 'GET' && req.method !== 'POST') {
+                    return res.status(405).json({ success: false, error: 'Method not allowed' });
                 }
 
                 const userId = req.query.userId || req.body?.userId;

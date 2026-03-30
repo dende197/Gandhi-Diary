@@ -118,9 +118,10 @@ window.connectGoogle = function () {
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
 
-    fetch(`${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}`, {
-        method: 'GET',
-        headers: getSessionHeaders()
+    fetch(`${window.API_BASE_URL}/api/google?action=auth-url`, {
+        method: 'POST',
+        headers: getSessionHeaders(),
+        body: JSON.stringify({ userId })
     })
         .then(r => r.json())
         .then(data => {

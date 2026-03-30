@@ -15,6 +15,23 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback';
 const BEARER_PREFIX = 'Bearer ';
+// Target local execution slots requested by product requirements:
+// midnight (00:00) and afternoon refresh (14:00), Europe/Rome.
+const TARGET_ROME_HOURS = new Set([0, 14]);
+const TARGET_MINUTE_WINDOW = 20;
+
+function getRomeTime() {
+    const timeParts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Rome',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).formatToParts(new Date());
+    return {
+        hour: Number(timeParts.find(p => p.type === 'hour')?.value || '0'),
+        minute: Number(timeParts.find(p => p.type === 'minute')?.value || '0')
+    };
+}
 
 function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
@@ -58,15 +75,8 @@ module.exports = async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
-    const timeParts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/Rome',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }).formatToParts(new Date());
-    const hourRome = Number(timeParts.find(p => p.type === 'hour')?.value || '0');
-    const minuteRome = Number(timeParts.find(p => p.type === 'minute')?.value || '0');
-    const isTargetSlot = minuteRome < 10 && (hourRome === 0 || hourRome === 14);
+    const { hour: hourRome, minute: minuteRome } = getRomeTime();
+    const isTargetSlot = minuteRome < TARGET_MINUTE_WINDOW && TARGET_ROME_HOURS.has(hourRome);
     if (!isTargetSlot) {
         return res.json({
             success: true,
