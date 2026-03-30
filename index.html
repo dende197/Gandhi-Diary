@@ -447,6 +447,7 @@
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
+                    state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','');

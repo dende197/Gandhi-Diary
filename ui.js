@@ -2448,7 +2448,8 @@ function promptSetGoal(type) {
         if (!isNaN(val) && val > 0 && val <= 10) {
             if (!state.goals) state.goals = {};
             state.goals[type] = val;
-            saveTasks(); // Persist standard
+            localStorage.setItem(lsKey('goals'), JSON.stringify(state.goals));
+            saveTasks(); // Persist tasks
             render();
         } else {
             alert("Inserisci un valore valido tra 1 e 10");
