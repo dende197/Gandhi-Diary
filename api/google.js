@@ -11,22 +11,10 @@
  */
 
 const { google } = require('googleapis');
-const { createClient } = require('@supabase/supabase-js');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
 const { createHeaders } = require('../lib/helpers');
-
-// --- Supabase Admin Client (lazy init) ---
-let _supabase = null;
-function getSupabase() {
-    if (!_supabase) {
-        const url = process.env.SUPABASE_URL || 'https://mlcutgkfunbpmrnbeznd.supabase.co';
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-        if (!key) throw new Error('Chiave Supabase non trovata su Vercel (controlla SUPABASE_SERVICE_ROLE_KEY)');
-        _supabase = createClient(url, key);
-    }
-    return _supabase;
-}
+const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Config ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -39,15 +27,6 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 function getOAuth2Client() {
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-    
-    console.log('=== OAuth Debug ===');
-    console.log('CLIENT_ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.slice(0, 30) + '...' : 'MANCANTE');
-    console.log('CLIENT_SECRET ends with:', GOOGLE_CLIENT_SECRET ? '...' + GOOGLE_CLIENT_SECRET.slice(-4) : 'MANCANTE');
-    console.log('REDIRECT_URI:', REDIRECT_URI);
-    console.log('==================');
-    
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
 }
 
@@ -167,7 +146,7 @@ module.exports = async function handler(req, res) {
                 // Try to parse state as base64 JSON
                 if (stateParam) {
                     try {
-                        const decoded = JSON.parse(decodeURIComponent(escape(Buffer.from(stateParam, 'base64').toString('binary'))));
+                        const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString('utf-8'));
                         if (decoded && decoded.userId) {
                             userId = decoded.userId;
                             argoCreds = decoded.argo;

@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
     if (cached) return res.json({ success: true, circolari: cached, cached: true });
 
     try {
-        const SCHOOL_URL = 'https://www.liceogandhi.edu.it/categoria/storico-circolari/';
+        const SCHOOL_URL = process.env.SCHOOL_CIRCOLARI_URL || 'https://www.liceogandhi.edu.it/categoria/storico-circolari/';
         const response = await axios.get(SCHOOL_URL, {
             headers: { 'User-Agent': USER_AGENT },
             timeout: 10000

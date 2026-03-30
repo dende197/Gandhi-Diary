@@ -140,15 +140,13 @@ module.exports = async function handler(req, res) {
             verifiche: verificheData
         };
 
-        if (targetProfile) {
-            resp.selectedProfile = {
-                index: targetIndex,
-                name: studentName,
-                class: studentClass,
-                school: targetProfile.school || school,
-                idSoggetto: targetProfile.idSoggetto
-            };
-        }
+        resp.selectedProfile = {
+            index: targetIndex,
+            name: studentName,
+            class: studentClass,
+            school: targetProfile.school || school,
+            idSoggetto: targetProfile.idSoggetto
+        };
 
         if (profiles.length > 1) {
             resp.profiles = profiles.map(p => ({ index: p.index, name: p.name, class: p.class, school: p.school || school }));

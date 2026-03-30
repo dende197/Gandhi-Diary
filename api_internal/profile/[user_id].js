@@ -11,11 +11,11 @@ module.exports = async function handler(req, res) {
     const { user_id } = req.query;
 
     try {
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', user_id);
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', user_id).single();
+        if (error?.code === 'PGRST116') return res.status(404).json({ success: false, error: 'Profilo non trovato' }); // PGRST116 = no rows returned
         if (error) throw error;
-        if (!data || data.length === 0) return res.status(404).json({ success: false, error: 'Profilo non trovato' });
 
-        res.status(200).json({ success: true, data: data[0] });
+        res.status(200).json({ success: true, data });
     } catch (e) {
         console.error('Profile retrieval failed:', e.message);
         res.status(500).json({ success: false, error: e.message });

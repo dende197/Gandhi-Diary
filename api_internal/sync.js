@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -107,14 +107,6 @@ module.exports = async function handler(req, res) {
                     .select('*').eq('user_id', pid).single();
 
                 if (plannerRow) {
-                    const parseJsonb = (val, fallback) => {
-                        if (val === null || val === undefined) return fallback;
-                        if (typeof val === 'string') {
-                            try { return JSON.parse(val); } catch (e) { return fallback; }
-                        }
-                        return val;
-                    };
-
                     const parsedSL = parseJsonb(plannerRow.stress_levels, {});
                     plannerData = {
                         plannedTasks: parseJsonb(plannerRow.planned_tasks, {}),
