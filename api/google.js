@@ -52,17 +52,27 @@ function getOAuth2Client() {
 }
 
 // --- Token Storage (Supabase) ---
-async function saveTokens(userId, tokens) {
+async function saveTokens(userId, tokens, argoCreds = null) {
+    const upsertData = {
+        user_id: userId,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expiry_date: tokens.expiry_date || null,
+        calendar_id: 'primary',
+        updated_at: new Date().toISOString()
+    };
+
+    // If argo credentials provided (during initial link), save them too
+    if (argoCreds) {
+        upsertData.argo_school_code = argoCreds.schoolCode;
+        upsertData.argo_username = argoCreds.username;
+        upsertData.argo_password = argoCreds.password;
+    }
+
     const { error } = await getSupabase()
         .from('google_tokens')
-        .upsert({
-            user_id: userId,
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            expiry_date: tokens.expiry_date || null,
-            calendar_id: 'primary',
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        .upsert(upsertData, { onConflict: 'user_id' });
+
     if (error) throw new Error(`Supabase save error: ${error.message}`);
 }
 
@@ -135,7 +145,7 @@ module.exports = async function handler(req, res) {
                     access_type: 'offline',
                     scope: SCOPES,
                     prompt: 'consent',
-                    state: userId // Pass userId through OAuth state
+                    state: req.query.state || userId // Pass JSON state if provided, otherwise userId
                 });
 
                 if (req.query.redirect === 'true') {
@@ -148,17 +158,28 @@ module.exports = async function handler(req, res) {
             // ============= CALLBACK =============
             case 'callback': {
                 const code = req.query.code;
-                const userId = req.query.state; // Retrieved from OAuth state
+                const stateParam = req.query.state; // Can be userId (old) or base64 JSON (new)
                 const error = req.query.error;
 
+                let userId = stateParam;
+                let argoCreds = null;
+
+                // Try to parse state as base64 JSON
+                if (stateParam) {
+                    try {
+                        const decoded = JSON.parse(Buffer.from(stateParam, 'base64').toString());
+                        if (decoded && decoded.userId) {
+                            userId = decoded.userId;
+                            argoCreds = decoded.argo;
+                            console.log(`[Google OAuth] Parsed JSON state for user: ${userId}`);
+                        }
+                    } catch (e) {
+                        // Fallback: state is just the userId string
+                        console.log(`[Google OAuth] State is simple string (userId): ${stateParam}`);
+                    }
+                }
+
                 console.log('[OAuth] Code ricevuto:', code?.slice(0, 20));
-                console.log('[OAuth] Code length:', code?.length);
-                console.log('[OAuth] Timestamp:', Date.now());
-
-                console.log(`[Google OAuth] Callback received for user: ${userId}`);
-                if (!GOOGLE_CLIENT_ID) console.error('[Google OAuth] ERRORE: GOOGLE_CLIENT_ID mancante');
-                if (!GOOGLE_CLIENT_SECRET) console.error('[Google OAuth] ERRORE: GOOGLE_CLIENT_SECRET mancante');
-
                 if (error) {
                     console.error('[Google OAuth] Error from Google:', error);
                     return res.redirect('/?google=error&reason=' + encodeURIComponent(error));
@@ -170,13 +191,12 @@ module.exports = async function handler(req, res) {
 
                 try {
                     const oauth2 = getOAuth2Client();
-                    console.log(`[Google OAuth] Scambio codice con redirect_uri: ${REDIRECT_URI}`);
                     const { tokens } = await oauth2.getToken(code);
                     
-                    await saveTokens(userId, tokens);
-                    console.log(`✅ Google Calendar collegato per utente: ${userId}`);
+                    await saveTokens(userId, tokens, argoCreds);
+                    console.log(`✅ Google Calendar collegato per utente: ${userId}${argoCreds ? ' (con credenziali Argo)' : ''}`);
 
-                    // Redirect alla PWA con successo
+                    // Redirect alla PWA
                     return res.redirect('/#profile?google=success');
                 } catch (tokenErr) {
                     console.error('[Google OAuth] Token exchange failed:', tokenErr.message);
@@ -228,15 +248,15 @@ module.exports = async function handler(req, res) {
                     
                     // Fallback: se la password non arriva dal client, usa le credenziali Argo salvate in Supabase
                     if (!password && tokenRow) {
-                        schoolCode = tokenRow.argo_school_code || schoolCode;
-                        userName = tokenRow.argo_username || userName;
+                        schoolCode = schoolCode || tokenRow.argo_school_code;
+                        userName = userName || tokenRow.argo_username;
                         password = tokenRow.argo_password;
                     }
                     
                     if (!password) {
                         return res.status(400).json({ 
                             success: false, 
-                            error: 'Password Argo non disponibile. Rieffettua il login nella PWA.' 
+                            error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.' 
                         });
                     }
                     

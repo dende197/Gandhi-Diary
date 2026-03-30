@@ -106,7 +106,25 @@ window.closeSubject = function () {
 window.connectGoogle = function () {
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
-    window.location.href = `${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}&redirect=true`;
+    
+    // Get Argo credentials to bundle them in the OAuth state
+    const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
+    let password = '';
+    try {
+        if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
+    } catch (e) { console.warn('Decode storedPass failed in connectGoogle'); }
+
+    const stateObj = {
+        userId: userId,
+        argo: {
+            schoolCode: session.schoolCode,
+            username: session.userName || session.username,
+            password: password
+        }
+    };
+    
+    const base64State = btoa(JSON.stringify(stateObj));
+    window.location.href = `${window.API_BASE_URL}/api/google?action=auth-url&userId=${encodeURIComponent(userId)}&redirect=true&state=${encodeURIComponent(base64State)}`;
 };
 
 window.syncGoogleCalendar = async function () {
@@ -173,6 +191,15 @@ window.saveArgoToSupabase = async function () {
         const userId = window.getUserId();
         if (!userId || userId === 'guest' || !session.userName) return;
 
+        // Decodifica password obbligatoria
+        let password = '';
+        try {
+            if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
+        } catch (e) {
+            console.warn('Decode storedPass failed in saveArgoToSupabase');
+            return;
+        }
+
         await fetch(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -180,7 +207,7 @@ window.saveArgoToSupabase = async function () {
                 userId,
                 schoolCode: session.schoolCode,
                 username: session.userName || session.username,
-                password: session.password
+                password: password
             })
         });
         console.log('✅ Credenziali Argo salvate per sync background');
