@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
 
     try {
         const { data, error } = await supabase.from('profiles').select('*').eq('id', user_id).single();
-        if (error?.code === 'PGRST116') return res.status(404).json({ success: false, error: 'Profilo non trovato' });
+        if (error?.code === 'PGRST116') return res.status(404).json({ success: false, error: 'Profilo non trovato' }); // PGRST116 = no rows returned
         if (error) throw error;
 
         res.status(200).json({ success: true, data });
