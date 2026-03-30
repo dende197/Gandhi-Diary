@@ -1,3 +1,14 @@
+// --- XSS PROTECTION ---
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // --- AGENDA SEARCH & FILTER HELPERS ---
 setInterval(() => {
     const clock = document.getElementById('topbar-clock');
@@ -708,7 +719,7 @@ function renderLogin() {
                 ${hasSession ? `
                 <div style="padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; margin-top: 12px;">
                     <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Sessione salvata</div>
-                    <div style="font-size: 15px; font-weight: 700; margin: 4px 0 16px 0;">${state.user?.name || 'Utente'}</div>
+                    <div style="font-size: 15px; font-weight: 700; margin: 4px 0 16px 0;">${escapeHtml(state.user?.name || 'Utente')}</div>
                     <button onclick="logout()" style="width: 100%; height: 40px; border-radius: 10px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); color: var(--red); font-size: 13px; font-weight: 700; cursor: pointer;">
                         Usa altro account
                     </button>
@@ -844,7 +855,7 @@ function renderHome() {
             <span id="vw-tipo" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>
             <span id="vw-counter" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${verificheCount > 1 ? `${vIdx + 1}/${verificheCount}` : ''}</span>
           </div>
-          <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px; height:32px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${currentVerifica ? (currentVerifica.text || '').substring(0, 45) : 'Nessuna verifica'}</div>
+          <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px; height:32px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${currentVerifica ? escapeHtml((currentVerifica.text || '').substring(0, 45)) : 'Nessuna verifica'}</div>
           <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
           <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5, 100 - daysToExam * 8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
         </div>
@@ -935,7 +946,7 @@ function renderHome() {
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
-                <span data-task-text="${t.id}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
+                <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2, '0') + ':00' : ''}</span>
               </div>`;
     }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito per domani.</div>'}
@@ -1000,9 +1011,9 @@ function renderProfile() {
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
             <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
-                    <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${state.user.name || 'Utente'}</div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${escapeHtml(state.user.name || 'Utente')}</div>
                     <div style="font-size: 13px; font-weight: 800; color: var(--accent); background: rgba(99, 102, 241, 0.08); padding: 6px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
-                        CLASSE ${(normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : '')}
+                        CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
                     </div>
                 </div>
             </div>
@@ -1182,12 +1193,12 @@ function renderGradesView() {
             const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
 
             return `
-                    <div class="card" style="padding: 24px; border-radius: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 20px;" onclick="state.activeSubject='${s.name.replace(/'/g, "\\'")}'; render();" >
+                    <div class="card" style="padding: 24px; border-radius: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 20px;" onclick="navigateSubject(${JSON.stringify(s.name)})" >
                         <div style="width: 52px; height: 52px; border-radius: 14px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 14px; flex-shrink: 0;">
-                            ${getSubjectAbbrev(s.name)}
+                            ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${s.name}</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${escapeHtml(s.name)}</div>
                             <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI</div>
                         </div>
                         <div style="text-align: right;">
@@ -1740,8 +1751,8 @@ function mostraVerificheModal() {
                                 ${abbr}
                             </div>
                             <div style="flex:1; min-width:0;">
-                                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">${v.text || (v.tipo === 'scritta' ? 'Verifica Scritta' : 'Interrogazione Orale')}</div>
-                                <div style="font-size:11px; color:var(--text-dim);">${v.materia} · ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</div>
+                                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">${escapeHtml(v.text || (v.tipo === 'scritta' ? 'Verifica Scritta' : 'Interrogazione Orale'))}</div>
+                                <div style="font-size:11px; color:var(--text-dim);">${escapeHtml(v.materia)} · ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</div>
                             </div>
                             <div style="text-align:right; flex-shrink:0; display:flex; align-items:center; gap:12px;">
                                 ${v.source === 'manual' ? `
@@ -1912,10 +1923,10 @@ function renderDayDetailModal(dateStr) {
                                         <div style="width:4px; background:${color}; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${subContent}</span>
-                                                ${timeStr ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${timeStr}</span>` : ''}
+                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(subContent)}</span>
+                                                ${timeStr ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${escapeHtml(timeStr)}</span>` : ''}
                                             </div>
-                                            <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${displayText}</div>
+                                            <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(displayText)}</div>
                                         </div>
                                         <div style="padding:12px 14px; display:flex; align-items:center; flex-shrink:0;">
                                             <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
@@ -2041,7 +2052,7 @@ function showEditProfileModal() {
                 <div style="display: flex; flex-direction: column; gap: 20px;">
                     <div>
                         <label style="display: block; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Nome Completo</label>
-                        <input type="text" id="edit-user-name" value="${state.user.name || ''}" placeholder="Esempio: Andrea Rossi">
+                        <input type="text" id="edit-user-name" value="${escapeHtml(state.user.name || '')}" placeholder="Esempio: Andrea Rossi">
                     </div>
                     
                     <div style="padding: 16px; background: rgba(99, 102, 241, 0.03); border-radius: var(--radius-m); border: 1px solid rgba(99, 102, 241, 0.1);">
@@ -2068,8 +2079,8 @@ function showProfileActions() {
                 <div style="padding: 24px; display: flex; align-items: center; gap: 16px;">
                     ${renderAvatar(state.user.name, 56)}
                     <div style="min-width: 0;">
-                        <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${state.user.name}</div>
-                        <div style="font-size: 13px; color: var(--text-dim); font-weight: 600;">${normalizeClassUi(state.user.class) || 'Studente'}</div>
+                        <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(state.user.name)}</div>
+                        <div style="font-size: 13px; color: var(--text-dim); font-weight: 600;">${escapeHtml(normalizeClassUi(state.user.class) || 'Studente')}</div>
                     </div>
                 </div>
 
@@ -2103,8 +2114,8 @@ function renderSettings() {
                     <div style="padding: 20px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                          ${renderAvatar(state.user.name, 56)}
                         <div>
-                            <div style="font-size: 17px; font-weight: 600; color: var(--text-primary);">${state.user.name}</div>
-                            <div style="font-size: 14px; color: var(--text-secondary);">${state.user.class || 'Studente'}</div>
+                            <div style="font-size: 17px; font-weight: 600; color: var(--text-primary);">${escapeHtml(state.user.name)}</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(state.user.class || 'Studente')}</div>
                        </div>
                    </div>
                     
@@ -2257,10 +2268,10 @@ function renderWeeklyAgenda() {
                         
                         <div style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
-                                <span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${cleanSubject}</span>
-                                ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${timeStr}</span>` : ''}
+                                <span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
+                                ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
                             </div>
-                            <div data-task-text="${t.id}" style="font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${displayText}</div>
+                            <div data-task-text="${escapeHtml(t.id)}" style="font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
                         
                         <div style="padding:0 16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
@@ -2629,7 +2640,7 @@ function renderVerifiche() {
                                             <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; background: ${color}20; color: ${color}; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; border: 1px solid ${color}40;">
                                                 ${e.type}
                                            </span>
-                                            <h3 style="font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${e.subject}</h3>
+                                            <h3 style="font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${escapeHtml(e.subject)}</h3>
                                        </div>
                                         <button onclick="removeExam(${index})" style="background: none; border: none; color: var(--text-secondary); padding: 4px; cursor: pointer; opacity: 0.6;">
                                             <i class="ph-bold ph-trash"></i>
@@ -2679,8 +2690,8 @@ function renderRecoveries() {
                         ${backlog.map((b, index) => `
                             <div class="glass-panel" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
                                 <div style="flex: 1; min-width: 0;">
-                                    <div style="font-size: 11px; font-weight: 700; color: ${getSubjectColor(b.subject)}; text-transform: uppercase; margin-bottom: 4px;">${b.subject}</div>
-                                    <div style="font-size: 15px; font-weight: 500; color: var(--text-primary); line-height: 1.3;">${b.topic}</div>
+                                    <div style="font-size: 11px; font-weight: 700; color: ${getSubjectColor(b.subject)}; text-transform: uppercase; margin-bottom: 4px;">${escapeHtml(b.subject)}</div>
+                                    <div style="font-size: 15px; font-weight: 500; color: var(--text-primary); line-height: 1.3;">${escapeHtml(b.topic)}</div>
                                </div>
                                 <button onclick="removeBacklog(${index})" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
                                     <i class="ph-bold ph-check"></i>
@@ -2739,11 +2750,11 @@ function showProfileSelectionModal(profiles, credentials) {
                                 data-index="${p.index}"
                                 style="background: var(--surface-highlight); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: left; -webkit-tap-highlight-color: transparent;">
                             <div class="profile-avatar" style="width: 44px; height: 44px; background: linear-gradient(135deg, var(--blue), var(--indigo)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
-                                ${(p.name || 'S')[0].toUpperCase()}
+                                ${escapeHtml((p.name || 'S')[0].toUpperCase())}
                             </div>
                             <div style="flex-grow: 1;">
-                                <div class="profile-name" style="font-weight: 700; font-size: 16px; color: white; margin-bottom: 4px;">${p.name || ('Studente ' + (p.index + 1))}</div>
-                                <div class="profile-class" style="font-size: 13px; color: var(--text-secondary);">${p.class || p.school || 'Caricamento...'}</div>
+                                <div class="profile-name" style="font-weight: 700; font-size: 16px; color: white; margin-bottom: 4px;">${escapeHtml(p.name || ('Studente ' + (p.index + 1)))}</div>
+                                <div class="profile-class" style="font-size: 13px; color: var(--text-secondary);">${escapeHtml(p.class || p.school || 'Caricamento...')}</div>
                             </div>
                             <i class="ph-bold ph-caret-right" style="color: var(--text-secondary);"></i>
                         </button>
@@ -3003,20 +3014,20 @@ function showCompetencyInputModal() {
                         ${subjectsList.map(s => `
                             <div style="padding: 18px; border-radius: 16px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08);">
                                 <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px; cursor: pointer;" onclick="const chk=this.querySelector('input'); chk.checked=!chk.checked">
-                                    <input type="checkbox" value="${s.name}" class="competency-check" id="comp-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" ${s.media < 6.5 || s.savedLevel < 3 ? 'checked' : ''} style="accent-color: var(--accent); width: 22px; height: 22px; cursor: pointer;" onclick="event.stopPropagation()" />
+                                    <input type="checkbox" value="${escapeHtml(s.name)}" class="competency-check" id="comp-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" ${s.media < 6.5 || s.savedLevel < 3 ? 'checked' : ''} style="accent-color: var(--accent); width: 22px; height: 22px; cursor: pointer;" onclick="event.stopPropagation()" />
                                     <span style="background: ${s.color}; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;"></span>
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="font-size: 15px; font-weight: 700; color: white;">${s.name}</div>
+                                        <div style="font-size: 15px; font-weight: 700; color: white;">${escapeHtml(s.name)}</div>
                                         <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${s.count > 0 ? `Media: ${s.media.toFixed(2)} · ${s.priority}` : 'Nessun voto'}</div>
                                     </div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 2px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Preparazione:</span>
-                                        <span id="prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" style="font-size: 12px; color: var(--accent); font-weight: 800;">${levelLabels[s.savedLevel]}</span>
+                                        <span id="prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" style="font-size: 12px; color: var(--accent); font-weight: 800;">${escapeHtml(levelLabels[s.savedLevel])}</span>
                                     </div>
                                     <div style="height: 48px; display: flex; align-items: center;">
-                                        <input type="range" min="1" max="5" value="${s.savedLevel}" class="prep-slider" data-subject="${s.name}"
+                                        <input type="range" min="1" max="5" value="${s.savedLevel}" class="prep-slider" data-subject="${escapeHtml(s.name)}"
                                             oninput="document.getElementById('prep-label-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}').textContent = ['','Per niente','Poco','Sufficiente','Abbastanza','Molto'][this.value]"
                                             style="flex: 1; accent-color: var(--accent); height: 8px; cursor: pointer;" />
                                     </div>
@@ -3056,8 +3067,8 @@ function showOrganizeStudyModal() {
                                         ${isPlanned ? '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>' : ''}
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="font-weight: 700; font-size: 16px; color: white;">${t.text}</div>
-                                        <div style="font-size: 12px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${t.subject}</div>
+                                        <div style="font-weight: 700; font-size: 16px; color: white;">${escapeHtml(t.text)}</div>
+                                        <div style="font-size: 12px; color: ${subjectColor}; font-weight: 800; text-transform: uppercase;">${escapeHtml(t.subject)}</div>
                                     </div>
                                 </div>
                             `;
@@ -3169,7 +3180,7 @@ function showTasksBySubjectModal() {
                                                     ${t.done ? '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>' : ''}
                                                 </div>
                                                 <div style="flex: 1;">
-                                                    <div style="font-size: 14px; font-weight: 600; color: white; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${t.text}</div>
+                                                    <div style="font-size: 14px; font-weight: 600; color: white; ${t.done ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${escapeHtml(t.text)}</div>
                                                     <div style="font-size: 10px; opacity: 0.5;">${t.display_date}</div>
                                                 </div>
                                             </div>
@@ -3723,8 +3734,8 @@ window.refreshPlanWeekModalContent = function () {
                 <div style="background: #FFFFFF; padding: 20px; border-radius: 20px; border: 1px solid #E0DDD8; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
                         <div style="min-width: 0; flex:1;">
-                            <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: var(--${key}-t, #141414); text-transform: uppercase; letter-spacing: 0.1em; background: var(--${key}, #EEE); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 8px;">${subContent}</div>
-                            <div style="font-size: 15px; font-weight: 700; color: #141414; line-height: 1.4; padding-right: 10px;">${t.text}</div>
+                            <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: var(--${key}-t, #141414); text-transform: uppercase; letter-spacing: 0.1em; background: var(--${key}, #EEE); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 8px;">${escapeHtml(subContent)}</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #141414; line-height: 1.4; padding-right: 10px;">${escapeHtml(t.text)}</div>
                         </div>
                     </div>
                     <div style="display: flex; gap: 6px;">
