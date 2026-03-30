@@ -1,0 +1,19 @@
+name: Cron Sync
+
+on:
+  schedule:
+    # Every hour — GitHub Actions uses UTC; the endpoint handles all logic server-side.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  cron-sync:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Call Cron Sync API
+        # VERCEL_URL must be set as a repository variable, e.g. https://your-project.vercel.app
+        run: |
+          curl -f -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.VERCEL_URL }}/api/cron-sync"
