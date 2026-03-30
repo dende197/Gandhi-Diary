@@ -4,7 +4,7 @@ setInterval(() => {
     if (clock) {
         clock.innerText = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
-}, 1000);
+}, 500);
 
 window.scrollToSearch = function () {
     // If we're not in the agenda view, go there first
@@ -2109,7 +2109,7 @@ function renderSettings() {
                </div>
                 
                 <div style="margin-top: 30px; text-align: center;">
-                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">G-Connect v5.0 (Liquid Glass)</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">v5.0 (Liquid Glass)</p>
                     <p style="font-size: 11px; color: var(--text-dim);">Made for Students</p>
                </div>
            </div>
