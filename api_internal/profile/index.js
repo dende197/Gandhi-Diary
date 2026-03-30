@@ -1,4 +1,4 @@
-const { handleCors, debugLog } = require('../../lib/helpers');
+const { handleCors, debugLog, verifySessionToken, normalizeUserId } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
 
 module.exports = async function handler(req, res) {
@@ -12,7 +12,12 @@ module.exports = async function handler(req, res) {
         const { userId, name, class: className, avatar, specialization } = req.body;
         if (!userId) return res.status(400).json({ success: false, error: 'userId mancante' });
 
-        const profileData = { id: userId, last_active: new Date().toISOString() };
+        const normalizedId = normalizeUserId(userId);
+        if (!verifySessionToken(req, normalizedId)) {
+            return res.status(403).json({ success: false, error: 'Non autorizzato' });
+        }
+
+        const profileData = { id: normalizedId, last_active: new Date().toISOString() };
         if (name) profileData.name = name;
         if (className) profileData.class = className;
         if (specialization) profileData.specialization = specialization;

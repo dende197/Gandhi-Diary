@@ -13,7 +13,7 @@
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
-const { createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword } = require('../lib/helpers');
+const { createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword, handleCors, verifySessionToken, normalizeUserId } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Config ---
@@ -99,11 +99,7 @@ function getAuthenticatedClient(tokenRow) {
 
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
-    // CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (handleCors(req, res)) return;
 
     const action = req.query.action || 'status';
 
@@ -118,6 +114,10 @@ module.exports = async function handler(req, res) {
 
                 const userId = req.query.userId || req.body?.userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
 
                 const oauth2 = getOAuth2Client();
                 const url = oauth2.generateAuthUrl({
@@ -191,6 +191,10 @@ module.exports = async function handler(req, res) {
                 const userId = req.query.userId || req.body?.userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
 
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
                 const tokenRow = await loadTokens(userId);
                 return res.json({
                     success: true,
@@ -206,6 +210,10 @@ module.exports = async function handler(req, res) {
                 const session = body.session; // Argo session
 
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
 
                 // 1. Load Google tokens
                 const tokenRow = await loadTokens(userId);
@@ -283,6 +291,10 @@ module.exports = async function handler(req, res) {
                     return res.status(400).json({ success: false, error: 'Dati Argo mancanti' });
                 }
 
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
                 const { error } = await getSupabase()
                     .from('google_tokens')
                     .update({
@@ -301,6 +313,10 @@ module.exports = async function handler(req, res) {
             case 'disconnect': {
                 const userId = req.query.userId || req.body?.userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
 
                 // Optionally revoke the token
                 try {
