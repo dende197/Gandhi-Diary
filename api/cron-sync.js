@@ -14,6 +14,7 @@ const { getSupabase } = require('../lib/supabase');
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback';
+const BEARER_PREFIX = 'Bearer ';
 
 function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
@@ -36,11 +37,42 @@ function buildAuthenticatedOAuth2Client(tokenRow) {
 
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
+    if (req.method !== 'GET') {
+        return res.status(405).json({ success: false, error: 'Method not allowed' });
+    }
+
+    const supabase = getSupabase();
+    if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Supabase non configurato' });
+    }
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        return res.status(500).json({ success: false, error: 'Google OAuth non configurato' });
+    }
+
     // Protection: CRON_SECRET must be configured and must match the request secret.
-    // Vercel automatically injects CRON_SECRET as x-vercel-cron-secret on scheduled calls.
-    const cronSecret = req.headers['x-vercel-cron-secret'] || req.query.secret;
+    // Support both Vercel Authorization Bearer and legacy x-vercel-cron-secret header.
+    const authHeader = req.headers.authorization || '';
+    const bearerToken = authHeader.startsWith(BEARER_PREFIX) ? authHeader.slice(BEARER_PREFIX.length).trim() : '';
+    const cronSecret = bearerToken || req.headers['x-vercel-cron-secret'] || req.query.secret;
     if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const timeParts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Rome',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).formatToParts(new Date());
+    const hourRome = Number(timeParts.find(p => p.type === 'hour')?.value || '0');
+    const minuteRome = Number(timeParts.find(p => p.type === 'minute')?.value || '0');
+    const isTargetSlot = minuteRome < 10 && (hourRome === 0 || hourRome === 14);
+    if (!isTargetSlot) {
+        return res.json({
+            success: true,
+            skipped: true,
+            reason: `Outside target slot (${hourRome}:${String(minuteRome).padStart(2, '0')} Europe/Rome)`
+        });
     }
 
     console.log('[Cron] Starting Universal Sync...');
@@ -49,16 +81,16 @@ module.exports = async function handler(req, res) {
 
     try {
         // 1. Fetch all users with Argo credentials
-        const { data: users, error } = await getSupabase()
+        const { data: users, error } = await supabase
             .from('google_tokens')
             .select('*')
             .not('argo_username', 'is', null)
             .not('argo_password', 'is', null);
 
         if (error) throw error;
-        results.total = users.length;
+        results.total = (users || []).length;
 
-        for (const user of users) {
+        for (const user of (users || [])) {
             results.processed++;
             console.log(`[Cron] Processing user: ${user.user_id}`);
             
