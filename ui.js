@@ -800,21 +800,6 @@ function renderHome() {
         .sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))
         .slice(0, 6);
 
-    // Debug: log assenze data
-    console.log('[Debug] assenzeData:', JSON.stringify(state.assenzeData || 'null'));
-    console.log('[Debug] verifiche:', (state.verifiche || []).length, 'trovate');
-    if (state.verifiche?.length > 0) {
-        console.log('[Debug] Verifiche sample (first 3):', JSON.stringify(state.verifiche.slice(0, 3)));
-    }
-    if (state.assenzeData?._debug) {
-        console.log('[Debug] Dashboard blocco keys:', JSON.stringify(state.assenzeData._debug.bloccoKeys));
-        console.log('[Debug] Raw nota sample:', JSON.stringify(state.assenzeData._debug.rawNotaSample));
-        // Log all debug keys
-        for (const [k, v] of Object.entries(state.assenzeData._debug)) {
-            if (k.startsWith('key_')) console.log(`[Debug] ${k}:`, JSON.stringify(v));
-        }
-    }
-
     // Task di domani
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);

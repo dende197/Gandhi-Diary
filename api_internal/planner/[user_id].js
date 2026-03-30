@@ -1,30 +1,5 @@
-const axios = require('axios');
-const { handleCors } = require('../../lib/helpers');
+const { handleCors, parseJsonb } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
-
-function sbHeaders() {
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        throw new Error('Missing Supabase env vars');
-    }
-    return {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-    };
-}
-
-function sbTableUrl(table) {
-    return `${process.env.SUPABASE_URL}/rest/v1/${table}`;
-}
-
-function parseJsonb(value, fallback) {
-    if (value === null || value === undefined) return fallback;
-    if (typeof value === 'string') {
-        try { return JSON.parse(value); } catch (e) { return fallback; }
-    }
-    return value;
-}
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
@@ -132,35 +107,7 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        // Fallback REST
-        try {
-            const url = `${sbTableUrl('planners')}?on_conflict=user_id`;
-            const headers = sbHeaders();
-            headers.Prefer = 'resolution=merge-duplicates,return=representation';
-            const r = await axios.post(url, payload, { headers, timeout: 15000 });
-            const rows = Array.isArray(r.data) ? r.data : [r.data];
-            const row = rows[0] || payload;
-
-            return res.json({
-                success: true,
-                data: {
-                    userId: row.user_id,
-                    plannedTasks: parseJsonb(row.planned_tasks, {}),
-                    stressLevels: parseJsonb(row.stress_levels, {}),
-                    plannedDetails: parseJsonb(row.planned_details, {}),
-                    tasks: parseJsonb(row.tasks, []),
-                    prepLevels: parseJsonb(row.prep_levels, {}),
-                    stressVents: (parseJsonb(row.stress_levels, {})).__vents || {},
-                    updatedAt: row.updated_at
-                }
-            });
-
-        } catch (e) {
-            return res.status(e.response?.status || 500).json({
-                success: false,
-                error: e.response?.data || e.message
-            });
-        }
+        return res.status(503).json({ success: false, error: 'Supabase non configurato o upsert fallito' });
     }
 
     res.status(405).json({ error: 'Method not allowed' });

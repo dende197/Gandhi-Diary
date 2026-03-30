@@ -5,29 +5,17 @@
  */
 
 const { google } = require('googleapis');
-const { createClient } = require('@supabase/supabase-js');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
 const { createHeaders } = require('../lib/helpers');
-
-// --- Supabase Admin Client (lazy init) ---
-let _supabase = null;
-function getSupabase() {
-    if (!_supabase) {
-        const url = process.env.SUPABASE_URL || 'https://mlcutgkfunbpmrnbeznd.supabase.co';
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-        if (!key) throw new Error('Supabase key non configurata');
-        _supabase = createClient(url, key);
-    }
-    return _supabase;
-}
+const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Setup ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback';
 
-function getOAuth2Client(tokenRow) {
+function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
     oauth2.setCredentials({
         access_token: tokenRow.access_token,
@@ -48,11 +36,11 @@ function getOAuth2Client(tokenRow) {
 
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
-    // Basic protection (optional: check CRON_SECRET or Vercel header)
+    // Basic protection: check CRON_SECRET or Vercel cron header
     const cronSecret = req.headers['x-vercel-cron-secret'] || req.query.secret;
-    // if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
-    //     return res.status(401).json({ success: false, error: 'Unauthorized' });
-    // }
+    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
 
     console.log('[Cron] Starting Universal Sync...');
     const startTime = Date.now();
@@ -93,7 +81,7 @@ module.exports = async function handler(req, res) {
                 
                 if (tasks.length > 0) {
                     // 4. Sync to Google Calendar
-                    const auth = getOAuth2Client(user);
+                    const auth = buildAuthenticatedOAuth2Client(user);
                     const syncRes = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth);
                     if (syncRes.success) {
                         results.success++;
