@@ -7,7 +7,7 @@
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
-const { createHeaders } = require('../lib/helpers');
+const { createHeaders, decryptArgoPassword } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Setup ---
@@ -36,9 +36,10 @@ function buildAuthenticatedOAuth2Client(tokenRow) {
 
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
-    // Basic protection: check CRON_SECRET or Vercel cron header
+    // Protection: CRON_SECRET must be configured and must match the request secret.
+    // Vercel automatically injects CRON_SECRET as x-vercel-cron-secret on scheduled calls.
     const cronSecret = req.headers['x-vercel-cron-secret'] || req.query.secret;
-    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+    if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
@@ -63,10 +64,12 @@ module.exports = async function handler(req, res) {
             
             try {
                 // 2. Login to Argo
+                const argoPassword = decryptArgoPassword(user.argo_password);
+                if (!argoPassword) throw new Error('Failed to decrypt Argo password');
                 const loginRes = await AdvancedArgo.rawLogin(
-                    user.argo_school_code, 
+                    user.argo_school_code,
                     user.argo_username,
-                    user.argo_password
+                    argoPassword
                 );
                 const { access_token, profiles } = loginRes;
                 if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');

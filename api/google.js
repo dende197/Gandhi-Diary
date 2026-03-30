@@ -13,7 +13,7 @@
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
-const { createHeaders } = require('../lib/helpers');
+const { createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Config ---
@@ -45,7 +45,7 @@ async function saveTokens(userId, tokens, argoCreds = null) {
     if (argoCreds) {
         upsertData.argo_school_code = argoCreds.schoolCode;
         upsertData.argo_username = argoCreds.username;
-        upsertData.argo_password = argoCreds.password;
+        upsertData.argo_password = encryptArgoPassword(argoCreds.password);
     }
 
     const { error } = await getSupabase()
@@ -150,15 +150,15 @@ module.exports = async function handler(req, res) {
                         if (decoded && decoded.userId) {
                             userId = decoded.userId;
                             argoCreds = decoded.argo;
-                            console.log(`[Google OAuth] Parsed JSON state for user: ${userId}`);
+                            debugLog('[Google OAuth] Parsed JSON state', { userId });
                         }
                     } catch (e) {
                         // Fallback: state is just the userId string
-                        console.log(`[Google OAuth] State is simple string (userId): ${stateParam}`);
+                        debugLog('[Google OAuth] State is simple string (userId)', stateParam);
                     }
                 }
 
-                console.log('[OAuth] Code ricevuto:', code?.slice(0, 20));
+                debugLog('[OAuth] Code received', { codePrefix: code?.slice(0, 10) });
                 if (error) {
                     console.error('[Google OAuth] Error from Google:', error);
                     return res.redirect('/?google=error&reason=' + encodeURIComponent(error));
@@ -173,7 +173,7 @@ module.exports = async function handler(req, res) {
                     const { tokens } = await oauth2.getToken(code);
                     
                     await saveTokens(userId, tokens, argoCreds);
-                    console.log(`✅ Google Calendar collegato per utente: ${userId}${argoCreds ? ' (con credenziali Argo)' : ''}`);
+                    debugLog('Google Calendar linked', { userId, hasArgo: !!argoCreds });
 
                     // Redirect alla PWA
                     return res.redirect('/#profile?google=success');
@@ -229,7 +229,7 @@ module.exports = async function handler(req, res) {
                     if (!password && tokenRow) {
                         schoolCode = schoolCode || tokenRow.argo_school_code;
                         userName = userName || tokenRow.argo_username;
-                        password = tokenRow.argo_password;
+                        password = decryptArgoPassword(tokenRow.argo_password);
                     }
                     
                     if (!password) {
@@ -267,7 +267,7 @@ module.exports = async function handler(req, res) {
                 const calendarId = tokenRow.calendar_id || 'primary';
                 const result = await syncTasksToCalendar(tasks, calendarId, auth);
 
-                console.log(`📅 Sync per ${userId}: +${result.added} aggiunti, ${result.skipped} saltati`);
+                debugLog(`Calendar sync result`, { userId, added: result.added, skipped: result.skipped });
 
                 return res.json({
                     success: true,
@@ -288,7 +288,7 @@ module.exports = async function handler(req, res) {
                     .update({
                         argo_school_code: schoolCode,
                         argo_username: username,
-                        argo_password: password,
+                        argo_password: encryptArgoPassword(password),
                         updated_at: new Date().toISOString()
                     })
                     .eq('user_id', userId);
@@ -312,7 +312,7 @@ module.exports = async function handler(req, res) {
                 } catch (e) { /* ignore revoke errors */ }
 
                 await deleteTokens(userId);
-                console.log(`🔌 Google Calendar disconnesso per utente: ${userId}`);
+                debugLog(`Google Calendar disconnected`, { userId });
 
                 return res.json({ success: true, message: 'Google Calendar disconnesso' });
             }
