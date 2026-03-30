@@ -43,6 +43,6 @@ module.exports = async function handler(req, res) {
         });
 
     } catch (e) {
-        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+        res.status(500).json({ success: false, error: e.message });
     }
 }

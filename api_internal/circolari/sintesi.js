@@ -5,12 +5,30 @@ const { handleCors, USER_AGENT, debugLog } = require('../../lib/helpers');
 const { getGroq } = require('../../lib/groq');
 const { getSintesiFromCache, setSintesiInCache } = require('../../lib/sintesiCache');
 
+// Allowed hostname suffixes for circolare links — prevents SSRF to internal addresses.
+const _SSRF_BLOCK = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|::1|metadata\.google\.internal)$/i;
+
+function isAllowedCircolareUrl(raw) {
+    try {
+        const url = new URL(raw);
+        if (url.protocol !== 'https:') return false;
+        if (_SSRF_BLOCK.test(url.hostname)) return false;
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const { link, id } = req.body;
     if (!link) return res.status(400).json({ success: false, error: 'Link mancante', errorType: 'badRequest' });
+
+    if (!isAllowedCircolareUrl(link)) {
+        return res.status(400).json({ success: false, error: 'URL non valido o non consentito', errorType: 'badRequest' });
+    }
 
     // Cache check
     if (id) {
@@ -31,7 +49,11 @@ module.exports = async function handler(req, res) {
             });
             if (pdfLinks.length > 0) {
                 const bestLink = pdfLinks.find(url => url.toLowerCase().includes('circolare') || url.toLowerCase().includes('comunicato')) || pdfLinks[0];
-                finalPdfUrl = (bestLink.startsWith('http') ? bestLink : `https://www.liceogandhi.edu.it${bestLink}`).trim();
+                const resolved = (bestLink.startsWith('http') ? bestLink : `https://www.liceogandhi.edu.it${bestLink}`).trim();
+                if (!isAllowedCircolareUrl(resolved)) {
+                    return res.status(400).json({ success: false, error: 'URL PDF non valido o non consentito', errorType: 'badRequest' });
+                }
+                finalPdfUrl = resolved;
             } else {
                 textContent = $('article, .entry-content, .content').text().trim() || $('body').text().trim();
             }

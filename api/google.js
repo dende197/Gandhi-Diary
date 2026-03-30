@@ -13,7 +13,7 @@
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
-const { createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword } = require('../lib/helpers');
+const { handleCors, createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
 // --- Google OAuth2 Config ---
@@ -99,11 +99,7 @@ function getAuthenticatedClient(tokenRow) {
 
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
-    // CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (handleCors(req, res)) return;
 
     const action = req.query.action || 'status';
 
