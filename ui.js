@@ -463,7 +463,30 @@ function renderNav() {
                 ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           </div>
-        </div>`;
+        </div>
+
+        <nav class="mobile-dock" aria-label="Navigazione principale">
+            <button class="dock-item ${state.view === 'home' ? 'dock-active' : ''}" onclick="navigate('home')" aria-label="Panoramica">
+                <i class="${state.view === 'home' ? 'ph-fill ph-house' : 'ph ph-house'}"></i>
+                <span>Home</span>
+            </button>
+            <button class="dock-item ${state.view === 'planner' ? 'dock-active' : ''}" onclick="navigate('planner')" aria-label="Agenda">
+                <i class="${state.view === 'planner' ? 'ph-fill ph-calendar-dots' : 'ph ph-calendar-dots'}"></i>
+                <span>Agenda</span>
+            </button>
+            <button class="dock-item ${state.view === 'voti' ? 'dock-active' : ''}" onclick="navigate('voti')" aria-label="Voti">
+                <i class="${state.view === 'voti' ? 'ph-fill ph-chart-line-up' : 'ph ph-chart-line-up'}"></i>
+                <span>Voti</span>
+            </button>
+            <button class="dock-item ${state.view === 'circolari' ? 'dock-active' : ''}" onclick="navigate('circolari')" aria-label="Circolari">
+                <i class="${state.view === 'circolari' ? 'ph-fill ph-megaphone' : 'ph ph-megaphone'}"></i>
+                <span>Circolari</span>
+            </button>
+            <button class="dock-item ${state.view === 'ai_assistant' ? 'dock-active' : ''}" onclick="navigate('ai_assistant')" aria-label="AI">
+                <i class="${state.view === 'ai_assistant' ? 'ph-fill ph-sparkle' : 'ph ph-sparkle'}"></i>
+                <span>AI</span>
+            </button>
+        </nav>`;
 }
 function updatePlanTaskUI(taskId, isPlanned) {
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -839,7 +862,7 @@ function renderHome() {
     <div class="dashboard view" style="width: 100%;">
 
       <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
-      <div style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
+      <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
         <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
           <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
           <div style="font-size:19px; font-weight:700; color:#fff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
@@ -870,7 +893,7 @@ function renderHome() {
       </div>
 
       <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
+      <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
 
         <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
@@ -902,7 +925,7 @@ function renderHome() {
       </div>
 
       <!-- ROW 3: Voti recenti · Task di oggi -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
 
         <div style="display:flex; flex-direction:column; min-height:0;">
           <div class="widget-header" style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
@@ -968,7 +991,7 @@ function renderPlanner() {
     return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
+            <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
                 <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Agenda & Compiti</h1>
                 
                 <div style="display: flex; gap: 16px; align-items: center;">
