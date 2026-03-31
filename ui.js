@@ -303,6 +303,11 @@ function getLocalDateString(date = new Date()) {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+function parseLocalDate(dateStr) {
+    const parts = (dateStr || '').split('-');
+    if (parts.length !== 3) return new Date(NaN);
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
 function getSchoolDate() {
     // Return a Date object normalized to Italy (UTC+1 or UTC+2)
     const now = new Date();
@@ -762,7 +767,7 @@ function renderHome() {
     }).join('');
 
     // Prossima verifica (scraped from DidUp) — carousel
-    const todayISO = today.toISOString().split('T')[0];
+    const todayISO = getLocalDateString(today);
     const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
@@ -785,7 +790,7 @@ function renderHome() {
     if (window._verificheIdx >= allUpcoming.length) window._verificheIdx = 0;
     const vIdx = window._verificheIdx;
     const currentVerifica = allUpcoming[vIdx] || null;
-    const daysToExam = currentVerifica ? Math.ceil((new Date(currentVerifica.data) - today) / 86400000) : null;
+    const daysToExam = currentVerifica ? Math.ceil((parseLocalDate(currentVerifica.data) - today) / 86400000) : null;
     const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia) : 'N/D';
     const examKey = examAbbr.toLowerCase();
     const examTipo = currentVerifica?.tipo || 'unknown';
@@ -1715,7 +1720,8 @@ window.mostraAssenzeModal = mostraAssenzeModal;
 
 function mostraVerificheModal() {
     const today = new Date();
-    const todayISO = today.toISOString().split('T')[0];
+    today.setHours(0, 0, 0, 0);
+    const todayISO = getLocalDateString(today);
     const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
@@ -1743,7 +1749,7 @@ function mostraVerificheModal() {
                 <div style="max-height:450px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-right:4px;">
                     ${all.length === 0 ? `<div style="text-align:center; padding:40px; color:var(--text-dim);">Nessuna verifica in programma</div>` :
             all.map(v => {
-                const d = new Date(v.data);
+                const d = parseLocalDate(v.data);
                 const days = Math.ceil((d - today) / 86400000);
                 const abbr = getSubjectAbbrev(v.materia);
                 const key = abbr.toLowerCase();
@@ -1780,7 +1786,7 @@ window.mostraVerificheModal = mostraVerificheModal;
 
 window._navVerifica = function (dir) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString().split('T')[0];
+    const todayISO = getLocalDateString(today);
     const argoV = (state.verifiche || []).filter(v => v.data && v.data >= todayISO).sort((a, b) => a.data.localeCompare(b.data));
     const manualV = (state.manualVerifiche || []).filter(v => !v.done && v.date && v.date >= todayISO).map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type }));
     const seen = new Set();
@@ -1793,7 +1799,7 @@ window._navVerifica = function (dir) {
     const abbr = typeof getSubjectAbbrev === 'function' ? getSubjectAbbrev(v.materia) : (v.materia || '').substring(0, 3).toUpperCase();
     const key = abbr.toLowerCase();
     const tipoLabel = v.tipo === 'scritta' ? 'SCRITTA' : v.tipo === 'orale' ? 'ORALE' : (v.tipo || '').toUpperCase();
-    const examDate = new Date(v.data);
+    const examDate = parseLocalDate(v.data);
     const daysLeft = Math.ceil((examDate - today) / 86400000);
     const desc = (v.text || v.materia || '').substring(0, 45);
 
