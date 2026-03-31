@@ -4,6 +4,7 @@
  * Loops through all users with Google and Argo credentials and performs sync.
  */
 
+const crypto = require('crypto');
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
@@ -15,6 +16,15 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback';
 const BEARER_PREFIX = 'Bearer ';
+const CRON_SECRET = process.env.CRON_SECRET;
+
+function secureEquals(left, right) {
+    if (typeof left !== 'string' || typeof right !== 'string') return false;
+    const leftBuf = Buffer.from(left);
+    const rightBuf = Buffer.from(right);
+    if (leftBuf.length !== rightBuf.length) return false;
+    return crypto.timingSafeEqual(leftBuf, rightBuf);
+}
 
 function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
@@ -35,6 +45,20 @@ function buildAuthenticatedOAuth2Client(tokenRow) {
     return oauth2;
 }
 
+function parseStoredSchedule(scheduleRaw, userId) {
+    if (!scheduleRaw) return null;
+    if (typeof scheduleRaw !== 'string') return scheduleRaw;
+    try {
+        return JSON.parse(scheduleRaw);
+    } catch (e) {
+        console.warn('[Cron] Invalid stored class_schedule - using default schedule', {
+            userId,
+            reason: e.message
+        });
+        return null;
+    }
+}
+
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -48,13 +72,16 @@ module.exports = async function handler(req, res) {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
         return res.status(500).json({ success: false, error: 'Google OAuth non configurato' });
     }
+    if (!CRON_SECRET) {
+        return res.status(500).json({ success: false, error: 'CRON_SECRET non configurato' });
+    }
 
     // Protection: CRON_SECRET must be configured and must match the request secret.
     // Support both Vercel Authorization Bearer and legacy x-vercel-cron-secret header.
     const authHeader = req.headers.authorization || '';
     const bearerToken = authHeader.startsWith(BEARER_PREFIX) ? authHeader.slice(BEARER_PREFIX.length).trim() : '';
     const cronSecret = bearerToken || req.headers['x-vercel-cron-secret'] || req.query.secret;
-    if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
+    if (!secureEquals(cronSecret, CRON_SECRET)) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
@@ -100,7 +127,8 @@ module.exports = async function handler(req, res) {
                 if (tasks.length > 0) {
                     // 4. Sync to Google Calendar (use per-user class schedule if stored)
                     const auth = buildAuthenticatedOAuth2Client(user);
-                    const syncRes = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, user.class_schedule || null);
+                    const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
+                    const syncRes = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
                     if (syncRes.success) {
                         results.success++;
                         results.users.push({ id: user.user_id, added: syncRes.added, skipped: syncRes.skipped });

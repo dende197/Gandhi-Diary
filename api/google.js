@@ -402,7 +402,8 @@ module.exports = async function handler(req, res) {
 
                 // Resolve per-user class schedule: request body takes priority, then stored value
                 let classSchedule = null;
-                const hasClassScheduleInBody = Object.hasOwn(body, 'classSchedule');
+                let usedScheduleFallback = false;
+                const hasClassScheduleInBody = Object.prototype.hasOwnProperty.call(body, 'classSchedule');
                 if (hasClassScheduleInBody) {
                     const parsedBodySchedule = parseAndValidateClassSchedule(body.classSchedule);
                     if (parsedBodySchedule.error) {
@@ -412,6 +413,7 @@ module.exports = async function handler(req, res) {
                 } else if (tokenRow.class_schedule) {
                     const parsedStoredSchedule = parseAndValidateClassSchedule(tokenRow.class_schedule);
                     if (parsedStoredSchedule.error) {
+                        usedScheduleFallback = true;
                         console.warn('[Google sync] Invalid stored class_schedule - using default schedule', {
                             userId: normalizeUserId(userId),
                             reason: parsedStoredSchedule.error
@@ -442,6 +444,7 @@ module.exports = async function handler(req, res) {
                 return res.json({
                     success: true,
                     ...result,
+                    usedScheduleFallback: usedScheduleFallback || !!result.usedScheduleFallback,
                     total_tasks: tasks.length
                 });
             }

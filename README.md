@@ -90,6 +90,8 @@ Content-Type: application/json
 }
 ```
 
+Se durante il sync viene rilevato un `class_schedule` salvato ma non valido, la risposta include `usedScheduleFallback: true` per indicare che è stato usato il fallback di default.
+
 ## 🛠 Tecnologie
 - **Frontend**: HTML5, Vanilla JS, CSS3 (No Frameworks).
 - **Backend**: Node.js, Vercel Serverless Functions.
