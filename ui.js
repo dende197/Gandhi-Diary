@@ -794,8 +794,8 @@ function renderCalendarWeekList(weekStart) {
     today.setHours(0, 0, 0, 0);
     const todayISO = getLocalDateString(today);
 
-    const dayNames = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-    const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+    const dayNames = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
+    const monthNames = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"];
 
     // Prepare verifiche by date
     const verificheByDate = {};
@@ -812,13 +812,8 @@ function renderCalendarWeekList(weekStart) {
         verificheByDate[dateKey].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '', isVerifica: true });
     });
 
-    let html = `<div style="margin-top:28px;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
-            <span style="flex:1; height:1px; background:#E5E5EA;"></span>
-            Lista Settimanale
-            <span style="flex:1; height:1px; background:#E5E5EA;"></span>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:16px;">`;
+    let hasAny = false;
+    let rows = '';
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(weekStart);
@@ -838,51 +833,49 @@ function renderCalendarWeekList(weekStart) {
         const dayVerifiche = verificheByDate[dateStr] || [];
 
         if (dayTasks.length === 0 && dayVerifiche.length === 0) continue;
+        hasAny = true;
 
-        const dayLabel = isToday ? 'OGGI' : '';
-        html += `
-            <div>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <div style="display:flex; flex-direction:column; align-items:center; min-width:36px;">
-                        <span style="font-family:'Inter',sans-serif; font-size:20px; font-weight:800; color:${isToday ? 'var(--accent)' : isPast ? '#C0BBB4' : '#141414'}; line-height:1; letter-spacing:-0.03em;">${dayDate.getDate()}</span>
-                        <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em;">${monthNames[dayDate.getMonth()].substring(0,3)}</span>
-                    </div>
-                    <div style="flex:1; height:1px; background:rgba(0,0,0,0.05);"></div>
-                    <span style="font-family:'Inter',sans-serif; font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize;">${dayNames[i]}</span>
-                    ${dayLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#34C759; border:1px solid #34C759; padding:2px 6px; border-radius:4px;">${dayLabel}</span>` : ''}
+        rows += `
+            <div style="display:grid; grid-template-columns:52px 1fr; gap:0; border-top:1px solid #ECEAE6; padding:14px 0;">
+                <div style="display:flex; flex-direction:column; align-items:center; padding-top:2px;">
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:${isToday ? '#7C3AED' : isPast ? '#C0BBB4' : '#908C86'}; text-transform:uppercase; letter-spacing:0.1em;">${dayNames[i]}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:${isToday ? '#7C3AED' : isPast ? '#C0BBB4' : '#141414'}; line-height:1.1; letter-spacing:-0.04em;">${dayDate.getDate()}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:${isPast ? '#C0BBB4' : '#908C86'}; font-weight:600;">${monthNames[dayDate.getMonth()]}</span>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; flex-direction:column; gap:6px; padding-left:12px;">
                     ${dayVerifiche.map(v => {
-            const color = getSubjectColor(v.subject);
             const abbr = getSubjectAbbrev(v.subject);
             const key = abbr.toLowerCase();
             return `
-                        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#FFFBF0; border:1px solid rgba(255,159,10,0.25); border-radius:10px; border-left:4px solid #FF9F0A;">
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; background:var(--${key},#EEE); color:var(--${key}-t,#333); padding:2px 6px; border-radius:4px; flex-shrink:0;">${abbr}</span>
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase; flex-shrink:0;">${escapeHtml(v.tipo || 'verifica')}</span>
-                            <span style="font-size:13px; font-weight:600; color:#141414; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.text || v.subject)}</span>
+                        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(255,159,10,0.06); border-radius:10px; border:1px solid rgba(255,159,10,0.18);">
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; background:var(--${key},#FFF3E0); color:var(--${key}-t,#B45309); padding:2px 7px; border-radius:5px; flex-shrink:0; text-transform:uppercase;">${abbr}</span>
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:700; color:#D97706; text-transform:uppercase; letter-spacing:0.08em; flex-shrink:0;">✏ ${escapeHtml(v.tipo || 'VERIFICA')}</span>
+                            <span style="font-size:12px; font-weight:600; color:#141414; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.text || v.subject)}</span>
                         </div>`;
         }).join('')}
                     ${dayTasks.map(t => {
-            const color = getSubjectColor(t.subject);
             const abbr = getSubjectAbbrev(t.subject);
             const key = abbr.toLowerCase();
             const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim();
             return `
-                        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.07)'}; border-radius:10px; border-left:4px solid ${t.done ? '#C8C5C0' : color}; opacity:${isPast && !t.done ? 0.7 : 1};" onclick="toggleTask('${t.id}')">
-                            <div data-task-toggle="${t.id}" style="width:16px; height:16px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s; cursor:pointer;">
+                        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:${t.done ? 'rgba(0,0,0,0.02)' : '#FFFFFF'}; border-radius:10px; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; opacity:${isPast && !t.done ? 0.6 : 1}; cursor:pointer;" onclick="toggleTask('${t.id}')">
+                            <div data-task-toggle="${t.id}" style="width:15px; height:15px; border:1.5px solid ${t.done ? '#6366F1' : '#D1CEC8'}; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#6366F1' : '#fff'}; transition:all 0.15s; cursor:pointer;">
                                 ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                             </div>
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; background:var(--${key},#EEE); color:var(--${key}-t,#333); padding:2px 6px; border-radius:4px; flex-shrink:0;">${abbr}</span>
-                            <span data-task-text="${escapeHtml(t.id)}" style="font-size:13px; font-weight:600; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;">${escapeHtml(displayText)}</span>
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; background:var(--${key},#F0F0F3); color:var(--${key}-t,#555); padding:2px 7px; border-radius:5px; flex-shrink:0;">${abbr}</span>
+                            <span data-task-text="${escapeHtml(t.id)}" style="font-size:12px; font-weight:600; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayText)}</span>
                         </div>`;
         }).join('')}
                 </div>
             </div>`;
     }
 
-    html += `</div></div>`;
-    return html;
+    if (!hasAny) return '';
+
+    return `<div style="margin-top:20px; background:#FFFFFF; border-radius:18px; border:1px solid #ECEAE6; overflow:hidden;">
+        <div style="padding:14px 18px 8px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.14em;">// AGENDA SETTIMANALE</div>
+        <div style="padding:0 18px 6px;">${rows}</div>
+    </div>`;
 }
 
 function navigateCalendar(dir) {
@@ -1036,18 +1029,17 @@ function renderHome() {
           </button>
           <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C6A66; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
           <div style="font-size:19px; font-weight:700; color:#1F2A44; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
-          <div style="font-size:11px; color:#6B6673; font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
+          <div style="font-size:14px; color:#6B6673; font-style:italic; line-height:1.6; margin-top:8px;">&ldquo;${quote}&rdquo;</div>
         </div>
  
-        <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative; height: 154px; overflow: hidden;">
+        <div id="widget-verifiche" class="card verifica-card" onclick="mostraVerificheModal()" style="cursor:pointer; border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative; height: 154px; overflow: hidden;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
             <div style="display:flex; gap:4px;">
               ${verificheCount > 1 ? `
-              <button onclick="window._navVerifica(-1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
-              <button onclick="window._navVerifica(1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
+              <button onclick="event.stopPropagation(); window._navVerifica(-1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
+              <button onclick="event.stopPropagation(); window._navVerifica(1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
               ` : ''}
-              <button onclick="mostraVerificheModal()" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0; margin-left:2px;"><i class="ph ph-list-bullets"></i></button>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom:5px;">
@@ -1089,7 +1081,7 @@ function renderHome() {
             <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
             <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${lastCirc.titolo}</div>
           </div>
-          <span style="display:inline-flex; margin-top:14px; background:#141414; color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
+          <span style="display:inline-flex; margin-top:14px; background:linear-gradient(135deg, #A78BFA 0%, #818CF8 100%); color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
         </div>
 
       </div>
