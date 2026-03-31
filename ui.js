@@ -900,7 +900,7 @@ function renderHome() {
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
 
         <div style="display:flex; flex-direction:column; min-height:0;">
-          <div style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
+          <div class="widget-header" style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Voti Recenti</div>
           </div>
           <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 18px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
@@ -934,9 +934,9 @@ function renderHome() {
         </div>
 
         <div style="display:flex; flex-direction:column; min-height:0;">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
+          <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Domani</div>
-            <button class="add-btn" onclick="showQuickAddTaskModal()" style="background:#141414; color:#fff; border:none; border-radius:100px; padding:0 12px; height:24px; font-size:11px; font-weight:600; cursor:pointer; transition:opacity 0.15s; display:flex; align-items:center;">+ attività</button>
+            <button class="add-btn" onclick="showQuickAddTaskModal()" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
           </div>
           <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
             ${tomorrowTasks.length ? tomorrowTasks.map(t => {
@@ -1930,10 +1930,13 @@ function renderDayDetailModal(dateStr) {
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(displayText)}</div>
                                         </div>
-                                        <div style="padding:12px 14px; display:flex; align-items:center; flex-shrink:0;">
+                                        <div style="padding:12px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;">
                                             <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
                                                 <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'white' : '#C8C5C0'};"></i>
                                             </button>
+                                            ${t.id && t.id.startsWith('manual_') ? `<button onclick="deleteCalendarTask('${t.id}', '${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
+                                                <i class="ph-bold ph-trash" style="font-size:14px; color:#FF3B30;"></i>
+                                            </button>` : ''}
                                         </div>
                                     </div>
                                 `;
@@ -1975,6 +1978,22 @@ function togglePlanInModal(dateStr, taskId) {
 
     // Feedback Home
     notifyPlannerChanged();
+}
+function deleteCalendarTask(taskId, dateStr) {
+    if (!taskId || !taskId.startsWith('manual_')) return;
+    state.tasks = state.tasks.filter(t => t.id !== taskId);
+    // Remove from plannedTasks as well
+    Object.keys(state.plannedTasks || {}).forEach(d => {
+        if (Array.isArray(state.plannedTasks[d])) {
+            state.plannedTasks[d] = state.plannedTasks[d].filter(id => id !== taskId);
+        }
+    });
+    saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
+    if (typeof showToast === 'function') showToast('Attività eliminata');
+    renderDayDetailModal(dateStr);
+    notifyPlannerChanged();
+    if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
 }
 function notifyPlannerChanged() {
     // badge sul bottone Organizza Oggi e Dashboard
@@ -2882,37 +2901,38 @@ function toggleTask(id) {
 function showQuickAddTaskModal() {
     const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
     const subjectOptions = subjects.length > 0
-        ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+        ? subjects.map(s => `<option value="${s}">${escapeHtml(s)}</option>`).join('')
         : '<option value="Generale">Generale</option>';
 
     showModal(`
-                <div style="padding: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="margin: 0; font-size: 20px; font-weight: 800;">Aggiungi Compito</h2>
-                        <i class="ph ph-x" onclick="closeModal()" style="cursor:pointer; font-size: 22px; opacity: 0.6;"></i>
+                <div style="padding: 28px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Aggiungi Attività</h2>
+                        <button onclick="closeModal()" style="width: 32px; height: 32px; border-radius: 10px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-x" style="font-size: 14px;"></i></button>
                     </div>
-                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;">Verrà aggiunto al calendario del Piano di Studio.</p>
-                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// AGGIUNGI_ATTIVITÀ_STUDIO</p>
+                    <div style="display: flex; flex-direction: column; gap: 18px;">
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Descrizione</label>
-                            <input id="quickTaskText" type="text" placeholder="Es. Studiare cap. 5 Storia" 
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Descrizione</label>
+                            <input id="quickTaskText" type="text" placeholder="Es. Studiare cap. 5 Storia"
+                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 14px; outline: none; box-sizing: border-box;" />
                         </div>
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Materia</label>
-                            <select id="quickTaskSubject" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Materia</label>
+                            <select id="quickTaskSubject" style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; -webkit-appearance: none;">
                                 ${subjectOptions}
                             </select>
                         </div>
                         <div>
-                            <label style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Data</label>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Data</label>
                             <input id="quickTaskDate" type="date" value="${getLocalDateString()}"
-                                style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30,30,30,0.9); color: white; font-size: 14px; outline: none; box-sizing: border-box;" />
+                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box;" />
                         </div>
                     </div>
-                    <button onclick="submitQuickTask()" style="width: 100%; margin-top: 20px; padding: 14px; border-radius: 14px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 700; cursor: pointer;">
-                        <i class="ph-bold ph-plus" style="margin-right: 6px;"></i> Aggiungi al Planner
+                    <button id="submit-quick-task-btn" onclick="submitQuickTask()" style="width: 100%; margin-top: 24px; padding: 16px; border-radius: 16px; border: none; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);">
+                        <i class="ph-bold ph-plus" style="margin-right: 8px;"></i> Aggiungi al Planner
                     </button>
+                    <style>#submit-quick-task-btn:active { transform: scale(0.96); opacity: 0.8; }</style>
                 </div>
         `);
 }
