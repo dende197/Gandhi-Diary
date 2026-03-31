@@ -1197,6 +1197,9 @@ function formatFullDate(dateInput) {
     return `${day} ${month} ${year} • ${time} `;
 }
 function renderProfile() {
+    const oauthHost = (() => {
+        try { return new URL(API_BASE_URL).host; } catch (_) { return 'g-connect-backend-r5j1.vercel.app'; }
+    })();
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
             <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
@@ -1246,6 +1249,18 @@ function renderProfile() {
                         <button class="btn-primary" onclick="window.connectGoogle()" style="height: 44px; font-size: 13px; gap: 8px; background: #EA4335; border: none; font-weight: 700; width: 100%; justify-content: center;">
                             <i class="ph-bold ph-google-logo"></i> Accedi con Google
                         </button>
+                        <div style="width: 100%; text-align: left; margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: rgba(234,67,53,0.06); border: 1px solid rgba(234,67,53,0.2);">
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: #B42318; text-transform: uppercase; margin-bottom: 6px;">Info accesso Google</div>
+                            <div style="font-size: 12px; line-height: 1.45; color: var(--text-secondary);">
+                                1) Clicca <b>Accedi con Google</b>.<br>
+                                2) Scegli il profilo Google e clicca <b>Continua</b>.<br>
+                                3) Se compare “Google non ha verificato questa app”, clicca <b>Avanzate</b> (in basso a sinistra).<br>
+                                4) Clicca <b>Apri ${escapeHtml(oauthHost)} (non sicura)</b> e completa l'accesso.
+                            </div>
+                            <div style="margin-top: 6px; font-size: 11px; color: var(--text-dim);">
+                                Screenshot guida: <a href="https://github.com/user-attachments/assets/c2d6362b-c5bd-4f24-a949-ea78aa391032" target="_blank" rel="noopener noreferrer">1</a> · <a href="https://github.com/user-attachments/assets/043874a9-966e-43c6-99b3-aa8dccf4b32f" target="_blank" rel="noopener noreferrer">2</a> · <a href="https://github.com/user-attachments/assets/3c4a6068-32e6-4146-8356-efbb3fc16081" target="_blank" rel="noopener noreferrer">3</a>
+                            </div>
+                        </div>
                     `}
                     </div>
                 </div>
