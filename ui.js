@@ -114,24 +114,71 @@ window.closeSubject = function () {
     scheduleRender();
 };
 // --- Google Calendar OAuth2 (Universal) ---
-window.connectGoogle = function () {
+window.refreshSessionToken = async function () {
+    const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
+    if (!s || !s.schoolCode || !(s.userName || s.username) || !s.storedPass) return false;
+
+    let password = '';
+    try {
+        password = decodeURIComponent(escape(atob(s.storedPass)));
+    } catch (e) {
+        console.warn('Decode storedPass failed in refreshSessionToken');
+        return false;
+    }
+
+    const payload = {
+        schoolCode: s.schoolCode,
+        username: s.userName || s.username,
+        password,
+        profileIndex: s.profileIndex
+    };
+
+    const res = await fetch(`${window.API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success || !data?.sessionToken) return false;
+
+    const updated = {
+        ...s,
+        ...data.session,
+        studentId: data.student?.id || s.studentId,
+        sessionToken: data.sessionToken
+    };
+    localStorage.setItem('argo_session', JSON.stringify(updated));
+    return true;
+};
+
+window.googleFetchWithAuthRetry = async function (url, options = {}) {
+    let res = await fetch(url, options);
+    if (res.status !== 403) return res;
+
+    const refreshed = await window.refreshSessionToken().catch(() => false);
+    if (!refreshed) return res;
+
+    const retryOpts = { ...options, headers: getSessionHeaders() };
+    return fetch(url, retryOpts);
+};
+
+window.connectGoogle = async function () {
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
 
-    fetch(`${window.API_BASE_URL}/api/google?action=auth-url`, {
-        method: 'POST',
-        headers: getSessionHeaders(),
-        body: JSON.stringify({ userId })
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (!data?.success || !data?.url) throw new Error(data?.error || 'Autorizzazione Google fallita');
-            window.location.href = data.url;
-        })
-        .catch(err => {
-            console.error('Google auth-url error:', err);
-            showToast(err.message || 'Errore collegamento Google', 'var(--red)');
+    try {
+        const response = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=auth-url`, {
+            method: 'POST',
+            headers: getSessionHeaders(),
+            body: JSON.stringify({ userId })
         });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data?.success || !data?.url) throw new Error(data?.error || 'Autorizzazione Google fallita');
+        window.location.href = data.url;
+    } catch (err) {
+        console.error('Google auth-url error:', err);
+        showToast(err.message || 'Errore collegamento Google', 'var(--red)');
+    }
 };
 
 window.syncGoogleCalendar = async function () {
@@ -187,7 +234,7 @@ window.checkGoogleStatus = async function () {
     try {
         const userId = window.getUserId();
         if (!userId || userId === 'guest') return;
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`, {
+        const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`, {
             method: 'GET',
             headers: getSessionHeaders()
         });
