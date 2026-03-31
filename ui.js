@@ -936,7 +936,7 @@ function renderHome() {
         <div style="display:flex; flex-direction:column; min-height:0;">
           <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Domani</div>
-            <button class="add-btn" onclick="showQuickAddTaskModal()"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
+            <button class="add-btn" onclick="showQuickAddTaskModal()" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
           </div>
           <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
             ${tomorrowTasks.length ? tomorrowTasks.map(t => {
@@ -1934,7 +1934,7 @@ function renderDayDetailModal(dateStr) {
                                             <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
                                                 <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'white' : '#C8C5C0'};"></i>
                                             </button>
-                                            ${t.id && t.id.startsWith('manual_') ? `<button onclick="deleteCalendarTask('${t.id}', '${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
+                                            ${t.id && t.id.startsWith('manual_') ? `<button onclick="deleteCalendarTask('${t.id}', '${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
                                                 <i class="ph-bold ph-trash" style="font-size:14px; color:#FF3B30;"></i>
                                             </button>` : ''}
                                         </div>
