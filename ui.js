@@ -531,6 +531,7 @@ function updateHomeView() {
         const tomorrowTasks = (state.tasks || []).filter(t => {
             if (t.id && t.id.startsWith('ai_')) return false;
             if (t.subject === 'QUEST') return false;
+            // `isExam` items are verifiche: calendar-only, never in "Domani"/task lists.
             if (t.isExam) return false;
             const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
             return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
@@ -720,7 +721,7 @@ function renderCustomCalendar() {
                             ${dayVerifiche.slice(0, 2).map(v => {
             const color = getSubjectColor(v.subject);
             const abbrev = getSubjectAbbrev(v.subject);
-            return `<div class="event-badge" style="background:${color}; outline:2px solid rgba(255,159,10,0.6); outline-offset:-1px;" title="${escapeHtml(v.tipo + (v.text ? ': ' + v.text : ''))}">${abbrev}✏</div>`;
+            return `<div class="event-badge" aria-label="Verifica ${escapeHtml(v.subject || '')}" style="background:${color}; outline:2px solid rgba(255,159,10,0.6); outline-offset:-1px;" title="${escapeHtml(v.tipo + (v.text ? ': ' + v.text : ''))}">${abbrev}✏</div>`;
         }).join('')}
                             ${dayTasks.slice(0, Math.max(0, 3 - dayVerifiche.length)).map(t => {
             const color = getSubjectColor(t.subject);
@@ -982,10 +983,13 @@ function renderHome() {
 
       <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
       <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
-        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:#121214; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.13);">
-          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.3); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
-          <div style="font-size:19px; font-weight:700; color:#fff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
-          <div style="font-size:11px; color:rgba(255,255,255,0.3); font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
+        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:linear-gradient(135deg, #E8EEF7 0%, #F5E8FD 48%, #E8FDF2 100%); border:1px solid #E0DDD8; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.06); position:relative;">
+          <button onclick="event.stopPropagation(); if(confirm('Aggiornare la pagina ora?')) window.location.reload();" title="Aggiorna pagina" aria-label="Aggiorna pagina" style="position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:9px; border:1px solid rgba(20,20,20,0.12); background:rgba(255,255,255,0.75); color:#2A3F6A; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <i class="ph-bold ph-arrow-clockwise" style="font-size:14px;"></i>
+          </button>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C6A66; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
+          <div style="font-size:19px; font-weight:700; color:#1F2A44; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
+          <div style="font-size:11px; color:#6B6673; font-style:italic; line-height:1.5; margin-top:7px;">&ldquo;${quote}&rdquo;</div>
         </div>
  
         <div id="widget-verifiche" class="card verifica-card" style="border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative; height: 154px; overflow: hidden;">
@@ -1224,7 +1228,9 @@ function renderGradesView() {
     const subjects = Object.entries(subjectsMap).map(([name, list]) => {
         const subMedia = parseFloat(calcolaMedia(list)) || 0;
         const trend = list.slice(-5).map(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')));
-        return { name, media: subMedia, count: list.length, trend };
+        const goal = state.goals?.[name] || 8.0;
+        const projection = getGoalProjection(subMedia, goal, list.length);
+        return { name, media: subMedia, count: list.length, trend, goal, projection };
     }).sort((a, b) => b.media - a.media);
 
     return `
@@ -1338,7 +1344,13 @@ function renderGradesView() {
                         </div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${escapeHtml(s.name)}</div>
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI · OBIETTIVO ${s.goal.toFixed(2)}</div>
+                            <div style="margin-top:8px; height:4px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                                <div style="height:100%; width:${Math.min(100, (s.media / Math.max(1, s.goal)) * 100)}%; background:${s.projection.done ? '#2DB86A' : subjColor}; border-radius:100px;"></div>
+                            </div>
+                            <div style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${s.projection.done ? '#2DB86A' : '#908C86'}; margin-top:6px; text-transform:uppercase;">
+                                ${s.projection.done ? '✓ OBIETTIVO RAGGIUNTO' : (s.projection.first ? `${s.projection.first.n} VOTI DA ≥ ${s.projection.first.grade.toFixed(1)}` : `GAP ${s.projection.gap.toFixed(2)}`)}
+                            </div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(2)}</div>
@@ -1733,6 +1745,8 @@ function renderSubjectDetailView(subjectName) {
     const subjColor = getSubjectColor(subjectName);
     const abbr = getSubjectAbbrev(subjectName);
     const key = abbr.toLowerCase();
+    const projection = getGoalProjection(media, goal, votiData.length);
+    const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
 
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
@@ -1759,6 +1773,25 @@ function renderSubjectDetailView(subjectName) {
                             ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
                         </div>
                     </div>
+                </div>
+                <div style="margin-top:18px;">
+                    <div style="height:6px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                        <div style="height:100%; width:${progressPct}%; background:${projection.done ? '#2DB86A' : subjColor}; border-radius:100px;"></div>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; gap:10px; flex-wrap:wrap;">
+                        <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">Progresso obiettivo</span>
+                        <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:${projection.done ? '#2DB86A' : '#908C86'}; font-weight:800; text-transform:uppercase;">
+                            ${projection.done ? '✓ Raggiunto' : `Gap ${projection.gap.toFixed(2)}`}
+                        </span>
+                    </div>
+                    ${projection.done ? '' : `
+                    <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+                        ${(projection.scenarios || []).map(s => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9F8F6; border:1px solid #ECEAE6; border-radius:10px; padding:8px 10px;">
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${s.n === 1 ? 'Prossimo voto' : `Prossimi ${s.n} voti`}</span>
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#141414; font-weight:800;">≥ ${s.grade.toFixed(2)}</span>
+                        </div>`).join('')}
+                    </div>`}
                 </div>
             </div>
 
@@ -2537,7 +2570,31 @@ function showVotiView() {
                     ${renderVoti()}
                 </div>
             </div>
-           </div> `;
+            </div> `;
+}
+function getGoalProjection(media, goal, count) {
+    const safeMedia = Number.isFinite(media) ? media : 0;
+    const safeGoal = Number.isFinite(goal) ? goal : 8.0;
+    const safeCount = Number.isFinite(count) ? count : 0;
+    const currentSum = safeCount * safeMedia;
+    const gap = Math.max(0, safeGoal - safeMedia);
+    const done = safeMedia >= safeGoal;
+    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+    const scenarios = [];
+
+    if (!done) {
+        for (const g of grades) {
+            if (g <= safeGoal) continue;
+            const denom = (g - safeGoal);
+            // Guard against floating-point near-zero denominator (goal almost equal to grade bucket).
+            if (Math.abs(denom) < 1e-9) continue;
+            const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
+            if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
+            if (scenarios.length === 3) break;
+        }
+    }
+
+    return { done, gap, scenarios, first: scenarios[0] || null };
 }
 function renderVoti() {
     const votiData = (state.voti && state.voti.length > 0) ? state.voti :
@@ -4487,6 +4544,11 @@ function renderCircolariView() {
             <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; text-transform: uppercase; margin: 0; color: #141414; letter-spacing: -0.02em;">
                 Circolari
             </h1>
+            <div style="margin-top:14px;">
+                <a href="https://www.liceogandhi.edu.it" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; background:#141414; color:#FFF; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:800; text-transform:uppercase; text-decoration:none;">
+                    <i class="ph-bold ph-globe" style="font-size:14px;"></i> Vai al sito
+                </a>
+            </div>
         </header>
 
         <div style="display: flex; flex-direction: column; gap: 16px;">
