@@ -2470,7 +2470,7 @@ function renderWeeklyAgenda() {
                             <i class="ph ph-sort-ascending"></i> Per assegnazione
                         </div>
                         ${allSubjects.map(s => `
-                            <div class="filter-chip ${filterSubject === s && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="setAgendaFilter('${s.replace(/'/g, "\\'")}'); state.agendaSortOrder='due_desc';">
+                            <div class="filter-chip ${filterSubject === s && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="setAgendaFilter('${s.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'); state.agendaSortOrder='due_desc';">
                                 ${s}
                             </div>
                         `).join('')}                    </div>
@@ -2634,8 +2634,10 @@ function getGoalProjection(media, goal, count) {
             if (g <= safeGoal) continue;
             const denom = (g - safeGoal);
             // Guard against floating-point near-zero denominator (goal almost equal to grade bucket).
+            // 1e-9 acts as epsilon to avoid unstable huge projections when denom is numerically ~0.
             if (Math.abs(denom) < 1e-9) continue;
             const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
+            // Cap at 100 to keep UI projections realistic/readable for student use cases.
             if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
             if (scenarios.length === 3) break;
         }
