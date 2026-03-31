@@ -93,7 +93,9 @@ function validateClassSchedule(schedule) {
     if (days.length === 0) return 'deve contenere almeno un giorno';
 
     for (const day of days) {
-        if (!WEEK_DAYS.includes(day)) return `giorno non valido: ${day}`;
+        if (!WEEK_DAYS.includes(day)) {
+            return `giorno non valido: ${day}. Valori ammessi: ${WEEK_DAYS.join(', ')}`;
+        }
         const slots = schedule[day];
         if (!Array.isArray(slots)) return `${day} deve essere un array`;
 
@@ -111,7 +113,11 @@ function validateClassSchedule(schedule) {
             if (typeof slot.fine !== 'string' || !HHMM_REGEX.test(slot.fine)) {
                 return `${day}[${i}].fine deve essere nel formato HH:MM`;
             }
-            if (slot.inizio >= slot.fine) {
+            const [inizioOre, inizioMin] = slot.inizio.split(':').map(Number);
+            const [fineOre, fineMin] = slot.fine.split(':').map(Number);
+            const inizioTotMin = inizioOre * 60 + inizioMin;
+            const fineTotMin = fineOre * 60 + fineMin;
+            if (inizioTotMin >= fineTotMin) {
                 return `${day}[${i}] deve avere inizio < fine`;
             }
         }
@@ -396,7 +402,7 @@ module.exports = async function handler(req, res) {
 
                 // Resolve per-user class schedule: request body takes priority, then stored value
                 let classSchedule = null;
-                const hasClassScheduleInBody = Object.prototype.hasOwnProperty.call(body, 'classSchedule');
+                const hasClassScheduleInBody = Object.hasOwn(body, 'classSchedule');
                 if (hasClassScheduleInBody) {
                     const parsedBodySchedule = parseAndValidateClassSchedule(body.classSchedule);
                     if (parsedBodySchedule.error) {
@@ -406,7 +412,7 @@ module.exports = async function handler(req, res) {
                 } else if (tokenRow.class_schedule) {
                     const parsedStoredSchedule = parseAndValidateClassSchedule(tokenRow.class_schedule);
                     if (parsedStoredSchedule.error) {
-                        console.warn('[Google sync] Invalid stored class_schedule — using default schedule', {
+                        console.warn('[Google sync] Invalid stored class_schedule - using default schedule', {
                             userId: normalizeUserId(userId),
                             reason: parsedStoredSchedule.error
                         });
@@ -473,8 +479,7 @@ module.exports = async function handler(req, res) {
                 }
 
                 const normalizedUserId = normalizeUserId(userId);
-                const sessionToken = (req.headers['x-session-token'] || '').trim();
-                if (!sessionToken || !verifySessionToken(req, normalizedUserId)) {
+                if (!verifySessionToken(req, normalizedUserId)) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 

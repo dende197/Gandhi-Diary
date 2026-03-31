@@ -62,7 +62,7 @@ Ogni utente può salvare il proprio orario scolastico personale, che viene usato
 **Salva l'orario tramite API:**
 ```
 POST /api/google?action=save-schedule
-Authorization: Bearer <session_token>
+x-session-token: <session_token>
 Content-Type: application/json
 
 {
