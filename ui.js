@@ -531,6 +531,7 @@ function updateHomeView() {
         const tomorrowTasks = (state.tasks || []).filter(t => {
             if (t.id && t.id.startsWith('ai_')) return false;
             if (t.subject === 'QUEST') return false;
+            if (t.isExam) return false;
             const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
             return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
         });
@@ -653,6 +654,22 @@ function renderCustomCalendar() {
     const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
     const weekLabel = `Settimana ${startDate.getDate()} ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} ${monthNames[endDate.getMonth()]}`;
 
+    // Prepare verifiche by date for quick lookup
+    const todayISO = getLocalDateString(today);
+    const verificheByDate = {};
+    (state.verifiche || []).forEach(v => {
+        const dateKey = v.data || '';
+        if (!dateKey) return;
+        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
+        verificheByDate[dateKey].push({ subject: v.materia || v.subject || '', text: v.text || '', tipo: v.tipo || '' });
+    });
+    (state.manualVerifiche || []).forEach(v => {
+        const dateKey = v.date || '';
+        if (!dateKey) return;
+        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
+        verificheByDate[dateKey].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '' });
+    });
+
     let html = `
                 <div class="custom-calendar">
                     <div class="calendar-header">
@@ -674,8 +691,6 @@ function renderCustomCalendar() {
                     <div class="calendar-days">
             `;
 
-    const todayISO = getLocalDateString(today);
-
     const tempDate = new Date(startDate);
     for (let i = 0; i < 14; i++) {
         const dateStr = getLocalDateString(tempDate);
@@ -684,13 +699,15 @@ function renderCustomCalendar() {
 
         let dayTasks = [];
         if (state.plannerMode === 'registro') {
-            // Badge based on DUE DATE - Show all except AI and manual quests
-            dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
+            // Badge based on DUE DATE - Show all except AI, manual quests and exams
+            dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
         } else {
             // Badge based on PLANNED DATE
             const plannedIds = state.plannedTasks[dateStr] || [];
-            dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id));
+            dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
         }
+
+        const dayVerifiche = verificheByDate[dateStr] || [];
 
         html += `
                     <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
@@ -700,12 +717,17 @@ function renderCustomCalendar() {
                             ${isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : ''}
                         </div>
                         <div class="day-events">
-                            ${dayTasks.slice(0, 3).map(t => {
+                            ${dayVerifiche.slice(0, 2).map(v => {
+            const color = getSubjectColor(v.subject);
+            const abbrev = getSubjectAbbrev(v.subject);
+            return `<div class="event-badge" style="background:${color}; outline:2px solid rgba(255,159,10,0.6); outline-offset:-1px;" title="${escapeHtml(v.tipo + (v.text ? ': ' + v.text : ''))}">${abbrev}✏</div>`;
+        }).join('')}
+                            ${dayTasks.slice(0, Math.max(0, 3 - dayVerifiche.length)).map(t => {
             const color = getSubjectColor(t.subject);
             const abbrev = getSubjectAbbrev(t.subject);
             return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
         }).join('')}
-                            ${dayTasks.length > 3 ? `<div class="more-events">+${dayTasks.length - 3}</div>` : ''}
+                            ${(dayVerifiche.length + dayTasks.length) > 3 ? `<div class="more-events">+${dayVerifiche.length + dayTasks.length - 3}</div>` : ''}
                        </div>
                    </div>
                 `;
@@ -713,8 +735,108 @@ function renderCustomCalendar() {
     }
 
     html += `</div></div>`;
-    calendarEl.innerHTML = html;
+
+    // Build 7-day task list below calendar (Mon-Sun of displayed first week)
+    const listHtml = renderCalendarWeekList(startDate);
+    calendarEl.innerHTML = html + listHtml;
 }
+
+function renderCalendarWeekList(weekStart) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = getLocalDateString(today);
+
+    const dayNames = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+    const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+    // Prepare verifiche by date
+    const verificheByDate = {};
+    (state.verifiche || []).forEach(v => {
+        const dateKey = v.data || '';
+        if (!dateKey) return;
+        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
+        verificheByDate[dateKey].push({ subject: v.materia || v.subject || '', text: v.text || v.descrizione || '', tipo: v.tipo || '', isVerifica: true });
+    });
+    (state.manualVerifiche || []).forEach(v => {
+        const dateKey = v.date || '';
+        if (!dateKey) return;
+        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
+        verificheByDate[dateKey].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '', isVerifica: true });
+    });
+
+    let html = `<div style="margin-top:28px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+            <span style="flex:1; height:1px; background:#E5E5EA;"></span>
+            Lista Settimanale
+            <span style="flex:1; height:1px; background:#E5E5EA;"></span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">`;
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(weekStart);
+        dayDate.setDate(weekStart.getDate() + i);
+        const dateStr = getLocalDateString(dayDate);
+        const isToday = dateStr === todayISO;
+        const isPast = dayDate < today && !isToday;
+
+        // Get tasks for this day
+        let dayTasks = [];
+        if (state.plannerMode === 'registro') {
+            dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
+        } else {
+            const plannedIds = state.plannedTasks[dateStr] || [];
+            dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
+        }
+        const dayVerifiche = verificheByDate[dateStr] || [];
+
+        if (dayTasks.length === 0 && dayVerifiche.length === 0) continue;
+
+        const dayLabel = isToday ? 'OGGI' : '';
+        html += `
+            <div>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; min-width:36px;">
+                        <span style="font-family:'Inter',sans-serif; font-size:20px; font-weight:800; color:${isToday ? 'var(--accent)' : isPast ? '#C0BBB4' : '#141414'}; line-height:1; letter-spacing:-0.03em;">${dayDate.getDate()}</span>
+                        <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em;">${monthNames[dayDate.getMonth()].substring(0,3)}</span>
+                    </div>
+                    <div style="flex:1; height:1px; background:rgba(0,0,0,0.05);"></div>
+                    <span style="font-family:'Inter',sans-serif; font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize;">${dayNames[i]}</span>
+                    ${dayLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#34C759; border:1px solid #34C759; padding:2px 6px; border-radius:4px;">${dayLabel}</span>` : ''}
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${dayVerifiche.map(v => {
+            const color = getSubjectColor(v.subject);
+            const abbr = getSubjectAbbrev(v.subject);
+            const key = abbr.toLowerCase();
+            return `
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#FFFBF0; border:1px solid rgba(255,159,10,0.25); border-radius:10px; border-left:4px solid #FF9F0A;">
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; background:var(--${key},#EEE); color:var(--${key}-t,#333); padding:2px 6px; border-radius:4px; flex-shrink:0;">${abbr}</span>
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase; flex-shrink:0;">${escapeHtml(v.tipo || 'verifica')}</span>
+                            <span style="font-size:13px; font-weight:600; color:#141414; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.text || v.subject)}</span>
+                        </div>`;
+        }).join('')}
+                    ${dayTasks.map(t => {
+            const color = getSubjectColor(t.subject);
+            const abbr = getSubjectAbbrev(t.subject);
+            const key = abbr.toLowerCase();
+            const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim();
+            return `
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.07)'}; border-radius:10px; border-left:4px solid ${t.done ? '#C8C5C0' : color}; opacity:${isPast && !t.done ? 0.7 : 1};" onclick="toggleTask('${t.id}')">
+                            <div data-task-toggle="${t.id}" style="width:16px; height:16px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s; cursor:pointer;">
+                                ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
+                            </div>
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; background:var(--${key},#EEE); color:var(--${key}-t,#333); padding:2px 6px; border-radius:4px; flex-shrink:0;">${abbr}</span>
+                            <span data-task-text="${escapeHtml(t.id)}" style="font-size:13px; font-weight:600; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;">${escapeHtml(displayText)}</span>
+                        </div>`;
+        }).join('')}
+                </div>
+            </div>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
 function navigateCalendar(dir) {
     calendarState.weekOffset += dir;
     renderCustomCalendar();
@@ -844,6 +966,7 @@ function renderHome() {
     const tomorrowTasks = (state.tasks || []).filter(t => {
         if (t.id && t.id.startsWith('ai_')) return false;
         if (t.subject === 'QUEST') return false;
+        if (t.isExam) return false;
         const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
         return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
     });
@@ -948,12 +1071,6 @@ function renderHome() {
               </div>`;
     }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
-            ${recentGrades.length ? `
-            <div style="display:flex; align-items:baseline; gap:8px; padding-top:10px; margin-top:2px; border-top:1px solid #F0EDE8;">
-              <span style="font-size:10px; color:#C0BBB4; font-family:'JetBrains Mono',monospace;">media</span>
-              <span style="font-size:24px; font-weight:700; color:#141414; letter-spacing:-0.04em;">${media.toFixed(2)}</span>
-              ${deltaStr ? `<span style="font-size:11px; color:#2DB86A; margin-left:auto; font-family:'JetBrains Mono',monospace; font-weight:500;">${deltaStr}</span>` : ''}
-            </div>` : ''}
           </div>
         </div>
 
@@ -973,7 +1090,6 @@ function renderHome() {
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
                 <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:#C8C4BE; flex-shrink:0;">${t.due_date ? new Date(t.due_date).getHours().toString().padStart(2, '0') + ':00' : ''}</span>
               </div>`;
     }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito per domani.</div>'}
           </div>
@@ -993,9 +1109,6 @@ function renderPlanner() {
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="scrollToSearch()" style="height: 36px; width: 36px; background: #F6F5F3; border: 1px solid #E5E5EA; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Cerca compiti">
-                            <i class="ph-bold ph-magnifying-glass" style="font-size: 16px; color: var(--text-dim);"></i>
-                        </button>
                         <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #E8EEF7; color: #2A3F6A; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-sparkle"></i> AI Chat
                         </button>
@@ -1903,12 +2016,23 @@ function renderDayDetailModal(dateStr) {
 
     let tasksForDay = [];
     if (state.plannerMode === 'registro') {
-        tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date === dateStr);
+        tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
     } else {
         const plannedIds = state.plannedTasks[dateStr] || [];
-        tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id));
+        tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
     }
     const isRegistro = state.plannerMode === 'registro';
+
+    // Gather verifiche for this day
+    const verificheForDay = [];
+    (state.verifiche || []).filter(v => v.data === dateStr).forEach(v => {
+        verificheForDay.push({ subject: v.materia || v.subject || '', text: v.text || v.descrizione || '', tipo: v.tipo || '' });
+    });
+    (state.manualVerifiche || []).filter(v => v.date === dateStr).forEach(v => {
+        verificheForDay.push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '', id: v.id });
+    });
+
+    const hasContent = tasksForDay.length > 0 || verificheForDay.length > 0;
 
     container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
@@ -1927,12 +2051,30 @@ function renderDayDetailModal(dateStr) {
                         </div>
 
                         <div id="modal-task-list" style="display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1; min-height:0; padding-right:4px;">
-                            ${tasksForDay.length === 0 ? `
+                            ${!hasContent ? `
                                 <div style="text-align:center; padding:56px 20px; color:#908C86;">
                                     <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 14px; opacity:0.12;"></i>
                                     <div style="font-family:'Inter',system-ui,sans-serif; font-size:15px; font-weight:600; opacity:0.5;">Nessun compito pianificato</div>
                                 </div>
-                            ` : tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
+                            ` : ''}
+                            ${verificheForDay.map(v => {
+        const color = getSubjectColor(v.subject);
+        const abbr = getSubjectAbbrev(v.subject);
+        const key = abbr.toLowerCase();
+        return `
+                                    <div style="flex-shrink:0; border-radius:16px; display:flex; align-items:stretch; overflow:hidden; background:#FFFBF0; border:1px solid rgba(255,159,10,0.2); box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+                                        <div style="width:4px; background:#FF9F0A; flex-shrink:0;"></div>
+                                        <div style="flex:1; padding:16px 16px; min-width:0;">
+                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || abbr)}</span>
+                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(v.tipo || 'VERIFICA')}</span>
+                                            </div>
+                                            <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word;">${escapeHtml(v.text || v.subject)}</div>
+                                        </div>
+                                    </div>
+                                `;
+    }).join('')}
+                            ${tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
         const subContent = t.subject || 'N/A';
         const abbr = getSubjectAbbrev(subContent);
         const key = abbr.toLowerCase();
@@ -1968,7 +2110,7 @@ function renderDayDetailModal(dateStr) {
     }).join('')}
                        </div>
 
-                        ${tasksForDay.length > 0 ? `
+                        ${hasContent ? `
                         <div style="margin-top:20px; padding-top:16px; border-top:1px solid #F0EDE8; flex-shrink:0;">
                             <button onclick="closeModal()" style="font-family:'Inter',system-ui,-apple-system,sans-serif; width:100%; height:48px; background:#141414; color:white; border:none; border-radius:14px; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:0.3px; transition: all 0.2s;" onmouseover="this.style.background='#2A2A2A'" onmouseout="this.style.background='#141414'">Chiudi</button>
                        </div>
@@ -2191,7 +2333,7 @@ function renderWeeklyAgenda() {
 
     if (state.plannerMode === 'registro') {
         state.tasks.forEach(t => {
-            if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && t.due_date) {
+            if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date) {
                 list.push({ ...t, displayDate: t.due_date });
             }
         });
@@ -2199,7 +2341,7 @@ function renderWeeklyAgenda() {
         Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
             ids.forEach(id => {
                 const t = state.tasks.find(tk => tk.id === id);
-                if (t) list.push({ ...t, displayDate: dateStr });
+                if (t && !t.isExam) list.push({ ...t, displayDate: dateStr });
             });
         });
     }
@@ -2209,6 +2351,7 @@ function renderWeeklyAgenda() {
     // --- LIVE FILTERING LOGIC ---
     const query = (state.agendaSearchQuery || "").toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || "all";
+    const sortOrder = state.agendaSortOrder || "due_desc";
 
     const filteredList = list.filter(t => {
         const matchesQuery = !query ||
@@ -2219,7 +2362,12 @@ function renderWeeklyAgenda() {
             (t.subject || "").toLowerCase().trim() === filterSubject.toLowerCase().trim();
 
         return matchesQuery && matchesSubject;
-    }).sort((a, b) => parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime());
+    }).sort((a, b) => {
+        if (sortOrder === "assignment_asc") {
+            return parseArgoDate(a.displayDate).getTime() - parseArgoDate(b.displayDate).getTime();
+        }
+        return parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime();
+    });
 
     // Extract unique subjects for chips
     const allSubjects = [...new Set(list.map(t => t.subject?.trim()).filter(Boolean))].sort();
@@ -2235,15 +2383,17 @@ function renderWeeklyAgenda() {
                                oninput="handleAgendaSearch(event)">
                     </div>
                     <div class="agenda-filters-scroll">
-                        <div class="filter-chip ${filterSubject === 'all' ? 'active' : ''}" onclick="setAgendaFilter('all')">
+                        <div class="filter-chip ${filterSubject === 'all' && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="setAgendaFilter('all'); state.agendaSortOrder='due_desc'; refreshAgenda();">
                             <i class="ph ph-rows"></i> Tutti
                         </div>
+                        <div class="filter-chip ${sortOrder === 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='assignment_asc'; state.agendaSearchSubject='all'; refreshAgenda();">
+                            <i class="ph ph-sort-ascending"></i> Per assegnazione
+                        </div>
                         ${allSubjects.map(s => `
-                            <div class="filter-chip ${filterSubject === s ? 'active' : ''}" onclick="setAgendaFilter('${s.replace(/'/g, "\\'")}')">
+                            <div class="filter-chip ${filterSubject === s && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="setAgendaFilter('${s.replace(/'/g, "\\'")}'); state.agendaSortOrder='due_desc';">
                                 ${s}
                             </div>
-                        `).join('')}
-                    </div>
+                        `).join('')}                    </div>
                 </div>
             `;
 
@@ -2402,24 +2552,23 @@ function renderVoti() {
                </div> `;
     }
 
-    const media = calcolaMedia(votiData);
     return `
         <div class="view">
-                <div class="card" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(79, 70, 229, 0.4)); border: 1px solid var(--blue); padding: 24px; text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">Media Generale</div>
-                    <div style="font-size: 56px; font-weight: 800; color: white;">${media || '--'}</div>
-                    <div style="font-size: 12px; opacity:0.7;">Su ${votiData.length} voti</div>
-               </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     ${votiData.map(v => {
         const rawVal = (v.valore || v.value || '').toString();
         const giu = isGiustifica(rawVal);
         const displayVal = giu ? 'GIU' : rawVal;
         const mat = v.materia || v.subject || 'Materia';
-        const color = giu ? '#BCB8B2' : (parseFloat(rawVal.replace(',', '.')) >= 6 ? 'var(--green)' : 'var(--red)');
+        const abbr = getSubjectAbbrev(mat);
+        const key = abbr.toLowerCase();
+        const numVal = parseFloat(rawVal.replace(',', '.'));
+        const subjBg = `var(--${key}, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'rgba(40,205,65,0.12)' : 'rgba(255,59,48,0.12)')})`;
+        const subjText = `var(--${key}-t, ${giu ? '#908C86' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
+        const subjDot = `var(--${key}-dot, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
         return `
                         <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
-                            <div style="width:54px; height:54px; border-radius:12px; background:${color}15; border:1px solid ${color}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${color};">${displayVal}</div>
+                            <div style="width:54px; height:54px; border-radius:12px; background:${subjBg}; border:1px solid ${subjDot}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${subjText};">${displayVal}</div>
                             <div style="flex:1; text-align:left;">
                                 <div style="font-weight:700; font-size:16px; color:white;">${mat}</div>
                                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
