@@ -2856,20 +2856,30 @@
         }
 
         .add-btn {
-          background: #141414;
-          border: none;
-          border-radius: 100px;
-          padding: 6px 14px;
-          font-size: 11.5px;
-          font-family: var(--font-main);
-          font-weight: 600;
-          color: #fff;
+          background: #F0F0F3;
+          border: 1.5px solid #E0DDD8;
+          border-radius: 8px;
+          padding: 0 10px;
+          height: 22px;
+          font-size: 9.5px;
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: 800;
+          color: #141414;
           cursor: pointer;
-          transition: opacity 0.15s;
+          display: inline-flex;
+          align-items: center;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          transition: background 0.15s, border-color 0.15s, transform 0.1s;
         }
 
         .add-btn:hover {
-          opacity: 0.82;
+          background: #E5E3DF;
+          border-color: #CCC9C4;
+        }
+
+        .add-btn:active {
+          transform: scale(0.95);
         }
 
         .task-row {
@@ -3777,19 +3787,31 @@
 
         /* ── 11. ADD BUTTON ──────────────────────────────────────────── */
         .add-btn {
-          background: #141414 !important;
-          color: #ffffff !important;
-          border: none !important;
-          border-radius: 100px !important;
-          padding: 6px 14px !important;
-          font-size: 11.5px !important;
-          font-weight: 600 !important;
+          background: #F0F0F3 !important;
+          border: 1.5px solid #E0DDD8 !important;
+          border-radius: 8px !important;
+          padding: 0 10px !important;
+          height: 22px !important;
+          font-size: 9.5px !important;
+          font-family: 'JetBrains Mono', monospace !important;
+          font-weight: 800 !important;
+          color: #141414 !important;
           cursor: pointer !important;
-          transition: opacity 0.15s !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          letter-spacing: 0.05em !important;
+          text-transform: uppercase !important;
+          transition: background 0.15s, border-color 0.15s, transform 0.1s !important;
         }
 
         .add-btn:hover {
-          opacity: 0.82 !important;
+          background: #E5E3DF !important;
+          border-color: #CCC9C4 !important;
+          opacity: 1 !important;
+        }
+
+        .add-btn:active {
+          transform: scale(0.95) !important;
         }
 
         /* ── 12. STREAK DOTS ─────────────────────────────────────────── */

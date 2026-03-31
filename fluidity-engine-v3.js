@@ -176,8 +176,8 @@
         }
       );
 
-      // 2. Card Stagger (Inner Elements)
-      const cards = viewEl.querySelectorAll('.card, .subject-summary-card, .greeting-card, .streak-card, .verifica-card');
+      // 2. Card & Widget Header Stagger (Inner Elements)
+      const cards = viewEl.querySelectorAll('.card, .subject-summary-card, .greeting-card, .streak-card, .verifica-card, .widget-header');
       if (cards.length > 0) {
         gsap.fromTo(cards,
           { opacity: 0, y: 12 },
