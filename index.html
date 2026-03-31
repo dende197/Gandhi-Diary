@@ -298,7 +298,7 @@
         }
         window.saveTasks = saveTasks;
 
-        // Function to push manual tasks to Supabase
+        // Function to push manual tasks and plannedTasks to Supabase
         async function saveTasksToSupabase() {
             if (!state.isLoggedIn || !state.user || !state.user.id) return;
             
@@ -312,11 +312,14 @@
                 await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(state.user.id)}`, {
                     method: 'PUT',
                     headers: getSessionHeaders(),
-                    body: JSON.stringify({ tasks: manualTasks })
+                    body: JSON.stringify({
+                        tasks: manualTasks,
+                        plannedTasks: state.plannedTasks || {}
+                    })
                 });
-                console.log("✅ Manual tasks synced to Supabase");
+                console.log("✅ Tasks and plannedTasks synced to Supabase");
             } catch (e) {
-                console.warn("⚠️ Failed to sync manual tasks to Supabase:", e);
+                console.warn("⚠️ Failed to sync to Supabase:", e);
             }
         }
         window.saveTasksToSupabase = saveTasksToSupabase;
@@ -503,9 +506,22 @@
         window.navigate = (v) => { location.hash = v; };
         window.saveTasks = () => {
             localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
             if (state.isLoggedIn) {
                 if (window.saveTasksToSupabase) window.saveTasksToSupabase();
             }
+        };
+
+        // Debounced remote save for plannedTasks (called from ui.js after togglePlanDay)
+        let _savePlannerTimer = null;
+        window.debouncedSavePlannerRemote = function(delay) {
+            // Always persist plannedTasks to localStorage immediately
+            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
+            // Debounce the Supabase save
+            clearTimeout(_savePlannerTimer);
+            _savePlannerTimer = setTimeout(function() {
+                if (window.saveTasksToSupabase) window.saveTasksToSupabase();
+            }, delay || 500);
         };
         // getLocalDateString is defined in ui.js (uses local timezone — correct)
         // We just set a simple fallback until ui.js loads
