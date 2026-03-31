@@ -458,35 +458,31 @@ function renderNav() {
             <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
           </div>
 
+          <nav class="mobile-dock" aria-label="Navigazione principale">
+              <button class="dock-item ${state.view === 'home' ? 'dock-active' : ''}" onclick="navigate('home')" aria-label="Panoramica">
+                  <i class="${state.view === 'home' ? 'ph-fill ph-house' : 'ph ph-house'}"></i>
+                  <span>Home</span>
+              </button>
+              <button class="dock-item ${state.view === 'planner' ? 'dock-active' : ''}" onclick="navigate('planner')" aria-label="Agenda">
+                  <i class="${state.view === 'planner' ? 'ph-fill ph-calendar-dots' : 'ph ph-calendar-dots'}"></i>
+                  <span>Agenda</span>
+              </button>
+              <button class="dock-item ${state.view === 'voti' ? 'dock-active' : ''}" onclick="navigate('voti')" aria-label="Voti">
+                  <i class="${state.view === 'voti' ? 'ph-fill ph-chart-line-up' : 'ph ph-chart-line-up'}"></i>
+                  <span>Voti</span>
+              </button>
+              <button class="dock-item ${state.view === 'circolari' ? 'dock-active' : ''}" onclick="navigate('circolari')" aria-label="Circolari">
+                  <i class="${state.view === 'circolari' ? 'ph-fill ph-megaphone' : 'ph ph-megaphone'}"></i>
+                  <span>Circolari</span>
+              </button>
+          </nav>
+
           <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
             <span id="topbar-clock" class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums;">
                 ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           </div>
-        </div>
-
-        <nav class="mobile-dock" aria-label="Navigazione principale">
-            <button class="dock-item ${state.view === 'home' ? 'dock-active' : ''}" onclick="navigate('home')" aria-label="Panoramica">
-                <i class="${state.view === 'home' ? 'ph-fill ph-house' : 'ph ph-house'}"></i>
-                <span>Home</span>
-            </button>
-            <button class="dock-item ${state.view === 'planner' ? 'dock-active' : ''}" onclick="navigate('planner')" aria-label="Agenda">
-                <i class="${state.view === 'planner' ? 'ph-fill ph-calendar-dots' : 'ph ph-calendar-dots'}"></i>
-                <span>Agenda</span>
-            </button>
-            <button class="dock-item ${state.view === 'voti' ? 'dock-active' : ''}" onclick="navigate('voti')" aria-label="Voti">
-                <i class="${state.view === 'voti' ? 'ph-fill ph-chart-line-up' : 'ph ph-chart-line-up'}"></i>
-                <span>Voti</span>
-            </button>
-            <button class="dock-item ${state.view === 'circolari' ? 'dock-active' : ''}" onclick="navigate('circolari')" aria-label="Circolari">
-                <i class="${state.view === 'circolari' ? 'ph-fill ph-megaphone' : 'ph ph-megaphone'}"></i>
-                <span>Circolari</span>
-            </button>
-            <button class="dock-item ${state.view === 'ai_assistant' ? 'dock-active' : ''}" onclick="navigate('ai_assistant')" aria-label="AI">
-                <i class="${state.view === 'ai_assistant' ? 'ph-fill ph-sparkle' : 'ph ph-sparkle'}"></i>
-                <span>AI</span>
-            </button>
-        </nav>`;
+        </div>`;
 }
 function updatePlanTaskUI(taskId, isPlanned) {
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);

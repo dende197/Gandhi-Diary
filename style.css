@@ -4239,69 +4239,65 @@
            Desktop and tablet layout (> 600 px) is completely untouched.
            ================================================================ */
 
-        /* ── Mobile Bottom Dock ─────────────────────────────────────────
+        /* ── Mobile Top Dock ────────────────────────────────────────────
            Always hidden on desktop. Shown only in the phone @media block.
+           Sits inside the topbar, styled like the desktop nav-pills.
            ────────────────────────────────────────────────────────────── */
         .mobile-dock {
           display: none;
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: calc(64px + env(safe-area-inset-bottom, 0px));
-          padding-bottom: env(safe-area-inset-bottom, 0px);
-          background: rgba(248, 248, 250, 0.92);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border-top: 1px solid rgba(0, 0, 0, 0.07);
-          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
-          z-index: 2000;
+          background: rgba(0, 0, 0, 0.05);
+          padding: 3px;
+          border-radius: 12px;
           align-items: center;
-          justify-content: space-around;
+          gap: 2px;
         }
 
         .dock-item {
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
           justify-content: center;
-          gap: 3px;
-          flex: 1;
-          height: 100%;
-          padding: 8px 4px 0;
+          gap: 4px;
+          padding: 5px 9px;
           background: transparent;
           border: none;
+          border-radius: 9px;
           cursor: pointer;
-          color: #86868b;
+          color: var(--text-dim, #86868b);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
           -webkit-tap-highlight-color: transparent;
-          transition: color 0.18s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+          transition: all 0.2s;
           -webkit-user-select: none;
           user-select: none;
         }
 
         .dock-item i {
-          font-size: 23px;
+          font-size: 15px;
           transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
         }
 
         .dock-item span {
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 700;
-          letter-spacing: 0.01em;
-          margin-top: 2px;
+          letter-spacing: -0.01em;
         }
 
         .dock-item:active {
-          transform: scale(0.82);
+          transform: scale(0.92);
           transition: transform 0.05s;
         }
 
         .dock-item.dock-active {
-          color: var(--accent);
+          background: white;
+          color: #141414;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
         .dock-item.dock-active i {
-          transform: scale(1.08);
+          transform: scale(1.05);
         }
 
         /* ── Phone overrides (@media ≤ 600 px) ─────────────────────────
@@ -4309,7 +4305,7 @@
            ────────────────────────────────────────────────────────────── */
         @media (max-width: 600px) {
 
-          /* 1 ▸ Show mobile dock */
+          /* 1 ▸ Show mobile dock (inside topbar, pill style) */
           .mobile-dock {
             display: flex !important;
           }
@@ -4321,16 +4317,11 @@
 
           /* 3 ▸ Compact topbar left/right areas */
           .topbar {
-            padding: 0 14px !important;
+            padding: 0 10px !important;
           }
 
           #topbar-clock {
             font-size: 11px !important;
-          }
-
-          /* 4 ▸ Extra bottom padding on all views so content clears the dock */
-          .view:not(.ai-view) {
-            padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
           }
 
           /* 5 ▸ Home dashboard — collapse all grid rows to single column by default */
@@ -4351,7 +4342,7 @@
 
           /* 6 ▸ Planner / Grades / Circolari — slim content padding */
           .planner-content {
-            padding: 12px 16px calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+            padding: 12px 16px !important;
           }
 
           /* 7 ▸ Planner header — wrap title + action buttons vertically */
@@ -4395,16 +4386,66 @@
             height: auto !important;
           }
 
-          /* 12 ▸ AI view — hide dock (AI view has its own back button / input area) */
-          body.is-ai-mode .mobile-dock {
-            display: none !important;
-          }
-
-          /* 13 ▸ Modal full-screen on phones */
+          /* 12 ▸ Modal full-screen on phones */
           .modal-content {
             width: calc(100vw - 16px) !important;
             max-width: calc(100vw - 16px) !important;
             margin: 8px !important;
             border-radius: 20px !important;
+          }
+
+          /* 13 ▸ Calendar — compact cells for small screens */
+          .custom-calendar {
+            padding: 12px !important;
+            border-radius: 14px !important;
+          }
+
+          .calendar-header {
+            margin-bottom: 10px !important;
+            padding: 4px 2px !important;
+          }
+
+          .calendar-title {
+            font-size: 12px !important;
+          }
+
+          .calendar-nav button {
+            width: 28px !important;
+            height: 28px !important;
+          }
+
+          .weekday-headers {
+            gap: 3px !important;
+            margin-bottom: 6px !important;
+          }
+
+          .weekday-header {
+            font-size: 9px !important;
+            padding: 2px 0 !important;
+          }
+
+          .calendar-days {
+            gap: 3px !important;
+          }
+
+          .calendar-day {
+            min-height: 54px !important;
+            padding: 6px 4px !important;
+            border-radius: 10px !important;
+          }
+
+          .day-number {
+            font-size: 11px !important;
+            margin-bottom: 4px !important;
+          }
+
+          .event-badge {
+            font-size: 7px !important;
+            padding: 2px 3px !important;
+            border-radius: 4px !important;
+          }
+
+          .more-events {
+            font-size: 8px !important;
           }
         }
