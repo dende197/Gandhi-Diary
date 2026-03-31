@@ -4234,3 +4234,177 @@
         .filter-chip.active i {
           color: #6366f1;
         }
+        /* ================================================================
+           MOBILE INTERFACE — Second UI for phone screens only (≤ 600 px)
+           Desktop and tablet layout (> 600 px) is completely untouched.
+           ================================================================ */
+
+        /* ── Mobile Bottom Dock ─────────────────────────────────────────
+           Always hidden on desktop. Shown only in the phone @media block.
+           ────────────────────────────────────────────────────────────── */
+        .mobile-dock {
+          display: none;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: calc(64px + env(safe-area-inset-bottom, 0px));
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+          background: rgba(248, 248, 250, 0.92);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border-top: 1px solid rgba(0, 0, 0, 0.07);
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+          z-index: 2000;
+          align-items: center;
+          justify-content: space-around;
+        }
+
+        .dock-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          flex: 1;
+          height: 100%;
+          padding: 8px 4px 0;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: #86868b;
+          -webkit-tap-highlight-color: transparent;
+          transition: color 0.18s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+          -webkit-user-select: none;
+          user-select: none;
+        }
+
+        .dock-item i {
+          font-size: 23px;
+          transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        .dock-item span {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          margin-top: 2px;
+        }
+
+        .dock-item:active {
+          transform: scale(0.82);
+          transition: transform 0.05s;
+        }
+
+        .dock-item.dock-active {
+          color: var(--accent);
+        }
+
+        .dock-item.dock-active i {
+          transform: scale(1.08);
+        }
+
+        /* ── Phone overrides (@media ≤ 600 px) ─────────────────────────
+           Only rules that differ from the desktop layout.
+           ────────────────────────────────────────────────────────────── */
+        @media (max-width: 600px) {
+
+          /* 1 ▸ Show mobile dock */
+          .mobile-dock {
+            display: flex !important;
+          }
+
+          /* 2 ▸ Hide topbar navigation pills — dock takes over */
+          .nav-pills {
+            display: none !important;
+          }
+
+          /* 3 ▸ Compact topbar left/right areas */
+          .topbar {
+            padding: 0 14px !important;
+          }
+
+          #topbar-clock {
+            font-size: 11px !important;
+          }
+
+          /* 4 ▸ Extra bottom padding on all views so content clears the dock */
+          .view:not(.ai-view) {
+            padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+
+          /* 5 ▸ Home dashboard — collapse all grid rows to single column by default */
+          .home-grid-row {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+
+          /* ROW 2 (stat cards: media, assenze, circolare) — keep 2-col so numbers are visible */
+          .home-grid-row:nth-child(2) {
+            grid-template-columns: 1fr 1fr !important;
+          }
+
+          /* Force the Ultima Circolare card to span the full width in ROW 2 */
+          .home-grid-row:nth-child(2) > .circ-widget {
+            grid-column: 1 / -1;
+          }
+
+          /* 6 ▸ Planner / Grades / Circolari — slim content padding */
+          .planner-content {
+            padding: 12px 16px calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+
+          /* 7 ▸ Planner header — wrap title + action buttons vertically */
+          .planner-view-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+            margin-bottom: 20px !important;
+          }
+
+          .planner-view-header h1 {
+            font-size: 22px !important;
+          }
+
+          /* Planner action button group — wrap neatly */
+          .planner-view-header > div {
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+          }
+
+          /* 8 ▸ Subject detail grid (Voti view) — force 1 column */
+          .planner-content > div[style*="auto-fill"],
+          .planner-content > div[style*="auto-fit"] {
+            grid-template-columns: 1fr !important;
+          }
+
+          /* 9 ▸ Profile card grid — single column */
+          .view > div[style*="auto-fit"] {
+            grid-template-columns: 1fr !important;
+          }
+
+          /* 10 ▸ Prevent any card from overflowing horizontally */
+          .card {
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+          }
+
+          /* 11 ▸ Keep verifica card at a natural height on mobile */
+          #widget-verifiche {
+            height: auto !important;
+          }
+
+          /* 12 ▸ AI view — hide dock (AI view has its own back button / input area) */
+          body.is-ai-mode .mobile-dock {
+            display: none !important;
+          }
+
+          /* 13 ▸ Modal full-screen on phones */
+          .modal-content {
+            width: calc(100vw - 16px) !important;
+            max-width: calc(100vw - 16px) !important;
+            margin: 8px !important;
+            border-radius: 20px !important;
+          }
+        }
