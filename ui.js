@@ -4221,13 +4221,68 @@ window.sendAIChat = async function () {
     });
 
     const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
+    const verifiche = (state.verifiche || []).map(v => `- ${v.materia || v.subject || 'Materia'}: ${v.argomento || v.topic || 'N/D'} (${v.data || v.date || 'data non indicata'})`).join('\n');
+    const reminders = (state.reminders || state.promemoria || []).slice(0, 12).map(r => `- ${r.text || r.title || r.descrizione || r.oggetto || 'Promemoria'}`).join('\n');
+    const backlog = (state.backlog || []).slice(0, 12).map(b => `- ${b.subject || 'Generale'}: ${b.text || b.title || b.task || ''}`).join('\n');
+    const grades = (state.voti || []).slice(0, 25).map(v => `- ${v.materia || v.subject || 'Materia'}: ${v.valore || v.value || 'N/D'} (${v.data || v.date || 'data n/d'})`).join('\n');
+    const attendanceSummary = state.assenzeData ? [
+        `Assenze totali: ${state.assenzeData.totaleAssenze ?? 0}`,
+        `Ritardi totali: ${state.assenzeData.totaleRitardi ?? 0}`,
+        `Uscite totali: ${state.assenzeData.totaleUscite ?? 0}`,
+        `Ore assenza totali: ${state.assenzeData.oreAssenzaTotali ?? 0}`,
+        `Da giustificare: ${state.assenzeData.daGiustificare ?? 0}`
+    ].join(' | ') : 'Nessun dato presenze/assenze disponibile';
 
     const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).map(([date, ids]) => {
         const dayTasks = ids.map(id => { const t = (state.tasks || []).find(x => x.id === id); return t ? `[${t.subject}] ${t.text}` : null; }).filter(Boolean);
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
-    const systemContext = `Sei G-AI, tutor di G-Diary. Rispondi in italiano in modo amichevole e conciso. OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}\n🔴 SCADENZE QUESTA SETTIMANA: ${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}\n📋 COMPITI FUTURI: ${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}\n📝 Verifiche: ${exams || 'nessuna'}\n⏰ Disp: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}${plannedSummary ? `\nGIÀ PIANIFICATO:\n${plannedSummary}` : ''}\nREGOLE: 1. Empatico e naturale. 2. NON usare MAI tabelle markdown. Scrivi i piani come lista con elenchi puntati e grassetto per le date/materie, in stile discorsivo e leggibile. 3. Usa grassetto **testo** per evidenziare le cose importanti.`;
+    const systemContext = `Sei G-AI, tutor di G-Diary.
+Stile: amichevole, pratico, meno rigido, incoraggiante e chiaro.
+Rispondi in italiano naturale.
+
+OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+PROFILO: ${state.user?.name || 'Studente'} (${state.user?.class || 'classe n/d'})
+DISPONIBILITÀ: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}
+ULTIMO SYNC: ${state.lastSync || 'n/d'} | STREAK: ${state.streak ?? 0}
+
+🔴 SCADENZE QUESTA SETTIMANA:
+${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}
+
+📋 COMPITI FUTURI:
+${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}
+
+📝 ESAMI:
+${exams || 'nessuno'}
+
+📚 VERIFICHE:
+${verifiche || 'nessuna'}
+
+📊 VOTI RECENTI:
+${grades || 'nessuno'}
+
+📌 PROMEMORIA:
+${reminders || 'nessuno'}
+
+🧩 BACKLOG:
+${backlog || 'vuoto'}
+
+🏫 PRESENZE/ASSENZE:
+${attendanceSummary}
+
+🗓️ GIÀ PIANIFICATO:
+${plannedSummary || 'Niente pianificato'}
+
+OBIETTIVI:
+${JSON.stringify(state.goals || {}, null, 2)}
+
+REGOLE OPERATIVE:
+1) Puoi usare TUTTI i dati sopra per decidere cosa proporre.
+2) Quando l'utente chiede pianificazione giornaliera o settimanale, usa una tabella Markdown semplice (non troppo elaborata), es. colonne: Giorno | Fascia oraria | Attività | Priorità.
+3) Prima di proporre il piano definitivo, se mancano dettagli essenziali fai 2-4 domande brevi su: livello di preparazione, urgenza/immediatezza, priorità, eventuali vincoli orari.
+4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
+5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.`;
 
     const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
     state.aiChatHistory.forEach(msg => contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));
