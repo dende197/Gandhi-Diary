@@ -11,9 +11,39 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
+      - name: Validate configuration
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "ERROR: CRON_SECRET secret is not set in this repository."
+            echo "Go to Settings > Secrets and variables > Actions and add CRON_SECRET"
+            echo "with the same value as the CRON_SECRET environment variable on Vercel."
+            exit 1
+          fi
+          if [ -z "${{ vars.VERCEL_URL }}" ]; then
+            echo "ERROR: VERCEL_URL variable is not set in this repository."
+            echo "Go to Settings > Secrets and variables > Actions and add VERCEL_URL"
+            echo "with your Vercel deployment URL, e.g. https://your-project.vercel.app"
+            exit 1
+          fi
+
       - name: Call Cron Sync API
         # VERCEL_URL must be set as a repository variable, e.g. https://your-project.vercel.app
+        # CRON_SECRET must match the CRON_SECRET environment variable configured on Vercel.
         run: |
-          curl -f -X GET \
+          HTTP_STATUS=$(curl -s -o /tmp/cron-response.json -w "%{http_code}" \
+            -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ vars.VERCEL_URL }}/api/cron-sync"
+            "${{ vars.VERCEL_URL }}/api/cron-sync")
+
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response body:"
+          cat /tmp/cron-response.json
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo ""
+            echo "ERROR: Cron sync endpoint returned HTTP $HTTP_STATUS"
+            if [ "$HTTP_STATUS" -eq 401 ]; then
+              echo "HINT: The CRON_SECRET GitHub secret does not match the CRON_SECRET env var on Vercel."
+            fi
+            exit 1
+          fi
