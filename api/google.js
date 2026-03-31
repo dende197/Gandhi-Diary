@@ -31,6 +31,8 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
+const WEEK_DAYS = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
+const HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function getOAuth2Client() {
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
@@ -80,6 +82,66 @@ function verifyAndParseOAuthState(rawState) {
     } catch {
         return null;
     }
+}
+
+function validateClassSchedule(schedule) {
+    if (!schedule || typeof schedule !== 'object' || Array.isArray(schedule)) {
+        return 'deve essere un oggetto JSON';
+    }
+
+    const days = Object.keys(schedule);
+    if (days.length === 0) return 'deve contenere almeno un giorno';
+
+    for (const day of days) {
+        if (!WEEK_DAYS.includes(day)) {
+            return `giorno non valido: ${day}. Valori ammessi: ${WEEK_DAYS.join(', ')}`;
+        }
+        const slots = schedule[day];
+        if (!Array.isArray(slots)) return `${day} deve essere un array`;
+
+        for (let i = 0; i < slots.length; i++) {
+            const slot = slots[i];
+            if (!slot || typeof slot !== 'object' || Array.isArray(slot)) {
+                return `${day}[${i}] deve essere un oggetto`;
+            }
+            if (typeof slot.materia !== 'string' || !slot.materia.trim()) {
+                return `${day}[${i}].materia deve essere una stringa non vuota`;
+            }
+            if (typeof slot.inizio !== 'string' || !HHMM_REGEX.test(slot.inizio)) {
+                return `${day}[${i}].inizio deve essere nel formato HH:MM`;
+            }
+            if (typeof slot.fine !== 'string' || !HHMM_REGEX.test(slot.fine)) {
+                return `${day}[${i}].fine deve essere nel formato HH:MM`;
+            }
+            const [inizioOre, inizioMin] = slot.inizio.split(':').map(Number);
+            const [fineOre, fineMin] = slot.fine.split(':').map(Number);
+            const inizioTotMin = inizioOre * 60 + inizioMin;
+            const fineTotMin = fineOre * 60 + fineMin;
+            if (inizioTotMin >= fineTotMin) {
+                return `${day}[${i}] deve avere inizio < fine`;
+            }
+        }
+    }
+
+    return null;
+}
+
+function parseAndValidateClassSchedule(rawClassSchedule) {
+    let schedule = rawClassSchedule;
+    if (typeof rawClassSchedule === 'string') {
+        try {
+            schedule = JSON.parse(rawClassSchedule);
+        } catch (e) {
+            return { error: `classSchedule JSON non valido: ${e.message}` };
+        }
+    }
+
+    const validationError = validateClassSchedule(schedule);
+    if (validationError) {
+        return { error: `classSchedule non valido: ${validationError}` };
+    }
+
+    return { value: schedule };
 }
 
 // --- Token Storage (Supabase) ---
@@ -337,13 +399,52 @@ module.exports = async function handler(req, res) {
                 // 3. Sync to user's Google Calendar
                 const auth = getAuthenticatedClient(tokenRow);
                 const calendarId = tokenRow.calendar_id || 'primary';
-                const result = await syncTasksToCalendar(tasks, calendarId, auth);
+
+                // Resolve per-user class schedule: request body takes priority, then stored value
+                let classSchedule = null;
+                let usedScheduleFallback = false;
+                const hasClassScheduleInBody = Object.prototype.hasOwnProperty.call(body, 'classSchedule');
+                if (hasClassScheduleInBody) {
+                    const parsedBodySchedule = parseAndValidateClassSchedule(body.classSchedule);
+                    if (parsedBodySchedule.error) {
+                        return res.status(400).json({ success: false, error: parsedBodySchedule.error });
+                    }
+                    classSchedule = parsedBodySchedule.value;
+                } else if (tokenRow.class_schedule) {
+                    const parsedStoredSchedule = parseAndValidateClassSchedule(tokenRow.class_schedule);
+                    if (parsedStoredSchedule.error) {
+                        usedScheduleFallback = true;
+                        console.warn('[Google sync] Invalid stored class_schedule - using default schedule', {
+                            userId: normalizeUserId(userId),
+                            reason: parsedStoredSchedule.error
+                        });
+                    } else {
+                        classSchedule = parsedStoredSchedule.value;
+                    }
+                }
+
+                const result = await syncTasksToCalendar(tasks, calendarId, auth, classSchedule);
 
                 debugLog(`Calendar sync result`, { userId, added: result.added, skipped: result.skipped });
+
+                if (!result.success) {
+                    const has403 = result.errors.some(e =>
+                        e.includes('403') || e.includes('Forbidden') || e.includes('insufficient')
+                    );
+                    if (has403) {
+                        return res.status(403).json({
+                            success: false,
+                            error: 'GOOGLE_AUTH_EXPIRED',
+                            message: 'Reconnect Google account',
+                            details: result.errors
+                        });
+                    }
+                }
 
                 return res.json({
                     success: true,
                     ...result,
+                    usedScheduleFallback: usedScheduleFallback || !!result.usedScheduleFallback,
                     total_tasks: tasks.length
                 });
             }
@@ -371,6 +472,32 @@ module.exports = async function handler(req, res) {
 
                 if (error) throw error;
                 return res.json({ success: true, message: 'Credenziali Argo salvate' });
+            }
+
+            // ============= SAVE CLASS SCHEDULE =============
+            case 'save-schedule': {
+                const { userId, classSchedule } = req.body || {};
+                if (!userId || !classSchedule) {
+                    return res.status(400).json({ success: false, error: 'userId e classSchedule richiesti' });
+                }
+
+                const normalizedUserId = normalizeUserId(userId);
+                if (!verifySessionToken(req, normalizedUserId)) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
+                const parsedSchedule = parseAndValidateClassSchedule(classSchedule);
+                if (parsedSchedule.error) {
+                    return res.status(400).json({ success: false, error: parsedSchedule.error });
+                }
+
+                const { error: schedErr } = await getSupabase()
+                    .from('google_tokens')
+                    .update({ class_schedule: parsedSchedule.value, updated_at: new Date().toISOString() })
+                    .eq('user_id', normalizedUserId);
+
+                if (schedErr) throw schedErr;
+                return res.json({ success: true, message: 'Orario scolastico salvato' });
             }
 
             // ============= DISCONNECT =============
