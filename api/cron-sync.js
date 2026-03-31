@@ -98,9 +98,9 @@ module.exports = async function handler(req, res) {
                 const tasks = extractHomeworkFromDashboard(dashboardData);
                 
                 if (tasks.length > 0) {
-                    // 4. Sync to Google Calendar
+                    // 4. Sync to Google Calendar (use per-user class schedule if stored)
                     const auth = buildAuthenticatedOAuth2Client(user);
-                    const syncRes = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth);
+                    const syncRes = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, user.class_schedule || null);
                     if (syncRes.success) {
                         results.success++;
                         results.users.push({ id: user.user_id, added: syncRes.added, skipped: syncRes.skipped });

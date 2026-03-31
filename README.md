@@ -53,7 +53,42 @@ Nel pannello Vercel (Settings → Environment Variables), assicurati di avere:
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — credenziali Supabase
 - `ARGO_ENCRYPTION_KEY` — chiave di cifratura per le password Argo
 
-> **Nota**: `CLASS_SCHEDULE` è **opzionale**. Se non impostato, viene usato automaticamente l'orario predefinito della classe 4D (Lun-Sab, 08:00–13:00).
+> **Nota**: `CLASS_SCHEDULE` è **opzionale**. Se non impostato, viene usato automaticamente l'orario predefinito della classe 4D (Lun-Sab, 08:00–13:00). È comunque possibile impostare un orario personalizzato **per singolo utente** tramite l'azione `save-schedule` (vedere sezione API).
+
+### 5. Orario Scolastico per-utente (Google Calendar Sync)
+
+Ogni utente può salvare il proprio orario scolastico personale, che viene usato per determinare l'orario preciso degli eventi su Google Calendar. Se non impostato, viene usato il valore dell'env var `CLASS_SCHEDULE` (globale) oppure l'orario di default della classe 4D.
+
+**Salva l'orario tramite API:**
+```
+POST /api/google?action=save-schedule
+Authorization: Bearer <session_token>
+Content-Type: application/json
+
+{
+  "userId": "...",
+  "classSchedule": {
+    "lunedi":   [{"materia":"MATEMATICA","inizio":"08:00","fine":"09:00"}, ...],
+    "martedi":  [...],
+    "mercoledi":[...],
+    "giovedi":  [...],
+    "venerdi":  [...],
+    "sabato":   [...]
+  }
+}
+```
+
+**Passa l'orario direttamente al sync (senza salvarlo):**
+```
+POST /api/google?action=sync
+Content-Type: application/json
+
+{
+  "userId": "...",
+  "tasks": [...],
+  "classSchedule": { ... }
+}
+```
 
 ## 🛠 Tecnologie
 - **Frontend**: HTML5, Vanilla JS, CSS3 (No Frameworks).

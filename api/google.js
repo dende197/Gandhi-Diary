@@ -337,9 +337,36 @@ module.exports = async function handler(req, res) {
                 // 3. Sync to user's Google Calendar
                 const auth = getAuthenticatedClient(tokenRow);
                 const calendarId = tokenRow.calendar_id || 'primary';
-                const result = await syncTasksToCalendar(tasks, calendarId, auth);
+
+                // Resolve per-user class schedule: request body takes priority, then stored value
+                let classSchedule = null;
+                const rawSchedule = body.classSchedule || tokenRow.class_schedule || null;
+                if (rawSchedule) {
+                    if (typeof rawSchedule === 'string') {
+                        try { classSchedule = JSON.parse(rawSchedule); } catch (e) {
+                            console.warn('[Google sync] Invalid classSchedule from client — using default:', e.message);
+                        }
+                    } else {
+                        classSchedule = rawSchedule;
+                    }
+                }
+
+                const result = await syncTasksToCalendar(tasks, calendarId, auth, classSchedule);
 
                 debugLog(`Calendar sync result`, { userId, added: result.added, skipped: result.skipped });
+
+                if (!result.success) {
+                    const has403 = result.errors.some(e =>
+                        e.includes('403') || e.includes('Forbidden') || e.includes('insufficient')
+                    );
+                    if (has403) {
+                        return res.status(403).json({
+                            success: false,
+                            error: 'Permessi Google Calendar insufficienti. Riconnetti Google Calendar dal profilo.',
+                            errors: result.errors
+                        });
+                    }
+                }
 
                 return res.json({
                     success: true,
@@ -371,6 +398,37 @@ module.exports = async function handler(req, res) {
 
                 if (error) throw error;
                 return res.json({ success: true, message: 'Credenziali Argo salvate' });
+            }
+
+            // ============= SAVE CLASS SCHEDULE =============
+            case 'save-schedule': {
+                const { userId, classSchedule } = req.body || {};
+                if (!userId || !classSchedule) {
+                    return res.status(400).json({ success: false, error: 'userId e classSchedule richiesti' });
+                }
+
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
+                }
+
+                let scheduleToSave;
+                if (typeof classSchedule === 'string') {
+                    try {
+                        scheduleToSave = JSON.parse(classSchedule);
+                    } catch (e) {
+                        return res.status(400).json({ success: false, error: `classSchedule JSON non valido: ${e.message}` });
+                    }
+                } else {
+                    scheduleToSave = classSchedule;
+                }
+
+                const { error: schedErr } = await getSupabase()
+                    .from('google_tokens')
+                    .update({ class_schedule: scheduleToSave, updated_at: new Date().toISOString() })
+                    .eq('user_id', normalizeUserId(userId));
+
+                if (schedErr) throw schedErr;
+                return res.json({ success: true, message: 'Orario scolastico salvato' });
             }
 
             // ============= DISCONNECT =============
