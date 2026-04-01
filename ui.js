@@ -48,6 +48,10 @@ window.setAgendaFilter = function (subject) {
 };
 const PASSING_GRADE_THRESHOLD = 6;
 const CHART_INTERMEDIATE_TICK_RATIO = 0.8;
+const CHART_MIN_RANGE_EPSILON = 0.0001;
+const CHART_LINE_COLOR = '#2563EB';
+const CHART_LABEL_COLOR = 'rgba(20,20,20,0.45)';
+const CHART_LABEL_FONT = '800 10px Inter';
 
 function getAgendaCacheKey() {
     try {
@@ -1900,7 +1904,7 @@ function initGradesCharts() {
     const maxV = Math.min(10, Math.max(...values, ...series, 8) + 0.5);
 
     function getY(val) {
-        const ratio = (val - minV) / Math.max(0.0001, (maxV - minV));
+        const ratio = (val - minV) / Math.max(CHART_MIN_RANGE_EPSILON, (maxV - minV));
         return (H - padding * 1.5) - ratio * (H - padding * 2.5);
     }
 
@@ -1927,7 +1931,7 @@ function initGradesCharts() {
     for (let i = 1; i < series.length; i++) {
         ctx.lineTo(padding + i * stepX, getY(series[i]));
     }
-    ctx.strokeStyle = '#2563EB';
+    ctx.strokeStyle = CHART_LINE_COLOR;
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -1944,8 +1948,8 @@ function initGradesCharts() {
         ctx.fill();
 
         // Draw Day Label
-        ctx.fillStyle = 'rgba(20,20,20,0.45)';
-        ctx.font = '800 10px Inter';
+        ctx.fillStyle = CHART_LABEL_COLOR;
+        ctx.font = CHART_LABEL_FONT;
         ctx.textAlign = 'center';
         ctx.fillText(labels[i], x, H - 5);
     });
