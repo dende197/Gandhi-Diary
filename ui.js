@@ -48,6 +48,10 @@ window.setAgendaFilter = function (subject) {
 };
 const PASSING_GRADE_THRESHOLD = 6;
 const CHART_INTERMEDIATE_TICK_RATIO = 0.8;
+const CHART_MIN_RANGE_EPSILON = 0.0001;
+const CHART_LINE_COLOR = '#2563EB';
+const CHART_LABEL_COLOR = 'rgba(20,20,20,0.45)';
+const CHART_LABEL_FONT = '800 10px Inter';
 
 function getAgendaCacheKey() {
     try {
@@ -339,7 +343,7 @@ window.googleFetchWithAuthRetry = async function (url, options = {}) {
     const refreshed = await window.refreshSessionToken().catch(() => false);
     if (!refreshed) return res;
 
-    const retryOpts = { ...options, headers: getSessionHeaders() };
+    const retryOpts = { ...options, headers: getSessionHeaders(options.headers || {}) };
     return fetch(url, retryOpts);
 };
 
@@ -376,7 +380,7 @@ window.syncGoogleCalendar = async function () {
         } catch (e) { console.warn('Decode storedPass failed'); }
         const fullSession = { ...session, password };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
+        const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
             headers: getSessionHeaders(),
             body: JSON.stringify({ userId, session: fullSession })
@@ -398,7 +402,7 @@ window.syncGoogleCalendar = async function () {
 window.disconnectGoogle = async function () {
     try {
         const userId = window.getUserId();
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`, {
+        const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`, {
             method: 'GET',
             headers: getSessionHeaders()
         });
@@ -441,7 +445,7 @@ window.saveArgoToSupabase = async function () {
             return;
         }
 
-        await fetch(`${window.API_BASE_URL}/api/google?action=save-argo`, {
+        await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
             headers: getSessionHeaders(),
             body: JSON.stringify({
@@ -1876,7 +1880,7 @@ function initGradesCharts() {
         return;
     }
 
-    // High Precision: Calculate progressive moving average
+    // Progressive moving average
     let sum = 0;
     const points = votiData.map((v, i) => {
         const val = parseFloat((v.valore || v.value || '0').toString().replace(',', '.'));
@@ -1889,15 +1893,19 @@ function initGradesCharts() {
     });
 
     const padding = 30;
-    const scrollX = 0; // Future: horizontal scrolling for many points
     const stepX = (W - padding * 2) / (points.length - 1);
-
-    const values = points.map(p => p.val);
-    const minV = Math.max(0, Math.min(...values) - 0.5);
-    const maxV = Math.min(10, Math.max(...values, 8) + 0.5);
+    const series = points.map(p => p.val);
+    const labels = points.map(p => {
+        const d = parseArgoDate(p.date);
+        return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    });
+    const values = points.map(p => p.raw);
+    const minV = Math.max(0, Math.min(...values, ...series) - 0.5);
+    const maxV = Math.min(10, Math.max(...values, ...series, 8) + 0.5);
 
     function getY(val) {
-        return (H - padding * 1.5) - (val / 10) * (H - padding * 2.5);
+        const ratio = (val - minV) / Math.max(CHART_MIN_RANGE_EPSILON, (maxV - minV));
+        return (H - padding * 1.5) - ratio * (H - padding * 2.5);
     }
 
     // Area Gradient
@@ -1923,7 +1931,7 @@ function initGradesCharts() {
     for (let i = 1; i < series.length; i++) {
         ctx.lineTo(padding + i * stepX, getY(series[i]));
     }
-    ctx.strokeStyle = 'var(--primary)';
+    ctx.strokeStyle = CHART_LINE_COLOR;
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -1940,8 +1948,8 @@ function initGradesCharts() {
         ctx.fill();
 
         // Draw Day Label
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.font = '800 10px inherit';
+        ctx.fillStyle = CHART_LABEL_COLOR;
+        ctx.font = CHART_LABEL_FONT;
         ctx.textAlign = 'center';
         ctx.fillText(labels[i], x, H - 5);
     });
@@ -1956,6 +1964,22 @@ function renderSubjectDetailView(subjectName) {
     const projection = getGoalProjection(media, goal, votiData.length);
     const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
     const MAX_GRADE_VALUE = 10;
+    const subjectScenarios = projection.scenarios || [];
+    const subjectGoalStatusLine = projection.done
+        ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#2DB86A; font-weight:800; text-transform:uppercase;">✓ Obiettivo raggiunto</span>`
+        : `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:800; text-transform:uppercase;">Gap ${projection.gap.toFixed(2)}</span>`;
+    const subjectScenariosHtml = (() => {
+        if (projection.done) return '';
+        if (subjectScenarios.length > 0) {
+            return subjectScenarios.map(s => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9F8F6; border:1px solid #ECEAE6; border-radius:10px; padding:8px 10px;">
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${s.exact ? 'Prossimo voto esatto' : s.n === 1 ? 'Prossimo voto' : `Prossimi ${s.n} voti`}</span>
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#141414; font-weight:800;">${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}</span>
+                        </div>
+                    `).join('');
+        }
+        return `<div style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${goal > 10 ? 'Obiettivo non raggiungibile' : 'Aggiungi altri voti per stimare la proiezione'}</div>`;
+    })();
 
     const trendItems = [...votiData]
         .sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date))
@@ -2002,17 +2026,11 @@ function renderSubjectDetailView(subjectName) {
                     </div>
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; gap:10px; flex-wrap:wrap;">
                         <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">Progresso obiettivo</span>
-                        <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:${projection.done ? '#2DB86A' : '#908C86'}; font-weight:800; text-transform:uppercase;">
-                            ${projection.done ? '✓ Raggiunto' : `Gap ${projection.gap.toFixed(2)}`}
-                        </span>
+                        ${subjectGoalStatusLine}
                     </div>
                     ${projection.done ? '' : `
                     <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
-                        ${(projection.scenarios || []).map(s => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9F8F6; border:1px solid #ECEAE6; border-radius:10px; padding:8px 10px;">
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${s.n === 1 ? 'Prossimo voto' : `Prossimi ${s.n} voti`}</span>
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#141414; font-weight:800;">≥ ${s.grade.toFixed(2)}</span>
-                        </div>`).join('')}
+                        ${subjectScenariosHtml}
                     </div>`}
                 </div>
             </div>
@@ -2684,9 +2702,18 @@ function renderWeeklyAgenda() {
     const filterSubject = state.agendaSearchSubject || "all";
     const sortOrder = state.agendaSortOrder || "due_desc";
 
+    const getAssignmentTimestamp = (task) => {
+        const raw = task.assigned_at || task.assignedAt || task.assigned_datetime || task.assignedDateTime || null;
+        if (raw) {
+            const parsed = new Date(raw);
+            if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+        }
+        const fallback = parseArgoDate(task.assigned_date || task.displayDate);
+        return fallback.getTime();
+    };
     const preparedList = list.map(t => ({
         ...t,
-        _assignedTs: parseArgoDate(t.assigned_date || t.displayDate).getTime(),
+        _assignedTs: getAssignmentTimestamp(t),
         _dueTs: parseArgoDate(t.displayDate).getTime()
     }));
 
@@ -4311,7 +4338,7 @@ window.refreshPlanWeekModalContent = function () {
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
             <h2 style="margin:0; font-family:'Inter', sans-serif; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: -0.02em;">Pianifica Settimana</h2>
-            <button onclick="closeModal()" style="background:#F0EDE8; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
+            <button onclick="finalizePlanWeekModal()" style="background:#F0EDE8; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
@@ -4349,8 +4376,15 @@ window.refreshPlanWeekModalContent = function () {
     }).join('')}
         </div>
         <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #F0EDE8;">
-            <button onclick="closeModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">Fatto</button>
+            <button onclick="finalizePlanWeekModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">Fatto</button>
         </div>`;
+};
+window.finalizePlanWeekModal = function () {
+    closeModal();
+    if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
+    if (state.view === 'planner' && typeof scheduleRender === 'function') {
+        setTimeout(() => scheduleRender(0), 0);
+    }
 };
 
 window.updateWeekDayButton = function (taskId, dateStr) {

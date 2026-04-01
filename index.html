@@ -261,17 +261,20 @@
                 const isoDate = !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '';
                 // Canonical hierarchy for assignment date:
                 // assigned_date/assignedDate (new normalized fields) → source payload aliases → due date fallback.
-                const assignedObj = parseArgoDate(t.assigned_date || t.assignedDate || t.datGiorno || t.dataAssegnazione || t.due_date || t.datConsegna);
+                const assignedRawDate = t.assigned_date || t.assignedDate || t.datGiorno || t.dataAssegnazione || t.due_date || t.datConsegna;
+                const assignedObj = parseArgoDate(assignedRawDate);
                 const assignedIso = !isNaN(assignedObj.getTime()) ? assignedObj.toISOString().split('T')[0] : isoDate;
                 const subject = t.subject || t.materia || 'Generico';
                 const text = t.text || t.desCompito || "Nessuna descrizione";
                 const key = `${subject}||${text}||${isoDate}`;
                 const match = localIndex.get(key);
+                const serverAssignedAt = t.assigned_at || t.assignedAt || t.assigned_datetime || t.assignedDateTime || t.datOraIns || t.datOraInserimento || t.dataOraInserimento || null;
                 
                 return {
                     id: t.id || stableTaskId({ subject, text, due_date: isoDate }),
                     text, subject, due_date: isoDate,
                     assigned_date: match?.assigned_date || assignedIso,
+                    assigned_at: match?.assigned_at || serverAssignedAt || null,
                     done: match ? !!match.done : !!t.done,
                     hasValidDate: !isNaN(dateObj.getTime())
                 };
