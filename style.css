@@ -84,6 +84,15 @@
           --text-on-dark: #FFFFFF;
           --text-dim-on-light: #86868B;
           --text-dim-on-dark: rgba(255, 255, 255, 0.45);
+
+          /* Semantic Palette */
+          --color-info: #1A6B8A;
+          --color-success: #2DB86A;
+          --color-warning: #FF9F0A;
+          --color-danger: #FF3B30;
+          --color-surface-subtle: #F8F7F5;
+          --color-surface-strong: #141414;
+          --color-border-soft: #ECEAE6;
         }
 
         /* === RESET === */

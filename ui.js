@@ -47,11 +47,46 @@ window.setAgendaFilter = function (subject) {
     refreshAgenda();
 };
 
+function getAgendaCacheKey() {
+    try {
+        return `${lsKey('weekly_agenda_cache')}:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
+    } catch (_) {
+        return `weekly_agenda_cache:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
+    }
+}
+
+function getCachedWeeklyAgendaHtml() {
+    if (state._weeklyAgendaCacheHtml) return state._weeklyAgendaCacheHtml;
+    try {
+        const cached = localStorage.getItem(getAgendaCacheKey());
+        if (!cached) return '';
+        state._weeklyAgendaCacheHtml = cached;
+        return cached;
+    } catch (_) {
+        return '';
+    }
+}
+
+function saveWeeklyAgendaCache(html) {
+    state._weeklyAgendaCacheHtml = html || '';
+    try {
+        localStorage.setItem(getAgendaCacheKey(), state._weeklyAgendaCacheHtml);
+    } catch (_) {}
+}
+
+window.warmWeeklyAgendaCache = function () {
+    if (state.uiMode !== 'calendar') return;
+    const html = renderWeeklyAgenda();
+    if (html) saveWeeklyAgendaCache(html);
+};
+
 window.refreshAgenda = function () {
     const list = document.getElementById('weekly-agenda-list');
     if (list) {
         const temp = document.createElement('div');
-        temp.innerHTML = renderWeeklyAgenda();
+        const html = renderWeeklyAgenda();
+        saveWeeklyAgendaCache(html);
+        temp.innerHTML = html;
         const newList = temp.firstElementChild;
         if (newList) {
             list.parentNode.replaceChild(newList, list);
@@ -107,17 +142,20 @@ window.switchPlannerView = function (view) {
     state.uiMode = view;
     localStorage.setItem('g_diary_planner_view', view);
     const content = document.getElementById('planner-main-content');
+    if (view === 'calendar' && typeof window.warmWeeklyAgendaCache === 'function') {
+        window.warmWeeklyAgendaCache();
+    }
     if (content && typeof gsap !== 'undefined') {
         gsap.to(content, {
-            opacity: 0, y: 6, scale: 0.99, duration: 0.15, ease: 'power2.in',
+            opacity: 0, y: 4, scale: 0.995, duration: 0.08, ease: 'power2.in',
             onComplete: () => {
                 scheduleRender(0);
                 requestAnimationFrame(() => {
                     const newContent = document.getElementById('planner-main-content');
                     if (newContent) {
                         gsap.fromTo(newContent,
-                            { opacity: 0, y: 10, scale: 0.99 },
-                            { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' }
+                            { opacity: 0, y: 6, scale: 0.995 },
+                            { opacity: 1, y: 0, scale: 1, duration: 0.14, ease: 'power2.out', clearProps: 'transform,opacity' }
                         );
                     }
                 });
@@ -1178,6 +1216,9 @@ function renderHome() {
 }
 
 function renderPlanner() {
+    const cachedAgenda = getCachedWeeklyAgendaHtml();
+    const listHtml = cachedAgenda || renderWeeklyAgenda();
+    if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
     return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
@@ -1206,11 +1247,11 @@ function renderPlanner() {
             </div>
 
             <div id="planner-main-content" class="section-animate">
-                ${state.uiMode === 'calendar' ? '<div id="calendar"></div>' : renderWeeklyAgenda()}
+                ${state.uiMode === 'calendar' ? '<div id="calendar"></div>' : listHtml}
             </div>
         </div> 
     </div>
-    ${state.uiMode === 'calendar' ? `<script>setTimeout(() => { if(typeof renderCustomCalendar === 'function') renderCustomCalendar(); }, 100);</script>` : ''}`;
+    ${state.uiMode === 'calendar' ? `<script>setTimeout(() => { if(typeof renderCustomCalendar === 'function') renderCustomCalendar(); if(typeof warmWeeklyAgendaCache === 'function') warmWeeklyAgendaCache(); }, 100);</script>` : ''}`;
 }
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
@@ -1419,7 +1460,7 @@ function renderGradesView() {
                 </h2>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;">
                 ${subjects.map(s => {
             const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
             const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
@@ -1427,25 +1468,16 @@ function renderGradesView() {
             const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
 
             return `
-                    <div class="card" style="padding: 24px; border-radius: 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 20px;" onclick="navigateSubject(${JSON.stringify(s.name)})" >
-                        <div style="width: 52px; height: 52px; border-radius: 14px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 14px; flex-shrink: 0;">
+                    <div class="card" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="navigateSubject(${JSON.stringify(s.name)})" >
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 12px; flex-shrink: 0;">
                             ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${escapeHtml(s.name)}</div>
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} VOTI REGISTRATI · OBIETTIVO ${s.goal.toFixed(2)}</div>
-                            <div style="margin-top:8px; height:4px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                                <div style="height:100%; width:${Math.min(100, (s.media / Math.max(1, s.goal)) * 100)}%; background:${s.projection.done ? '#2DB86A' : subjColor}; border-radius:100px;"></div>
-                            </div>
-                            <div style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${s.projection.done ? '#2DB86A' : '#908C86'}; margin-top:6px; text-transform:uppercase;">
-                                ${s.projection.done ? '✓ OBIETTIVO RAGGIUNTO' : (s.projection.first ? `${s.projection.first.n} VOTI DA ≥ ${s.projection.first.grade.toFixed(1)}` : `GAP ${s.projection.gap.toFixed(2)}`)}
-                            </div>
+                            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">${escapeHtml(s.name)}</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Media generale materia</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.02em;">${s.media.toFixed(2)}</div>
-                            <div style="display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px;">
-                                ${s.trend.map(v => `<div style="width: 4px; height: 4px; border-radius: 50%; background: ${v >= 6 ? 'var(--green)' : 'var(--red)'};"></div>`).join('')}
-                            </div>
+                            <div style="font-size: 26px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.03em;">${s.media.toFixed(2)}</div>
                         </div>
                     </div > `;
         }).join('')}
@@ -1837,8 +1869,19 @@ function renderSubjectDetailView(subjectName) {
     const projection = getGoalProjection(media, goal, votiData.length);
     const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
 
+    const trendItems = [...votiData]
+        .sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date))
+        .map(v => {
+            const rawVal = (v.valore || v.value || '').toString();
+            if (isGiustifica(rawVal)) return null;
+            const parsed = parseFloat(rawVal.replace(',', '.'));
+            if (!Number.isFinite(parsed)) return null;
+            return parsed;
+        })
+        .filter(v => Number.isFinite(v));
+
     return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 4px 0 24px;">
             <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 32px;">
                 <button onclick="window.closeSubject()" style="width: 48px; height: 48px; border-radius: 16px; background: #FFFFFF; border: 1px solid #141414; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s;">
                     <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
@@ -1849,7 +1892,7 @@ function renderSubjectDetailView(subjectName) {
                 </div>
             </div>
 
-            <div class="card" style="background:#FFFFFF; border: 1px solid #141414; border-radius: 24px; padding: 28px; margin-bottom: 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
+            <div class="card" style="background:#FFFFFF; border: 1px solid #141414; border-radius: 24px; padding: 24px; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
                 <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: ${subjColor};"></div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
                     <div>
@@ -1884,14 +1927,26 @@ function renderSubjectDetailView(subjectName) {
                 </div>
             </div>
 
-            <div style="margin-bottom: 24px;">
-                <h2 style="font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; gap: 12px;">
-                    STORICO VALUTAZIONI
+            <div class="card" style="padding:18px; border-radius:18px; margin-bottom:18px; border:1px solid var(--border-light);">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <h2 style="font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.08em;">Trend andamento</h2>
+                    <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86;">${trendItems.length} punti</span>
+                </div>
+                <div style="height:90px; display:flex; align-items:flex-end; gap:6px; background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
+                    ${trendItems.length ? trendItems.map(v => `
+                        <div style="flex:1; min-width:8px; height:${Math.max(8, (v / 10) * 100)}%; background:${v >= 6 ? 'var(--green)' : 'var(--red)'}; border-radius:6px; opacity:0.9;"></div>
+                    `).join('') : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 10px;">
+                    Voti ricevuti
                     <span style="flex:1; height:1px; background:#E0DDD8;"></span>
                 </h2>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 14px; padding-bottom: 60px;">
+            <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 60px;">
                 ${votiData.map(v => {
         const rawVal = v.valore || v.value || '0';
         const giu = isGiustifica(rawVal);
@@ -2486,6 +2541,9 @@ function renderWeeklyAgenda() {
         return matchesQuery && matchesSubject;
     }).sort((a, b) => {
         if (sortOrder === "assignment_asc") {
+            const da = parseArgoDate(a.assigned_date || a.displayDate).getTime();
+            const db = parseArgoDate(b.assigned_date || b.displayDate).getTime();
+            if (da !== db) return da - db;
             return parseArgoDate(a.displayDate).getTime() - parseArgoDate(b.displayDate).getTime();
         }
         return parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime();
@@ -2536,6 +2594,9 @@ function renderWeeklyAgenda() {
     });
     const sortedDates = Object.keys(grouped).sort((a, b) => {
         if (sortOrder === 'assignment_asc') {
+            const minAssignedA = Math.min(...grouped[a].map(t => parseArgoDate(t.assigned_date || t.displayDate).getTime()));
+            const minAssignedB = Math.min(...grouped[b].map(t => parseArgoDate(t.assigned_date || t.displayDate).getTime()));
+            if (minAssignedA !== minAssignedB) return minAssignedA - minAssignedB;
             return parseArgoDate(a).getTime() - parseArgoDate(b).getTime();
         }
         return parseArgoDate(b).getTime() - parseArgoDate(a).getTime();

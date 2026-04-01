@@ -259,6 +259,8 @@
             const formatted = newTasks.map(t => {
                 const dateObj = parseArgoDate(t.due_date || t.datConsegna);
                 const isoDate = !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '';
+                const assignedObj = parseArgoDate(t.assigned_date || t.assignedDate || t.datGiorno || t.dataAssegnazione || t.due_date || t.datConsegna);
+                const assignedIso = !isNaN(assignedObj.getTime()) ? assignedObj.toISOString().split('T')[0] : isoDate;
                 const subject = t.subject || t.materia || 'Generico';
                 const text = t.text || t.desCompito || "Nessuna descrizione";
                 const key = `${subject}||${text}||${isoDate}`;
@@ -266,7 +268,8 @@
                 
                 return {
                     id: t.id || stableTaskId({ subject, text, due_date: isoDate }),
-                    text, subject, due_date: isoDate, 
+                    text, subject, due_date: isoDate,
+                    assigned_date: match?.assigned_date || assignedIso,
                     done: match ? !!match.done : !!t.done,
                     hasValidDate: !isNaN(dateObj.getTime())
                 };
@@ -506,7 +509,6 @@
                         if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
                             window.saveArgoToSupabase();
                         }
-                        if (window.scheduleRender) window.scheduleRender();
                     });
                 }
             }, 100);
