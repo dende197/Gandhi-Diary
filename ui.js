@@ -1482,33 +1482,10 @@ function renderGradesView() {
 
             ${(() => {
             const count = votiData.length;
-            const currentSum = count * media;
-
-            // Calcola scenari: quanti voti di X servono per raggiungere goal
-            const buildScenarios = () => {
-                const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
-                const deficit = goal * count - currentSum;
-                const results = [];
-                for (const g of grades) {
-                    if (g <= goal) continue; // voto <= obiettivo: matematicamente impossibile
-                    const n = Math.ceil(deficit / (g - goal));
-                    if (n < 1 || n > 100) continue; // Alzato limite a 100 per coprire casi difficili
-                    results.push({ grade: g, n });
-                    if (results.length === 3) break;
-                }
-                // Se nessuno scenario con voti normali funziona, mostra il minimo teorico
-                if (results.length === 0) {
-                    const minNeeded = (goal * (count + 1)) - currentSum;
-                    if (minNeeded <= 10) {
-                        results.push({ grade: Math.ceil(minNeeded * 10) / 10, n: 1, exact: true });
-                    }
-                }
-                return results;
-            };
-
-            const alreadyDone = media >= goal;
-            const scenarios = alreadyDone ? [] : buildScenarios();
-            const gap = goal - media;
+            const projection = getGoalProjection(media, goal, count);
+            const alreadyDone = projection.done;
+            const scenarios = projection.scenarios || [];
+            const gap = projection.gap;
 
             let statusLine = '';
             let scenariosHtml = '';
@@ -1527,12 +1504,12 @@ function renderGradesView() {
                                     ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
                                 </div>
                                 <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
-                                    ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
-                                </span>
-                            </div>`).join('');
+                                     ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
+                                 </span>
+                             </div>`).join('');
                 } else {
                     // Se goal è > 10 o irraggiungibile anche con cento 10
-                    const isImpossible = goal > 10 || (count > 0 && (count * 10 + currentSum) / (count + 100) < goal);
+                    const isImpossible = goal > 10;
                     scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
                 }
             }
@@ -1986,9 +1963,11 @@ function renderSubjectDetailView(subjectName) {
             if (isGiustifica(rawVal)) return null;
             const parsed = parseFloat(rawVal.replace(',', '.'));
             if (!Number.isFinite(parsed)) return null;
-            return parsed;
+            const dateObj = parseArgoDate(v.data || v.date);
+            if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return null;
+            return { value: parsed, date: dateObj };
         })
-        .filter(v => Number.isFinite(v));
+        .filter(v => v && Number.isFinite(v.value));
 
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 4px 0 24px;">
@@ -2042,10 +2021,51 @@ function renderSubjectDetailView(subjectName) {
                     <h2 style="font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.08em;">Trend andamento</h2>
                     <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86;">${trendItems.length} punti</span>
                 </div>
-                <div style="height:90px; display:flex; align-items:flex-end; gap:6px; background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
-                    ${trendItems.length ? trendItems.map(v => `
-                        <div style="flex:1; min-width:8px; height:${Math.max(8, (v / MAX_GRADE_VALUE) * 100)}%; background:${v >= PASSING_GRADE_THRESHOLD ? 'var(--green)' : 'var(--red)'}; border-radius:6px; opacity:0.9;"></div>
-                    `).join('') : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
+                <div style="background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
+                    ${trendItems.length ? (() => {
+            const W = 100;
+            const H = 86;
+            const padLeft = 30;
+            const padRight = 8;
+            const padTop = 8;
+            const padBottom = 22;
+            const innerW = Math.max(1, W - padLeft - padRight);
+            const innerH = Math.max(1, H - padTop - padBottom);
+            const dateMin = trendItems[0].date.getTime();
+            const dateMax = trendItems[trendItems.length - 1].date.getTime();
+            const dateSpan = Math.max(1, dateMax - dateMin);
+            const yMin = 0;
+            const yMax = MAX_GRADE_VALUE;
+            const ySpan = yMax - yMin;
+            const points = trendItems.map((item) => {
+                const x = padLeft + ((item.date.getTime() - dateMin) / dateSpan) * innerW;
+                const y = padTop + (1 - ((item.value - yMin) / ySpan)) * innerH;
+                return { x, y, value: item.value, date: item.date };
+            });
+            const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+            const firstLabel = trendItems[0].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+            const lastLabel = trendItems[trendItems.length - 1].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+            const yTicks = [0, 6, 8, 10];
+            return `
+                        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:140px; display:block;">
+                            <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
+                            <line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
+                            ${yTicks.map(t => {
+                const y = padTop + (1 - ((t - yMin) / ySpan)) * innerH;
+                return `
+                                <line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="#ECEAE6" stroke-width="0.5" />
+                                <text x="${padLeft - 3}" y="${y + 1.4}" text-anchor="end" font-size="3" fill="#908C86" style="font-family:'JetBrains Mono', monospace;">${t}</text>
+                                `;
+            }).join('')}
+                            <path d="${linePath}" fill="none" stroke="${subjColor}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                            ${points.map(p => `
+                                <circle cx="${p.x}" cy="${p.y}" r="1.2" fill="${p.value >= PASSING_GRADE_THRESHOLD ? 'var(--green)' : 'var(--red)'}" />
+                            `).join('')}
+                            <text x="${padLeft}" y="${H - 4}" text-anchor="start" font-size="3" fill="#908C86" style="font-family:'JetBrains Mono', monospace;">${firstLabel}</text>
+                            <text x="${W - padRight}" y="${H - 4}" text-anchor="end" font-size="3" fill="#908C86" style="font-family:'JetBrains Mono', monospace;">${lastLabel}</text>
+                        </svg>
+                    `;
+        })() : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
                 </div>
             </div>
 
@@ -2127,7 +2147,13 @@ function mostraAssenzeModal() {
                                     <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);">${a.oreEffettive ? a.oreEffettive.toFixed(2) : '?.??'}h</span>
                                 </div>
                                 <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
-                                    ${a.tipo.charAt(0).toUpperCase() + a.tipo.slice(1)}${a.nota ? ` • ${a.nota}` : ''}
+                                    ${(() => {
+            const tipo = (a.tipo || '').toString();
+            const nota = (a.nota || '').toString().trim();
+            const tipoLabel = tipo ? (tipo.charAt(0).toUpperCase() + tipo.slice(1)) : 'Evento';
+            const showNota = nota && nota.toLowerCase() !== tipo.trim().toLowerCase();
+            return `${tipoLabel}${showNota ? ` • ${nota}` : ''}`;
+        })()}
                                 </div>
                                 <div style="margin-top:5px;">
                                     <span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; background:${a.giustificata ? 'rgba(40,205,65,0.14)' : 'rgba(239,68,68,0.14)'}; color:${a.giustificata ? '#15803D' : '#B91C1C'}; border:1px solid ${a.giustificata ? 'rgba(40,205,65,0.35)' : 'rgba(239,68,68,0.35)'};">
