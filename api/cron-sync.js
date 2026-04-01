@@ -69,6 +69,17 @@ function getRomeHour(date = new Date()) {
     return Number(hourPart);
 }
 
+function getTodayRomeISODate() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Rome',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date());
+    const get = (type) => parts.find(p => p.type === type)?.value || '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -144,8 +155,8 @@ module.exports = async function handler(req, res) {
                         assenze: [
                             ...(assenzeData?.assenze || []),
                             {
-                                id: 'simulated-unjustified-absence',
-                                data: new Date().toISOString().split('T')[0],
+                                id: `simulated-unjustified-absence-${Date.now()}`,
+                                data: getTodayRomeISODate(),
                                 tipo: 'assenza',
                                 giustificata: false,
                                 daGiustificare: true,
