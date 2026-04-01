@@ -52,6 +52,26 @@ const CHART_MIN_RANGE_EPSILON = 0.0001;
 const CHART_LINE_COLOR = '#2563EB';
 const CHART_LABEL_COLOR = 'rgba(20,20,20,0.45)';
 const CHART_LABEL_FONT = '800 10px Inter';
+const GOAL_GRADE_SCALE_DESC = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
+const MAX_GOAL_SCENARIOS = 6;
+const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
+    ? GOAL_GRADE_SCALE_DESC
+    : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
+
+function normalizeSubjectName(name) {
+    // Unify subject labels coming from different DidUP payloads/UI variants
+    // (e.g. trailing asterisks, extra spaces, case differences) before grouping/filtering.
+    return (name || '')
+        .toString()
+        .replace(/\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function isAiTask(task) {
+    return !!(task && typeof task.id === 'string' && task.id.startsWith('ai_'));
+}
 
 function getAgendaCacheKey() {
     try {
@@ -378,7 +398,7 @@ window.syncGoogleCalendar = async function () {
         try {
             if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
         } catch (e) { console.warn('Decode storedPass failed'); }
-        const fullSession = { ...session, password };
+        const fullSession = { ...session, password, profileIndex: session.profileIndex ?? 0 };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
@@ -452,7 +472,8 @@ window.saveArgoToSupabase = async function () {
                 userId,
                 schoolCode: session.schoolCode,
                 username: session.userName || session.username,
-                password: password
+                password: password,
+                profileIndex: session.profileIndex ?? 0
             })
         });
         console.log('✅ Credenziali Argo salvate per sync background');
@@ -933,7 +954,7 @@ function renderCustomCalendar() {
         let dayTasks = [];
         if (state.plannerMode === 'registro') {
             // Badge based on DUE DATE - Show all except AI, manual quests and exams
-            dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
+            dayTasks = (state.tasks || []).filter(t => !isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
         } else {
             // Badge based on PLANNED DATE
             const plannedIds = state.plannedTasks[dateStr] || [];
@@ -1011,7 +1032,7 @@ function renderCalendarWeekList(weekStart) {
         // Get tasks for this day
         let dayTasks = [];
         if (state.plannerMode === 'registro') {
-            dayTasks = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
+            dayTasks = (state.tasks || []).filter(t => !isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
         } else {
             const plannedIds = state.plannedTasks[dateStr] || [];
             dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
@@ -1464,11 +1485,12 @@ function renderGradesView() {
     const subjectsMap = {};
     votiData.forEach(v => {
         const sub = v.materia || v.subject || 'Altro';
-        if (!subjectsMap[sub]) subjectsMap[sub] = [];
-        subjectsMap[sub].push(v);
+        const subjectKey = normalizeSubjectName(sub) || 'altro';
+        if (!subjectsMap[subjectKey]) subjectsMap[subjectKey] = { name: sub, list: [] };
+        subjectsMap[subjectKey].list.push(v);
     });
 
-    const subjects = Object.entries(subjectsMap).map(([name, list]) => {
+    const subjects = Object.values(subjectsMap).map(({ name, list }) => {
         const subMedia = parseFloat(calcolaMedia(list)) || 0;
         const trend = list.slice(-5).map(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')));
         const goal = state.goals?.[name] || 8.0;
@@ -1955,7 +1977,10 @@ function initGradesCharts() {
     });
 }
 function renderSubjectDetailView(subjectName) {
-    const votiData = getVotiData().filter(v => (v.materia || v.subject) === subjectName).sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
+    const normalizedSubject = normalizeSubjectName(subjectName);
+    const votiData = getVotiData()
+        .filter(v => normalizeSubjectName(v.materia || v.subject) === normalizedSubject)
+        .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
     const media = parseFloat(calcolaMedia(votiData)) || 0;
     const goal = state.goals?.[subjectName] || 8.0;
     const subjColor = getSubjectColor(subjectName);
@@ -2365,7 +2390,7 @@ function renderDayDetailModal(dateStr) {
 
     let tasksForDay = [];
     if (state.plannerMode === 'registro') {
-        tasksForDay = (state.tasks || []).filter(t => !t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
+        tasksForDay = (state.tasks || []).filter(t => !isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
     } else {
         const plannedIds = state.plannedTasks[dateStr] || [];
         tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
@@ -2679,17 +2704,20 @@ function renderWeeklyAgenda() {
     const list = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const plannedTasks = (state.plannedTasks && typeof state.plannedTasks === 'object') ? state.plannedTasks : {};
 
     if (state.plannerMode === 'registro') {
-        state.tasks.forEach(t => {
-            if (!t.id.startsWith('ai_') && t.subject !== 'QUEST' && !t.isExam && t.due_date) {
+        tasks.forEach(t => {
+            if (!isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date) {
                 list.push({ ...t, displayDate: t.due_date });
             }
         });
     } else {
-        Object.entries(state.plannedTasks).forEach(([dateStr, ids]) => {
+        Object.entries(plannedTasks).forEach(([dateStr, ids]) => {
+            if (!Array.isArray(ids)) return;
             ids.forEach(id => {
-                const t = state.tasks.find(tk => tk.id === id);
+                const t = tasks.find(tk => tk.id === id);
                 if (t && !t.isExam) list.push({ ...t, displayDate: dateStr });
             });
         });
@@ -2925,7 +2953,7 @@ function getGoalProjection(media, goal, count) {
     const currentSum = safeCount * safeMedia;
     const gap = Math.max(0, safeGoal - safeMedia);
     const done = safeMedia >= safeGoal;
-    const grades = Array.from(new Set([10, 9.5, 9, 8.5, 8, 7.5, 7, PASSING_GRADE_THRESHOLD]));
+    const grades = GOAL_GRADE_OPTIONS_DESC;
     const scenarios = [];
 
     if (!done && safeCount === 0) {
@@ -2946,7 +2974,7 @@ function getGoalProjection(media, goal, count) {
             if (Math.abs(denom) < 1e-9) continue;
             const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
             if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
-            if (scenarios.length === 3) break;
+            if (scenarios.length === MAX_GOAL_SCENARIOS) break;
         }
 
         if (scenarios.length === 0 && safeGoal > 0 && safeGoal <= 10) {
@@ -4330,8 +4358,8 @@ window.refreshPlanWeekModalContent = function () {
     }
     const now2w = new Date(); now2w.setHours(0, 0, 0, 0);
     const twoWeeksLater = new Date(now2w); twoWeeksLater.setDate(now2w.getDate() + 14);
-    const calendarTasks = state.tasks.filter(t => {
-        if (t.done || !t.due_date || t.subject === 'QUEST' || t.id.startsWith('ai_')) return false;
+    const calendarTasks = (Array.isArray(state.tasks) ? state.tasks : []).filter(t => {
+        if (t.done || !t.due_date || t.subject === 'QUEST' || isAiTask(t)) return false;
         const d = parseArgoDate(t.due_date);
         return d >= now2w && d <= twoWeeksLater;
     });
@@ -4528,7 +4556,7 @@ window.sendAIChat = async function () {
     endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
 
     const argoTasks = (state.tasks || []).filter(t => {
-        if (t.done || t.id.startsWith('ai_') || t.subject === 'QUEST') return false;
+        if (t.done || isAiTask(t) || t.subject === 'QUEST') return false;
         if (!t.due_date) return true;
         if (hour >= 14 && t.due_date <= todayStr) return false;
         return true;
