@@ -379,8 +379,8 @@ module.exports = async function handler(req, res) {
                         const { access_token, profiles } = loginRes;
                         if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
 
-                        const profileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
-                        const targetProfile = profiles.find(p => (p.index ?? p.profileIndex) == profileIndex) || profiles[profileIndex] || profiles[0];
+                        const profileIndex = Number(session.profileIndex ?? tokenRow.profile_index ?? 0);
+                        const targetProfile = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex) || profiles[profileIndex] || profiles[0];
                         const authToken = targetProfile.token;
                         const subjectId = targetProfile.idSoggetto;
                         const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
