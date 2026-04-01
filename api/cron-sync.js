@@ -147,10 +147,11 @@ module.exports = async function handler(req, res) {
         }
 
         const duration = (Date.now() - startTime) / 1000;
-        console.log(`[Cron] Universal Sync Finished in ${duration}s. Success: ${results.success}/${results.total}`);
+        const hasFailures = results.failed > 0;
+        console.log(`[Cron] Universal Sync Finished in ${duration}s. Success: ${results.success}/${results.total}. Failed: ${results.failed}`);
 
-        return res.json({
-            success: true,
+        return res.status(hasFailures ? 500 : 200).json({
+            success: !hasFailures,
             duration: `${duration}s`,
             results
         });
