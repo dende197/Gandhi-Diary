@@ -52,9 +52,15 @@ const CHART_MIN_RANGE_EPSILON = 0.0001;
 const CHART_LINE_COLOR = '#2563EB';
 const CHART_LABEL_COLOR = 'rgba(20,20,20,0.45)';
 const CHART_LABEL_FONT = '800 10px Inter';
-const GOAL_GRADE_SCALE = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
+const GOAL_GRADE_SCALE_DESC = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
+const MAX_GOAL_SCENARIOS = 6;
+const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
+    ? GOAL_GRADE_SCALE_DESC
+    : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
 
 function normalizeSubjectName(name) {
+    // Unify subject labels coming from different DidUP payloads/UI variants
+    // (e.g. trailing asterisks, extra spaces, case differences) before grouping/filtering.
     return (name || '')
         .toString()
         .replace(/\*/g, '')
@@ -2947,7 +2953,7 @@ function getGoalProjection(media, goal, count) {
     const currentSum = safeCount * safeMedia;
     const gap = Math.max(0, safeGoal - safeMedia);
     const done = safeMedia >= safeGoal;
-    const grades = GOAL_GRADE_SCALE;
+    const grades = GOAL_GRADE_OPTIONS_DESC;
     const scenarios = [];
 
     if (!done && safeCount === 0) {
@@ -2968,7 +2974,7 @@ function getGoalProjection(media, goal, count) {
             if (Math.abs(denom) < 1e-9) continue;
             const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
             if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
-            if (scenarios.length === 6) break;
+            if (scenarios.length === MAX_GOAL_SCENARIOS) break;
         }
 
         if (scenarios.length === 0 && safeGoal > 0 && safeGoal <= 10) {

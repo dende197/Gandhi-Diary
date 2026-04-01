@@ -264,6 +264,8 @@ module.exports = async function handler(req, res) {
                 const url = oauth2.generateAuthUrl({
                     access_type: 'offline',
                     scope: SCOPES,
+                    // Space-separated prompts: force consent screen + account picker
+                    // to avoid cross-profile Google account reuse.
                     prompt: 'consent select_account',
                     state: signedState
                 });
@@ -379,8 +381,17 @@ module.exports = async function handler(req, res) {
                         const { access_token, profiles } = loginRes;
                         if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
 
-                        const profileIndex = Number(session.profileIndex ?? tokenRow.profile_index ?? 0);
-                        const targetProfile = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex) || profiles[profileIndex] || profiles[0];
+                        const rawProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
+                        const parsedProfileIndex = Number(rawProfileIndex);
+                        const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
+                        // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
+                        // or, in some responses, only by array position.
+                        const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
+                        const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
+                            ? profiles[profileIndex]
+                            : null;
+                        // Fallback order: explicit profile index field -> validated array index -> first available profile.
+                        const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
                         const authToken = targetProfile.token;
                         const subjectId = targetProfile.idSoggetto;
                         const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
