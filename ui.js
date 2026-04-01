@@ -2045,9 +2045,15 @@ function renderSubjectDetailView(subjectName) {
             const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
             const firstLabel = trendItems[0].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
             const lastLabel = trendItems[trendItems.length - 1].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-            const yTicks = [0, 6, 8, 10];
+            const yTicks = Array.from(new Set([
+                yMin,
+                Math.max(yMin, Math.min(yMax, PASSING_GRADE_THRESHOLD)),
+                Math.round((yMax * 0.8) * 10) / 10,
+                yMax
+            ])).sort((a, b) => a - b);
+            const chartPxHeight = 140;
             return `
-                        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:140px; display:block;">
+                        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:${chartPxHeight}px; display:block;">
                             <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
                             <line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
                             ${yTicks.map(t => {
@@ -2908,7 +2914,7 @@ function getGoalProjection(media, goal, count) {
             // 1e-9 acts as epsilon to avoid unstable huge projections when denom is numerically ~0.
             if (Math.abs(denom) < 1e-9) continue;
             const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
-            if (n >= 1 && n <= 9999) scenarios.push({ grade: g, n });
+            if (n >= 1 && n <= 500) scenarios.push({ grade: g, n });
             if (scenarios.length === 3) break;
         }
 
