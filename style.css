@@ -2549,9 +2549,9 @@
 
         /* ── GREETING ────────────────────────────────────── */
         .greeting-card {
-          background: linear-gradient(135deg, #E8EEF7 0%, #F5E8FD 48%, #E8FDF2 100%) !important;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
-          border: 1px solid #E0DDD8 !important;
+          background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%) !important;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+          border: none !important;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -2560,7 +2560,7 @@
         .greeting-period {
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
-          color: #6C6A66;
+          color: rgba(255, 255, 255, 0.7);
           letter-spacing: 0.08em;
           margin-bottom: 6px;
         }
@@ -2568,7 +2568,7 @@
         .greeting-text {
           font-size: 19px;
           font-weight: 700;
-          color: #1F2A44;
+          color: #ffffff;
           letter-spacing: -0.03em;
           line-height: 1.2;
           margin-bottom: 8px;
@@ -2576,7 +2576,7 @@
 
         .greeting-quote {
           font-size: 11px;
-          color: #6B6673;
+          color: rgba(255, 255, 255, 0.7);
           line-height: 1.5;
           font-style: italic;
         }
@@ -3705,13 +3705,13 @@
 
         /* ── 5. GREETING CARD ────────────────────────────────────────── */
         .greeting-card {
-          background: linear-gradient(135deg, #E8EEF7 0%, #F5E8FD 48%, #E8FDF2 100%) !important;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
-          border: 1px solid #E0DDD8 !important;
+          background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%) !important;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+          border: none !important;
         }
 
         .greeting-period {
-          color: #6C6A66 !important;
+          color: rgba(255, 255, 255, 0.7) !important;
           font-size: 10px !important;
           font-weight: 700 !important;
           letter-spacing: 0.05em !important;
@@ -3722,13 +3722,13 @@
         .greeting-text {
           font-size: 19px !important;
           font-weight: 700 !important;
-          color: #1F2A44 !important;
+          color: #ffffff !important;
           letter-spacing: -0.03em !important;
         }
 
         .greeting-quote {
           font-size: 13px !important;
-          color: #6B6673 !important;
+          color: rgba(255, 255, 255, 0.7) !important;
           font-style: italic !important;
         }
 
