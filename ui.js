@@ -47,6 +47,7 @@ window.setAgendaFilter = function (subject) {
     refreshAgenda();
 };
 const PASSING_GRADE_THRESHOLD = 6;
+const CHART_INTERMEDIATE_TICK_RATIO = 0.8;
 
 function getAgendaCacheKey() {
     try {
@@ -2045,15 +2046,18 @@ function renderSubjectDetailView(subjectName) {
             const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
             const firstLabel = trendItems[0].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
             const lastLabel = trendItems[trendItems.length - 1].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+            const clampedPassingThreshold = Math.max(yMin, Math.min(yMax, PASSING_GRADE_THRESHOLD));
             const yTicks = Array.from(new Set([
                 yMin,
-                Math.max(yMin, Math.min(yMax, PASSING_GRADE_THRESHOLD)),
-                Math.round((yMax * 0.8) * 10) / 10,
+                clampedPassingThreshold,
+                Math.round((yMax * CHART_INTERMEDIATE_TICK_RATIO) * 10) / 10,
                 yMax
-            ])).sort((a, b) => a - b);
+            ]))
+                .sort((a, b) => a - b)
+                .filter((tick, idx, arr) => idx === 0 || Math.abs(tick - arr[idx - 1]) >= 1);
             const chartPxHeight = 140;
             return `
-                        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:${chartPxHeight}px; display:block;">
+                        <svg role="img" aria-label="Grafico andamento voti con ${trendItems.length} valutazioni nel tempo" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:${chartPxHeight}px; display:block;">
                             <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
                             <line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
                             ${yTicks.map(t => {
@@ -2894,7 +2898,7 @@ function getGoalProjection(media, goal, count) {
     const currentSum = safeCount * safeMedia;
     const gap = Math.max(0, safeGoal - safeMedia);
     const done = safeMedia >= safeGoal;
-    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
+    const grades = Array.from(new Set([10, 9.5, 9, 8.5, 8, 7.5, 7, PASSING_GRADE_THRESHOLD]));
     const scenarios = [];
 
     if (!done && safeCount === 0) {
@@ -2909,12 +2913,12 @@ function getGoalProjection(media, goal, count) {
     } else if (!done) {
         for (const g of grades) {
             if (g <= safeGoal) continue;
-            const denom = (g - safeGoal);
+            const denom = g - safeGoal;
             // Guard against floating-point near-zero denominator (goal almost equal to grade bucket).
             // 1e-9 acts as epsilon to avoid unstable huge projections when denom is numerically ~0.
             if (Math.abs(denom) < 1e-9) continue;
             const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
-            if (n >= 1 && n <= 500) scenarios.push({ grade: g, n });
+            if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
             if (scenarios.length === 3) break;
         }
 
