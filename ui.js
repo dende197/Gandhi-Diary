@@ -378,7 +378,7 @@ window.syncGoogleCalendar = async function () {
         try {
             if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
         } catch (e) { console.warn('Decode storedPass failed'); }
-        const fullSession = { ...session, password };
+        const fullSession = { ...session, password, profileIndex: session.profileIndex ?? 0 };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
@@ -452,7 +452,8 @@ window.saveArgoToSupabase = async function () {
                 userId,
                 schoolCode: session.schoolCode,
                 username: session.userName || session.username,
-                password: password
+                password: password,
+                profileIndex: session.profileIndex ?? 0
             })
         });
         console.log('✅ Credenziali Argo salvate per sync background');

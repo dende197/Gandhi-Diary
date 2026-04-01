@@ -161,6 +161,7 @@ async function saveTokens(userId, tokens, argoCreds = null) {
         upsertData.argo_school_code = argoCreds.schoolCode;
         upsertData.argo_username = argoCreds.username;
         upsertData.argo_password = encryptArgoPassword(argoCreds.password);
+        upsertData.profile_index = argoCreds.profileIndex ?? 0;
     }
 
     const { error } = await getSupabase()
@@ -263,7 +264,7 @@ module.exports = async function handler(req, res) {
                 const url = oauth2.generateAuthUrl({
                     access_type: 'offline',
                     scope: SCOPES,
-                    prompt: 'consent',
+                    prompt: 'consent select_account',
                     state: signedState
                 });
 
@@ -377,9 +378,11 @@ module.exports = async function handler(req, res) {
                         const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
                         const { access_token, profiles } = loginRes;
                         if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
-                        
-                        const authToken = profiles[0].token;
-                        const subjectId = profiles[0].idSoggetto;
+
+                        const profileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
+                        const targetProfile = profiles.find(p => (p.index ?? p.profileIndex) == profileIndex) || profiles[profileIndex] || profiles[0];
+                        const authToken = targetProfile.token;
+                        const subjectId = targetProfile.idSoggetto;
                         const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
                         const dashboardData = await getDashboard(headers);
                         tasks = extractHomeworkFromDashboard(dashboardData);
@@ -451,7 +454,7 @@ module.exports = async function handler(req, res) {
 
             // ============= SAVE ARGO CREDENTIALS =============
             case 'save-argo': {
-                const { userId, schoolCode, username, password } = req.body || {};
+                const { userId, schoolCode, username, password, profileIndex } = req.body || {};
                 if (!userId || !schoolCode || !username || !password) {
                     return res.status(400).json({ success: false, error: 'Dati Argo mancanti' });
                 }
@@ -466,6 +469,7 @@ module.exports = async function handler(req, res) {
                         argo_school_code: schoolCode,
                         argo_username: username,
                         argo_password: encryptArgoPassword(password),
+                        profile_index: profileIndex ?? 0,
                         updated_at: new Date().toISOString()
                     })
                     .eq('user_id', normalizeUserId(userId));
