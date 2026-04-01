@@ -102,6 +102,7 @@ window.switchPlannerMode = function (mode) {
 };
 
 window.switchPlannerView = function (view) {
+    if (view !== 'calendar' && view !== 'list') return;
     if (state.uiMode === view) return;
     state.uiMode = view;
     localStorage.setItem('g_diary_planner_view', view);
