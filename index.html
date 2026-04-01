@@ -189,6 +189,13 @@
         };
         window.state = state;
 
+        // --- NAVIGATE (defined early so fluidity-engine can upgrade it to v3) ---
+        const _allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+        window.navigate = function navigate(v) {
+            if (!_allowedViews.includes(v)) v = 'home';
+            location.hash = v;
+        };
+
         // --- UTILS ---
         function parseArgoDate(dateStr) {
             if (!dateStr) return new Date(0);
@@ -467,6 +474,11 @@
             }
 
             state.booting = false;
+            // Cancel any render timer scheduled during sync (e.g. from performSync's scheduleRender)
+            // to avoid a double DOM write on first load.
+            clearTimeout(window._gRenderTimer);
+            if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');
                 if (loader) {
@@ -474,9 +486,7 @@
                     setTimeout(() => loader.remove(), 450);
                 }
                 
-                // FINAL BOOT RENDER:
-                // We always attempt a render here to ensure the UI is visible.
-                // If performSync finished before ui.js was ready, this is our safety net.
+                // FINAL BOOT RENDER — single, authoritative paint after boot.
                 if (window.render) {
                     window.render();
                 } else {
@@ -490,21 +500,33 @@
                     setTimeout(() => clearInterval(checkRender), 5000);
                 }
 
-            // Check Google connection status
-            if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
-                window.checkGoogleStatus().then(() => {
-                    // Se collegato, salviamo/aggiorniamo le credenziali Argo per il sync background
-                    if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
-                        window.saveArgoToSupabase();
-                    }
-                    // Re-render to show updated connection status
-                    if (window.render) window.render();
-                });
-            }
+                // Check Google connection status (async, fires a re-render only on state change)
+                if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
+                    window.checkGoogleStatus().then(() => {
+                        if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
+                            window.saveArgoToSupabase();
+                        }
+                        if (window.scheduleRender) window.scheduleRender();
+                    });
+                }
             }, 100);
 
+            // Handle hash-based navigation: update view when URL hash changes
+            // (covers both the simple navigate fallback and browser back/forward)
+            function _handleNavFromHash() {
+                if (!state.isLoggedIn) return;
+                const v = (location.hash || '#home').replace('#', '').split('?')[0].trim() || 'home';
+                const newView = _allowedViews.includes(v) ? v : 'home';
+                if (state.view !== newView) {
+                    state.view = newView;
+                    window.scrollTo({ top: 0, behavior: 'auto' });
+                    if (window.scheduleRender) window.scheduleRender(0);
+                }
+            }
+            window.addEventListener('hashchange', _handleNavFromHash);
+            window.addEventListener('popstate', _handleNavFromHash);
+
         // Global APIs
-        window.navigate = (v) => { location.hash = v; };
         window.saveTasks = () => {
             localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));

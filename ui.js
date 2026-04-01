@@ -1058,13 +1058,13 @@ function renderHome() {
 
       <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
       <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
-        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:linear-gradient(135deg, #E8EEF7 0%, #F5E8FD 48%, #E8FDF2 100%); border:1px solid #E0DDD8; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.06); position:relative;">
-          <button onclick="event.stopPropagation(); if(confirm('Aggiornare la pagina ora?')) window.location.reload();" title="Aggiorna pagina" aria-label="Aggiorna pagina" style="position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:9px; border:1px solid rgba(20,20,20,0.12); background:rgba(255,255,255,0.75); color:#2A3F6A; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border:none; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.15); position:relative;">
+          <button onclick="event.stopPropagation(); if(confirm('Aggiornare la pagina ora?')) window.location.reload();" title="Aggiorna pagina" aria-label="Aggiorna pagina" style="position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:9px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; cursor:pointer;">
             <i class="ph-bold ph-arrow-clockwise" style="font-size:14px;"></i>
           </button>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C6A66; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
-          <div style="font-size:19px; font-weight:700; color:#1F2A44; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
-          <div style="font-size:14px; color:#6B6673; font-style:italic; line-height:1.6; margin-top:8px;">&ldquo;${quote}&rdquo;</div>
+          <div class="greeting-period" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.7); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
+          <div class="greeting-text" style="font-size:19px; font-weight:700; color:#ffffff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
+          <div class="greeting-quote" style="font-size:14px; color:rgba(255,255,255,0.7); font-style:italic; line-height:1.6; margin-top:8px;">&ldquo;${quote}&rdquo;</div>
         </div>
  
         <div id="widget-verifiche" class="card verifica-card" onclick="mostraVerificheModal()" style="cursor:pointer; border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative; height: 154px; overflow: hidden;">
