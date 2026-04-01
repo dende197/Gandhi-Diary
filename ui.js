@@ -50,9 +50,16 @@ window.setAgendaFilter = function (subject) {
 window.refreshAgenda = function () {
     const list = document.getElementById('weekly-agenda-list');
     if (list) {
-        list.innerHTML = renderWeeklyAgenda();
+        const temp = document.createElement('div');
+        temp.innerHTML = renderWeeklyAgenda();
+        const newList = temp.firstElementChild;
+        if (newList) {
+            list.parentNode.replaceChild(newList, list);
+        } else {
+            list.innerHTML = '';
+        }
         // Focus back on search input if it existed to maintain typing flow
-        const searchInput = list.querySelector('.agenda-search-input');
+        const searchInput = document.getElementById('weekly-agenda-list')?.querySelector('.agenda-search-input');
         if (searchInput) {
             searchInput.focus();
             const val = searchInput.value;
@@ -78,8 +85,15 @@ window.switchPlannerMode = function (mode) {
         gsap.to(list, {
             opacity: 0, y: 4, duration: 0.12, ease: 'power2.in',
             onComplete: () => {
-                list.innerHTML = renderWeeklyAgenda();
-                gsap.fromTo(list, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' });
+                const temp = document.createElement('div');
+                temp.innerHTML = renderWeeklyAgenda();
+                const newList = temp.firstElementChild;
+                if (newList) {
+                    list.parentNode.replaceChild(newList, list);
+                    gsap.fromTo(newList, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' });
+                } else {
+                    gsap.fromTo(list, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' });
+                }
             }
         });
     } else {
@@ -88,9 +102,30 @@ window.switchPlannerMode = function (mode) {
 };
 
 window.switchPlannerView = function (view) {
+    if (view !== 'calendar' && view !== 'list') return;
+    if (state.uiMode === view) return;
     state.uiMode = view;
     localStorage.setItem('g_diary_planner_view', view);
-    scheduleRender(0);
+    const content = document.getElementById('planner-main-content');
+    if (content && typeof gsap !== 'undefined') {
+        gsap.to(content, {
+            opacity: 0, y: 6, scale: 0.99, duration: 0.15, ease: 'power2.in',
+            onComplete: () => {
+                scheduleRender(0);
+                requestAnimationFrame(() => {
+                    const newContent = document.getElementById('planner-main-content');
+                    if (newContent) {
+                        gsap.fromTo(newContent,
+                            { opacity: 0, y: 10, scale: 0.99 },
+                            { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power2.out', clearProps: 'transform,opacity' }
+                        );
+                    }
+                });
+            }
+        });
+    } else {
+        scheduleRender(0);
+    }
 };
 
 window.navigateSubject = function (subjName) {
@@ -2499,7 +2534,12 @@ function renderWeeklyAgenda() {
         if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
         grouped[t.displayDate].push(t);
     });
-    const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b).getTime() - parseArgoDate(a).getTime());
+    const sortedDates = Object.keys(grouped).sort((a, b) => {
+        if (sortOrder === 'assignment_asc') {
+            return parseArgoDate(a).getTime() - parseArgoDate(b).getTime();
+        }
+        return parseArgoDate(b).getTime() - parseArgoDate(a).getTime();
+    });
 
     return `
         <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">

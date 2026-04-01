@@ -2549,8 +2549,9 @@
 
         /* ── GREETING ────────────────────────────────────── */
         .greeting-card {
-          background: #141414 !important;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.13) !important;
+          background: linear-gradient(135deg, #E8EEF7 0%, #F5E8FD 48%, #E8FDF2 100%) !important;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+          border: 1px solid #E0DDD8 !important;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -2559,7 +2560,7 @@
         .greeting-period {
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
-          color: #444;
+          color: #6C6A66;
           letter-spacing: 0.08em;
           margin-bottom: 6px;
         }
@@ -2567,7 +2568,7 @@
         .greeting-text {
           font-size: 19px;
           font-weight: 700;
-          color: #fff;
+          color: #1F2A44;
           letter-spacing: -0.03em;
           line-height: 1.2;
           margin-bottom: 8px;
@@ -2575,7 +2576,7 @@
 
         .greeting-quote {
           font-size: 11px;
-          color: #555;
+          color: #6B6673;
           line-height: 1.5;
           font-style: italic;
         }
@@ -2762,7 +2763,7 @@
         .circ-new {
           display: inline-flex;
           margin-top: 12px;
-          background: #141414;
+          background: linear-gradient(135deg, #C4B5FD 0%, #A5B4FC 100%);
           color: #fff;
           font-family: 'JetBrains Mono', monospace;
           font-size: 9px;
@@ -3704,29 +3705,30 @@
 
         /* ── 5. GREETING CARD ────────────────────────────────────────── */
         .greeting-card {
-          background: #121214 !important;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.13) !important;
+          background: linear-gradient(135deg, #E8EEF7 0%, #F5E8FD 48%, #E8FDF2 100%) !important;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+          border: 1px solid #E0DDD8 !important;
         }
 
         .greeting-period {
-          color: rgba(255, 255, 255, 0.35) !important;
+          color: #6C6A66 !important;
           font-size: 10px !important;
-          font-weight: 600 !important;
-          letter-spacing: 0.12em !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.05em !important;
           text-transform: uppercase !important;
           font-family: 'JetBrains Mono', monospace !important;
         }
 
         .greeting-text {
-          font-size: 26px !important;
+          font-size: 19px !important;
           font-weight: 700 !important;
-          color: #ffffff !important;
+          color: #1F2A44 !important;
           letter-spacing: -0.03em !important;
         }
 
         .greeting-quote {
           font-size: 13px !important;
-          color: rgba(255, 255, 255, 0.35) !important;
+          color: #6B6673 !important;
           font-style: italic !important;
         }
 
@@ -3884,7 +3886,7 @@
         }
 
         .circ-new {
-          background: #141414 !important;
+          background: linear-gradient(135deg, #C4B5FD 0%, #A5B4FC 100%) !important;
           color: #ffffff !important;
           font-family: 'JetBrains Mono', monospace !important;
           font-size: 9px !important;

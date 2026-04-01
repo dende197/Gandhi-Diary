@@ -453,12 +453,19 @@
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                 } catch(e) {}
                 
-                state.view = (location.hash || '#home').replace('#','');
+                state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
                 await Promise.all([performSync(session), loadCircolari()]);
             } else {
                 state.view = 'login';
             }
             
+            // Handle Google OAuth callback (must run BEFORE initial render so state is correct)
+            if (window.location.hash.includes('google=success')) {
+                state.googleConnected = true;
+                history.replaceState(null, '', '/#profile');
+                setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
+            }
+
             state.booting = false;
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');
@@ -482,14 +489,6 @@
                     }, 50);
                     setTimeout(() => clearInterval(checkRender), 5000);
                 }
-            }, 100);
-
-            // Handle Google OAuth callback
-            if (window.location.hash.includes('google=success')) {
-                state.googleConnected = true;
-                setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
-                history.replaceState(null, '', '/#profile');
-            }
 
             // Check Google connection status
             if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
@@ -498,9 +497,11 @@
                     if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
                         window.saveArgoToSupabase();
                     }
+                    // Re-render to show updated connection status
+                    if (window.render) window.render();
                 });
             }
-        });
+            }, 100);
 
         // Global APIs
         window.navigate = (v) => { location.hash = v; };
