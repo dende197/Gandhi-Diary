@@ -405,6 +405,9 @@
                     state.lastSync = new Date().toLocaleTimeString();
                     state.didup.connected = true;
                     state.isOffline = false;
+                    if (typeof window.warmWeeklyAgendaCache === 'function') {
+                        setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
+                    }
 
                     // Show unjustified absence popup
                     if (data.assenzeData && data.assenzeData.daGiustificare > 0) {
@@ -467,6 +470,9 @@
                 
                 state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
                 await Promise.all([performSync(session), loadCircolari()]);
+                if (typeof window.warmWeeklyAgendaCache === 'function') {
+                    setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
+                }
             } else {
                 state.view = 'login';
             }

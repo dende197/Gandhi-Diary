@@ -1193,8 +1193,21 @@
           border-left: 4px solid var(--accent);
         }
 
+        .grade-subject-widget {
+          min-height: 92px;
+          height: 92px;
+          background: var(--bg-card);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-sizing: border-box;
+        }
+
         .subject-summary-card:hover {
           transform: translateY(-2px);
+          background: var(--bg-card-hover);
+        }
+
+        .grade-subject-widget:hover {
+          border-color: rgba(0, 0, 0, 0.12);
           background: var(--bg-card-hover);
         }
 

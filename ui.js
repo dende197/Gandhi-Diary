@@ -76,10 +76,28 @@ function saveWeeklyAgendaCache(html) {
     } catch (_) {}
 }
 
-window.warmWeeklyAgendaCache = function () {
-    if (state.uiMode !== 'calendar') return;
-    const html = renderWeeklyAgenda();
-    if (html) saveWeeklyAgendaCache(html);
+/**
+ * Pre-computa e salva la lista agenda in cache.
+ * @param {boolean} force - Se true, esegue il warmup anche fuori dalla vista calendar (es. login/sync).
+ */
+window.warmWeeklyAgendaCache = function (force = false) {
+    if (!force && state.uiMode !== 'calendar') return;
+    const snapshot = {
+        agendaSortOrder: state.agendaSortOrder,
+        agendaSearchSubject: state.agendaSearchSubject,
+        agendaSearchQuery: state.agendaSearchQuery
+    };
+    try {
+        state.agendaSearchQuery = '';
+        state.agendaSearchSubject = 'all';
+        state.agendaSortOrder = 'due_desc';
+        const baseHtml = renderWeeklyAgenda();
+        if (baseHtml) saveWeeklyAgendaCache(baseHtml);
+    } finally {
+        state.agendaSortOrder = snapshot.agendaSortOrder;
+        state.agendaSearchSubject = snapshot.agendaSearchSubject;
+        state.agendaSearchQuery = snapshot.agendaSearchQuery;
+    }
 };
 
 window.refreshAgenda = function () {
@@ -92,6 +110,7 @@ window.refreshAgenda = function () {
         const newList = temp.firstElementChild;
         if (newList) {
             list.parentNode.replaceChild(newList, list);
+            if (typeof animatePlannerSurface === 'function') animatePlannerSurface('list');
         } else {
             list.innerHTML = '';
         }
@@ -107,6 +126,52 @@ window.refreshAgenda = function () {
         scheduleRender(0);
     }
 };
+
+function refreshPlannerSwitchButtons() {
+    const buttons = Array.from(document.querySelectorAll('.view-switch .switch-btn'));
+    buttons.forEach((btn) => {
+        const targetView = btn.dataset.plannerView;
+        const isActive = targetView === state.uiMode;
+        btn.classList.toggle('active', isActive);
+        btn.style.background = isActive ? '#141414' : 'transparent';
+        btn.style.color = isActive ? 'white' : 'var(--text-secondary)';
+    });
+}
+
+function animatePlannerSurface(view) {
+    if (typeof gsap === 'undefined') return;
+    if (view === 'calendar') {
+        const days = document.querySelectorAll('.calendar-day');
+        const badges = document.querySelectorAll('.event-badge');
+        gsap.fromTo(days, { opacity: 0, y: 12, scale: 0.985 }, {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.28,
+            ease: 'power2.out',
+            stagger: { each: 0.015, from: 'start' },
+            clearProps: 'transform,opacity'
+        });
+        gsap.fromTo(badges, { opacity: 0, x: -4 }, {
+            opacity: 1,
+            x: 0,
+            duration: 0.22,
+            ease: 'power1.out',
+            stagger: 0.01,
+            clearProps: 'transform,opacity'
+        });
+        return;
+    }
+    const listCards = document.querySelectorAll('#weekly-agenda-list .card');
+    gsap.fromTo(listCards, { opacity: 0, y: 10 }, {
+        opacity: 1,
+        y: 0,
+        duration: 0.26,
+        ease: 'power2.out',
+        stagger: 0.02,
+        clearProps: 'transform,opacity'
+    });
+}
 
 // --- UI TRANSITION HELPERS (Added by Phase 25 Mega Patch) ---
 window.switchPlannerMode = function (mode) {
@@ -144,28 +209,52 @@ window.switchPlannerView = function (view) {
     state.uiMode = view;
     localStorage.setItem('g_diary_planner_view', view);
     const content = document.getElementById('planner-main-content');
-    if (view === 'calendar' && typeof window.warmWeeklyAgendaCache === 'function') {
-        window.warmWeeklyAgendaCache();
-    }
+    const canPatchInPlace = state.view === 'planner' && content;
+    const runSwap = () => {
+        if (!canPatchInPlace) {
+            scheduleRender(0);
+            return;
+        }
+        if (view === 'calendar') {
+            if (typeof window.warmWeeklyAgendaCache === 'function') window.warmWeeklyAgendaCache(true);
+            content.innerHTML = '<div id="calendar"></div>';
+            renderCustomCalendar();
+            animatePlannerSurface('calendar');
+        } else {
+            const cachedAgenda = getCachedWeeklyAgendaHtml();
+            const listHtml = cachedAgenda || renderWeeklyAgenda();
+            if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
+            content.innerHTML = listHtml;
+            animatePlannerSurface('list');
+        }
+        refreshPlannerSwitchButtons();
+    };
+
     if (content && typeof gsap !== 'undefined') {
         gsap.to(content, {
-            opacity: 0, y: 4, scale: 0.995, duration: 0.08, ease: 'power2.in',
+            opacity: 0,
+            y: 4,
+            scale: 0.995,
+            duration: 0.1,
+            ease: 'power2.in',
             onComplete: () => {
-                scheduleRender(0);
-                requestAnimationFrame(() => {
-                    const newContent = document.getElementById('planner-main-content');
-                    if (newContent) {
-                        gsap.fromTo(newContent,
-                            { opacity: 0, y: 6, scale: 0.995 },
-                            { opacity: 1, y: 0, scale: 1, duration: 0.14, ease: 'power2.out', clearProps: 'transform,opacity' }
-                        );
-                    }
-                });
+                runSwap();
+                const newContent = document.getElementById('planner-main-content');
+                if (newContent) {
+                    gsap.fromTo(newContent, { opacity: 0, y: 6, scale: 0.995 }, {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        duration: 0.16,
+                        ease: 'power2.out',
+                        clearProps: 'transform,opacity'
+                    });
+                }
             }
         });
-    } else {
-        scheduleRender(0);
+        return;
     }
+    runSwap();
 };
 
 window.navigateSubject = function (subjName) {
@@ -182,6 +271,22 @@ window.navigateSubject = function (subjName) {
         state.activeSubject = subjName;
         scheduleRender(0);
     }
+};
+
+window.handleGradeSubjectClick = function (subjectName) {
+    state.view = 'voti';
+    window.navigateSubject(subjectName);
+    if (typeof closeModal === 'function') closeModal();
+};
+
+window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
+    let subjectName = '';
+    try {
+        subjectName = decodeURIComponent(encodedSubjectName || '');
+    } catch (_) {
+        subjectName = encodedSubjectName || '';
+    }
+    window.handleGradeSubjectClick(subjectName);
 };
 
 window.closeSubject = function () {
@@ -862,6 +967,7 @@ function renderCustomCalendar() {
     // Build 7-day task list below calendar (Mon-Sun of displayed first week)
     const listHtml = renderCalendarWeekList(startDate);
     calendarEl.innerHTML = html + listHtml;
+    if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
 }
 
 function renderCalendarWeekList(weekStart) {
@@ -1239,8 +1345,8 @@ function renderPlanner() {
                     </div>
 
                     <div class="view-switch" style="background: rgba(0,0,0,0.06); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
-                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
-                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
+                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" data-planner-view="calendar" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
+                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" data-planner-view="list" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
                     </div>
                     <button onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
                         <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Verifica
@@ -1469,8 +1575,9 @@ function renderGradesView() {
             const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
             const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
 
+            const encodedSubjectArg = encodeURIComponent(s.name || '');
             return `
-                    <div class="card" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="navigateSubject(${JSON.stringify(s.name)})" >
+                    <div class="card grade-subject-widget" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
                         <div style="width: 44px; height: 44px; border-radius: 12px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 12px; flex-shrink: 0;">
                             ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
@@ -2001,6 +2108,9 @@ function mostraAssenzeModal() {
                         <div style="font-size:20px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
                     </div>
                 </div>
+                <div style="margin:-10px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
+                    ${ad.daGiustificare > 0 ? `Da giustificare: ${ad.daGiustificare}` : 'Tutti gli eventi risultano giustificati'}
+                </div>
 
                 <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">Cronologia Eventi</div>
                 
@@ -2018,6 +2128,11 @@ function mostraAssenzeModal() {
                                 </div>
                                 <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
                                     ${a.tipo.charAt(0).toUpperCase() + a.tipo.slice(1)}${a.nota ? ` • ${a.nota}` : ''}
+                                </div>
+                                <div style="margin-top:5px;">
+                                    <span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; background:${a.giustificata ? 'rgba(40,205,65,0.14)' : 'rgba(239,68,68,0.14)'}; color:${a.giustificata ? '#15803D' : '#B91C1C'}; border:1px solid ${a.giustificata ? 'rgba(40,205,65,0.35)' : 'rgba(239,68,68,0.35)'};">
+                                        ${a.giustificata ? 'Giustificata' : 'Da giustificare'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -2793,14 +2908,15 @@ function renderVoti() {
         const subjBg = `var(--${key}, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'rgba(40,205,65,0.12)' : 'rgba(255,59,48,0.12)')})`;
         const subjText = `var(--${key}-t, ${giu ? '#908C86' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
         const subjDot = `var(--${key}-dot, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
+        const encodedMat = encodeURIComponent(mat || '');
         return `
-                        <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
+                        <div class="card" onclick="handleGradeSubjectClickFromEncoded('${encodedMat}')" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${subjBg}; border:1px solid ${subjDot}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${subjText};">${displayVal}</div>
                             <div style="flex:1; text-align:left;">
-                                <div style="font-weight:700; font-size:16px; color:white;">${mat}</div>
+                                <div style="font-weight:700; font-size:16px; color:var(--text-primary);">${mat}</div>
                                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
-                           </div>
-                       </div>`;
+                            </div>
+                        </div>`;
     }).join('')}
                </div>
            </div> `;
