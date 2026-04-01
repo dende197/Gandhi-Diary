@@ -76,10 +76,26 @@ function saveWeeklyAgendaCache(html) {
     } catch (_) {}
 }
 
-window.warmWeeklyAgendaCache = function () {
-    if (state.uiMode !== 'calendar') return;
-    const html = renderWeeklyAgenda();
-    if (html) saveWeeklyAgendaCache(html);
+window.warmWeeklyAgendaCache = function (force = false) {
+    if (!force && state.uiMode !== 'calendar') return;
+    const snapshot = {
+        plannerMode: state.plannerMode,
+        agendaSortOrder: state.agendaSortOrder,
+        agendaSearchSubject: state.agendaSearchSubject,
+        agendaSearchQuery: state.agendaSearchQuery
+    };
+    try {
+        state.agendaSearchQuery = '';
+        state.agendaSearchSubject = 'all';
+        state.agendaSortOrder = 'due_desc';
+        const baseHtml = renderWeeklyAgenda();
+        if (baseHtml) saveWeeklyAgendaCache(baseHtml);
+    } finally {
+        state.plannerMode = snapshot.plannerMode;
+        state.agendaSortOrder = snapshot.agendaSortOrder;
+        state.agendaSearchSubject = snapshot.agendaSearchSubject;
+        state.agendaSearchQuery = snapshot.agendaSearchQuery;
+    }
 };
 
 window.refreshAgenda = function () {
@@ -92,6 +108,7 @@ window.refreshAgenda = function () {
         const newList = temp.firstElementChild;
         if (newList) {
             list.parentNode.replaceChild(newList, list);
+            if (typeof animatePlannerSurface === 'function') animatePlannerSurface('list');
         } else {
             list.innerHTML = '';
         }
@@ -107,6 +124,52 @@ window.refreshAgenda = function () {
         scheduleRender(0);
     }
 };
+
+function refreshPlannerSwitchButtons() {
+    const buttons = Array.from(document.querySelectorAll('.view-switch .switch-btn'));
+    buttons.forEach((btn) => {
+        const isCalendarBtn = /calendar/i.test(btn.textContent || '');
+        const isActive = (isCalendarBtn && state.uiMode === 'calendar') || (!isCalendarBtn && state.uiMode === 'list');
+        btn.classList.toggle('active', isActive);
+        btn.style.background = isActive ? '#141414' : 'transparent';
+        btn.style.color = isActive ? 'white' : 'var(--text-secondary)';
+    });
+}
+
+function animatePlannerSurface(view) {
+    if (typeof gsap === 'undefined') return;
+    if (view === 'calendar') {
+        const days = document.querySelectorAll('.calendar-day');
+        const badges = document.querySelectorAll('.event-badge');
+        gsap.fromTo(days, { opacity: 0, y: 12, scale: 0.985 }, {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.28,
+            ease: 'power2.out',
+            stagger: { each: 0.015, from: 'start' },
+            clearProps: 'transform,opacity'
+        });
+        gsap.fromTo(badges, { opacity: 0, x: -4 }, {
+            opacity: 1,
+            x: 0,
+            duration: 0.22,
+            ease: 'power1.out',
+            stagger: 0.01,
+            clearProps: 'transform,opacity'
+        });
+        return;
+    }
+    const listCards = document.querySelectorAll('#weekly-agenda-list .card');
+    gsap.fromTo(listCards, { opacity: 0, y: 10 }, {
+        opacity: 1,
+        y: 0,
+        duration: 0.26,
+        ease: 'power2.out',
+        stagger: 0.02,
+        clearProps: 'transform,opacity'
+    });
+}
 
 // --- UI TRANSITION HELPERS (Added by Phase 25 Mega Patch) ---
 window.switchPlannerMode = function (mode) {
@@ -144,28 +207,52 @@ window.switchPlannerView = function (view) {
     state.uiMode = view;
     localStorage.setItem('g_diary_planner_view', view);
     const content = document.getElementById('planner-main-content');
-    if (view === 'calendar' && typeof window.warmWeeklyAgendaCache === 'function') {
-        window.warmWeeklyAgendaCache();
-    }
+    const canPatchInPlace = state.view === 'planner' && content;
+    const runSwap = () => {
+        if (!canPatchInPlace) {
+            scheduleRender(0);
+            return;
+        }
+        if (view === 'calendar') {
+            if (typeof window.warmWeeklyAgendaCache === 'function') window.warmWeeklyAgendaCache(true);
+            content.innerHTML = '<div id="calendar"></div>';
+            renderCustomCalendar();
+            animatePlannerSurface('calendar');
+        } else {
+            const cachedAgenda = getCachedWeeklyAgendaHtml();
+            const listHtml = cachedAgenda || renderWeeklyAgenda();
+            if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
+            content.innerHTML = listHtml;
+            animatePlannerSurface('list');
+        }
+        refreshPlannerSwitchButtons();
+    };
+
     if (content && typeof gsap !== 'undefined') {
         gsap.to(content, {
-            opacity: 0, y: 4, scale: 0.995, duration: 0.08, ease: 'power2.in',
+            opacity: 0,
+            y: 4,
+            scale: 0.995,
+            duration: 0.1,
+            ease: 'power2.in',
             onComplete: () => {
-                scheduleRender(0);
-                requestAnimationFrame(() => {
-                    const newContent = document.getElementById('planner-main-content');
-                    if (newContent) {
-                        gsap.fromTo(newContent,
-                            { opacity: 0, y: 6, scale: 0.995 },
-                            { opacity: 1, y: 0, scale: 1, duration: 0.14, ease: 'power2.out', clearProps: 'transform,opacity' }
-                        );
-                    }
-                });
+                runSwap();
+                const newContent = document.getElementById('planner-main-content');
+                if (newContent) {
+                    gsap.fromTo(newContent, { opacity: 0, y: 6, scale: 0.995 }, {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        duration: 0.16,
+                        ease: 'power2.out',
+                        clearProps: 'transform,opacity'
+                    });
+                }
             }
         });
-    } else {
-        scheduleRender(0);
+        return;
     }
+    runSwap();
 };
 
 window.navigateSubject = function (subjName) {
@@ -862,6 +949,7 @@ function renderCustomCalendar() {
     // Build 7-day task list below calendar (Mon-Sun of displayed first week)
     const listHtml = renderCalendarWeekList(startDate);
     calendarEl.innerHTML = html + listHtml;
+    if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
 }
 
 function renderCalendarWeekList(weekStart) {
@@ -1469,8 +1557,9 @@ function renderGradesView() {
             const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
             const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
 
+            const safeSubjectArg = (s.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             return `
-                    <div class="card" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="navigateSubject(${JSON.stringify(s.name)})" >
+                    <div class="card grade-subject-widget" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="navigateSubject('${safeSubjectArg}')" >
                         <div style="width: 44px; height: 44px; border-radius: 12px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 12px; flex-shrink: 0;">
                             ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
@@ -2801,14 +2890,15 @@ function renderVoti() {
         const subjBg = `var(--${key}, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'rgba(40,205,65,0.12)' : 'rgba(255,59,48,0.12)')})`;
         const subjText = `var(--${key}-t, ${giu ? '#908C86' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
         const subjDot = `var(--${key}-dot, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
+        const safeMat = (mat || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `
-                        <div class="card" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0;">
+                        <div class="card" onclick="navigateSubject('${safeMat}'); state.view='voti'; closeModal(); scheduleRender(0);" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${subjBg}; border:1px solid ${subjDot}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${subjText};">${displayVal}</div>
                             <div style="flex:1; text-align:left;">
-                                <div style="font-weight:700; font-size:16px; color:white;">${mat}</div>
+                                <div style="font-weight:700; font-size:16px; color:var(--text-primary);">${mat}</div>
                                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
-                           </div>
-                       </div>`;
+                            </div>
+                        </div>`;
     }).join('')}
                </div>
            </div> `;
