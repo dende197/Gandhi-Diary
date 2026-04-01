@@ -6,8 +6,8 @@
 
 const crypto = require('crypto');
 const { google } = require('googleapis');
-const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
-const { syncTasksToCalendar } = require('../lib/googleCalendar');
+const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard } = require('../lib/argo');
+const { syncTasksToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
 const { createHeaders, decryptArgoPassword } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
@@ -59,6 +59,16 @@ function parseStoredSchedule(scheduleRaw, userId) {
     }
 }
 
+function getRomeHour(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Rome',
+        hour: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(date);
+    const hourPart = parts.find(p => p.type === 'hour')?.value || '0';
+    return Number(hourPart);
+}
+
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -88,6 +98,10 @@ module.exports = async function handler(req, res) {
     console.log('[Cron] Starting Universal Sync...');
     const startTime = Date.now();
     const results = { total: 0, processed: 0, success: 0, failed: 0, users: [] };
+    const romeHour = getRomeHour(new Date());
+    const forceAttendanceCheck = (req.query?.forceAttendanceCheck === '1' || req.query?.forceAttendanceCheck === 'true');
+    const simulateUnjustified = (req.query?.simulateUnjustified === '1' || req.query?.simulateUnjustified === 'true');
+    const shouldCheckAttendance = forceAttendanceCheck || romeHour === 13;
 
     try {
         // 1. Fetch all users with Argo credentials
@@ -123,21 +137,53 @@ module.exports = async function handler(req, res) {
                 // 3. Fetch Tasks
                 const dashboardData = await getDashboard(headers);
                 const tasks = extractHomeworkFromDashboard(dashboardData);
+                let assenzeData = shouldCheckAttendance ? extractAssenzeFromDashboard(dashboardData) : null;
+                if (shouldCheckAttendance && simulateUnjustified && (assenzeData?.daGiustificare || 0) === 0) {
+                    assenzeData = {
+                        ...(assenzeData || {}),
+                        assenze: [
+                            ...(assenzeData?.assenze || []),
+                            {
+                                id: 'simulated-unjustified-absence',
+                                data: new Date().toISOString().split('T')[0],
+                                tipo: 'assenza',
+                                giustificata: false,
+                                daGiustificare: true,
+                                nota: 'SIMULAZIONE TEST PROMEMORIA'
+                            }
+                        ],
+                        daGiustificare: 1
+                    };
+                }
                 
+                const auth = buildAuthenticatedOAuth2Client(user);
+                const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
+                let taskSync = { success: true, added: 0, skipped: 0, errors: [] };
                 if (tasks.length > 0) {
                     // 4. Sync to Google Calendar (use per-user class schedule if stored)
-                    const auth = buildAuthenticatedOAuth2Client(user);
-                    const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
-                    const syncRes = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
-                    if (syncRes.success) {
-                        results.success++;
-                        results.users.push({ id: user.user_id, added: syncRes.added, skipped: syncRes.skipped });
-                    } else {
-                        throw new Error(syncRes.errors.join(', '));
-                    }
-                } else {
-                    results.success++; // Nothing to sync is a success
+                    taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
+                    if (!taskSync.success) throw new Error(taskSync.errors.join(', '));
                 }
+
+                let attendanceSync = null;
+                if (shouldCheckAttendance) {
+                    attendanceSync = await syncUnjustifiedAttendanceReminders(
+                        assenzeData,
+                        user.calendar_id || 'primary',
+                        auth
+                    );
+                    if (!attendanceSync.success) throw new Error(attendanceSync.errors.join(', '));
+                }
+
+                results.success++;
+                results.users.push({
+                    id: user.user_id,
+                    added: taskSync.added || 0,
+                    skipped: taskSync.skipped || 0,
+                    attendancePending: attendanceSync?.pending || 0,
+                    remindersScheduled: attendanceSync?.scheduled || 0,
+                    remindersUpdated: attendanceSync?.updated || 0
+                });
 
             } catch (err) {
                 console.error(`[Cron] Failed for ${user.user_id}:`, err.message);
@@ -153,6 +199,9 @@ module.exports = async function handler(req, res) {
         return res.status(hasFailures ? 500 : 200).json({
             success: !hasFailures,
             duration: `${duration}s`,
+            shouldCheckAttendance,
+            romeHour,
+            simulateUnjustified,
             results
         });
 

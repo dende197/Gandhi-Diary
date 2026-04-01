@@ -2001,6 +2001,9 @@ function mostraAssenzeModal() {
                         <div style="font-size:20px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
                     </div>
                 </div>
+                <div style="margin:-10px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
+                    ${ad.daGiustificare > 0 ? `Da giustificare: ${ad.daGiustificare}` : 'Tutti gli eventi risultano giustificati'}
+                </div>
 
                 <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">Cronologia Eventi</div>
                 
@@ -2018,6 +2021,11 @@ function mostraAssenzeModal() {
                                 </div>
                                 <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
                                     ${a.tipo.charAt(0).toUpperCase() + a.tipo.slice(1)}${a.nota ? ` • ${a.nota}` : ''}
+                                </div>
+                                <div style="margin-top:5px;">
+                                    <span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; background:${a.giustificata ? 'rgba(40,205,65,0.14)' : 'rgba(239,68,68,0.14)'}; color:${a.giustificata ? '#15803D' : '#B91C1C'}; border:1px solid ${a.giustificata ? 'rgba(40,205,65,0.35)' : 'rgba(239,68,68,0.35)'};">
+                                        ${a.giustificata ? 'Giustificata' : 'Da giustificare'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
