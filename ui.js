@@ -76,10 +76,13 @@ function saveWeeklyAgendaCache(html) {
     } catch (_) {}
 }
 
+/**
+ * Pre-computa e salva la lista agenda in cache.
+ * @param {boolean} force - Se true, esegue il warmup anche fuori dalla vista calendar (es. login/sync).
+ */
 window.warmWeeklyAgendaCache = function (force = false) {
     if (!force && state.uiMode !== 'calendar') return;
     const snapshot = {
-        plannerMode: state.plannerMode,
         agendaSortOrder: state.agendaSortOrder,
         agendaSearchSubject: state.agendaSearchSubject,
         agendaSearchQuery: state.agendaSearchQuery
@@ -91,7 +94,6 @@ window.warmWeeklyAgendaCache = function (force = false) {
         const baseHtml = renderWeeklyAgenda();
         if (baseHtml) saveWeeklyAgendaCache(baseHtml);
     } finally {
-        state.plannerMode = snapshot.plannerMode;
         state.agendaSortOrder = snapshot.agendaSortOrder;
         state.agendaSearchSubject = snapshot.agendaSearchSubject;
         state.agendaSearchQuery = snapshot.agendaSearchQuery;
@@ -128,8 +130,8 @@ window.refreshAgenda = function () {
 function refreshPlannerSwitchButtons() {
     const buttons = Array.from(document.querySelectorAll('.view-switch .switch-btn'));
     buttons.forEach((btn) => {
-        const isCalendarBtn = /calendar/i.test(btn.textContent || '');
-        const isActive = (isCalendarBtn && state.uiMode === 'calendar') || (!isCalendarBtn && state.uiMode === 'list');
+        const targetView = btn.dataset.plannerView;
+        const isActive = targetView === state.uiMode;
         btn.classList.toggle('active', isActive);
         btn.style.background = isActive ? '#141414' : 'transparent';
         btn.style.color = isActive ? 'white' : 'var(--text-secondary)';
@@ -269,6 +271,22 @@ window.navigateSubject = function (subjName) {
         state.activeSubject = subjName;
         scheduleRender(0);
     }
+};
+
+window.handleGradeSubjectClick = function (subjectName) {
+    state.view = 'voti';
+    window.navigateSubject(subjectName);
+    if (typeof closeModal === 'function') closeModal();
+};
+
+window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
+    let subjectName = '';
+    try {
+        subjectName = decodeURIComponent(encodedSubjectName || '');
+    } catch (_) {
+        subjectName = encodedSubjectName || '';
+    }
+    window.handleGradeSubjectClick(subjectName);
 };
 
 window.closeSubject = function () {
@@ -1327,8 +1345,8 @@ function renderPlanner() {
                     </div>
 
                     <div class="view-switch" style="background: rgba(0,0,0,0.06); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
-                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
-                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
+                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" data-planner-view="calendar" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
+                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" data-planner-view="list" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
                     </div>
                     <button onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
                         <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Verifica
@@ -1557,9 +1575,9 @@ function renderGradesView() {
             const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
             const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
 
-            const safeSubjectArg = (s.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const encodedSubjectArg = encodeURIComponent(s.name || '');
             return `
-                    <div class="card grade-subject-widget" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="navigateSubject('${safeSubjectArg}')" >
+                    <div class="card grade-subject-widget" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
                         <div style="width: 44px; height: 44px; border-radius: 12px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 12px; flex-shrink: 0;">
                             ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
@@ -2890,9 +2908,9 @@ function renderVoti() {
         const subjBg = `var(--${key}, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'rgba(40,205,65,0.12)' : 'rgba(255,59,48,0.12)')})`;
         const subjText = `var(--${key}-t, ${giu ? '#908C86' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
         const subjDot = `var(--${key}-dot, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
-        const safeMat = (mat || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const encodedMat = encodeURIComponent(mat || '');
         return `
-                        <div class="card" onclick="navigateSubject('${safeMat}'); state.view='voti'; closeModal(); scheduleRender(0);" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
+                        <div class="card" onclick="handleGradeSubjectClickFromEncoded('${encodedMat}')" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${subjBg}; border:1px solid ${subjDot}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${subjText};">${displayVal}</div>
                             <div style="flex:1; text-align:left;">
                                 <div style="font-weight:700; font-size:16px; color:var(--text-primary);">${mat}</div>

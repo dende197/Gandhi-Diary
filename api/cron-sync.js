@@ -155,7 +155,7 @@ module.exports = async function handler(req, res) {
                         assenze: [
                             ...(assenzeData?.assenze || []),
                             {
-                                id: `simulated-unjustified-absence-${Date.now()}`,
+                                id: `simulated-unjustified-absence-${crypto.randomUUID()}`,
                                 data: getTodayRomeISODate(),
                                 tipo: 'assenza',
                                 giustificata: false,
