@@ -343,7 +343,7 @@ window.googleFetchWithAuthRetry = async function (url, options = {}) {
     const refreshed = await window.refreshSessionToken().catch(() => false);
     if (!refreshed) return res;
 
-    const retryOpts = { ...options, headers: getSessionHeaders() };
+    const retryOpts = { ...options, headers: getSessionHeaders(options.headers || {}) };
     return fetch(url, retryOpts);
 };
 
@@ -380,7 +380,7 @@ window.syncGoogleCalendar = async function () {
         } catch (e) { console.warn('Decode storedPass failed'); }
         const fullSession = { ...session, password };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=sync`, {
+        const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
             headers: getSessionHeaders(),
             body: JSON.stringify({ userId, session: fullSession })
@@ -402,7 +402,7 @@ window.syncGoogleCalendar = async function () {
 window.disconnectGoogle = async function () {
     try {
         const userId = window.getUserId();
-        const res = await fetch(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`, {
+        const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`, {
             method: 'GET',
             headers: getSessionHeaders()
         });
@@ -445,7 +445,7 @@ window.saveArgoToSupabase = async function () {
             return;
         }
 
-        await fetch(`${window.API_BASE_URL}/api/google?action=save-argo`, {
+        await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
             headers: getSessionHeaders(),
             body: JSON.stringify({
