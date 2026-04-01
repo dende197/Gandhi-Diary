@@ -2862,10 +2862,19 @@ function getGoalProjection(media, goal, count) {
     const currentSum = safeCount * safeMedia;
     const gap = Math.max(0, safeGoal - safeMedia);
     const done = safeMedia >= safeGoal;
-    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+    const grades = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
     const scenarios = [];
 
-    if (!done) {
+    if (!done && safeCount === 0) {
+        const firstScenarios = grades
+            .filter(g => g >= safeGoal)
+            .slice(0, 3)
+            .map(g => ({ grade: g, n: 1 }));
+        if (firstScenarios.length > 0) scenarios.push(...firstScenarios);
+        if (scenarios.length === 0 && safeGoal > 0 && safeGoal <= 10) {
+            scenarios.push({ grade: Math.round(safeGoal * 100) / 100, n: 1, exact: true });
+        }
+    } else if (!done) {
         for (const g of grades) {
             if (g <= safeGoal) continue;
             const denom = (g - safeGoal);
@@ -2873,9 +2882,15 @@ function getGoalProjection(media, goal, count) {
             // 1e-9 acts as epsilon to avoid unstable huge projections when denom is numerically ~0.
             if (Math.abs(denom) < 1e-9) continue;
             const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
-            // Cap at 100 to keep UI projections realistic/readable for student use cases.
-            if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
+            if (n >= 1 && n <= 9999) scenarios.push({ grade: g, n });
             if (scenarios.length === 3) break;
+        }
+
+        if (scenarios.length === 0 && safeGoal > 0 && safeGoal <= 10) {
+            const minNeeded = (safeGoal * (safeCount + 1)) - currentSum;
+            if (minNeeded > safeGoal && minNeeded <= 10) {
+                scenarios.push({ grade: Math.ceil(minNeeded * 100) / 100, n: 1, exact: true });
+            }
         }
     }
 
