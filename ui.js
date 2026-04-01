@@ -46,11 +46,13 @@ window.setAgendaFilter = function (subject) {
     state.agendaSearchSubject = subject;
     refreshAgenda();
 };
+const PASSING_GRADE_THRESHOLD = 6;
 
 function getAgendaCacheKey() {
     try {
         return `${lsKey('weekly_agenda_cache')}:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
-    } catch (_) {
+    } catch (e) {
+        console.warn('Agenda cache key fallback:', e?.message || e);
         return `weekly_agenda_cache:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
     }
 }
@@ -1868,6 +1870,7 @@ function renderSubjectDetailView(subjectName) {
     const key = abbr.toLowerCase();
     const projection = getGoalProjection(media, goal, votiData.length);
     const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
+    const MAX_GRADE_VALUE = 10;
 
     const trendItems = [...votiData]
         .sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date))
@@ -1934,7 +1937,7 @@ function renderSubjectDetailView(subjectName) {
                 </div>
                 <div style="height:90px; display:flex; align-items:flex-end; gap:6px; background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
                     ${trendItems.length ? trendItems.map(v => `
-                        <div style="flex:1; min-width:8px; height:${Math.max(8, (v / 10) * 100)}%; background:${v >= 6 ? 'var(--green)' : 'var(--red)'}; border-radius:6px; opacity:0.9;"></div>
+                        <div style="flex:1; min-width:8px; height:${Math.max(8, (v / MAX_GRADE_VALUE) * 100)}%; background:${v >= PASSING_GRADE_THRESHOLD ? 'var(--green)' : 'var(--red)'}; border-radius:6px; opacity:0.9;"></div>
                     `).join('') : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
                 </div>
             </div>
@@ -2530,7 +2533,13 @@ function renderWeeklyAgenda() {
     const filterSubject = state.agendaSearchSubject || "all";
     const sortOrder = state.agendaSortOrder || "due_desc";
 
-    const filteredList = list.filter(t => {
+    const preparedList = list.map(t => ({
+        ...t,
+        _assignedTs: parseArgoDate(t.assigned_date || t.displayDate).getTime(),
+        _dueTs: parseArgoDate(t.displayDate).getTime()
+    }));
+
+    const filteredList = preparedList.filter(t => {
         const matchesQuery = !query ||
             (t.text || "").toLowerCase().includes(query) ||
             (t.subject || "").toLowerCase().includes(query);
@@ -2541,12 +2550,10 @@ function renderWeeklyAgenda() {
         return matchesQuery && matchesSubject;
     }).sort((a, b) => {
         if (sortOrder === "assignment_asc") {
-            const da = parseArgoDate(a.assigned_date || a.displayDate).getTime();
-            const db = parseArgoDate(b.assigned_date || b.displayDate).getTime();
-            if (da !== db) return da - db;
-            return parseArgoDate(a.displayDate).getTime() - parseArgoDate(b.displayDate).getTime();
+            if (a._assignedTs !== b._assignedTs) return a._assignedTs - b._assignedTs;
+            return a._dueTs - b._dueTs;
         }
-        return parseArgoDate(b.displayDate).getTime() - parseArgoDate(a.displayDate).getTime();
+        return b._dueTs - a._dueTs;
     });
 
     // Extract unique subjects for chips
@@ -2592,10 +2599,16 @@ function renderWeeklyAgenda() {
         if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
         grouped[t.displayDate].push(t);
     });
+    const groupedAssignmentMin = {};
+    if (sortOrder === 'assignment_asc') {
+        Object.entries(grouped).forEach(([dateKey, tasks]) => {
+            groupedAssignmentMin[dateKey] = Math.min(...tasks.map(t => t._assignedTs || parseArgoDate(t.assigned_date || t.displayDate).getTime()));
+        });
+    }
     const sortedDates = Object.keys(grouped).sort((a, b) => {
         if (sortOrder === 'assignment_asc') {
-            const minAssignedA = Math.min(...grouped[a].map(t => parseArgoDate(t.assigned_date || t.displayDate).getTime()));
-            const minAssignedB = Math.min(...grouped[b].map(t => parseArgoDate(t.assigned_date || t.displayDate).getTime()));
+            const minAssignedA = groupedAssignmentMin[a] ?? parseArgoDate(a).getTime();
+            const minAssignedB = groupedAssignmentMin[b] ?? parseArgoDate(b).getTime();
             if (minAssignedA !== minAssignedB) return minAssignedA - minAssignedB;
             return parseArgoDate(a).getTime() - parseArgoDate(b).getTime();
         }

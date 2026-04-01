@@ -259,6 +259,8 @@
             const formatted = newTasks.map(t => {
                 const dateObj = parseArgoDate(t.due_date || t.datConsegna);
                 const isoDate = !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '';
+                // Canonical hierarchy for assignment date:
+                // assigned_date/assignedDate (new normalized fields) → source payload aliases → due date fallback.
                 const assignedObj = parseArgoDate(t.assigned_date || t.assignedDate || t.datGiorno || t.dataAssegnazione || t.due_date || t.datConsegna);
                 const assignedIso = !isNaN(assignedObj.getTime()) ? assignedObj.toISOString().split('T')[0] : isoDate;
                 const subject = t.subject || t.materia || 'Generico';
