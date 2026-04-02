@@ -57,6 +57,7 @@ const MAX_GOAL_SCENARIOS = 6;
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
+let __subjectTrendRAF = null;
 
 function normalizeSubjectName(name) {
     // Unify subject labels coming from different DidUP payloads/UI variants
@@ -772,27 +773,61 @@ function updatePlanTaskUI(taskId, isPlanned) {
 function updatePlannerCounter() {
     // Function retired: replaced numeric badge with static green '+'
 }
+function getHomeTaskWidgetData() {
+    const mode = state.homeTaskFocus === 'today' ? 'today' : 'tomorrow';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = getLocalDateString(today);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrow);
+
+    if (mode === 'today') {
+        const plannedTodayIds = (state.plannedTasks && state.plannedTasks[todayStr]) || [];
+        const tasks = (state.tasks || []).filter(t => {
+            if (t.id && t.id.startsWith('ai_')) return false;
+            if (t.subject === 'QUEST') return false;
+            if (t.isExam) return false;
+            return plannedTodayIds.includes(t.id);
+        });
+        return {
+            mode,
+            title: 'Oggi',
+            dateStr: todayStr,
+            emptyMessage: 'Nessun compito pianificato per oggi.',
+            tasks
+        };
+    }
+
+    const tasks = (state.tasks || []).filter(t => {
+        if (t.id && t.id.startsWith('ai_')) return false;
+        if (t.subject === 'QUEST') return false;
+        if (t.isExam) return false;
+        return t.due_date === tomorrowStr;
+    });
+    return {
+        mode,
+        title: 'Domani',
+        dateStr: tomorrowStr,
+        emptyMessage: 'Nessun compito assegnato per domani.',
+        tasks
+    };
+}
+window.setHomeTaskFocus = function (mode) {
+    state.homeTaskFocus = mode === 'today' ? 'today' : 'tomorrow';
+    if (state.view === 'home') {
+        if (typeof scheduleRender === 'function') scheduleRender(0);
+    }
+};
 function updateHomeView() {
     if (state.view !== 'home') return;
 
-    const domaniCard = document.getElementById('domani-task-list');
-    if (domaniCard) {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = getLocalDateString(tomorrow);
-        const tomorrowTasks = (state.tasks || []).filter(t => {
-            if (t.id && t.id.startsWith('ai_')) return false;
-            if (t.subject === 'QUEST') return false;
-            // `isExam` items are verifiche: calendar-only, never in "Domani"/task lists.
-            if (t.isExam) return false;
-            const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
-            return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
-        });
-
-        tomorrowTasks.forEach(t => {
-            const cb = domaniCard.querySelector(`[data-task-toggle="${t.id}"]`);
-            const txt = domaniCard.querySelector(`[data-task-text="${t.id}"]`);
+    const focusCard = document.getElementById('home-focus-task-list');
+    if (focusCard) {
+        const focusData = getHomeTaskWidgetData();
+        focusData.tasks.forEach(t => {
+            const cb = focusCard.querySelector(`[data-task-toggle="${t.id}"]`);
+            const txt = focusCard.querySelector(`[data-task-text="${t.id}"]`);
             if (cb) {
                 cb.style.background = t.done ? '#141414' : '#fff';
                 cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
@@ -822,6 +857,18 @@ function buildCalendarEventsFromState() {
                 extendedProps: { fullText: t.text, subject: t.subject }
             };
         });
+}
+function getCalendarTasksForDate(dateStr) {
+    const plannedIds = (state.plannedTasks && state.plannedTasks[dateStr]) || [];
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const merged = new Map();
+    tasks.forEach(t => {
+        if (!t || isAiTask(t) || t.subject === 'QUEST' || t.isExam) return;
+        if (t.due_date === dateStr || plannedIds.includes(t.id)) {
+            merged.set(t.id, t);
+        }
+    });
+    return [...merged.values()];
 }
 function getSubjectAbbrev(subject) {
     if (!subject) return 'GEN';
@@ -951,15 +998,7 @@ function renderCustomCalendar() {
         const isToday = dateStr === todayISO;
         const isPast = tempDate < today && !isToday;
 
-        let dayTasks = [];
-        if (state.plannerMode === 'registro') {
-            // Badge based on DUE DATE - Show all except AI, manual quests and exams
-            dayTasks = (state.tasks || []).filter(t => !isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
-        } else {
-            // Badge based on PLANNED DATE
-            const plannedIds = state.plannedTasks[dateStr] || [];
-            dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
-        }
+        const dayTasks = getCalendarTasksForDate(dateStr);
 
         const dayVerifiche = verificheByDate[dateStr] || [];
 
@@ -1030,13 +1069,7 @@ function renderCalendarWeekList(weekStart) {
         const isPast = dayDate < today && !isToday;
 
         // Get tasks for this day
-        let dayTasks = [];
-        if (state.plannerMode === 'registro') {
-            dayTasks = (state.tasks || []).filter(t => !isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
-        } else {
-            const plannedIds = state.plannedTasks[dateStr] || [];
-            dayTasks = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
-        }
+        const dayTasks = getCalendarTasksForDate(dateStr);
         const dayVerifiche = verificheByDate[dateStr] || [];
 
         if (dayTasks.length === 0 && dayVerifiche.length === 0) continue;
@@ -1071,6 +1104,10 @@ function renderCalendarWeekList(weekStart) {
                             </div>
                             <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; background:var(--${key},#F0F0F3); color:var(--${key}-t,#555); padding:2px 7px; border-radius:5px; flex-shrink:0;">${abbr}</span>
                             <span data-task-text="${escapeHtml(t.id)}" style="font-size:12px; font-weight:600; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayText)}</span>
+                            ${t.id && t.id.startsWith('manual_') ? `
+                            <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:18px; height:18px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività">
+                                <i class="ph-bold ph-trash" style="font-size:10px;"></i>
+                            </button>` : ''}
                         </div>`;
         }).join('')}
                 </div>
@@ -1130,6 +1167,9 @@ function renderLogin() {
 // ================================================================
 
 function renderHome() {
+    if (state.homeTaskFocus !== 'today' && state.homeTaskFocus !== 'tomorrow') {
+        state.homeTaskFocus = 'tomorrow';
+    }
     const todayStr = getLocalDateString();
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
@@ -1207,17 +1247,7 @@ function renderHome() {
         .sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))
         .slice(0, 6);
 
-    // Task di domani
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = getLocalDateString(tomorrow);
-    const tomorrowTasks = (state.tasks || []).filter(t => {
-        if (t.id && t.id.startsWith('ai_')) return false;
-        if (t.subject === 'QUEST') return false;
-        if (t.isExam) return false;
-        const plannedTmrw = (state.plannedTasks && state.plannedTasks[tomorrowStr]) || [];
-        return t.due_date === tomorrowStr || plannedTmrw.includes(t.id);
-    });
+    const homeTaskData = getHomeTaskWidgetData();
 
     // Media delta vs mese scorso
     const prevMedia = state.lastMedia || media;
@@ -1326,14 +1356,22 @@ function renderHome() {
 
         <div style="display:flex; flex-direction:column; min-height:0;">
           <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Domani</div>
+            <div id="home-focus-label" style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">${homeTaskData.title}</div>
             <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:4px;">
+                    <button onclick="setHomeTaskFocus('today')" style="width:24px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'today' ? '#141414' : '#E0DDD8'}; background:${homeTaskData.mode === 'today' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'today' ? '#FFFFFF' : '#908C86'}; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="Visualizza oggi" title="Oggi">
+                        <i class="ph-bold ph-caret-left" style="font-size:10px;"></i>
+                    </button>
+                    <button onclick="setHomeTaskFocus('tomorrow')" style="width:24px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'tomorrow' ? '#141414' : '#E0DDD8'}; background:${homeTaskData.mode === 'tomorrow' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'tomorrow' ? '#FFFFFF' : '#908C86'}; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="Visualizza domani" title="Domani">
+                        <i class="ph-bold ph-caret-right" style="font-size:10px;"></i>
+                    </button>
+                </div>
                 <button class="add-btn" onclick="window.showPlanWeekModal()" style="background:#F0F0F3; color:#908C86; border:1px solid #E0DDD8;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i>PIANIFICA</button>
                 <button class="add-btn" onclick="showQuickAddTaskModal()" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
             </div>
           </div>
-          <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
-            ${tomorrowTasks.length ? tomorrowTasks.map(t => {
+          <div id="home-focus-task-list" class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
+            ${homeTaskData.tasks.length ? homeTaskData.tasks.map(t => {
         const abbr = getSubjectAbbrev(t.subject);
         const key = abbr.toLowerCase();
         return `
@@ -1343,8 +1381,12 @@ function renderHome() {
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
                 <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
+                ${t.id && t.id.startsWith('manual_') ? `
+                <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
+                    <i class="ph-bold ph-trash" style="font-size:10px; color:#FF3B30;"></i>
+                </button>` : ''}
               </div>`;
-    }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">Nessun compito per domani.</div>'}
+    }).join('') : `<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">${homeTaskData.emptyMessage}</div>`}
           </div>
         </div>
 
@@ -1575,7 +1617,7 @@ function renderGradesView() {
                 </h2>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px;">
                 ${subjects.map(s => {
             const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
             const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
@@ -1584,16 +1626,16 @@ function renderGradesView() {
 
             const encodedSubjectArg = encodeURIComponent(s.name || '');
             return `
-                    <div class="card grade-subject-widget" style="padding: 18px; border-radius: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; border-left: 4px solid ${subjColor};" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
-                        <div style="width: 44px; height: 44px; border-radius: 12px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 12px; flex-shrink: 0;">
+                    <div class="card grade-subject-widget" style="padding: 24px; border-radius: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 18px; border-left: 5px solid ${subjColor}; min-height: 112px;" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 13px; flex-shrink: 0;">
                             ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">${escapeHtml(s.name)}</div>
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Media generale materia</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; line-height:1.3;">${escapeHtml(s.name)}</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} vot${s.count === 1 ? 'o' : 'i'} registrat${s.count === 1 ? 'o' : 'i'}</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 26px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.03em;">${s.media.toFixed(2)}</div>
+                            <div style="font-size: 30px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.03em; line-height:1;">${s.media.toFixed(2)}</div>
                         </div>
                     </div > `;
         }).join('')}
@@ -1835,6 +1877,114 @@ function setupCanvas(canvas) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, rect, dpr };
 }
+function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
+    if (!Array.isArray(trendItems) || trendItems.length === 0) return;
+    const p = { left: 44, right: 18, top: 16, bottom: 34 };
+    const innerW = Math.max(1, W - p.left - p.right);
+    const innerH = Math.max(1, H - p.top - p.bottom);
+    const yMin = 0;
+    const yMax = 10;
+    const ySpan = yMax - yMin;
+    const dateMin = trendItems[0].date.getTime();
+    const dateMax = trendItems[trendItems.length - 1].date.getTime();
+    const dateSpan = Math.max(1, dateMax - dateMin);
+    const points = trendItems.map(item => {
+        const x = p.left + ((item.date.getTime() - dateMin) / dateSpan) * innerW;
+        const y = p.top + (1 - ((item.value - yMin) / ySpan)) * innerH;
+        return { x, y, value: item.value };
+    });
+
+    ctx.clearRect(0, 0, W, H);
+
+    const ticks = [0, PASSING_GRADE_THRESHOLD, 8, 10];
+    ticks.forEach(t => {
+        const y = p.top + (1 - ((t - yMin) / ySpan)) * innerH;
+        ctx.strokeStyle = '#E8E4DE';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.left, y);
+        ctx.lineTo(W - p.right, y);
+        ctx.stroke();
+        ctx.fillStyle = '#908C86';
+        ctx.font = '700 10px JetBrains Mono';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(t), p.left - 8, y + 3);
+    });
+
+    const visibleCount = Math.max(1, Math.ceil((points.length - 1) * progress) + 1);
+    const visiblePoints = points.slice(0, visibleCount);
+
+    if (visiblePoints.length >= 2) {
+        const grad = ctx.createLinearGradient(0, p.top, 0, H - p.bottom);
+        grad.addColorStop(0, `${subjColor}35`);
+        grad.addColorStop(1, `${subjColor}05`);
+        ctx.beginPath();
+        ctx.moveTo(visiblePoints[0].x, H - p.bottom);
+        visiblePoints.forEach((pt, i) => {
+            if (i === 0) ctx.lineTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.lineTo(visiblePoints[visiblePoints.length - 1].x, H - p.bottom);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = subjColor;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    visiblePoints.forEach((pt, i) => {
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+
+    visiblePoints.forEach(pt => {
+        ctx.fillStyle = pt.value >= PASSING_GRADE_THRESHOLD ? '#2DB86A' : '#FF3B30';
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+
+    const firstLabel = trendItems[0].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    const lastLabel = trendItems[trendItems.length - 1].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    ctx.fillStyle = '#908C86';
+    ctx.font = '700 10px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText(firstLabel, p.left, H - 10);
+    ctx.textAlign = 'right';
+    ctx.fillText(lastLabel, W - p.right, H - 10);
+}
+function initSubjectTrendChart(canvasId, trendItems, subjColor) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !Array.isArray(trendItems) || trendItems.length === 0) return;
+    const { ctx, rect } = setupCanvas(canvas);
+    const W = rect.width;
+    const H = rect.height;
+    if (__subjectTrendRAF) cancelAnimationFrame(__subjectTrendRAF);
+    let progress = 0;
+    const animate = () => {
+        const chartCanvas = document.getElementById(canvasId);
+        if (!chartCanvas) {
+            __subjectTrendRAF = null;
+            return;
+        }
+        progress = Math.min(1, progress + 0.06);
+        drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress);
+        if (progress < 1) {
+            __subjectTrendRAF = requestAnimationFrame(animate);
+        } else {
+            __subjectTrendRAF = null;
+        }
+    };
+    drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, 0.04);
+    __subjectTrendRAF = requestAnimationFrame(animate);
+}
 function initCustomScrollbar() {
     const scroller = document.getElementById('custom-scrollbar');
     const thumb = document.getElementById('scroll-thumb');
@@ -2037,12 +2187,10 @@ function renderSubjectDetailView(subjectName) {
             <div class="card" style="background:#FFFFFF; border: 1px solid #141414; border-radius: 24px; padding: 24px; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
                 <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: ${subjColor};"></div>
                 <div style="display: flex; gap: 32px; align-items: center;">
-                    <div style="width: 100px; height: 100px; position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: rotate(-90deg);">
-                            <circle cx="18" cy="18" r="16" fill="none" stroke="#F0EDE8" stroke-width="3" />
-                            <circle cx="18" cy="18" r="16" fill="none" stroke="${media >= 6 ? '#28CD41' : '#FF3B30'}" stroke-width="3" stroke-dasharray="${(media / 10) * 100}, 100" stroke-linecap="round" />
-                        </svg>
-                        <div style="position: absolute; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: -0.05em;">${media.toFixed(1)}</div>
+                    <div style="min-width: 112px; height: 112px; border-radius: 20px; border:1px solid #ECEAE6; background:#FAF9F7; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; padding:10px;">
+                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color:#908C86; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Media</div>
+                        <div style="font-size: 34px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.05em; line-height:1; margin-top:4px;">${media.toFixed(2)}</div>
+                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color:#908C86; margin-top:6px;">${votiData.length} voti</div>
                     </div>
                     <div style="flex: 1;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
@@ -2078,59 +2226,7 @@ function renderSubjectDetailView(subjectName) {
                     <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86;">${trendItems.length} punti</span>
                 </div>
                 <div style="background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
-                    ${trendItems.length ? (() => {
-            const W = 100;
-            const H = 86;
-            const padLeft = 30;
-            const padRight = 8;
-            const padTop = 8;
-            const padBottom = 22;
-            const innerW = Math.max(1, W - padLeft - padRight);
-            const innerH = Math.max(1, H - padTop - padBottom);
-            const dateMin = trendItems[0].date.getTime();
-            const dateMax = trendItems[trendItems.length - 1].date.getTime();
-            const dateSpan = Math.max(1, dateMax - dateMin);
-            const yMin = 0;
-            const yMax = MAX_GRADE_VALUE;
-            const ySpan = yMax - yMin;
-            const points = trendItems.map((item) => {
-                const x = padLeft + ((item.date.getTime() - dateMin) / dateSpan) * innerW;
-                const y = padTop + (1 - ((item.value - yMin) / ySpan)) * innerH;
-                return { x, y, value: item.value, date: item.date };
-            });
-            const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
-            const firstLabel = trendItems[0].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-            const lastLabel = trendItems[trendItems.length - 1].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-            const clampedPassingThreshold = Math.max(yMin, Math.min(yMax, PASSING_GRADE_THRESHOLD));
-            const yTicks = Array.from(new Set([
-                yMin,
-                clampedPassingThreshold,
-                Math.round((yMax * CHART_INTERMEDIATE_TICK_RATIO) * 10) / 10,
-                yMax
-            ]))
-                .sort((a, b) => a - b)
-                .filter((tick, idx, arr) => idx === 0 || Math.abs(tick - arr[idx - 1]) >= 1);
-            const chartPxHeight = 140;
-            return `
-                        <svg role="img" aria-label="Grafico andamento voti con ${trendItems.length} valutazioni nel tempo" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:${chartPxHeight}px; display:block;">
-                            <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
-                            <line x1="${padLeft}" y1="${H - padBottom}" x2="${W - padRight}" y2="${H - padBottom}" stroke="#D7D2CB" stroke-width="0.6" />
-                            ${yTicks.map(t => {
-                const y = padTop + (1 - ((t - yMin) / ySpan)) * innerH;
-                return `
-                                <line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="#ECEAE6" stroke-width="0.5" />
-                                <text x="${padLeft - 3}" y="${y + 1.4}" text-anchor="end" font-size="3" fill="#908C86" style="font-family:'JetBrains Mono', monospace;">${t}</text>
-                                `;
-            }).join('')}
-                            <path d="${linePath}" fill="none" stroke="${subjColor}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
-                            ${points.map(p => `
-                                <circle cx="${p.x}" cy="${p.y}" r="1.2" fill="${p.value >= PASSING_GRADE_THRESHOLD ? 'var(--green)' : 'var(--red)'}" />
-                            `).join('')}
-                            <text x="${padLeft}" y="${H - 4}" text-anchor="start" font-size="3" fill="#908C86" style="font-family:'JetBrains Mono', monospace;">${firstLabel}</text>
-                            <text x="${W - padRight}" y="${H - 4}" text-anchor="end" font-size="3" fill="#908C86" style="font-family:'JetBrains Mono', monospace;">${lastLabel}</text>
-                        </svg>
-                    `;
-        })() : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
+                    ${trendItems.length ? `<canvas id="subjectTrendCanvas" width="820" height="240" aria-label="Grafico cartesiano andamento voti" style="width:100%; height:240px; display:block;"></canvas>` : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
                 </div>
             </div>
 
@@ -2161,6 +2257,7 @@ function renderSubjectDetailView(subjectName) {
                     </div>`;
     }).join('')}
             </div>
+            ${trendItems.length ? `<script>setTimeout(() => { if (typeof initSubjectTrendChart === 'function') initSubjectTrendChart('subjectTrendCanvas', ${JSON.stringify(trendItems.map(item => ({ value: item.value, date: item.date.toISOString() }))).replace(/</g, '\\u003c')}.map(p => ({ value: p.value, date: new Date(p.date) })), '${subjColor}'); }, 60);</script>` : ''}
         </div> `;
 }
 function mostraAssenzeModal() {
@@ -2400,14 +2497,7 @@ function renderDayDetailModal(dateStr) {
     const date = parseArgoDate(dateStr);
     const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    let tasksForDay = [];
-    if (state.plannerMode === 'registro') {
-        tasksForDay = (state.tasks || []).filter(t => !isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date === dateStr);
-    } else {
-        const plannedIds = state.plannedTasks[dateStr] || [];
-        tasksForDay = (state.tasks || []).filter(t => plannedIds.includes(t.id) && !t.isExam);
-    }
-    const isRegistro = state.plannerMode === 'registro';
+    const tasksForDay = getCalendarTasksForDate(dateStr);
 
     // Gather verifiche for this day
     const verificheForDay = [];
@@ -2426,8 +2516,8 @@ function renderDayDetailModal(dateStr) {
 
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-shrink:0;">
                             <div>
-                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${isRegistro ? '#007AFF' : '#FF2D55'}; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:8px; background: ${isRegistro ? 'rgba(0,122,255,0.06)' : 'rgba(255,45,85,0.06)'}; padding: 4px 10px; border-radius: 8px; display:inline-block;">
-                                    ${isRegistro ? 'Scadenze Registro' : 'Organizzazione Studio'}
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#007AFF; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:8px; background: rgba(0,122,255,0.06); padding: 4px 10px; border-radius: 8px; display:inline-block;">
+                                    Agenda Compiti
                                 </div>
                                 <h2 style="font-family:'Inter',system-ui,-apple-system,sans-serif; margin:0; font-size:24px; font-weight:800; text-transform:capitalize; letter-spacing:-0.03em; color:#141414;">${formattedDate}</h2>
                             </div>
@@ -2544,9 +2634,12 @@ function deleteCalendarTask(taskId, dateStr) {
     saveTasks();
     if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
     if (typeof showToast === 'function') showToast('Attività eliminata');
-    renderDayDetailModal(dateStr);
+    if (dateStr) {
+        renderDayDetailModal(dateStr);
+    }
     notifyPlannerChanged();
     if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+    if (typeof scheduleRender === 'function' && state.view === 'planner') scheduleRender(0);
 }
 function notifyPlannerChanged() {
     // badge sul bottone Organizza Oggi e Dashboard
@@ -2878,7 +2971,7 @@ function renderWeeklyAgenda() {
                 .trim();
 
             return `
-                    <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
+                        <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
                         <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
                         <div style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
@@ -2889,10 +2982,14 @@ function renderWeeklyAgenda() {
                             <div data-task-text="${escapeHtml(t.id)}" style="font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
                         
-                        <div style="padding:0 16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
+                        <div style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
                             <div data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
+                            ${t.id && t.id.startsWith('manual_') ? `
+                            <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
+                                <i class="ph-bold ph-trash" style="font-size:13px;"></i>
+                            </button>` : ''}
                         </div>
                     </div>`;
         }).join('')}
@@ -4437,7 +4534,6 @@ window.refreshPlanWeekModalContent = function () {
         </div>`;
 };
 window.finalizePlanWeekModal = function () {
-    state.plannerMode = 'pianificato'; // Forza la visualizzazione dei compiti pianificati
     closeModal();
     if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
     if (state.view === 'planner' && typeof scheduleRender === 'function') {
