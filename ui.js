@@ -184,22 +184,20 @@ function animatePlannerSurface(view) {
     if (view === 'calendar') {
         const days = document.querySelectorAll('.calendar-day');
         const badges = document.querySelectorAll('.event-badge');
-        gsap.fromTo(days, { opacity: 0, y: 12, scale: 0.985 }, {
-            opacity: 1,
+        gsap.fromTo(days, { y: 12, scale: 0.985 }, {
             y: 0,
             scale: 1,
             duration: 0.28,
             ease: 'power2.out',
             stagger: { each: 0.015, from: 'start' },
-            clearProps: 'transform,opacity'
+            clearProps: 'transform'
         });
-        gsap.fromTo(badges, { opacity: 0, x: -4 }, {
-            opacity: 1,
+        gsap.fromTo(badges, { x: -4 }, {
             x: 0,
             duration: 0.22,
             ease: 'power1.out',
             stagger: 0.01,
-            clearProps: 'transform,opacity'
+            clearProps: 'transform'
         });
         return;
     }
@@ -1577,7 +1575,7 @@ function renderPlanner() {
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: ${BRAND_GRADIENT}; color: #FFFFFF; border: 1px solid rgba(13,31,45,0.16); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-sparkle"></i> AI Chat
                         </button>
                         <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
