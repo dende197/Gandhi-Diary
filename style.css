@@ -2050,15 +2050,15 @@
         }
 
         .badge-primary {
-          background: rgba(10, 132, 255, 0.12);
-          color: var(--blue);
-          border: 1px solid rgba(10, 132, 255, 0.2);
+          background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%);
+          color: #fff;
+          border: 1px solid rgba(13, 31, 45, 0.16);
         }
 
         .badge-success {
-          background: rgba(48, 209, 88, 0.1);
-          color: var(--green);
-          border: 1px solid rgba(48, 209, 88, 0.15);
+          background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%);
+          color: #fff;
+          border: 1px solid rgba(13, 31, 45, 0.16);
         }
 
         /* === PROGRESS === */
@@ -4362,23 +4362,51 @@
            ────────────────────────────────────────────────────────────── */
         @media (max-width: 600px) {
 
-          /* 1 ▸ Show mobile dock (inside topbar, pill style) */
+          /* 1 ▸ Keep only the mobile dock fixed while scrolling */
           .mobile-dock {
             display: flex !important;
+            position: fixed !important;
+            top: calc(var(--safe-top) + 8px) !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 1200 !important;
+            background: rgba(246, 245, 243, 0.9) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(20, 20, 20, 0.08) !important;
+            box-shadow: 0 10px 24px rgba(13, 31, 45, 0.12) !important;
+            padding: 4px !important;
+            border-radius: 14px !important;
           }
 
-          /* 2 ▸ Hide topbar navigation pills — dock takes over */
+          /* 2 ▸ Hide desktop topbar chrome on mobile */
+          .topbar {
+            height: 0 !important;
+            min-height: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            overflow: visible !important;
+          }
+
+          .topbar > .logo,
+          .topbar > .topbar-right {
+            display: none !important;
+          }
+
+          /* 3 ▸ Hide topbar navigation pills — dock takes over */
           .nav-pills {
             display: none !important;
           }
 
-          /* 3 ▸ Compact topbar left/right areas */
-          .topbar {
-            padding: 0 10px !important;
-          }
-
           #topbar-clock {
             font-size: 11px !important;
+          }
+
+          .main-container {
+            padding-top: calc(var(--safe-top) + 68px) !important;
           }
 
           /* 5 ▸ Home dashboard — collapse all grid rows to single column by default */
