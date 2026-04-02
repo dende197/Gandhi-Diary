@@ -79,7 +79,7 @@ function isAiTask(task) {
 
 function isUserGeneratedTaskId(id) {
     if (typeof id !== 'string') return false;
-    return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('registro_') || id.startsWith('quest-');
+    return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('quest-');
 }
 
 function getAgendaCacheKey() {
@@ -531,10 +531,10 @@ function getSchoolYearRanges(refDate = new Date()) {
     return {
         startYear,
         endYear,
-        firstTermStart: new Date(startYear, 8, 1),   // 1 Sept
-        firstTermEnd: new Date(endYear, 0, 31),      // 31 Jan
-        secondTermStart: new Date(endYear, 1, 1),    // 1 Feb
-        secondTermEnd: new Date(endYear, 5, 30)      // 30 Jun
+        firstTermStart: new Date(startYear, 8, 1, 0, 0, 0, 0),      // 1 Sep 00:00:00
+        firstTermEnd: new Date(endYear, 0, 31, 23, 59, 59, 999),    // 31 Jan 23:59:59
+        secondTermStart: new Date(endYear, 1, 1, 0, 0, 0, 0),       // 1 Feb 00:00:00
+        secondTermEnd: new Date(endYear, 5, 30, 23, 59, 59, 999)     // 30 Jun 23:59:59
     };
 }
 
@@ -1689,7 +1689,7 @@ function renderGradesView() {
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
                     <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 sett → 31 gen · ${firstTermVotes.length} voti</div>
                 </div>
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
@@ -1702,7 +1702,7 @@ function renderGradesView() {
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
                     <div>
                         <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
-                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Scegli un voto da 1 a 10 e genera la media fittizia.</div>
+                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Scegli un voto da 1 a 10 e genera la media simulata.</div>
                     </div>
                     <div style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
                 </div>
