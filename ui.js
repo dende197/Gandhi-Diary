@@ -294,6 +294,8 @@ window.switchPlannerView = function (view) {
 window.navigateSubject = function (subjName) {
     const root = document.getElementById('app');
     const currentView = root ? root.querySelector('.view') : null;
+    state._scrollTopAfterRender = true;
+    window.scrollTo({ top: 0, behavior: 'auto' });
     if (currentView && typeof gsap !== 'undefined') {
         gsap.to(currentView, {
             opacity: 0, y: -8, scale: 0.99, duration: 0.15, ease: 'power2.in', onComplete: () => {
@@ -521,6 +523,21 @@ function getVoteDate(vote) {
     const d = parseArgoDate(vote?.data || vote?.date);
     if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
     return d;
+}
+/**
+ * Restituisce l'etichetta UI per uno scenario di proiezione obiettivo.
+ * @param {{combo?: boolean, exact?: boolean, n?: number}} scenario Scenario calcolato (combo, exact, numero voti).
+ * @param {boolean} lowercase Se true, restituisce testo in minuscolo per card scure.
+ * @returns {string} Etichetta human-readable da mostrare nella proiezione.
+ */
+function getProjectionScenarioLabel(scenario, lowercase = false) {
+    if (scenario?.combo) return lowercase ? 'combinazione utile' : 'Combinazione utile';
+    if (scenario?.exact) return lowercase ? 'prossimo voto esatto' : 'Prossimo voto esatto';
+    if ((scenario?.n || 0) === 1) return lowercase ? 'prossimo voto' : 'Prossimo voto';
+    return lowercase ? `prossimi ${scenario?.n || 0} voti` : `Prossimi ${scenario?.n || 0} voti`;
+}
+function getProjectionComboDetailLabel(grade, extraTopGrades, maxGradeValue) {
+    return `1 voto ${grade.toFixed(2)} + ${extraTopGrades} vot${extraTopGrades === 1 ? 'o' : 'i'} da ${maxGradeValue.toFixed(2)}`;
 }
 
 function getSchoolYearRanges(refDate = new Date()) {
@@ -876,10 +893,72 @@ function getHomeTaskWidgetData() {
         tasks
     };
 }
+function renderHomeTaskListHtml(homeTaskData) {
+    if (!homeTaskData.tasks.length) {
+        return `<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">${homeTaskData.emptyMessage}</div>`;
+    }
+    return homeTaskData.tasks.map(t => {
+        const abbr = getSubjectAbbrev(t.subject);
+        const key = abbr.toLowerCase();
+        return `
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
+                <div data-task-toggle="${t.id}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
+                  ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
+                </div>
+                <span style="font-family:\'JetBrains Mono\',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
+                <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
+                ${isUserGeneratedTaskId(t.id) ? `
+                <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
+                    <i class="ph-bold ph-trash" style="font-size:10px; color:#FF3B30;"></i>
+                </button>` : ''}
+              </div>`;
+    }).join('');
+}
+function updateHomeTaskFocusWidget() {
+    if (state.view !== 'home') return false;
+    const homeTaskData = getHomeTaskWidgetData();
+    const label = document.getElementById('home-focus-label');
+    const list = document.getElementById('home-focus-task-list');
+    const btnToday = document.getElementById('home-focus-btn-today');
+    const btnTomorrow = document.getElementById('home-focus-btn-tomorrow');
+    if (!label || !list || !btnToday || !btnTomorrow) return false;
+
+    label.textContent = homeTaskData.title;
+    list.innerHTML = renderHomeTaskListHtml(homeTaskData);
+
+    const applyBtnState = (btn, active) => {
+        btn.style.borderColor = active ? '#141414' : '#D3CEC7';
+        btn.style.background = active ? '#141414' : '#FFFFFF';
+        btn.style.color = active ? '#FFFFFF' : '#4F4A43';
+    };
+    applyBtnState(btnToday, homeTaskData.mode === 'today');
+    applyBtnState(btnTomorrow, homeTaskData.mode === 'tomorrow');
+    return true;
+}
+function updateNextGradeSimulatorWidget() {
+    if (state.view !== 'voti' || state.activeSubject) return false;
+    const simValueEl = document.getElementById('next-grade-sim-value');
+    const currentAvgEl = document.getElementById('next-grade-current-avg');
+    const simAvgEl = document.getElementById('next-grade-sim-avg');
+    const impactEl = document.getElementById('next-grade-sim-impact');
+    if (!simValueEl || !currentAvgEl || !simAvgEl || !impactEl) return false;
+    const votiData = getVotiData();
+    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const media = averageFromNumeric(numericVotes) || 0;
+    const simulatorValue = getNextGradeSimulatorValue();
+    const simulatedAvg = averageFromNumeric([...numericVotes, simulatorValue]);
+    const simulatedDelta = Number.isFinite(simulatedAvg) ? (simulatedAvg - media) : 0;
+    simValueEl.textContent = `voto: ${simulatorValue}`;
+    currentAvgEl.textContent = media.toFixed(2);
+    simAvgEl.textContent = Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—';
+    impactEl.textContent = `${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}`;
+    impactEl.style.color = simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30';
+    return true;
+}
 window.setHomeTaskFocus = function (mode) {
     state.homeTaskFocus = mode === 'today' ? 'today' : 'tomorrow';
     if (state.view === 'home') {
-        if (typeof scheduleRender === 'function') scheduleRender(0);
+        if (!updateHomeTaskFocusWidget() && typeof scheduleRender === 'function') scheduleRender(0);
     }
 };
 function updateHomeView() {
@@ -1378,7 +1457,7 @@ function renderHome() {
             <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
             <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${lastCirc.titolo}</div>
           </div>
-          <span style="display:inline-flex; margin-top:14px; background:linear-gradient(135deg, #A78BFA 0%, #818CF8 100%); color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
+          <span style="display:inline-flex; margin-top:14px; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
         </div>
 
       </div>
@@ -1419,11 +1498,11 @@ function renderHome() {
             <div id="home-focus-label" style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">${homeTaskData.title}</div>
             <div style="display:flex; gap:8px;">
                 <div style="display:flex; gap:4px;">
-                    <button onclick="setHomeTaskFocus('today')" style="width:24px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'today' ? '#141414' : '#E0DDD8'}; background:${homeTaskData.mode === 'today' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'today' ? '#FFFFFF' : '#908C86'}; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="Visualizza oggi" title="Oggi">
-                        <i class="ph-bold ph-caret-left" style="font-size:10px;"></i>
+                    <button id="home-focus-btn-today" onclick="setHomeTaskFocus('today')" style="min-width:52px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'today' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'today' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'today' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Visualizza oggi" title="Oggi">
+                        <span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">OGGI</span>
                     </button>
-                    <button onclick="setHomeTaskFocus('tomorrow')" style="width:24px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'tomorrow' ? '#141414' : '#E0DDD8'}; background:${homeTaskData.mode === 'tomorrow' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'tomorrow' ? '#FFFFFF' : '#908C86'}; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="Visualizza domani" title="Domani">
-                        <i class="ph-bold ph-caret-right" style="font-size:10px;"></i>
+                    <button id="home-focus-btn-tomorrow" onclick="setHomeTaskFocus('tomorrow')" style="min-width:62px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'tomorrow' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'tomorrow' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'tomorrow' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Visualizza domani" title="Domani">
+                        <span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">DOMANI</span>
                     </button>
                 </div>
                 <button class="add-btn" onclick="window.showPlanWeekModal()" style="background:#F0F0F3; color:#908C86; border:1px solid #E0DDD8;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i>PIANIFICA</button>
@@ -1431,22 +1510,7 @@ function renderHome() {
             </div>
           </div>
           <div id="home-focus-task-list" class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
-            ${homeTaskData.tasks.length ? homeTaskData.tasks.map(t => {
-        const abbr = getSubjectAbbrev(t.subject);
-        const key = abbr.toLowerCase();
-        return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
-                <div data-task-toggle="${t.id}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
-                  ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
-                </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
-                <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
-                ${isUserGeneratedTaskId(t.id) ? `
-                <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
-                    <i class="ph-bold ph-trash" style="font-size:10px; color:#FF3B30;"></i>
-                </button>` : ''}
-              </div>`;
-    }).join('') : `<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">${homeTaskData.emptyMessage}</div>`}
+            ${renderHomeTaskListHtml(homeTaskData)}
           </div>
         </div>
 
@@ -1647,8 +1711,9 @@ function renderGradesView() {
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 9px; background:rgba(255,255,255,0.06); border-radius:9px; margin-top:6px;">
                                 <div style="display:flex; flex-direction:column; gap:2px;">
                                     <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.5);">
-                                        ${s.exact ? 'prossimo voto esatto' : s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
+                                        ${getProjectionScenarioLabel(s, true)}
                                     </span>
+                                    ${s.combo ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.65);">${s.label}</span>` : ''}
                                     ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
                                 </div>
                                 <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:white;">
@@ -1704,7 +1769,7 @@ function renderGradesView() {
                         <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
                         <div style="font-size:12px; color:#7A7670; margin-top:4px;">Scegli un voto da 1 a 10 e genera la media simulata.</div>
                     </div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
+                    <div id="next-grade-sim-value" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
                     <button onclick="window.adjustNextGradeSimulator(-1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">−</button>
@@ -1714,15 +1779,15 @@ function renderGradesView() {
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
                     <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
                         <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media attuale</div>
-                        <div style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${media.toFixed(2)}</div>
+                        <div id="next-grade-current-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${media.toFixed(2)}</div>
                     </div>
                     <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
                         <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media simulata</div>
-                        <div style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—'}</div>
+                        <div id="next-grade-sim-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—'}</div>
                     </div>
                     <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
                         <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Impatto</div>
-                        <div style="font-size:18px; font-weight:800; color:${simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30'}; letter-spacing:-0.02em;">${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}</div>
+                        <div id="next-grade-sim-impact" style="font-size:18px; font-weight:800; color:${simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30'}; letter-spacing:-0.02em;">${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}</div>
                     </div>
                 </div>
             </div>
@@ -2301,7 +2366,8 @@ function renderSubjectDetailView(subjectName) {
         if (subjectScenarios.length > 0) {
             return subjectScenarios.map(s => `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9F8F6; border:1px solid #ECEAE6; border-radius:10px; padding:8px 10px;">
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${s.exact ? 'Prossimo voto esatto' : s.n === 1 ? 'Prossimo voto' : `Prossimi ${s.n} voti`}</span>
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${getProjectionScenarioLabel(s, false)}</span>
+                            ${s.combo ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; color:#6A655F; font-weight:700;">${s.label}</span>` : ''}
                             <span style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#141414; font-weight:800;">${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}</span>
                         </div>
                     `).join('');
@@ -3234,13 +3300,41 @@ function getGoalProjection(media, goal, count) {
         }
     }
 
+    if (safeGoal < MAX_GRADE_VALUE) {
+        // Include anche voti sotto-obiettivo (>= sufficienza) per mostrare percorsi realistici:
+        // 1) ipotizziamo un prossimo voto g inferiore al goal;
+        // 2) stimiamo quanti 10 servono dopo quel voto per rientrare nel target;
+        // 3) limitiamo a scenari brevi (massimo 5 voti totali) per mantenere suggerimenti utili.
+        for (const g of grades) {
+            if (g < PASSING_GRADE_THRESHOLD || g >= safeGoal) continue;
+            const sumAfterOne = currentSum + g;
+            const countAfterOne = safeCount + 1;
+            const denom = MAX_GRADE_VALUE - safeGoal;
+            if (denom <= 1e-9) continue;
+            const extraTopGrades = Math.ceil((safeGoal * countAfterOne - sumAfterOne) / denom);
+            const totalVotes = 1 + extraTopGrades;
+            if (extraTopGrades >= 1 && totalVotes <= 5) {
+                scenarios.push({
+                    n: totalVotes,
+                    grade: g,
+                    combo: true,
+                    extraTopGrades,
+                    label: getProjectionComboDetailLabel(g, extraTopGrades, MAX_GRADE_VALUE)
+                });
+            }
+        }
+    }
+
     const uniqueScenarios = [];
-    const seenGrades = new Set();
+    const seenKeys = new Set();
     const sortedScenarios = scenarios.sort((a, b) => a.n - b.n || b.grade - a.grade);
     for (const s of sortedScenarios) {
-        if (!seenGrades.has(s.grade)) {
+        const normalizedGrade = Number.isFinite(s.grade) ? s.grade.toFixed(2) : '0.00';
+        const normalizedExtra = Number.isFinite(s.extraTopGrades) ? s.extraTopGrades : 0;
+        const key = s.combo ? `combo-${normalizedGrade}-${normalizedExtra}` : `single-${normalizedGrade}`;
+        if (!seenKeys.has(key)) {
             uniqueScenarios.push(s);
-            seenGrades.add(s.grade);
+            seenKeys.add(key);
         }
         if (uniqueScenarios.length >= 4) break;
     }
@@ -3260,7 +3354,7 @@ function getGoalProjection(media, goal, count) {
     return {
         done,
         gap,
-        scenarios: scenarios.sort((a, b) => a.n - b.n || b.grade - a.grade).slice(0, 4)
+        scenarios: uniqueScenarios
     };
 }
 function renderVoti() {
@@ -4333,6 +4427,10 @@ window._renderCore = function () {
     }
 
     root.innerHTML = html;
+    if (state._scrollTopAfterRender) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        state._scrollTopAfterRender = false;
+    }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
     requestAnimationFrame(() => {
@@ -4699,7 +4797,9 @@ window.addCustomQuestFromInput = function () {
 window.adjustNextGradeSimulator = function (delta) {
     const current = getNextGradeSimulatorValue();
     setNextGradeSimulatorValue(current + (Number(delta) || 0));
-    if (state.view === 'voti') scheduleRender(0);
+    if (state.view === 'voti') {
+        if (!updateNextGradeSimulatorWidget()) scheduleRender(0);
+    }
 };
 
 window.generateFictionalAverage = function () {
