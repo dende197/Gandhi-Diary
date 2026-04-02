@@ -561,6 +561,25 @@ function getSchoolYearRanges(refDate = new Date()) {
     };
 }
 
+function getCurrentSchoolTerm(refDate = new Date()) {
+    const ranges = getSchoolYearRanges(refDate);
+    if (refDate >= ranges.firstTermStart && refDate <= ranges.firstTermEnd) return 'first';
+    if (refDate >= ranges.secondTermStart && refDate <= ranges.secondTermEnd) return 'second';
+    return null;
+}
+
+function getVotesBySchoolTerm(votes, term, refDate = new Date()) {
+    const ranges = getSchoolYearRanges(refDate);
+    const list = Array.isArray(votes) ? votes : [];
+    return list.filter(v => {
+        const d = getVoteDate(v);
+        if (!d) return false;
+        if (term === 'first') return d >= ranges.firstTermStart && d <= ranges.firstTermEnd;
+        if (term === 'second') return d >= ranges.secondTermStart && d <= ranges.secondTermEnd;
+        return false;
+    });
+}
+
 function averageFromNumeric(values) {
     if (!Array.isArray(values) || values.length === 0) return null;
     const valid = values.filter(v => Number.isFinite(v));
@@ -942,23 +961,38 @@ function updateHomeTaskFocusWidget() {
     return true;
 }
 function updateNextGradeSimulatorWidget() {
-    if (state.view !== 'voti' || state.activeSubject) return false;
+    if (state.view !== 'voti') return false;
     const simValueEl = document.getElementById('next-grade-sim-value');
     const currentAvgEl = document.getElementById('next-grade-current-avg');
     const simAvgEl = document.getElementById('next-grade-sim-avg');
     const impactEl = document.getElementById('next-grade-sim-impact');
+    const termLabelEl = document.getElementById('next-grade-current-term-label');
     if (!simValueEl || !currentAvgEl || !simAvgEl || !impactEl) return false;
-    const votiData = getVotiData();
-    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const media = averageFromNumeric(numericVotes) || 0;
+    let votiData = getVotiData();
+    if (state.activeSubject) {
+        const normalized = normalizeSubjectName(state.activeSubject);
+        votiData = votiData.filter(v => normalizeSubjectName(v.materia || v.subject) === normalized);
+    }
+    const currentTerm = getCurrentSchoolTerm(new Date());
+    const termVotes = currentTerm ? getVotesBySchoolTerm(votiData, currentTerm) : [];
+    const numericVotes = termVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const media = averageFromNumeric(numericVotes);
     const simulatorValue = getNextGradeSimulatorValue();
     const simulatedAvg = averageFromNumeric([...numericVotes, simulatorValue]);
-    const simulatedDelta = Number.isFinite(simulatedAvg) ? (simulatedAvg - media) : 0;
+    const simulatedDelta = Number.isFinite(media) && Number.isFinite(simulatedAvg) ? (simulatedAvg - media) : null;
     simValueEl.textContent = `voto: ${simulatorValue}`;
-    currentAvgEl.textContent = media.toFixed(2);
+    currentAvgEl.textContent = Number.isFinite(media) ? media.toFixed(2) : '—';
     simAvgEl.textContent = Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—';
-    impactEl.textContent = `${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}`;
-    impactEl.style.color = simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30';
+    if (Number.isFinite(simulatedDelta)) {
+        impactEl.textContent = `${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}`;
+        impactEl.style.color = simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30';
+    } else {
+        impactEl.textContent = '—';
+        impactEl.style.color = '#908C86';
+    }
+    if (termLabelEl) {
+        termLabelEl.textContent = currentTerm === 'first' ? 'Primo quadrimestre' : (currentTerm === 'second' ? 'Secondo quadrimestre' : 'Nessun quadrimestre attivo');
+    }
     return true;
 }
 window.setHomeTaskFocus = function (mode) {
@@ -1511,8 +1545,8 @@ function renderHome() {
                         <span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">DOMANI</span>
                     </button>
                 </div>
-                <button class="add-btn" onclick="window.showPlanWeekModal()" style="background:#F0F0F3; color:#908C86; border:1px solid #E0DDD8;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i>PIANIFICA</button>
-                <button class="add-btn" onclick="showQuickAddTaskModal()" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
+                <button onclick="window.showPlanWeekModal()" style="min-width:78px; height:24px; border-radius:8px; border:1px solid #D3CEC7; background:#FFFFFF; color:#4F4A43; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i><span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">PIANIFICA</span></button>
+                <button onclick="showQuickAddTaskModal()" style="min-width:82px; height:24px; border-radius:8px; border:1px solid rgba(255,255,255,0.28); background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); color:#FFFFFF; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i><span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">ATTIVITÀ+</span></button>
             </div>
           </div>
           <div id="home-focus-task-list" class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
@@ -1660,20 +1694,10 @@ function renderGradesView() {
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
     const media = averageFromNumeric(numericVotes) || 0;
     const goal = Number.isFinite(Number(state.goals?.overall)) ? Number(state.goals.overall) : 8.0;
-    const schoolRanges = getSchoolYearRanges(new Date());
-    const firstTermVotes = votiData.filter(v => {
-        const d = getVoteDate(v);
-        return d && d >= schoolRanges.firstTermStart && d <= schoolRanges.firstTermEnd;
-    });
-    const secondTermVotes = votiData.filter(v => {
-        const d = getVoteDate(v);
-        return d && d >= schoolRanges.secondTermStart && d <= schoolRanges.secondTermEnd;
-    });
+    const firstTermVotes = getVotesBySchoolTerm(votiData, 'first');
+    const secondTermVotes = getVotesBySchoolTerm(votiData, 'second');
     const firstTermAvg = averageFromNumeric(firstTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
     const secondTermAvg = averageFromNumeric(secondTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
-    const simulatorValue = getNextGradeSimulatorValue();
-    const simulatedAvg = averageFromNumeric([...numericVotes, simulatorValue]);
-    const simulatedDelta = Number.isFinite(simulatedAvg) ? (simulatedAvg - media) : 0;
 
     const subjectsMap = {};
     votiData.forEach(v => {
@@ -1763,41 +1787,12 @@ function renderGradesView() {
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
                     <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 sett → 31 gen · ${firstTermVotes.length} voti</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
                 </div>
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
                     <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(secondTermAvg) ? secondTermAvg.toFixed(2) : '—'}</div>
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 feb → 30 giu · ${secondTermVotes.length} voti</div>
-                </div>
-            </div>
-
-            <div class="card" style="border-radius:14px; padding:14px; margin-bottom:18px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
-                    <div>
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
-                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Scegli un voto da 1 a 10 e genera la media simulata.</div>
-                    </div>
-                    <div id="next-grade-sim-value" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                    <button onclick="window.adjustNextGradeSimulator(-1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">−</button>
-                    <button onclick="window.adjustNextGradeSimulator(1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">+</button>
-                    <button onclick="window.generateFictionalAverage()" style="height:34px; border:none; border-radius:10px; padding:0 14px; background:#141414; color:#FFF; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:800; text-transform:uppercase; cursor:pointer;">Genera la tua media</button>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
-                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media attuale</div>
-                        <div id="next-grade-current-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${media.toFixed(2)}</div>
-                    </div>
-                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media simulata</div>
-                        <div id="next-grade-sim-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—'}</div>
-                    </div>
-                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Impatto</div>
-                        <div id="next-grade-sim-impact" style="font-size:18px; font-weight:800; color:${simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30'}; letter-spacing:-0.02em;">${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}</div>
-                    </div>
                 </div>
             </div>
 
@@ -2366,6 +2361,18 @@ function renderSubjectDetailView(subjectName) {
     const projection = getGoalProjection(media, goal, votiData.length);
     const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
     const subjectScenarios = projection.scenarios || [];
+    const firstTermVotes = getVotesBySchoolTerm(votiData, 'first');
+    const secondTermVotes = getVotesBySchoolTerm(votiData, 'second');
+    const firstTermAvg = averageFromNumeric(firstTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
+    const secondTermAvg = averageFromNumeric(secondTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
+    const currentTerm = getCurrentSchoolTerm(new Date());
+    const currentTermVotes = currentTerm ? getVotesBySchoolTerm(votiData, currentTerm) : [];
+    const currentTermNumeric = currentTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const simulatorValue = getNextGradeSimulatorValue();
+    const currentTermAvg = averageFromNumeric(currentTermNumeric);
+    const simulatedAvg = averageFromNumeric([...currentTermNumeric, simulatorValue]);
+    const simulatedDelta = Number.isFinite(currentTermAvg) && Number.isFinite(simulatedAvg) ? (simulatedAvg - currentTermAvg) : null;
+    const currentTermLabel = currentTerm === 'first' ? 'Primo quadrimestre' : (currentTerm === 'second' ? 'Secondo quadrimestre' : 'Nessun quadrimestre attivo');
     const subjectGoalStatusLine = projection.done
         ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#2DB86A; font-weight:800; text-transform:uppercase;">✓ Obiettivo raggiunto</span>`
         : `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:800; text-transform:uppercase;">Gap ${projection.gap.toFixed(2)}</span>`;
@@ -2442,6 +2449,47 @@ function renderSubjectDetailView(subjectName) {
                 <div style="margin-top:20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
                     ${subjectScenariosHtml}
                 </div>`}
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:14px;">
+                <div class="card" style="border-radius:14px; padding:14px;">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
+                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
+                </div>
+                <div class="card" style="border-radius:14px; padding:14px;">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
+                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(secondTermAvg) ? secondTermAvg.toFixed(2) : '—'}</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 feb → 30 giu · ${secondTermVotes.length} voti</div>
+                </div>
+            </div>
+
+            <div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
+                    <div>
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
+                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Simulazione attiva solo per il <span id="next-grade-current-term-label" aria-live="polite" aria-atomic="true">${currentTermLabel}</span>.</div>
+                    </div>
+                    <div id="next-grade-sim-value" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <button onclick="window.adjustNextGradeSimulator(-1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">−</button>
+                    <button onclick="window.adjustNextGradeSimulator(1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">+</button>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
+                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media attuale</div>
+                        <div id="next-grade-current-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(currentTermAvg) ? currentTermAvg.toFixed(2) : '—'}</div>
+                    </div>
+                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media simulata</div>
+                        <div id="next-grade-sim-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—'}</div>
+                    </div>
+                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Impatto</div>
+                        <div id="next-grade-sim-impact" style="font-size:18px; font-weight:800; color:${Number.isFinite(simulatedDelta) ? (simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30') : '#908C86'}; letter-spacing:-0.02em;">${Number.isFinite(simulatedDelta) ? `${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}` : '—'}</div>
+                    </div>
+                </div>
             </div>
 
             <div class="card" style="padding:14px; border-radius:14px; margin-bottom:14px; border:1px solid var(--border-light);">
@@ -4831,21 +4879,6 @@ window.adjustNextGradeSimulator = function (delta) {
     if (state.view === 'voti') {
         if (!updateNextGradeSimulatorWidget()) scheduleRender(0);
     }
-};
-
-window.generateFictionalAverage = function () {
-    const selected = getNextGradeSimulatorValue();
-    const votiData = getVotiData();
-    const numeric = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    if (!numeric.length) {
-        showToast('Aggiungi prima almeno un voto reale.');
-        return;
-    }
-    const currentAvg = averageFromNumeric(numeric) || 0;
-    const newAvg = averageFromNumeric([...numeric, selected]) || 0;
-    const delta = newAvg - currentAvg;
-    showToast(`Media simulata ${newAvg.toFixed(2)} (${delta >= 0 ? '+' : ''}${delta.toFixed(2)})`);
-    if (state.view === 'voti') scheduleRender(0);
 };
 
 window.selectDay = function (day) {
