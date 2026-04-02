@@ -55,6 +55,7 @@ const CHART_LABEL_FONT = '800 10px Inter';
 const GOAL_GRADE_SCALE_DESC = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
 const MAX_GRADE_VALUE = 10;
 const MAX_GOAL_SCENARIOS = 6;
+const BRAND_GRADIENT = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%)';
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
@@ -386,7 +387,7 @@ window.googleFetchWithAuthRetry = async function (url, options = {}) {
 
 window.connectGoogle = async function () {
     const userId = window.getUserId();
-    if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
+    if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'error', 'var(--red)'); return; }
 
     try {
         const response = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=auth-url`, {
@@ -399,7 +400,7 @@ window.connectGoogle = async function () {
         window.location.href = data.url;
     } catch (err) {
         console.error('Google auth-url error:', err);
-        showToast(err.message || 'Errore collegamento Google', 'var(--red)');
+        showToast(err.message || 'Errore collegamento Google', 'error', 'var(--red)');
     }
 };
 
@@ -424,13 +425,13 @@ window.syncGoogleCalendar = async function () {
         });
         const data = await res.json();
         if (data.success) {
-            showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'var(--green)');
+            showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'success', 'var(--green)');
         } else {
             throw new Error(data.error || 'Sync fallito');
         }
     } catch (err) {
         console.error('Google Sync Error:', err);
-        showToast(err.message || 'Errore durante il sync', 'var(--red)');
+        showToast(err.message || 'Errore durante il sync', 'error', 'var(--red)');
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
     }
@@ -446,10 +447,10 @@ window.disconnectGoogle = async function () {
         const data = await res.json();
         if (data.success) {
             state.googleConnected = false;
-            showToast('Google Calendar disconnesso.', 'var(--orange)');
+            showToast('Google Calendar disconnesso.', 'warning', 'var(--orange)');
             window.scheduleRender();
         }
-    } catch (e) { showToast('Errore disconnessione Google', 'var(--red)'); }
+    } catch (e) { showToast('Errore disconnessione Google', 'error', 'var(--red)'); }
 };
 
 window.checkGoogleStatus = async function () {
@@ -716,18 +717,22 @@ function closeModal(event) {
         }
     }
 }
-function showToast(message, type) {
+function showToast(message, type = 'success', customBackground = '') {
     const existing = document.getElementById('g-toast');
     if (existing) existing.remove();
 
     const typeValue = typeof type === 'string' ? type.toLowerCase() : '';
-    const successGradient = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%)';
-    const bgColor = typeValue === 'warning'
+    const bgColor = customBackground || (typeValue === 'warning'
         ? '#FF9500'
         : typeValue === 'error'
             ? '#FF3B30'
-            : (type && !['success', 'warning', 'error'].includes(typeValue) ? type : successGradient);
-    const icon = typeValue === 'warning' ? 'ph-warning' : typeValue === 'error' ? 'ph-x-circle' : 'ph-check-circle';
+            : BRAND_GRADIENT);
+    const toastIconByType = {
+        warning: 'ph-warning',
+        error: 'ph-x-circle',
+        success: 'ph-check-circle'
+    };
+    const icon = toastIconByType[typeValue] || toastIconByType.success;
 
     const toast = document.createElement('div');
     toast.id = 'g-toast';
@@ -754,7 +759,7 @@ function showToast(message, type) {
         toast.style.transform = 'translateX(-50%) translateY(20px)';
         toast.style.transition = 'all 0.4s ease-in';
         setTimeout(() => toast.remove(), 400);
-    }, type === 'warning' ? 4000 : 1800);
+    }, typeValue === 'warning' ? 4000 : 1800);
 }
 function showBoot(text) {
     const el = document.getElementById('boot-overlay');
@@ -1572,7 +1577,7 @@ function renderPlanner() {
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); color: #FFFFFF; border: 1px solid rgba(13,31,45,0.16); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: ${BRAND_GRADIENT}; color: #FFFFFF; border: 1px solid rgba(13,31,45,0.16); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-sparkle"></i> AI Chat
                         </button>
                         <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
@@ -3594,11 +3599,11 @@ function togglePomodoro() {
                 if (pomodoroState.mode === 'focus') {
                     pomodoroState.mode = 'break';
                     pomodoroState.timeLeft = 5 * 60;
-                    showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
+                    showToast('🎉 Sessione completata! Pausa di 5 min.', 'success', 'var(--green)');
                 } else {
                     pomodoroState.mode = 'focus';
                     pomodoroState.timeLeft = 25 * 60;
-                    showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
+                    showToast('💪 Pausa finita! Torna a studiare.', 'success', '#7c3aed');
                 }
             }
             const container = document.getElementById('pomodoroContainer');
@@ -4811,7 +4816,7 @@ window.refreshPlanWeekModalContent = function () {
     });
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
-            <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 23px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform:uppercase;">Pianifica Settimana</h2>
+            <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase;">Pianifica Settimana</h2>
             <button onclick="finalizePlanWeekModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
@@ -4857,8 +4862,8 @@ window.refreshPlanWeekModalContent = function () {
 window.finalizePlanWeekModal = function () {
     const doneBtn = document.getElementById('plan-week-done-btn');
     const addedBadge = document.getElementById('plan-week-added-badge');
-    const beforeCount = Number.isFinite(state.planWeekInitialPlannedCount) ? state.planWeekInitialPlannedCount : 0;
-    const added = Math.max(0, getPlannedTasksTotalCount() - beforeCount);
+    const initialPlannedCount = state.planWeekInitialPlannedCount ?? 0;
+    const added = Math.max(0, getPlannedTasksTotalCount() - initialPlannedCount);
 
     if (doneBtn) {
         doneBtn.style.background = '#2DB86A';
@@ -4875,7 +4880,7 @@ window.finalizePlanWeekModal = function () {
         closeModal();
         if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
         if (added > 0 && typeof showToast === 'function') {
-            showToast(`<span class="badge badge-success" style="margin-left:6px;">${added} compiti aggiunti</span>`);
+            showToast(`${added} compiti aggiunti`);
         }
         if (state.view === 'planner' && typeof scheduleRender === 'function') {
             setTimeout(() => scheduleRender(0), 10);
@@ -4932,19 +4937,19 @@ window.submitExamForm = function () {
     let subject = document.getElementById('examSubject').value;
     if (subject === '__custom') {
         subject = (document.getElementById('examCustomSubject').value || '').trim();
-        if (!subject) return showToast('Inserisci il nome della materia', '#ff453a');
+        if (!subject) return showToast('Inserisci il nome della materia', 'error', '#ff453a');
     }
     const type = document.getElementById('examType').value;
     const date = document.getElementById('examDate').value;
     const topic = (document.getElementById('examTopic').value || '').trim();
-    if (!date) return showToast('Seleziona una data', '#ff453a');
+    if (!date) return showToast('Seleziona una data', 'error', '#ff453a');
     state.exams.push({ subject, type, date, topic });
     const examTask = { id: 'exam_' + Date.now(), text: `${type}: ${topic || subject}`, subject, due_date: date, done: false, isExam: true };
     state.tasks.push(examTask);
     if (typeof saveTasks === 'function') saveTasks();
     closeModal();
     window.scheduleRender();
-    showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
+    showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'success', 'var(--green)');
 };
 
 window.removeExam = function (index) {
@@ -4956,12 +4961,12 @@ window.removeExam = function (index) {
 window.submitBacklogForm = function () {
     const subject = document.getElementById('backlogSubject').value;
     const topic = (document.getElementById('backlogTopic').value || '').trim();
-    if (!topic) return showToast('Inserisci l\'argomento da recuperare', '#ff453a');
+    if (!topic) return showToast('Inserisci l\'argomento da recuperare', 'error', '#ff453a');
     state.backlog.push({ subject, topic });
     if (typeof saveTasks === 'function') saveTasks();
     closeModal();
     window.scheduleRender();
-    showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
+    showToast(`📚 Arretrato di ${subject} aggiunto!`, 'success', 'var(--green)');
 };
 
 window.removeBacklog = function (index) {
