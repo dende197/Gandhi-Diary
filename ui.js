@@ -58,6 +58,7 @@ const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THR
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
 let __subjectTrendRAF = null;
+const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 
 function normalizeSubjectName(name) {
     // Unify subject labels coming from different DidUP payloads/UI variants
@@ -1167,9 +1168,6 @@ function renderLogin() {
 // ================================================================
 
 function renderHome() {
-    if (state.homeTaskFocus !== 'today' && state.homeTaskFocus !== 'tomorrow') {
-        state.homeTaskFocus = 'tomorrow';
-    }
     const todayStr = getLocalDateString();
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
@@ -1974,7 +1972,7 @@ function initSubjectTrendChart(canvasId, trendItems, subjColor) {
             __subjectTrendRAF = null;
             return;
         }
-        progress = Math.min(1, progress + 0.06);
+        progress = Math.min(1, progress + SUBJECT_TREND_ANIMATION_STEP);
         drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress);
         if (progress < 1) {
             __subjectTrendRAF = requestAnimationFrame(animate);
@@ -1985,6 +1983,25 @@ function initSubjectTrendChart(canvasId, trendItems, subjColor) {
     drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, 0.04);
     __subjectTrendRAF = requestAnimationFrame(animate);
 }
+function scheduleSubjectTrendChartInit(payload) {
+    if (!payload || !Array.isArray(payload.points) || payload.points.length === 0) return;
+    const color = payload.color || '#2563EB';
+    const normalized = payload.points
+        .map(p => {
+            const value = Number(p?.value);
+            const date = new Date(p?.date);
+            if (!Number.isFinite(value) || Number.isNaN(date.getTime())) return null;
+            return { value, date };
+        })
+        .filter(Boolean);
+    if (!normalized.length) return;
+    setTimeout(() => {
+        if (typeof initSubjectTrendChart === 'function') {
+            initSubjectTrendChart('subjectTrendCanvas', normalized, color);
+        }
+    }, 60);
+}
+window.scheduleSubjectTrendChartInit = scheduleSubjectTrendChartInit;
 function initCustomScrollbar() {
     const scroller = document.getElementById('custom-scrollbar');
     const thumb = document.getElementById('scroll-thumb');
@@ -2257,7 +2274,7 @@ function renderSubjectDetailView(subjectName) {
                     </div>`;
     }).join('')}
             </div>
-            ${trendItems.length ? `<script>setTimeout(() => { if (typeof initSubjectTrendChart === 'function') initSubjectTrendChart('subjectTrendCanvas', ${JSON.stringify(trendItems.map(item => ({ value: item.value, date: item.date.toISOString() }))).replace(/</g, '\\u003c')}.map(p => ({ value: p.value, date: new Date(p.date) })), '${subjColor}'); }, 60);</script>` : ''}
+            ${trendItems.length ? `<script>window.scheduleSubjectTrendChartInit && window.scheduleSubjectTrendChartInit(${JSON.stringify({ points: trendItems.map(item => ({ value: item.value, date: item.date.toISOString() })), color: subjColor }).replace(/</g, '\\u003c')});</script>` : ''}
         </div> `;
 }
 function mostraAssenzeModal() {
