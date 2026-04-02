@@ -77,6 +77,11 @@ function isAiTask(task) {
     return !!(task && typeof task.id === 'string' && task.id.startsWith('ai_'));
 }
 
+function isUserGeneratedTaskId(id) {
+    if (typeof id !== 'string') return false;
+    return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('quest-');
+}
+
 function getAgendaCacheKey() {
     try {
         return `${lsKey('weekly_agenda_cache')}:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
@@ -502,6 +507,61 @@ function isGiustifica(val) {
     if (!val && val !== 0) return true;
     const s = val.toString().replace(',', '.').trim();
     return s === '' || s === '-' || s === '—' || isNaN(parseFloat(s));
+}
+
+function getNumericGradeValue(vote) {
+    if (!vote) return null;
+    const raw = (vote.valore || vote.value || '').toString().replace(',', '.').trim();
+    if (isGiustifica(raw)) return null;
+    const num = parseFloat(raw);
+    return Number.isFinite(num) ? num : null;
+}
+
+function getVoteDate(vote) {
+    const d = parseArgoDate(vote?.data || vote?.date);
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+    return d;
+}
+
+function getSchoolYearRanges(refDate = new Date()) {
+    const year = refDate.getFullYear();
+    const month = refDate.getMonth();
+    const startYear = month >= 8 ? year : year - 1; // school year starts in September
+    const endYear = startYear + 1;
+    return {
+        startYear,
+        endYear,
+        firstTermStart: new Date(startYear, 8, 1, 0, 0, 0, 0),      // 1 Sep 00:00:00
+        firstTermEnd: new Date(endYear, 0, 31, 23, 59, 59, 999),    // 31 Jan 23:59:59
+        secondTermStart: new Date(endYear, 1, 1, 0, 0, 0, 0),       // 1 Feb 00:00:00
+        secondTermEnd: new Date(endYear, 5, 30, 23, 59, 59, 999)     // 30 Jun 23:59:59
+    };
+}
+
+function averageFromNumeric(values) {
+    if (!Array.isArray(values) || values.length === 0) return null;
+    const valid = values.filter(v => Number.isFinite(v));
+    if (!valid.length) return null;
+    return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function getNextGradeSimulatorValue() {
+    const inState = Number(state.nextGradeSimulator);
+    if (Number.isFinite(inState)) return Math.max(1, Math.min(10, Math.round(inState)));
+    try {
+        const stored = Number(localStorage.getItem(lsKey('next_grade_sim')));
+        if (Number.isFinite(stored)) return Math.max(1, Math.min(10, Math.round(stored)));
+    } catch (_) {}
+    return 7;
+}
+
+function setNextGradeSimulatorValue(value) {
+    const next = Math.max(1, Math.min(10, Math.round(Number(value) || 7)));
+    state.nextGradeSimulator = next;
+    try {
+        localStorage.setItem(lsKey('next_grade_sim'), String(next));
+    } catch (_) {}
+    return next;
 }
 function getMotivationalFallback() {
     const quotes = [
@@ -1107,7 +1167,7 @@ function renderCalendarWeekList(weekStart) {
                             </div>
                             <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; background:var(--${key},#F0F0F3); color:var(--${key}-t,#555); padding:2px 7px; border-radius:5px; flex-shrink:0;">${abbr}</span>
                             <span data-task-text="${escapeHtml(t.id)}" style="font-size:12px; font-weight:600; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayText)}</span>
-                            ${t.id && t.id.startsWith('manual_') ? `
+                            ${isUserGeneratedTaskId(t.id) ? `
                             <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:18px; height:18px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività">
                                 <i class="ph-bold ph-trash" style="font-size:10px;"></i>
                             </button>` : ''}
@@ -1381,7 +1441,7 @@ function renderHome() {
                 </div>
                 <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
                 <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
-                ${t.id && t.id.startsWith('manual_') ? `
+                ${isUserGeneratedTaskId(t.id) ? `
                 <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
                     <i class="ph-bold ph-trash" style="font-size:10px; color:#FF3B30;"></i>
                 </button>` : ''}
@@ -1524,8 +1584,23 @@ function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
     const votiData = getVotiData();
-    const media = parseFloat(calcolaMedia(votiData)) || 0;
-    const goal = state.goals?.overall || 8.0;
+    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const media = averageFromNumeric(numericVotes) || 0;
+    const goal = Number.isFinite(Number(state.goals?.overall)) ? Number(state.goals.overall) : 8.0;
+    const schoolRanges = getSchoolYearRanges(new Date());
+    const firstTermVotes = votiData.filter(v => {
+        const d = getVoteDate(v);
+        return d && d >= schoolRanges.firstTermStart && d <= schoolRanges.firstTermEnd;
+    });
+    const secondTermVotes = votiData.filter(v => {
+        const d = getVoteDate(v);
+        return d && d >= schoolRanges.secondTermStart && d <= schoolRanges.secondTermEnd;
+    });
+    const firstTermAvg = averageFromNumeric(firstTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
+    const secondTermAvg = averageFromNumeric(secondTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
+    const simulatorValue = getNextGradeSimulatorValue();
+    const simulatedAvg = averageFromNumeric([...numericVotes, simulatorValue]);
+    const simulatedDelta = Number.isFinite(simulatedAvg) ? (simulatedAvg - media) : 0;
 
     const subjectsMap = {};
     votiData.forEach(v => {
@@ -1536,11 +1611,12 @@ function renderGradesView() {
     });
 
     const subjects = Object.values(subjectsMap).map(({ name, list }) => {
-        const subMedia = parseFloat(calcolaMedia(list)) || 0;
-        const trend = list.slice(-5).map(v => parseFloat((v.valore || v.value || '0').toString().replace(',', '.')));
+        const subMedia = averageFromNumeric(list.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
+        const trend = list.slice(-5).map(getNumericGradeValue).filter(v => Number.isFinite(v));
         const goal = state.goals?.[name] || 8.0;
-        const projection = getGoalProjection(subMedia, goal, list.length);
-        return { name, media: subMedia, count: list.length, trend, goal, projection };
+        const numericCount = list.map(getNumericGradeValue).filter(v => Number.isFinite(v)).length;
+        const projection = getGoalProjection(subMedia, goal, numericCount);
+        return { name, media: subMedia, count: numericCount, trend, goal, projection };
     }).sort((a, b) => b.media - a.media);
 
     return `
@@ -1553,7 +1629,7 @@ function renderGradesView() {
             </div>
 
             ${(() => {
-            const count = votiData.length;
+            const count = numericVotes.length;
             const projection = getGoalProjection(media, goal, count);
             const alreadyDone = projection.done;
             const scenarios = projection.scenarios || [];
@@ -1563,51 +1639,93 @@ function renderGradesView() {
             let scenariosHtml = '';
 
             if (alreadyDone) {
-                statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
+                statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
             } else {
-                statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
+                statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
                 if (scenarios.length > 0) {
                     scenariosHtml = scenarios.map(s => `
-                            <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.06); border-radius:10px; margin-top:6px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 9px; background:rgba(255,255,255,0.06); border-radius:9px; margin-top:6px;">
                                 <div style="display:flex; flex-direction:column; gap:2px;">
-                                    <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);">
+                                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.5);">
                                         ${s.exact ? 'prossimo voto esatto' : s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
                                     </span>
                                     ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
                                 </div>
-                                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:800; color:white;">
+                                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:white;">
                                      ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
                                  </span>
                              </div>`).join('');
                 } else {
                     // Se goal è > 10 o irraggiungibile anche con cento 10
                     const isImpossible = goal > 10;
-                    scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
+                    scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
                 }
             }
 
             return `
-                <div class="card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:40px; border-radius:18px; padding:24px; display:flex; align-items:flex-start; gap:24px; background:#121214; box-shadow:0 10px 30px rgba(0,0,0,0.15); transition:transform 0.2s;">
-                    <div style="display:flex; gap:14px; align-items:flex-start; flex-shrink:0;">
-                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:22px; color:white; flex-shrink:0;">
+                <div class="card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:18px; border-radius:16px; padding:16px; display:flex; align-items:flex-start; gap:16px; background:#121214; box-shadow:0 8px 20px rgba(0,0,0,0.12); transition:transform 0.2s;">
+                    <div style="display:flex; gap:10px; align-items:flex-start; flex-shrink:0;">
+                        <div style="width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:17px; color:white; flex-shrink:0;">
                             <i class="ph-fill ph-target"></i>
                         </div>
                         <div>
-                            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:4px;">Obiettivo</div>
-                            <div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:3px;">Obiettivo media</div>
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
                                 ${goal.toFixed(2)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
                             </div>
-                            <div style="margin-top:8px;">${statusLine}</div>
+                            <div style="margin-top:6px;">${statusLine}</div>
                         </div>
                     </div>
                     ${!alreadyDone ? `
                     <div style="flex:1; min-width:0;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:2px;">Come arrivarci</div>
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:2px;">Come arrivarci</div>
                         ${scenariosHtml}
                     </div>` : ''}
                 </div>
                 `;
         })()}
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:16px;">
+                <div class="card" style="border-radius:14px; padding:14px;">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
+                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 sett → 31 gen · ${firstTermVotes.length} voti</div>
+                </div>
+                <div class="card" style="border-radius:14px; padding:14px;">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
+                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(secondTermAvg) ? secondTermAvg.toFixed(2) : '—'}</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 feb → 30 giu · ${secondTermVotes.length} voti</div>
+                </div>
+            </div>
+
+            <div class="card" style="border-radius:14px; padding:14px; margin-bottom:18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
+                    <div>
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
+                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Scegli un voto da 1 a 10 e genera la media simulata.</div>
+                    </div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <button onclick="window.adjustNextGradeSimulator(-1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">−</button>
+                    <button onclick="window.adjustNextGradeSimulator(1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">+</button>
+                    <button onclick="window.generateFictionalAverage()" style="height:34px; border:none; border-radius:10px; padding:0 14px; background:#141414; color:#FFF; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:800; text-transform:uppercase; cursor:pointer;">Genera la tua media</button>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
+                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media attuale</div>
+                        <div style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${media.toFixed(2)}</div>
+                    </div>
+                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media simulata</div>
+                        <div style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—'}</div>
+                    </div>
+                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Impatto</div>
+                        <div style="font-size:18px; font-weight:800; color:${simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30'}; letter-spacing:-0.02em;">${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}</div>
+                    </div>
+                </div>
+            </div>
 
             <div style="margin-bottom: 24px;">
                 <h2 style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px;">
@@ -1617,7 +1735,7 @@ function renderGradesView() {
                 </h2>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
                 ${subjects.map(s => {
             const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
             const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
@@ -1626,16 +1744,16 @@ function renderGradesView() {
 
             const encodedSubjectArg = encodeURIComponent(s.name || '');
             return `
-                    <div class="card grade-subject-widget" style="padding: 24px; border-radius: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 18px; border-left: 5px solid ${subjColor}; min-height: 112px;" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
-                        <div style="width: 52px; height: 52px; border-radius: 14px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 13px; flex-shrink: 0;">
+                    <div class="card grade-subject-widget" style="padding: 14px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; border-left: 4px solid ${subjColor}; min-height: 84px;" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 11px; flex-shrink: 0;">
                             ${escapeHtml(getSubjectAbbrev(s.name))}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; line-height:1.3;">${escapeHtml(s.name)}</div>
+                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; line-height:1.3;">${escapeHtml(s.name)}</div>
                             <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} vot${s.count === 1 ? 'o' : 'i'} registrat${s.count === 1 ? 'o' : 'i'}</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 30px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.03em; line-height:1;">${s.media.toFixed(2)}</div>
+                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.03em; line-height:1;">${s.media.toFixed(2)}</div>
                         </div>
                     </div > `;
         }).join('')}
@@ -2252,13 +2370,13 @@ function renderSubjectDetailView(subjectName) {
                 </div>`}
             </div>
 
-            <div class="card" style="padding:18px; border-radius:18px; margin-bottom:18px; border:1px solid var(--border-light);">
+            <div class="card" style="padding:14px; border-radius:14px; margin-bottom:14px; border:1px solid var(--border-light);">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                     <h2 style="font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.08em;">Trend andamento</h2>
                     <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86;">${trendItems.length} punti</span>
                 </div>
-                <div style="background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
-                    ${trendItems.length ? `<canvas id="subjectTrendCanvas" data-color="${escapeHtml(subjColor)}" data-points="${encodeURIComponent(JSON.stringify(trendItems.map(item => ({ value: item.value, date: item.date.toISOString() }))))}" width="820" height="240" aria-label="Grafico cartesiano andamento voti" style="width:100%; height:240px; display:block;"></canvas>` : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
+                <div style="background:#F8F7F5; border:1px solid #ECEAE6; border-radius:10px; padding:8px;">
+                    ${trendItems.length ? `<canvas id="subjectTrendCanvas" data-color="${escapeHtml(subjColor)}" data-points="${encodeURIComponent(JSON.stringify(trendItems.map(item => ({ value: item.value, date: item.date.toISOString() }))))}" width="820" height="160" aria-label="Grafico cartesiano andamento voti" style="width:100%; height:160px; display:block;"></canvas>` : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
                 </div>
             </div>
 
@@ -2608,7 +2726,7 @@ function renderDayDetailModal(dateStr) {
                                             <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
                                                 <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'white' : '#C8C5C0'};"></i>
                                             </button>
-                                            ${t.id && t.id.startsWith('manual_') ? `<button onclick="deleteCalendarTask('${t.id}', '${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
+                                            ${isUserGeneratedTaskId(t.id) ? `<button onclick="deleteCalendarTask('${t.id}', '${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
                                                 <i class="ph-bold ph-trash" style="font-size:14px; color:#FF3B30;"></i>
                                             </button>` : ''}
                                         </div>
@@ -2654,7 +2772,7 @@ function togglePlanInModal(dateStr, taskId) {
     notifyPlannerChanged();
 }
 function deleteCalendarTask(taskId, dateStr = '') {
-    if (!taskId || !taskId.startsWith('manual_')) return;
+    if (!taskId || !isUserGeneratedTaskId(taskId)) return;
     const shouldRefreshDayModal = Boolean(dateStr && document.getElementById('modal-task-list'));
     state.tasks = state.tasks.filter(t => t.id !== taskId);
     // Remove from plannedTasks as well
@@ -3018,7 +3136,7 @@ function renderWeeklyAgenda() {
                             <div data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
-                            ${t.id && t.id.startsWith('manual_') ? `
+                            ${isUserGeneratedTaskId(t.id) ? `
                             <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
                                 <i class="ph-bold ph-trash" style="font-size:13px;"></i>
                             </button>` : ''}
@@ -3680,38 +3798,20 @@ function toggleTask(id) {
     }
 }
 function showQuickAddTaskModal() {
-    const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
-    const subjectOptions = subjects.length > 0
-        ? subjects.map(s => `<option value="${s}">${escapeHtml(s)}</option>`).join('')
-        : '<option value="Generale">Generale</option>';
-
     showModal(`
                 <div style="padding: 28px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Aggiungi Attività</h2>
+                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Task Manuali Disattivate</h2>
                         <button onclick="closeModal()" style="width: 32px; height: 32px; border-radius: 10px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-x" style="font-size: 14px;"></i></button>
                     </div>
-                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// AGGIUNGI_ATTIVITÀ_STUDIO</p>
-                    <div style="display: flex; flex-direction: column; gap: 18px;">
-                        <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Descrizione</label>
-                            <input id="quickTaskText" type="text" placeholder="Es. Studiare cap. 5 Storia"
-                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 14px; outline: none; box-sizing: border-box;" />
-                        </div>
-                        <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Materia</label>
-                            <select id="quickTaskSubject" style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; -webkit-appearance: none;">
-                                ${subjectOptions}
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Data</label>
-                            <input id="quickTaskDate" type="date" value="${getLocalDateString()}"
-                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box;" />
-                        </div>
+                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// SOLO_COMPITI_ASSEGNATI</p>
+                    <div style="border:1px solid #E0DDD8; border-radius:14px; background:#F6F5F3; padding:14px; font-size:14px; color:#141414; line-height:1.45;">
+                        Per mantenere l'agenda pulita usiamo solo i compiti assegnati dal registro.
+                        <br><br>
+                        Se avevi task manuali/AI, sono stati rimossi automaticamente.
                     </div>
                     <button id="submit-quick-task-btn" onclick="submitQuickTask()" style="width: 100%; margin-top: 24px; padding: 16px; border-radius: 16px; border: none; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);">
-                        <i class="ph-bold ph-plus" style="margin-right: 8px;"></i> Aggiungi al Planner
+                        <i class="ph-bold ph-check-circle" style="margin-right: 8px;"></i> Ho capito
                     </button>
                     <style>#submit-quick-task-btn:active { transform: scale(0.96); opacity: 0.8; }</style>
                 </div>
@@ -4593,22 +4693,28 @@ window.updateWeekDayButton = function (taskId, dateStr) {
 };
 
 window.addCustomQuestFromInput = function () {
-    const textInput = document.getElementById('quest-text-input');
-    const dateSelect = document.getElementById('quest-date-select');
-    if (!textInput || !dateSelect) return;
-    const text = textInput.value.trim();
-    const dateStr = dateSelect.value;
-    if (!text) return showToast('Inserisci un compito!');
-    const quest = { id: 'quest-' + Date.now(), text, subject: 'QUEST', due_date: dateStr, done: false };
-    state.tasks.push(quest);
-    if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
-    state.plannedTasks[dateStr].push(quest.id);
-    if (typeof saveTasks === 'function') saveTasks();
-    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
-    showToast('Compito aggiunto!');
-    textInput.value = '';
-    window.refreshPlanWeekModalContent();
-    if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
+    showToast('Task manuali disattivate: restano solo compiti assegnati.');
+};
+
+window.adjustNextGradeSimulator = function (delta) {
+    const current = getNextGradeSimulatorValue();
+    setNextGradeSimulatorValue(current + (Number(delta) || 0));
+    if (state.view === 'voti') scheduleRender(0);
+};
+
+window.generateFictionalAverage = function () {
+    const selected = getNextGradeSimulatorValue();
+    const votiData = getVotiData();
+    const numeric = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    if (!numeric.length) {
+        showToast('Aggiungi prima almeno un voto reale.');
+        return;
+    }
+    const currentAvg = averageFromNumeric(numeric) || 0;
+    const newAvg = averageFromNumeric([...numeric, selected]) || 0;
+    const delta = newAvg - currentAvg;
+    showToast(`Media simulata ${newAvg.toFixed(2)} (${delta >= 0 ? '+' : ''}${delta.toFixed(2)})`);
+    if (state.view === 'voti') scheduleRender(0);
 };
 
 window.selectDay = function (day) {
@@ -4818,54 +4924,7 @@ REGOLE OPERATIVE:
 window.applyAIPlanFromChat = function (msgIndex) {
     const msg = state.aiChatHistory[msgIndex];
     if (!msg || msg.role !== 'ai') return;
-    const todayStr = getLocalDateString();
-    let currentDate = todayStr, addedCount = 0;
-    const DAY_IT = { lune: 1, lunedì: 1, mart: 2, martedì: 2, merc: 3, mercoledì: 3, giov: 4, giovedì: 4, vend: 5, venerdì: 5, sab: 6, sabato: 6, dom: 0, domenica: 0 };
-
-    msg.text.split('\n').forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
-        const cleanLine = trimmed.replace(/[#*_\[\]]/g, '').trim().toLowerCase();
-
-        // Check for date/day header
-        let foundDate = null;
-        const isoMatch = trimmed.match(/(\d{4}-\d{2}-\d{2})/);
-        if (isoMatch) foundDate = isoMatch[1];
-        else {
-            for (const [key, dNum] of Object.entries(DAY_IT)) {
-                if (cleanLine.includes(key) && !/\d{1,2}[:.]\d{2}/.test(cleanLine)) {
-                    const d = new Date(); d.setDate(d.getDate() + (dNum - d.getDay()));
-                    foundDate = getLocalDateString(d); break;
-                }
-            }
-        }
-        if (foundDate) { currentDate = foundDate; return; }
-
-        const timeMatch = trimmed.match(/(\d{1,2})[.:](\d{2})/);
-        if (!timeMatch) return;
-        const timeStr = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
-        let taskText = trimmed.replace(/^[#*\->\s•·]+/, '').replace(/\d{1,2}[.:]\d{2}(\s*[-–—]\s*\d{1,2}[.:]\d{2})?/, '').replace(/^[:\-–—\s]+/, '').trim();
-        if (/pausa|break|riposo/i.test(taskText) || taskText.length < 2) return;
-
-        let subject = 'Studio', topic = taskText;
-        const bracketMatch = taskText.match(/^\[?([^\]\-–—:]+)[\]\-–—:\s]+(.+)$/);
-        if (bracketMatch) { subject = bracketMatch[1].trim(); topic = bracketMatch[2].trim(); }
-        subject = subject.replace(/[^\p{L}\s]/gu, '').trim();
-        subject = subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase();
-
-        const newTask = { id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5), subject, text: `[AI] ${timeStr} — ${topic}`, due_date: currentDate, done: false, created_at: new Date().toISOString() };
-        state.tasks.push(newTask);
-        if (!state.plannedTasks[currentDate]) state.plannedTasks[currentDate] = [];
-        state.plannedTasks[currentDate].push(newTask.id);
-        addedCount++;
-    });
-
-    if (addedCount > 0) {
-        if (typeof saveTasks === 'function') saveTasks();
-        if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(300);
-        showToast(`✅ ${addedCount} sessioni aggiunte al Planner!`, 'var(--green)');
-        setTimeout(() => window.navigate('planner'), 900);
-    } else showToast('⚠️ Nessuna sessione valida trovata nel messaggio.', 'var(--orange)');
+    showToast('Piano AI non inseribile come task: restano solo compiti assegnati.');
 };
 
 window.saveGeminiKey = function () {
