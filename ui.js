@@ -1753,9 +1753,9 @@ function renderGradesView() {
                                     ${s.combo ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.65);">${s.label}</span>` : ''}
                                     ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
                                 </div>
-                                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:white;">
-                                     ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
-                                 </span>
+                                <span class="goal-overall-scenario-grade" style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:white;">
+                                      ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
+                                  </span>
                              </div>`).join('');
                 } else {
                     // Se goal è > 10 o irraggiungibile anche con cento 10
@@ -1765,14 +1765,14 @@ function renderGradesView() {
             }
 
             return `
-                <div class="card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:18px; border-radius:16px; padding:16px; display:flex; align-items:flex-start; gap:16px; background:#121214; box-shadow:0 8px 20px rgba(0,0,0,0.12); transition:transform 0.2s;">
+                <div class="card goal-overall-card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:18px; border-radius:16px; padding:16px; display:flex; align-items:flex-start; gap:16px; background:#121214; box-shadow:0 8px 20px rgba(0,0,0,0.12); transition:transform 0.2s;">
                     <div style="display:flex; gap:10px; align-items:flex-start; flex-shrink:0;">
                         <div style="width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:17px; color:white; flex-shrink:0;">
                             <i class="ph-fill ph-target"></i>
                         </div>
                         <div>
                             <div style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:3px;">Obiettivo media</div>
-                            <div style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
+                            <div class="goal-overall-value" style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
                                 ${goal.toFixed(2)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
                             </div>
                             <div style="margin-top:6px;">${statusLine}</div>
@@ -3232,7 +3232,7 @@ function renderWeeklyAgenda() {
     });
 
     return `
-        <div id="weekly-agenda-list" style="display: flex; flex-direction: column; gap: 32px;">
+        <div id="weekly-agenda-list" class="weekly-agenda-root" style="display: flex; flex-direction: column; gap: 32px;">
             ${searchHeader}
             ${sortedDates.map(dateStr => {
         const d = parseArgoDate(dateStr);
@@ -3249,7 +3249,7 @@ function renderWeeklyAgenda() {
             : '';
 
         return `
-            <div>
+            <div class="agenda-day-section">
                 <!-- TE Date Header -->
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
                     <div style="display:flex; flex-direction:column; align-items:center; min-width:44px;">
@@ -3276,10 +3276,10 @@ function renderWeeklyAgenda() {
                 .trim();
 
             return `
-                        <div class="card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
+                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
                         <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
-                        <div style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
+                        <div class="agenda-task-main" style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
                                 <span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
                                 ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
@@ -3287,12 +3287,12 @@ function renderWeeklyAgenda() {
                             <div data-task-text="${escapeHtml(t.id)}" style="font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
                         
-                        <div style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
-                            <div data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                        <div class="agenda-task-actions" style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
+                            <div class="agenda-task-action-btn" data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                             ${isUserGeneratedTaskId(t.id) ? `
-                            <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
+                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
                                 <i class="ph-bold ph-trash" style="font-size:13px;"></i>
                             </button>` : ''}
                         </div>

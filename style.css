@@ -4536,7 +4536,7 @@
           }
 
           /* 14 ▸ Agenda settimanale: evita testi troncati nei task */
-          #weekly-agenda-list>div {
+          #weekly-agenda-list.weekly-agenda-root>.agenda-day-section {
             gap: 18px !important;
           }
 
@@ -4551,43 +4551,43 @@
             -webkit-box-orient: initial !important;
           }
 
-          #weekly-agenda-list .card[style*="min-height:80px"] {
+          #weekly-agenda-list .agenda-task-card {
             min-height: 0 !important;
           }
 
-          #weekly-agenda-list .card[style*="padding:16px 20px"] {
+          #weekly-agenda-list .agenda-task-main {
             padding: 12px 12px !important;
           }
 
-          #weekly-agenda-list .card [style*="padding:0 16px"] {
+          #weekly-agenda-list .agenda-task-actions {
             padding: 0 10px !important;
             gap: 6px !important;
           }
 
-          #weekly-agenda-list .card [style*="width:30px; height:30px"] {
+          #weekly-agenda-list .agenda-task-action-btn {
             width: 28px !important;
             height: 28px !important;
           }
 
           /* 15 ▸ Voti: card obiettivo media più leggibile su schermo piccolo */
-          .dashboard.view .card[onclick*="promptSetGoal('overall')"] {
+          .dashboard.view .goal-overall-card {
             flex-direction: column !important;
             align-items: stretch !important;
             gap: 12px !important;
             padding: 14px !important;
           }
 
-          .dashboard.view .card[onclick*="promptSetGoal('overall')"]>div {
+          .dashboard.view .goal-overall-card>div {
             width: 100% !important;
             min-width: 0 !important;
           }
 
-          .dashboard.view .card[onclick*="promptSetGoal('overall')"] [style*="font-size:22px"] {
+          .dashboard.view .goal-overall-card .goal-overall-value {
             font-size: 20px !important;
             line-height: 1.1 !important;
           }
 
-          .dashboard.view .card[onclick*="promptSetGoal('overall')"] [style*="font-size:12px"] {
+          .dashboard.view .goal-overall-card .goal-overall-scenario-grade {
             font-size: 11px !important;
           }
         }
