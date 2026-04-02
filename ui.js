@@ -991,7 +991,7 @@ function updateNextGradeSimulatorWidget() {
         impactEl.style.color = '#908C86';
     }
     if (termLabelEl) {
-        termLabelEl.textContent = currentTerm === 'first' ? 'Primo quadrimestre' : (currentTerm === 'second' ? 'Secondo quadrimestre' : 'Quadrimestre attuale');
+        termLabelEl.textContent = currentTerm === 'first' ? 'Primo quadrimestre' : (currentTerm === 'second' ? 'Secondo quadrimestre' : 'Nessun quadrimestre attivo');
     }
     return true;
 }
@@ -1787,7 +1787,7 @@ function renderGradesView() {
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
                     <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 sett → 31 gen · ${firstTermVotes.length} voti</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
                 </div>
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
@@ -2455,7 +2455,7 @@ function renderSubjectDetailView(subjectName) {
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
                     <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 sett → 31 gen · ${firstTermVotes.length} voti</div>
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
                 </div>
                 <div class="card" style="border-radius:14px; padding:14px;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
@@ -2468,7 +2468,7 @@ function renderSubjectDetailView(subjectName) {
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
                     <div>
                         <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
-                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Simulazione attiva solo sul <span id="next-grade-current-term-label">${currentTermLabel}</span>.</div>
+                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Simulazione attiva solo per il <span id="next-grade-current-term-label">${currentTermLabel}</span>.</div>
                     </div>
                     <div id="next-grade-sim-value" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
                 </div>
