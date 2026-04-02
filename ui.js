@@ -524,11 +524,20 @@ function getVoteDate(vote) {
     if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
     return d;
 }
+/**
+ * Restituisce l'etichetta UI per uno scenario di proiezione obiettivo.
+ * @param {{combo?: boolean, exact?: boolean, n?: number}} scenario Scenario calcolato (combo, exact, numero voti).
+ * @param {boolean} lowercase Se true, restituisce testo in minuscolo per card scure.
+ * @returns {string} Etichetta human-readable da mostrare nella proiezione.
+ */
 function getProjectionScenarioLabel(scenario, lowercase = false) {
     if (scenario?.combo) return lowercase ? 'combinazione utile' : 'Combinazione utile';
     if (scenario?.exact) return lowercase ? 'prossimo voto esatto' : 'Prossimo voto esatto';
     if ((scenario?.n || 0) === 1) return lowercase ? 'prossimo voto' : 'Prossimo voto';
     return lowercase ? `prossimi ${scenario?.n || 0} voti` : `Prossimi ${scenario?.n || 0} voti`;
+}
+function getProjectionComboDetailLabel(grade, extraTopGrades, maxGradeValue) {
+    return `1 voto ${grade.toFixed(2)} + ${extraTopGrades} vot${extraTopGrades === 1 ? 'o' : 'i'} da ${maxGradeValue.toFixed(2)}`;
 }
 
 function getSchoolYearRanges(refDate = new Date()) {
@@ -3297,7 +3306,7 @@ function getGoalProjection(media, goal, count) {
         // 2) stimiamo quanti 10 servono dopo quel voto per rientrare nel target;
         // 3) limitiamo a scenari brevi (massimo 5 voti totali) per mantenere suggerimenti utili.
         for (const g of grades) {
-            if (g <= PASSING_GRADE_THRESHOLD || g >= safeGoal) continue;
+            if (g < PASSING_GRADE_THRESHOLD || g >= safeGoal) continue;
             const sumAfterOne = currentSum + g;
             const countAfterOne = safeCount + 1;
             const denom = MAX_GRADE_VALUE - safeGoal;
@@ -3310,7 +3319,7 @@ function getGoalProjection(media, goal, count) {
                     grade: g,
                     combo: true,
                     extraTopGrades,
-                    label: `1 voto ${g.toFixed(2)} + ${extraTopGrades} vot${extraTopGrades === 1 ? 'o' : 'i'} da ${MAX_GRADE_VALUE.toFixed(2)}`
+                    label: getProjectionComboDetailLabel(g, extraTopGrades, MAX_GRADE_VALUE)
                 });
             }
         }
