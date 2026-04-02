@@ -57,7 +57,7 @@ const MAX_GOAL_SCENARIOS = 6;
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
-let __subjectTrendRAF = null;
+let subjectTrendRAF = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 const SUBJECT_TREND_ANIMATION_INITIAL_PROGRESS = 0.04;
 
@@ -1962,24 +1962,24 @@ function initSubjectTrendChart(canvasId, trendItems, subjColor) {
     const { ctx, rect } = setupCanvas(canvas);
     const W = rect.width;
     const H = rect.height;
-    if (__subjectTrendRAF) cancelAnimationFrame(__subjectTrendRAF);
+    if (subjectTrendRAF) cancelAnimationFrame(subjectTrendRAF);
     let progress = 0;
     const animate = () => {
         const chartCanvas = document.getElementById(canvasId);
         if (!chartCanvas) {
-            __subjectTrendRAF = null;
+            subjectTrendRAF = null;
             return;
         }
         progress = Math.min(1, progress + SUBJECT_TREND_ANIMATION_STEP);
         drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress);
         if (progress < 1) {
-            __subjectTrendRAF = requestAnimationFrame(animate);
+            subjectTrendRAF = requestAnimationFrame(animate);
         } else {
-            __subjectTrendRAF = null;
+            subjectTrendRAF = null;
         }
     };
     drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, SUBJECT_TREND_ANIMATION_INITIAL_PROGRESS);
-    __subjectTrendRAF = requestAnimationFrame(animate);
+    subjectTrendRAF = requestAnimationFrame(animate);
 }
 function scheduleSubjectTrendChartInit(payload) {
     if (!payload || !Array.isArray(payload.points) || payload.points.length === 0) return;
@@ -1993,11 +1993,11 @@ function scheduleSubjectTrendChartInit(payload) {
         })
         .filter(Boolean);
     if (!normalized.length) return;
-    setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
         if (typeof initSubjectTrendChart === 'function') {
             initSubjectTrendChart('subjectTrendCanvas', normalized, color);
         }
-    }, 60);
+    }));
 }
 window.scheduleSubjectTrendChartInit = scheduleSubjectTrendChartInit;
 function mountSubjectTrendChartFromDom() {
@@ -2654,6 +2654,7 @@ function togglePlanInModal(dateStr, taskId) {
 }
 function deleteCalendarTask(taskId, dateStr) {
     if (!taskId || !taskId.startsWith('manual_')) return;
+    const shouldRefreshDayModal = Boolean(dateStr && document.getElementById('modal-task-list'));
     state.tasks = state.tasks.filter(t => t.id !== taskId);
     // Remove from plannedTasks as well
     Object.keys(state.plannedTasks || {}).forEach(d => {
@@ -2664,7 +2665,7 @@ function deleteCalendarTask(taskId, dateStr) {
     saveTasks();
     if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
     if (typeof showToast === 'function') showToast('Attività eliminata');
-    if (dateStr) {
+    if (shouldRefreshDayModal) {
         renderDayDetailModal(dateStr);
     }
     notifyPlannerChanged();
