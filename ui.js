@@ -83,6 +83,11 @@ function isUserGeneratedTaskId(id) {
     return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('quest-');
 }
 
+function hasPlannedTasks(plannedTasks) {
+    if (!plannedTasks || typeof plannedTasks !== 'object') return false;
+    return Object.values(plannedTasks).some(ids => Array.isArray(ids) && ids.length > 0);
+}
+
 function getAgendaCacheKey() {
     try {
         return `${lsKey('weekly_agenda_cache')}:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
@@ -1538,7 +1543,7 @@ function renderPlanner() {
                         <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #F0F0F3; color: var(--text-secondary); border: 1px solid #E5E5EA; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-calendar-plus"></i> Pianifica
                         </button>
-                        <button onclick="clearPlannedCalendarTasks()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-trash"></i> Svuota Pianifica
                         </button>
                     </div>
@@ -2862,7 +2867,7 @@ function deleteCalendarTask(taskId, dateStr = '') {
 }
 function clearPlannedCalendarTasks() {
     const planned = (state.plannedTasks && typeof state.plannedTasks === 'object') ? state.plannedTasks : {};
-    const hasPlanned = Object.values(planned).some(ids => Array.isArray(ids) && ids.length > 0);
+    const hasPlanned = hasPlannedTasks(planned);
     if (!hasPlanned) {
         if (typeof showToast === 'function') showToast('Nessun compito pianificato da eliminare');
         return;
