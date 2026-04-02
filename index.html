@@ -784,6 +784,9 @@
             state.isOffline = false;
             state.lastSync = new Date().toLocaleTimeString();
             if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
+            // Reset Google state per il profilo appena caricato, poi riverifica dal server
+            state.googleConnected = false;
+            if (typeof window.checkGoogleStatus === 'function') window.checkGoogleStatus();
 
             Promise.all([
                 (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e))

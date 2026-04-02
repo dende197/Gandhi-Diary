@@ -161,6 +161,7 @@ async function saveTokens(userId, tokens, argoCreds = null) {
         upsertData.argo_school_code = argoCreds.schoolCode;
         upsertData.argo_username = argoCreds.username;
         upsertData.argo_password = encryptArgoPassword(argoCreds.password);
+        upsertData.profile_index = argoCreds.profileIndex ?? 0;
     }
 
     const { error } = await getSupabase()
@@ -263,7 +264,9 @@ module.exports = async function handler(req, res) {
                 const url = oauth2.generateAuthUrl({
                     access_type: 'offline',
                     scope: SCOPES,
-                    prompt: 'consent',
+                    // Space-separated prompts: force consent screen + account picker
+                    // to avoid cross-profile Google account reuse.
+                    prompt: 'consent select_account',
                     state: signedState
                 });
 
@@ -377,9 +380,20 @@ module.exports = async function handler(req, res) {
                         const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
                         const { access_token, profiles } = loginRes;
                         if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
-                        
-                        const authToken = profiles[0].token;
-                        const subjectId = profiles[0].idSoggetto;
+
+                        const rawProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
+                        const parsedProfileIndex = Number(rawProfileIndex);
+                        const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
+                        // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
+                        // or, in some responses, only by array position.
+                        const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
+                        const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
+                            ? profiles[profileIndex]
+                            : null;
+                        // Fallback order: explicit profile index field -> validated array index -> first available profile.
+                        const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
+                        const authToken = targetProfile.token;
+                        const subjectId = targetProfile.idSoggetto;
                         const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
                         const dashboardData = await getDashboard(headers);
                         tasks = extractHomeworkFromDashboard(dashboardData);
@@ -451,7 +465,7 @@ module.exports = async function handler(req, res) {
 
             // ============= SAVE ARGO CREDENTIALS =============
             case 'save-argo': {
-                const { userId, schoolCode, username, password } = req.body || {};
+                const { userId, schoolCode, username, password, profileIndex } = req.body || {};
                 if (!userId || !schoolCode || !username || !password) {
                     return res.status(400).json({ success: false, error: 'Dati Argo mancanti' });
                 }
@@ -466,6 +480,7 @@ module.exports = async function handler(req, res) {
                         argo_school_code: schoolCode,
                         argo_username: username,
                         argo_password: encryptArgoPassword(password),
+                        profile_index: profileIndex ?? 0,
                         updated_at: new Date().toISOString()
                     })
                     .eq('user_id', normalizeUserId(userId));
