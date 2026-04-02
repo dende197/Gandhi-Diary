@@ -225,6 +225,42 @@
             return 't_' + djb2(key);
         }
 
+        function isUserGeneratedTaskId(id) {
+            if (typeof id !== 'string') return false;
+            return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('registro_') || id.startsWith('quest-');
+        }
+
+        function isUserGeneratedTask(task) {
+            if (!task || typeof task !== 'object') return false;
+            return isUserGeneratedTaskId(task.id) || String(task.subject || '').toUpperCase() === 'QUEST';
+        }
+
+        function purgeUserGeneratedTasksAndPlans(syncRemote = false) {
+            const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+            const planned = (state.plannedTasks && typeof state.plannedTasks === 'object') ? state.plannedTasks : {};
+
+            const cleanedTasks = tasks.filter(t => !isUserGeneratedTask(t));
+            const validTaskIds = new Set(cleanedTasks.map(t => t.id).filter(Boolean));
+            const cleanedPlanned = {};
+            Object.entries(planned).forEach(([dateKey, ids]) => {
+                if (!Array.isArray(ids)) return;
+                const kept = ids.filter(id => !isUserGeneratedTaskId(id) && validTaskIds.has(id));
+                if (kept.length > 0) cleanedPlanned[dateKey] = kept;
+            });
+
+            const changed = cleanedTasks.length !== tasks.length || JSON.stringify(cleanedPlanned) !== JSON.stringify(planned);
+            if (!changed) return false;
+
+            state.tasks = cleanedTasks;
+            state.plannedTasks = cleanedPlanned;
+            localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+            if (syncRemote && state.isLoggedIn && typeof saveTasksToSupabase === 'function') {
+                saveTasksToSupabase().catch(() => {});
+            }
+            return true;
+        }
+
         // calcolaMedia is defined in ui.js (returns null for empty — correct behavior)
         // We just ensure it's exposed globally after ui.js loads
 
@@ -281,16 +317,8 @@
                 };
             });
 
-            // Persist Manual/AI tasks: those with registro_ prefix, ai_ prefix, or subject QUEST
-            // Filter state.tasks and localTasks to find existing manual tasks
-            const manualTasks = (state.tasks || localTasks).filter(t => 
-                (t.id && (t.id.startsWith('registro_') || t.id.startsWith('ai_'))) || 
-                t.subject === 'QUEST' || 
-                (t.id && t.id.startsWith('manual_'))
-            );
-            
-            // Merge: formatted (Argo) + unique manual tasks
-            const combined = [...formatted, ...manualTasks];
+            // Keep only assigned tasks from Argo (manual/AI tasks are intentionally discarded)
+            const combined = [...formatted];
             
             // Final Deduplicate (by true ID)
             const unique = [];
@@ -318,22 +346,16 @@
         async function saveTasksToSupabase() {
             if (!state.isLoggedIn || !state.user || !state.user.id) return;
             
-            // Only sync manual/AI tasks to the 'tasks' column in planners table
-            const manualTasks = (state.tasks || []).filter(t => 
-                (t.id && (t.id.startsWith('registro_') || t.id.startsWith('ai_'))) || 
-                t.subject === 'QUEST'
-            );
-
             try {
                 await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(state.user.id)}`, {
                     method: 'PUT',
                     headers: getSessionHeaders(),
                     body: JSON.stringify({
-                        tasks: manualTasks,
+                        tasks: [],
                         plannedTasks: state.plannedTasks || {}
                     })
                 });
-                console.log("✅ Tasks and plannedTasks synced to Supabase");
+                console.log("✅ PlannedTasks synced to Supabase");
             } catch (e) {
                 console.warn("⚠️ Failed to sync to Supabase:", e);
             }
@@ -371,25 +393,12 @@
                             localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
                         }
 
-                        // If we have remote manual tasks, use them to initialize state.tasks
-                        // before updateTasks merges them with fresh Argo data
-                        if (data.planner.tasks && Array.isArray(data.planner.tasks)) {
-                            const remoteManual = data.planner.tasks;
-                            const localTasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
-                            
-                            // Simple merge: remote manual tasks override local ones if IDs match
-                            const merged = [...localTasks];
-                            remoteManual.forEach(rt => {
-                                const idx = merged.findIndex(lt => lt.id === rt.id);
-                                if (idx > -1) merged[idx] = rt;
-                                else merged.push(rt);
-                            });
-                            state.tasks = merged;
-                        }
+                        // Remote planner.tasks are intentionally ignored: keep only assigned tasks.
                     }
 
                     // 2. Process Argo Tasks (merges into state.tasks)
                     if (data.tasks) updateTasks(data.tasks, false);
+                    purgeUserGeneratedTasksAndPlans(true);
 
                     if (data.voti) { state.voti = data.voti; localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti)); }
                     if (data.circolari) state.circolari = data.circolari;
@@ -470,6 +479,7 @@
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
+                    purgeUserGeneratedTasksAndPlans(false);
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
@@ -888,21 +898,9 @@
 
         // --- QUICK ADD TASK ---
         function submitQuickTask() {
-            const text = document.getElementById('quickTaskText')?.value?.trim();
-            const subject = document.getElementById('quickTaskSubject')?.value || 'Generale';
-            const dateVal = document.getElementById('quickTaskDate')?.value;
-            if (!text) { if (typeof showToast === 'function') showToast('Inserisci una descrizione!'); return; }
-
-            const taskId = 'manual_' + Date.now();
-            const newTask = { id: taskId, text, subject, done: false, due_date: dateVal, dateObj: new Date(dateVal) };
-            state.tasks.push(newTask);
-
-            if (!state.plannedTasks[dateVal]) state.plannedTasks[dateVal] = [];
-            state.plannedTasks[dateVal].push(taskId);
-
-            saveTasks();
             if (typeof closeModal === 'function') closeModal();
-            if (typeof showToast === 'function') showToast('Compito aggiunto! ✅');
+            if (typeof showToast === 'function') showToast('Sono supportati solo i compiti assegnati dal registro.');
+            purgeUserGeneratedTasksAndPlans(true);
             if (window.scheduleRender) window.scheduleRender();
         }
         window.submitQuickTask = submitQuickTask;
