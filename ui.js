@@ -1306,7 +1306,10 @@ function renderHome() {
         <div style="display:flex; flex-direction:column; min-height:0;">
           <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
             <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Domani</div>
-            <button class="add-btn" onclick="showQuickAddTaskModal()" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
+            <div style="display:flex; gap:8px;">
+                <button class="add-btn" onclick="window.showPlanWeekModal()" style="background:#F0F0F3; color:#908C86; border:1px solid #E0DDD8;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i>PIANIFICA</button>
+                <button class="add-btn" onclick="showQuickAddTaskModal()" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i>ATTIVITÀ</button>
+            </div>
           </div>
           <div class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
             ${tomorrowTasks.length ? tomorrowTasks.map(t => {
@@ -2008,31 +2011,40 @@ function renderSubjectDetailView(subjectName) {
 
             <div class="card" style="background:#FFFFFF; border: 1px solid #141414; border-radius: 24px; padding: 24px; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
                 <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: ${subjColor};"></div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
-                    <div>
-                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">MEDIA ATTUALE</div>
-                        <div style="font-size: 36px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.05em;">${media.toFixed(2)}</div>
+                <div style="display: flex; gap: 32px; align-items: center;">
+                    <div style="width: 100px; height: 100px; position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: rotate(-90deg);">
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="#F0EDE8" stroke-width="3" />
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="${media >= 6 ? '#28CD41' : '#FF3B30'}" stroke-width="3" stroke-dasharray="${(media / 10) * 100}, 100" stroke-linecap="round" />
+                        </svg>
+                        <div style="position: absolute; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: -0.05em;">${media.toFixed(1)}</div>
                     </div>
-                    <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
-                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">OBIETTIVO</div>
-                        <div style="font-size: 36px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 10px; letter-spacing: -0.05em;">
-                            ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 18px; color: #007AFF;"></i>
+                    <div style="flex: 1;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
+                            <div>
+                                <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">MEDIA</div>
+                                <div style="font-size: 24px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.02em;">${media.toFixed(2)}</div>
+                            </div>
+                            <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
+                                <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">OBIETTIVO</div>
+                                <div style="font-size: 24px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 6px; letter-spacing: -0.02em;">
+                                    ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 14px; color: #007AFF;"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="height:6px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
+                            <div style="height:100%; width:${progressPct}%; background:${projection.done ? '#2DB86A' : subjColor}; border-radius:100px;"></div>
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">Progresso obiettivo</span>
+                            ${subjectGoalStatusLine}
                         </div>
                     </div>
                 </div>
-                <div style="margin-top:18px;">
-                    <div style="height:6px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                        <div style="height:100%; width:${progressPct}%; background:${projection.done ? '#2DB86A' : subjColor}; border-radius:100px;"></div>
-                    </div>
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; gap:10px; flex-wrap:wrap;">
-                        <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">Progresso obiettivo</span>
-                        ${subjectGoalStatusLine}
-                    </div>
-                    ${projection.done ? '' : `
-                    <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
-                        ${subjectScenariosHtml}
-                    </div>`}
-                </div>
+                ${projection.done ? '' : `
+                <div style="margin-top:20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                    ${subjectScenariosHtml}
+                </div>`}
             </div>
 
             <div class="card" style="padding:18px; border-radius:18px; margin-bottom:18px; border:1px solid var(--border-light);">
@@ -2861,7 +2873,7 @@ function renderWeeklyAgenda() {
     }).join('')}
         </div>`;
 }
-function showPlanWeekModal() {
+window.showPlanWeekModal = function() {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
 
@@ -2922,42 +2934,43 @@ function getGoalProjection(media, goal, count) {
     const safeMedia = Number.isFinite(media) ? media : 0;
     const safeGoal = Number.isFinite(goal) ? goal : 8.0;
     const safeCount = Number.isFinite(count) ? count : 0;
-    const currentSum = safeCount * safeMedia;
-    const gap = Math.max(0, safeGoal - safeMedia);
+    const currentSum = safeMedia * safeCount;
     const done = safeMedia >= safeGoal;
-    const grades = Array.from(new Set([10, 9.5, 9, 8.5, 8, 7.5, 7, PASSING_GRADE_THRESHOLD]));
+    const gap = Math.max(0, safeGoal - safeMedia);
+
+    if (done) return { done: true, gap: 0, scenarios: [] };
+
+    const grades = [10, 9, 8, 7, 6];
     const scenarios = [];
 
-    if (!done && safeCount === 0) {
-        const firstScenarios = grades
-            .filter(g => g >= safeGoal)
-            .slice(0, 3)
-            .map(g => ({ grade: g, n: 1 }));
-        if (firstScenarios.length > 0) scenarios.push(...firstScenarios);
-        if (scenarios.length === 0 && safeGoal > 0 && safeGoal <= 10) {
-            scenarios.push({ grade: Math.round(safeGoal * 100) / 100, n: 1, exact: true });
-        }
-    } else if (!done) {
-        for (const g of grades) {
-            if (g <= safeGoal) continue;
-            const denom = g - safeGoal;
-            // Guard against floating-point near-zero denominator (goal almost equal to grade bucket).
-            // 1e-9 acts as epsilon to avoid unstable huge projections when denom is numerically ~0.
-            if (Math.abs(denom) < 1e-9) continue;
-            const n = Math.ceil((safeGoal * safeCount - currentSum) / denom);
-            if (n >= 1 && n <= 100) scenarios.push({ grade: g, n });
-            if (scenarios.length === 3) break;
-        }
-
-        if (scenarios.length === 0 && safeGoal > 0 && safeGoal <= 10) {
-            const minNeeded = (safeGoal * (safeCount + 1)) - currentSum;
-            if (minNeeded > safeGoal && minNeeded <= 10) {
-                scenarios.push({ grade: Math.ceil(minNeeded * 100) / 100, n: 1, exact: true });
+    for (const g of grades) {
+        if (g <= safeMedia && g < safeGoal) continue;
+        for (let n = 1; n <= 5; n++) {
+            const simulatedMedia = (currentSum + g * n) / (safeCount + n);
+            if (simulatedMedia >= safeGoal) {
+                scenarios.push({
+                    n,
+                    grade: g,
+                    label: n === 1 ? `Prossimo voto: ${g}` : `Prossimi ${n} voti: ${g}`
+                });
+                break;
             }
         }
     }
 
-    return { done, gap, scenarios, first: scenarios[0] || null };
+    // Se non ci sono scenari con voti fissi, aggiungi il voto esatto necessario
+    if (scenarios.length === 0) {
+        const exact = (safeGoal * (safeCount + 1)) - currentSum;
+        if (exact > 0 && exact <= 10) {
+            scenarios.push({ n: 1, grade: exact, exact: true, label: `Prossimo voto esatto: ${exact.toFixed(2)}` });
+        }
+    }
+
+    return {
+        done,
+        gap,
+        scenarios: scenarios.sort((a, b) => a.n - b.n || b.grade - a.grade).slice(0, 4)
+    };
 }
 function renderVoti() {
     const votiData = (state.voti && state.voti.length > 0) ? state.voti :
@@ -4380,10 +4393,11 @@ window.refreshPlanWeekModalContent = function () {
         </div>`;
 };
 window.finalizePlanWeekModal = function () {
+    state.plannerMode = 'pianificato'; // Forza la visualizzazione dei compiti pianificati
     closeModal();
     if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
     if (state.view === 'planner' && typeof scheduleRender === 'function') {
-        setTimeout(() => scheduleRender(0), 0);
+        setTimeout(() => scheduleRender(0), 10);
     }
 };
 
