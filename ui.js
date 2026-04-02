@@ -2468,7 +2468,7 @@ function renderSubjectDetailView(subjectName) {
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
                     <div>
                         <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
-                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Simulazione attiva solo per il <span id="next-grade-current-term-label">${currentTermLabel}</span>.</div>
+                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Simulazione attiva solo per il <span id="next-grade-current-term-label" aria-live="polite" aria-atomic="true">${currentTermLabel}</span>.</div>
                     </div>
                     <div id="next-grade-sim-value" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
                 </div>
