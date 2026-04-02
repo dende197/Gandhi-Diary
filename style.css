@@ -4534,4 +4534,60 @@
           .more-events {
             font-size: 8px !important;
           }
+
+          /* 14 ▸ Agenda settimanale: evita testi troncati nei task */
+          #weekly-agenda-list.weekly-agenda-root>.agenda-day-section {
+            gap: 18px !important;
+          }
+
+          #weekly-agenda-list [data-task-text] {
+            font-size: 13px !important;
+            line-height: 1.45 !important;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            display: block !important;
+            -webkit-line-clamp: unset !important;
+            -webkit-box-orient: initial !important;
+          }
+
+          #weekly-agenda-list .agenda-task-card {
+            min-height: 0 !important;
+          }
+
+          #weekly-agenda-list .agenda-task-main {
+            padding: 12px 12px !important;
+          }
+
+          #weekly-agenda-list .agenda-task-actions {
+            padding: 0 10px !important;
+            gap: 6px !important;
+          }
+
+          #weekly-agenda-list .agenda-task-action-btn {
+            width: 28px !important;
+            height: 28px !important;
+          }
+
+          /* 15 ▸ Voti: card obiettivo media più leggibile su schermo piccolo */
+          .dashboard.view .goal-overall-card {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            padding: 14px !important;
+          }
+
+          .dashboard.view .goal-overall-card>div {
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .dashboard.view .goal-overall-card .goal-overall-value {
+            font-size: 20px !important;
+            line-height: 1.1 !important;
+          }
+
+          .dashboard.view .goal-overall-card .goal-overall-scenario-grade {
+            font-size: 11px !important;
+          }
         }
