@@ -53,6 +53,7 @@ const CHART_LINE_COLOR = '#2563EB';
 const CHART_LABEL_COLOR = 'rgba(20,20,20,0.45)';
 const CHART_LABEL_FONT = '800 10px Inter';
 const GOAL_GRADE_SCALE_DESC = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
+const MAX_GRADE_VALUE = 10;
 const MAX_GOAL_SCENARIOS = 6;
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
@@ -80,6 +81,11 @@ function isAiTask(task) {
 function isUserGeneratedTaskId(id) {
     if (typeof id !== 'string') return false;
     return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('quest-');
+}
+
+function hasPlannedTasks(plannedTasks) {
+    if (!plannedTasks || typeof plannedTasks !== 'object') return false;
+    return Object.values(plannedTasks).some(ids => Array.isArray(ids) && ids.length > 0);
 }
 
 function getAgendaCacheKey() {
@@ -1537,6 +1543,9 @@ function renderPlanner() {
                         <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #F0F0F3; color: var(--text-secondary); border: 1px solid #E5E5EA; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-calendar-plus"></i> Pianifica
                         </button>
+                        <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-trash"></i> Svuota Pianifica
+                        </button>
                     </div>
 
                     <div class="view-switch" style="background: rgba(0,0,0,0.06); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
@@ -2356,7 +2365,6 @@ function renderSubjectDetailView(subjectName) {
     const key = abbr.toLowerCase();
     const projection = getGoalProjection(media, goal, votiData.length);
     const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
-    const MAX_GRADE_VALUE = 10;
     const subjectScenarios = projection.scenarios || [];
     const subjectGoalStatusLine = projection.done
         ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#2DB86A; font-weight:800; text-transform:uppercase;">✓ Obiettivo raggiunto</span>`
@@ -2856,6 +2864,29 @@ function deleteCalendarTask(taskId, dateStr = '') {
     notifyPlannerChanged();
     if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
     if (typeof scheduleRender === 'function' && state.view === 'planner') scheduleRender(0);
+}
+function clearPlannedCalendarTasks() {
+    const planned = (state.plannedTasks && typeof state.plannedTasks === 'object') ? state.plannedTasks : {};
+    const hasPlanned = hasPlannedTasks(planned);
+    if (!hasPlanned) {
+        if (typeof showToast === 'function') showToast('Nessun compito pianificato da eliminare');
+        return;
+    }
+    if (!confirm('Vuoi eliminare tutti i compiti pianificati nel calendario? L\'azione verrà salvata anche nel database.')) return;
+
+    state.plannedTasks = {};
+    saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(300);
+    if (typeof showToast === 'function') showToast('Compiti pianificati eliminati');
+
+    notifyPlannerChanged();
+    if (state.view === 'planner' && state.uiMode === 'calendar' && typeof renderCustomCalendar === 'function') {
+        renderCustomCalendar();
+    } else if (state.view === 'planner' && typeof refreshAgenda === 'function') {
+        refreshAgenda();
+    } else if (typeof scheduleRender === 'function') {
+        scheduleRender(0);
+    }
 }
 function notifyPlannerChanged() {
     // badge sul bottone Organizza Oggi e Dashboard
