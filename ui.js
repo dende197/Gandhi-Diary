@@ -59,6 +59,7 @@ const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THR
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
 let __subjectTrendRAF = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
+const SUBJECT_TREND_ANIMATION_INITIAL_PROGRESS = 0.04;
 
 function normalizeSubjectName(name) {
     // Unify subject labels coming from different DidUP payloads/UI variants
@@ -1918,10 +1919,7 @@ function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
         grad.addColorStop(1, `${subjColor}05`);
         ctx.beginPath();
         ctx.moveTo(visiblePoints[0].x, H - p.bottom);
-        visiblePoints.forEach((pt, i) => {
-            if (i === 0) ctx.lineTo(pt.x, pt.y);
-            else ctx.lineTo(pt.x, pt.y);
-        });
+        visiblePoints.forEach(pt => ctx.lineTo(pt.x, pt.y));
         ctx.lineTo(visiblePoints[visiblePoints.length - 1].x, H - p.bottom);
         ctx.closePath();
         ctx.fillStyle = grad;
@@ -1980,7 +1978,7 @@ function initSubjectTrendChart(canvasId, trendItems, subjColor) {
             __subjectTrendRAF = null;
         }
     };
-    drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, 0.04);
+    drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, SUBJECT_TREND_ANIMATION_INITIAL_PROGRESS);
     __subjectTrendRAF = requestAnimationFrame(animate);
 }
 function scheduleSubjectTrendChartInit(payload) {
@@ -2002,6 +2000,22 @@ function scheduleSubjectTrendChartInit(payload) {
     }, 60);
 }
 window.scheduleSubjectTrendChartInit = scheduleSubjectTrendChartInit;
+function mountSubjectTrendChartFromDom() {
+    const canvas = document.getElementById('subjectTrendCanvas');
+    if (!canvas) return;
+    const pointsEncoded = canvas.getAttribute('data-points');
+    const color = canvas.getAttribute('data-color') || '#2563EB';
+    if (!pointsEncoded) return;
+    try {
+        const decoded = decodeURIComponent(pointsEncoded);
+        const points = JSON.parse(decoded);
+        if (typeof scheduleSubjectTrendChartInit === 'function') {
+            scheduleSubjectTrendChartInit({ points, color });
+        }
+    } catch (e) {
+        console.warn('Unable to mount subject trend chart:', e?.message || e);
+    }
+}
 function initCustomScrollbar() {
     const scroller = document.getElementById('custom-scrollbar');
     const thumb = document.getElementById('scroll-thumb');
@@ -2243,7 +2257,7 @@ function renderSubjectDetailView(subjectName) {
                     <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86;">${trendItems.length} punti</span>
                 </div>
                 <div style="background:#F8F7F5; border:1px solid #ECEAE6; border-radius:12px; padding:10px;">
-                    ${trendItems.length ? `<canvas id="subjectTrendCanvas" width="820" height="240" aria-label="Grafico cartesiano andamento voti" style="width:100%; height:240px; display:block;"></canvas>` : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
+                    ${trendItems.length ? `<canvas id="subjectTrendCanvas" data-color="${escapeHtml(subjColor)}" data-points="${encodeURIComponent(JSON.stringify(trendItems.map(item => ({ value: item.value, date: item.date.toISOString() }))))}" width="820" height="240" aria-label="Grafico cartesiano andamento voti" style="width:100%; height:240px; display:block;"></canvas>` : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
                 </div>
             </div>
 
@@ -2274,7 +2288,6 @@ function renderSubjectDetailView(subjectName) {
                     </div>`;
     }).join('')}
             </div>
-            ${trendItems.length ? `<script>window.scheduleSubjectTrendChartInit && window.scheduleSubjectTrendChartInit(${JSON.stringify({ points: trendItems.map(item => ({ value: item.value, date: item.date.toISOString() })), color: subjColor }).replace(/</g, '\\u003c')});</script>` : ''}
         </div> `;
 }
 function mostraAssenzeModal() {
@@ -4231,6 +4244,9 @@ window._renderCore = function () {
         }
         if (state.view === 'voti' && typeof initGradesCharts === 'function') {
             initGradesCharts();
+        }
+        if (state.view === 'voti' && typeof mountSubjectTrendChartFromDom === 'function') {
+            mountSubjectTrendChartFromDom();
         }
 
         if (typeof gsapAnimateView === 'function') {
