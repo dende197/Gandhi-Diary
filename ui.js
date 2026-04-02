@@ -55,6 +55,7 @@ const CHART_LABEL_FONT = '800 10px Inter';
 const GOAL_GRADE_SCALE_DESC = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
 const MAX_GRADE_VALUE = 10;
 const MAX_GOAL_SCENARIOS = 6;
+const BRAND_GRADIENT = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%)';
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
@@ -386,7 +387,7 @@ window.googleFetchWithAuthRetry = async function (url, options = {}) {
 
 window.connectGoogle = async function () {
     const userId = window.getUserId();
-    if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'var(--red)'); return; }
+    if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'error', 'var(--red)'); return; }
 
     try {
         const response = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=auth-url`, {
@@ -399,7 +400,7 @@ window.connectGoogle = async function () {
         window.location.href = data.url;
     } catch (err) {
         console.error('Google auth-url error:', err);
-        showToast(err.message || 'Errore collegamento Google', 'var(--red)');
+        showToast(err.message || 'Errore collegamento Google', 'error', 'var(--red)');
     }
 };
 
@@ -424,13 +425,13 @@ window.syncGoogleCalendar = async function () {
         });
         const data = await res.json();
         if (data.success) {
-            showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'var(--green)');
+            showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'success', 'var(--green)');
         } else {
             throw new Error(data.error || 'Sync fallito');
         }
     } catch (err) {
         console.error('Google Sync Error:', err);
-        showToast(err.message || 'Errore durante il sync', 'var(--red)');
+        showToast(err.message || 'Errore durante il sync', 'error', 'var(--red)');
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
     }
@@ -446,10 +447,10 @@ window.disconnectGoogle = async function () {
         const data = await res.json();
         if (data.success) {
             state.googleConnected = false;
-            showToast('Google Calendar disconnesso.', 'var(--orange)');
+            showToast('Google Calendar disconnesso.', 'warning', 'var(--orange)');
             window.scheduleRender();
         }
-    } catch (e) { showToast('Errore disconnessione Google', 'var(--red)'); }
+    } catch (e) { showToast('Errore disconnessione Google', 'error', 'var(--red)'); }
 };
 
 window.checkGoogleStatus = async function () {
@@ -716,12 +717,22 @@ function closeModal(event) {
         }
     }
 }
-function showToast(message, type) {
+function showToast(message, type = 'success', customBackground = '') {
     const existing = document.getElementById('g-toast');
     if (existing) existing.remove();
 
-    const bgColor = type === 'warning' ? '#FF9500' : type === 'error' ? '#FF3B30' : 'var(--blue)';
-    const icon = type === 'warning' ? 'ph-warning' : type === 'error' ? 'ph-x-circle' : 'ph-check-circle';
+    const typeValue = typeof type === 'string' ? type.toLowerCase() : '';
+    const bgColor = customBackground || (typeValue === 'warning'
+        ? '#FF9500'
+        : typeValue === 'error'
+            ? '#FF3B30'
+            : BRAND_GRADIENT);
+    const toastIconByType = {
+        warning: 'ph-warning',
+        error: 'ph-x-circle',
+        success: 'ph-check-circle'
+    };
+    const icon = toastIconByType[typeValue] || toastIconByType.success;
 
     const toast = document.createElement('div');
     toast.id = 'g-toast';
@@ -748,7 +759,7 @@ function showToast(message, type) {
         toast.style.transform = 'translateX(-50%) translateY(20px)';
         toast.style.transition = 'all 0.4s ease-in';
         setTimeout(() => toast.remove(), 400);
-    }, type === 'warning' ? 4000 : 1800);
+    }, typeValue === 'warning' ? 4000 : 1800);
 }
 function showBoot(text) {
     const el = document.getElementById('boot-overlay');
@@ -819,19 +830,15 @@ function renderNav() {
 
           <nav class="mobile-dock" aria-label="Navigazione principale">
               <button class="dock-item ${state.view === 'home' ? 'dock-active' : ''}" onclick="navigate('home')" aria-label="Panoramica">
-                  <i class="${state.view === 'home' ? 'ph-fill ph-house' : 'ph ph-house'}"></i>
-                  <span>Home</span>
+                  <span>Panoramica</span>
               </button>
               <button class="dock-item ${state.view === 'planner' ? 'dock-active' : ''}" onclick="navigate('planner')" aria-label="Agenda">
-                  <i class="${state.view === 'planner' ? 'ph-fill ph-calendar-dots' : 'ph ph-calendar-dots'}"></i>
                   <span>Agenda</span>
               </button>
               <button class="dock-item ${state.view === 'voti' ? 'dock-active' : ''}" onclick="navigate('voti')" aria-label="Voti">
-                  <i class="${state.view === 'voti' ? 'ph-fill ph-chart-line-up' : 'ph ph-chart-line-up'}"></i>
                   <span>Voti</span>
               </button>
               <button class="dock-item ${state.view === 'circolari' ? 'dock-active' : ''}" onclick="navigate('circolari')" aria-label="Circolari">
-                  <i class="${state.view === 'circolari' ? 'ph-fill ph-megaphone' : 'ph ph-megaphone'}"></i>
                   <span>Circolari</span>
               </button>
           </nav>
@@ -1546,7 +1553,6 @@ function renderHome() {
                     </button>
                 </div>
                 <button onclick="window.showPlanWeekModal()" style="min-width:78px; height:24px; border-radius:8px; border:1px solid #D3CEC7; background:#FFFFFF; color:#4F4A43; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i><span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">PIANIFICA</span></button>
-                <button onclick="showQuickAddTaskModal()" style="min-width:82px; height:24px; border-radius:8px; border:1px solid rgba(255,255,255,0.28); background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); color:#FFFFFF; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Aggiungi nuova attività"><i class="ph-bold ph-plus" style="font-size:9px; margin-right:4px;"></i><span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">ATTIVITÀ+</span></button>
             </div>
           </div>
           <div id="home-focus-task-list" class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
@@ -1565,16 +1571,16 @@ function renderPlanner() {
     return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
-            <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
-                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Agenda & Compiti</h1>
+            <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #DAD4CC; padding-bottom: 16px;">
+                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda & Compiti</h1>
                 
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #E8EEF7; color: #2A3F6A; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: ${BRAND_GRADIENT}; color: #FFFFFF; border: 1px solid rgba(13,31,45,0.16); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-sparkle"></i> AI Chat
                         </button>
-                        <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #F0F0F3; color: var(--text-secondary); border: 1px solid #E5E5EA; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-calendar-plus"></i> Pianifica
                         </button>
                         <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
@@ -1582,9 +1588,9 @@ function renderPlanner() {
                         </button>
                     </div>
 
-                    <div class="view-switch" style="background: rgba(0,0,0,0.06); padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
-                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" data-planner-view="calendar" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">Calendar</button>
-                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" data-planner-view="list" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: transparent; color: var(--text-secondary);'}">List</button>
+                    <div class="view-switch" style="background:#F6F5F3; border:1px solid #D3CEC7; padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
+                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" data-planner-view="calendar" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: #FFFFFF; color: #4F4A43;'}">Calendar</button>
+                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" data-planner-view="list" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: #FFFFFF; color: #4F4A43;'}">List</button>
                     </div>
                     <button onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
                         <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Verifica
@@ -2963,6 +2969,12 @@ function notifyPlannerChanged() {
         calendarEl._fullCalendar.updateSize();
     }
 }
+function getPlannedTasksTotalCount() {
+    return Object.values(state.plannedTasks || {}).reduce((sum, list) => {
+        if (!Array.isArray(list)) return sum;
+        return sum + list.length;
+    }, 0);
+}
 function getSubjectColor(subject) {
     let s = (subject || '').trim();
     s = s.replace(/[*_\[\]]/g, '').trim();
@@ -3296,6 +3308,7 @@ function renderWeeklyAgenda() {
 window.showPlanWeekModal = function() {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
+    state.planWeekInitialPlannedCount = getPlannedTasksTotalCount();
 
     modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
@@ -3324,8 +3337,8 @@ function togglePlanDay(taskId, dateStr) {
     // ✅ FIX: Immediate surgical DOM update — border shorthand, background, color
     const isNowPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
     document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
-        btn.style.background = isNowPlanned ? '#141414' : '#F6F5F3';
-        btn.style.color = isNowPlanned ? 'white' : '#908C86';
+        btn.style.background = isNowPlanned ? '#141414' : '#FFFFFF';
+        btn.style.color = isNowPlanned ? 'white' : '#4F4A43';
         btn.style.border = isNowPlanned
             ? '2px solid #141414'
             : (dateStr === todayStr ? '2px solid #007AFF' : '1px solid #E0DDD8');
@@ -3586,11 +3599,11 @@ function togglePomodoro() {
                 if (pomodoroState.mode === 'focus') {
                     pomodoroState.mode = 'break';
                     pomodoroState.timeLeft = 5 * 60;
-                    showToast('🎉 Sessione completata! Pausa di 5 min.', 'var(--green)');
+                    showToast('🎉 Sessione completata! Pausa di 5 min.', 'success', 'var(--green)');
                 } else {
                     pomodoroState.mode = 'focus';
                     pomodoroState.timeLeft = 25 * 60;
-                    showToast('💪 Pausa finita! Torna a studiare.', '#7c3aed');
+                    showToast('💪 Pausa finita! Torna a studiare.', 'success', '#7c3aed');
                 }
             }
             const container = document.getElementById('pomodoroContainer');
@@ -4803,8 +4816,8 @@ window.refreshPlanWeekModalContent = function () {
     });
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
-            <h2 style="margin:0; font-family:'Inter', sans-serif; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: -0.02em;">Pianifica Settimana</h2>
-            <button onclick="finalizePlanWeekModal()" style="background:#F0EDE8; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
+            <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase;">Pianifica Settimana</h2>
+            <button onclick="finalizePlanWeekModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
@@ -4815,7 +4828,7 @@ window.refreshPlanWeekModalContent = function () {
         const abbr = getSubjectAbbrev(subContent);
         const key = abbr.toLowerCase();
         return `
-                <div style="background: #FFFFFF; padding: 20px; border-radius: 20px; border: 1px solid #E0DDD8; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #DAD4CC; box-shadow: 0 3px 10px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
                         <div style="min-width: 0; flex:1;">
                             <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: var(--${key}-t, #141414); text-transform: uppercase; letter-spacing: 0.1em; background: var(--${key}, #EEE); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 8px;">${escapeHtml(subContent)}</div>
@@ -4829,9 +4842,9 @@ window.refreshPlanWeekModalContent = function () {
             return `
                             <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                 onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
-                                style="flex: 1; text-align:center; padding: 12px 4px; border-radius: 14px; cursor: pointer; transition: all 0.2s;
-                                background: ${isPlanned ? '#141414' : '#F6F5F3'};
-                                color: ${isPlanned ? 'white' : '#908C86'};
+                                style="flex: 1; text-align:center; padding: 12px 4px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+                                background: ${isPlanned ? '#141414' : '#FFFFFF'};
+                                color: ${isPlanned ? 'white' : '#4F4A43'};
                                 border: ${isToday ? '2px solid #007AFF' : '1px solid #E0DDD8'};">
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; margin-bottom: 4px; opacity: ${isPlanned ? '0.6' : '1'};">${day.label.toUpperCase()}</div>
                                 <div style="font-weight: 800; font-size: 15px; letter-spacing: -0.02em;">${day.dayNum}</div>
@@ -4841,16 +4854,38 @@ window.refreshPlanWeekModalContent = function () {
                 </div>`;
     }).join('')}
         </div>
-        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #F0EDE8;">
-            <button onclick="finalizePlanWeekModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: transform 0.2s;">Fatto</button>
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #F0EDE8; display:flex; align-items:center; gap:10px;">
+            <button id="plan-week-done-btn" onclick="finalizePlanWeekModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: all 0.25s cubic-bezier(0.2,0.8,0.2,1);">Fatto</button>
+            <span id="plan-week-added-badge" class="badge badge-success" style="display:none; white-space:nowrap; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;">0 compiti aggiunti</span>
         </div>`;
 };
 window.finalizePlanWeekModal = function () {
-    closeModal();
-    if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
-    if (state.view === 'planner' && typeof scheduleRender === 'function') {
-        setTimeout(() => scheduleRender(0), 10);
+    const doneBtn = document.getElementById('plan-week-done-btn');
+    const addedBadge = document.getElementById('plan-week-added-badge');
+    const initialPlannedCount = state.planWeekInitialPlannedCount ?? 0;
+    const added = Math.max(0, getPlannedTasksTotalCount() - initialPlannedCount);
+
+    if (doneBtn) {
+        doneBtn.style.background = '#2DB86A';
+        doneBtn.style.color = '#FFFFFF';
+        doneBtn.textContent = 'Fatto ✓';
+        doneBtn.style.transform = 'scale(0.98)';
     }
+    if (addedBadge && added > 0) {
+        addedBadge.style.display = 'inline-flex';
+        addedBadge.textContent = `${added} compiti aggiunti`;
+    }
+
+    setTimeout(() => {
+        closeModal();
+        if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
+        if (added > 0 && typeof showToast === 'function') {
+            showToast(`${added} compiti aggiunti`);
+        }
+        if (state.view === 'planner' && typeof scheduleRender === 'function') {
+            setTimeout(() => scheduleRender(0), 10);
+        }
+    }, 320);
 };
 
 window.updateWeekDayButton = function (taskId, dateStr) {
@@ -4862,9 +4897,9 @@ window.updateWeekDayButton = function (taskId, dateStr) {
             btn.style.borderColor = '#141414';
             btn.style.color = 'white';
         } else {
-            btn.style.background = '#F6F5F3';
+            btn.style.background = '#FFFFFF';
             btn.style.borderColor = (dateStr === todayStr) ? '#007AFF' : '#E0DDD8';
-            btn.style.color = '#908C86';
+            btn.style.color = '#4F4A43';
         }
     });
 };
@@ -4902,19 +4937,19 @@ window.submitExamForm = function () {
     let subject = document.getElementById('examSubject').value;
     if (subject === '__custom') {
         subject = (document.getElementById('examCustomSubject').value || '').trim();
-        if (!subject) return showToast('Inserisci il nome della materia', '#ff453a');
+        if (!subject) return showToast('Inserisci il nome della materia', 'error', '#ff453a');
     }
     const type = document.getElementById('examType').value;
     const date = document.getElementById('examDate').value;
     const topic = (document.getElementById('examTopic').value || '').trim();
-    if (!date) return showToast('Seleziona una data', '#ff453a');
+    if (!date) return showToast('Seleziona una data', 'error', '#ff453a');
     state.exams.push({ subject, type, date, topic });
     const examTask = { id: 'exam_' + Date.now(), text: `${type}: ${topic || subject}`, subject, due_date: date, done: false, isExam: true };
     state.tasks.push(examTask);
     if (typeof saveTasks === 'function') saveTasks();
     closeModal();
     window.scheduleRender();
-    showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'var(--green)');
+    showToast(`✅ ${type} di ${subject} aggiunta al ${date}!`, 'success', 'var(--green)');
 };
 
 window.removeExam = function (index) {
@@ -4926,12 +4961,12 @@ window.removeExam = function (index) {
 window.submitBacklogForm = function () {
     const subject = document.getElementById('backlogSubject').value;
     const topic = (document.getElementById('backlogTopic').value || '').trim();
-    if (!topic) return showToast('Inserisci l\'argomento da recuperare', '#ff453a');
+    if (!topic) return showToast('Inserisci l\'argomento da recuperare', 'error', '#ff453a');
     state.backlog.push({ subject, topic });
     if (typeof saveTasks === 'function') saveTasks();
     closeModal();
     window.scheduleRender();
-    showToast(`📚 Arretrato di ${subject} aggiunto!`, 'var(--green)');
+    showToast(`📚 Arretrato di ${subject} aggiunto!`, 'success', 'var(--green)');
 };
 
 window.removeBacklog = function (index) {

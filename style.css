@@ -4303,10 +4303,10 @@
         .mobile-dock {
           display: none;
           background: rgba(0, 0, 0, 0.05);
-          padding: 3px;
-          border-radius: 12px;
+          padding: 4px;
+          border-radius: 16px;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
         }
 
         .dock-item {
@@ -4314,16 +4314,16 @@
           flex-direction: row;
           align-items: center;
           justify-content: center;
-          gap: 4px;
-          padding: 5px 9px;
+          gap: 0;
+          padding: 8px 14px;
           background: transparent;
           border: none;
-          border-radius: 9px;
+          border-radius: 12px;
           cursor: pointer;
           color: var(--text-dim, #86868b);
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 700;
-          letter-spacing: -0.01em;
+          letter-spacing: 0;
           white-space: nowrap;
           -webkit-tap-highlight-color: transparent;
           transition: all 0.2s;
@@ -4332,14 +4332,15 @@
         }
 
         .dock-item i {
+          display: none;
           font-size: 15px;
           transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
         }
 
         .dock-item span {
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 700;
-          letter-spacing: -0.01em;
+          letter-spacing: 0;
         }
 
         .dock-item:active {
@@ -4375,8 +4376,8 @@
             -webkit-backdrop-filter: blur(16px) !important;
             border: 1px solid rgba(20, 20, 20, 0.08) !important;
             box-shadow: 0 10px 24px rgba(13, 31, 45, 0.12) !important;
-            padding: 4px !important;
-            border-radius: 14px !important;
+            padding: 6px !important;
+            border-radius: 18px !important;
           }
 
           /* 2 ▸ Hide desktop topbar chrome on mobile */
