@@ -524,6 +524,12 @@ function getVoteDate(vote) {
     if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
     return d;
 }
+function getProjectionScenarioLabel(scenario, lowercase = false) {
+    if (scenario?.combo) return lowercase ? 'combinazione utile' : 'Combinazione utile';
+    if (scenario?.exact) return lowercase ? 'prossimo voto esatto' : 'Prossimo voto esatto';
+    if ((scenario?.n || 0) === 1) return lowercase ? 'prossimo voto' : 'Prossimo voto';
+    return lowercase ? `prossimi ${scenario?.n || 0} voti` : `Prossimi ${scenario?.n || 0} voti`;
+}
 
 function getSchoolYearRanges(refDate = new Date()) {
     const year = refDate.getFullYear();
@@ -1696,7 +1702,7 @@ function renderGradesView() {
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 9px; background:rgba(255,255,255,0.06); border-radius:9px; margin-top:6px;">
                                 <div style="display:flex; flex-direction:column; gap:2px;">
                                     <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.5);">
-                                        ${s.combo ? 'combinazione utile' : s.exact ? 'prossimo voto esatto' : s.n === 1 ? 'prossimo voto' : `prossimi ${s.n} voti`}
+                                        ${getProjectionScenarioLabel(s, true)}
                                     </span>
                                     ${s.combo ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.65);">${s.label}</span>` : ''}
                                     ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
@@ -2351,7 +2357,7 @@ function renderSubjectDetailView(subjectName) {
         if (subjectScenarios.length > 0) {
             return subjectScenarios.map(s => `
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#F9F8F6; border:1px solid #ECEAE6; border-radius:10px; padding:8px 10px;">
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${s.combo ? 'Combinazione utile' : s.exact ? 'Prossimo voto esatto' : s.n === 1 ? 'Prossimo voto' : `Prossimi ${s.n} voti`}</span>
+                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${getProjectionScenarioLabel(s, false)}</span>
                             ${s.combo ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; color:#6A655F; font-weight:700;">${s.label}</span>` : ''}
                             <span style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#141414; font-weight:800;">${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}</span>
                         </div>
@@ -3286,6 +3292,10 @@ function getGoalProjection(media, goal, count) {
     }
 
     if (safeGoal < MAX_GRADE_VALUE) {
+        // Include anche voti sotto-obiettivo (>= sufficienza) per mostrare percorsi realistici:
+        // 1) ipotizziamo un prossimo voto g inferiore al goal;
+        // 2) stimiamo quanti 10 servono dopo quel voto per rientrare nel target;
+        // 3) limitiamo a scenari brevi (massimo 5 voti totali) per mantenere suggerimenti utili.
         for (const g of grades) {
             if (g <= PASSING_GRADE_THRESHOLD || g >= safeGoal) continue;
             const sumAfterOne = currentSum + g;
@@ -3310,7 +3320,9 @@ function getGoalProjection(media, goal, count) {
     const seenKeys = new Set();
     const sortedScenarios = scenarios.sort((a, b) => a.n - b.n || b.grade - a.grade);
     for (const s of sortedScenarios) {
-        const key = s.combo ? `combo-${s.grade}-${s.extraTopGrades}` : `single-${s.grade}`;
+        const normalizedGrade = Number.isFinite(s.grade) ? s.grade.toFixed(2) : '0.00';
+        const normalizedExtra = Number.isFinite(s.extraTopGrades) ? s.extraTopGrades : 0;
+        const key = s.combo ? `combo-${normalizedGrade}-${normalizedExtra}` : `single-${normalizedGrade}`;
         if (!seenKeys.has(key)) {
             uniqueScenarios.push(s);
             seenKeys.add(key);
