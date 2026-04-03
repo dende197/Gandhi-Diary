@@ -636,13 +636,14 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (window.hasReloadedForServiceWorkerUpdate) return;
-                    window.hasReloadedForServiceWorkerUpdate = true;
+                    if (sessionStorage.getItem('sw_update_reloaded') === '1') return;
+                    sessionStorage.setItem('sw_update_reloaded', '1');
                     window.location.reload();
                 });
                 navigator.serviceWorker
                     .register('/service-worker.js?v=3.2.8')
                     .then((registration) => {
+                        sessionStorage.removeItem('sw_update_reloaded');
                         registration.update().catch(() => {});
                         registration.addEventListener('updatefound', () => {
                             const worker = registration.installing;

@@ -59,9 +59,14 @@ self.addEventListener('fetch', (event) => {
 
   if (isNavigation) {
     event.respondWith(
-      fetch(normalizedRequest).then((response) => {
+      fetch(normalizedRequest).then(async (response) => {
         const cloned = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(normalizedRequest, cloned)).catch(() => {});
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(normalizedRequest, cloned);
+        } catch (err) {
+          console.warn('[SW] Navigation cache write failed:', err?.message || err);
+        }
         return response;
       }).catch(async () => {
         const cached = await caches.match(normalizedRequest);
@@ -86,7 +91,12 @@ self.addEventListener('fetch', (event) => {
       try {
         const response = await fetch(normalizedRequest);
         const cloned = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(normalizedRequest, cloned)).catch(() => {});
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(normalizedRequest, cloned);
+        } catch (err) {
+          console.warn('[SW] Resource cache write failed:', err?.message || err);
+        }
         return response;
       } catch {
         return caches.match('/index.html');
