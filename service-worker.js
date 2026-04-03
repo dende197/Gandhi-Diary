@@ -1,17 +1,16 @@
-const CACHE_VERSION = '3.3.1';
+const CACHE_VERSION = '3.3.2';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/style.css?v=3.3.1',
-  '/animations.css?v=3.3.1',
-  '/ui.js?v=3.3.1',
+  '/style.css?v=3.3.2',
+  '/animations.css?v=3.3.2',
+  '/ui.js?v=3.3.2',
   '/fluidity-engine-v3.js?v=3.0.2',
-  '/manifest.webmanifest?v=3.3.1',
-  '/gandhi-diary-icon-180.png?v=3.3.1',
-  '/gandhi-diary-icon-192.png?v=3.3.1',
-  '/gandhi-diary-icon-512.png?v=3.3.1',
-  '/gandhi_diary_icon_final-2.svg?v=3.3.1'
+  '/manifest.webmanifest?v=3.3.2',
+  '/gandhi-diary-icon-180.png?v=3.3.2',
+  '/gandhi-diary-icon-192.png?v=3.3.2',
+  '/gandhi-diary-icon-512.png?v=3.3.2',
 ];
 
 function normalizeSameOriginUrl(url) {
