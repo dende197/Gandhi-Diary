@@ -9,9 +9,9 @@
   "icons": [
     {
       "src": "/gandhi_diary_icon_final-2.svg",
-      "sizes": "512x512",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable any"
     }
   ]
 }
