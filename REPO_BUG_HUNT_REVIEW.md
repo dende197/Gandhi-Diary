@@ -1,6 +1,6 @@
-# Review completa repository `g-connect-backend` (bug hunt)
+# Review completo repository `g-connect-backend` (bug hunt)
 
-## Metodo
+## Metodologia
 - Analisi riga-per-riga dei file testuali del repo (API, librerie, frontend, config, workflow, docs, migration).
 - Verifica funzionale statica lato **server** (routing, auth, sync, gestione errori) e lato **interfaccia** (stato, sicurezza DOM, flussi login/sync).
 - File binari (PNG/SVG) non hanno codice eseguibile JS/Node da analizzare riga-per-riga come logica applicativa.
