@@ -26,14 +26,14 @@ module.exports = async function handler(req, res) {
             return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
         }
 
-        const pidForVault = generatePid(school, username, profileIndex);
-        const fromVault = getArgoCredentials(pidForVault);
+        const credentialKey = generatePid(school, username, profileIndex);
+        const fromVault = getArgoCredentials(credentialKey);
         const user = username || fromVault?.username;
         const pwd = password || fromVault?.password;
         if (!pwd) {
             return res.status(401).json({ success: false, error: 'Password non disponibile: rieffettua il login' });
         }
-        setArgoCredentials(pidForVault, {
+        setArgoCredentials(credentialKey, {
             schoolCode: school,
             username: user,
             password: pwd,

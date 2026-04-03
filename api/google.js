@@ -487,7 +487,7 @@ module.exports = async function handler(req, res) {
                     if (existing?.argo_school_code && existing?.argo_username && existing?.argo_password) {
                         return res.json({ success: true, message: 'Credenziali Argo già presenti' });
                     }
-                    return res.status(400).json({ success: false, error: 'Credenziali Argo non disponibili. Esegui di nuovo il login Argo.' });
+                    return res.status(400).json({ success: false, error: 'Credenziali Argo non disponibili. Esegui nuovamente il login Argo.' });
                 }
 
                 const { error } = await getSupabase()

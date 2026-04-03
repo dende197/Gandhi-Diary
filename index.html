@@ -768,6 +768,9 @@
             console.log("✅ Login OK, hydrating state...");
             const user = data.session.userName;
             const pass = rawPassword || tempCreds.pass || '';
+            if (!pass) {
+                throw new Error('Password Argo non disponibile nella sessione corrente. Rieffettua il login.');
+            }
 
             // 1. Session Save
             if (data.session) {
