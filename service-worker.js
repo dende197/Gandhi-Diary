@@ -3,9 +3,9 @@ const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/style.css?v=3.3.2',
-  '/animations.css?v=3.3.2',
-  '/ui.js?v=3.3.2',
+  '/style.css?v=3.3.3',
+  '/animations.css?v=3.3.3',
+  '/ui.js?v=3.3.3',
   '/fluidity-engine-v3.js?v=3.0.2',
   '/manifest.webmanifest',
   '/gandhi-diary-icon-180.png',
