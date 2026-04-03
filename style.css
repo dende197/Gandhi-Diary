@@ -78,6 +78,9 @@
           --top-nav-height: 56px;
           --safe-top: env(safe-area-inset-top, 0px);
           --safe-bottom: env(safe-area-inset-bottom, 0px);
+          --mobile-view-inline-padding: 12px;
+          --mobile-chat-total-inline-padding: calc(var(--mobile-view-inline-padding) * 2);
+          --mobile-dock-offset: 14px;
 
           /* Contrast System */
           --text-on-light: #141414;
