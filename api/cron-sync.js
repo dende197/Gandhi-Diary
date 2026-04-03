@@ -101,7 +101,7 @@ module.exports = async function handler(req, res) {
     // Support both Vercel Authorization Bearer and legacy x-vercel-cron-secret header.
     const authHeader = req.headers.authorization || '';
     const bearerToken = authHeader.startsWith(BEARER_PREFIX) ? authHeader.slice(BEARER_PREFIX.length).trim() : '';
-    const cronSecret = bearerToken || req.headers['x-vercel-cron-secret'] || req.query.secret;
+    const cronSecret = bearerToken || req.headers['x-vercel-cron-secret'];
     if (!secureEquals(cronSecret, CRON_SECRET)) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
     }

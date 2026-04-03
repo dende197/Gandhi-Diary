@@ -1,7 +1,8 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken, isSessionSecurityConfigured
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
+const { setArgoCredentials } = require('../lib/session-vault');
 const {
     AdvancedArgo, enrichProfiles, resolveIdentityForProfile,
     resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb,
@@ -12,6 +13,12 @@ const {
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if (!isSessionSecurityConfigured()) {
+        return res.status(500).json({
+            success: false,
+            error: 'Server auth non configurata: ARGO_ENCRYPTION_KEY mancante o non valida'
+        });
+    }
 
     const body = req.body;
     const school = (body.schoolCode || body.school || '').trim().toUpperCase();
@@ -88,6 +95,12 @@ module.exports = async function handler(req, res) {
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
         const pid = generatePid(school, username, targetIndex);
+        setArgoCredentials(pid, {
+            schoolCode: school,
+            username,
+            password,
+            profileIndex: targetIndex
+        });
         let storedSpecialization = null;
         let storedAvatar = null;
 

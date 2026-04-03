@@ -96,7 +96,7 @@
         // ==============================================================================
         const APP_VERSION = '3.3.5';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
-        const API_BASE_URL = "https://g-connect-backend-r5j1.vercel.app";
+        const API_BASE_URL = window.location.origin;
         window.API_BASE_URL = API_BASE_URL;
         console.log(`[Network] Connected directly to: ${API_BASE_URL}`);
 
@@ -122,10 +122,18 @@
 
         // --- SESSION MANAGER (v7.0) ---
         const sessionManager = {
+            sanitizeSensitiveSessionData(obj) {
+                if (!obj || typeof obj !== 'object') return obj;
+                delete obj.storedUser;
+                delete obj.storedPass;
+                delete obj.ephemeralPassword;
+                return obj;
+            },
             save(data) {
                 try {
                     const existing = this.load() || {};
                     const merged = { ...existing };
+                    this.sanitizeSensitiveSessionData(merged);
                     for (const [k, v] of Object.entries(data)) if (v !== null && v !== undefined) merged[k] = v;
                     localStorage.setItem('argo_session', JSON.stringify(merged));
                     localStorage.setItem('argo_is_logged_in', 'true');
@@ -134,7 +142,12 @@
             load() {
                 try {
                     const s = localStorage.getItem('argo_session');
-                    return s ? JSON.parse(s) : null;
+                    const parsed = s ? JSON.parse(s) : null;
+                    if (parsed && (parsed.storedUser || parsed.storedPass || parsed.ephemeralPassword)) {
+                        this.sanitizeSensitiveSessionData(parsed);
+                        localStorage.setItem('argo_session', JSON.stringify(parsed));
+                    }
+                    return parsed;
                 } catch (e) { return null; }
             },
             isLoggedIn() { return localStorage.getItem('argo_is_logged_in') === 'true'; },
@@ -387,7 +400,12 @@
                 const response = await fetch(`${API_BASE_URL}/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(sessionData)
+                    body: JSON.stringify({
+                        schoolCode: sessionData.schoolCode,
+                        username: sessionData.userName || sessionData.username,
+                        password: '',
+                        profileIndex: sessionData.profileIndex
+                    })
                 });
                 if (!response.ok) throw new Error("Sync failed: " + response.status);
                 const data = await response.json();
@@ -749,14 +767,15 @@
         async function handleLoginSuccess(data, rawPassword) {
             console.log("✅ Login OK, hydrating state...");
             const user = data.session.userName;
-            const pass = rawPassword || tempCreds.pass;
+            const pass = rawPassword || tempCreds.pass || '';
+            if (!pass) {
+                throw new Error('Password Argo non disponibile nella sessione corrente. Rieffettua il login.');
+            }
 
             // 1. Session Save
             if (data.session) {
                 const sessionData = {
                     ...data.session,
-                    storedUser: btoa(unescape(encodeURIComponent(user))),
-                    storedPass: btoa(unescape(encodeURIComponent(pass))),
                     studentId: data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex),
                     name: data.student?.name || data.selectedProfile?.name,
                     class: data.student?.class || data.selectedProfile?.class,
@@ -900,11 +919,11 @@
         // --- SWITCH PROFILE ---
         async function switchProfile() {
             const stored = sessionManager.load();
-            if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+            if (stored && stored.schoolCode && (stored.userName || stored.username)) {
                 try {
                     if (typeof showBoot === 'function') showBoot("Ricerca profili...");
-                    const user = decodeURIComponent(escape(atob(stored.storedUser)));
-                    const pass = decodeURIComponent(escape(atob(stored.storedPass)));
+                    const user = stored.userName || stored.username;
+                    const pass = '';
 
                     const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
@@ -921,7 +940,7 @@
                     hideBoot();
 
                     if (response.ok && data.status === 'MULTIPLE_PROFILES') {
-                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
+                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: '' });
                     } else if (response.ok && data.success) {
                         handleLoginSuccess(data, pass);
                     } else {

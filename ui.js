@@ -337,20 +337,12 @@ window.closeSubject = function () {
 // --- Google Calendar OAuth2 (Universal) ---
 window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
-    if (!s || !s.schoolCode || !(s.userName || s.username) || !s.storedPass) return false;
-
-    let password = '';
-    try {
-        password = decodeURIComponent(escape(atob(s.storedPass)));
-    } catch (e) {
-        console.warn('Decode storedPass failed in refreshSessionToken');
-        return false;
-    }
+    if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
     const payload = {
         schoolCode: s.schoolCode,
         username: s.userName || s.username,
-        password,
+        password: '',
         profileIndex: s.profileIndex
     };
 
@@ -409,12 +401,10 @@ window.syncGoogleCalendar = async function () {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Aggiornamento...'; }
         const userId = window.getUserId();
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
-        // La password è salvata come base64 in storedPass
-        let password = '';
-        try {
-            if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
-        } catch (e) { console.warn('Decode storedPass failed'); }
-        const fullSession = { ...session, password, profileIndex: session.profileIndex ?? 0 };
+        const fullSession = {
+            ...session,
+            profileIndex: session.profileIndex ?? 0
+        };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
@@ -471,15 +461,7 @@ window.saveArgoToSupabase = async function () {
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
         const userId = window.getUserId();
         if (!userId || userId === 'guest' || !session.userName) return;
-
-        // Decodifica password obbligatoria
-        let password = '';
-        try {
-            if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
-        } catch (e) {
-            console.warn('Decode storedPass failed in saveArgoToSupabase');
-            return;
-        }
+        // Credentials are stored server-side at login, no client password persistence.
 
         await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
@@ -488,7 +470,6 @@ window.saveArgoToSupabase = async function () {
                 userId,
                 schoolCode: session.schoolCode,
                 username: session.userName || session.username,
-                password: password,
                 profileIndex: session.profileIndex ?? 0
             })
         });
@@ -1640,7 +1621,7 @@ function formatFullDate(dateInput) {
 }
 function renderProfile() {
     const oauthHost = (() => {
-        try { return new URL(API_BASE_URL).host; } catch (_) { return 'g-connect-backend-r5j1.vercel.app'; }
+        try { return new URL(API_BASE_URL).host; } catch (_) { return window.location.host; }
     })();
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
