@@ -4941,11 +4941,11 @@
         }
 
         .asw-day-num {
-          font-family: 'Inter', sans-serif;
+          font-family: 'JetBrains Mono', monospace;
           font-size: 26px;
           font-weight: 800;
           line-height: 1;
-          letter-spacing: -0.04em;
+          letter-spacing: -0.03em;
         }
 
         .asw-month {
@@ -5054,11 +5054,12 @@
         }
 
         .asw-task-text {
-          font-family: 'Inter', sans-serif;
-          font-size: 13px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px;
           font-weight: 600;
           color: #141414;
-          line-height: 1.5;
+          line-height: 1.45;
+          letter-spacing: 0.01em;
           /* No truncation — full text always visible */
           white-space: normal;
           word-break: break-word;
@@ -5134,8 +5135,8 @@
           }
 
           .asw-task-text {
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 13px;
+            line-height: 1.45;
           }
 
           .asw-subject-badge {
