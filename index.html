@@ -96,7 +96,7 @@
         // ==============================================================================
         const APP_VERSION = '3.3.5';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
-        const API_BASE_URL = "https://g-connect-backend-r5j1.vercel.app";
+        const API_BASE_URL = window.location.origin;
         window.API_BASE_URL = API_BASE_URL;
         console.log(`[Network] Connected directly to: ${API_BASE_URL}`);
 
@@ -387,7 +387,12 @@
                 const response = await fetch(`${API_BASE_URL}/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(sessionData)
+                    body: JSON.stringify({
+                        schoolCode: sessionData.schoolCode,
+                        username: sessionData.userName || sessionData.username,
+                        password: sessionData.ephemeralPassword || '',
+                        profileIndex: sessionData.profileIndex
+                    })
                 });
                 if (!response.ok) throw new Error("Sync failed: " + response.status);
                 const data = await response.json();
@@ -689,6 +694,7 @@
             if (typeof setLoginBtnText === 'function') setLoginBtnText("Connessione... ");
 
             try {
+                if (credentials.password) sessionStorage.setItem('argo_ephemeral_password', credentials.password);
                 const payload = {
                     schoolCode: credentials.schoolCode,
                     username: credentials.username,
@@ -749,14 +755,12 @@
         async function handleLoginSuccess(data, rawPassword) {
             console.log("✅ Login OK, hydrating state...");
             const user = data.session.userName;
-            const pass = rawPassword || tempCreds.pass;
+            const pass = rawPassword || tempCreds.pass || sessionStorage.getItem('argo_ephemeral_password') || '';
 
             // 1. Session Save
             if (data.session) {
                 const sessionData = {
                     ...data.session,
-                    storedUser: btoa(unescape(encodeURIComponent(user))),
-                    storedPass: btoa(unescape(encodeURIComponent(pass))),
                     studentId: data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex),
                     name: data.student?.name || data.selectedProfile?.name,
                     class: data.student?.class || data.selectedProfile?.class,
@@ -764,6 +768,7 @@
                     avatar: data.student?.avatar || data.selectedProfile?.avatar,
                     sessionToken: data.sessionToken || null
                 };
+                if (pass) sessionData.ephemeralPassword = pass;
                 sessionManager.save(sessionData);
             }
 
@@ -900,11 +905,17 @@
         // --- SWITCH PROFILE ---
         async function switchProfile() {
             const stored = sessionManager.load();
-            if (stored && stored.schoolCode && stored.storedUser && stored.storedPass) {
+            if (stored && stored.schoolCode && (stored.userName || stored.username)) {
                 try {
                     if (typeof showBoot === 'function') showBoot("Ricerca profili...");
-                    const user = decodeURIComponent(escape(atob(stored.storedUser)));
-                    const pass = decodeURIComponent(escape(atob(stored.storedPass)));
+                    const user = stored.userName || stored.username;
+                    const pass = stored.ephemeralPassword || sessionStorage.getItem('argo_ephemeral_password') || '';
+                    if (!pass) {
+                        hideBoot();
+                        alert('Per cambiare profilo reinserisci la password Argo.');
+                        if (typeof openArgoLogin === 'function') openArgoLogin();
+                        return;
+                    }
 
                     const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',

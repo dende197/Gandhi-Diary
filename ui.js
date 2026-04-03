@@ -337,20 +337,13 @@ window.closeSubject = function () {
 // --- Google Calendar OAuth2 (Universal) ---
 window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
-    if (!s || !s.schoolCode || !(s.userName || s.username) || !s.storedPass) return false;
-
-    let password = '';
-    try {
-        password = decodeURIComponent(escape(atob(s.storedPass)));
-    } catch (e) {
-        console.warn('Decode storedPass failed in refreshSessionToken');
-        return false;
-    }
+    const ephemeralPassword = s.ephemeralPassword || sessionStorage.getItem('argo_ephemeral_password') || '';
+    if (!s || !s.schoolCode || !(s.userName || s.username) || !ephemeralPassword) return false;
 
     const payload = {
         schoolCode: s.schoolCode,
         username: s.userName || s.username,
-        password,
+        password: ephemeralPassword,
         profileIndex: s.profileIndex
     };
 
@@ -366,9 +359,11 @@ window.refreshSessionToken = async function () {
         ...s,
         ...data.session,
         studentId: data.student?.id || s.studentId,
-        sessionToken: data.sessionToken
+        sessionToken: data.sessionToken,
+        ephemeralPassword
     };
     localStorage.setItem('argo_session', JSON.stringify(updated));
+    if (ephemeralPassword) sessionStorage.setItem('argo_ephemeral_password', ephemeralPassword);
     return true;
 };
 
@@ -409,12 +404,10 @@ window.syncGoogleCalendar = async function () {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-circle-notch ph-spin"></i> Aggiornamento...'; }
         const userId = window.getUserId();
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
-        // La password è salvata come base64 in storedPass
-        let password = '';
-        try {
-            if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
-        } catch (e) { console.warn('Decode storedPass failed'); }
-        const fullSession = { ...session, password, profileIndex: session.profileIndex ?? 0 };
+        const fullSession = {
+            ...session,
+            profileIndex: session.profileIndex ?? 0
+        };
         // NON inviamo state.tasks: forziamo il server a scaricare i compiti aggiornati da Argo
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=sync`, {
             method: 'POST',
@@ -472,14 +465,8 @@ window.saveArgoToSupabase = async function () {
         const userId = window.getUserId();
         if (!userId || userId === 'guest' || !session.userName) return;
 
-        // Decodifica password obbligatoria
-        let password = '';
-        try {
-            if (session.storedPass) password = decodeURIComponent(escape(atob(session.storedPass)));
-        } catch (e) {
-            console.warn('Decode storedPass failed in saveArgoToSupabase');
-            return;
-        }
+        const password = session.ephemeralPassword || sessionStorage.getItem('argo_ephemeral_password') || '';
+        if (!password) return;
 
         await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
@@ -1640,7 +1627,7 @@ function formatFullDate(dateInput) {
 }
 function renderProfile() {
     const oauthHost = (() => {
-        try { return new URL(API_BASE_URL).host; } catch (_) { return 'g-connect-backend-r5j1.vercel.app'; }
+        try { return new URL(API_BASE_URL).host; } catch (_) { return window.location.host; }
     })();
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
@@ -4595,6 +4582,7 @@ window.logout = async function () {
         }
 
         sessionManager.clear();
+        sessionStorage.removeItem('argo_ephemeral_password');
         if (typeof supabaseClient !== 'undefined' && supabaseClient.auth) supabaseClient.auth.signOut();
 
         state.isLoggedIn = false;
