@@ -4006,6 +4006,9 @@
           min-height: 36px;
           line-height: 1.2;
           padding: 0 12px !important;
+          color: #141414 !important;
+          -webkit-text-fill-color: #141414 !important;
+          opacity: 1 !important;
         }
 
         .ai-chat-send-btn {
@@ -4015,7 +4018,7 @@
         }
 
         #weekly-agenda-list .agenda-task-card {
-          overflow: visible;
+          overflow: visible !important;
         }
 
         #weekly-agenda-list .agenda-task-main {
@@ -4551,7 +4554,7 @@
           }
 
           /* 10 ▸ Prevent any card from overflowing horizontally */
-          .card {
+          .card:not(.agenda-task-card) {
             min-width: 0;
             max-width: 100%;
             overflow: hidden;
@@ -4737,7 +4740,7 @@
           }
 
           .ai-chat-header {
-            padding: 10px 12px !important;
+            padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 8px 12px !important;
             gap: 8px !important;
           }
 

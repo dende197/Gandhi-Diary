@@ -1841,7 +1841,7 @@ function renderAIAssistantView() {
         <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; min-height:0; padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
-            <div class="ai-chat-header" style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
+            <div class="ai-chat-header" style="flex-shrink: 0; padding: calc(env(safe-area-inset-top, 20px) + 10px) 24px 14px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <button onclick="navigate('planner')" style="background: #141414; border: none; color: #FFF; cursor: pointer; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" title="Back">
                         <i class="ph-bold ph-arrow-left" style="font-size: 16px;"></i>
