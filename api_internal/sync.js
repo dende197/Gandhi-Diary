@@ -162,7 +162,7 @@ module.exports = async function handler(req, res) {
         debugLog('❌ SYNC FAILED', e.message);
         const msg = (e && e.message) ? e.message : 'Errore sincronizzazione';
         const lower = String(msg).toLowerCase();
-        const isAuthError = lower.includes('credenzial') || lower.includes('password') || lower.includes('unauthorized') || lower.includes('forbidden');
+        const isAuthError = lower.includes('credenziali') || lower.includes('password') || lower.includes('unauthorized') || lower.includes('forbidden');
         res.status(isAuthError ? 401 : 500).json({ success: false, error: msg });
     }
 }

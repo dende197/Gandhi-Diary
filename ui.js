@@ -337,13 +337,12 @@ window.closeSubject = function () {
 // --- Google Calendar OAuth2 (Universal) ---
 window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
-    const ephemeralPassword = sessionStorage.getItem('argo_ephemeral_password') || '';
-    if (!s || !s.schoolCode || !(s.userName || s.username) || !ephemeralPassword) return false;
+    if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
     const payload = {
         schoolCode: s.schoolCode,
         username: s.userName || s.username,
-        password: ephemeralPassword,
+        password: '',
         profileIndex: s.profileIndex
     };
 
@@ -362,7 +361,6 @@ window.refreshSessionToken = async function () {
         sessionToken: data.sessionToken
     };
     localStorage.setItem('argo_session', JSON.stringify(updated));
-    if (ephemeralPassword) sessionStorage.setItem('argo_ephemeral_password', ephemeralPassword);
     return true;
 };
 
@@ -463,9 +461,7 @@ window.saveArgoToSupabase = async function () {
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
         const userId = window.getUserId();
         if (!userId || userId === 'guest' || !session.userName) return;
-
-        const password = sessionStorage.getItem('argo_ephemeral_password') || '';
-        if (!password) return;
+        // Credentials are stored server-side at login, no client password persistence.
 
         await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
@@ -474,7 +470,6 @@ window.saveArgoToSupabase = async function () {
                 userId,
                 schoolCode: session.schoolCode,
                 username: session.userName || session.username,
-                password: password,
                 profileIndex: session.profileIndex ?? 0
             })
         });
@@ -4581,7 +4576,6 @@ window.logout = async function () {
         }
 
         sessionManager.clear();
-        sessionStorage.removeItem('argo_ephemeral_password');
         if (typeof supabaseClient !== 'undefined' && supabaseClient.auth) supabaseClient.auth.signOut();
 
         state.isLoggedIn = false;

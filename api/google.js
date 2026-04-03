@@ -19,6 +19,7 @@ const {
     handleCors, verifySessionToken, normalizeUserId, SESSION_TOKEN_HEX_LENGTH
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
+const { getArgoCredentials } = require('../lib/session-vault');
 
 // --- Google OAuth2 Config ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -466,21 +467,36 @@ module.exports = async function handler(req, res) {
             // ============= SAVE ARGO CREDENTIALS =============
             case 'save-argo': {
                 const { userId, schoolCode, username, password, profileIndex } = req.body || {};
-                if (!userId || !schoolCode || !username || !password) {
-                    return res.status(400).json({ success: false, error: 'Dati Argo mancanti' });
+                if (!userId) {
+                    return res.status(400).json({ success: false, error: 'userId richiesto' });
                 }
 
                 if (!verifySessionToken(req, normalizeUserId(userId))) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 
+                const fromVault = getArgoCredentials(normalizeUserId(userId));
+                const resolvedSchoolCode = schoolCode || fromVault?.schoolCode || null;
+                const resolvedUsername = username || fromVault?.username || null;
+                const resolvedPassword = password || fromVault?.password || null;
+                const resolvedProfileIndex = profileIndex ?? fromVault?.profileIndex ?? 0;
+
+                // If already present in DB and no fresh credentials are available, allow no-op success.
+                if (!resolvedSchoolCode || !resolvedUsername || !resolvedPassword) {
+                    const existing = await loadTokens(userId);
+                    if (existing?.argo_school_code && existing?.argo_username && existing?.argo_password) {
+                        return res.json({ success: true, message: 'Credenziali Argo già presenti' });
+                    }
+                    return res.status(400).json({ success: false, error: 'Credenziali Argo non disponibili. Esegui di nuovo il login Argo.' });
+                }
+
                 const { error } = await getSupabase()
                     .from('google_tokens')
                     .update({
-                        argo_school_code: schoolCode,
-                        argo_username: username,
-                        argo_password: encryptArgoPassword(password),
-                        profile_index: profileIndex ?? 0,
+                        argo_school_code: resolvedSchoolCode,
+                        argo_username: resolvedUsername,
+                        argo_password: encryptArgoPassword(resolvedPassword),
+                        profile_index: resolvedProfileIndex,
                         updated_at: new Date().toISOString()
                     })
                     .eq('user_id', normalizeUserId(userId));

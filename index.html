@@ -122,13 +122,18 @@
 
         // --- SESSION MANAGER (v7.0) ---
         const sessionManager = {
+            sanitizeSensitiveSessionData(obj) {
+                if (!obj || typeof obj !== 'object') return obj;
+                delete obj.storedUser;
+                delete obj.storedPass;
+                delete obj.ephemeralPassword;
+                return obj;
+            },
             save(data) {
                 try {
                     const existing = this.load() || {};
                     const merged = { ...existing };
-                    delete merged.storedUser;
-                    delete merged.storedPass;
-                    delete merged.ephemeralPassword;
+                    this.sanitizeSensitiveSessionData(merged);
                     for (const [k, v] of Object.entries(data)) if (v !== null && v !== undefined) merged[k] = v;
                     localStorage.setItem('argo_session', JSON.stringify(merged));
                     localStorage.setItem('argo_is_logged_in', 'true');
@@ -139,9 +144,7 @@
                     const s = localStorage.getItem('argo_session');
                     const parsed = s ? JSON.parse(s) : null;
                     if (parsed && (parsed.storedUser || parsed.storedPass || parsed.ephemeralPassword)) {
-                        delete parsed.storedUser;
-                        delete parsed.storedPass;
-                        delete parsed.ephemeralPassword;
+                        this.sanitizeSensitiveSessionData(parsed);
                         localStorage.setItem('argo_session', JSON.stringify(parsed));
                     }
                     return parsed;
@@ -152,7 +155,6 @@
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
                 localStorage.removeItem('argo_password');
-                sessionStorage.removeItem('argo_ephemeral_password');
                 console.log("Session cleared");
             }
         };
@@ -401,7 +403,7 @@
                     body: JSON.stringify({
                         schoolCode: sessionData.schoolCode,
                         username: sessionData.userName || sessionData.username,
-                        password: sessionStorage.getItem('argo_ephemeral_password') || '',
+                        password: '',
                         profileIndex: sessionData.profileIndex
                     })
                 });
@@ -705,7 +707,6 @@
             if (typeof setLoginBtnText === 'function') setLoginBtnText("Connessione... ");
 
             try {
-                if (credentials.password) sessionStorage.setItem('argo_ephemeral_password', credentials.password);
                 const payload = {
                     schoolCode: credentials.schoolCode,
                     username: credentials.username,
@@ -766,7 +767,7 @@
         async function handleLoginSuccess(data, rawPassword) {
             console.log("✅ Login OK, hydrating state...");
             const user = data.session.userName;
-            const pass = rawPassword || tempCreds.pass || sessionStorage.getItem('argo_ephemeral_password') || '';
+            const pass = rawPassword || tempCreds.pass || '';
 
             // 1. Session Save
             if (data.session) {
@@ -780,7 +781,6 @@
                     sessionToken: data.sessionToken || null
                 };
                 sessionManager.save(sessionData);
-                if (pass) sessionStorage.setItem('argo_ephemeral_password', pass);
             }
 
             // 2. Identity Update
@@ -920,13 +920,7 @@
                 try {
                     if (typeof showBoot === 'function') showBoot("Ricerca profili...");
                     const user = stored.userName || stored.username;
-                    const pass = sessionStorage.getItem('argo_ephemeral_password') || '';
-                    if (!pass) {
-                        hideBoot();
-                        alert('Per cambiare profilo reinserisci la password Argo.');
-                        if (typeof openArgoLogin === 'function') openArgoLogin();
-                        return;
-                    }
+                    const pass = '';
 
                     const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
@@ -943,7 +937,7 @@
                     hideBoot();
 
                     if (response.ok && data.status === 'MULTIPLE_PROFILES') {
-                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
+                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: '' });
                     } else if (response.ok && data.success) {
                         handleLoginSuccess(data, pass);
                     } else {
