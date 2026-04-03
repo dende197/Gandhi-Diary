@@ -5116,21 +5116,23 @@ REGOLE OPERATIVE:
         { role: 'user', parts: [{ text: compactSystemContext }] },
         { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
     ];
+    const toModelMessage = (msg, maxLen) => {
+        const role = msg.role === 'user' ? 'user' : 'model';
+        const textValue = clampText(msg.text, maxLen);
+        if (!textValue) return null;
+        return { role, parts: [{ text: textValue }] };
+    };
     const recentHistory = (state.aiChatHistory || []).slice(-12);
     recentHistory.forEach((msg) => {
-        const role = msg.role === 'user' ? 'user' : 'model';
-        const textValue = clampText(msg.text, 700);
-        if (textValue) contents.push({ role, parts: [{ text: textValue }] });
+        const mapped = toModelMessage(msg, 700);
+        if (mapped) contents.push(mapped);
     });
 
-    const maxPayloadBytes = 120 * 1024;
+    const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
-    let payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
-    if (payloadSize > maxPayloadBytes) {
-        const trimmedHistory = recentHistory.slice(-6).map(msg => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: clampText(msg.text, 400) }]
-        }));
+    const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
+    if (payloadSize > payloadSizeLimitBytes) {
+        const trimmedHistory = recentHistory.slice(-6).map(msg => toModelMessage(msg, 400)).filter(Boolean);
         payload = {
             messages: [
                 { role: 'user', parts: [{ text: clampText(systemContext, 5000) }] },
@@ -5138,7 +5140,6 @@ REGOLE OPERATIVE:
                 ...trimmedHistory
             ]
         };
-        payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
     }
 
     try {
