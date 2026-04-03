@@ -78,7 +78,7 @@
           --top-nav-height: 56px;
           --safe-top: env(safe-area-inset-top, 0px);
           --safe-bottom: env(safe-area-inset-bottom, 0px);
-          --mobile-view-inline-padding: 12px;
+          --mobile-view-inline-padding: 6px;
           --mobile-chat-total-inline-padding: calc(var(--mobile-view-inline-padding) * 2);
           --mobile-dock-offset: 14px;
 
@@ -1044,7 +1044,7 @@
         /* Mobile Responsive Table */
         @media (max-width: 600px) {
           :root {
-            --mobile-view-inline-padding: 10px;
+            --mobile-view-inline-padding: 6px;
             --mobile-chat-total-inline-padding: calc(var(--mobile-view-inline-padding) * 2);
             --mobile-dock-offset: 14px;
           }
@@ -3941,9 +3941,9 @@
 
         @media (max-width: 768px) {
           #app .view {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
-            padding-bottom: 32px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            padding-bottom: 20px !important;
           }
         }
 
@@ -4454,11 +4454,13 @@
             padding-top: calc(var(--safe-top) + 68px) !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
+            padding-bottom: 0 !important;
           }
 
           #app .view {
             padding-left: var(--mobile-view-inline-padding) !important;
             padding-right: var(--mobile-view-inline-padding) !important;
+            padding-bottom: 16px !important;
             font-size: 15px !important;
           }
 
@@ -4479,7 +4481,7 @@
           /* 5 ▸ Home dashboard — collapse all grid rows to single column by default */
           .home-grid-row {
             grid-template-columns: 1fr !important;
-            gap: 12px !important;
+            gap: 8px !important;
           }
 
           /* ROW 2 (stat cards: media, assenze, circolare) — keep 2-col so numbers are visible */
@@ -4494,25 +4496,44 @@
 
           /* 6 ▸ Planner / Grades / Circolari — slim content padding */
           .planner-content {
-            padding: 10px 10px !important;
+            padding: 10px 4px !important;
           }
 
           /* 7 ▸ Planner header — wrap title + action buttons vertically */
           .planner-view-header {
             flex-direction: column !important;
             align-items: flex-start !important;
-            gap: 10px !important;
-            margin-bottom: 20px !important;
+            gap: 8px !important;
+            margin-bottom: 14px !important;
+            padding-bottom: 12px !important;
           }
 
           .planner-view-header h1 {
-            font-size: 22px !important;
+            font-size: 20px !important;
           }
 
           /* Planner action button group — wrap neatly */
           .planner-view-header > div {
             flex-wrap: wrap !important;
             gap: 6px !important;
+            width: 100% !important;
+          }
+
+          /* Planner action buttons — smaller on mobile */
+          .planner-view-header button {
+            height: 32px !important;
+            font-size: 10px !important;
+            padding: 0 10px !important;
+          }
+
+          /* View switch buttons — compact */
+          .planner-view-header .view-switch {
+            padding: 3px !important;
+          }
+
+          .planner-view-header .switch-btn {
+            padding: 5px 10px !important;
+            font-size: 10px !important;
           }
 
           /* 8 ▸ Subject detail grid (Voti view) — force 1 column */
@@ -4601,44 +4622,71 @@
             font-size: 8px !important;
           }
 
-          /* 14 ▸ Agenda settimanale: evita testi troncati nei task */
+          /* 14 ▸ Agenda settimanale: testi leggibili, layout pulito su mobile */
           #weekly-agenda-list.weekly-agenda-root>.agenda-day-section {
-            gap: 18px !important;
+            gap: 14px !important;
+          }
+
+          /* Date header — slightly more compact */
+          #weekly-agenda-list .agenda-day-section > div:first-child {
+            gap: 8px !important;
+            margin-bottom: 8px !important;
           }
 
           #weekly-agenda-list [data-task-text] {
-            font-size: 14px !important;
-            line-height: 1.45 !important;
+            font-size: 15px !important;
+            line-height: 1.55 !important;
             white-space: normal !important;
             overflow: visible !important;
             text-overflow: clip !important;
             display: block !important;
             -webkit-line-clamp: unset !important;
+            line-clamp: unset !important;
             -webkit-box-orient: initial !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            hyphens: auto !important;
           }
 
           #weekly-agenda-list .agenda-task-card {
             min-height: 0 !important;
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
             overflow: visible !important;
+            border-radius: 12px !important;
           }
 
           #weekly-agenda-list .agenda-task-main {
-            padding: 12px 12px 10px !important;
+            padding: 12px 14px 10px !important;
             min-width: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          /* Subject badge — make it readable */
+          #weekly-agenda-list .agenda-task-main span[style*="font-size:9px"] {
+            font-size: 10px !important;
           }
 
           #weekly-agenda-list .agenda-task-actions {
-            padding: 8px 10px 10px !important;
-            gap: 6px !important;
+            padding: 6px 14px 10px !important;
+            gap: 8px !important;
             border-left: none !important;
-            border-top: 1px dashed rgba(0, 0, 0, 0.12) !important;
+            border-top: 1px dashed rgba(0, 0, 0, 0.08) !important;
             justify-content: flex-end !important;
+            flex-direction: row !important;
+            display: flex !important;
           }
 
           #weekly-agenda-list .agenda-task-action-btn {
-            width: 28px !important;
-            height: 28px !important;
+            width: 32px !important;
+            height: 32px !important;
+          }
+
+          /* Side color stripe — horizontal when card is column */
+          #weekly-agenda-list .agenda-task-card > div[style*="width:4px"] {
+            width: 100% !important;
+            height: 3px !important;
           }
 
           /* 15 ▸ Voti: card obiettivo media più leggibile su schermo piccolo */
@@ -4663,47 +4711,120 @@
             font-size: 11px !important;
           }
 
-          .ai-chat-header {
-            padding: 12px 10px !important;
+          /* ── AI Chat: interfaccia mobile stile Gemini/ChatGPT ─────── */
+
+          /* Full-screen chat container */
+          .view.ai-view {
+            padding: 0 !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: 100vh !important;
+            max-height: 100dvh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
           }
 
+          .ai-chat-header {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+
+          /* Header back button — smaller */
+          .ai-chat-header button[onclick*="navigate"] {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 10px !important;
+          }
+
+          .ai-chat-header button[onclick*="navigate"] i {
+            font-size: 14px !important;
+          }
+
+          /* Header title — compact */
+          .ai-chat-header span[style*="font-size: 13px"] {
+            font-size: 12px !important;
+          }
+
+          .ai-chat-header span[style*="font-size: 9px"] {
+            font-size: 8px !important;
+          }
+
+          /* Chat messages area — fills available space */
           #aiChatMessages.ai-chat-messages {
             padding: 12px 10px !important;
-            gap: 12px !important;
+            gap: 10px !important;
+            flex: 1 !important;
+            min-height: 0 !important;
           }
 
+          /* Welcome card — fit on small screen */
+          #aiChatMessages > div[style*="max-width: 500px"] {
+            margin: 20px auto !important;
+            padding: 20px !important;
+            max-width: 100% !important;
+          }
+
+          #aiChatMessages > div[style*="max-width: 500px"] > div[style*="font-size: 18px"] {
+            font-size: 15px !important;
+            margin-bottom: 16px !important;
+          }
+
+          #aiChatMessages > div[style*="max-width: 500px"] button {
+            padding: 11px !important;
+            font-size: 10px !important;
+          }
+
+          /* Message bubbles — tighter on mobile */
           .ai-chat-message-bubble {
-            max-width: 92% !important;
-            padding: 12px 14px !important;
-            border-radius: 16px !important;
+            max-width: 88% !important;
+            padding: 10px 14px !important;
+            border-radius: 18px !important;
             font-size: 14px !important;
-            line-height: 1.45 !important;
+            line-height: 1.5 !important;
           }
 
+          /* Timestamp label inside bubble */
+          .ai-chat-message-bubble > div[style*="font-size: 9px"] {
+            margin-bottom: 6px !important;
+          }
+
+          /* ── Input bar: flush bottom, pill-shaped, compact ───── */
           .ai-chat-input-wrap {
-            padding: 6px var(--mobile-view-inline-padding) calc(8px + var(--safe-bottom)) !important;
-            background: #fff !important;
-            border-top: 1px solid rgba(20, 20, 20, 0.08) !important;
+            padding: 6px 8px 0px !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            background: #FFFFFF !important;
+            border-top: 1px solid rgba(20, 20, 20, 0.06) !important;
+            flex-shrink: 0 !important;
+          }
+
+          .ai-input-shell {
+            width: 100% !important;
           }
 
           .ai-input-dock {
-            width: calc(100vw - var(--mobile-chat-total-inline-padding)) !important;
-            border-radius: 18px !important;
-            padding: 5px 6px !important;
+            width: 100% !important;
+            border-radius: 22px !important;
+            padding: 4px 4px 4px 14px !important;
             background: #F6F5F3 !important;
             border: 1px solid #E0DDD8 !important;
+            gap: 6px !important;
+            box-sizing: border-box !important;
           }
 
           .ai-chat-input-field {
             font-size: 15px !important;
-            padding: 0 10px !important;
-            min-height: 34px !important;
+            padding: 0 4px !important;
+            min-height: 36px !important;
+            max-height: 120px !important;
           }
 
           .ai-chat-send-btn {
-            width: 30px !important;
-            height: 30px !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
             border-radius: 50% !important;
+            flex-shrink: 0 !important;
           }
 
           .ai-chat-send-btn i {
