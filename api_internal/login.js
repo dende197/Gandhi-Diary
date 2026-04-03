@@ -2,6 +2,7 @@ const {
     handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken, isSessionSecurityConfigured
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
+const { setArgoCredentials } = require('../lib/session-vault');
 const {
     AdvancedArgo, enrichProfiles, resolveIdentityForProfile,
     resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb,
@@ -94,6 +95,12 @@ module.exports = async function handler(req, res) {
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
         const pid = generatePid(school, username, targetIndex);
+        setArgoCredentials(pid, {
+            schoolCode: school,
+            username,
+            password,
+            profileIndex: targetIndex
+        });
         let storedSpecialization = null;
         let storedAvatar = null;
 

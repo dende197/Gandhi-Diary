@@ -7,6 +7,7 @@ const {
     getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractPromemoriaFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
+const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
@@ -14,19 +15,30 @@ module.exports = async function handler(req, res) {
 
     const body = req.body;
     const school = (body.schoolCode || '').trim().toUpperCase();
-    const storedUser = body.storedUser;
-    const storedPass = body.storedPass;
+    const username = (body.username || '').trim().toLowerCase();
+    const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
 
     try {
         debugLog('SYNC REQUEST', { school, profileIndex });
 
-        if (!school || !storedUser || !storedPass) {
+        if (!school || !username) {
             return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
         }
 
-        const user = decodeURIComponent(Buffer.from(storedUser, 'base64').toString('utf-8')).trim().toLowerCase();
-        const pwd = decodeURIComponent(Buffer.from(storedPass, 'base64').toString('utf-8'));
+        const pidForVault = generatePid(school, username, profileIndex);
+        const fromVault = getArgoCredentials(pidForVault);
+        const user = username || fromVault?.username;
+        const pwd = password || fromVault?.password;
+        if (!pwd) {
+            return res.status(401).json({ success: false, error: 'Password non disponibile: rieffettua il login' });
+        }
+        setArgoCredentials(pidForVault, {
+            schoolCode: school,
+            username: user,
+            password: pwd,
+            profileIndex
+        });
 
         let accessToken = null;
         let authToken = null;
@@ -148,6 +160,9 @@ module.exports = async function handler(req, res) {
 
     } catch (e) {
         debugLog('❌ SYNC FAILED', e.message);
-        res.status(401).json({ success: false, error: e.message });
+        const msg = (e && e.message) ? e.message : 'Errore sincronizzazione';
+        const lower = String(msg).toLowerCase();
+        const isAuthError = lower.includes('credenzial') || lower.includes('password') || lower.includes('unauthorized') || lower.includes('forbidden');
+        res.status(isAuthError ? 401 : 500).json({ success: false, error: msg });
     }
 }

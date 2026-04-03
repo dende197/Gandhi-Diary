@@ -337,7 +337,7 @@ window.closeSubject = function () {
 // --- Google Calendar OAuth2 (Universal) ---
 window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
-    const ephemeralPassword = s.ephemeralPassword || sessionStorage.getItem('argo_ephemeral_password') || '';
+    const ephemeralPassword = sessionStorage.getItem('argo_ephemeral_password') || '';
     if (!s || !s.schoolCode || !(s.userName || s.username) || !ephemeralPassword) return false;
 
     const payload = {
@@ -359,8 +359,7 @@ window.refreshSessionToken = async function () {
         ...s,
         ...data.session,
         studentId: data.student?.id || s.studentId,
-        sessionToken: data.sessionToken,
-        ephemeralPassword
+        sessionToken: data.sessionToken
     };
     localStorage.setItem('argo_session', JSON.stringify(updated));
     if (ephemeralPassword) sessionStorage.setItem('argo_ephemeral_password', ephemeralPassword);
@@ -465,7 +464,7 @@ window.saveArgoToSupabase = async function () {
         const userId = window.getUserId();
         if (!userId || userId === 'guest' || !session.userName) return;
 
-        const password = session.ephemeralPassword || sessionStorage.getItem('argo_ephemeral_password') || '';
+        const password = sessionStorage.getItem('argo_ephemeral_password') || '';
         if (!password) return;
 
         await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {

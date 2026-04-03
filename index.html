@@ -126,6 +126,9 @@
                 try {
                     const existing = this.load() || {};
                     const merged = { ...existing };
+                    delete merged.storedUser;
+                    delete merged.storedPass;
+                    delete merged.ephemeralPassword;
                     for (const [k, v] of Object.entries(data)) if (v !== null && v !== undefined) merged[k] = v;
                     localStorage.setItem('argo_session', JSON.stringify(merged));
                     localStorage.setItem('argo_is_logged_in', 'true');
@@ -134,7 +137,14 @@
             load() {
                 try {
                     const s = localStorage.getItem('argo_session');
-                    return s ? JSON.parse(s) : null;
+                    const parsed = s ? JSON.parse(s) : null;
+                    if (parsed && (parsed.storedUser || parsed.storedPass || parsed.ephemeralPassword)) {
+                        delete parsed.storedUser;
+                        delete parsed.storedPass;
+                        delete parsed.ephemeralPassword;
+                        localStorage.setItem('argo_session', JSON.stringify(parsed));
+                    }
+                    return parsed;
                 } catch (e) { return null; }
             },
             isLoggedIn() { return localStorage.getItem('argo_is_logged_in') === 'true'; },
@@ -142,6 +152,7 @@
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
                 localStorage.removeItem('argo_password');
+                sessionStorage.removeItem('argo_ephemeral_password');
                 console.log("Session cleared");
             }
         };
@@ -390,7 +401,7 @@
                     body: JSON.stringify({
                         schoolCode: sessionData.schoolCode,
                         username: sessionData.userName || sessionData.username,
-                        password: sessionData.ephemeralPassword || '',
+                        password: sessionStorage.getItem('argo_ephemeral_password') || '',
                         profileIndex: sessionData.profileIndex
                     })
                 });
@@ -768,8 +779,8 @@
                     avatar: data.student?.avatar || data.selectedProfile?.avatar,
                     sessionToken: data.sessionToken || null
                 };
-                if (pass) sessionData.ephemeralPassword = pass;
                 sessionManager.save(sessionData);
+                if (pass) sessionStorage.setItem('argo_ephemeral_password', pass);
             }
 
             // 2. Identity Update
@@ -909,7 +920,7 @@
                 try {
                     if (typeof showBoot === 'function') showBoot("Ricerca profili...");
                     const user = stored.userName || stored.username;
-                    const pass = stored.ephemeralPassword || sessionStorage.getItem('argo_ephemeral_password') || '';
+                    const pass = sessionStorage.getItem('argo_ephemeral_password') || '';
                     if (!pass) {
                         hideBoot();
                         alert('Per cambiare profilo reinserisci la password Argo.');
