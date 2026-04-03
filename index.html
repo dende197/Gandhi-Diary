@@ -399,7 +399,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/sync`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getSessionHeaders(),
                     body: JSON.stringify({
                         schoolCode: sessionData.schoolCode,
                         username: sessionData.userName || sessionData.username,

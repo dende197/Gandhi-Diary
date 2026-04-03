@@ -5031,19 +5031,24 @@ window.sendAIChat = async function () {
         return true;
     }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
 
+    const clampText = (value, max = 180) => {
+        const txt = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!txt) return '';
+        return txt.length > max ? `${txt.slice(0, max - 1)}…` : txt;
+    };
     const thisWeekTasks = [], laterTasks = [];
     argoTasks.forEach(t => {
         const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
         const dueDateStr = dueDate ? dueDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
-        const entry = `- [${t.subject}] ${t.text} → consegna: ${dueDateStr}`;
+        const entry = `- [${clampText(t.subject, 40) || 'Materia'}] ${clampText(t.text, 160)} → consegna: ${dueDateStr}`;
         (dueDate && dueDate <= endOfWeek) ? thisWeekTasks.push(entry) : laterTasks.push(entry);
     });
 
-    const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-    const verifiche = (state.verifiche || []).map(v => `- ${v.materia || v.subject || 'Materia'}: ${v.argomento || v.topic || 'N/D'} (${v.data || v.date || 'data non indicata'})`).join('\n');
-    const reminders = (state.reminders || state.promemoria || []).slice(0, 12).map(r => `- ${r.text || r.title || r.descrizione || r.oggetto || 'Promemoria'}`).join('\n');
-    const backlog = (state.backlog || []).slice(0, 12).map(b => `- ${b.subject || 'Generale'}: ${b.text || b.title || b.task || ''}`).join('\n');
-    const grades = (state.voti || []).slice(0, 25).map(v => `- ${v.materia || v.subject || 'Materia'}: ${v.valore || v.value || 'N/D'} (${v.data || v.date || 'data n/d'})`).join('\n');
+    const exams = (state.exams || []).slice(0, 10).map(ex => `- ${clampText(ex.type, 32)} di ${clampText(ex.subject, 40)} il ${clampText(ex.date, 24)} (${clampText(ex.topic || 'gen.', 60)})`).join('\n');
+    const verifiche = (state.verifiche || []).slice(0, 14).map(v => `- ${clampText(v.materia || v.subject || 'Materia', 40)}: ${clampText(v.argomento || v.topic || 'N/D', 110)} (${clampText(v.data || v.date || 'data non indicata', 24)})`).join('\n');
+    const reminders = (state.reminders || state.promemoria || []).slice(0, 10).map(r => `- ${clampText(r.text || r.title || r.descrizione || r.oggetto || 'Promemoria', 140)}`).join('\n');
+    const backlog = (state.backlog || []).slice(0, 10).map(b => `- ${clampText(b.subject || 'Generale', 40)}: ${clampText(b.text || b.title || b.task || '', 120)}`).join('\n');
+    const grades = (state.voti || []).slice(0, 18).map(v => `- ${clampText(v.materia || v.subject || 'Materia', 40)}: ${clampText(v.valore || v.value || 'N/D', 10)} (${clampText(v.data || v.date || 'data n/d', 24)})`).join('\n');
     const attendanceSummary = state.assenzeData ? [
         `Assenze totali: ${state.assenzeData.totaleAssenze ?? 0}`,
         `Ritardi totali: ${state.assenzeData.totaleRitardi ?? 0}`,
@@ -5052,8 +5057,11 @@ window.sendAIChat = async function () {
         `Da giustificare: ${state.assenzeData.daGiustificare ?? 0}`
     ].join(' | ') : 'Nessun dato presenze/assenze disponibile';
 
-    const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).map(([date, ids]) => {
-        const dayTasks = ids.map(id => { const t = (state.tasks || []).find(x => x.id === id); return t ? `[${t.subject}] ${t.text}` : null; }).filter(Boolean);
+    const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).slice(0, 8).map(([date, ids]) => {
+        const dayTasks = ids.slice(0, 6).map(id => {
+            const t = (state.tasks || []).find(x => x.id === id);
+            return t ? `[${clampText(t.subject, 32)}] ${clampText(t.text, 80)}` : null;
+        }).filter(Boolean);
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
@@ -5103,11 +5111,42 @@ REGOLE OPERATIVE:
 4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
 5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.`;
 
-    const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
-    state.aiChatHistory.forEach(msg => contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));
+    const compactSystemContext = clampText(systemContext, 9000);
+    const contents = [
+        { role: 'user', parts: [{ text: compactSystemContext }] },
+        { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
+    ];
+    const recentHistory = (state.aiChatHistory || []).slice(-12);
+    recentHistory.forEach((msg) => {
+        const role = msg.role === 'user' ? 'user' : 'model';
+        const textValue = clampText(msg.text, 700);
+        if (textValue) contents.push({ role, parts: [{ text: textValue }] });
+    });
+
+    const maxPayloadBytes = 120 * 1024;
+    let payload = { messages: contents };
+    let payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
+    if (payloadSize > maxPayloadBytes) {
+        const trimmedHistory = recentHistory.slice(-6).map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: clampText(msg.text, 400) }]
+        }));
+        payload = {
+            messages: [
+                { role: 'user', parts: [{ text: clampText(systemContext, 5000) }] },
+                { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] },
+                ...trimmedHistory
+            ]
+        };
+        payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
+    }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contents }) });
+        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
         const data = await response.json();
         if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
             const aiText = data.candidates[0].content.parts[0].text;

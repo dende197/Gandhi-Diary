@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -18,6 +18,10 @@ module.exports = async function handler(req, res) {
     const username = (body.username || '').trim().toLowerCase();
     const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
+    const pidForAuth = generatePid(school, username, profileIndex);
+    if (!verifySessionToken(req, pidForAuth)) {
+        return res.status(403).json({ success: false, error: 'Non autorizzato' });
+    }
 
     try {
         debugLog('SYNC REQUEST', { school, profileIndex });
