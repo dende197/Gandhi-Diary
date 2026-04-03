@@ -1,0 +1,17 @@
+{
+  "name": "Gandhi diary",
+  "short_name": "Gandhi diary",
+  "description": "Gandhi diary",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F6F5F3",
+  "theme_color": "#F6F5F3",
+  "icons": [
+    {
+      "src": "https://github.com/user-attachments/assets/227c37b7-98ec-4318-816e-717fb9507680",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -4367,7 +4367,7 @@
           .mobile-dock {
             display: flex !important;
             position: fixed !important;
-            top: calc(var(--safe-top) + 8px) !important;
+            top: calc(var(--safe-top) + 14px) !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
             z-index: 1200 !important;
@@ -4410,6 +4410,12 @@
             padding-top: calc(var(--safe-top) + 68px) !important;
           }
 
+          #app .view {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            font-size: 15px !important;
+          }
+
           /* 5 ▸ Home dashboard — collapse all grid rows to single column by default */
           .home-grid-row {
             grid-template-columns: 1fr !important;
@@ -4428,7 +4434,7 @@
 
           /* 6 ▸ Planner / Grades / Circolari — slim content padding */
           .planner-content {
-            padding: 12px 16px !important;
+            padding: 10px 10px !important;
           }
 
           /* 7 ▸ Planner header — wrap title + action buttons vertically */
@@ -4541,7 +4547,7 @@
           }
 
           #weekly-agenda-list [data-task-text] {
-            font-size: 13px !important;
+            font-size: 14px !important;
             line-height: 1.45 !important;
             white-space: normal !important;
             overflow: visible !important;
@@ -4553,15 +4559,19 @@
 
           #weekly-agenda-list .agenda-task-card {
             min-height: 0 !important;
+            display: block !important;
           }
 
           #weekly-agenda-list .agenda-task-main {
-            padding: 12px 12px !important;
+            padding: 12px 12px 10px !important;
           }
 
           #weekly-agenda-list .agenda-task-actions {
-            padding: 0 10px !important;
+            padding: 8px 10px 10px !important;
             gap: 6px !important;
+            border-left: none !important;
+            border-top: 1px dashed rgba(0, 0, 0, 0.04) !important;
+            justify-content: flex-end !important;
           }
 
           #weekly-agenda-list .agenda-task-action-btn {
@@ -4589,5 +4599,42 @@
 
           .dashboard.view .goal-overall-card .goal-overall-scenario-grade {
             font-size: 11px !important;
+          }
+
+          .ai-chat-header {
+            padding: 12px 10px !important;
+          }
+
+          #aiChatMessages.ai-chat-messages {
+            padding: 12px 10px !important;
+            gap: 12px !important;
+          }
+
+          .ai-chat-message-bubble {
+            max-width: 92% !important;
+            padding: 12px 14px !important;
+            border-radius: 16px !important;
+            font-size: 14px !important;
+            line-height: 1.45 !important;
+          }
+
+          .ai-chat-input-wrap {
+            padding: 8px 10px calc(8px + var(--safe-bottom)) !important;
+          }
+
+          .ai-input-dock {
+            width: calc(100vw - 20px) !important;
+            border-radius: 18px !important;
+            padding: 4px 6px !important;
+          }
+
+          .ai-chat-input-field {
+            font-size: 15px !important;
+            padding: 4px 8px !important;
+          }
+
+          .ai-chat-send-btn {
+            width: 30px !important;
+            height: 30px !important;
           }
         }
