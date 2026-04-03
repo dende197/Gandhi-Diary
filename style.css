@@ -4834,9 +4834,6 @@
             padding: 0 4px !important;
             min-height: 28px !important;
             max-height: 120px !important;
-            color: #141414 !important;
-            -webkit-text-fill-color: #141414 !important;
-            opacity: 1 !important;
           }
 
           .ai-chat-send-btn {
