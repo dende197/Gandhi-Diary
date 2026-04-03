@@ -4017,7 +4017,6 @@
           border-radius: 50%;
         }
 
-        #weekly-agenda-list .card.agenda-task-card,
         #weekly-agenda-list .agenda-task-card {
           overflow: visible !important;
         }
