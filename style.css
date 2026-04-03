@@ -4405,12 +4405,27 @@
           transform: scale(1.05);
         }
 
-        /* ── Phone overrides (@media ≤ 600 px) ─────────────────────────
+         /* ── Phone overrides (@media ≤ 600 px) ─────────────────────────
            Only rules that differ from the desktop layout.
            ────────────────────────────────────────────────────────────── */
         @media (max-width: 600px) {
           body.is-ai-mode .mobile-dock {
             display: none !important;
+          }
+
+          /* Hide the topbar too so the AI chat truly fills the screen */
+          body.is-ai-mode .topbar {
+            display: none !important;
+          }
+
+          /* Main container fills the entire viewport in AI mode */
+          body.is-ai-mode .main-container {
+            height: 100svh !important;
+            padding-top: 0 !important;
+          }
+
+          body.is-ai-mode #app {
+            height: 100svh !important;
           }
 
           /* 1 ▸ Keep only the mobile dock fixed while scrolling */

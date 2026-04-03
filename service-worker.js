@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.3.2';
+const CACHE_VERSION = '3.3.3';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
@@ -7,10 +7,10 @@ const APP_SHELL = [
   '/animations.css?v=3.3.2',
   '/ui.js?v=3.3.2',
   '/fluidity-engine-v3.js?v=3.0.2',
-  '/manifest.webmanifest?v=3.3.2',
-  '/gandhi-diary-icon-180.png?v=3.3.2',
-  '/gandhi-diary-icon-192.png?v=3.3.2',
-  '/gandhi-diary-icon-512.png?v=3.3.2',
+  '/manifest.webmanifest',
+  '/gandhi-diary-icon-180.png',
+  '/gandhi-diary-icon-192.png',
+  '/gandhi-diary-icon-512.png',
 ];
 
 function normalizeSameOriginUrl(url) {
@@ -76,30 +76,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-first: always fetch fresh from network; fall back to cache when offline.
   event.respondWith(
-    caches.match(normalizedRequest).then(async (cached) => {
-      if (cached) {
-        event.waitUntil(
-          fetch(normalizedRequest).then((response) => {
-            const cloned = response.clone();
-            return caches.open(CACHE_NAME).then((cache) => cache.put(normalizedRequest, cloned));
-          }).catch(() => {})
-        );
-        return cached;
-      }
+    fetch(normalizedRequest).then(async (response) => {
+      const cloned = response.clone();
       try {
-        const response = await fetch(normalizedRequest);
-        const cloned = response.clone();
-        try {
-          const cache = await caches.open(CACHE_NAME);
-          await cache.put(normalizedRequest, cloned);
-        } catch (err) {
-          console.warn('[SW] Resource cache write failed:', err?.message || err);
-        }
-        return response;
-      } catch {
-        return caches.match('/index.html');
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(normalizedRequest, cloned);
+      } catch (err) {
+        console.warn('[SW] Resource cache write failed:', err?.message || err);
       }
+      return response;
+    }).catch(async () => {
+      const cached = await caches.match(normalizedRequest);
+      return cached || caches.match('/index.html');
     })
   );
 });
