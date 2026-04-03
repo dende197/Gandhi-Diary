@@ -4633,7 +4633,9 @@
             margin-bottom: 8px !important;
           }
 
-          #weekly-agenda-list [data-task-text] {
+          #weekly-agenda-list [data-task-text],
+          [data-task-text],
+          .card [data-task-text] {
             font-size: 15px !important;
             line-height: 1.55 !important;
             white-space: normal !important;
@@ -4665,7 +4667,8 @@
 
           /* Subject badge — make it readable */
           #weekly-agenda-list .agenda-task-main span[style*="font-size:9px"] {
-            font-size: 10px !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
           }
 
           #weekly-agenda-list .agenda-task-actions {
@@ -4686,7 +4689,7 @@
           /* Side color stripe — horizontal when card is column */
           #weekly-agenda-list .agenda-task-card > div[style*="width:4px"] {
             width: 100% !important;
-            height: 3px !important;
+            height: 4px !important;
           }
 
           /* 15 ▸ Voti: card obiettivo media più leggibile su schermo piccolo */
@@ -4792,7 +4795,7 @@
           /* ── Input bar: flush bottom, pill-shaped, compact ───── */
           .ai-chat-input-wrap {
             padding: 6px 8px 0px !important;
-            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
             background: #FFFFFF !important;
             border-top: 1px solid rgba(20, 20, 20, 0.06) !important;
             flex-shrink: 0 !important;
@@ -4810,19 +4813,20 @@
             border: 1px solid #E0DDD8 !important;
             gap: 6px !important;
             box-sizing: border-box !important;
+            align-items: center !important;
           }
 
           .ai-chat-input-field {
             font-size: 15px !important;
             padding: 0 4px !important;
-            min-height: 36px !important;
+            min-height: 28px !important;
             max-height: 120px !important;
           }
 
           .ai-chat-send-btn {
-            width: 32px !important;
-            height: 32px !important;
-            min-width: 32px !important;
+            width: 34px !important;
+            height: 34px !important;
+            min-width: 34px !important;
             border-radius: 50% !important;
             flex-shrink: 0 !important;
           }
