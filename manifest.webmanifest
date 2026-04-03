@@ -9,8 +9,14 @@
   "id": "/",
   "icons": [
     {
-      "src": "/Picsart_26-04-03_11-47-32-568.png",
-      "sizes": "2720x2720",
+      "src": "/gandhi-diary-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/gandhi-diary-icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
