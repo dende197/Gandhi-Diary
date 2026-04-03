@@ -3993,6 +3993,42 @@
           box-sizing: border-box;
         }
 
+        .ai-chat-input-wrap {
+          padding: 8px 16px calc(10px + var(--safe-bottom)) !important;
+          background: #FFFFFF;
+          border-top: 1px solid rgba(20, 20, 20, 0.08);
+        }
+
+        .ai-chat-input-field {
+          min-height: 36px;
+          line-height: 1.2;
+          padding: 0 12px !important;
+        }
+
+        .ai-chat-send-btn {
+          width: 34px !important;
+          height: 34px !important;
+          border-radius: 50%;
+        }
+
+        #weekly-agenda-list .agenda-task-card {
+          overflow: visible;
+        }
+
+        #weekly-agenda-list .agenda-task-main {
+          min-width: 0;
+        }
+
+        #weekly-agenda-list [data-task-text] {
+          white-space: normal !important;
+          overflow: visible !important;
+          text-overflow: clip !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          display: block !important;
+          max-width: 100%;
+        }
+
         /* Modal circolare desktop-oriented */
         /* Modal circolare — Layout Ingegneristico v2 */
         .modal-content.circolare-modal {
@@ -4413,12 +4449,28 @@
 
           .main-container {
             padding-top: calc(var(--safe-top) + 68px) !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
           }
 
           #app .view {
             padding-left: var(--mobile-view-inline-padding) !important;
             padding-right: var(--mobile-view-inline-padding) !important;
             font-size: 15px !important;
+          }
+
+          .dashboard.view,
+          .dashboard.view .planner-content,
+          .view[style*="max-width: 1180px"] {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          .dashboard.view .planner-content {
+            padding-left: var(--mobile-view-inline-padding) !important;
+            padding-right: var(--mobile-view-inline-padding) !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
           }
 
           /* 5 ▸ Home dashboard — collapse all grid rows to single column by default */
@@ -4565,10 +4617,12 @@
           #weekly-agenda-list .agenda-task-card {
             min-height: 0 !important;
             display: block !important;
+            overflow: visible !important;
           }
 
           #weekly-agenda-list .agenda-task-main {
             padding: 12px 12px 10px !important;
+            min-width: 0 !important;
           }
 
           #weekly-agenda-list .agenda-task-actions {
@@ -4624,22 +4678,32 @@
           }
 
           .ai-chat-input-wrap {
-            padding: 8px 10px calc(8px + var(--safe-bottom)) !important;
+            padding: 6px var(--mobile-view-inline-padding) calc(8px + var(--safe-bottom)) !important;
+            background: #fff !important;
+            border-top: 1px solid rgba(20, 20, 20, 0.08) !important;
           }
 
           .ai-input-dock {
             width: calc(100vw - var(--mobile-chat-total-inline-padding)) !important;
             border-radius: 18px !important;
-            padding: 4px 6px !important;
+            padding: 5px 6px !important;
+            background: #F6F5F3 !important;
+            border: 1px solid #E0DDD8 !important;
           }
 
           .ai-chat-input-field {
             font-size: 15px !important;
-            padding: 4px 8px !important;
+            padding: 0 10px !important;
+            min-height: 34px !important;
           }
 
           .ai-chat-send-btn {
             width: 30px !important;
             height: 30px !important;
+            border-radius: 50% !important;
+          }
+
+          .ai-chat-send-btn i {
+            font-size: 14px !important;
           }
         }

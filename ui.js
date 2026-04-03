@@ -1894,11 +1894,11 @@ function renderAIAssistantView() {
             </div>
 
             <!-- INPUT BOX (Centered) -->
-            <div class="ai-chat-input-wrap" style="flex-shrink: 0; padding: 12px 24px 16px; background: #FFFFFF; border-top: 1px solid #E0DDD8;">
+            <div class="ai-chat-input-wrap" style="flex-shrink: 0;">
                 <div class="ai-input-shell">
                   <div class="ai-input-dock">
-                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 14px;">
-                    <button class="ai-chat-send-btn" onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414;">
+                    <button class="ai-chat-send-btn" onclick="sendAIChat()" style="background: #141414; border: none; color: #FFF; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i class="ph-bold ph-paper-plane-right" style="font-size: 16px;"></i>
                     </button>
                   </div>
