@@ -52,8 +52,17 @@ Nel pannello Vercel (Settings → Environment Variables), assicurati di avere:
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — credenziali Google OAuth2
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — credenziali Supabase
 - `ARGO_ENCRYPTION_KEY` — chiave di cifratura per le password Argo
+  - **Obbligatoria**: deve essere una stringa esadecimale da 64 caratteri.
+  - Se mancante/non valida, il backend rifiuta login e accesso agli endpoint protetti da `x-session-token`.
 
 > **Nota**: `CLASS_SCHEDULE` è **opzionale**. Se non impostato, viene usato automaticamente l'orario predefinito della classe 4D (Lun-Sab, 08:00–13:00). È comunque possibile impostare un orario personalizzato **per singolo utente** tramite l'azione `save-schedule` (vedere sezione API).
+
+### Sicurezza sessione e credenziali
+
+- Le credenziali Argo non vengono più persistite in `localStorage` lato client.
+- Il cron endpoint `/api/cron-sync` accetta il segreto **solo via header**:
+  - `Authorization: Bearer <CRON_SECRET>` oppure
+  - `x-vercel-cron-secret: <CRON_SECRET>`
 
 ### 5. Orario Scolastico per-utente (Google Calendar Sync)
 
