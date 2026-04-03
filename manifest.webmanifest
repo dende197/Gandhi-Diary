@@ -1,0 +1,17 @@
+{
+  "name": "Gandhi diary",
+  "short_name": "Gandhi diary",
+  "description": "Gandhi diary",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F6F5F3",
+  "theme_color": "#F6F5F3",
+  "icons": [
+    {
+      "src": "/gandhi_diary_icon_final-2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ]
+}

@@ -1841,7 +1841,7 @@ function renderAIAssistantView() {
         <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
-            <div style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
+            <div class="ai-chat-header" style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <button onclick="navigate('planner')" style="background: #141414; border: none; color: #FFF; cursor: pointer; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" title="Back">
                         <i class="ph-bold ph-arrow-left" style="font-size: 16px;"></i>
@@ -1859,7 +1859,7 @@ function renderAIAssistantView() {
             </div>
 
             <!-- CHAT SCROLLABLE -->
-            <div id="aiChatMessages" style="flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px;">
+            <div id="aiChatMessages" class="ai-chat-messages" style="flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px;">
                 ${chat.length === 0 ? `
                 <div style="max-width: 500px; margin: 40px auto; text-align: left; font-family: 'JetBrains Mono', monospace; border: 1px solid #141414; border-radius: 20px; padding: 28px; background: #FFF; box-shadow: 0 8px 30px rgba(0,0,0,0.04);">
                     <div style="font-size: 10px; color: #908C86; margin-bottom: 12px; font-weight: 800;">// SYSTEM_INITIALIZATION_COMPLETE</div>
@@ -1879,7 +1879,7 @@ function renderAIAssistantView() {
                 </div>
                 ` : chat.map((msg, idx) => `
                 <div style="display: flex; flex-direction: column; ${msg.role === 'user' ? 'align-items: flex-end;' : 'align-items: flex-start;'}">
-                    <div style="max-width: 85%; padding: 18px 22px; font-family: 'Inter', sans-serif; border: 1px solid ${msg.role === 'user' ? '#141414' : '#E0DDD8'}; border-radius: 20px; background: ${msg.role === 'user' ? '#141414' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#141414'}; font-size: 14px; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div class="ai-chat-message-bubble" style="max-width: 85%; padding: 18px 22px; font-family: 'Inter', sans-serif; border: 1px solid ${msg.role === 'user' ? '#141414' : '#E0DDD8'}; border-radius: 20px; background: ${msg.role === 'user' ? '#141414' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#141414'}; font-size: 14px; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                         <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.5; margin-bottom: 10px; text-transform: uppercase; font-weight: 800;">${msg.role === 'user' ? 'User' : 'Tutor'} [${msg.ts || ''}]</div>
                         <div class="ai-prose" style="color: inherit !important;">
                             ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
@@ -1894,11 +1894,11 @@ function renderAIAssistantView() {
             </div>
 
             <!-- INPUT BOX (Centered) -->
-            <div style="flex-shrink: 0; padding: 12px 24px 16px; background: #FFFFFF; border-top: 1px solid #E0DDD8;">
+            <div class="ai-chat-input-wrap" style="flex-shrink: 0; padding: 12px 24px 16px; background: #FFFFFF; border-top: 1px solid #E0DDD8;">
                 <div class="ai-input-shell">
                   <div class="ai-input-dock">
-                    <input id="aiChatInput" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 14px;">
-                    <button onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414; padding: 4px 14px;">
+                    <button class="ai-chat-send-btn" onclick="sendAIChat()" style="width: 34px; height: 34px; background: #141414; border: none; color: #FFF; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i class="ph-bold ph-paper-plane-right" style="font-size: 16px;"></i>
                     </button>
                   </div>
