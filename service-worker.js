@@ -1,22 +1,26 @@
-const CACHE_VERSION = '3.3.4';
+const CACHE_VERSION = '3.3.5';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
+const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/style.css?v=3.3.4',
-  '/animations.css?v=3.3.4',
-  '/ui.js?v=3.3.4',
-  '/fluidity-engine-v3.js?v=3.0.2',
-  '/manifest.webmanifest',
-  '/gandhi-diary-icon-180.png',
-  '/gandhi-diary-icon-192.png',
-  '/gandhi-diary-icon-512.png',
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/index.html`,
+  `${BASE_PATH}/style.css?v=3.3.5`,
+  `${BASE_PATH}/animations.css?v=3.3.5`,
+  `${BASE_PATH}/ui.js?v=3.3.5`,
+  `${BASE_PATH}/fluidity-engine-v3.js?v=3.0.2`,
+  `${BASE_PATH}/manifest.webmanifest`,
+  `${BASE_PATH}/gandhi-diary-icon-180.png`,
+  `${BASE_PATH}/gandhi-diary-icon-192.png`,
+  `${BASE_PATH}/gandhi-diary-icon-512.png`,
 ];
 
 function normalizeSameOriginUrl(url) {
   const normalized = new URL(url);
   if (normalized.origin !== self.location.origin) return normalized.toString();
-  if (normalized.pathname === '/' && normalized.searchParams.get('source') === 'pwa') {
+  if (
+    (normalized.pathname === `${BASE_PATH}/` || normalized.pathname === `${BASE_PATH}`) &&
+    normalized.searchParams.get('source') === 'pwa'
+  ) {
     normalized.searchParams.delete('source');
   }
   return normalized.toString();
@@ -70,7 +74,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(async () => {
         const cached = await caches.match(normalizedRequest);
         if (cached) return cached;
-        return caches.match('/index.html');
+        return caches.match(`${BASE_PATH}/index.html`);
       })
     );
     return;
@@ -89,7 +93,7 @@ self.addEventListener('fetch', (event) => {
       return response;
     }).catch(async () => {
       const cached = await caches.match(normalizedRequest);
-      return cached || caches.match('/index.html');
+      return cached || caches.match(`${BASE_PATH}/index.html`);
     })
   );
 });
