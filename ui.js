@@ -1838,7 +1838,7 @@ function renderAIAssistantView() {
     const chat = state.aiChatHistory || [];
 
     return `
-        <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; padding: 0 !important; background: var(--bg-body);">
+        <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; min-height:0; padding: 0 !important; background: var(--bg-body);">
             
             <!-- HEADER TE -->
             <div class="ai-chat-header" style="flex-shrink: 0; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
@@ -1859,7 +1859,7 @@ function renderAIAssistantView() {
             </div>
 
             <!-- CHAT SCROLLABLE -->
-            <div id="aiChatMessages" class="ai-chat-messages" style="flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px;">
+            <div id="aiChatMessages" class="ai-chat-messages" style="flex: 1; min-height:0; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px;">
                 ${chat.length === 0 ? `
                 <div style="max-width: 500px; margin: 40px auto; text-align: left; font-family: 'JetBrains Mono', monospace; border: 1px solid #141414; border-radius: 20px; padding: 28px; background: #FFF; box-shadow: 0 8px 30px rgba(0,0,0,0.04);">
                     <div style="font-size: 10px; color: #908C86; margin-bottom: 12px; font-weight: 800;">// SYSTEM_INITIALIZATION_COMPLETE</div>
@@ -3276,7 +3276,7 @@ function renderWeeklyAgenda() {
                 .trim();
 
             return `
-                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden;">
+                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: visible;">
                         <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
                         <div class="agenda-task-main" style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
