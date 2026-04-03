@@ -1040,6 +1040,10 @@
 
         /* Mobile Responsive Table */
         @media (max-width: 600px) {
+          :root {
+            --mobile-view-inline-padding: 10px;
+            --mobile-chat-inline-gutter: calc(var(--mobile-view-inline-padding) * 2);
+          }
           .ai-prose {
             overflow-x: auto;
           }
@@ -4411,8 +4415,8 @@
           }
 
           #app .view {
-            padding-left: 10px !important;
-            padding-right: 10px !important;
+            padding-left: var(--mobile-view-inline-padding) !important;
+            padding-right: var(--mobile-view-inline-padding) !important;
             font-size: 15px !important;
           }
 
@@ -4623,7 +4627,7 @@
           }
 
           .ai-input-dock {
-            width: calc(100vw - 20px) !important;
+            width: calc(100vw - var(--mobile-chat-inline-gutter)) !important;
             border-radius: 18px !important;
             padding: 4px 6px !important;
           }

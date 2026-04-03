@@ -8,9 +8,9 @@
   "theme_color": "#F6F5F3",
   "icons": [
     {
-      "src": "https://github.com/user-attachments/assets/227c37b7-98ec-4318-816e-717fb9507680",
+      "src": "/icons/pwa-icon.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
