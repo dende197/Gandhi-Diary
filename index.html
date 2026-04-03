@@ -13,12 +13,12 @@
     <meta name="application-name" content="Gandhi diary">
     <meta name="theme-color" content="#F6F5F3">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="version" content="3.2.7">
-    <link rel="manifest" href="/manifest.webmanifest?v=3.2.7">
-    <link rel="icon" type="image/png" sizes="192x192" href="/gandhi-diary-icon-192.png?v=3.2.7">
-    <link rel="icon" type="image/png" sizes="512x512" href="/gandhi-diary-icon-512.png?v=3.2.7">
-    <link rel="icon" type="image/svg+xml" href="/gandhi_diary_icon_final-2.svg?v=3.2.7">
-    <link rel="apple-touch-icon" sizes="180x180" href="/gandhi-diary-icon-180.png?v=3.2.7">
+    <meta name="version" content="3.2.8">
+    <link rel="manifest" href="/manifest.webmanifest?v=3.2.8">
+    <link rel="icon" type="image/png" sizes="192x192" href="/gandhi-diary-icon-192.png?v=3.2.8">
+    <link rel="icon" type="image/png" sizes="512x512" href="/gandhi-diary-icon-512.png?v=3.2.8">
+    <link rel="icon" type="image/svg+xml" href="/gandhi_diary_icon_final-2.svg?v=3.2.8">
+    <link rel="apple-touch-icon" sizes="180x180" href="/gandhi-diary-icon-180.png?v=3.2.8">
     
     <!-- Premium Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700&family=Urbanist:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -39,11 +39,11 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/CustomEase.min.js"></script>
 
     <!-- Consolidated Assets -->
-    <link rel="stylesheet" href="style.css?v=3.2.7">
-    <link rel="stylesheet" href="animations.css?v=3.2.7">
+    <link rel="stylesheet" href="style.css?v=3.2.8">
+    <link rel="stylesheet" href="animations.css?v=3.2.8">
     
     <!-- App Logic -->
-    <script src="ui.js?v=3.2.7" defer></script>
+    <script src="ui.js?v=3.2.8" defer></script>
     <script src="fluidity-engine-v3.js?v=3.0.2" defer></script>
 
     <style>
@@ -89,7 +89,7 @@
         // ==============================================================================
         // G-CONNECT CORE SYSTEM v3.0
         // ==============================================================================
-        const APP_VERSION = '3.2.7';
+        const APP_VERSION = '3.2.8';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
         const API_BASE_URL = "https://g-connect-backend-r5j1.vercel.app";
         window.API_BASE_URL = API_BASE_URL;
@@ -635,10 +635,25 @@
         // --- PWA SERVICE WORKER ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (sessionStorage.getItem('sw_update_reloaded') === '1') return;
+                    sessionStorage.setItem('sw_update_reloaded', '1');
+                    window.location.reload();
+                });
                 navigator.serviceWorker
-                    .register('/service-worker.js?v=3.2.7')
+                    .register('/service-worker.js?v=3.2.8')
                     .then((registration) => {
+                        sessionStorage.removeItem('sw_update_reloaded');
                         registration.update().catch(() => {});
+                        registration.addEventListener('updatefound', () => {
+                            const worker = registration.installing;
+                            if (!worker) return;
+                            worker.addEventListener('statechange', () => {
+                                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    worker.postMessage('SKIP_WAITING');
+                                }
+                            });
+                        });
                     })
                     .catch((err) => {
                         console.warn('[PWA] Service Worker registration failed:', err?.message || err);
