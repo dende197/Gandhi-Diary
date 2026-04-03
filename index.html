@@ -635,13 +635,15 @@
         // --- PWA SERVICE WORKER ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (window.hasReloadedForServiceWorkerUpdate) return;
+                    window.hasReloadedForServiceWorkerUpdate = true;
+                    window.location.reload();
+                });
                 navigator.serviceWorker
                     .register('/service-worker.js?v=3.2.8')
                     .then((registration) => {
                         registration.update().catch(() => {});
-                        if (registration.waiting) {
-                            registration.waiting.postMessage('SKIP_WAITING');
-                        }
                         registration.addEventListener('updatefound', () => {
                             const worker = registration.installing;
                             if (!worker) return;
@@ -655,11 +657,6 @@
                     .catch((err) => {
                         console.warn('[PWA] Service Worker registration failed:', err?.message || err);
                     });
-            });
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (window.__reloadedForSwUpdate) return;
-                window.__reloadedForSwUpdate = true;
-                window.location.reload();
             });
         }
 

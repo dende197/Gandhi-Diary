@@ -42,7 +42,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (event?.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -55,7 +55,7 @@ self.addEventListener('fetch', (event) => {
   const isNavigation =
     event.request.mode === 'navigate' ||
     event.request.destination === 'document' ||
-    normalizedRequest.headers.get('accept')?.includes('text/html');
+    event.request.headers.get('accept')?.includes('text/html');
 
   if (isNavigation) {
     event.respondWith(
@@ -73,13 +73,24 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(normalizedRequest).then((cached) => {
-      const networkFetch = fetch(normalizedRequest).then((response) => {
+    caches.match(normalizedRequest).then(async (cached) => {
+      if (cached) {
+        event.waitUntil(
+          fetch(normalizedRequest).then((response) => {
+            const cloned = response.clone();
+            return caches.open(CACHE_NAME).then((cache) => cache.put(normalizedRequest, cloned));
+          }).catch(() => {})
+        );
+        return cached;
+      }
+      try {
+        const response = await fetch(normalizedRequest);
         const cloned = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(normalizedRequest, cloned)).catch(() => {});
         return response;
-      }).catch(() => cached);
-      return cached || networkFetch;
+      } catch {
+        return caches.match('/index.html');
+      }
     })
   );
 });
