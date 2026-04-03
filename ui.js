@@ -1264,7 +1264,7 @@ function renderCalendarWeekList(weekStart) {
         hasAny = true;
         totalItems += dayTasks.length + dayVerifiche.length;
 
-        const labelText = isToday ? 'TODAY' : isTomorrow ? 'DOMANI' : '';
+        const labelText = isToday ? 'OGGI' : isTomorrow ? 'DOMANI' : '';
         const labelColor = isToday ? '#34C759' : '#FF9F0A';
 
         daySections += `
