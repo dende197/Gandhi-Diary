@@ -1246,55 +1246,76 @@ function renderCalendarWeekList(weekStart) {
     });
 
     let hasAny = false;
-    let rows = '';
+    let daySections = '';
+    let totalItems = 0;
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(weekStart);
         dayDate.setDate(weekStart.getDate() + i);
         const dateStr = getLocalDateString(dayDate);
         const isToday = dateStr === todayISO;
+        const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
         const isPast = dayDate < today && !isToday;
 
-        // Get tasks for this day
         const dayTasks = getCalendarTasksForDate(dateStr);
         const dayVerifiche = verificheByDate[dateStr] || [];
 
         if (dayTasks.length === 0 && dayVerifiche.length === 0) continue;
         hasAny = true;
+        totalItems += dayTasks.length + dayVerifiche.length;
 
-        rows += `
-            <div style="display:grid; grid-template-columns:52px 1fr; gap:0; border-top:1px solid #ECEAE6; padding:14px 0;">
-                <div style="display:flex; flex-direction:column; align-items:center; padding-top:2px;">
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:${isToday ? '#7C3AED' : isPast ? '#C0BBB4' : '#908C86'}; text-transform:uppercase; letter-spacing:0.1em;">${dayNames[i]}</span>
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:${isToday ? '#7C3AED' : isPast ? '#C0BBB4' : '#141414'}; line-height:1.1; letter-spacing:-0.04em;">${dayDate.getDate()}</span>
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:${isPast ? '#C0BBB4' : '#908C86'}; font-weight:600;">${monthNames[dayDate.getMonth()]}</span>
+        const labelText = isToday ? 'TODAY' : isTomorrow ? 'DOMANI' : '';
+        const labelColor = isToday ? '#34C759' : '#FF9F0A';
+
+        daySections += `
+            <div class="asw-day-section">
+                <div class="asw-day-header">
+                    <div class="asw-date-block">
+                        <span class="asw-day-name" style="color:${isToday ? '#34C759' : isPast ? '#C0BBB4' : '#908C86'};">${dayNames[i]}</span>
+                        <span class="asw-day-num" style="color:${isToday ? '#34C759' : isPast ? '#C0BBB4' : '#141414'};">${dayDate.getDate()}</span>
+                        <span class="asw-month" style="color:${isPast ? '#C0BBB4' : '#908C86'};">${monthNames[dayDate.getMonth()]}</span>
+                    </div>
+                    <div class="asw-separator"></div>
+                    ${labelText ? `<span class="asw-label-tag" style="color:${labelColor}; border-color:${labelColor};">${labelText}</span>` : ''}
                 </div>
-                <div style="display:flex; flex-direction:column; gap:6px; padding-left:12px;">
+                <div class="asw-tasks-list">
                     ${dayVerifiche.map(v => {
             const abbr = getSubjectAbbrev(v.subject);
-            const key = abbr.toLowerCase();
+            const subjColor = getSubjectColor(v.subject);
             return `
-                        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(255,159,10,0.06); border-radius:10px; border:1px solid rgba(255,159,10,0.18);">
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; background:var(--${key},#FFF3E0); color:var(--${key}-t,#B45309); padding:2px 7px; border-radius:5px; flex-shrink:0; text-transform:uppercase;">${abbr}</span>
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:700; color:#D97706; text-transform:uppercase; letter-spacing:0.08em; flex-shrink:0;">✏ ${escapeHtml(v.tipo || 'VERIFICA')}</span>
-                            <span style="font-size:12px; font-weight:600; color:#141414; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.text || v.subject)}</span>
+                        <div class="asw-task-card asw-verifica-card">
+                            <div class="asw-task-stripe" style="background:#FF9F0A;"></div>
+                            <div class="asw-task-body">
+                                <div class="asw-task-meta">
+                                    <span class="asw-subject-badge" style="color:#D97706; background:rgba(255,159,10,0.1);">${escapeHtml(abbr)}</span>
+                                    <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml(v.tipo || 'VERIFICA')}</span>
+                                </div>
+                                <div class="asw-task-text">${escapeHtml(v.text || v.subject)}</div>
+                            </div>
                         </div>`;
         }).join('')}
                     ${dayTasks.map(t => {
+            const subjColor = getSubjectColor(t.subject);
             const abbr = getSubjectAbbrev(t.subject);
-            const key = abbr.toLowerCase();
             const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim();
             return `
-                        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:${t.done ? 'rgba(0,0,0,0.02)' : '#FFFFFF'}; border-radius:10px; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; opacity:${isPast && !t.done ? 0.6 : 1}; cursor:pointer;" onclick="toggleTask('${t.id}')">
-                            <div data-task-toggle="${t.id}" style="width:15px; height:15px; border:1.5px solid ${t.done ? '#6366F1' : '#D1CEC8'}; border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#6366F1' : '#fff'}; transition:all 0.15s; cursor:pointer;">
-                                ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
+                        <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${t.id}')">
+                            <div class="asw-task-stripe" style="background:${t.done ? '#C8C5C0' : subjColor};"></div>
+                            <div class="asw-task-body">
+                                <div class="asw-task-meta">
+                                    <span class="asw-subject-badge" style="color:${t.done ? '#908C86' : subjColor}; background:rgba(0,0,0,0.04);">${escapeHtml(abbr)}</span>
+                                </div>
+                                <div class="asw-task-text" data-task-text="${escapeHtml(t.id)}">${escapeHtml(displayText)}</div>
                             </div>
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; background:var(--${key},#F0F0F3); color:var(--${key}-t,#555); padding:2px 7px; border-radius:5px; flex-shrink:0;">${abbr}</span>
-                            <span data-task-text="${escapeHtml(t.id)}" style="font-size:12px; font-weight:600; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayText)}</span>
-                            ${isUserGeneratedTaskId(t.id) ? `
-                            <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:18px; height:18px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività">
-                                <i class="ph-bold ph-trash" style="font-size:10px;"></i>
-                            </button>` : ''}
+                            <div class="asw-task-actions">
+                                <div class="asw-toggle-btn" data-task-toggle="${t.id}" style="border-color:${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'};">
+                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i>' : ''}
+                                </div>
+                                ${isUserGeneratedTaskId(t.id) ? `
+                                <button class="asw-delete-btn" onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" aria-label="Elimina attività">
+                                    <i class="ph-bold ph-trash" style="font-size:11px;"></i>
+                                </button>` : ''}
+                            </div>
                         </div>`;
         }).join('')}
                 </div>
@@ -1303,9 +1324,12 @@ function renderCalendarWeekList(weekStart) {
 
     if (!hasAny) return '';
 
-    return `<div style="margin-top:20px; background:#FFFFFF; border-radius:18px; border:1px solid #ECEAE6; overflow:hidden;">
-        <div style="padding:14px 18px 8px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.14em;">// AGENDA SETTIMANALE</div>
-        <div style="padding:0 18px 6px;">${rows}</div>
+    return `<div class="asw-root">
+        <div class="asw-header">
+            <span class="asw-header-title">// AGENDA SETTIMANALE</span>
+            <span class="asw-header-count">${totalItems} ITEM${totalItems !== 1 ? 'S' : ''}</span>
+        </div>
+        <div class="asw-body">${daySections}</div>
     </div>`;
 }
 
