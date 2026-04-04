@@ -5048,7 +5048,7 @@ window.sendAIChat = async function () {
         return true;
     }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
 
-    const clampText = (value, max = 180) => {
+    const truncateWithEllipsis = (value, max = 180) => {
         const txt = String(value ?? '').replace(/\s+/g, ' ').trim();
         if (!txt) return '';
         return txt.length > max ? `${txt.slice(0, max)}…` : txt;
@@ -5057,7 +5057,7 @@ window.sendAIChat = async function () {
     argoTasks.forEach(t => {
         const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
         const dueDateStr = dueDate ? dueDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
-        const entry = `- [${clampText(t.subject, 40) || 'Materia'}] ${clampText(t.text, 160)} → consegna: ${dueDateStr}`;
+        const entry = `- [${truncateWithEllipsis(t.subject, 40) || 'Materia'}] ${truncateWithEllipsis(t.text, 160)} → consegna: ${dueDateStr}`;
         (dueDate && dueDate <= endOfWeek) ? thisWeekTasks.push(entry) : laterTasks.push(entry);
     });
 
@@ -5128,7 +5128,7 @@ REGOLE OPERATIVE:
 4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
 5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.`;
 
-    const clampedSystemContext = clampText(systemContext, 9000);
+    const clampedSystemContext = truncateWithEllipsis(systemContext, 9000);
     const contents = [
         { role: 'user', parts: [{ text: clampedSystemContext }] },
         { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
@@ -5145,8 +5145,8 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Vercel/Serverless payload limits are typically much higher (~1MB+), but this client guardrail is intentionally
-    // fixed at 120KB to reduce risk of edge-case 413 responses after JSON/header overhead and future prompt growth.
+    // The platform request-body limit is generally much higher (around ~1MB+ for common serverless setups),
+    // but this client-side JSON payload guardrail is intentionally 120KB to avoid 413 errors from overhead growth.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
