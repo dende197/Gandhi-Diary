@@ -27,9 +27,7 @@ module.exports = async function handler(req, res) {
 
         const targetIdx = (idx < 0 || idx >= profiles.length) ? 0 : idx;
         const profile = profiles[targetIdx];
-        // Keep this payload intentionally compact (class-focused) for stable debug output.
-        // We intentionally expose only scheda.classe here (instead of older debug payloads that also returned fullRaw/scheda completa)
-        // to reduce unnecessary payload variations and keep quick diagnostics consistent across schools/profiles.
+        // Debug payload intentionally limited to scheda.classe for consistent diagnostics across profiles.
         const rawData = profile.raw || {};
         const scheda = rawData.scheda || {};
         const classeObj = scheda.classe || {};

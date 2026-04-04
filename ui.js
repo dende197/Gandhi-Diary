@@ -100,6 +100,12 @@ function hasPlannedTasks(plannedTasks) {
     return Object.values(plannedTasks).some(ids => Array.isArray(ids) && ids.length > 0);
 }
 
+window._truncateWithEllipsis = function truncateWithEllipsis(value, max = 180) {
+    const txt = String(value ?? '').replace(/\s+/g, ' ').trim();
+    if (!txt) return '';
+    return txt.length > max ? `${txt.slice(0, max)}…` : txt;
+};
+
 function getAgendaCacheKey() {
     try {
         return `${lsKey('weekly_agenda_cache')}:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
@@ -5048,11 +5054,7 @@ window.sendAIChat = async function () {
         return true;
     }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
 
-    const truncateWithEllipsis = (value, max = 180) => {
-        const txt = String(value ?? '').replace(/\s+/g, ' ').trim();
-        if (!txt) return '';
-        return txt.length > max ? `${txt.slice(0, max)}…` : txt;
-    };
+    const truncateWithEllipsis = window._truncateWithEllipsis;
     const thisWeekTasks = [], laterTasks = [];
     argoTasks.forEach(t => {
         const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
@@ -5151,7 +5153,7 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Vercel request-body limits are far above this value (commonly around 4.5MB); we intentionally cap client payload at 120KB.
+    // Vercel request-body limits are far above this value and can vary by plan/configuration; we intentionally cap client payload at 120KB.
     // This guards against extra bytes from JSON encoding, HTTP headers, and future growth of system prompt/chat history.
     const payloadSizeLimitBytes = 120 * 1024; // 120KB conservative client-side cap to reduce edge-case 413 errors.
     let payload = { messages: contents };
