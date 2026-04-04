@@ -2145,8 +2145,9 @@ function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
 
     if (visiblePoints.length >= 2) {
         const grad = ctx.createLinearGradient(0, p.top, 0, H - p.bottom);
-        grad.addColorStop(0, `${subjColor}35`);
-        grad.addColorStop(1, `${subjColor}05`);
+        grad.addColorStop(0, `${subjColor}FF`);
+        grad.addColorStop(0.55, `${subjColor}66`);
+        grad.addColorStop(1, `${subjColor}12`);
         ctx.beginPath();
         ctx.moveTo(visiblePoints[0].x, H - p.bottom);
         visiblePoints.forEach(pt => ctx.lineTo(pt.x, pt.y));
@@ -2346,8 +2347,9 @@ function initGradesCharts() {
 
     // Area Gradient
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
-    grad.addColorStop(1, 'rgba(37, 99, 235, 0)');
+    grad.addColorStop(0, 'rgba(37, 99, 235, 1)');
+    grad.addColorStop(0.55, 'rgba(37, 99, 235, 0.45)');
+    grad.addColorStop(1, 'rgba(37, 99, 235, 0.08)');
 
     // Draw Area
     ctx.beginPath();
