@@ -1,13 +1,13 @@
-const CACHE_VERSION = '3.3.5';
+const CACHE_VERSION = '3.3.6';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
 const APP_SHELL = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/style.css?v=3.3.5`,
-  `${BASE_PATH}/animations.css?v=3.3.5`,
-  `${BASE_PATH}/ui.js?v=3.3.5`,
-  `${BASE_PATH}/fluidity-engine-v3.js?v=3.0.2`,
+  `${BASE_PATH}/style.css?v=3.3.6`,
+  `${BASE_PATH}/animations.css?v=3.3.6`,
+  `${BASE_PATH}/ui.js?v=3.3.6`,
+  `${BASE_PATH}/fluidity-engine-v3.js?v=3.1.0`,
   `${BASE_PATH}/manifest.webmanifest`,
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
