@@ -5151,7 +5151,7 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Vercel request-body limits are far above this value; we intentionally cap client payload at 120KB.
+    // Vercel request-body limits are far above this value (commonly around 4.5MB); we intentionally cap client payload at 120KB.
     // "Overhead growth" means extra bytes from JSON structure, headers, and future prompt/history expansions.
     const payloadSizeLimitBytes = 120 * 1024; // 120KB conservative client-side cap to reduce edge-case 413 errors.
     let payload = { messages: contents };
