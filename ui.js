@@ -1658,18 +1658,18 @@ function renderHome() {
         </div>
 
         <div style="display:flex; flex-direction:column; min-height:0;">
-          <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; height:26px;">
+          <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; min-height:38px;">
             <div id="home-focus-label" style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">${homeTaskData.title}</div>
             <div style="display:flex; gap:8px;">
                 <div style="display:flex; gap:4px;">
-                    <button id="home-focus-btn-today" onclick="setHomeTaskFocus('today')" style="min-width:52px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'today' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'today' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'today' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Visualizza oggi" title="Oggi">
-                        <span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">OGGI</span>
+                    <button id="home-focus-btn-today" onclick="setHomeTaskFocus('today')" style="min-width:60px; height:36px; border-radius:10px; border:1px solid ${homeTaskData.mode === 'today' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'today' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'today' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 14px;" aria-label="Visualizza oggi" title="Oggi">
+                        <span style="font-size:11px; font-weight:800; letter-spacing:0.05em;">OGGI</span>
                     </button>
-                    <button id="home-focus-btn-tomorrow" onclick="setHomeTaskFocus('tomorrow')" style="min-width:62px; height:24px; border-radius:8px; border:1px solid ${homeTaskData.mode === 'tomorrow' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'tomorrow' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'tomorrow' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Visualizza domani" title="Domani">
-                        <span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">DOMANI</span>
+                    <button id="home-focus-btn-tomorrow" onclick="setHomeTaskFocus('tomorrow')" style="min-width:72px; height:36px; border-radius:10px; border:1px solid ${homeTaskData.mode === 'tomorrow' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'tomorrow' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'tomorrow' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 14px;" aria-label="Visualizza domani" title="Domani">
+                        <span style="font-size:11px; font-weight:800; letter-spacing:0.05em;">DOMANI</span>
                     </button>
                 </div>
-                <button onclick="window.showPlanWeekModal()" style="min-width:78px; height:24px; border-radius:8px; border:1px solid #D3CEC7; background:#FFFFFF; color:#4F4A43; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 8px;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:9px; margin-right:4px;"></i><span style="font-size:9px; font-weight:800; letter-spacing:0.05em;">PIANIFICA</span></button>
+                <button onclick="window.showPlanWeekModal()" style="min-width:90px; height:36px; border-radius:10px; border:1px solid #D3CEC7; background:#FFFFFF; color:#4F4A43; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 14px;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:12px; margin-right:5px;"></i><span style="font-size:11px; font-weight:800; letter-spacing:0.05em;">PIANIFICA</span></button>
             </div>
           </div>
           <div id="home-focus-task-list" class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
