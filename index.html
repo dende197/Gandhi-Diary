@@ -95,6 +95,7 @@
         // G-CONNECT CORE SYSTEM v3.0
         // ==============================================================================
         const APP_VERSION = '3.3.5';
+        const GCONNECT_DEFAULT_API_BACKEND = 'https://g-connect-backend-r5j1.vercel.app';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
 
         function normalizeApiBase(url) {
@@ -122,8 +123,7 @@
             const isGitHubPages = /(^|\.)github\.io$/i.test(window.location.hostname);
             if (!isGitHubPages) return { url: sameOrigin, source: 'same-origin' };
 
-            const defaultBackend = 'https://g-connect-backend-r5j1.vercel.app';
-            return { url: defaultBackend, source: 'github-pages fallback' };
+            return { url: GCONNECT_DEFAULT_API_BACKEND, source: 'github-pages fallback' };
         }
 
         const resolvedApi = resolveApiBaseUrl();
