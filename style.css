@@ -1278,6 +1278,11 @@
           transform: scale(1);
         }
 
+        .modal-content.assenze-modal-fixed {
+          padding: 0;
+          overflow: hidden;
+        }
+
 
         /* === CALENDAR === */
         .custom-calendar {
@@ -4586,6 +4591,35 @@
             max-width: calc(100vw - 16px) !important;
             margin: 8px !important;
             border-radius: 20px !important;
+          }
+
+          .modal-overlay {
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .modal-content.assenze-modal-fixed {
+            max-height: calc(100svh - 24px) !important;
+          }
+
+          .modal-content.assenze-modal-fixed .assenze-modal-shell {
+            max-height: calc(100svh - 24px) !important;
+          }
+
+          .modal-content.assenze-modal-fixed .assenze-modal-header {
+            padding: 18px 16px 12px !important;
+          }
+
+          .modal-content.assenze-modal-fixed .assenze-modal-summary {
+            padding: 12px 16px 0 !important;
+          }
+
+          .modal-content.assenze-modal-fixed .assenze-modal-list-wrap {
+            padding: 0 16px !important;
+          }
+
+          .modal-content.assenze-modal-fixed .assenze-modal-actions {
+            padding: 12px 16px 16px !important;
           }
 
           /* 13 ▸ Calendar — compact cells for small screens */
