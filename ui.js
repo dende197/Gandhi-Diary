@@ -408,10 +408,11 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
     try {
         subjectName = decodeURIComponent(rawSubject);
         // Some inline handlers can pass an already-encoded payload again after intermediate transformations.
-        // If '%' remains, attempt one extra decode to support legacy/double-encoded subject labels.
-        if (subjectName.includes('%')) {
-            try { subjectName = decodeURIComponent(subjectName); } catch (_) { }
-        }
+        // Attempt one extra decode only when decoding actually changes the value.
+        try {
+            const maybeDoubleDecoded = decodeURIComponent(subjectName);
+            if (maybeDoubleDecoded !== subjectName) subjectName = maybeDoubleDecoded;
+        } catch (_) { }
     } catch (_) {
         subjectName = rawSubject;
     }
