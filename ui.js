@@ -1740,6 +1740,12 @@ function renderProfile() {
     })();
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 0; padding-bottom: 48px; box-sizing: border-box;">
+            <div style="display:flex; align-items:center; padding: 8px 0 16px 0;">
+                <button onclick="navigate('home')" aria-label="Torna alla panoramica" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; color:var(--accent); font-weight:700; font-size:14px; padding:8px 0; -webkit-tap-highlight-color:transparent;">
+                    <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
+                    Panoramica
+                </button>
+            </div>
             <div class="card" style="padding: 20px 32px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
                     <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${escapeHtml(state.user.name || 'Utente')}</div>
@@ -2727,7 +2733,7 @@ function mostraAssenzeModal() {
                         <div style="font-size:18px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
                     </div>
                 </div>
-                <div style="margin:-10px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
+                <div style="margin:8px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
                     ${ad.daGiustificare > 0 ? `Da giustificare: ${ad.daGiustificare}` : 'Tutti gli eventi risultano giustificati'}
                 </div>
                 </div>
@@ -2765,7 +2771,7 @@ function mostraAssenzeModal() {
                       `).join('')}
                 </div>
                 </div>
-                <div class="assenze-modal-actions" style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:rgba(255,255,255,0.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); flex:0 0 auto;">
+                <div class="assenze-modal-actions" style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:transparent; flex:0 0 auto;">
                     <button onclick="closeModal()" style="width:100%; height:44px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
                 </div>
             </div>
@@ -2795,47 +2801,81 @@ function mostraVerificheModal() {
     }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
 
     showModal(`
-            <div style="padding:24px; text-align: left;">
-                <header style="margin-bottom:24px;">
+            <div style="display:flex; flex-direction:column; text-align:left; max-height:70svh;">
+                <header style="padding:14px 24px 12px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Prossime Verifiche</div>
-                    <h2 style="margin:0; font-size:24px; font-weight:800;">Calendario Verifiche</h2>
+                    <div style="display:flex; align-items:baseline; gap:12px;">
+                        <h2 style="margin:0; font-size:24px; font-weight:800; color:var(--text-primary);">Calendario Verifiche</h2>
+                        <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">${all.length > 0 ? all.length + ' event' + (all.length === 1 ? 'o' : 'i') : ''}</span>
+                    </div>
                 </header>
 
-                <div style="max-height:450px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-right:4px;">
-                    ${all.length === 0 ? `<div style="text-align:center; padding:40px; color:var(--text-dim);">Nessuna verifica in programma</div>` :
-            all.map(v => {
-                const d = parseLocalDate(v.data);
-                const days = Math.ceil((d - today) / 86400000);
-                const abbr = getSubjectAbbrev(v.materia);
-                const key = abbr.toLowerCase();
-                return `
-                          <div style="padding:16px; background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                            <div style="width:48px; height:48px; border-radius:12px; background:var(--${key},var(--mat)); color:var(--${key}-t,var(--mat-t)); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; flex-shrink:0;">
-                                ${abbr}
-                            </div>
-                            <div style="flex:1; min-width:0;">
-                                <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">${escapeHtml(v.text || (v.tipo === 'scritta' ? 'Verifica Scritta' : 'Interrogazione Orale'))}</div>
-                                <div style="font-size:11px; color:var(--text-dim);">${escapeHtml(v.materia)} · ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</div>
-                            </div>
-                            <div style="text-align:right; flex-shrink:0; display:flex; align-items:center; gap:12px;">
-                                ${v.source === 'manual' ? `
-                                    <button onclick="deleteManualVerifica('${v.id}')" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:4px; opacity:0.6; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
-                                        <i class="ph-bold ph-trash" style="font-size:16px;"></i>
-                                    </button>
-                                ` : ''}
-                                <div style="min-width:40px;">
-                                    <div style="font-size:16px; font-weight:800; color:var(--text-primary); line-height:1;">${days}</div>
-                                    <div style="font-size:9px; color:var(--text-dim); font-weight:600; text-transform:uppercase;">giorni</div>
+                <div style="min-height:0; flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:12px 20px; display:flex; flex-direction:column; gap:8px;">
+                    ${all.length === 0 ? `
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; gap:12px;">
+                            <i class="ph-bold ph-calendar-check" style="font-size:40px; color:var(--text-dim); opacity:0.5;"></i>
+                            <div style="font-size:14px; color:var(--text-dim); text-align:center; font-weight:600;">Nessuna verifica in programma</div>
+                        </div>
+                    ` : (() => {
+                        let lastDateLabel = '';
+                        return all.map(v => {
+                            const d = parseLocalDate(v.data);
+                            const days = Math.ceil((d - today) / 86400000);
+                            const abbr = getSubjectAbbrev(v.materia);
+                            const key = abbr.toLowerCase();
+                            const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
+                            const tipoLabel = normalizedTipo === 'scritta' ? 'Scritta' : normalizedTipo === 'orale' ? 'Orale' : '';
+
+                            let urgencyColor = '#3B82F6';
+                            let urgencyBg = 'rgba(59,130,246,0.08)';
+                            if (days === 0) { urgencyColor = '#EF4444'; urgencyBg = 'rgba(239,68,68,0.1)'; }
+                            else if (days === 1) { urgencyColor = '#F97316'; urgencyBg = 'rgba(249,115,22,0.1)'; }
+                            else if (days <= 3) { urgencyColor = '#F59E0B'; urgencyBg = 'rgba(245,158,11,0.08)'; }
+
+                            let dayLabel;
+                            if (days === 0) dayLabel = 'Oggi';
+                            else if (days === 1) dayLabel = 'Domani';
+                            else if (days <= 6) dayLabel = d.toLocaleDateString('it-IT', { weekday: 'long' });
+                            else dayLabel = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+
+                            const fullDate = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+                            const dateKey = v.data;
+                            const showDateHeader = dateKey !== lastDateLabel;
+                            lastDateLabel = dateKey;
+
+                            return `
+                                ${showDateHeader ? `<div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; padding: 8px 0 4px 0;">${fullDate}</div>` : ''}
+                                <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(0,0,0,0.02); border-radius:14px; border:1px solid rgba(0,0,0,0.04);">
+                                    <div style="width:44px; height:44px; border-radius:12px; background:var(--${key},var(--mat)); color:var(--${key}-t,var(--mat-t)); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; flex-shrink:0; letter-spacing:-0.02em;">
+                                        ${abbr}
+                                    </div>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.text || (normalizedTipo === 'scritta' ? 'Verifica Scritta' : normalizedTipo === 'orale' ? 'Interrogazione Orale' : 'Verifica'))}</div>
+                                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                            <span style="font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.materia || '')}</span>
+                                            ${tipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); background:rgba(0,0,0,0.05); border-radius:5px; padding:2px 6px; text-transform:uppercase;">${tipoLabel}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:52px; gap:2px;">
+                                        <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
+                                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
+                                        ${v.source === 'manual' ? `
+                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; margin-top:4px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
+                                                <i class="ph-bold ph-trash" style="font-size:14px;"></i>
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 </div>
-                            </div>
-                          </div>
-                        `;
-            }).join('')}
+                            `;
+                        }).join('');
+                    })()}
                 </div>
 
-                <button onclick="closeModal()" style="width:100%; margin-top:24px; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+                <div style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:transparent; flex:0 0 auto;">
+                    <button onclick="closeModal()" style="width:100%; height:44px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer; font-size:14px;">Chiudi</button>
+                </div>
             </div>
-            `);
+            `, 'verifiche-modal-fixed');
 }
 window.mostraVerificheModal = mostraVerificheModal;
 

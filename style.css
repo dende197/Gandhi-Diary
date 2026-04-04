@@ -1283,6 +1283,11 @@
           overflow: hidden;
         }
 
+        .modal-content.verifiche-modal-fixed {
+          padding: 0;
+          overflow: hidden;
+        }
+
 
         /* === CALENDAR === */
         .custom-calendar {
@@ -4599,6 +4604,10 @@
           }
 
           .modal-content.assenze-modal-fixed {
+            max-height: 82svh !important;
+          }
+
+          .modal-content.verifiche-modal-fixed {
             max-height: 82svh !important;
           }
 
