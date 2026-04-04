@@ -70,6 +70,9 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
+const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
+const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
+const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -77,11 +80,14 @@ const SUBJECT_TREND_ANIMATION_INITIAL_PROGRESS = 0.04;
 
 function normalizeSubjectName(name) {
     // Unify subject labels coming from different DidUP payloads/UI variants
-    // (e.g. trailing asterisks, extra spaces, case differences) before grouping/filtering.
+    // (e.g. trailing asterisks, extra spaces, accents and apostrophe variants) before grouping/filtering.
     return (name || '')
         .toString()
+        // NFD separates accented letters into base char + combining mark (e.g. é -> e + ́).
         .normalize('NFD')
+        // Remove combining marks to compare subjects regardless of accents.
         .replace(/[\u0300-\u036f]/g, '')
+        // Normalize typographic apostrophes/backticks/acute accents to a single apostrophe.
         .replace(/[’`´]/g, "'")
         .replace(/['"]/g, '')
         .replace(/[./]/g, ' ')
@@ -2119,6 +2125,7 @@ function colorWithAlpha(color, alpha) {
     const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch) {
         const hex = hexMatch[1];
+        // Expand shorthand hex (#abc / #abcd) to full form (#aabbcc / #aabbccdd).
         const expanded = hex.length <= 4 ? hex.split('').map(ch => ch + ch).join('') : hex;
         const rgb = expanded.length === 8 ? expanded.slice(0, 6) : expanded;
         const r = parseInt(rgb.slice(0, 2), 16);
@@ -2189,9 +2196,9 @@ function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
 
     if (visiblePoints.length >= 2) {
         const grad = ctx.createLinearGradient(0, p.top, 0, H - p.bottom);
-        grad.addColorStop(0, colorWithAlpha(subjColor, 0.95));
-        grad.addColorStop(0.55, colorWithAlpha(subjColor, 0.4));
-        grad.addColorStop(1, colorWithAlpha(subjColor, 0.08));
+        grad.addColorStop(0, colorWithAlpha(subjColor, SUBJECT_TREND_GRADIENT_TOP_ALPHA));
+        grad.addColorStop(0.55, colorWithAlpha(subjColor, SUBJECT_TREND_GRADIENT_MID_ALPHA));
+        grad.addColorStop(1, colorWithAlpha(subjColor, SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA));
         ctx.beginPath();
         ctx.moveTo(visiblePoints[0].x, H - p.bottom);
         visiblePoints.forEach(pt => ctx.lineTo(pt.x, pt.y));
@@ -3092,7 +3099,11 @@ function getSubjectColor(subject) {
     if (normalized.includes('scienze naturali') || normalized.includes('naturali')) return '#1DB87A';
     if (normalized.includes('filosofia')) return '#7060C8';
     if (normalized.includes('fisica')) return '#2563EB';
-    if (normalized.includes('disegno') || normalized.includes('storia dellarte') || normalized.includes('storia arte')) return '#E06020';
+    const isArtDrawingSubject = normalized.includes('disegno')
+        || normalized.includes("storia dell'arte")
+        || normalized.includes('storia dellarte')
+        || normalized.includes('storia arte');
+    if (isArtDrawingSubject) return '#E06020';
 
     // Fallback: stable vibrant color
     let hash = 0;
