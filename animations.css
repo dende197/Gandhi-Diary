@@ -52,11 +52,11 @@
 
 @keyframes slideUp {
     from {
-        transform: translateY(10px);
+        transform: translateY(10px) translateZ(0);
         opacity: 0;
     }
     to {
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
         opacity: 1;
     }
 }
