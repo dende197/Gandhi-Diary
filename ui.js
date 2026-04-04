@@ -1739,7 +1739,7 @@ function renderProfile() {
         try { return new URL(API_BASE_URL).host; } catch (_) { return window.location.host; }
     })();
     return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-bottom: 48px; box-sizing: border-box;">
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 0; padding-bottom: 48px; box-sizing: border-box;">
             <div class="card" style="padding: 20px 32px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
                     <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${escapeHtml(state.user.name || 'Utente')}</div>
@@ -2708,23 +2708,23 @@ function mostraAssenzeModal() {
     const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
 
     showModal(`
-            <div class="assenze-modal-shell" style="display:flex; flex-direction:column; text-align:left; max-height:82svh;">
-                <header class="assenze-modal-header" style="padding:24px 24px 16px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
+            <div class="assenze-modal-shell" style="display:flex; flex-direction:column; text-align:left; max-height:70svh;">
+                <header class="assenze-modal-header" style="padding:14px 24px 12px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
                     <div style="display:flex; align-items:baseline; gap:12px;">
-                        <h2 style="margin:0; font-size:36px; font-weight:800; color:#EF4444;">${percAssenza}%</h2>
-                        <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(2)} ore totali</span>
+                        <h2 style="margin:0; font-size:28px; font-weight:800; color:#EF4444;">${percAssenza}%</h2>
+                        <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(2)} ore totali</span>
                     </div>
                 </header>
-                <div class="assenze-modal-summary" style="padding:16px 24px 0; flex:0 0 auto;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                    <div style="background:rgba(239, 68, 68, 0.05); padding:16px; border-radius:16px; border:1px solid rgba(239, 68, 68, 0.1);">
+                <div class="assenze-modal-summary" style="padding:12px 24px 0; flex:0 0 auto;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <div style="background:rgba(239, 68, 68, 0.05); padding:12px; border-radius:14px; border:1px solid rgba(239, 68, 68, 0.1);">
                         <div style="font-size:10px; color:#EF4444; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Assenze</div>
-                        <div style="font-size:20px; font-weight:800;">${ad.totaleAssenze}</div>
+                        <div style="font-size:18px; font-weight:800;">${ad.totaleAssenze}</div>
                     </div>
-                    <div style="background:rgba(245, 158, 11, 0.05); padding:16px; border-radius:16px; border:1px solid rgba(245, 158, 11, 0.1);">
+                    <div style="background:rgba(245, 158, 11, 0.05); padding:12px; border-radius:14px; border:1px solid rgba(245, 158, 11, 0.1);">
                         <div style="font-size:10px; color:#F59E0B; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Ritardi/Uscite</div>
-                        <div style="font-size:20px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
+                        <div style="font-size:18px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
                     </div>
                 </div>
                 <div style="margin:-10px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
@@ -2765,8 +2765,8 @@ function mostraAssenzeModal() {
                       `).join('')}
                 </div>
                 </div>
-                <div class="assenze-modal-actions" style="padding:16px 24px 24px; border-top:1px solid rgba(0,0,0,0.06); background:rgba(255,255,255,0.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); flex:0 0 auto;">
-                    <button onclick="closeModal()" style="width:100%; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+                <div class="assenze-modal-actions" style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:rgba(255,255,255,0.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); flex:0 0 auto;">
+                    <button onclick="closeModal()" style="width:100%; height:44px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
                 </div>
             </div>
             `, 'assenze-modal-fixed');
