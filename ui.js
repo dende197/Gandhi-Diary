@@ -942,6 +942,12 @@ function updatePlanTaskUI(taskId, isPlanned) {
 function updatePlannerCounter() {
     // Function retired: replaced numeric badge with static green '+'
 }
+function normalizeTipoVerifica(tipo, upperCase = true) {
+    const t = (tipo || '').toString().toLowerCase().trim();
+    if (t === 'scritta') return upperCase ? 'SCRITTA' : 'Scritta';
+    if (t === 'orale')   return upperCase ? 'ORALE'   : 'Orale';
+    return upperCase ? 'VERIFICA' : 'Valutazione';
+}
 function getHomeTaskWidgetData() {
     const mode = state.homeTaskFocus === 'today' ? 'today' : 'tomorrow';
     const today = new Date();
@@ -1076,7 +1082,7 @@ function updateHomeView() {
         focusCard.querySelectorAll('[data-task-toggle]').forEach(cb => {
             const taskId = cb.getAttribute('data-task-toggle');
             if (!liveIds.has(taskId)) {
-                const row = cb.closest('div[style*="display:flex"]') || cb.parentElement;
+                const row = cb.parentElement;
                 if (row && row !== focusCard) {
                     if (typeof gsap !== 'undefined') {
                         gsap.to(row, { opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0, marginBottom: 0, duration: 0.2, ease: 'power2.in', onComplete: () => row.remove() });
@@ -1376,7 +1382,7 @@ function renderCalendarWeekList(weekStart) {
                             <div class="asw-task-body">
                                 <div class="asw-task-meta">
                                     <span class="asw-subject-badge" style="color:#D97706; background:rgba(255,159,10,0.1);">${escapeHtml(abbr)}</span>
-                                    <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml((()=>{const t=(v.tipo||'').toLowerCase().trim();return t==='scritta'?'SCRITTA':t==='orale'?'ORALE':'VERIFICA';})())}</span>
+                                    <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml(normalizeTipoVerifica(v.tipo))}</span>
                                 </div>
                                 <div class="asw-task-text">${escapeHtml(v.text || v.subject)}</div>
                             </div>
@@ -2680,7 +2686,7 @@ function renderSubjectDetailView(subjectName) {
                             ${displayVal}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${(()=>{const t=(v.tipo||'').toLowerCase().trim();return t==='scritta'?'Scritta':t==='orale'?'Orale':t&&t!=='unknown'?v.tipo:'Valutazione';})()}</div>
+                            <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${normalizeTipoVerifica(v.tipo, false)}</div>
                             <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #908C86; text-transform: uppercase;">${new Date(v.data || v.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
                         </div>
                         ${v.commento ? `<i class="ph-bold ph-chat-circle-dots" style="color: #007AFF; font-size: 22px; cursor: help;" title="${v.commento}"></i>` : ''}
@@ -2974,7 +2980,7 @@ function renderDayDetailModal(dateStr) {
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
                                                 <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.08em; background:${colorWithAlpha(color, 0.12)}; padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || getSubjectAbbrev(v.subject))}</span>
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml((()=>{const t=(v.tipo||'').toLowerCase().trim();return t==='scritta'?'SCRITTA':t==='orale'?'ORALE':'VERIFICA';})())}</span>
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(normalizeTipoVerifica(v.tipo))}</span>
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word;">${escapeHtml(v.text || v.subject)}</div>
                                         </div>
