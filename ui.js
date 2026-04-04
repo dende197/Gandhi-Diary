@@ -725,6 +725,8 @@ function showToast(message, type = 'success', customBackground = '') {
     const icon = toastIconByType[typeValue] || toastIconByType.success;
 
     const toast = document.createElement('div');
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
     toast.id = 'g-toast';
     toast.style = `
                 position: fixed;
@@ -5143,8 +5145,8 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Keep payload safely below common serverless body ceilings (~1MB):
-    // use 120KB as a conservative guardrail to absorb request overhead/serialization variance and avoid 413s.
+    // Typical body limit can be around ~1MB, but we intentionally cap at 120KB (much lower)
+    // to leave headroom for headers/serialization growth and avoid edge-case 413 responses.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;

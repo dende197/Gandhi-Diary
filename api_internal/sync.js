@@ -16,7 +16,8 @@ module.exports = async function handler(req, res) {
     const body = getRequestBody(req);
     const school = (body.schoolCode || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
-    // `password` can be omitted when already available in server-side vault for the same user/profile.
+    // Password may be omitted client-side: below we resolve credentials from session-vault via
+    // getArgoCredentials(generatePid(...)); if neither body password nor vault password exists, sync fails with 401.
     const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
     if (!school || !username) {
