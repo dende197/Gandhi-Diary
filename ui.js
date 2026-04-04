@@ -1921,7 +1921,7 @@ function renderGradesView() {
             const subjBg = colorWithAlpha(subjColor, 0.13);
             const subjText = subjColor;
 
-            const encodedSubjectArg = encodeURIComponent(s.name || '');
+            const encodedSubjectArg = encodeURIComponent(s.name || '').replace(/'/g, '%27');
             return `
                     <div class="card grade-subject-widget" style="padding: 14px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; border-left: 4px solid ${subjColor}; min-height: 84px;" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
                         <div style="width: 42px; height: 42px; border-radius: 10px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 11px; flex-shrink: 0;">
@@ -3643,7 +3643,7 @@ function renderVoti() {
         const subjBg = giu ? '#F2F1EF' : colorWithAlpha(subjColor, 0.13);
         const subjText = giu ? '#908C86' : subjColor;
         const subjDot = giu ? '#BCB8B2' : subjColor;
-        const encodedMat = encodeURIComponent(mat || '');
+        const encodedMat = encodeURIComponent(mat || '').replace(/'/g, '%27');
         return `
                         <div class="card" onclick="handleGradeSubjectClickFromEncoded('${encodedMat}')" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
                             <div style="width:54px; height:54px; border-radius:12px; background:${subjBg}; border:1px solid ${subjDot}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${subjText};">${displayVal}</div>
