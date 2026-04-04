@@ -1741,7 +1741,7 @@ function renderProfile() {
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 0; padding-bottom: 48px; box-sizing: border-box;">
             <div style="display:flex; align-items:center; padding: 8px 0 16px 0;">
-                <button onclick="navigate('home')" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; color:var(--accent); font-weight:700; font-size:14px; padding:8px 0; -webkit-tap-highlight-color:transparent;">
+                <button onclick="navigate('home')" aria-label="Torna alla panoramica" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; color:var(--accent); font-weight:700; font-size:14px; padding:8px 0; -webkit-tap-highlight-color:transparent;">
                     <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
                     Panoramica
                 </button>
@@ -2860,7 +2860,7 @@ function mostraVerificheModal() {
                                         <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
                                         <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
                                         ${v.source === 'manual' ? `
-                                            <button onclick="deleteManualVerifica('${v.id}')" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; margin-top:4px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
+                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; margin-top:4px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
                                                 <i class="ph-bold ph-trash" style="font-size:14px;"></i>
                                             </button>
                                         ` : ''}
