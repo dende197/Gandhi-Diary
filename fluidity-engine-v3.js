@@ -266,24 +266,29 @@
   }
 
   const _installSubjectTransitions = () => {
+    if (window.navigateSubject && window.navigateSubject._isV3) return;
     window.navigateSubject = function navigateSubject(subjName) {
       if (!subjName) return;
       state._scrollTopAfterRender = true;
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
       _exitCurrent('left', { duration: 0.14, distance: 12, scale: 0.995 }).then(() => {
+        const targetView = state.view || 'voti';
         state.activeSubject = subjName;
-        _renderViewDirect(state.view || 'voti');
-        _animateViewEntrance(state.view || 'voti', 'right');
+        _renderViewDirect(targetView);
+        _animateViewEntrance(targetView, 'right');
       });
     };
+    window.navigateSubject._isV3 = true;
 
     window.closeSubject = function closeSubject() {
       _exitCurrent('right', { duration: 0.14, distance: 12, scale: 0.995 }).then(() => {
+        const targetView = state.view || 'voti';
         state.activeSubject = null;
-        _renderViewDirect(state.view || 'voti');
-        _animateViewEntrance(state.view || 'voti', 'left');
+        _renderViewDirect(targetView);
+        _animateViewEntrance(targetView, 'left');
       });
     };
+    window.closeSubject._isV3 = true;
   };
 
   function _installButtonFeedback(scope = document) {

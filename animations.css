@@ -139,13 +139,6 @@
     animation: msg-appear 0.25s ease forwards;
 }
 
-.view {
-    will-change: transform, opacity;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform: translateZ(0);
-}
-
 .anim-done {
     will-change: auto !important;
 }

@@ -371,13 +371,13 @@ window.switchPlannerView = function (view) {
     runSwap();
 };
 
-window.navigateSubject = window.navigateSubject || function (subjName) {
+window.navigateSubject = function (subjName) {
     if (!subjName) return;
     state.activeSubject = subjName;
     scheduleRender(0);
 };
 
-window.handleGradeSubjectClick = window.handleGradeSubjectClick || function (subjectName) {
+window.handleGradeSubjectClick = function (subjectName) {
     state.view = 'voti';
     window.navigateSubject(subjectName);
     if (typeof closeModal === 'function') closeModal();
@@ -402,7 +402,7 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
     window.handleGradeSubjectClick(subjectName);
 };
 
-window.closeSubject = window.closeSubject || function () {
+window.closeSubject = function () {
     state.activeSubject = null;
     scheduleRender();
 };
