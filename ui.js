@@ -523,9 +523,10 @@ window.checkGoogleStatus = async function () {
         });
         const data = await res.json();
         state.googleConnected = data.connected || false;
+        localStorage.setItem('gc_google_connected_cache', state.googleConnected ? '1' : '0');
         // State updated silently — profile view reads state.googleConnected on navigation
         // No full re-render needed (eliminates double render on boot)
-    } catch (e) { state.googleConnected = false; }
+    } catch (e) { state.googleConnected = false; localStorage.setItem('gc_google_connected_cache', '0'); }
 };
 
 window.saveArgoToSupabase = async function () {
@@ -1733,12 +1734,13 @@ function formatFullDate(dateInput) {
     return `${day} ${month} ${year} • ${time} `;
 }
 function renderProfile() {
+    const isGoogleConnected = state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1';
     const oauthHost = (() => {
         try { return new URL(API_BASE_URL).host; } catch (_) { return window.location.host; }
     })();
     return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto;">
-            <div class="card" style="padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
+        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-bottom: 48px; box-sizing: border-box;">
+            <div class="card" style="padding: 20px 32px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
                     <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${escapeHtml(state.user.name || 'Utente')}</div>
                     <div style="font-size: 13px; font-weight: 800; color: var(--accent); background: rgba(99, 102, 241, 0.08); padding: 6px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
@@ -1770,11 +1772,11 @@ function renderProfile() {
                     <div>
                         <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Google Calendar</div>
                         <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
-                            ${state.googleConnected ? 'Collegato ✓' : 'Non collegato'}
+                            ${isGoogleConnected ? 'Collegato ✓' : 'Non collegato'}
                         </div>
                     </div>
                     <div style="display: flex; flex-direction: column; width: 100%; gap: 8px;">
-                    ${state.googleConnected ? `
+                    ${isGoogleConnected ? `
                         <button class="btn-primary" onclick="window.syncGoogleCalendar()" style="height: 40px; font-size: 13px; gap: 8px; background: #EA4335; border: none; width: 100%; justify-content: center;">
                             <i class="ph-bold ph-arrows-clockwise"></i> Sincronizza Compiti
                         </button>
@@ -2730,9 +2732,9 @@ function mostraAssenzeModal() {
                 </div>
                 </div>
 
-                <div class="assenze-modal-list-wrap" style="min-height:0; flex:1 1 auto; padding:0 24px 0; overflow:hidden;">
+                <div class="assenze-modal-list-wrap" style="min-height:0; flex:1 1 auto; padding:0 24px 0; overflow:hidden; display:flex; flex-direction:column;">
                 <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">Cronologia Eventi</div>
-                <div class="assenze-modal-list" style="height:100%; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
+                <div class="assenze-modal-list" style="flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:10px; padding-right:4px; padding-bottom:8px;">
                     ${all.length === 0 ? `<div style="text-align:center; padding:30px; color:var(--text-dim); font-size:13px;">Nessun evento registrato</div>` :
             all.map(a => `
                         <div style="display:flex; align-items:center; gap:14px; padding:12px; background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid rgba(0,0,0,0.03);">
@@ -3103,6 +3105,10 @@ function clearPlannedCalendarTasks() {
     }
 }
 function notifyPlannerChanged() {
+    // ✅ FIX: invalida sempre la cache agenda prima di aggiornare
+    state._weeklyAgendaCacheHtml = '';
+    try { localStorage.removeItem(getAgendaCacheKey()); } catch(_) {}
+
     // badge sul bottone Organizza Oggi e Dashboard
     if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
     if (typeof updateHomeView === 'function') updateHomeView();
@@ -5066,9 +5072,7 @@ window.finalizePlanWeekModal = function () {
         if (added > 0 && typeof showToast === 'function') {
             showToast(`${added} compiti aggiunti`);
         }
-        if (state.view === 'planner' && typeof scheduleRender === 'function') {
-            setTimeout(() => scheduleRender(0), 10);
-        }
+        // (rimosso scheduleRender ridondante: notifyPlannerChanged() ha già aggiornato il DOM)
     }, 320);
 };
 
