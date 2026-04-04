@@ -5053,6 +5053,7 @@ window.sendAIChat = async function () {
         if (!txt) return '';
         return txt.length > max ? `${txt.slice(0, max)}…` : txt;
     };
+    const clampText = truncateWithEllipsis;
     const thisWeekTasks = [], laterTasks = [];
     argoTasks.forEach(t => {
         const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
@@ -5061,7 +5062,13 @@ window.sendAIChat = async function () {
         (dueDate && dueDate <= endOfWeek) ? thisWeekTasks.push(entry) : laterTasks.push(entry);
     });
 
-    const exams = (state.exams || []).slice(0, 10).map(ex => `- ${clampText(ex.type, 32)} di ${clampText(ex.subject, 40)} il ${clampText(ex.date, 24)} (${clampText(ex.topic || 'gen.', 60)})`).join('\n');
+    const exams = (state.exams || []).slice(0, 10).map(ex => {
+        const typeText = clampText(ex.type, 32);
+        const subjectText = clampText(ex.subject, 40);
+        const dateText = clampText(ex.date, 24);
+        const topicText = clampText(ex.topic || 'gen.', 60);
+        return `- ${typeText} di ${subjectText} il ${dateText} (${topicText})`;
+    }).join('\n');
     const verifiche = (state.verifiche || []).slice(0, 14).map(v => `- ${clampText(v.materia || v.subject || 'Materia', 40)}: ${clampText(v.argomento || v.topic || 'N/D', 110)} (${clampText(v.data || v.date || 'data non indicata', 24)})`).join('\n');
     const reminders = (state.reminders || state.promemoria || []).slice(0, 10).map(r => `- ${clampText(r.text || r.title || r.descrizione || r.oggetto || 'Promemoria', 140)}`).join('\n');
     const backlog = (state.backlog || []).slice(0, 10).map(b => `- ${clampText(b.subject || 'Generale', 40)}: ${clampText(b.text || b.title || b.task || '', 120)}`).join('\n');
@@ -5145,7 +5152,7 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // The platform request-body limit is generally much higher (around ~1MB+ for common serverless setups),
+    // On Vercel serverless functions the request-body limit is generally much higher (around ~1MB+),
     // but this client-side JSON payload guardrail is intentionally 120KB to avoid 413 errors from overhead growth.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };

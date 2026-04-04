@@ -16,8 +16,6 @@ module.exports = async function handler(req, res) {
     const body = getRequestBody(req);
     const school = (body.schoolCode || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
-    // Password may be omitted client-side: below we resolve credentials from session-vault via
-    // getArgoCredentials(generatePid(...)); if neither body password nor vault password exists, sync fails with 401.
     const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
     if (!school || !username) {
@@ -32,6 +30,8 @@ module.exports = async function handler(req, res) {
         debugLog('SYNC REQUEST', { school, profileIndex });
 
         const credentialKey = generatePid(school, username, profileIndex);
+        // Password may be omitted client-side: credentials are resolved from session-vault via getArgoCredentials.
+        // If neither body password nor vault password exists, sync explicitly fails with 401.
         const fromVault = getArgoCredentials(credentialKey);
         const user = username || fromVault?.username;
         const pwd = password || fromVault?.password;
