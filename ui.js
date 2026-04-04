@@ -5078,7 +5078,7 @@ window.finalizePlanWeekModal = function () {
         if (added > 0 && typeof showToast === 'function') {
             showToast(`${added} compiti aggiunti`);
         }
-    }, 300);
+    }, 300); // 300ms: permette all'animazione "Fatto ✓" di essere visibile prima della chiusura modale
 };
 
 window.updateWeekDayButton = function (taskId, dateStr) {
