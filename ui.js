@@ -5145,8 +5145,8 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Typical body limit can be around ~1MB, but we intentionally cap at 120KB (much lower)
-    // to leave headroom for headers/serialization growth and avoid edge-case 413 responses.
+    // Vercel/Serverless payload limits are typically much higher (~1MB+), but this client guardrail is intentionally
+    // fixed at 120KB to reduce risk of edge-case 413 responses after JSON/header overhead and future prompt growth.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;

@@ -13,26 +13,10 @@
 (function fluidityEngineV3() {
   console.log('🚀 G-Connect Fluidity Engine v3.0 - Initializing...');
 
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function escapeJsSingleQuote(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/\\/g, '\\\\')
-      .replace(/'/g, "\\'")
-      .replace(/\r/g, '\\r')
-      .replace(/\n/g, '\\n')
-      .replace(/\u2028/g, '\\u2028')
-      .replace(/\u2029/g, '\\u2029');
-  }
+  const escapeHtml = (str) =>
+    (typeof window.escapeHtml === 'function' ? window.escapeHtml(str) : String(str ?? ''));
+  const escapeJsSingleQuote = (str) =>
+    (typeof window.escapeJsSingleQuote === 'function' ? window.escapeJsSingleQuote(str) : String(str ?? ''));
 
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;

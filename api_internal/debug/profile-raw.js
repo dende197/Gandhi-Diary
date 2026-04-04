@@ -37,7 +37,6 @@ module.exports = async function handler(req, res) {
             totalProfiles: profiles.length,
             profile: { name: profile.name, class: profile.class, school: profile.school, idSoggetto: profile.idSoggetto },
             rawData: {
-                classe: { desDenominazione: classeObj.desDenominazione, desSezione: classeObj.desSezione, desCorso: classeObj.desCorso, corso: classeObj.corso },
                 scheda: {
                     classe: {
                         desDenominazione: classeObj.desDenominazione,
