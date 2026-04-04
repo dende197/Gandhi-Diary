@@ -372,6 +372,8 @@ window.switchPlannerView = function (view) {
 };
 
 window.navigateSubject = function (subjName) {
+    const NAVIGATE_SUBJECT_EXIT_MS = 150;
+    const NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS = 70;
     const root = document.getElementById('app');
     const currentView = root ? root.querySelector('.view') : null;
     state._scrollTopAfterRender = true;
@@ -386,9 +388,9 @@ window.navigateSubject = function (subjName) {
     if (currentView && typeof gsap !== 'undefined') {
         gsap.killTweensOf(currentView);
         gsap.to(currentView, {
-            opacity: 0, y: -8, scale: 0.99, duration: 0.15, ease: 'power2.in', overwrite: 'auto', onComplete: completeTransition
+            opacity: 0, y: -8, scale: 0.99, duration: NAVIGATE_SUBJECT_EXIT_MS / 1000, ease: 'power2.in', overwrite: 'auto', onComplete: completeTransition
         });
-        setTimeout(completeTransition, 220);
+        setTimeout(completeTransition, NAVIGATE_SUBJECT_EXIT_MS + NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS);
     } else {
         completeTransition();
     }
@@ -405,6 +407,8 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
     let subjectName = rawSubject;
     try {
         subjectName = decodeURIComponent(rawSubject);
+        // Some inline handlers can pass an already-encoded payload again after intermediate transformations.
+        // If '%' remains, attempt one extra decode to support legacy/double-encoded subject labels.
         if (subjectName.includes('%')) {
             try { subjectName = decodeURIComponent(subjectName); } catch (_) { }
         }
