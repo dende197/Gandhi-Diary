@@ -164,14 +164,15 @@
   function _animateViewEntrance(view) {
     if (typeof gsap === 'undefined') return;
     
-    requestAnimationFrame(() => {
-      const viewEl = document.querySelector('.view');
-      if (!viewEl) return;
+      requestAnimationFrame(() => {
+        const viewEl = document.querySelector('.view');
+        if (!viewEl) return;
+        gsap.killTweensOf(viewEl);
 
-      // 1. View Entrance (Fade + Slide + Scale)
-      gsap.fromTo(viewEl, 
-        { opacity: 0, y: 15, scale: 0.985 },
-        { 
+        // 1. View Entrance (Fade + Slide + Scale)
+        gsap.fromTo(viewEl, 
+          { opacity: 0, y: 15, scale: 0.985 },
+          { 
           opacity: 1, 
           y: 0, 
           scale: 1, 
@@ -184,6 +185,7 @@
       // 2. Card & Widget Header Stagger (Inner Elements)
       const cards = viewEl.querySelectorAll('.card, .subject-summary-card, .greeting-card, .streak-card, .verifica-card, .widget-header');
       if (cards.length > 0) {
+        gsap.killTweensOf(cards);
         gsap.fromTo(cards,
           { opacity: 0, y: 12 },
           {
@@ -201,6 +203,7 @@
       // 3. Row Stagger (List Content)
       const items = viewEl.querySelectorAll('.task-row, .grade-row, .circolari-scroll > div, #weekly-agenda-list > div, .studio-entry');
       if (items.length > 0) {
+        gsap.killTweensOf(items);
         gsap.fromTo(items,
           { opacity: 0, y: 8 },
           {

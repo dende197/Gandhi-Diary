@@ -372,20 +372,33 @@ window.switchPlannerView = function (view) {
 };
 
 window.navigateSubject = function (subjName) {
+    const NAVIGATE_SUBJECT_EXIT_MS = 150;
+    const NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS = 70;
     const root = document.getElementById('app');
     const currentView = root ? root.querySelector('.view') : null;
     state._scrollTopAfterRender = true;
     window.scrollTo({ top: 0, behavior: 'auto' });
-    if (currentView && typeof gsap !== 'undefined') {
-        gsap.to(currentView, {
-            opacity: 0, y: -8, scale: 0.99, duration: 0.15, ease: 'power2.in', onComplete: () => {
-                state.activeSubject = subjName;
-                scheduleRender(0);
-            }
-        });
-    } else {
+    let didTransition = false;
+    let fallbackTimer = null;
+    const completeTransition = () => {
+        if (fallbackTimer) {
+            clearTimeout(fallbackTimer);
+            fallbackTimer = null;
+        }
+        if (currentView && typeof gsap !== 'undefined') gsap.killTweensOf(currentView);
+        if (didTransition) return;
+        didTransition = true;
         state.activeSubject = subjName;
         scheduleRender(0);
+    };
+    if (currentView && typeof gsap !== 'undefined') {
+        gsap.killTweensOf(currentView);
+        gsap.to(currentView, {
+            opacity: 0, y: -8, scale: 0.99, duration: NAVIGATE_SUBJECT_EXIT_MS / 1000, ease: 'power2.in', overwrite: 'auto', onComplete: completeTransition
+        });
+        fallbackTimer = setTimeout(completeTransition, NAVIGATE_SUBJECT_EXIT_MS + NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS);
+    } else {
+        completeTransition();
     }
 };
 
@@ -396,11 +409,20 @@ window.handleGradeSubjectClick = function (subjectName) {
 };
 
 window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
-    let subjectName = '';
+    const rawSubject = (encodedSubjectName || '').toString();
+    let subjectName = rawSubject;
     try {
-        subjectName = decodeURIComponent(encodedSubjectName || '');
+        subjectName = decodeURIComponent(rawSubject);
+        // Some inline handlers can pass an already-encoded payload again after intermediate transformations.
+        // Attempt one extra decode only when the original payload still contains encoded percent markers (%25...).
+        if (/%25/.test(rawSubject)) {
+            try {
+                const maybeDoubleDecoded = decodeURIComponent(subjectName);
+                if (maybeDoubleDecoded !== subjectName) subjectName = maybeDoubleDecoded;
+            } catch (_) { }
+        }
     } catch (_) {
-        subjectName = encodedSubjectName || '';
+        subjectName = rawSubject;
     }
     window.handleGradeSubjectClick(subjectName);
 };
@@ -2480,6 +2502,7 @@ function initGradesCharts() {
 }
 function renderSubjectDetailView(subjectName) {
     const normalizedSubject = normalizeSubjectName(subjectName);
+    const safeSubjectNameJs = escapeJsSingleQuote(subjectName);
     const votiData = getVotiData()
         .filter(v => areSubjectsEquivalent(v.materia || v.subject, normalizedSubject))
         .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
@@ -2559,7 +2582,7 @@ function renderSubjectDetailView(subjectName) {
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">MEDIA</div>
                                 <div style="font-size: 24px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.02em;">${media.toFixed(2)}</div>
                             </div>
-                            <div onclick="promptSetGoal('${subjectName}')" style="cursor: pointer;">
+                            <div onclick="promptSetGoal('${safeSubjectNameJs}')" style="cursor: pointer;">
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">OBIETTIVO</div>
                                 <div style="font-size: 24px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 6px; letter-spacing: -0.02em;">
                                     ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 14px; color: #007AFF;"></i>
