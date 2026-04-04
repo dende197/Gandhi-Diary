@@ -80,6 +80,12 @@ function normalizeSubjectName(name) {
     // (e.g. trailing asterisks, extra spaces, case differences) before grouping/filtering.
     return (name || '')
         .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[’`´]/g, "'")
+        .replace(/['"]/g, '')
+        .replace(/[./]/g, ' ')
+        .replace(/&/g, ' e ')
         .replace(/\*/g, '')
         .replace(/\s+/g, ' ')
         .trim()
@@ -1848,10 +1854,9 @@ function renderGradesView() {
 
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
                 ${subjects.map(s => {
-            const subMediaAbbr = getSubjectAbbrev(s.name).toLowerCase();
-            const subjColor = `var(--${subMediaAbbr}-dot, var(--accent))`;
-            const subjBg = `var(--${subMediaAbbr}, #F2F2F7)`;
-            const subjText = `var(--${subMediaAbbr}-t, var(--text-primary))`;
+            const subjColor = getSubjectColor(s.name);
+            const subjBg = colorWithAlpha(subjColor, 0.13);
+            const subjText = subjColor;
 
             const encodedSubjectArg = encodeURIComponent(s.name || '');
             return `
@@ -2106,6 +2111,45 @@ function setupCanvas(canvas) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, rect, dpr };
 }
+function colorWithAlpha(color, alpha) {
+    const safeAlpha = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
+    const source = String(color || '').trim();
+    if (!source) return `rgba(37, 99, 235, ${safeAlpha})`;
+
+    const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hexMatch) {
+        const hex = hexMatch[1];
+        const expanded = hex.length <= 4 ? hex.split('').map(ch => ch + ch).join('') : hex;
+        const rgb = expanded.length === 8 ? expanded.slice(0, 6) : expanded;
+        const r = parseInt(rgb.slice(0, 2), 16);
+        const g = parseInt(rgb.slice(2, 4), 16);
+        const b = parseInt(rgb.slice(4, 6), 16);
+        if ([r, g, b].every(Number.isFinite)) return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+    }
+
+    const hslMatch = source.match(/^hsl\(\s*([+-]?\d*\.?\d+)\s*,\s*([+-]?\d*\.?\d+)%\s*,\s*([+-]?\d*\.?\d+)%\s*\)$/i);
+    if (hslMatch) return `hsla(${hslMatch[1]}, ${hslMatch[2]}%, ${hslMatch[3]}%, ${safeAlpha})`;
+
+    const hslaMatch = source.match(/^hsla\(\s*([^)]+)\)$/i);
+    if (hslaMatch) {
+        const parts = hslaMatch[1].split(',').map(p => p.trim());
+        if (parts.length >= 3) return `hsla(${parts[0]}, ${parts[1]}, ${parts[2]}, ${safeAlpha})`;
+    }
+
+    const rgbMatch = source.match(/^rgb\(\s*([^)]+)\)$/i);
+    if (rgbMatch) {
+        const parts = rgbMatch[1].split(',').map(p => p.trim());
+        if (parts.length >= 3) return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${safeAlpha})`;
+    }
+
+    const rgbaMatch = source.match(/^rgba\(\s*([^)]+)\)$/i);
+    if (rgbaMatch) {
+        const parts = rgbaMatch[1].split(',').map(p => p.trim());
+        if (parts.length >= 3) return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${safeAlpha})`;
+    }
+
+    return source;
+}
 function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
     if (!Array.isArray(trendItems) || trendItems.length === 0) return;
     const p = { left: 44, right: 18, top: 16, bottom: 34 };
@@ -2145,9 +2189,9 @@ function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
 
     if (visiblePoints.length >= 2) {
         const grad = ctx.createLinearGradient(0, p.top, 0, H - p.bottom);
-        grad.addColorStop(0, `${subjColor}FF`);
-        grad.addColorStop(0.55, `${subjColor}66`);
-        grad.addColorStop(1, `${subjColor}12`);
+        grad.addColorStop(0, colorWithAlpha(subjColor, 0.95));
+        grad.addColorStop(0.55, colorWithAlpha(subjColor, 0.4));
+        grad.addColorStop(1, colorWithAlpha(subjColor, 0.08));
         ctx.beginPath();
         ctx.moveTo(visiblePoints[0].x, H - p.bottom);
         visiblePoints.forEach(pt => ctx.lineTo(pt.x, pt.y));
@@ -2850,14 +2894,12 @@ function renderDayDetailModal(dateStr) {
                             ` : ''}
                             ${verificheForDay.map(v => {
         const color = getSubjectColor(v.subject);
-        const abbr = getSubjectAbbrev(v.subject);
-        const key = abbr.toLowerCase();
         return `
                                     <div style="flex-shrink:0; border-radius:16px; display:flex; align-items:stretch; overflow:hidden; background:#FFFBF0; border:1px solid rgba(255,159,10,0.2); box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
                                         <div style="width:4px; background:#FF9F0A; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || abbr)}</span>
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.08em; background:${colorWithAlpha(color, 0.12)}; padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || getSubjectAbbrev(v.subject))}</span>
                                                 <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(v.tipo || 'VERIFICA')}</span>
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word;">${escapeHtml(v.text || v.subject)}</div>
@@ -2867,8 +2909,6 @@ function renderDayDetailModal(dateStr) {
     }).join('')}
                             ${tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
         const subContent = t.subject || 'N/A';
-        const abbr = getSubjectAbbrev(subContent);
-        const key = abbr.toLowerCase();
         const color = getSubjectColor(subContent);
         const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
         const timeStr = timeMatch ? timeMatch[1] : '';
@@ -2883,7 +2923,7 @@ function renderDayDetailModal(dateStr) {
                                         <div style="width:4px; background:${color}; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(subContent)}</span>
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.08em; background:${colorWithAlpha(color, 0.12)}; padding:3px 8px; border-radius:6px;">${escapeHtml(subContent)}</span>
                                                 ${timeStr ? `<span style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${escapeHtml(timeStr)}</span>` : ''}
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(displayText)}</div>
@@ -3016,26 +3056,51 @@ function getPlannedTasksTotalCount() {
 function getSubjectColor(subject) {
     let s = (subject || '').trim();
     s = s.replace(/[*_\[\]]/g, '').trim();
-    if (!s) return '#0A84FF';
+    if (!s) return '#3B9DD4';
 
-    const lower = s.toLowerCase();
-    if (lower.includes('ita')) return '#FF2D55';
-    if (lower.includes('mat')) return '#0A84FF';
-    if (lower.includes('ing')) return '#BF5AF2';
-    if (lower.includes('storia') || lower.includes('geo')) return '#FF9F0A';
-    if (lower.includes('scienza') || lower.includes('biol')) return '#30D158';
-    if (lower.includes('fisica')) return '#64D2FF';
-    if (lower.includes('arte')) return '#FF375F';
-    if (lower.includes('ed')) return '#FFD60A';
-    if (lower.includes('rel')) return '#64D2FF';
+    const normalized = normalizeSubjectName(s);
+    const abbr = getSubjectAbbrev(s).toLowerCase();
+    const colorByAbbrev = {
+        mat: '#3B9DD4',
+        fis: '#2563EB',
+        ing: '#2DB86A',
+        ita: '#9B4DD4',
+        sto: '#C8921E',
+        geo: '#D4A037',
+        lat: '#D44B4B',
+        sci: '#1DB87A',
+        bio: '#1DB870',
+        chi: '#9040C8',
+        fil: '#7060C8',
+        art: '#E06020',
+        dis: '#E06020',
+        scm: '#38A020',
+        rel: '#C82090',
+        inf: '#3060D0',
+        dir: '#2A5CC8',
+        eco: '#C89020',
+        fra: '#3055C0',
+        ted: '#C82060',
+        spa: '#C83030',
+        grc: '#C82090',
+        civ: '#E67E22'
+    };
+    if (colorByAbbrev[abbr]) return colorByAbbrev[abbr];
 
-    // 🚀 SENIOR FIX: Hash-based color for UNIQUE identification
+    if (normalized.includes('educazione civica') || normalized.includes('ed civica') || normalized.includes('civica')) return '#E67E22';
+    if (normalized.includes('scienze motorie') || normalized.includes('motorie') || normalized.includes('sportive')) return '#38A020';
+    if (normalized.includes('scienze naturali') || normalized.includes('naturali')) return '#1DB87A';
+    if (normalized.includes('filosofia')) return '#7060C8';
+    if (normalized.includes('fisica')) return '#2563EB';
+    if (normalized.includes('disegno') || normalized.includes('storia dellarte') || normalized.includes('storia arte')) return '#E06020';
+
+    // Fallback: stable vibrant color
     let hash = 0;
     for (let i = 0; i < s.length; i++) {
         hash = s.charCodeAt(i) + ((hash << 5) - hash);
     }
     const h = Math.abs(hash % 360);
-    return `hsl(${h}, 85%, 65%)`; // Vibrant, distinct Colors
+    return `hsl(${h}, 80%, 52%)`;
 }
 function renderAvatar(displayName, size = 44) {
     const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -3508,12 +3573,10 @@ function renderVoti() {
         const giu = isGiustifica(rawVal);
         const displayVal = giu ? 'GIU' : rawVal;
         const mat = v.materia || v.subject || 'Materia';
-        const abbr = getSubjectAbbrev(mat);
-        const key = abbr.toLowerCase();
-        const numVal = parseFloat(rawVal.replace(',', '.'));
-        const subjBg = `var(--${key}, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'rgba(40,205,65,0.12)' : 'rgba(255,59,48,0.12)')})`;
-        const subjText = `var(--${key}-t, ${giu ? '#908C86' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
-        const subjDot = `var(--${key}-dot, ${giu ? '#BCB8B2' : (numVal >= 6 ? 'var(--green)' : 'var(--red)')})`;
+        const subjColor = getSubjectColor(mat);
+        const subjBg = giu ? '#F2F1EF' : colorWithAlpha(subjColor, 0.13);
+        const subjText = giu ? '#908C86' : subjColor;
+        const subjDot = giu ? '#BCB8B2' : subjColor;
         const encodedMat = encodeURIComponent(mat || '');
         return `
                         <div class="card" onclick="handleGradeSubjectClickFromEncoded('${encodedMat}')" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
