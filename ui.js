@@ -385,6 +385,7 @@ window.navigateSubject = function (subjName) {
             clearTimeout(fallbackTimer);
             fallbackTimer = null;
         }
+        if (currentView && typeof gsap !== 'undefined') gsap.killTweensOf(currentView);
         if (didTransition) return;
         didTransition = true;
         state.activeSubject = subjName;
@@ -414,7 +415,7 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
         subjectName = decodeURIComponent(rawSubject);
         // Some inline handlers can pass an already-encoded payload again after intermediate transformations.
         // Attempt one extra decode only when the original payload still contains encoded percent markers (%25...).
-        if (/%25/i.test(rawSubject)) {
+        if (/%25/.test(rawSubject)) {
             try {
                 const maybeDoubleDecoded = decodeURIComponent(subjectName);
                 if (maybeDoubleDecoded !== subjectName) subjectName = maybeDoubleDecoded;
