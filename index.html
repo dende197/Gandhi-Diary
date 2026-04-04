@@ -672,10 +672,12 @@
                     statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
                     statusEl.style.color = "var(--green)";
                 } else {
-                    throw new Error(`HTTP_${res.status}`);
+                    const err = new Error("Server error");
+                    err.status = res.status;
+                    throw err;
                 }
             } catch (e) {
-                const shouldRetry = !e || !String(e.message || '').includes('HTTP_404');
+                const shouldRetry = !(e && e.status === 404);
                 if (attempt < 15 && shouldRetry) {
                     statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
                     setTimeout(() => checkServerHealth(attempt + 1), 2500);
