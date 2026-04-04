@@ -726,7 +726,7 @@ function showToast(message, type = 'success', customBackground = '') {
 
     const toast = document.createElement('div');
     toast.setAttribute('role', 'status');
-    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('aria-live', typeValue === 'error' ? 'assertive' : 'polite');
     toast.id = 'g-toast';
     toast.style = `
                 position: fixed;
@@ -5128,9 +5128,9 @@ REGOLE OPERATIVE:
 4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
 5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.`;
 
-    const compactSystemContext = clampText(systemContext, 9000);
+    const clampedSystemContext = clampText(systemContext, 9000);
     const contents = [
-        { role: 'user', parts: [{ text: compactSystemContext }] },
+        { role: 'user', parts: [{ text: clampedSystemContext }] },
         { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
     ];
     const toModelMessage = (msg, maxLen) => {

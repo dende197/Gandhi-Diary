@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
         });
 
     } catch (e) {
-        console.error('profile-raw debug error:', e);
+        console.error('profile-raw debug error:', e && e.message ? e.message : e);
         res.status(500).json({ success: false, error: e.message || 'Internal server error' });
     }
 }
