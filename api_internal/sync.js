@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const body = (req.body && typeof req.body === 'object') ? req.body : {};
+    const body = getRequestBody(req);
     const school = (body.schoolCode || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
     const password = body.password || '';

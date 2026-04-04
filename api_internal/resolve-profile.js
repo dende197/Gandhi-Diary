@@ -1,11 +1,12 @@
-const { handleCors, debugLog, normalizeClass } = require('../lib/helpers');
+const { handleCors, debugLog, normalizeClass, getRequestBody } = require('../lib/helpers');
 const { AdvancedArgo, resolveIdentityForProfile } = require('../lib/argo');
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { schoolCode, username, password, profileIndex } = req.body;
+    const body = getRequestBody(req);
+    const { schoolCode, username, password, profileIndex } = body;
     const school = (schoolCode || '').trim().toUpperCase();
     const user = (username || '').trim().toLowerCase();
     const idx = parseInt(profileIndex) || 0;

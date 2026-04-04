@@ -1,5 +1,5 @@
 const { getSupabase } = require('../../lib/supabase');
-const { handleCors, verifySessionToken } = require('../../lib/helpers');
+const { handleCors, verifySessionToken, normalizeUserIdParam, getRequestBody } = require('../../lib/helpers');
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
     const { user_id } = req.query;
     if (!user_id) return res.status(400).json({ success: false, error: 'user_id mancante' });
 
-    const userId = decodeURIComponent(user_id).toLowerCase().replace(/\s+/g, '');
+    const userId = normalizeUserIdParam(user_id);
 
     if (!verifySessionToken(req, userId)) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
@@ -34,7 +34,8 @@ module.exports = async function handler(req, res) {
 
     // POST: Create a new manual verifica
     if (req.method === 'POST') {
-        const { subject, date, type, args } = req.body;
+        const body = getRequestBody(req);
+        const { subject, date, type, args } = body;
         if (!subject || !date || !type) {
             return res.status(400).json({ success: false, error: 'Mancano campi obbligatori' });
         }
@@ -55,7 +56,8 @@ module.exports = async function handler(req, res) {
 
     // PUT: Update done status or date
     if (req.method === 'PUT') {
-        const { id, done, date, subject, type, args } = req.body;
+        const body = getRequestBody(req);
+        const { id, done, date, subject, type, args } = body;
         if (!id) return res.status(400).json({ success: false, error: 'ID verifica mancante' });
 
         const updates = {};
@@ -83,7 +85,8 @@ module.exports = async function handler(req, res) {
 
     // DELETE: Remove a manual verifica
     if (req.method === 'DELETE') {
-        const { id } = req.body || req.query;
+        const body = getRequestBody(req);
+        const { id } = body.id ? body : (req.query || {});
         if (!id) return res.status(400).json({ success: false, error: 'ID verifica mancante' });
 
         try {

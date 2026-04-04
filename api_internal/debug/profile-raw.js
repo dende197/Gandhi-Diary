@@ -1,4 +1,4 @@
-const { handleCors, DEBUG_MODE } = require('../../lib/helpers');
+const { handleCors, DEBUG_MODE, getRequestBody } = require('../../lib/helpers');
 const { AdvancedArgo } = require('../../lib/argo');
 
 module.exports = async function handler(req, res) {
@@ -9,7 +9,8 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ success: false, error: 'Debug endpoint disponibile solo con DEBUG_MODE=true' });
     }
 
-    const { schoolCode, username, password, profileIndex } = req.body;
+    const body = getRequestBody(req);
+    const { schoolCode, username, password, profileIndex } = body;
     const school = (schoolCode || '').trim().toUpperCase();
     const user = (username || '').trim().toLowerCase();
     const idx = parseInt(profileIndex) || 0;

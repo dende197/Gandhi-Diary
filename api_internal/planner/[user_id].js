@@ -1,4 +1,4 @@
-const { handleCors, parseJsonb, verifySessionToken } = require('../../lib/helpers');
+const { handleCors, parseJsonb, verifySessionToken, normalizeUserIdParam, getRequestBody } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
 
 module.exports = async function handler(req, res) {
@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
     const { user_id } = req.query;
     if (!user_id) return res.status(400).json({ success: false, error: 'user_id mancante' });
 
-    const userId = decodeURIComponent(user_id).toLowerCase().replace(/\s+/g, '');
+    const userId = normalizeUserIdParam(user_id);
 
     if (!verifySessionToken(req, userId)) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
@@ -60,7 +60,7 @@ module.exports = async function handler(req, res) {
 
     // PUT
     if (req.method === 'PUT') {
-        const body = req.body || {};
+        const body = getRequestBody(req);
 
         // Embed stressVents into stress_levels as __vents key (no separate DB column needed)
         const stressLevels = body.stressLevels || body.stress_levels || {};

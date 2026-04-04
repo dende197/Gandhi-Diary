@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken, isSessionSecurityConfigured
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken, isSessionSecurityConfigured, getRequestBody
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const { setArgoCredentials } = require('../lib/session-vault');
@@ -20,7 +20,7 @@ module.exports = async function handler(req, res) {
         });
     }
 
-    const body = req.body;
+    const body = getRequestBody(req);
     const school = (body.schoolCode || body.school || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
     const password = body.password;

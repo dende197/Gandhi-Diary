@@ -1,4 +1,4 @@
-const { handleCors, debugLog, verifySessionToken, normalizeUserId } = require('../../lib/helpers');
+const { handleCors, verifySessionToken, normalizeUserId, getRequestBody } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
 
 module.exports = async function handler(req, res) {
@@ -9,7 +9,8 @@ module.exports = async function handler(req, res) {
     if (!supabase) return res.status(500).json({ success: false, error: 'Supabase non configurato' });
 
     try {
-        const { userId, name, class: className, avatar, specialization } = req.body;
+        const body = getRequestBody(req);
+        const { userId, name, class: className, avatar, specialization } = body;
         if (!userId) return res.status(400).json({ success: false, error: 'userId mancante' });
 
         const normalizedId = normalizeUserId(userId);
