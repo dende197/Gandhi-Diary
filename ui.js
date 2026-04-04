@@ -379,7 +379,12 @@ window.navigateSubject = function (subjName) {
     state._scrollTopAfterRender = true;
     window.scrollTo({ top: 0, behavior: 'auto' });
     let didTransition = false;
+    let fallbackTimer = null;
     const completeTransition = () => {
+        if (fallbackTimer) {
+            clearTimeout(fallbackTimer);
+            fallbackTimer = null;
+        }
         if (didTransition) return;
         didTransition = true;
         state.activeSubject = subjName;
@@ -390,7 +395,7 @@ window.navigateSubject = function (subjName) {
         gsap.to(currentView, {
             opacity: 0, y: -8, scale: 0.99, duration: NAVIGATE_SUBJECT_EXIT_MS / 1000, ease: 'power2.in', overwrite: 'auto', onComplete: completeTransition
         });
-        setTimeout(completeTransition, NAVIGATE_SUBJECT_EXIT_MS + NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS);
+        fallbackTimer = setTimeout(completeTransition, NAVIGATE_SUBJECT_EXIT_MS + NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS);
     } else {
         completeTransition();
     }
@@ -408,11 +413,13 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
     try {
         subjectName = decodeURIComponent(rawSubject);
         // Some inline handlers can pass an already-encoded payload again after intermediate transformations.
-        // Attempt one extra decode only when decoding actually changes the value.
-        try {
-            const maybeDoubleDecoded = decodeURIComponent(subjectName);
-            if (maybeDoubleDecoded !== subjectName) subjectName = maybeDoubleDecoded;
-        } catch (_) { }
+        // Attempt one extra decode only when the original payload still contains encoded percent markers (%25...).
+        if (/%25/i.test(rawSubject)) {
+            try {
+                const maybeDoubleDecoded = decodeURIComponent(subjectName);
+                if (maybeDoubleDecoded !== subjectName) subjectName = maybeDoubleDecoded;
+            } catch (_) { }
+        }
     } catch (_) {
         subjectName = rawSubject;
     }
