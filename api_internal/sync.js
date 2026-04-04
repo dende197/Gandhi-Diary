@@ -18,6 +18,9 @@ module.exports = async function handler(req, res) {
     const username = (body.username || '').trim().toLowerCase();
     const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
+    if (!school || !username) {
+        return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
+    }
     const pidForAuth = generatePid(school, username, profileIndex);
     if (!verifySessionToken(req, pidForAuth)) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
@@ -25,10 +28,6 @@ module.exports = async function handler(req, res) {
 
     try {
         debugLog('SYNC REQUEST', { school, profileIndex });
-
-        if (!school || !username) {
-            return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
-        }
 
         const credentialKey = generatePid(school, username, profileIndex);
         const fromVault = getArgoCredentials(credentialKey);

@@ -94,7 +94,7 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ success: false, error: 'Google OAuth non configurato' });
     }
     if (!REDIRECT_URI) {
-        return res.status(500).json({ success: false, error: 'GOOGLE_REDIRECT_URI is not configured' });
+        return res.status(500).json({ success: false, error: 'GOOGLE_REDIRECT_URI non configurato' });
     }
     if (!CRON_SECRET) {
         return res.status(500).json({ success: false, error: 'CRON_SECRET non configurato' });

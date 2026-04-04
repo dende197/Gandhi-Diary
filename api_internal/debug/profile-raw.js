@@ -50,6 +50,7 @@ module.exports = async function handler(req, res) {
         });
 
     } catch (e) {
+        console.error('profile-raw debug error:', e);
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 }

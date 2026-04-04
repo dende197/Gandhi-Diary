@@ -86,7 +86,7 @@ module.exports = async function handler(req, res) {
     // DELETE: Remove a manual verifica
     if (req.method === 'DELETE') {
         const body = getRequestBody(req);
-        const { id } = body.id ? body : (req.query || {});
+        const id = body.id || (req.query && req.query.id);
         if (!id) return res.status(400).json({ success: false, error: 'ID verifica mancante' });
 
         try {

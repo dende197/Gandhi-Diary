@@ -745,7 +745,7 @@ function showToast(message, type = 'success', customBackground = '') {
     iconEl.className = `ph-bold ${icon}`;
     iconEl.style.marginRight = '8px';
     toast.appendChild(iconEl);
-    toast.appendChild(document.createTextNode(String(message ?? '')));
+    toast.appendChild(document.createTextNode(message ?? ''));
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -5143,7 +5143,8 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Keep payload below the typical JSON body size tolerated by Vercel/serverless handlers to avoid 413 responses.
+    // Keep payload safely below common serverless body ceilings (~1MB), using 120KB as conservative guardrail
+    // because request metadata/headers and serialization variance can still trigger 413 near higher thresholds.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
