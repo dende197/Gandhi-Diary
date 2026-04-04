@@ -9,6 +9,17 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+function escapeJsSingleQuote(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+}
+
 // --- AGENDA SEARCH & FILTER HELPERS ---
 setInterval(() => {
     const clock = document.getElementById('topbar-clock');
@@ -88,6 +99,12 @@ function hasPlannedTasks(plannedTasks) {
     if (!plannedTasks || typeof plannedTasks !== 'object') return false;
     return Object.values(plannedTasks).some(ids => Array.isArray(ids) && ids.length > 0);
 }
+
+window._truncateWithEllipsis = function truncateWithEllipsis(value, max = 180) {
+    const txt = String(value ?? '').replace(/\s+/g, ' ').trim();
+    if (!txt) return '';
+    return txt.length > max ? `${txt.slice(0, max)}…` : txt;
+};
 
 function getAgendaCacheKey() {
     try {
@@ -714,6 +731,8 @@ function showToast(message, type = 'success', customBackground = '') {
     const icon = toastIconByType[typeValue] || toastIconByType.success;
 
     const toast = document.createElement('div');
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', typeValue === 'error' ? 'assertive' : 'polite');
     toast.id = 'g-toast';
     toast.style = `
                 position: fixed;
@@ -730,7 +749,11 @@ function showToast(message, type = 'success', customBackground = '') {
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
             `;
-    toast.innerHTML = `<i class="ph-bold ${icon}" style="margin-right:8px;"></i>` + message;
+    const iconEl = document.createElement('i');
+    iconEl.className = `ph-bold ${icon}`;
+    iconEl.style.marginRight = '8px';
+    toast.appendChild(iconEl);
+    toast.appendChild(document.createTextNode(message || ''));
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -912,14 +935,14 @@ function renderHomeTaskListHtml(homeTaskData) {
         const abbr = getSubjectAbbrev(t.subject);
         const key = abbr.toLowerCase();
         return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${t.id}')">
-                <div data-task-toggle="${t.id}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                <div data-task-toggle="${escapeHtml(t.id)}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
                 <span style="font-family:\'JetBrains Mono\',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
                 <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
                 ${isUserGeneratedTaskId(t.id) ? `
-                <button onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
+                <button onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
                     <i class="ph-bold ph-trash" style="font-size:10px; color:#FF3B30;"></i>
                 </button>` : ''}
               </div>`;
@@ -1280,7 +1303,7 @@ function renderCalendarWeekList(weekStart) {
             const abbr = getSubjectAbbrev(t.subject);
             const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim();
             return `
-                        <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${t.id}')">
+                        <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
                             <div class="asw-task-stripe" style="background:${t.done ? '#C8C5C0' : subjColor};"></div>
                             <div class="asw-task-body">
                                 <div class="asw-task-meta">
@@ -1293,7 +1316,7 @@ function renderCalendarWeekList(weekStart) {
                                     ${t.done ? '<i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i>' : ''}
                                 </div>
                                 ${isUserGeneratedTaskId(t.id) ? `
-                                <button class="asw-delete-btn" onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" aria-label="Elimina attività">
+                                <button class="asw-delete-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" aria-label="Elimina attività">
                                     <i class="ph-bold ph-trash" style="font-size:11px;"></i>
                                 </button>` : ''}
                             </div>
@@ -1501,11 +1524,11 @@ function renderHome() {
           <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (oreAssenza / ((state.giorniScuola || 200) * 5)) * 100)}%; background:#EF4444; border-radius:100px;"></div></div>
         </div>
 
-        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${lastCirc.id}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${escapeJsSingleQuote(lastCirc.id)}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
           <div>
             <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ULTIMA CIRCOLARE</div>
             <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
-            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${lastCirc.titolo}</div>
+            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${escapeHtml(lastCirc.titolo)}</div>
           </div>
           <span style="display:inline-flex; margin-top:14px; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
         </div>
@@ -2854,10 +2877,10 @@ function renderDayDetailModal(dateStr) {
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(displayText)}</div>
                                         </div>
                                         <div style="padding:12px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;">
-                                            <button onclick="toggleTask('${t.id}'); renderDayDetailModal('${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
+                                            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); renderDayDetailModal('${escapeJsSingleQuote(dateStr)}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
                                                 <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'white' : '#C8C5C0'};"></i>
                                             </button>
-                                            ${isUserGeneratedTaskId(t.id) ? `<button onclick="deleteCalendarTask('${t.id}', '${dateStr}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
+                                            ${isUserGeneratedTaskId(t.id) ? `<button onclick="deleteCalendarTask('${escapeJsSingleQuote(t.id)}', '${escapeJsSingleQuote(dateStr)}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
                                                 <i class="ph-bold ph-trash" style="font-size:14px; color:#FF3B30;"></i>
                                             </button>` : ''}
                                         </div>
@@ -3293,11 +3316,11 @@ function renderWeeklyAgenda() {
                         </div>
                         
                         <div class="agenda-task-actions" style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
-                            <div class="agenda-task-action-btn" data-task-toggle="${t.id}" onclick="toggleTask('${t.id}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                             ${isUserGeneratedTaskId(t.id) ? `
-                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${t.id}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
+                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
                                 <i class="ph-bold ph-trash" style="font-size:13px;"></i>
                             </button>` : ''}
                         </div>
@@ -5031,19 +5054,26 @@ window.sendAIChat = async function () {
         return true;
     }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
 
+    const truncateWithEllipsis = window._truncateWithEllipsis;
     const thisWeekTasks = [], laterTasks = [];
     argoTasks.forEach(t => {
         const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
         const dueDateStr = dueDate ? dueDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
-        const entry = `- [${t.subject}] ${t.text} → consegna: ${dueDateStr}`;
+        const entry = `- [${truncateWithEllipsis(t.subject, 40) || 'Materia'}] ${truncateWithEllipsis(t.text, 160)} → consegna: ${dueDateStr}`;
         (dueDate && dueDate <= endOfWeek) ? thisWeekTasks.push(entry) : laterTasks.push(entry);
     });
 
-    const exams = (state.exams || []).map(ex => `- ${ex.type} di ${ex.subject} il ${ex.date} (${ex.topic || 'gen.'})`).join('\n');
-    const verifiche = (state.verifiche || []).map(v => `- ${v.materia || v.subject || 'Materia'}: ${v.argomento || v.topic || 'N/D'} (${v.data || v.date || 'data non indicata'})`).join('\n');
-    const reminders = (state.reminders || state.promemoria || []).slice(0, 12).map(r => `- ${r.text || r.title || r.descrizione || r.oggetto || 'Promemoria'}`).join('\n');
-    const backlog = (state.backlog || []).slice(0, 12).map(b => `- ${b.subject || 'Generale'}: ${b.text || b.title || b.task || ''}`).join('\n');
-    const grades = (state.voti || []).slice(0, 25).map(v => `- ${v.materia || v.subject || 'Materia'}: ${v.valore || v.value || 'N/D'} (${v.data || v.date || 'data n/d'})`).join('\n');
+    const exams = (state.exams || []).slice(0, 10).map(ex => {
+        const typeText = truncateWithEllipsis(ex.type, 32);
+        const subjectText = truncateWithEllipsis(ex.subject, 40);
+        const dateText = truncateWithEllipsis(ex.date, 24);
+        const topicText = truncateWithEllipsis(ex.topic || 'gen.', 60);
+        return `- ${typeText} di ${subjectText} il ${dateText} (${topicText})`;
+    }).join('\n');
+    const verifiche = (state.verifiche || []).slice(0, 14).map(v => `- ${truncateWithEllipsis(v.materia || v.subject || 'Materia', 40)}: ${truncateWithEllipsis(v.argomento || v.topic || 'N/D', 110)} (${truncateWithEllipsis(v.data || v.date || 'data non indicata', 24)})`).join('\n');
+    const reminders = (state.reminders || state.promemoria || []).slice(0, 10).map(r => `- ${truncateWithEllipsis(r.text || r.title || r.descrizione || r.oggetto || 'Promemoria', 140)}`).join('\n');
+    const backlog = (state.backlog || []).slice(0, 10).map(b => `- ${truncateWithEllipsis(b.subject || 'Generale', 40)}: ${truncateWithEllipsis(b.text || b.title || b.task || '', 120)}`).join('\n');
+    const grades = (state.voti || []).slice(0, 18).map(v => `- ${truncateWithEllipsis(v.materia || v.subject || 'Materia', 40)}: ${truncateWithEllipsis(v.valore || v.value || 'N/D', 10)} (${truncateWithEllipsis(v.data || v.date || 'data n/d', 24)})`).join('\n');
     const attendanceSummary = state.assenzeData ? [
         `Assenze totali: ${state.assenzeData.totaleAssenze ?? 0}`,
         `Ritardi totali: ${state.assenzeData.totaleRitardi ?? 0}`,
@@ -5052,8 +5082,11 @@ window.sendAIChat = async function () {
         `Da giustificare: ${state.assenzeData.daGiustificare ?? 0}`
     ].join(' | ') : 'Nessun dato presenze/assenze disponibile';
 
-    const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).map(([date, ids]) => {
-        const dayTasks = ids.map(id => { const t = (state.tasks || []).find(x => x.id === id); return t ? `[${t.subject}] ${t.text}` : null; }).filter(Boolean);
+    const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).slice(0, 8).map(([date, ids]) => {
+        const dayTasks = ids.slice(0, 6).map(id => {
+            const t = (state.tasks || []).find(x => x.id === id);
+            return t ? `[${truncateWithEllipsis(t.subject, 32)}] ${truncateWithEllipsis(t.text, 80)}` : null;
+        }).filter(Boolean);
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
@@ -5103,11 +5136,45 @@ REGOLE OPERATIVE:
 4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
 5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.`;
 
-    const contents = [{ role: 'user', parts: [{ text: systemContext }] }, { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }];
-    state.aiChatHistory.forEach(msg => contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));
+    const clampedSystemContext = truncateWithEllipsis(systemContext, 9000);
+    const contents = [
+        { role: 'user', parts: [{ text: clampedSystemContext }] },
+        { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
+    ];
+    const toModelMessage = (msg, maxLen) => {
+        const role = msg.role === 'user' ? 'user' : 'model';
+        const textValue = truncateWithEllipsis(msg.text, maxLen);
+        if (!textValue) return null;
+        return { role, parts: [{ text: textValue }] };
+    };
+    const recentHistory = (state.aiChatHistory || []).slice(-12);
+    recentHistory.forEach((msg) => {
+        const mapped = toModelMessage(msg, 700);
+        if (mapped) contents.push(mapped);
+    });
+
+    // Vercel request-body limits are far above this value and can vary by plan/configuration; we intentionally cap client payload at 120KB.
+    // This guards against extra bytes from JSON encoding, HTTP headers, and future growth of system prompt/chat history.
+    const payloadSizeLimitBytes = 120 * 1024; // 120KB conservative client-side cap to reduce edge-case 413 errors.
+    let payload = { messages: contents };
+    const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
+    if (payloadSize > payloadSizeLimitBytes) {
+        const trimmedHistory = recentHistory.slice(-6).map(msg => toModelMessage(msg, 400)).filter(Boolean);
+        payload = {
+            messages: [
+                { role: 'user', parts: [{ text: truncateWithEllipsis(systemContext, 5000) }] },
+                { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] },
+                ...trimmedHistory
+            ]
+        };
+    }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contents }) });
+        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
         const data = await response.json();
         if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
             const aiText = data.candidates[0].content.parts[0].text;
@@ -5429,16 +5496,16 @@ function renderCircolariView() {
 
         <div style="display: flex; flex-direction: column; gap: 16px;">
             ${toShow.length ? toShow.map(c => `
-            <div class="card" onclick="mostraCircolare('${c.id}')" style="cursor: pointer; padding: 24px; border-radius: 18px; display: flex; align-items: center; gap: 20px; transition: all 0.2s;">
+            <div class="card" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" style="cursor: pointer; padding: 24px; border-radius: 18px; display: flex; align-items: center; gap: 20px; transition: all 0.2s;">
                 <div style="width: 52px; height: 52px; border-radius: 12px; background: #F0F0F3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <i class="ph-bold ph-file-text" style="font-size: 24px; color: #141414;"></i>
                 </div>
                 <div style="flex: 1;">
                     <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: var(--accent-warm); text-transform: uppercase; margin-bottom: 4px;">
-                        Circolare N. ${c.numero} &middot; ${c.data}
+                        Circolare N. ${escapeHtml(c.numero)} &middot; ${escapeHtml(c.data)}
                     </div>
                     <div style="font-size: 16px; font-weight: 700; color: #141414; line-height: 1.4;">
-                        ${c.titolo}
+                        ${escapeHtml(c.titolo)}
                     </div>
                 </div>
                 <i class="ph-bold ph-caret-right" style="font-size: 20px; color: #BCB8B2;"></i>

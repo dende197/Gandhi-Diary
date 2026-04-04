@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const pdfParse = require('pdf-parse');
-const { handleCors, USER_AGENT, debugLog } = require('../../lib/helpers');
+const { handleCors, USER_AGENT, getRequestBody } = require('../../lib/helpers');
 const { getGroq } = require('../../lib/groq');
 const { getSintesiFromCache, setSintesiInCache } = require('../../lib/sintesiCache');
 
@@ -31,7 +31,8 @@ module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { link, id } = req.body;
+    const body = getRequestBody(req);
+    const { link, id } = body;
     if (!link) return res.status(400).json({ success: false, error: 'Link mancante', errorType: 'badRequest' });
 
     // SSRF protection: only allow links from the configured school domain over HTTPS.

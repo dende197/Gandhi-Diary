@@ -1,4 +1,4 @@
-const { handleCors, verifySessionToken } = require('../../lib/helpers');
+const { handleCors, verifySessionToken, normalizeUserId, normalizeUserIdParam } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
 
 module.exports = async function handler(req, res) {
@@ -10,12 +10,13 @@ module.exports = async function handler(req, res) {
 
     const { user_id } = req.query;
 
-    if (!verifySessionToken(req, (user_id || '').toLowerCase().replace(/\s+/g, ''))) {
+    const normalizedUserId = normalizeUserIdParam(user_id);
+    if (!verifySessionToken(req, normalizedUserId)) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
     }
 
     try {
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', user_id).single();
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', normalizeUserId(user_id)).single();
         if (error?.code === 'PGRST116') return res.status(404).json({ success: false, error: 'Profilo non trovato' }); // PGRST116 = no rows returned
         if (error) throw error;
 

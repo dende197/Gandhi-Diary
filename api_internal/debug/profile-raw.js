@@ -1,4 +1,4 @@
-const { handleCors, DEBUG_MODE } = require('../../lib/helpers');
+const { handleCors, DEBUG_MODE, getRequestBody } = require('../../lib/helpers');
 const { AdvancedArgo } = require('../../lib/argo');
 
 module.exports = async function handler(req, res) {
@@ -9,7 +9,8 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ success: false, error: 'Debug endpoint disponibile solo con DEBUG_MODE=true' });
     }
 
-    const { schoolCode, username, password, profileIndex } = req.body;
+    const body = getRequestBody(req);
+    const { schoolCode, username, password, profileIndex } = body;
     const school = (schoolCode || '').trim().toUpperCase();
     const user = (username || '').trim().toLowerCase();
     const idx = parseInt(profileIndex) || 0;
@@ -26,6 +27,7 @@ module.exports = async function handler(req, res) {
 
         const targetIdx = (idx < 0 || idx >= profiles.length) ? 0 : idx;
         const profile = profiles[targetIdx];
+        // Debug payload intentionally limited to scheda.classe for consistent diagnostics across profiles.
         const rawData = profile.raw || {};
         const scheda = rawData.scheda || {};
         const classeObj = scheda.classe || {};
@@ -36,13 +38,19 @@ module.exports = async function handler(req, res) {
             totalProfiles: profiles.length,
             profile: { name: profile.name, class: profile.class, school: profile.school, idSoggetto: profile.idSoggetto },
             rawData: {
-                classe: { desDenominazione: classeObj.desDenominazione, desSezione: classeObj.desSezione, desCorso: classeObj.desCorso, corso: classeObj.corso, fullClasseObject: classeObj },
-                scheda,
-                fullRaw: rawData
+                scheda: {
+                    classe: {
+                        desDenominazione: classeObj.desDenominazione,
+                        desSezione: classeObj.desSezione,
+                        desCorso: classeObj.desCorso,
+                        corso: classeObj.corso
+                    }
+                }
             }
         });
 
     } catch (e) {
-        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+        console.error('profile-raw debug error:', e?.message || e);
+        res.status(500).json({ success: false, error: e.message || 'Internal server error' });
     }
 }

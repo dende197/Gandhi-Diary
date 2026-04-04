@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -13,20 +13,25 @@ module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const body = req.body;
+    const body = getRequestBody(req);
     const school = (body.schoolCode || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
     const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
+    if (!school || !username) {
+        return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
+    }
+    const pidForAuth = generatePid(school, username, profileIndex);
+    if (!verifySessionToken(req, pidForAuth)) {
+        return res.status(403).json({ success: false, error: 'Non autorizzato' });
+    }
 
     try {
         debugLog('SYNC REQUEST', { school, profileIndex });
 
-        if (!school || !username) {
-            return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
-        }
-
         const credentialKey = generatePid(school, username, profileIndex);
+        // Password may be omitted client-side: credentials are resolved from session-vault via getArgoCredentials.
+        // If neither body password nor vault password exists, sync explicitly fails with 401.
         const fromVault = getArgoCredentials(credentialKey);
         const user = username || fromVault?.username;
         const pwd = password || fromVault?.password;
