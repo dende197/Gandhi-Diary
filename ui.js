@@ -741,7 +741,10 @@ function showToast(message, type = 'success', customBackground = '') {
                 box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
             `;
-    toast.innerHTML = `<i class="ph-bold ${icon}" style="margin-right:8px;"></i>`;
+    const iconEl = document.createElement('i');
+    iconEl.className = `ph-bold ${icon}`;
+    iconEl.style.marginRight = '8px';
+    toast.appendChild(iconEl);
     toast.appendChild(document.createTextNode(String(message ?? '')));
     document.body.appendChild(toast);
 
@@ -5044,7 +5047,7 @@ window.sendAIChat = async function () {
     }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
 
     const clampText = (value, max = 180) => {
-        const txt = String(value || '').replace(/\s+/g, ' ').trim();
+        const txt = String(value ?? '').replace(/\s+/g, ' ').trim();
         if (!txt) return '';
         return txt.length > max ? `${txt.slice(0, max - 1)}…` : txt;
     };
@@ -5140,6 +5143,7 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
+    // Keep payload below the typical JSON body size tolerated by Vercel/serverless handlers to avoid 413 responses.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
