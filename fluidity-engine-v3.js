@@ -13,6 +13,27 @@
 (function fluidityEngineV3() {
   console.log('🚀 G-Connect Fluidity Engine v3.0 - Initializing...');
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function escapeJsSingleQuote(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+  }
+
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;
   const RENDER_MIN_GAP = 50; // ms: impedisce doppi render da burst asincroni
@@ -235,19 +256,19 @@
         // Update chirurgico cross-fade
         gsap.to(scroll, { opacity: 0, duration: 0.15, onComplete: () => {
           scroll.innerHTML = (state.circolari || []).map(c => `
-            <div onclick="mostraCircolare('${c.id}')" style="cursor:pointer; padding:18px; border-radius:20px;
+            <div onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" style="cursor:pointer; padding:18px; border-radius:20px;
                 background:var(--bg-card); border:1px solid rgba(0,0,0,0.06);
                 display:flex; flex-direction:column; gap:8px; min-width: 220px; max-width: 240px; flex-shrink: 0; scroll-snap-align: start;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(99,102,241,0.04);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${c.numero}</div>
+                    <div style="font-size:11px; color:var(--accent-warm); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">N. ${escapeHtml(c.numero)}</div>
                     ${c.sintesi ? '<i class="ph-fill ph-check-circle" style="color:var(--green); font-size:14px;"></i>' : ''}
                 </div>
                 <div style="font-size:15px; font-weight:700; color:var(--text-primary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
-                    ${c.titolo}
+                    ${escapeHtml(c.titolo)}
                 </div>
                 <div style="font-size:11px; color:var(--text-dim); margin-top:auto; font-weight:600;">
-                    <i class="ph ph-calendar-blank" style="vertical-align: middle; margin-right:4px;"></i> ${c.data}
+                    <i class="ph ph-calendar-blank" style="vertical-align: middle; margin-right:4px;"></i> ${escapeHtml(c.data)}
                 </div>
             </div>
           `).join('');

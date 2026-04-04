@@ -14,7 +14,7 @@ const { getSupabase } = require('../lib/supabase');
 // --- Google OAuth2 Setup ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback';
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 const BEARER_PREFIX = 'Bearer ';
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -92,6 +92,9 @@ module.exports = async function handler(req, res) {
     }
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
         return res.status(500).json({ success: false, error: 'Google OAuth non configurato' });
+    }
+    if (!REDIRECT_URI) {
+        return res.status(500).json({ success: false, error: 'GOOGLE_REDIRECT_URI non configurato' });
     }
     if (!CRON_SECRET) {
         return res.status(500).json({ success: false, error: 'CRON_SECRET non configurato' });
