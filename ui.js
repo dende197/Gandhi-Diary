@@ -747,8 +747,8 @@ function showModal(html, className = '') {
     const container = getModalContainer();
     if (!container) return;
     container.innerHTML = `
-            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-                <div class="modal-content ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:90vh;overflow-y:auto;width:calc(100% - 32px);">
+            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
+                <div class="modal-content ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;">
                     ${html}
                 </div>
             </div>
@@ -1070,6 +1070,36 @@ function updateHomeView() {
     const focusCard = document.getElementById('home-focus-task-list');
     if (focusCard) {
         const focusData = getHomeTaskWidgetData();
+        const liveIds = new Set(focusData.tasks.map(t => t.id));
+
+        // Remove DOM rows for tasks that no longer exist
+        focusCard.querySelectorAll('[data-task-toggle]').forEach(cb => {
+            const taskId = cb.getAttribute('data-task-toggle');
+            if (!liveIds.has(taskId)) {
+                const row = cb.closest('div[style*="display:flex"]') || cb.parentElement;
+                if (row && row !== focusCard) {
+                    if (typeof gsap !== 'undefined') {
+                        gsap.to(row, { opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0, marginBottom: 0, duration: 0.2, ease: 'power2.in', onComplete: () => row.remove() });
+                    } else {
+                        row.remove();
+                    }
+                }
+            }
+        });
+
+        // Show empty message if no tasks remain after removal
+        setTimeout(() => {
+            const remaining = focusCard.querySelectorAll('[data-task-toggle]').length;
+            if (remaining === 0 && !focusCard.querySelector('[data-empty-msg]')) {
+                const empty = document.createElement('div');
+                empty.setAttribute('data-empty-msg', '1');
+                empty.style.cssText = 'font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;';
+                empty.textContent = focusData.emptyMessage || 'Nessun compito';
+                focusCard.appendChild(empty);
+            }
+        }, 220);
+
+        // Update done/undone state for remaining tasks
         focusData.tasks.forEach(t => {
             const cb = focusCard.querySelector(`[data-task-toggle="${t.id}"]`);
             const txt = focusCard.querySelector(`[data-task-text="${t.id}"]`);
@@ -1346,7 +1376,7 @@ function renderCalendarWeekList(weekStart) {
                             <div class="asw-task-body">
                                 <div class="asw-task-meta">
                                     <span class="asw-subject-badge" style="color:#D97706; background:rgba(255,159,10,0.1);">${escapeHtml(abbr)}</span>
-                                    <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml(v.tipo || 'VERIFICA')}</span>
+                                    <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml((()=>{const t=(v.tipo||'').toLowerCase().trim();return t==='scritta'?'SCRITTA':t==='orale'?'ORALE':'VERIFICA';})())}</span>
                                 </div>
                                 <div class="asw-task-text">${escapeHtml(v.text || v.subject)}</div>
                             </div>
@@ -2650,7 +2680,7 @@ function renderSubjectDetailView(subjectName) {
                             ${displayVal}
                         </div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${v.tipo || 'Valutazione'}</div>
+                            <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${(()=>{const t=(v.tipo||'').toLowerCase().trim();return t==='scritta'?'Scritta':t==='orale'?'Orale':t&&t!=='unknown'?v.tipo:'Valutazione';})()}</div>
                             <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #908C86; text-transform: uppercase;">${new Date(v.data || v.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
                         </div>
                         ${v.commento ? `<i class="ph-bold ph-chat-circle-dots" style="color: #007AFF; font-size: 22px; cursor: help;" title="${v.commento}"></i>` : ''}
@@ -2944,7 +2974,7 @@ function renderDayDetailModal(dateStr) {
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
                                                 <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.08em; background:${colorWithAlpha(color, 0.12)}; padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || getSubjectAbbrev(v.subject))}</span>
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(v.tipo || 'VERIFICA')}</span>
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml((()=>{const t=(v.tipo||'').toLowerCase().trim();return t==='scritta'?'SCRITTA':t==='orale'?'ORALE':'VERIFICA';})())}</span>
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word;">${escapeHtml(v.text || v.subject)}</div>
                                         </div>
@@ -4963,9 +4993,9 @@ window.refreshPlanWeekModalContent = function () {
         return d >= now2w && d <= twoWeeksLater;
     });
     contentEl.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
-            <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase;">Pianifica Settimana</h2>
-            <button onclick="closeModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414; margin-left:14px;">
+        <div style="display: flex; align-items: center; margin-bottom: 24px; padding: 0 4px;">
+            <h2 style="margin:0; flex:1; min-width:0; font-family:'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Pianifica Settimana</h2>
+            <button onclick="closeModal()" style="flex-shrink:0; margin-left:auto; background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
