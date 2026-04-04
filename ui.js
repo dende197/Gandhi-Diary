@@ -1488,7 +1488,7 @@ function renderHome() {
     const daysToExam = currentVerifica ? Math.ceil((parseLocalDate(currentVerifica.data) - today) / 86400000) : null;
     const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia) : 'N/D';
     const examKey = examAbbr.toLowerCase();
-    const examTipo = currentVerifica?.tipo || 'unknown';
+    const examTipo = (currentVerifica?.tipo || '').toString().trim().toLowerCase();
     const examTipoLabel = examTipo === 'scritta' ? 'SCRITTA' : examTipo === 'orale' ? 'ORALE' : '';
     const verificheCount = allUpcoming.length;
 
@@ -1526,7 +1526,7 @@ function renderHome() {
 
       <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
       <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
-        <div class="card greeting-card" onclick="navigate('profile')" style="cursor:pointer; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border:none; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.15); position:relative;">
+        <div class="card greeting-card" onclick="window.scrollTo({ top: 0, behavior: 'auto' }); navigate('profile')" style="cursor:pointer; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border:none; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.15); position:relative;">
           <button onclick="event.stopPropagation(); if(confirm('Aggiornare la pagina ora?')) window.location.reload();" title="Aggiorna pagina" aria-label="Aggiorna pagina" style="position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:9px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; cursor:pointer;">
             <i class="ph-bold ph-arrow-clockwise" style="font-size:14px;"></i>
           </button>
@@ -2670,16 +2670,16 @@ function mostraAssenzeModal() {
     const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
 
     showModal(`
-            <div style="padding:24px; text-align: left;">
-                <header style="margin-bottom:24px;">
+            <div class="assenze-modal-shell" style="display:flex; flex-direction:column; text-align:left; max-height:82svh;">
+                <header class="assenze-modal-header" style="padding:24px 24px 16px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
                     <div style="display:flex; align-items:baseline; gap:12px;">
                         <h2 style="margin:0; font-size:36px; font-weight:800; color:#EF4444;">${percAssenza}%</h2>
                         <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(2)} ore totali</span>
                     </div>
                 </header>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+                <div class="assenze-modal-summary" style="padding:16px 24px 0; flex:0 0 auto;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
                     <div style="background:rgba(239, 68, 68, 0.05); padding:16px; border-radius:16px; border:1px solid rgba(239, 68, 68, 0.1);">
                         <div style="font-size:10px; color:#EF4444; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Assenze</div>
                         <div style="font-size:20px; font-weight:800;">${ad.totaleAssenze}</div>
@@ -2692,10 +2692,11 @@ function mostraAssenzeModal() {
                 <div style="margin:-10px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
                     ${ad.daGiustificare > 0 ? `Da giustificare: ${ad.daGiustificare}` : 'Tutti gli eventi risultano giustificati'}
                 </div>
+                </div>
 
+                <div class="assenze-modal-list-wrap" style="min-height:0; flex:1 1 auto; padding:0 24px 0; overflow:hidden;">
                 <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">Cronologia Eventi</div>
-                
-                <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
+                <div class="assenze-modal-list" style="height:100%; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
                     ${all.length === 0 ? `<div style="text-align:center; padding:30px; color:var(--text-dim); font-size:13px;">Nessun evento registrato</div>` :
             all.map(a => `
                         <div style="display:flex; align-items:center; gap:14px; padding:12px; background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid rgba(0,0,0,0.03);">
@@ -2725,10 +2726,12 @@ function mostraAssenzeModal() {
                         </div>
                       `).join('')}
                 </div>
-
-                <button onclick="closeModal()" style="width:100%; margin-top:24px; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+                </div>
+                <div class="assenze-modal-actions" style="padding:16px 24px 24px; border-top:1px solid rgba(0,0,0,0.06); background:rgba(255,255,255,0.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); flex:0 0 auto;">
+                    <button onclick="closeModal()" style="width:100%; height:48px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+                </div>
             </div>
-            `);
+            `, 'assenze-modal-fixed');
 }
 window.mostraAssenzeModal = mostraAssenzeModal;
 
@@ -2812,7 +2815,8 @@ window._navVerifica = function (dir) {
 
     const abbr = typeof getSubjectAbbrev === 'function' ? getSubjectAbbrev(v.materia) : (v.materia || '').substring(0, 3).toUpperCase();
     const key = abbr.toLowerCase();
-    const tipoLabel = v.tipo === 'scritta' ? 'SCRITTA' : v.tipo === 'orale' ? 'ORALE' : (v.tipo || '').toUpperCase();
+    const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
+    const tipoLabel = normalizedTipo === 'scritta' ? 'SCRITTA' : normalizedTipo === 'orale' ? 'ORALE' : '';
     const examDate = parseLocalDate(v.data);
     const daysLeft = Math.ceil((examDate - today) / 86400000);
     const desc = (v.text || v.materia || '').substring(0, 45);
@@ -3034,6 +3038,8 @@ function deleteCalendarTask(taskId, dateStr = '') {
         renderDayDetailModal(dateStr);
     }
     notifyPlannerChanged();
+    if (typeof updateHomeTaskFocusWidget === 'function') updateHomeTaskFocusWidget();
+    if (typeof updateHomeView === 'function') updateHomeView();
     if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
     if (typeof scheduleRender === 'function' && state.view === 'planner') scheduleRender(0);
 }
@@ -4959,7 +4965,7 @@ window.refreshPlanWeekModalContent = function () {
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
             <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase;">Pianifica Settimana</h2>
-            <button onclick="closeModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
+            <button onclick="closeModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414; margin-left:14px;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
