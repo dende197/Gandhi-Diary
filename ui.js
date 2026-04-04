@@ -2582,7 +2582,7 @@ function renderSubjectDetailView(subjectName) {
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">MEDIA</div>
                                 <div style="font-size: 24px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.02em;">${media.toFixed(2)}</div>
                             </div>
-                            <div onclick="promptSetGoal('${safeSubjectNameJs}')" style="cursor: pointer;">
+                            <div onclick="promptSetGoal(decodeURIComponent('${encodeURIComponent(subjectName)}'))" style="cursor: pointer;">
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">OBIETTIVO</div>
                                 <div style="font-size: 24px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 6px; letter-spacing: -0.02em;">
                                     ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 14px; color: #007AFF;"></i>
