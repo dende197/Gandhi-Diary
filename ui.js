@@ -371,38 +371,13 @@ window.switchPlannerView = function (view) {
     runSwap();
 };
 
-window.navigateSubject = function (subjName) {
-    const NAVIGATE_SUBJECT_EXIT_MS = 150;
-    const NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS = 70;
-    const root = document.getElementById('app');
-    const currentView = root ? root.querySelector('.view') : null;
-    state._scrollTopAfterRender = true;
-    window.scrollTo({ top: 0, behavior: 'auto' });
-    let didTransition = false;
-    let fallbackTimer = null;
-    const completeTransition = () => {
-        if (fallbackTimer) {
-            clearTimeout(fallbackTimer);
-            fallbackTimer = null;
-        }
-        if (currentView && typeof gsap !== 'undefined') gsap.killTweensOf(currentView);
-        if (didTransition) return;
-        didTransition = true;
-        state.activeSubject = subjName;
-        scheduleRender(0);
-    };
-    if (currentView && typeof gsap !== 'undefined') {
-        gsap.killTweensOf(currentView);
-        gsap.to(currentView, {
-            opacity: 0, y: -8, scale: 0.99, duration: NAVIGATE_SUBJECT_EXIT_MS / 1000, ease: 'power2.in', overwrite: 'auto', onComplete: completeTransition
-        });
-        fallbackTimer = setTimeout(completeTransition, NAVIGATE_SUBJECT_EXIT_MS + NAVIGATE_SUBJECT_FALLBACK_BUFFER_MS);
-    } else {
-        completeTransition();
-    }
+window.navigateSubject = window.navigateSubject || function (subjName) {
+    if (!subjName) return;
+    state.activeSubject = subjName;
+    scheduleRender(0);
 };
 
-window.handleGradeSubjectClick = function (subjectName) {
+window.handleGradeSubjectClick = window.handleGradeSubjectClick || function (subjectName) {
     state.view = 'voti';
     window.navigateSubject(subjectName);
     if (typeof closeModal === 'function') closeModal();
@@ -427,7 +402,7 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
     window.handleGradeSubjectClick(subjectName);
 };
 
-window.closeSubject = function () {
+window.closeSubject = window.closeSubject || function () {
     state.activeSubject = null;
     scheduleRender();
 };

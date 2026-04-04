@@ -17,13 +17,11 @@
 @keyframes liquidIn {
     0% {
         opacity: 0;
-        transform: scale(0.98) translateY(6px);
-        filter: blur(6px);
+        transform: translate3d(0, 6px, 0) scale(0.98);
     }
     100% {
         opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: blur(0);
+        transform: translate3d(0, 0, 0) scale(1);
     }
 }
 
@@ -99,13 +97,11 @@
 @keyframes sectionIn {
   from { 
     opacity: 0; 
-    transform: translateY(10px) translateZ(0);
-    filter: blur(2px);
+    transform: translate3d(0, 10px, 0);
   }
   to { 
     opacity: 1; 
-    transform: translateY(0) translateZ(0);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -131,6 +127,8 @@
 
 .section-animate {
     animation: sectionIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .mic-active {
@@ -139,4 +137,15 @@
 
 .msg-appear {
     animation: msg-appear 0.25s ease forwards;
+}
+
+.view {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+.anim-done {
+    will-change: auto !important;
 }

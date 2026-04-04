@@ -1,5 +1,5 @@
 /* ================================================================
-   G-CONNECT — FLUIDITY ENGINE v3.0 (ULTIMATE CONSOLIDATION)
+   G-CONNECT — FLUIDITY ENGINE v3.1 (ULTIMATE CONSOLIDATION)
    
    Questo script unifica e sostituisce:
    - perf-patch.js
@@ -11,12 +11,82 @@
    ================================================================ */
 
 (function fluidityEngineV3() {
-  console.log('🚀 G-Connect Fluidity Engine v3.0 - Initializing...');
+  console.log('🚀 G-Connect Fluidity Engine v3.1 - Initializing...');
 
   const escapeHtml = (str) =>
     (typeof window.escapeHtml === 'function' ? window.escapeHtml(str) : String(str ?? ''));
   const escapeJsSingleQuote = (str) =>
     (typeof window.escapeJsSingleQuote === 'function' ? window.escapeJsSingleQuote(str) : String(str ?? ''));
+
+  function _setWillChange(el, enabled) {
+    if (!el) return;
+    el.style.willChange = enabled ? 'transform, opacity' : 'auto';
+  }
+
+  function _directionVector(direction, distance = 10) {
+    switch (direction) {
+      case 'left': return { x: -distance, y: 0 };
+      case 'right': return { x: distance, y: 0 };
+      case 'down': return { x: 0, y: distance };
+      case 'up':
+      default:
+        return { x: 0, y: -distance };
+    }
+  }
+
+  function _exitCurrent(direction = 'up', opts = {}) {
+    const { duration = 0.14, distance = 10, scale = 0.995 } = opts;
+    const root = document.getElementById('app');
+    const currentView = root ? root.querySelector('.view') : null;
+    if (!currentView || typeof gsap === 'undefined') return Promise.resolve();
+
+    const to = _directionVector(direction, distance);
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        gsap.killTweensOf(currentView);
+        _setWillChange(currentView, false);
+        resolve();
+      };
+      _setWillChange(currentView, true);
+      gsap.killTweensOf(currentView);
+      gsap.to(currentView, {
+        opacity: 0,
+        x: to.x,
+        y: to.y,
+        scale,
+        duration,
+        ease: 'power2.in',
+        overwrite: 'auto',
+        onComplete: finish
+      });
+      setTimeout(finish, Math.ceil(duration * 1000) + 80);
+    });
+  }
+
+  function _enterView(direction = 'down', opts = {}) {
+    const { duration = 0.24, distance = 10, scale = 1 } = opts;
+    const viewEl = document.querySelector('.view');
+    if (!viewEl || typeof gsap === 'undefined') return;
+    const from = _directionVector(direction, distance);
+    _setWillChange(viewEl, true);
+    gsap.killTweensOf(viewEl);
+    gsap.fromTo(viewEl,
+      { opacity: 0, x: from.x, y: from.y, scale },
+      {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        scale: 1,
+        duration,
+        ease: 'power3.out',
+        overwrite: 'auto',
+        onComplete: () => _setWillChange(viewEl, false)
+      }
+    );
+  }
 
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;
@@ -78,9 +148,6 @@
         window.history.pushState(null, '', targetHash);
       }
 
-      const root = document.getElementById('app');
-      const currentView = root ? root.querySelector('.view') : null;
-
       const performTransition = () => {
         state.view = v;
         if (typeof saveNavigationState === 'function') saveNavigationState();
@@ -101,15 +168,7 @@
         _animateViewEntrance(v);
       };
 
-      if (currentView && typeof gsap !== 'undefined') {
-        gsap.to(currentView, {
-          opacity: 0, y: -8, scale: 0.99,
-          duration: 0.15, ease: 'power2.in',
-          onComplete: performTransition
-        });
-      } else {
-        performTransition();
-      }
+      _exitCurrent('up', { duration: 0.14, distance: 8, scale: 0.995 }).then(performTransition);
     };
     window.navigate._isV3 = true;
     console.log('✅ Fluidity Engine: Zero-Latency Navigation installed.');
@@ -161,62 +220,92 @@
   }
 
   // ── 3. UNIFIED ANIMATION SYSTEM (V6 STANDARD) ───────────────
-  function _animateViewEntrance(view) {
+  function _animateViewEntrance(view, direction = 'down') {
     if (typeof gsap === 'undefined') return;
-    
-      requestAnimationFrame(() => {
-        const viewEl = document.querySelector('.view');
-        if (!viewEl) return;
-        gsap.killTweensOf(viewEl);
+    const viewEl = document.querySelector('.view');
+    if (!viewEl) return;
+    _enterView(direction, { duration: 0.26, distance: 10, scale: 0.99 });
 
-        // 1. View Entrance (Fade + Slide + Scale)
-        gsap.fromTo(viewEl, 
-          { opacity: 0, y: 15, scale: 0.985 },
-          { 
-          opacity: 1, 
-          y: 0, 
-          scale: 1, 
-          duration: 0.5, 
-          ease: "power3.out",
-          clearProps: "transform"
+    // 2. Card & Widget Header Stagger (Inner Elements)
+    const cards = viewEl.querySelectorAll('.card, .subject-summary-card, .greeting-card, .streak-card, .verifica-card, .widget-header');
+    if (cards.length > 0) {
+      gsap.killTweensOf(cards);
+      gsap.fromTo(cards,
+        { opacity: 0, y: 10 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.36,
+          stagger: 0.03,
+          ease: "power2.out",
+          delay: 0.07,
+          clearProps: "transform,opacity"
         }
       );
+    }
 
-      // 2. Card & Widget Header Stagger (Inner Elements)
-      const cards = viewEl.querySelectorAll('.card, .subject-summary-card, .greeting-card, .streak-card, .verifica-card, .widget-header');
-      if (cards.length > 0) {
-        gsap.killTweensOf(cards);
-        gsap.fromTo(cards,
-          { opacity: 0, y: 12 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.45,
-            stagger: 0.05,
-            ease: "power2.out",
-            delay: 0.1,
-            clearProps: "transform"
-          }
-        );
-      }
+    // 3. Row Stagger (List Content)
+    const items = viewEl.querySelectorAll('.task-row, .grade-row, .circolari-scroll > div, #weekly-agenda-list > div, .studio-entry');
+    if (items.length > 0) {
+      gsap.killTweensOf(items);
+      gsap.fromTo(items,
+        { opacity: 0, y: 6 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.32,
+          stagger: 0.02,
+          ease: "power1.out",
+          delay: 0.14,
+          clearProps: "transform,opacity"
+        }
+      );
+    }
 
-      // 3. Row Stagger (List Content)
-      const items = viewEl.querySelectorAll('.task-row, .grade-row, .circolari-scroll > div, #weekly-agenda-list > div, .studio-entry');
-      if (items.length > 0) {
-        gsap.killTweensOf(items);
-        gsap.fromTo(items,
-          { opacity: 0, y: 8 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.4,
-            stagger: 0.03,
-            ease: "power1.out",
-            delay: 0.25,
-            clearProps: "all"
-          }
-        );
-      }
+    _installButtonFeedback(viewEl);
+  }
+
+  const _installSubjectTransitions = () => {
+    window.navigateSubject = function navigateSubject(subjName) {
+      if (!subjName) return;
+      state._scrollTopAfterRender = true;
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      _exitCurrent('left', { duration: 0.14, distance: 12, scale: 0.995 }).then(() => {
+        state.activeSubject = subjName;
+        _renderViewDirect(state.view || 'voti');
+        _animateViewEntrance(state.view || 'voti', 'right');
+      });
+    };
+
+    window.closeSubject = function closeSubject() {
+      _exitCurrent('right', { duration: 0.14, distance: 12, scale: 0.995 }).then(() => {
+        state.activeSubject = null;
+        _renderViewDirect(state.view || 'voti');
+        _animateViewEntrance(state.view || 'voti', 'left');
+      });
+    };
+  };
+
+  function _installButtonFeedback(scope = document) {
+    if (typeof gsap === 'undefined' || !scope) return;
+    const nodes = scope.querySelectorAll('.nav-item, button, .pill, .profile-trigger, [role="button"], [onclick]');
+    nodes.forEach((el) => {
+      if (el.dataset.gFluidPressReady === '1') return;
+      el.dataset.gFluidPressReady = '1';
+
+      const press = () => {
+        gsap.killTweensOf(el);
+        gsap.to(el, { scale: 0.94, duration: 0.08, ease: 'power2.out', overwrite: 'auto' });
+      };
+      const release = () => {
+        gsap.killTweensOf(el);
+        gsap.to(el, { scale: 1, duration: 0.26, ease: 'back.out(2)', overwrite: 'auto' });
+      };
+
+      el.addEventListener('pointerdown', press, { passive: true });
+      el.addEventListener('pointerup', release, { passive: true });
+      el.addEventListener('pointercancel', release, { passive: true });
+      el.addEventListener('pointerleave', release, { passive: true });
     });
   }
 
@@ -271,7 +360,9 @@
   const init = () => {
     _installCoreRender();
     _installNavigation();
+    _installSubjectTransitions();
     _patchCircolari();
+    _installButtonFeedback(document);
     
     // Cleanup will-change
     document.addEventListener('animationend', (e) => {
