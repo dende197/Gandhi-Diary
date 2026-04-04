@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
         const targetIdx = (idx < 0 || idx >= profiles.length) ? 0 : idx;
         const profile = profiles[targetIdx];
         // Keep this payload intentionally compact (class-focused) for stable debug output.
-        // For full raw payload inspection use AdvancedArgo.rawLogin(...) directly in local debug sessions.
+        // For full raw payload inspection, use the full object from the `AdvancedArgo.rawLogin(...)` response in local debug sessions.
         const rawData = profile.raw || {};
         const scheda = rawData.scheda || {};
         const classeObj = scheda.classe || {};

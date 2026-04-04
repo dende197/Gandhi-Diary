@@ -5053,7 +5053,6 @@ window.sendAIChat = async function () {
         if (!txt) return '';
         return txt.length > max ? `${txt.slice(0, max)}…` : txt;
     };
-    const clampText = truncateWithEllipsis;
     const thisWeekTasks = [], laterTasks = [];
     argoTasks.forEach(t => {
         const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
@@ -5063,16 +5062,16 @@ window.sendAIChat = async function () {
     });
 
     const exams = (state.exams || []).slice(0, 10).map(ex => {
-        const typeText = clampText(ex.type, 32);
-        const subjectText = clampText(ex.subject, 40);
-        const dateText = clampText(ex.date, 24);
-        const topicText = clampText(ex.topic || 'gen.', 60);
+        const typeText = truncateWithEllipsis(ex.type, 32);
+        const subjectText = truncateWithEllipsis(ex.subject, 40);
+        const dateText = truncateWithEllipsis(ex.date, 24);
+        const topicText = truncateWithEllipsis(ex.topic || 'gen.', 60);
         return `- ${typeText} di ${subjectText} il ${dateText} (${topicText})`;
     }).join('\n');
-    const verifiche = (state.verifiche || []).slice(0, 14).map(v => `- ${clampText(v.materia || v.subject || 'Materia', 40)}: ${clampText(v.argomento || v.topic || 'N/D', 110)} (${clampText(v.data || v.date || 'data non indicata', 24)})`).join('\n');
-    const reminders = (state.reminders || state.promemoria || []).slice(0, 10).map(r => `- ${clampText(r.text || r.title || r.descrizione || r.oggetto || 'Promemoria', 140)}`).join('\n');
-    const backlog = (state.backlog || []).slice(0, 10).map(b => `- ${clampText(b.subject || 'Generale', 40)}: ${clampText(b.text || b.title || b.task || '', 120)}`).join('\n');
-    const grades = (state.voti || []).slice(0, 18).map(v => `- ${clampText(v.materia || v.subject || 'Materia', 40)}: ${clampText(v.valore || v.value || 'N/D', 10)} (${clampText(v.data || v.date || 'data n/d', 24)})`).join('\n');
+    const verifiche = (state.verifiche || []).slice(0, 14).map(v => `- ${truncateWithEllipsis(v.materia || v.subject || 'Materia', 40)}: ${truncateWithEllipsis(v.argomento || v.topic || 'N/D', 110)} (${truncateWithEllipsis(v.data || v.date || 'data non indicata', 24)})`).join('\n');
+    const reminders = (state.reminders || state.promemoria || []).slice(0, 10).map(r => `- ${truncateWithEllipsis(r.text || r.title || r.descrizione || r.oggetto || 'Promemoria', 140)}`).join('\n');
+    const backlog = (state.backlog || []).slice(0, 10).map(b => `- ${truncateWithEllipsis(b.subject || 'Generale', 40)}: ${truncateWithEllipsis(b.text || b.title || b.task || '', 120)}`).join('\n');
+    const grades = (state.voti || []).slice(0, 18).map(v => `- ${truncateWithEllipsis(v.materia || v.subject || 'Materia', 40)}: ${truncateWithEllipsis(v.valore || v.value || 'N/D', 10)} (${truncateWithEllipsis(v.data || v.date || 'data n/d', 24)})`).join('\n');
     const attendanceSummary = state.assenzeData ? [
         `Assenze totali: ${state.assenzeData.totaleAssenze ?? 0}`,
         `Ritardi totali: ${state.assenzeData.totaleRitardi ?? 0}`,
@@ -5084,7 +5083,7 @@ window.sendAIChat = async function () {
     const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).slice(0, 8).map(([date, ids]) => {
         const dayTasks = ids.slice(0, 6).map(id => {
             const t = (state.tasks || []).find(x => x.id === id);
-            return t ? `[${clampText(t.subject, 32)}] ${clampText(t.text, 80)}` : null;
+            return t ? `[${truncateWithEllipsis(t.subject, 32)}] ${truncateWithEllipsis(t.text, 80)}` : null;
         }).filter(Boolean);
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
@@ -5142,7 +5141,7 @@ REGOLE OPERATIVE:
     ];
     const toModelMessage = (msg, maxLen) => {
         const role = msg.role === 'user' ? 'user' : 'model';
-        const textValue = clampText(msg.text, maxLen);
+        const textValue = truncateWithEllipsis(msg.text, maxLen);
         if (!textValue) return null;
         return { role, parts: [{ text: textValue }] };
     };
@@ -5154,14 +5153,14 @@ REGOLE OPERATIVE:
 
     // On Vercel serverless functions the request-body limit is generally much higher (around ~1MB+),
     // but this client-side JSON payload guardrail is intentionally 120KB to avoid 413 errors from overhead growth.
-    const payloadSizeLimitBytes = 120 * 1024;
+    const payloadSizeLimitBytes = 120 * 1024; // 120KB conservative client-side cap to reduce edge-case 413 errors.
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
     if (payloadSize > payloadSizeLimitBytes) {
         const trimmedHistory = recentHistory.slice(-6).map(msg => toModelMessage(msg, 400)).filter(Boolean);
         payload = {
             messages: [
-                { role: 'user', parts: [{ text: clampText(systemContext, 5000) }] },
+                { role: 'user', parts: [{ text: truncateWithEllipsis(systemContext, 5000) }] },
                 { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] },
                 ...trimmedHistory
             ]
