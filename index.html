@@ -96,9 +96,40 @@
         // ==============================================================================
         const APP_VERSION = '3.3.5';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
-        const API_BASE_URL = window.location.origin;
+
+        function normalizeApiBase(url) {
+            if (!url || typeof url !== 'string') return '';
+            const trimmed = url.trim();
+            if (!trimmed) return '';
+            try {
+                return new URL(trimmed).origin.replace(/\/$/, '');
+            } catch (_) {
+                return '';
+            }
+        }
+
+        function resolveApiBaseUrl() {
+            const localOverride = normalizeApiBase(localStorage.getItem('gconnect_api_base_url') || '');
+            if (localOverride) return { url: localOverride, source: 'localStorage override' };
+
+            const queryOverride = normalizeApiBase(new URLSearchParams(window.location.search).get('api') || '');
+            if (queryOverride) {
+                try { localStorage.setItem('gconnect_api_base_url', queryOverride); } catch (_) {}
+                return { url: queryOverride, source: 'query override' };
+            }
+
+            const sameOrigin = window.location.origin.replace(/\/$/, '');
+            const isGitHubPages = /(^|\.)github\.io$/i.test(window.location.hostname);
+            if (!isGitHubPages) return { url: sameOrigin, source: 'same-origin' };
+
+            const defaultBackend = 'https://g-connect-backend-r5j1.vercel.app';
+            return { url: defaultBackend, source: 'github-pages fallback' };
+        }
+
+        const resolvedApi = resolveApiBaseUrl();
+        const API_BASE_URL = resolvedApi.url;
         window.API_BASE_URL = API_BASE_URL;
-        console.log(`[Network] Connected directly to: ${API_BASE_URL}`);
+        console.log(`[Network] API base resolved (${resolvedApi.source}): ${API_BASE_URL}`);
 
         // Supabase client is initialised lazily once config is loaded from the backend
         let supabaseClient = null;
@@ -475,7 +506,7 @@
 
         async function loadCircolari() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/circolari`);
+                const res = await fetch(`${API_BASE_URL}/api/circolari/index`);
                 const data = await res.json();
                 if (data.success && data.circolari) {
                     state.circolari = data.circolari;
@@ -641,10 +672,11 @@
                     statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
                     statusEl.style.color = "var(--green)";
                 } else {
-                    throw new Error("Server error");
+                    throw new Error(`HTTP_${res.status}`);
                 }
             } catch (e) {
-                if (attempt < 15) {
+                const shouldRetry = !e || !String(e.message || '').includes('HTTP_404');
+                if (attempt < 15 && shouldRetry) {
                     statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
                     setTimeout(() => checkServerHealth(attempt + 1), 2500);
                 } else {
