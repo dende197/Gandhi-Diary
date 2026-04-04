@@ -103,7 +103,7 @@
             const trimmed = url.trim();
             if (!trimmed) return '';
             try {
-                return new URL(trimmed).origin.replace(/\/$/, '');
+                return new URL(trimmed).origin;
             } catch (_) {
                 return '';
             }
@@ -119,7 +119,7 @@
                 return { url: queryOverride, source: 'query override' };
             }
 
-            const sameOrigin = window.location.origin.replace(/\/$/, '');
+            const sameOrigin = window.location.origin;
             const isGitHubPages = /(^|\.)github\.io$/i.test(window.location.hostname);
             if (!isGitHubPages) return { url: sameOrigin, source: 'same-origin' };
 
@@ -677,7 +677,7 @@
                     throw err;
                 }
             } catch (e) {
-                const shouldRetry = !(e && e.status === 404);
+                const shouldRetry = e.status !== 404;
                 if (attempt < 15 && shouldRetry) {
                     statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
                     setTimeout(() => checkServerHealth(attempt + 1), 2500);
