@@ -2670,7 +2670,7 @@ function mostraAssenzeModal() {
     const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
 
     showModal(`
-            <div class="assenze-modal-shell" style="display:flex; flex-direction:column; text-align:left; max-height:min(82svh, 760px);">
+            <div class="assenze-modal-shell" style="display:flex; flex-direction:column; text-align:left; max-height:82svh;">
                 <header class="assenze-modal-header" style="padding:24px 24px 16px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
                     <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
                     <div style="display:flex; align-items:baseline; gap:12px;">
@@ -4965,7 +4965,7 @@ window.refreshPlanWeekModalContent = function () {
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
             <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase;">Pianifica Settimana</h2>
-            <button onclick="closeModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414; margin-left:10px; transform:translateX(4px);">
+            <button onclick="closeModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414; margin-left:14px;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
