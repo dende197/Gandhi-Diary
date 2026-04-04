@@ -218,13 +218,23 @@ function animatePlannerSurface(view) {
         });
         return;
     }
-    const listCards = document.querySelectorAll('#weekly-agenda-list .card');
+    const listCards = document.querySelectorAll('#weekly-agenda-list .card, #weekly-agenda-list .asw-task-card, #weekly-agenda-list .agenda-day-section');
+    const listBadges = document.querySelectorAll('#weekly-agenda-list .agenda-subject-badge, #weekly-agenda-list .agenda-time-badge, #weekly-agenda-list .agenda-day-month, #weekly-agenda-list .agenda-day-label, #weekly-agenda-list .asw-subject-badge, #weekly-agenda-list .asw-label-tag');
     gsap.fromTo(listCards, { opacity: 0, y: 10 }, {
         opacity: 1,
         y: 0,
         duration: 0.26,
         ease: 'power2.out',
         stagger: 0.02,
+        clearProps: 'transform,opacity'
+    });
+    gsap.fromTo(listBadges, { opacity: 0, scale: 0.96, y: 4 }, {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        duration: 0.24,
+        ease: 'power2.out',
+        stagger: 0.01,
         clearProps: 'transform,opacity'
     });
 }
@@ -2819,7 +2829,7 @@ function renderDayDetailModal(dateStr) {
 
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-shrink:0;">
                             <div>
-                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#007AFF; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:8px; background: rgba(0,122,255,0.06); padding: 4px 10px; border-radius: 8px; display:inline-block;">
+                                <div style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#007AFF; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:8px; background: rgba(0,122,255,0.06); padding: 4px 10px; border-radius: 8px; display:inline-block;">
                                     Agenda Compiti
                                 </div>
                                 <h2 style="font-family:'Inter',system-ui,-apple-system,sans-serif; margin:0; font-size:24px; font-weight:800; text-transform:capitalize; letter-spacing:-0.03em; color:#141414;">${formattedDate}</h2>
@@ -2845,8 +2855,8 @@ function renderDayDetailModal(dateStr) {
                                         <div style="width:4px; background:#FF9F0A; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || abbr)}</span>
-                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(v.tipo || 'VERIFICA')}</span>
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || abbr)}</span>
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(v.tipo || 'VERIFICA')}</span>
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word;">${escapeHtml(v.text || v.subject)}</div>
                                         </div>
@@ -2871,8 +2881,8 @@ function renderDayDetailModal(dateStr) {
                                         <div style="width:4px; background:${color}; flex-shrink:0;"></div>
                                         <div style="flex:1; padding:16px 16px; min-width:0;">
                                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(subContent)}</span>
-                                                ${timeStr ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${escapeHtml(timeStr)}</span>` : ''}
+                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:var(--${key}-t, ${color}); text-transform:uppercase; letter-spacing:0.08em; background:var(--${key}, rgba(0,0,0,0.04)); padding:3px 8px; border-radius:6px;">${escapeHtml(subContent)}</span>
+                                                ${timeStr ? `<span style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${escapeHtml(timeStr)}</span>` : ''}
                                             </div>
                                             <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(displayText)}</div>
                                         </div>
@@ -3273,7 +3283,7 @@ function renderWeeklyAgenda() {
         const labelColor = isToday ? '#34C759' : isTomorrow ? '#FF9F0A' : 'transparent';
         const labelText = isToday ? 'TODAY' : isTomorrow ? 'BEYOND' : '';
         const labelTag = isToday || isTomorrow
-            ? `<span style="font-family: 'JetBrains Mono', monospace; font-size:10px; font-weight:800; color:${labelColor}; border: 1px solid ${labelColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">${labelText}</span>`
+            ? `<span class="agenda-day-label" style="font-family: var(--font-main); font-size:10px; font-weight:800; color:${labelColor}; border: 1px solid ${labelColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">${labelText}</span>`
             : '';
 
         return `
@@ -3281,11 +3291,11 @@ function renderWeeklyAgenda() {
                 <!-- TE Date Header -->
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
                     <div style="display:flex; flex-direction:column; align-items:center; min-width:44px;">
-                        <span style="font-family: 'Inter', sans-serif; font-size:24px; font-weight:800; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1; letter-spacing:-0.04em;">${dayNum}</span>
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-top:2px;">${monthName}</span>
+                        <span style="font-family: var(--font-main); font-size:24px; font-weight:800; color:${isToday ? 'var(--accent)' : 'var(--text-primary)'}; line-height:1; letter-spacing:-0.04em;">${dayNum}</span>
+                        <span class="agenda-day-month" style="font-family: var(--font-main); font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-top:2px;">${monthName}</span>
                     </div>
                     <div style="flex:1; height:1px; background:rgba(0,0,0,0.05);"></div>
-                    <div style="font-family: 'Inter', sans-serif; font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize; letter-spacing:-0.01em;">${dayName}</div>
+                    <div style="font-family: var(--font-main); font-size:12px; font-weight:700; color:var(--text-dim); text-transform:capitalize; letter-spacing:-0.01em;">${dayName}</div>
                     ${labelTag}
                 </div>
                 
@@ -3309,10 +3319,10 @@ function renderWeeklyAgenda() {
                         
                         <div class="agenda-task-main" style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
-                                <span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
-                                ${timeStr ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
+                                <span class="agenda-subject-badge" style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
+                                ${timeStr ? `<span class="agenda-time-badge" style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
                             </div>
-                            <div data-task-text="${escapeHtml(t.id)}" style="font-family:'Inter', sans-serif; font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
+                            <div data-task-text="${escapeHtml(t.id)}" style="font-family: var(--font-main); font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
                         
                         <div class="agenda-task-actions" style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
@@ -4843,7 +4853,7 @@ window.refreshPlanWeekModalContent = function () {
     contentEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
             <h2 style="margin:0; font-family:'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase;">Pianifica Settimana</h2>
-            <button onclick="finalizePlanWeekModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
+            <button onclick="closeModal()" style="background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
