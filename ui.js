@@ -98,6 +98,33 @@ function normalizeSubjectName(name) {
         .toLowerCase();
 }
 
+function isArtDrawingSubjectNormalized(normalized) {
+    const s = (normalized || '').toString();
+    if (!s) return false;
+    return s.includes('disegno')
+        || s.includes('storia dellarte')
+        || s.includes('storia arte')
+        || s.includes('storiaarte')
+        || s.includes('dellarte')
+        || s.includes('arte triennio');
+}
+
+function areSubjectsEquivalent(subjectA, subjectB) {
+    const a = normalizeSubjectName(subjectA);
+    const b = normalizeSubjectName(subjectB);
+    if (!a || !b) return false;
+    if (a === b) return true;
+    if (isArtDrawingSubjectNormalized(a) && isArtDrawingSubjectNormalized(b)) return true;
+    return false;
+}
+
+function getSubjectGroupKey(subject) {
+    const normalized = normalizeSubjectName(subject);
+    if (!normalized) return 'altro';
+    if (isArtDrawingSubjectNormalized(normalized)) return 'area_disegno_storia_arte';
+    return normalized;
+}
+
 function isAiTask(task) {
     return !!(task && typeof task.id === 'string' && task.id.startsWith('ai_'));
 }
@@ -232,6 +259,7 @@ function animatePlannerSurface(view) {
     }
     const listCards = document.querySelectorAll('#weekly-agenda-list .card, #weekly-agenda-list .asw-task-card, #weekly-agenda-list .agenda-day-section');
     const listBadges = document.querySelectorAll('#weekly-agenda-list .agenda-subject-badge, #weekly-agenda-list .agenda-time-badge, #weekly-agenda-list .agenda-day-month, #weekly-agenda-list .agenda-day-label, #weekly-agenda-list .asw-subject-badge, #weekly-agenda-list .asw-label-tag');
+    const listUi = document.querySelectorAll('#weekly-agenda-list .agenda-search-container, #weekly-agenda-list .agenda-filters-scroll, #weekly-agenda-list .filter-chip, #weekly-agenda-list .agenda-task-main, #weekly-agenda-list .agenda-task-actions, #weekly-agenda-list .agenda-task-action-btn, #weekly-agenda-list [data-task-text]');
     gsap.fromTo(listCards, { opacity: 0, y: 10 }, {
         opacity: 1,
         y: 0,
@@ -247,6 +275,14 @@ function animatePlannerSurface(view) {
         duration: 0.24,
         ease: 'power2.out',
         stagger: 0.01,
+        clearProps: 'transform,opacity'
+    });
+    gsap.fromTo(listUi, { opacity: 0, y: 6 }, {
+        opacity: 1,
+        y: 0,
+        duration: 0.24,
+        ease: 'power2.out',
+        stagger: 0.008,
         clearProps: 'transform,opacity'
     });
 }
@@ -1001,8 +1037,7 @@ function updateNextGradeSimulatorWidget() {
     if (!simValueEl || !currentAvgEl || !simAvgEl || !impactEl) return false;
     let votiData = getVotiData();
     if (state.activeSubject) {
-        const normalized = normalizeSubjectName(state.activeSubject);
-        votiData = votiData.filter(v => normalizeSubjectName(v.materia || v.subject) === normalized);
+        votiData = votiData.filter(v => areSubjectsEquivalent(v.materia || v.subject, state.activeSubject));
     }
     const currentTerm = getCurrentSchoolTerm(new Date());
     const termVotes = currentTerm ? getVotesBySchoolTerm(votiData, currentTerm) : [];
@@ -1756,7 +1791,7 @@ function renderGradesView() {
     const subjectsMap = {};
     votiData.forEach(v => {
         const sub = v.materia || v.subject || 'Altro';
-        const subjectKey = normalizeSubjectName(sub) || 'altro';
+        const subjectKey = getSubjectGroupKey(sub);
         if (!subjectsMap[subjectKey]) subjectsMap[subjectKey] = { name: sub, list: [] };
         subjectsMap[subjectKey].list.push(v);
     });
@@ -2355,7 +2390,7 @@ function initGradesCharts() {
 
     let votiData = [...getVotiData()];
     if (state.activeSubject) {
-        votiData = votiData.filter(v => (v.materia || v.subject) === state.activeSubject);
+        votiData = votiData.filter(v => areSubjectsEquivalent(v.materia || v.subject, state.activeSubject));
     }
     // Sort by absolute time
     votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
@@ -2446,7 +2481,7 @@ function initGradesCharts() {
 function renderSubjectDetailView(subjectName) {
     const normalizedSubject = normalizeSubjectName(subjectName);
     const votiData = getVotiData()
-        .filter(v => normalizeSubjectName(v.materia || v.subject) === normalizedSubject)
+        .filter(v => areSubjectsEquivalent(v.materia || v.subject, normalizedSubject))
         .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
     const media = parseFloat(calcolaMedia(votiData)) || 0;
     const goal = state.goals?.[subjectName] || 8.0;
@@ -3099,10 +3134,7 @@ function getSubjectColor(subject) {
     if (normalized.includes('scienze naturali') || normalized.includes('naturali')) return '#1DB87A';
     if (normalized.includes('filosofia')) return '#7060C8';
     if (normalized.includes('fisica')) return '#2563EB';
-    const isArtDrawingSubject = normalized.includes('disegno')
-        || normalized.includes("storia dell'arte")
-        || normalized.includes('storia dellarte')
-        || normalized.includes('storia arte');
+    const isArtDrawingSubject = isArtDrawingSubjectNormalized(normalized);
     if (isArtDrawingSubject) return '#E06020';
 
     // Fallback: stable vibrant color
