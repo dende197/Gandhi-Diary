@@ -16,6 +16,7 @@ module.exports = async function handler(req, res) {
     const body = getRequestBody(req);
     const school = (body.schoolCode || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
+    // `password` can be omitted when already available in server-side vault for the same user/profile.
     const password = body.password || '';
     let profileIndex = parseInt(body.profileIndex) || 0;
     if (!school || !username) {

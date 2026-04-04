@@ -745,7 +745,7 @@ function showToast(message, type = 'success', customBackground = '') {
     iconEl.className = `ph-bold ${icon}`;
     iconEl.style.marginRight = '8px';
     toast.appendChild(iconEl);
-    toast.appendChild(document.createTextNode(message ?? ''));
+    toast.appendChild(document.createTextNode(message || ''));
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -5049,7 +5049,7 @@ window.sendAIChat = async function () {
     const clampText = (value, max = 180) => {
         const txt = String(value ?? '').replace(/\s+/g, ' ').trim();
         if (!txt) return '';
-        return txt.length > max ? `${txt.slice(0, max - 1)}…` : txt;
+        return txt.length > max ? `${txt.slice(0, max)}…` : txt;
     };
     const thisWeekTasks = [], laterTasks = [];
     argoTasks.forEach(t => {
@@ -5143,8 +5143,8 @@ REGOLE OPERATIVE:
         if (mapped) contents.push(mapped);
     });
 
-    // Keep payload safely below common serverless body ceilings (~1MB), using 120KB as conservative guardrail
-    // because request metadata/headers and serialization variance can still trigger 413 near higher thresholds.
+    // Keep payload safely below common serverless body ceilings (~1MB):
+    // use 120KB as a conservative guardrail to absorb request overhead/serialization variance and avoid 413s.
     const payloadSizeLimitBytes = 120 * 1024;
     let payload = { messages: contents };
     const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
