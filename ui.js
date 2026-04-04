@@ -998,7 +998,7 @@ function renderHomeTaskListHtml(homeTaskData) {
         const key = abbr.toLowerCase();
         return `
               <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                <div data-task-toggle="${escapeHtml(t.id)}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition:all 0.15s;">
+                <div data-task-toggle="${escapeHtml(t.id)}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition: background 0.15s ease, border-color 0.15s ease;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
                 <span style="font-family:\'JetBrains Mono\',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
@@ -3111,7 +3111,10 @@ function notifyPlannerChanged() {
 
     // badge sul bottone Organizza Oggi e Dashboard
     if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
+    // updateHomeView rimuove/aggiorna righe esistenti; updateHomeTaskFocusWidget
+    // fa un re-render completo del widget (aggiunge anche i task appena pianificati)
     if (typeof updateHomeView === 'function') updateHomeView();
+    if (typeof updateHomeTaskFocusWidget === 'function') updateHomeTaskFocusWidget();
 
     // ✅ FIX: Aggiorna la weekly agenda list in-place (nessun full re-render)
     if (state.view === 'planner') {
@@ -3470,7 +3473,7 @@ function renderWeeklyAgenda() {
                 .trim();
 
             return `
-                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);">
+                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: background 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);">
                         <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
                         <div class="agenda-task-main" style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
@@ -3482,11 +3485,11 @@ function renderWeeklyAgenda() {
                         </div>
                         
                         <div class="agenda-task-actions" style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
-                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease, border-color 0.18s ease; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                             ${isUserGeneratedTaskId(t.id) ? `
-                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0;" aria-label="Elimina attività">
+                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease; flex-shrink:0;" aria-label="Elimina attività">
                                 <i class="ph-bold ph-trash" style="font-size:13px;"></i>
                             </button>` : ''}
                         </div>
@@ -5060,20 +5063,22 @@ window.finalizePlanWeekModal = function () {
         doneBtn.style.color = '#FFFFFF';
         doneBtn.textContent = 'Fatto ✓';
         doneBtn.style.transform = 'scale(0.98)';
+        setTimeout(() => { if (doneBtn) doneBtn.style.transform = 'scale(1)'; }, 180);
     }
     if (addedBadge && added > 0) {
         addedBadge.style.display = 'inline-flex';
         addedBadge.textContent = `${added} compiti aggiunti`;
     }
 
+    // Aggiornamento immediato di calendario e widget oggi/domani prima della chiusura modale
+    if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
+
     setTimeout(() => {
         closeModal();
-        if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
         if (added > 0 && typeof showToast === 'function') {
             showToast(`${added} compiti aggiunti`);
         }
-        // (rimosso scheduleRender ridondante: notifyPlannerChanged() ha già aggiornato il DOM)
-    }, 320);
+    }, 300);
 };
 
 window.updateWeekDayButton = function (taskId, dateStr) {
