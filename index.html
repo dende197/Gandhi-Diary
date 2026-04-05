@@ -55,9 +55,16 @@
 
     <style>
         /* Essential inline styles only */
-        :root { --accent: #6366f1; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.4s ease-out; }
+        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
+        .app-loader-ring{
+            width:42px;height:42px;border-radius:50%;
+            background:conic-gradient(from 0deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%);
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+            animation:spin 0.85s cubic-bezier(.4,0,.2,1) infinite;
+            margin:0 auto 20px;
+        }
     </style>
 </head>
 
@@ -66,7 +73,7 @@
     <!-- APP LOADER -->
     <div id="app-loader">
         <div style="text-align:center; transform:translateY(-20px);">
-            <div style="width:40px;height:40px;border:2.5px solid rgba(255,255,255,0.05);border-top-color:var(--accent);border-radius:50%;animation:spin 1s cubic-bezier(0.4,0,0.2,1) infinite;margin:0 auto 20px;"></div>
+            <div class="app-loader-ring"></div>
             <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;"></div>
         </div>
     </div>
@@ -219,6 +226,8 @@
             user: { id: null, name: 'Studente', class: '...', avatar: null, specialization: null },
             didup: { connected: false, lastUpdate: null },
             aiChatHistory: [],
+            aiChatPending: false,
+            aiChatInputValue: '',
             lastSync: null,
             streak: 0,
             activeSubject: null,
@@ -516,6 +525,26 @@
         // --- BOOT FLOW ---
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
+            const renderBootFallback = () => {
+                if (window._bootRenderedOnce) return;
+                window._bootRenderedOnce = true;
+                const loader = document.getElementById('app-loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 230);
+                }
+                if (window.render) {
+                    window.render();
+                    return;
+                }
+                const checkRender = setInterval(() => {
+                    if (window.render) {
+                        window.render();
+                        clearInterval(checkRender);
+                    }
+                }, 30);
+                setTimeout(() => clearInterval(checkRender), 1800);
+            };
             
             // Assign offlineBadge reference for updateOfflineBadge()
             offlineBadge = document.getElementById('offline-badge');
@@ -523,9 +552,7 @@
             const session = sessionManager.load();
             if (session && sessionManager.isLoggedIn()) {
                 state.isLoggedIn = true;
-                state.booting = true;
-                const bootOverlay = document.getElementById('boot-overlay');
-                if (bootOverlay) bootOverlay.style.display = 'flex';
+                state.booting = false;
                 
                 // Hydrate
                 try {
@@ -544,12 +571,18 @@
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
-                await Promise.all([performSync(session), loadCircolari()]);
-                if (typeof window.warmWeeklyAgendaCache === 'function') {
-                    setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
-                }
+                renderBootFallback();
+                Promise.all([performSync(session), loadCircolari()])
+                    .then(() => {
+                        if (typeof window.warmWeeklyAgendaCache === 'function') {
+                            setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
+                        }
+                    })
+                    .catch((e) => console.warn('Background sync failed:', e));
             } else {
                 state.view = 'login';
+                state.booting = false;
+                renderBootFallback();
             }
             
             // Handle Google OAuth callback (must run BEFORE initial render so state is correct)
@@ -559,42 +592,18 @@
                 setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
             }
 
-            state.booting = false;
             // Cancel any render timer scheduled during sync (e.g. from performSync's scheduleRender)
             // to avoid a double DOM write on first load.
             clearTimeout(window._gRenderTimer);
             if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
-
-            setTimeout(() => {
-                const loader = document.getElementById('app-loader');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.remove(), 450);
-                }
-                
-                // FINAL BOOT RENDER — single, authoritative paint after boot.
-                if (window.render) {
-                    window.render();
-                } else {
-                    // Safety fallback if ui.js is still loading
-                    const checkRender = setInterval(() => {
-                        if (window.render) {
-                            window.render();
-                            clearInterval(checkRender);
-                        }
-                    }, 50);
-                    setTimeout(() => clearInterval(checkRender), 5000);
-                }
-
-                // Check Google connection status (async, fires a re-render only on state change)
-                if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
-                    window.checkGoogleStatus().then(() => {
-                        if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
-                            window.saveArgoToSupabase();
-                        }
-                    });
-                }
-            }, 100);
+            // Check Google connection status (async, fires a re-render only on state change)
+            if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
+                window.checkGoogleStatus().then(() => {
+                    if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
+                        window.saveArgoToSupabase();
+                    }
+                });
+            }
 
             // Handle hash-based navigation: update view when URL hash changes
             // (covers both the simple navigate fallback and browser back/forward)
