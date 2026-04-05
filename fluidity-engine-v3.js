@@ -90,7 +90,7 @@
 
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;
-  const RENDER_MIN_GAP = 200; // ms: impedisce doppi render da burst asincroni
+  const RENDER_MIN_GAP = 400; // ms: impedisce doppi render da burst asincroni
 
   // Sostituiamo il motore di rendering globale
   const _installCoreRender = () => {
@@ -105,7 +105,7 @@
     
     // Ridefiniamo render() con lock e rAF — usa shared globals
     window.render = function render() {
-      if (window._gRenderRAF || state.booting) return;
+      if (window._gRenderRAF || state.booting || state._loggedOut) return;
       
       const now = performance.now();
       if (now - _lastRenderTime < RENDER_MIN_GAP) {
@@ -142,6 +142,12 @@
       const allowedViews = ['login', 'home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
       const canAccessRequested = allowedViews.includes(v) && (state.isLoggedIn || v === 'login');
       if (!canAccessRequested) v = state.isLoggedIn ? 'home' : 'login';
+
+      // Clear _loggedOut flag when navigating to a real view (e.g. after login)
+      if (v !== 'login' && state.isLoggedIn && state._loggedOut) {
+          state._loggedOut = false;
+      }
+
       if (v === state.view) {
         // If auth/session state changed while staying on the same view, refresh DOM immediately.
         const fallbackRefresh = () => {
@@ -194,6 +200,7 @@
 
   // Helper per rendering diretto
   function _renderViewDirect(view) {
+    if (state._loggedOut && view !== 'login') return; // Post-logout guard
     const root = document.getElementById('app');
     if (!root) return;
     const nav = document.getElementById('nav-container');

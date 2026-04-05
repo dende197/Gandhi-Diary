@@ -438,7 +438,7 @@
         window.saveTasksToSupabase = saveTasksToSupabase;
 
         async function performSync(sessionData) {
-            if (state.syncing) return;
+            if (state.syncing || state._loggedOut) return;
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
             updateLoader("Contatto Server...");
@@ -517,6 +517,8 @@
             } finally {
                 state.syncing = false;
                 hideBoot();
+                if (state._loggedOut) return; // Don't render after logout
+                state._forceRender = true;
                 if (window.scheduleRender) window.scheduleRender();
             }
         }
@@ -622,9 +624,17 @@
             // Handle hash-based navigation: update view when URL hash changes
             // (covers both the simple navigate fallback and browser back/forward)
             function _handleNavFromHash() {
-                if (!state.isLoggedIn) return;
-                const v = (location.hash || '#home').replace('#', '').split('?')[0].trim() || 'home';
-                const newView = _allowedViews.includes(v) ? v : 'home';
+                if (state._loggedOut) return; // Don't navigate after logout
+                const raw = (location.hash || '#home').replace('#', '').split('?')[0].trim() || 'home';
+                // After logout the hash may be 'login' — render login view
+                if (!state.isLoggedIn) {
+                    if (state.view !== 'login') {
+                        state.view = 'login';
+                        if (window.scheduleRender) window.scheduleRender(0);
+                    }
+                    return;
+                }
+                const newView = _allowedViews.includes(raw) ? raw : 'home';
                 if (state.view !== newView) {
                     state.view = newView;
                     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -816,6 +826,8 @@
         // --- HANDLE LOGIN SUCCESS ---
         async function handleLoginSuccess(data, rawPassword) {
             console.log("✅ Login OK, hydrating state...");
+            // Clear _loggedOut flag immediately on new login
+            state._loggedOut = false;
             const user = data.session.userName;
             const pass = rawPassword || tempCreds.pass || '';
             if (!pass) {
@@ -920,7 +932,7 @@
             alert(`✅ Benvenuto ${state.user.name}!`);
             window._bootRenderedOnce = false;
             navigate('home');
-            if (window.scheduleRender) window.scheduleRender();
+            // navigate() already triggers a render — no extra scheduleRender needed
         }
         window.handleLoginSuccess = handleLoginSuccess;
 
@@ -962,10 +974,9 @@
 
         // --- PROFILE SELECTION ---
         async function selectProfile(profileIndex, credentials) {
-            if (typeof closeModal === 'function') closeModal();
-            if (typeof showBoot === 'function') showBoot('Sincronizzazione profilo...');
+            // Don't call showBoot here — the gradient spinner is shown inside the modal.
+            // handleLoginSuccess() will close the modal after login completes.
             await performArgoSync(profileIndex, credentials);
-            hideBoot();
         }
         window.selectProfile = selectProfile;
 

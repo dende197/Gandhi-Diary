@@ -4110,23 +4110,28 @@ function showProfileSelectionModal(profiles, credentials) {
         const btn = ev.target.closest('.btn-profile');
         if (!btn) return;
 
-        // Disabilita UI
-        const allBtns = list.querySelectorAll('.btn-profile');
-        allBtns.forEach(b => {
-            b.disabled = true;
-            b.style.opacity = '0.5';
-            b.style.pointerEvents = 'none';
-        });
+        // Get selected profile name for the loading screen
+        const selectedName = btn.querySelector('.profile-name')?.textContent || 'Studente';
 
-        btn.style.opacity = '1';
-        const profileLoadingSpinner = `
-            <span style="margin-left:auto; width:20px; height:20px; border-radius:50%; flex-shrink:0; display:inline-block; animation: profile-loader-spin 0.9s linear infinite; background: conic-gradient(#C6F2DF, #1A6B8A, #0D1F2D, transparent 90%); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));"></span>
-        `;
-        const rightIcon = btn.querySelector('i.ph-caret-right');
-        if (rightIcon) {
-            rightIcon.outerHTML = profileLoadingSpinner;
-        } else {
-            btn.innerHTML += profileLoadingSpinner;
+        // Replace entire modal content with a large gradient spinner
+        const modalContent = container.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+            modalContent.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; gap: 24px; text-align: center;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; display: inline-block;
+                        animation: profile-loader-spin 1s linear infinite;
+                        background: conic-gradient(#C6F2DF, #1A6B8A, #0D1F2D, transparent 90%);
+                        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+                        mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));">
+                    </div>
+                    <div>
+                        <div style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Caricamento profilo</div>
+                        <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(selectedName)}</div>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;">Sincronizzazione in corso…</div>
+                </div>
+            `;
         }
 
         await selectProfile(parseInt(btn.dataset.index, 10), credentials);
@@ -4696,7 +4701,7 @@ window._gRenderRAF = null;
 window._gRenderTimer = null;
 
 window.render = function () {
-    if (window._gRenderRAF || state.booting) return;
+    if (window._gRenderRAF || state.booting || state._loggedOut) return;
     const now = performance.now();
     if (now - _lastRenderTime < RENDER_MIN_GAP) {
         clearTimeout(window._gRenderTimer);
@@ -4719,17 +4724,45 @@ window.scheduleRender = function (delay = 80) {
     }
 };
 
+// ── Render deduplication: skip if view+login state unchanged ──
+let _lastRenderedView = null;
+let _lastRenderedLoggedIn = null;
+let _lastRenderedTaskCount = -1;
+let _lastRenderedVotiCount = -1;
+
 window._renderCore = function () {
+    if (state._loggedOut) return; // Post-logout guard
     const root = document.getElementById('app');
     const nav = document.getElementById('nav-container');
     if (!root || !nav) return;
 
     if (!state.isLoggedIn) {
+        // Deduplicate: skip if already showing login
+        if (_lastRenderedLoggedIn === false) return;
+        _lastRenderedLoggedIn = false;
+        _lastRenderedView = 'login';
         document.body.classList.add('logged-out');
         root.innerHTML = renderLogin();
         nav.innerHTML = '';
         return;
     }
+
+    // Deduplicate: skip full re-render if same view + same data counts
+    const taskCount = (state.tasks || []).length;
+    const votiCount = (state.voti || []).length;
+    if (_lastRenderedLoggedIn === true &&
+        _lastRenderedView === state.view &&
+        _lastRenderedTaskCount === taskCount &&
+        _lastRenderedVotiCount === votiCount &&
+        !state._forceRender) {
+        return;
+    }
+    _lastRenderedLoggedIn = true;
+    _lastRenderedView = state.view;
+    _lastRenderedTaskCount = taskCount;
+    _lastRenderedVotiCount = votiCount;
+    state._forceRender = false;
+
     document.body.classList.remove('logged-out');
 
     nav.innerHTML = renderNav();
@@ -4795,6 +4828,9 @@ window._renderCore = function () {
 // ── UI HELPERS & PROFILE ──
 window.logout = async function () {
     if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
+        // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
+        state._loggedOut = true;
+
         const currentUserId = getUserId();
         const currentLsPrefix = getActiveProfileKey();
 
@@ -4808,6 +4844,7 @@ window.logout = async function () {
 
         state.isLoggedIn = false;
         state.booting = false;
+        state.syncing = false;
         state.didup.connected = false;
         state.user = { name: '', class: '' };
         state.tasks = [];
@@ -4827,6 +4864,10 @@ window.logout = async function () {
 
         // Write login directly and imperatively — bypasses all async pipelines
         state.view = 'login';
+        // Sync URL hash so hashchange/popstate listeners don't overwrite the login page
+        if (window.location.hash !== '#login') {
+            window.history.replaceState(null, '', '#login');
+        }
         const _logoutAppRoot = document.getElementById('app');
         const _logoutNav = document.getElementById('nav-container');
         if (_logoutAppRoot) {
@@ -4839,6 +4880,10 @@ window.logout = async function () {
             _logoutAppRoot.innerHTML = (typeof renderLogin === 'function') ? renderLogin() : '';
         }
         if (_logoutNav) _logoutNav.innerHTML = '';
+
+        // Reset render dedup state so next login renders correctly
+        _lastRenderedLoggedIn = false;
+        _lastRenderedView = 'login';
 
         if (currentUserId && currentUserId !== 'guest') {
             const payload = {
