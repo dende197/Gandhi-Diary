@@ -2856,14 +2856,15 @@ function mostraVerificheModal() {
                                             ${tipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); background:rgba(0,0,0,0.05); border-radius:5px; padding:2px 6px; text-transform:uppercase;">${tipoLabel}</span>` : ''}
                                         </div>
                                     </div>
-                                    <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:52px; gap:2px;">
-                                        <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
-                                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
+                                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; min-width:52px; gap:2px;">
                                         ${v.source === 'manual' ? `
-                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; margin-top:4px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
+                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
                                                 <i class="ph-bold ph-trash" style="font-size:14px;"></i>
                                             </button>
-                                        ` : ''}
+                                        ` : `
+                                            <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
+                                            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
+                                        `}
                                     </div>
                                 </div>
                             `;
