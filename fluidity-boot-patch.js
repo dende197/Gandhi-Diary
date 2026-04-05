@@ -171,7 +171,7 @@
     const nativeAlert = window.alert.bind(window);
     const alertPatched = function (message) {
       const text = String(message ?? '');
-      const isLoginWelcome = /^\s*✅/.test(text) || /welcome|benvenut|bienven|bienvenu|willkommen|bem-vind/i.test(text);
+      const isLoginWelcome = /^\s*✅/.test(text) || /welcome|benvenuto|bienven|bienvenu|willkommen|bem-vindo/i.test(text);
       if (isLoginWelcome && typeof window.showToast === 'function') {
         window.showToast(text.replace(/^✅\s*/, ''), 'success');
         return;
