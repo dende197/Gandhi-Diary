@@ -4831,6 +4831,7 @@ window.logout = async function () {
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
         state._loggedOut = true;
         state.isLoggedIn = false;
+        state.view = 'login'; // Immediate visual shift target
 
         // ── Kill all running GSAP animations (prevents late onComplete/onUpdate calls) ──
         if (typeof gsap !== 'undefined') {
@@ -4903,7 +4904,10 @@ window.logout = async function () {
                 }
             });
             observer.observe(_logoutAppRoot, { childList: true, subtree: true });
-            setTimeout(() => observer.disconnect(), 1000);
+            setTimeout(() => {
+                observer.disconnect();
+                state._loggedOut = false; // Release lock for future interactions
+            }, 1000);
         }
 
         // Reset render dedup state

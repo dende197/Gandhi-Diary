@@ -18,6 +18,9 @@
   const escapeJsSingleQuote = (str) =>
     (typeof window.escapeJsSingleQuote === 'function' ? window.escapeJsSingleQuote(str) : String(str ?? ''));
 
+  // Stato condiviso tra render e animate per evitare doppia animazione boot/navigate
+  let _lastAnimatedViewRender = null;
+
   function _setWillChange(el, enabled) {
     if (!el) return;
     el.style.willChange = enabled ? 'transform, opacity' : 'auto';
@@ -90,7 +93,8 @@
 
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;
-  const RENDER_MIN_GAP = 400; // ms: impedisce doppi render da burst asincroni
+  // Gap ridotto: 80ms basta per coalizzare burst, senza bloccare render legittimi
+  const RENDER_MIN_GAP = 80; 
 
   // Sostituiamo il motore di rendering globale
   const _installCoreRender = () => {
@@ -103,9 +107,10 @@
     // Salviamo l'originale _renderCore (quello che scrive l'HTML)
     const _origRenderCore = window._renderCore;
     
-    // Ridefiniamo render() con lock e rAF — usa shared globals
+    // Ridefiniamo render() con lock, rAF e animazione boot/refresh ──
     window.render = function render() {
-      if (window._gRenderRAF || state.booting || state._loggedOut) return;
+      // Allow render if view is login to prevent locking the screen on logout
+      if (window._gRenderRAF || state.booting || (state._loggedOut && state.view !== 'login')) return;
       
       const now = performance.now();
       if (now - _lastRenderTime < RENDER_MIN_GAP) {
@@ -117,13 +122,26 @@
       
       _lastRenderTime = now;
       window._gRenderRAF = requestAnimationFrame(() => {
-        // ── DEFINITIVE FIX: Re-check logout flag INSIDE the RAF callback ──
-        if (state._loggedOut) {
-            window._gRenderRAF = null;
-            return;
-        }
+        if (state._loggedOut && state.view !== 'login') { window._gRenderRAF = null; return; }
+        
+        const isFirstRenderOfView = (_lastAnimatedViewRender !== state.view);
+        
         if (typeof _origRenderCore === 'function') _origRenderCore();
         window._gRenderRAF = null;
+        
+        // ── BOOT/REFRESH ANIMATION ──
+        // Se è il primo render di questa view (boot o refresh dati),
+        // e non siamo appena tornati da una navigate V3 (che ha già animato),
+        // lancia _animateViewEntrance per avere le animazioni GSAP anche al boot.
+        if (isFirstRenderOfView && state.isLoggedIn && state.view !== 'login') {
+          _lastAnimatedViewRender = state.view;
+          // Piccolo delay per lasciar dipingere il browser prima di animare
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              _animateViewEntrance(state.view, 'down');
+            });
+          });
+        }
       });
     };
     window.render._isV3 = true;
@@ -250,7 +268,17 @@
       case 'circolari':       html = (typeof renderCircolariView === 'function') ? renderCircolariView() : ''; break;
       default:                html = (typeof renderHome === 'function') ? renderHome() : ''; break;
     }
+    // ── SILENT SWAP: micro cross-fade per eliminare il DOM flash ──
+    // Se il root ha già contenuto (re-render post-sync), usiamo opacity 0→1
+    // invece di un innerHTML nudo che causa un frame bianco visibile.
+    const _hadContent = root.children.length > 0;
+    if (_hadContent && typeof gsap !== 'undefined') {
+      gsap.set(root, { opacity: 0 });
+    }
     root.innerHTML = html;
+    if (_hadContent && typeof gsap !== 'undefined') {
+      gsap.to(root, { opacity: 1, duration: 0.12, ease: 'none', overwrite: 'auto' });
+    }
     
     // Async hooks per canvas/charts
     requestAnimationFrame(() => {
@@ -269,6 +297,10 @@
     if (typeof gsap === 'undefined') return;
     const viewEl = document.querySelector('.view');
     if (!viewEl) return;
+    
+    // Marca questa view come animata — il render post-sync non la ri-animerà
+    _lastAnimatedViewRender = view;
+    
     _enterView(direction, { duration: 0.26, distance: 10, scale: 0.99 });
 
     // 2. Card & Widget Header Stagger (Inner Elements)

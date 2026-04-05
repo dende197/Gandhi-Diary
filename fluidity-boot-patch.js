@@ -125,10 +125,11 @@
     if (!window.render._isV3 && !window.__fluidityRenderBypassForce) return;
 
     const patched = function renderNoGapPatched() {
-      if (window._gRenderRAF || !window.state || window.state.booting || window.state._loggedOut) return;
+      // Allow render if view is login to prevent locking the screen on logout
+      if (window._gRenderRAF || !window.state || window.state.booting || (window.state._loggedOut && window.state.view !== 'login')) return;
       window._gRenderRAF = requestAnimationFrame(() => {
         try {
-          if (window.state && window.state._loggedOut) return;
+          if (window.state && window.state._loggedOut && window.state.view !== 'login') return;
           if (typeof window._renderCore === 'function') window._renderCore();
         } finally {
           window._gRenderRAF = null;
