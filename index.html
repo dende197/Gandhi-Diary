@@ -159,6 +159,9 @@
 
         // --- SESSION MANAGER (v7.0) ---
         const sessionManager = {
+            isValidSessionObject(s) {
+                return !!(s && typeof s === 'object' && s.schoolCode && s.userName);
+            },
             sanitizeSensitiveSessionData(obj) {
                 if (!obj || typeof obj !== 'object') return obj;
                 delete obj.storedUser;
@@ -187,7 +190,14 @@
                     return parsed;
                 } catch (e) { return null; }
             },
-            isLoggedIn() { return localStorage.getItem('argo_is_logged_in') === 'true'; },
+            isLoggedIn() {
+                const hasLoginFlag = localStorage.getItem('argo_is_logged_in') === 'true';
+                if (!hasLoginFlag) return false;
+                const s = this.load();
+                const hasValidSession = this.isValidSessionObject(s);
+                if (!hasValidSession) this.clear();
+                return hasValidSession;
+            },
             clear() {
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
@@ -582,8 +592,10 @@
                     })
                     .catch((e) => console.warn('Background sync failed:', e));
             } else {
+                state.isLoggedIn = false;
                 state.view = 'login';
                 state.booting = false;
+                window._bootRenderedOnce = false;
                 renderBootFallback();
             }
             
@@ -912,6 +924,7 @@
 
             if (typeof closeModal === 'function') closeModal();
             alert(`✅ Benvenuto ${state.user.name}!`);
+            window._bootRenderedOnce = false;
             navigate('home');
             if (window.scheduleRender) window.scheduleRender();
         }

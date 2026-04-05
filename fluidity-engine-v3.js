@@ -142,7 +142,20 @@
       const allowedViews = ['login', 'home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
       const canAccessRequested = allowedViews.includes(v) && (state.isLoggedIn || v === 'login');
       if (!canAccessRequested) v = state.isLoggedIn ? 'home' : 'login';
-      if (v === state.view) return;
+      if (v === state.view) {
+        // If auth/session state changed while staying on the same view, refresh DOM immediately.
+        const fallbackRefresh = () => {
+          if (typeof window.scheduleRender === 'function') window.scheduleRender(0);
+        };
+        try {
+          if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
+          else fallbackRefresh();
+        } catch (e) {
+          console.warn('Direct same-view refresh failed, fallback to scheduleRender:', e);
+          fallbackRefresh();
+        }
+        return;
+      }
 
       const targetHash = '#' + v;
       if (window.location.hash !== targetHash) {
