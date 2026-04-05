@@ -4729,6 +4729,8 @@ let _lastRenderedView = null;
 let _lastRenderedLoggedIn = null;
 let _lastRenderedTaskCount = -1;
 let _lastRenderedVotiCount = -1;
+let _lastRenderedAICount = -1;
+let _lastRenderedAIPending = null;
 
 window._renderCore = function () {
     if (state._loggedOut) return; // Post-logout guard
@@ -4747,13 +4749,18 @@ window._renderCore = function () {
         return;
     }
 
-    // Deduplicate: skip full re-render if same view + same data counts
+    // Deduplicate: skip full re-render if same view + same data counts + same AI state
     const taskCount = (state.tasks || []).length;
     const votiCount = (state.voti || []).length;
+    const aiCount = (state.aiChatHistory || []).length;
+    const aiPending = !!state.aiChatPending;
+
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
         _lastRenderedTaskCount === taskCount &&
         _lastRenderedVotiCount === votiCount &&
+        _lastRenderedAICount === aiCount &&
+        _lastRenderedAIPending === aiPending &&
         !state._forceRender) {
         return;
     }
@@ -4761,6 +4768,8 @@ window._renderCore = function () {
     _lastRenderedView = state.view;
     _lastRenderedTaskCount = taskCount;
     _lastRenderedVotiCount = votiCount;
+    _lastRenderedAICount = aiCount;
+    _lastRenderedAIPending = aiPending;
     state._forceRender = false;
 
     document.body.classList.remove('logged-out');
