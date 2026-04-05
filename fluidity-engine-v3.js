@@ -216,7 +216,6 @@
 
     let html = '';
     switch (view) {
-      case 'login':           html = (typeof renderLogin === 'function') ? renderLogin() : ''; break;
       case 'home':            html = (typeof renderHome === 'function') ? renderHome() : ''; break;
       case 'planner':         html = (typeof renderPlanner === 'function') ? renderPlanner() : ''; break;
       case 'voti':            html = (typeof renderGradesView === 'function') ? renderGradesView() : ''; break;
