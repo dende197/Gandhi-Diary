@@ -2826,8 +2826,8 @@ function mostraVerificheModal() {
                             const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
                             const tipoLabel = normalizedTipo === 'scritta' ? 'Scritta' : normalizedTipo === 'orale' ? 'Orale' : '';
 
-                            let urgencyColor = '#3B82F6';
-                            let urgencyBg = 'rgba(59,130,246,0.08)';
+                            let urgencyColor = 'var(--text-secondary)';
+                            let urgencyBg = 'rgba(0,0,0,0.04)';
                             if (days === 0) { urgencyColor = '#EF4444'; urgencyBg = 'rgba(239,68,68,0.1)'; }
                             else if (days === 1) { urgencyColor = '#F97316'; urgencyBg = 'rgba(249,115,22,0.1)'; }
                             else if (days <= 3) { urgencyColor = '#F59E0B'; urgencyBg = 'rgba(245,158,11,0.08)'; }
@@ -2856,14 +2856,15 @@ function mostraVerificheModal() {
                                             ${tipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); background:rgba(0,0,0,0.05); border-radius:5px; padding:2px 6px; text-transform:uppercase;">${tipoLabel}</span>` : ''}
                                         </div>
                                     </div>
-                                    <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:52px; gap:2px;">
-                                        <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
-                                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
+                                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; min-width:52px; gap:2px;">
                                         ${v.source === 'manual' ? `
-                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; margin-top:4px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
+                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
                                                 <i class="ph-bold ph-trash" style="font-size:14px;"></i>
                                             </button>
-                                        ` : ''}
+                                        ` : `
+                                            <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
+                                            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
+                                        `}
                                     </div>
                                 </div>
                             `;
@@ -4051,7 +4052,7 @@ function openArgoLogin() {
                     <div style="width:60px; height:60px; background:#106690; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
                        <i class="ph-fill ph-book-bookmark" style="font-size:30px; color:white;"></i>
                     </div>
-                    <h2 style="margin:0; color:white;">Collega DidUP</h2>
+                    <h2 style="margin:0; color:var(--text-primary);">Collega DidUP</h2>
                 </div>
 
                 <div id="server-status" style="margin-bottom: 20px; font-size: 12px; color: var(--orange); display: flex; align-items: center; justify-content: center; gap: 6px;">
@@ -4075,30 +4076,34 @@ function showProfileSelectionModal(profiles, credentials) {
 
     container.innerHTML = `
         <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
-            <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width: 440px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-                <div style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <div style="width: 64px; height: 64px; background: rgba(10, 132, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                        <i class="ph-fill ph-users" style="font-size: 32px; color: var(--blue);"></i>
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 440px; padding: 0; overflow: hidden;">
+                <div style="padding: 28px 24px 20px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.06);">
+                    <div style="width: 64px; height: 64px; background: rgba(99,102,241,0.1); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                        <i class="ph-fill ph-users" style="font-size: 32px; color: var(--accent);"></i>
                     </div>
-                    <h2 style="font-size: 20px; margin-bottom: 8px;">Seleziona Profilo</h2>
+                    <h2 style="font-size: 20px; font-weight: 800; margin: 0 0 6px 0; color: var(--text-primary);">Seleziona Profilo</h2>
                     <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Scegli quale studente visualizzare</p>
                 </div>
-                
-                <div class="profiles-list" style="padding: 24px; display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto;">
+
+                <div class="profiles-list" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;">
                     ${profiles.map(p => `
-                        <button class="btn-profile" 
+                        <button class="btn-profile"
                                 data-index="${p.index}"
-                                style="background: var(--surface-highlight); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: left; -webkit-tap-highlight-color: transparent;">
-                            <div class="profile-avatar" style="width: 44px; height: 44px; background: linear-gradient(135deg, var(--blue), var(--indigo)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
+                                style="background: var(--bg-card); border: 1px solid rgba(0,0,0,0.06); padding: 14px 16px; border-radius: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: left; -webkit-tap-highlight-color: transparent; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                            <div class="profile-avatar" style="width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), var(--blue)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
                                 ${escapeHtml((p.name || 'S')[0].toUpperCase())}
                             </div>
-                            <div style="flex-grow: 1;">
-                                <div class="profile-name" style="font-weight: 700; font-size: 16px; color: white; margin-bottom: 4px;">${escapeHtml(p.name || ('Studente ' + (p.index + 1)))}</div>
-                                <div class="profile-class" style="font-size: 13px; color: var(--text-secondary);">${escapeHtml(p.class || p.school || 'Caricamento...')}</div>
+                            <div style="flex-grow: 1; min-width: 0;">
+                                <div class="profile-name" style="font-weight: 700; font-size: 16px; color: var(--text-primary); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.name || ('Studente ' + (p.index + 1)))}</div>
+                                <div class="profile-class" style="font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.class || p.school || 'Caricamento...')}</div>
                             </div>
-                            <i class="ph-bold ph-caret-right" style="color: var(--text-secondary);"></i>
+                            <i class="ph-bold ph-caret-right" style="color: var(--text-dim); flex-shrink: 0;"></i>
                         </button>
                     `).join('')}
+                </div>
+
+                <div style="padding: 12px 16px 16px; border-top: 1px solid rgba(0,0,0,0.06);">
+                    <button onclick="closeModal()" style="width: 100%; height: 44px; border-radius: 14px; border: none; background: rgba(0,0,0,0.05); color: var(--text-secondary); font-weight: 600; cursor: pointer; font-size: 14px;">Annulla</button>
                 </div>
             </div>
         </div>`;
