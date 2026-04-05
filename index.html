@@ -195,7 +195,7 @@
                 if (!hasLoginFlag) return false;
                 const s = this.load();
                 const hasValidSession = this.isValidSessionObject(s);
-                if (!hasValidSession) localStorage.removeItem('argo_is_logged_in');
+                if (!hasValidSession) this.clear();
                 return hasValidSession;
             },
             clear() {

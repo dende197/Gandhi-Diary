@@ -144,7 +144,16 @@
       if (!canAccessRequested) v = state.isLoggedIn ? 'home' : 'login';
       if (v === state.view) {
         // If auth/session state changed while staying on the same view, refresh DOM immediately.
-        if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
+        const fallbackRefresh = () => {
+          if (typeof window.scheduleRender === 'function') window.scheduleRender(0);
+        };
+        try {
+          if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
+          else fallbackRefresh();
+        } catch (e) {
+          console.warn('Direct same-view refresh failed, fallback to scheduleRender:', e);
+          fallbackRefresh();
+        }
         return;
       }
 
