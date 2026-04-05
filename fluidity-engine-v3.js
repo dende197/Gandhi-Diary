@@ -140,8 +140,8 @@
 
     window.navigate = function navigate(v) {
       const allowedViews = ['login', 'home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
-      if (!allowedViews.includes(v)) v = state.isLoggedIn ? 'home' : 'login';
-      if (!state.isLoggedIn && v !== 'login') v = 'login';
+      const canAccessRequested = allowedViews.includes(v) && (state.isLoggedIn || v === 'login');
+      if (!canAccessRequested) v = state.isLoggedIn ? 'home' : 'login';
       if (v === state.view) return;
 
       const targetHash = '#' + v;
