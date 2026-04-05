@@ -1991,7 +1991,7 @@ function renderAIAssistantView() {
                     <div class="ai-chat-welcome-title">Come posso aiutarti oggi?</div>
                     <div class="ai-chat-suggest-grid">
                         ${quickPrompts.map((prompt) => `
-                        <button class="ai-chat-suggest-btn" onclick="sendAIChatQuick('${escapeHtml(prompt).replace(/'/g, "\\'")}')">
+                        <button class="ai-chat-suggest-btn" onclick="sendAIChatQuick(${JSON.stringify(prompt)})">
                             ${escapeHtml(prompt)}
                         </button>
                         `).join('')}

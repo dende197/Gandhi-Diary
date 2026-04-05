@@ -522,6 +522,8 @@
             } catch (e) { console.warn("Circolari load failed", e); }
         }
 
+        const RENDER_CHECK_INTERVAL_MS = 30;
+        const RENDER_CHECK_TIMEOUT_MS = 1800;
         // --- BOOT FLOW ---
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
@@ -542,8 +544,8 @@
                         window.render();
                         clearInterval(checkRender);
                     }
-                }, 30);
-                setTimeout(() => clearInterval(checkRender), 1800);
+                }, RENDER_CHECK_INTERVAL_MS);
+                setTimeout(() => clearInterval(checkRender), RENDER_CHECK_TIMEOUT_MS);
             };
             
             // Assign offlineBadge reference for updateOfflineBadge()
