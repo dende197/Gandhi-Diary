@@ -610,12 +610,6 @@
                 setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
             }
 
-            // Cancel any render timer scheduled during sync (e.g. from performSync's scheduleRender)
-            // to avoid a double DOM write on first load.
-            if (state.isLoggedIn) {
-                clearTimeout(window._gRenderTimer);
-                if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
-            }
             // Check Google connection status (async, fires a re-render only on state change)
             if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
                 window.checkGoogleStatus().then(() => {
