@@ -4508,6 +4508,24 @@
             font-size: 15px !important;
           }
 
+          /* ── LOGIN VIEW: override mobile #app .view (same specificity, must come after) ── */
+          #app .login-view {
+            min-height: 100svh !important;
+            min-height: 100dvh !important;
+            padding-left: 24px !important;
+            padding-right: 24px !important;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+          }
+
+          body.logged-out .main-container {
+            padding-top: 0 !important;
+            min-height: 0 !important;
+          }
+
           .dashboard.view,
           .dashboard.view .planner-content,
           .view[style*="max-width: 1180px"] {
@@ -5603,4 +5621,9 @@
             border-radius: 15px;
             padding-left: 10px;
           }
+        }
+
+        /* ── AUTO-ENTRANCE: ogni nuovo .view animato dopo render ── */
+        #app > .view:not(.ai-view):not(.login-view) {
+          animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
