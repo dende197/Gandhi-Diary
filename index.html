@@ -56,6 +56,8 @@
 
     <style>
         /* Essential inline styles only */
+        html, body { background-color: #F6F5F3; }
+        @media (prefers-color-scheme: dark) { html, body { background-color: #0D1117; } }
         @keyframes spin { to { transform: rotate(360deg); } }
         #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-body);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
         .app-loader-ring{
