@@ -2,7 +2,7 @@
   if (window.__fluidityBootPatchInstalled) return;
   window.__fluidityBootPatchInstalled = true;
 
-  const PATCH_VERSION = '1.0.0';
+  const PATCH_VERSION = '1.0.1';
   const LOADER_REMOVE_TIMEOUT_MS = 180;
   const POST_NAV_SCHEDULE_BLOCK_MS = 160;
   const PATCH_RETRY_INTERVAL_MS = 50;
@@ -30,8 +30,7 @@
       window.gsapAnimateView && window.gsapAnimateView.__fluidityBootPatched &&
       window.render && window.render.__fluidityNoGapPatched &&
       window.scheduleRender && window.scheduleRender.__fluidityBootPatched &&
-      window.alert && window.alert.__fluidityBootPatched &&
-      window.gsap && window.gsap.__fluidityWillChangePatched
+      window.alert && window.alert.__fluidityBootPatched
     );
   }
 
@@ -149,6 +148,7 @@
         window.__fluidityLastNavigateAt = performance.now();
         return originalNavigate.apply(this, args);
       };
+      navigatePatched._isV3 = !!originalNavigate._isV3;
       window.navigate = markPatched(navigatePatched, '__fluidityBootPatched');
     }
 
