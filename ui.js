@@ -4119,7 +4119,20 @@ function showProfileSelectionModal(profiles, credentials) {
         });
 
         btn.style.opacity = '1';
-        btn.innerHTML += '<i class="ph-bold ph-spinner ph-spin" style="margin-left:auto"></i>';
+        const rightIcon = btn.querySelector('i.ph-caret-right');
+        if (rightIcon) {
+            rightIcon.outerHTML = `
+                <span style="margin-left:auto; width:18px; height:18px; border-radius:50%; background:var(--meeting-gradient); position:relative; display:inline-block; flex-shrink:0; animation: profile-loader-spin 0.8s linear infinite;">
+                    <span style="position:absolute; inset:2px; border-radius:50%; background: var(--bg-card);"></span>
+                </span>
+            `;
+        } else {
+            btn.innerHTML += `
+                <span style="margin-left:auto; width:18px; height:18px; border-radius:50%; background:var(--meeting-gradient); position:relative; display:inline-block; flex-shrink:0; animation: profile-loader-spin 0.8s linear infinite;">
+                    <span style="position:absolute; inset:2px; border-radius:50%; background: var(--bg-card);"></span>
+                </span>
+            `;
+        }
 
         await selectProfile(parseInt(btn.dataset.index, 10), credentials);
     }, { once: true });

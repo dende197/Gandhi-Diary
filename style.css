@@ -4020,7 +4020,7 @@
         }
 
         .ai-chat-input-wrap {
-          padding: 8px 16px calc(10px + var(--safe-bottom)) !important;
+          padding: 8px 16px var(--safe-bottom) !important;
           background: #FFFFFF;
           border-top: 1px solid rgba(20, 20, 20, 0.08);
         }
@@ -4903,7 +4903,7 @@
           /* ── Input bar: flush bottom, pill-shaped, compact ───── */
           .ai-chat-input-wrap {
             padding: 6px 8px 0px !important;
-            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px) !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
             background: #FFFFFF !important;
             border-top: 1px solid rgba(20, 20, 20, 0.06) !important;
             flex-shrink: 0 !important;
@@ -5475,10 +5475,11 @@
         }
 
         .ai-chat-input-wrap {
-          padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 10px) 12px !important;
+          padding: 8px 12px env(safe-area-inset-bottom, 0px) 12px !important;
           background: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(12px);
           border-top: 1px solid rgba(13, 31, 45, 0.08);
+          margin-bottom: 0 !important;
         }
 
         .ai-input-shell {
@@ -5615,6 +5616,7 @@
           .ai-chat-input-wrap {
             padding-left: 8px !important;
             padding-right: 8px !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
           }
 
           .ai-input-dock {
@@ -5626,4 +5628,8 @@
         /* ── AUTO-ENTRANCE: ogni nuovo .view animato dopo render ── */
         #app > .view:not(.ai-view):not(.login-view) {
           animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes profile-loader-spin {
+          to { transform: rotate(360deg); }
         }
