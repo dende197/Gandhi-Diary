@@ -96,6 +96,7 @@
           --color-surface-subtle: #F8F7F5;
           --color-surface-strong: #141414;
           --color-border-soft: #ECEAE6;
+          --meeting-gradient: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%);
         }
 
         /* === RESET === */
@@ -219,6 +220,10 @@
         body:not(.is-ai-mode) .main-container {
           overflow: visible !important;
           padding-top: 20px;
+        }
+
+        body.logged-out .main-container {
+          padding-top: 0 !important;
         }
 
         body:not(.is-ai-mode) #app {
