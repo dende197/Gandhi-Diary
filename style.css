@@ -4020,10 +4020,10 @@
         }
 
         .ai-chat-input-wrap {
-          padding: 8px 16px 0px 16px !important;
+          padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 12px) 16px !important;
           margin-bottom: 0px !important;
-          background: #FFFFFF;
-          border-top: 1px solid rgba(20, 20, 20, 0.08);
+          background: transparent;
+          border-top: none;
         }
 
         .ai-chat-input-field {
@@ -4901,12 +4901,12 @@
             margin-bottom: 6px !important;
           }
 
-          /* ── Input bar: flush bottom, pill-shaped, compact ───── */
+          /* ── Input bar: floating pill, compact ───── */
           .ai-chat-input-wrap {
-            padding: 6px 8px 0px 8px !important;
+            padding: 6px 8px calc(env(safe-area-inset-bottom, 0px) + 12px) 8px !important;
             margin-bottom: 0px !important;
-            background: #FFFFFF !important;
-            border-top: 1px solid rgba(20, 20, 20, 0.06) !important;
+            background: transparent !important;
+            border-top: none !important;
             flex-shrink: 0 !important;
           }
 
@@ -4916,7 +4916,7 @@
 
           .ai-input-dock {
             width: 100% !important;
-            border-radius: 22px !important;
+            border-radius: 999px !important;
             padding: 4px 4px 4px 14px !important;
             background: #F6F5F3 !important;
             border: 1px solid #E0DDD8 !important;
@@ -5483,11 +5483,11 @@
         }
 
         .ai-chat-input-wrap {
-          padding: 0 !important;
+          padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 12px) 16px !important;
           margin: 0 !important;
-          background: rgba(255, 255, 255, 0.88);
-          backdrop-filter: blur(12px);
-          border-top: 1px solid rgba(13, 31, 45, 0.08);
+          background: transparent;
+          backdrop-filter: none;
+          border-top: none;
           flex-shrink: 0;
         }
 
@@ -5498,15 +5498,16 @@
         }
 
         .ai-input-dock {
-          width: min(920px, 100%);
-          border-radius: 0;
-          border: none;
-          background: #fff;
+          width: min(760px, 100%);
+          border-radius: 999px;
+          border: 1px solid #E0DDD8;
+          background: rgba(246, 245, 243, 0.96);
           padding: 10px 16px;
           display: flex;
           align-items: center;
           gap: 8px;
-          box-shadow: none;
+          box-shadow: 0 10px 24px rgba(13, 31, 45, 0.14);
+          backdrop-filter: blur(8px);
         }
 
         .ai-chat-input-field {
@@ -5624,15 +5625,18 @@
           }
 
           .ai-chat-input-wrap {
-            padding: 0 !important;
+            padding: 6px 8px calc(env(safe-area-inset-bottom, 0px) + 12px) 8px !important;
             margin: 0 !important;
+            background: transparent !important;
+            border-top: none !important;
           }
 
           .ai-input-dock {
             width: 100%;
-            border-radius: 0;
-            border: none;
-            padding: 10px 12px;
+            border-radius: 999px;
+            border: 1px solid #E0DDD8;
+            padding: 4px 4px 4px 14px;
+            background: #F6F5F3;
           }
         }
 
