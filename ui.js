@@ -5205,10 +5205,12 @@ window.removeBacklog = function (index) {
 
 // ── AI ASSISTANT HELPERS ──
 window.sendAIChatQuick = function (text) {
-    if (typeof text !== 'string' || !text.trim()) return;
-    state.aiChatInputValue = text;
+    if (typeof text !== 'string') return;
+    const normalizedText = text.trim();
+    if (!normalizedText) return;
+    state.aiChatInputValue = normalizedText;
     const input = document.getElementById('aiChatInput');
-    if (input) input.value = text;
+    if (input) input.value = normalizedText;
     window.sendAIChat();
 };
 

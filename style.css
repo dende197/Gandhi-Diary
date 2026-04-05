@@ -5449,6 +5449,13 @@
           40% { transform: translateY(-4px); opacity: 1; }
         }
 
+        @media (prefers-reduced-motion: reduce) {
+          .typing-dot {
+            animation: none !important;
+            opacity: 0.7;
+          }
+        }
+
         .ai-chat-input-wrap {
           padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 10px) 12px !important;
           background: rgba(255, 255, 255, 0.88);
