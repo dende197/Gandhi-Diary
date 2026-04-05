@@ -1444,7 +1444,7 @@ function renderLogin() {
     return `
         <div class="view login-view" style="min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) 24px calc(env(safe-area-inset-bottom, 0px) + 24px); text-align: center;">
             <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 10px 24px rgba(13,31,45,0.25); overflow: hidden;">
-                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" style="width: 60px; height: 60px; border-radius: 14px; object-fit: cover;">
+                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-180.png';" style="width: 60px; height: 60px; border-radius: 14px; object-fit: cover;">
             </div>
             
             <h1 style="font-size: 32px; font-weight: 800; margin: 0;"></h1>
@@ -2849,7 +2849,7 @@ function mostraVerificheModal() {
                                             <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
                                                 <i class="ph-bold ph-trash" style="font-size:14px;"></i>
                                             </button>
-                                        ` : ``}
+                                        ` : ''}
                                     </div>
                                 </div>
                             `;
