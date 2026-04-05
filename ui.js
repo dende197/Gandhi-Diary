@@ -4031,11 +4031,11 @@ function openArgoLogin() {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
     modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)">
-            <div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;">
+        <div class="modal-overlay active" onclick="closeModal(event)" style="display:flex; align-items:center; justify-content:center; padding:16px;">
+            <div class="modal-content" onclick="event.stopPropagation()" style="width:100%; max-width:380px; margin:0 auto;">
                 <div style="text-align:center; margin-bottom:20px;">
-                    <div style="width:60px; height:60px; background:#106690; border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
-                       <i class="ph-fill ph-book-bookmark" style="font-size:30px; color:white;"></i>
+                    <div style="width:60px; height:60px; background:var(--meeting-gradient); border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; box-shadow:0 8px 18px rgba(13,31,45,0.24); overflow:hidden;">
+                       <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-512.png';" style="width:44px; height:44px; border-radius:10px; object-fit:cover;">
                     </div>
                     <h2 style="margin:0; color:var(--text-primary);">Collega DidUP</h2>
                 </div>
@@ -4048,7 +4048,7 @@ function openArgoLogin() {
                 <input id="argo-school" placeholder="Codice Scuola" value="${localStorage.getItem('argo_school') || ''}">
                 <input id="argo-user" placeholder="Nome Utente">
                 <input type="password" id="argo-pass" placeholder="Password">
-                <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px;">Accedi e Sincronizza</button>
+                <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px; background:var(--meeting-gradient); border:none; color:#fff;">Accedi e Sincronizza</button>
                 <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
             </div>
         </div>`;
@@ -4060,11 +4060,11 @@ function showProfileSelectionModal(profiles, credentials) {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out;">
-            <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 440px; padding: 0; overflow: hidden;">
+        <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out; display:flex; align-items:center; justify-content:center; padding:16px;">
+            <div class="modal-content" onclick="event.stopPropagation()" style="width:100%; max-width: 440px; margin:0 auto; padding: 0; overflow: hidden;">
                 <div style="padding: 28px 24px 20px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.06);">
-                    <div style="width: 64px; height: 64px; background: rgba(99,102,241,0.1); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                        <i class="ph-fill ph-users" style="font-size: 32px; color: var(--accent);"></i>
+                    <div style="width: 64px; height: 64px; background: #141414; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; overflow:hidden;">
+                        <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-512.png';" style="width:48px; height:48px; border-radius:12px; object-fit:cover;">
                     </div>
                     <h2 style="font-size: 20px; font-weight: 800; margin: 0 0 6px 0; color: var(--text-primary);">Seleziona Profilo</h2>
                     <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Scegli quale studente visualizzare</p>
@@ -4075,7 +4075,7 @@ function showProfileSelectionModal(profiles, credentials) {
                         <button class="btn-profile"
                                 data-index="${p.index}"
                                 style="background: var(--bg-card); border: 1px solid rgba(0,0,0,0.06); padding: 14px 16px; border-radius: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: left; -webkit-tap-highlight-color: transparent; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                            <div class="profile-avatar" style="width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), var(--blue)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
+                            <div class="profile-avatar" style="width: 44px; height: 44px; background: #141414; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
                                 ${escapeHtml((p.name || 'S')[0].toUpperCase())}
                             </div>
                             <div style="flex-grow: 1; min-width: 0;">
