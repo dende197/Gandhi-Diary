@@ -70,6 +70,11 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
+const AI_CHAT_QUICK_PROMPTS = [
+    'Organizza la mia settimana 📅',
+    'Aiutami a ripassare per la verifica 📝',
+    'Consiglio produttività 🚀'
+];
 const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
 const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
 const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
@@ -1961,11 +1966,6 @@ function renderGradesView() {
 }
 function renderAIAssistantView() {
     const chat = state.aiChatHistory || [];
-    const quickPrompts = [
-        'Organizza la mia settimana 📅',
-        'Aiutami a ripassare per la verifica 📝',
-        'Consiglio produttività 🚀'
-    ];
 
     return `
         <div class="view ai-view ai-chat-view">
@@ -1990,7 +1990,7 @@ function renderAIAssistantView() {
                     <div class="ai-chat-welcome-eyebrow">G-Diary Assistant</div>
                     <div class="ai-chat-welcome-title">Come posso aiutarti oggi?</div>
                     <div class="ai-chat-suggest-grid">
-                        ${quickPrompts.map((prompt, idx) => `
+                        ${AI_CHAT_QUICK_PROMPTS.map((prompt, idx) => `
                         <button class="ai-chat-suggest-btn" onclick="sendAIChatQuickAt(${idx})">
                             ${escapeHtml(prompt)}
                         </button>
@@ -5205,19 +5205,15 @@ window.removeBacklog = function (index) {
 
 // ── AI ASSISTANT HELPERS ──
 window.sendAIChatQuick = function (text) {
-    state.aiChatInputValue = text || '';
+    if (typeof text !== 'string' || !text.trim()) return;
+    state.aiChatInputValue = text;
     const input = document.getElementById('aiChatInput');
     if (input) input.value = text;
     window.sendAIChat();
 };
 
 window.sendAIChatQuickAt = function (index) {
-    const quickPrompts = [
-        'Organizza la mia settimana 📅',
-        'Aiutami a ripassare per la verifica 📝',
-        'Consiglio produttività 🚀'
-    ];
-    const text = quickPrompts[index];
+    const text = AI_CHAT_QUICK_PROMPTS[index];
     if (!text) return;
     window.sendAIChatQuick(text);
 };
