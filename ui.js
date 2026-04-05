@@ -4846,7 +4846,7 @@ window.logout = async function () {
         }
 
         sessionManager.clear();
-        if (typeof supabaseClient !== 'undefined' && supabaseClient.auth) supabaseClient.auth.signOut();
+        if (supabaseClient && supabaseClient.auth) supabaseClient.auth.signOut().catch(e => console.warn('[Logout] Supabase signOut failed:', e));
 
         state.booting = false;
         state.syncing = false;
