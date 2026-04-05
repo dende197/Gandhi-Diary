@@ -541,21 +541,25 @@
                 if (window._bootRenderedOnce) return;
                 window._bootRenderedOnce = true;
                 const loader = document.getElementById('app-loader');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.remove(), 230);
-                }
-                if (window.render) {
-                    window.render();
-                    return;
-                }
-                const checkRender = setInterval(() => {
+                const _doRender = () => {
                     if (window.render) {
                         window.render();
-                        clearInterval(checkRender);
+                    } else {
+                        const checkRender = setInterval(() => {
+                            if (window.render) { window.render(); clearInterval(checkRender); }
+                        }, RENDER_AVAILABILITY_CHECK_INTERVAL_MS);
+                        setTimeout(() => clearInterval(checkRender), RENDER_AVAILABILITY_TIMEOUT_MS);
                     }
-                }, RENDER_AVAILABILITY_CHECK_INTERVAL_MS);
-                setTimeout(() => clearInterval(checkRender), RENDER_AVAILABILITY_TIMEOUT_MS);
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            if (loader) {
+                                loader.style.opacity = '0';
+                                setTimeout(() => { if (loader.parentNode) loader.remove(); }, 220);
+                            }
+                        });
+                    });
+                };
+                setTimeout(_doRender, 16);
             };
             
             // Assign offlineBadge reference for updateOfflineBadge()
@@ -608,8 +612,10 @@
 
             // Cancel any render timer scheduled during sync (e.g. from performSync's scheduleRender)
             // to avoid a double DOM write on first load.
-            clearTimeout(window._gRenderTimer);
-            if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+            if (state.isLoggedIn) {
+                clearTimeout(window._gRenderTimer);
+                if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+            }
             // Check Google connection status (async, fires a re-render only on state change)
             if (state.isLoggedIn && typeof window.checkGoogleStatus === 'function') {
                 window.checkGoogleStatus().then(() => {
