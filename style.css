@@ -4903,7 +4903,6 @@
           /* ── Input bar: flush bottom, pill-shaped, compact ───── */
           .ai-chat-input-wrap {
             padding: 6px 8px 0px !important;
-            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
             background: #FFFFFF !important;
             border-top: 1px solid rgba(20, 20, 20, 0.06) !important;
             flex-shrink: 0 !important;
@@ -5616,7 +5615,6 @@
           .ai-chat-input-wrap {
             padding-left: 8px !important;
             padding-right: 8px !important;
-            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
           }
 
           .ai-input-dock {
