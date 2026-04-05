@@ -3,6 +3,10 @@
   window.__fluidityBootPatchInstalled = true;
 
   const PATCH_VERSION = '1.0.0';
+  const LOADER_REMOVE_TIMEOUT_MS = 180;
+  const POST_NAV_SCHEDULE_BLOCK_MS = 160;
+  const PATCH_RETRY_INTERVAL_MS = 50;
+  const PATCH_RETRY_MAX_ATTEMPTS = 120;
 
   // 1) Cold-start white flash guard (run as early as possible).
   try {
@@ -18,6 +22,17 @@
   function markPatched(fn, key) {
     try { fn[key] = true; } catch (_) {}
     return fn;
+  }
+
+  function areCorePatchesInstalled() {
+    return !!(
+      window.hideBoot && window.hideBoot.__fluidityBootPatched &&
+      window.gsapAnimateView && window.gsapAnimateView.__fluidityBootPatched &&
+      window.render && window.render.__fluidityNoGapPatched &&
+      window.scheduleRender && window.scheduleRender.__fluidityBootPatched &&
+      window.alert && window.alert.__fluidityBootPatched &&
+      window.gsap && window.gsap.__fluidityWillChangePatched
+    );
   }
 
   // 2) hideBoot() without lingering loader layer.
@@ -41,7 +56,7 @@
         };
         loader.addEventListener('transitionend', done, { once: true });
         loader.style.opacity = '0';
-        setTimeout(done, 180);
+        setTimeout(done, LOADER_REMOVE_TIMEOUT_MS);
       }
     };
     window.hideBoot = markPatched(patched, '__fluidityBootPatched');
@@ -141,7 +156,7 @@
       const originalScheduleRender = window.scheduleRender;
       const schedulePatched = function (delay = 80) {
         const lastNav = window.__fluidityLastNavigateAt || 0;
-        const inPostNavWindow = (performance.now() - lastNav) < 160;
+        const inPostNavWindow = (performance.now() - lastNav) < POST_NAV_SCHEDULE_BLOCK_MS;
         const forceRender = !!(window.state && window.state._forceRender);
         if (inPostNavWindow && !forceRender) return;
         return originalScheduleRender.call(this, delay);
@@ -156,7 +171,7 @@
     const nativeAlert = window.alert.bind(window);
     const alertPatched = function (message) {
       const text = String(message ?? '');
-      const isLoginWelcome = /benvenuto/i.test(text) || /^\s*✅/.test(text);
+      const isLoginWelcome = /^\s*✅/.test(text) || /welcome|benvenut|bienven|bienvenu|willkommen|bem-vind/i.test(text);
       if (isLoginWelcome && typeof window.showToast === 'function') {
         window.showToast(text.replace(/^✅\s*/, ''), 'success');
         return;
@@ -173,15 +188,20 @@
     installRenderBypassPatch();
     installNavigateSchedulePatch();
     installAlertPatch();
+    return areCorePatchesInstalled();
   }
 
-  installAll();
+  if (installAll()) {
+    window.__fluidityBootPatchVersion = PATCH_VERSION;
+    console.log('🩹 Fluidity boot patch loaded', PATCH_VERSION);
+    return;
+  }
   let attempts = 0;
   const timer = setInterval(() => {
     attempts += 1;
-    installAll();
-    if (attempts >= 120) clearInterval(timer);
-  }, 50);
+    const ready = installAll();
+    if (ready || attempts >= PATCH_RETRY_MAX_ATTEMPTS) clearInterval(timer);
+  }, PATCH_RETRY_INTERVAL_MS);
 
   window.__fluidityBootPatchVersion = PATCH_VERSION;
   console.log('🩹 Fluidity boot patch loaded', PATCH_VERSION);
