@@ -200,9 +200,15 @@
   const timer = setInterval(() => {
     attempts += 1;
     const ready = installAll();
-    if (ready || attempts >= PATCH_RETRY_MAX_ATTEMPTS) clearInterval(timer);
+    if (ready) {
+      clearInterval(timer);
+      window.__fluidityBootPatchVersion = PATCH_VERSION;
+      console.log('🩹 Fluidity boot patch loaded', PATCH_VERSION);
+      return;
+    }
+    if (attempts >= PATCH_RETRY_MAX_ATTEMPTS) {
+      clearInterval(timer);
+      console.warn('⚠️ Fluidity boot patch partial install after retries');
+    }
   }, PATCH_RETRY_INTERVAL_MS);
-
-  window.__fluidityBootPatchVersion = PATCH_VERSION;
-  console.log('🩹 Fluidity boot patch loaded', PATCH_VERSION);
 })();
