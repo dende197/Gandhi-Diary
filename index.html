@@ -159,6 +159,9 @@
 
         // --- SESSION MANAGER (v7.0) ---
         const sessionManager = {
+            isValidSessionObject(s) {
+                return !!(s && typeof s === 'object' && s.schoolCode && s.userName);
+            },
             sanitizeSensitiveSessionData(obj) {
                 if (!obj || typeof obj !== 'object') return obj;
                 delete obj.storedUser;
@@ -191,7 +194,7 @@
                 const hasLoginFlag = localStorage.getItem('argo_is_logged_in') === 'true';
                 if (!hasLoginFlag) return false;
                 const s = this.load();
-                const hasValidSession = !!(s && typeof s === 'object' && s.schoolCode && s.userName);
+                const hasValidSession = this.isValidSessionObject(s);
                 if (!hasValidSession) localStorage.removeItem('argo_is_logged_in');
                 return hasValidSession;
             },
