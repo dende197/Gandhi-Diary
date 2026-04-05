@@ -111,10 +111,10 @@
     if (!window.render._isV3 && !window.__fluidityRenderBypassForce) return;
 
     const patched = function renderNoGapPatched() {
-      if (window._gRenderRAF || !window.state || state.booting || state._loggedOut) return;
+      if (window._gRenderRAF || !window.state || window.state.booting || window.state._loggedOut) return;
       window._gRenderRAF = requestAnimationFrame(() => {
         try {
-          if (state._loggedOut) return;
+          if (window.state && window.state._loggedOut) return;
           if (typeof window._renderCore === 'function') window._renderCore();
         } finally {
           window._gRenderRAF = null;
@@ -142,7 +142,7 @@
       const schedulePatched = function (delay = 80) {
         const lastNav = window.__fluidityLastNavigateAt || 0;
         const inPostNavWindow = (performance.now() - lastNav) < 160;
-        const forceRender = !!(window.state && state._forceRender);
+        const forceRender = !!(window.state && window.state._forceRender);
         if (inPostNavWindow && !forceRender) return;
         return originalScheduleRender.call(this, delay);
       };
