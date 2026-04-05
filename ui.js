@@ -4830,6 +4830,12 @@ window.logout = async function () {
     if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
         state._loggedOut = true;
+        state.isLoggedIn = false;
+
+        // ── Kill all running GSAP animations (prevents late onComplete/onUpdate calls) ──
+        if (typeof gsap !== 'undefined') {
+            gsap.killTweensOf("*");
+        }
 
         const currentUserId = getUserId();
         const currentLsPrefix = getActiveProfileKey();
@@ -4842,7 +4848,6 @@ window.logout = async function () {
         sessionManager.clear();
         if (typeof supabaseClient !== 'undefined' && supabaseClient.auth) supabaseClient.auth.signOut();
 
-        state.isLoggedIn = false;
         state.booting = false;
         state.syncing = false;
         state.didup.connected = false;
@@ -4857,31 +4862,51 @@ window.logout = async function () {
         window._bootRenderedOnce = false;
         if (window._threadsPoller) clearInterval(window._threadsPoller);
 
-        // Cancel any pending render so they can't overwrite the login page
+        // Cancel any pending render timers
         clearTimeout(window._gRenderTimer);
         window._gRenderTimer = null;
-        if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+        if (window._gRenderRAF) {
+            cancelAnimationFrame(window._gRenderRAF);
+            window._gRenderRAF = null;
+        }
 
         // Write login directly and imperatively — bypasses all async pipelines
         state.view = 'login';
-        // Sync URL hash so hashchange/popstate listeners don't overwrite the login page
         if (window.location.hash !== '#login') {
             window.history.replaceState(null, '', '#login');
         }
+
         const _logoutAppRoot = document.getElementById('app');
         const _logoutNav = document.getElementById('nav-container');
-        if (_logoutAppRoot) {
-            document.body.classList.add('logged-out');
-            document.body.classList.remove('is-ai-mode');
-            document.body.style.overflow = '';
-            document.body.style.height = '';
-            _logoutAppRoot.style.overflow = 'visible';
-            _logoutAppRoot.style.height = '';
-            _logoutAppRoot.innerHTML = (typeof renderLogin === 'function') ? renderLogin() : '';
-        }
-        if (_logoutNav) _logoutNav.innerHTML = '';
 
-        // Reset render dedup state so next login renders correctly
+        const forceLoginRender = () => {
+            if (_logoutAppRoot) {
+                document.body.classList.add('logged-out');
+                document.body.classList.remove('is-ai-mode');
+                document.body.style.overflow = '';
+                document.body.style.height = '';
+                _logoutAppRoot.style.overflow = 'visible';
+                _logoutAppRoot.style.height = '';
+                _logoutAppRoot.innerHTML = (typeof renderLogin === 'function') ? renderLogin() : '';
+            }
+            if (_logoutNav) _logoutNav.innerHTML = '';
+        };
+
+        forceLoginRender();
+
+        // ── Mutation Guard: Prevent any other component from overwriting login for 1s ──
+        if (_logoutAppRoot) {
+            const observer = new MutationObserver((mutations) => {
+                if (state._loggedOut && !_logoutAppRoot.querySelector('.login-container')) {
+                    console.warn("[Guard] Detected unathorized DOM write post-logout, reverting to login...");
+                    forceLoginRender();
+                }
+            });
+            observer.observe(_logoutAppRoot, { childList: true, subtree: true });
+            setTimeout(() => observer.disconnect(), 1000);
+        }
+
+        // Reset render dedup state
         _lastRenderedLoggedIn = false;
         _lastRenderedView = 'login';
 

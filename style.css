@@ -4020,7 +4020,8 @@
         }
 
         .ai-chat-input-wrap {
-          padding: 8px 16px 0 16px !important;
+          padding: 8px 16px 0px 16px !important;
+          margin-bottom: 0px !important;
           background: #FFFFFF;
           border-top: 1px solid rgba(20, 20, 20, 0.08);
         }
@@ -4902,7 +4903,8 @@
 
           /* ── Input bar: flush bottom, pill-shaped, compact ───── */
           .ai-chat-input-wrap {
-            padding: 6px 8px 0px !important;
+            padding: 6px 8px 0px 8px !important;
+            margin-bottom: 0px !important;
             background: #FFFFFF !important;
             border-top: 1px solid rgba(20, 20, 20, 0.06) !important;
             flex-shrink: 0 !important;
@@ -5199,8 +5201,8 @@
           flex-direction: column !important;
           height: 100dvh !important;
           max-height: 100dvh !important;
-          padding-bottom: 0 !important;
-          margin-bottom: 0 !important;
+          padding-bottom: 0px !important;
+          margin-bottom: 0px !important;
           background:
             radial-gradient(1000px 500px at 120% -20%, rgba(26, 107, 138, 0.16), transparent 70%),
             radial-gradient(700px 400px at -20% -20%, rgba(198, 242, 223, 0.18), transparent 70%),
@@ -5476,8 +5478,8 @@
         }
 
         .ai-chat-input-wrap {
-          padding: 8px 12px 0 12px !important;
-          margin-bottom: 0 !important;
+          padding: 8px 12px 0px 12px !important;
+          margin-bottom: 0px !important;
           background: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(12px);
           border-top: 1px solid rgba(13, 31, 45, 0.08);
@@ -5616,8 +5618,8 @@
           }
 
           .ai-chat-input-wrap {
-            padding: 6px 8px 0 8px !important;
-            margin-bottom: 0 !important;
+            padding: 6px 8px 0px 8px !important;
+            margin-bottom: 0px !important;
           }
 
           .ai-input-dock {

@@ -117,6 +117,11 @@
       
       _lastRenderTime = now;
       window._gRenderRAF = requestAnimationFrame(() => {
+        // ── DEFINITIVE FIX: Re-check logout flag INSIDE the RAF callback ──
+        if (state._loggedOut) {
+            window._gRenderRAF = null;
+            return;
+        }
         if (typeof _origRenderCore === 'function') _origRenderCore();
         window._gRenderRAF = null;
       });
