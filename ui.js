@@ -70,6 +70,11 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
+const AI_CHAT_QUICK_PROMPTS = [
+    'Organizza la mia settimana 📅',
+    'Aiutami a ripassare per la verifica 📝',
+    'Consiglio produttività 🚀'
+];
 const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
 const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
 const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
@@ -373,6 +378,7 @@ window.switchPlannerView = function (view) {
 
 window.navigateSubject = function (subjName) {
     if (!subjName) return;
+    state._gradeSubjectsScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
     state.activeSubject = subjName;
     scheduleRender(0);
 };
@@ -403,8 +409,15 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
 };
 
 window.closeSubject = function () {
+    const restoreY = Number.isFinite(state._gradeSubjectsScrollY) ? state._gradeSubjectsScrollY : null;
     state.activeSubject = null;
-    scheduleRender();
+    scheduleRender(0);
+    if (restoreY !== null) {
+        requestAnimationFrame(() => {
+            window.scrollTo({ top: restoreY, behavior: 'auto' });
+            state._gradeSubjectsScrollY = null;
+        });
+    }
 };
 // --- Google Calendar OAuth2 (Universal) ---
 window.refreshSessionToken = async function () {
@@ -1963,68 +1976,66 @@ function renderAIAssistantView() {
     const chat = state.aiChatHistory || [];
 
     return `
-        <div class="view ai-view" style="display:flex; flex-direction:column; height:100%; max-height:100%; min-height:0; padding: 0 !important; background: var(--bg-body);">
-            
-            <!-- HEADER TE -->
-            <div class="ai-chat-header" style="flex-shrink: 0; padding: calc(env(safe-area-inset-top, 20px) + 10px) 24px 14px 24px; display: flex; align-items: center; justify-content: space-between; background: #FFF; border-bottom: 1px solid #E0DDD8; z-index: 10;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button onclick="navigate('planner')" style="background: #141414; border: none; color: #FFF; cursor: pointer; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" title="Back">
-                        <i class="ph-bold ph-arrow-left" style="font-size: 16px;"></i>
+        <div class="view ai-view ai-chat-view">
+            <div class="ai-chat-header">
+                <div class="ai-chat-header-main">
+                    <button class="ai-chat-back-btn" onclick="navigate('planner')" title="Torna al planner">
+                        <i class="ph-bold ph-arrow-left"></i>
                     </button>
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; color: #141414;">OP-Z Tutor AI</span>
-                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em;">Connected / Signal 100%</span>
+                    <div class="ai-chat-title-wrap">
+                        <span class="ai-chat-title">Tutor AI</span>
+                        <span class="ai-chat-subtitle">${state.aiChatPending ? 'Sta scrivendo…' : 'Online'}</span>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="if(confirm('Reset memory?')) clearAIChat()" style="background: #F6F5F3; border: 1px solid #E0DDD8; color: #141414; cursor: pointer; padding: 6px 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; transition: all 0.2s;">
-                        Reset
-                    </button>
-                </div>
+                <button class="ai-chat-reset-btn" onclick="if(confirm('Vuoi cancellare tutta la cronologia della chat?')) clearAIChat()">
+                    Nuova chat
+                </button>
             </div>
 
-            <!-- CHAT SCROLLABLE -->
-            <div id="aiChatMessages" class="ai-chat-messages" style="flex: 1; min-height:0; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px;">
+            <div id="aiChatMessages" class="ai-chat-messages">
                 ${chat.length === 0 ? `
-                <div style="max-width: 500px; margin: 40px auto; text-align: left; font-family: 'JetBrains Mono', monospace; border: 1px solid #141414; border-radius: 20px; padding: 28px; background: #FFF; box-shadow: 0 8px 30px rgba(0,0,0,0.04);">
-                    <div style="font-size: 10px; color: #908C86; margin-bottom: 12px; font-weight: 800;">// SYSTEM_INITIALIZATION_COMPLETE</div>
-                    <div style="font-size: 18px; font-weight: 800; line-height: 1.2; text-transform: uppercase; margin-bottom: 24px; color: #141414;">Pronto per l'organizzazione pomeridiana.</div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="sendAIChatQuick('Organizza la mia settimana 📅')" style="background: #F6F5F3; border: 1px solid #E0DDD8; border-radius: 12px; color: #141414; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">
-                            > Pianifica Settimana
+                <div class="ai-chat-welcome">
+                    <div class="ai-chat-welcome-eyebrow">G-Diary Assistant</div>
+                    <div class="ai-chat-welcome-title">Come posso aiutarti oggi?</div>
+                    <div class="ai-chat-suggest-grid">
+                        ${AI_CHAT_QUICK_PROMPTS.map((prompt, idx) => `
+                        <button class="ai-chat-suggest-btn" onclick="sendAIChatQuickAt(${idx})">
+                            ${escapeHtml(prompt)}
                         </button>
-                        <button onclick="sendAIChatQuick('Aiutami a ripassare per la verifica 📝')" style="background: #F6F5F3; border: 1px solid #E0DDD8; border-radius: 12px; color: #141414; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">
-                            > Supporto Studio
-                        </button>
-                        <button onclick="sendAIChatQuick('Consiglio produttività 🚀')" style="background: #F6F5F3; border: 1px solid #E0DDD8; border-radius: 12px; color: #141414; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-align: left; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">
-                            > Tip Produttività
-                        </button>
+                        `).join('')}
                     </div>
                 </div>
                 ` : chat.map((msg, idx) => `
-                <div style="display: flex; flex-direction: column; ${msg.role === 'user' ? 'align-items: flex-end;' : 'align-items: flex-start;'}">
-                    <div class="ai-chat-message-bubble" style="max-width: 85%; padding: 18px 22px; font-family: 'Inter', sans-serif; border: 1px solid ${msg.role === 'user' ? '#141414' : '#E0DDD8'}; border-radius: 20px; background: ${msg.role === 'user' ? '#141414' : '#FFF'}; color: ${msg.role === 'user' ? '#FFF' : '#141414'}; font-size: 14px; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.5; margin-bottom: 10px; text-transform: uppercase; font-weight: 800;">${msg.role === 'user' ? 'User' : 'Tutor'} [${msg.ts || ''}]</div>
-                        <div class="ai-prose" style="color: inherit !important;">
+                <div class="ai-chat-row ${msg.role === 'user' ? 'is-user' : 'is-ai'}">
+                    <div class="ai-chat-avatar ${msg.role === 'user' ? 'user' : 'ai'}">${msg.role === 'user' ? 'TU' : 'AI'}</div>
+                    <div class="ai-chat-message-bubble ${msg.role === 'user' ? 'msg-user' : 'msg-ai'}">
+                        <div class="ai-chat-meta">${msg.role === 'user' ? 'Tu' : 'Tutor AI'}${msg.ts ? ` · ${msg.ts}` : ''}</div>
+                        <div class="ai-prose ai-chat-message-content">
                             ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
                         </div>
                         ${msg.hasPlan ? `
-                        <button onclick="applyAIPlanFromChat(${idx})" style="margin-top:18px; border:none; background:#007AFF; color:#FFF; padding:10px 20px; border-radius:12px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; text-transform:uppercase; cursor:pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.3); transition: transform 0.2s;">
-                            Applica Piano [ENTER]
-                        </button>` : ''}
+                        <button class="ai-chat-apply-btn" onclick="applyAIPlanFromChat(${idx})">Applica piano</button>` : ''}
                     </div>
                 </div>
                 `).join('')}
+                ${state.aiChatPending ? `
+                <div class="ai-chat-row is-ai ai-chat-typing-row">
+                    <div class="ai-chat-avatar ai">AI</div>
+                    <div class="ai-chat-message-bubble msg-ai ai-chat-typing-bubble">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+                ` : ''}
             </div>
 
-            <!-- INPUT BOX (Centered) -->
-            <div class="ai-chat-input-wrap" style="flex-shrink: 0;">
+            <div class="ai-chat-input-wrap">
                 <div class="ai-input-shell">
                   <div class="ai-input-dock">
-                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un comando..." onkeypress="if(event.key==='Enter') sendAIChat()" style="flex: 1; background: none; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #141414;">
-                    <button class="ai-chat-send-btn" onclick="sendAIChat()" style="background: #141414; border: none; color: #FFF; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <i class="ph-bold ph-paper-plane-right" style="font-size: 16px;"></i>
+                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un messaggio…" value="${escapeHtml(state.aiChatInputValue || '')}" oninput="state.aiChatInputValue=this.value" onkeypress="handleAIChatInputKeypress(event)">
+                    <button class="ai-chat-send-btn" onclick="sendAIChat()" ${state.aiChatPending ? 'disabled' : ''} title="Invia messaggio">
+                        <i class="ph-bold ph-paper-plane-right"></i>
                     </button>
                   </div>
                 </div>
@@ -5202,14 +5213,32 @@ window.removeBacklog = function (index) {
 
 // ── AI ASSISTANT HELPERS ──
 window.sendAIChatQuick = function (text) {
-    state.aiChatInputValue = '';
+    if (typeof text !== 'string') return;
+    const normalizedText = text.trim();
+    if (!normalizedText) return;
+    state.aiChatInputValue = normalizedText;
     const input = document.getElementById('aiChatInput');
-    if (input) input.value = text;
+    if (input) input.value = normalizedText;
     window.sendAIChat();
+};
+
+window.sendAIChatQuickAt = function (index) {
+    const text = AI_CHAT_QUICK_PROMPTS[index];
+    if (!text) return;
+    window.sendAIChatQuick(text);
+};
+
+window.handleAIChatInputKeypress = function (event) {
+    if (event?.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        window.sendAIChat();
+    }
 };
 
 window.clearAIChat = function () {
     state.aiChatHistory = [];
+    state.aiChatPending = false;
+    state.aiChatInputValue = '';
     localStorage.setItem(lsKey('ai_chat'), '[]');
     state.aiResponse = '';
     window.scheduleRender();
@@ -5230,12 +5259,14 @@ window.stopVoiceInput = function () {
 
 window.sendAIChat = async function () {
     window.stopVoiceInput();
+    if (state.aiChatPending) return;
     const input = document.getElementById('aiChatInput');
     const text = (input?.value || '').trim();
     if (!text) return;
     state.aiChatInputValue = '';
     const nowTs = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     state.aiChatHistory.push({ role: 'user', text, ts: nowTs });
+    state.aiChatPending = true;
     if (input) { input.value = ''; input.style.height = 'auto'; }
     window.scheduleRender();
     setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'smooth' }); }, 100);
@@ -5383,6 +5414,7 @@ REGOLE OPERATIVE:
             state.aiChatHistory.push({ role: 'ai', text: '⚠️ IA momentaneamente non disponibile.', ts: nowTs });
         }
     } catch (e) { state.aiChatHistory.push({ role: 'ai', text: '⚠️ Errore di connessione.', ts: nowTs }); }
+    state.aiChatPending = false;
 
     localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
     window.scheduleRender();
