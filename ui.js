@@ -1443,15 +1443,15 @@ function renderLogin() {
 
     return `
         <div class="view login-view" style="min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) 24px calc(env(safe-area-inset-bottom, 0px) + 24px); text-align: center;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 10px 24px rgba(13,31,45,0.25); overflow: hidden;">
-                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-180.png';" style="width: 60px; height: 60px; border-radius: 14px; object-fit: cover;">
+            <div style="width: 80px; height: 80px; background: var(--meeting-gradient); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 10px 24px rgba(13,31,45,0.25); overflow: hidden;">
+                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-512.png';" style="width: 60px; height: 60px; border-radius: 14px; object-fit: cover;">
             </div>
             
             <h1 style="font-size: 32px; font-weight: 800; margin: 0;"></h1>
             <p style="color: var(--text-secondary); font-size: 16px; margin: 8px 0 40px 0; max-width: 280px;">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
             
             <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 16px;">
-                <button class="btn-primary" onclick="openArgoLogin()" style="width: 100%; height: 52px; font-size: 16px; background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border: none; color: #fff;">
+                <button class="btn-primary" onclick="openArgoLogin()" style="width: 100%; height: 52px; font-size: 16px; background: var(--meeting-gradient); border: none; color: #fff;">
                     <i class="ph-bold ph-sign-in"></i> Accedi con DidUP
                 </button>
                 
