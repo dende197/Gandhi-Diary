@@ -139,8 +139,9 @@
     if (typeof window.navigate !== 'function' || window.navigate._isV3) return;
 
     window.navigate = function navigate(v) {
-      const allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
-      if (!allowedViews.includes(v)) v = 'home';
+      const allowedViews = ['login', 'home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+      const canAccessRequested = allowedViews.includes(v) && (state.isLoggedIn || v === 'login');
+      if (!canAccessRequested) v = state.isLoggedIn ? 'home' : 'login';
       if (v === state.view) return;
 
       const targetHash = '#' + v;
@@ -168,6 +169,10 @@
         _animateViewEntrance(v);
       };
 
+      if (!state.isLoggedIn || v === 'login') {
+        performTransition();
+        return;
+      }
       _exitCurrent('up', { duration: 0.14, distance: 8, scale: 0.995 }).then(performTransition);
     };
     window.navigate._isV3 = true;
@@ -178,6 +183,20 @@
   function _renderViewDirect(view) {
     const root = document.getElementById('app');
     if (!root) return;
+    const nav = document.getElementById('nav-container');
+
+    if (!state.isLoggedIn || view === 'login') {
+      document.body.classList.add('logged-out');
+      document.body.classList.remove('is-ai-mode');
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      root.style.overflow = 'visible';
+      root.style.height = '';
+      root.innerHTML = (typeof renderLogin === 'function') ? renderLogin() : '';
+      if (nav) nav.innerHTML = '';
+      return;
+    }
+    document.body.classList.remove('logged-out');
     
     // Fix: Set AI mode class BEFORE innerHTML so CSS rules are active during first layout
     const isAI = view === 'ai_assistant';
@@ -221,6 +240,7 @@
 
   // ── 3. UNIFIED ANIMATION SYSTEM (V6 STANDARD) ───────────────
   function _animateViewEntrance(view, direction = 'down') {
+    if (!state.isLoggedIn || view === 'login') return;
     if (typeof gsap === 'undefined') return;
     const viewEl = document.querySelector('.view');
     if (!viewEl) return;
