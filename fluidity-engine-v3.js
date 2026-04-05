@@ -90,7 +90,7 @@
 
   // ── 1. CORE RENDER SYSTEM (Deduplication & Lock) ──────────────
   let _lastRenderTime = 0;
-  const RENDER_MIN_GAP = 50; // ms: impedisce doppi render da burst asincroni
+  const RENDER_MIN_GAP = 200; // ms: impedisce doppi render da burst asincroni
 
   // Sostituiamo il motore di rendering globale
   const _installCoreRender = () => {

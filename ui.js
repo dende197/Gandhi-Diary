@@ -4120,9 +4120,7 @@ function showProfileSelectionModal(profiles, credentials) {
 
         btn.style.opacity = '1';
         const profileLoadingSpinner = `
-            <span style="margin-left:auto; width:18px; height:18px; border-radius:50%; background:var(--meeting-gradient); position:relative; display:inline-block; flex-shrink:0; animation: profile-loader-spin 0.8s linear infinite;">
-                <span style="position:absolute; inset:2px; border-radius:50%; background: var(--bg-card);"></span>
-            </span>
+            <span style="margin-left:auto; width:20px; height:20px; border-radius:50%; flex-shrink:0; display:inline-block; animation: profile-loader-spin 0.9s linear infinite; background: conic-gradient(#C6F2DF, #1A6B8A, #0D1F2D, transparent 90%); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));"></span>
         `;
         const rightIcon = btn.querySelector('i.ph-caret-right');
         if (rightIcon) {
@@ -4821,11 +4819,26 @@ window.logout = async function () {
 
         window._bootRenderedOnce = false;
         if (window._threadsPoller) clearInterval(window._threadsPoller);
-        if (window.navigate && window.navigate._isV3) {
-            window.navigate('login');
-        } else {
-            window.scheduleRender();
+
+        // Cancel any pending render so they can't overwrite the login page
+        clearTimeout(window._gRenderTimer);
+        window._gRenderTimer = null;
+        if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+
+        // Write login directly and imperatively — bypasses all async pipelines
+        state.view = 'login';
+        const _logoutAppRoot = document.getElementById('app');
+        const _logoutNav = document.getElementById('nav-container');
+        if (_logoutAppRoot) {
+            document.body.classList.add('logged-out');
+            document.body.classList.remove('is-ai-mode');
+            document.body.style.overflow = '';
+            document.body.style.height = '';
+            _logoutAppRoot.style.overflow = 'visible';
+            _logoutAppRoot.style.height = '';
+            _logoutAppRoot.innerHTML = (typeof renderLogin === 'function') ? renderLogin() : '';
         }
+        if (_logoutNav) _logoutNav.innerHTML = '';
 
         if (currentUserId && currentUserId !== 'guest') {
             const payload = {
