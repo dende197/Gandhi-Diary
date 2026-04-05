@@ -142,7 +142,15 @@
       const allowedViews = ['login', 'home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
       const canAccessRequested = allowedViews.includes(v) && (state.isLoggedIn || v === 'login');
       if (!canAccessRequested) v = state.isLoggedIn ? 'home' : 'login';
-      if (v === state.view) return;
+      if (v === state.view) {
+        // If auth state changed without changing view, force a direct render refresh.
+        if (!state.isLoggedIn || v === 'login') {
+          if (typeof _renderViewDirect === 'function') _renderViewDirect('login');
+        } else {
+          if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
+        }
+        return;
+      }
 
       const targetHash = '#' + v;
       if (window.location.hash !== targetHash) {

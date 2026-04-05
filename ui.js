@@ -4812,6 +4812,7 @@ window.logout = async function () {
         if (typeof supabaseClient !== 'undefined' && supabaseClient.auth) supabaseClient.auth.signOut();
 
         state.isLoggedIn = false;
+        state.booting = false;
         state.didup.connected = false;
         state.user = { name: '', class: '' };
         state.tasks = [];
@@ -4822,8 +4823,13 @@ window.logout = async function () {
         state.plannedTasks = {};
 
         state.view = 'login';
+        window._bootRenderedOnce = false;
         if (window._threadsPoller) clearInterval(window._threadsPoller);
-        window.scheduleRender();
+        if (window.navigate && window.navigate._isV3) {
+            window.navigate('login');
+        } else {
+            window.scheduleRender();
+        }
     }
 };
 
