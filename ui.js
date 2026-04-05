@@ -1442,16 +1442,16 @@ function renderLogin() {
     const hasSession = savedSession && sessionManager.isLoggedIn();
 
     return `
-        <div class="view" style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--accent), var(--blue)); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 16px var(--accent-glow);">
-                <i class="ph-fill ph-student" style="font-size: 40px; color: white;"></i>
+        <div class="view login-view" style="min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) 24px calc(env(safe-area-inset-bottom, 0px) + 24px); text-align: center;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 10px 24px rgba(13,31,45,0.25); overflow: hidden;">
+                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" style="width: 60px; height: 60px; border-radius: 14px; object-fit: cover;">
             </div>
             
             <h1 style="font-size: 32px; font-weight: 800; margin: 0;"></h1>
             <p style="color: var(--text-secondary); font-size: 16px; margin: 8px 0 40px 0; max-width: 280px;">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
             
             <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 16px;">
-                <button class="btn-primary" onclick="openArgoLogin()" style="width: 100%; height: 52px; font-size: 16px;">
+                <button class="btn-primary" onclick="openArgoLogin()" style="width: 100%; height: 52px; font-size: 16px; background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border: none; color: #fff;">
                     <i class="ph-bold ph-sign-in"></i> Accedi con DidUP
                 </button>
                 
@@ -1740,11 +1740,11 @@ function renderProfile() {
     })();
     return `
         <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 0; padding-bottom: 48px; box-sizing: border-box;">
-            <div style="display:flex; align-items:center; padding: 8px 0 16px 0;">
-                <button onclick="navigate('home')" aria-label="Torna alla panoramica" style="display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; color:var(--accent); font-weight:700; font-size:14px; padding:8px 0; -webkit-tap-highlight-color:transparent;">
-                    <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
-                    Panoramica
+            <div style="display:flex; align-items:center; gap:12px; padding: 8px 0 16px 0;">
+                <button onclick="navigate('home')" aria-label="Torna alla panoramica" style="background:#141414; border:none; color:#FFF; cursor:pointer; width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;">
+                    <i class="ph-bold ph-arrow-left" style="font-size:16px;"></i>
                 </button>
+                <span style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color:#908C86; text-transform: uppercase; letter-spacing: 0.08em;">Panoramica</span>
             </div>
             <div class="card" style="padding: 20px 32px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
@@ -2826,18 +2826,6 @@ function mostraVerificheModal() {
                             const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
                             const tipoLabel = normalizedTipo === 'scritta' ? 'Scritta' : normalizedTipo === 'orale' ? 'Orale' : '';
 
-                            let urgencyColor = 'var(--text-secondary)';
-                            let urgencyBg = 'rgba(0,0,0,0.04)';
-                            if (days === 0) { urgencyColor = '#EF4444'; urgencyBg = 'rgba(239,68,68,0.1)'; }
-                            else if (days === 1) { urgencyColor = '#F97316'; urgencyBg = 'rgba(249,115,22,0.1)'; }
-                            else if (days <= 3) { urgencyColor = '#F59E0B'; urgencyBg = 'rgba(245,158,11,0.08)'; }
-
-                            let dayLabel;
-                            if (days === 0) dayLabel = 'Oggi';
-                            else if (days === 1) dayLabel = 'Domani';
-                            else if (days <= 6) dayLabel = d.toLocaleDateString('it-IT', { weekday: 'long' });
-                            else dayLabel = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
-
                             const fullDate = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
                             const dateKey = v.data;
                             const showDateHeader = dateKey !== lastDateLabel;
@@ -2856,15 +2844,12 @@ function mostraVerificheModal() {
                                             ${tipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); background:rgba(0,0,0,0.05); border-radius:5px; padding:2px 6px; text-transform:uppercase;">${tipoLabel}</span>` : ''}
                                         </div>
                                     </div>
-                                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; min-width:52px; gap:2px;">
+                                    <div style="display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                                         ${v.source === 'manual' ? `
                                             <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
                                                 <i class="ph-bold ph-trash" style="font-size:14px;"></i>
                                             </button>
-                                        ` : `
-                                            <div style="font-size:18px; font-weight:900; color:${urgencyColor}; line-height:1; letter-spacing:-0.04em;">${days === 0 ? '!' : days}</div>
-                                            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:${urgencyColor}; text-align:center; line-height:1.2; text-transform:uppercase;">${dayLabel}</div>
-                                        `}
+                                        ` : ``}
                                     </div>
                                 </div>
                             `;
@@ -4721,10 +4706,12 @@ window._renderCore = function () {
     if (!root || !nav) return;
 
     if (!state.isLoggedIn) {
+        document.body.classList.add('logged-out');
         root.innerHTML = renderLogin();
         nav.innerHTML = '';
         return;
     }
+    document.body.classList.remove('logged-out');
 
     nav.innerHTML = renderNav();
 

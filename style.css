@@ -221,6 +221,10 @@
           padding-top: 20px;
         }
 
+        body.logged-out .main-container {
+          padding-top: 0 !important;
+        }
+
         body:not(.is-ai-mode) #app {
           overflow: visible !important;
         }
