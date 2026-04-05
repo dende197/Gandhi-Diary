@@ -2,7 +2,7 @@
   if (window.__fluidityBootPatchInstalled) return;
   window.__fluidityBootPatchInstalled = true;
 
-  const PATCH_VERSION = '1.0.1';
+  const PATCH_VERSION = '1.1.0';
   const LOADER_REMOVE_TIMEOUT_MS = 180;
   const POST_NAV_SCHEDULE_BLOCK_MS = 160;
   const PATCH_RETRY_INTERVAL_MS = 50;
@@ -18,6 +18,86 @@
       document.head.appendChild(s);
     }
   } catch (_) {}
+
+  // ─────────────────────────────────────────────────────────────────
+  // FIX: Mobile multi-reload on manual refresh
+  //
+  // Root causes:
+  //   A) iOS/Android bfcache: when the user pulls-to-refresh, the page
+  //      is restored from the back-forward cache and fires a "pageshow"
+  //      event with persisted=true.  If the app immediately calls
+  //      scheduleRender/render multiple times from the restored state it
+  //      triggers the full boot sequence again → the screen flashes and
+  //      the loader appears/disappears several times in rapid succession.
+  //
+  //   B) hashchange fires synchronously during the same bfcache restore
+  //      and can kick off a second navigate() → render() chain on top
+  //      of the one triggered by DOMContentLoaded / init code.
+  //
+  // Solution:
+  //   1. On "pageshow" with persisted=true we set a short suppression
+  //      window (BFCACHE_SUPPRESS_MS) during which all render() and
+  //      scheduleRender() calls are silently dropped, then we issue
+  //      exactly ONE controlled render after the paint settles.
+  //   2. We debounce hashchange so that rapid back-to-back fires
+  //      (common on Android Chrome) coalesce into a single navigate().
+  // ─────────────────────────────────────────────────────────────────
+  const BFCACHE_SUPPRESS_MS = 400; // guard window after bfcache restore
+  let _bfcacheSuppressUntil = 0;
+
+  window.__fluidityIsBfcacheSuppressed = function () {
+    return performance.now() < _bfcacheSuppressUntil;
+  };
+
+  // pageshow fires both on normal load (persisted=false) and bfcache
+  // restore (persisted=true).  We only need to act on bfcache restores.
+  window.addEventListener('pageshow', function onPageShow(e) {
+    if (!e.persisted) return; // normal load — nothing to do
+
+    // Suppress renders triggered by the bfcache restore burst
+    _bfcacheSuppressUntil = performance.now() + BFCACHE_SUPPRESS_MS;
+
+    // Cancel any already-queued render timers/RAFs from the restored state
+    clearTimeout(window._gRenderTimer);
+    if (window._gRenderRAF) {
+      cancelAnimationFrame(window._gRenderRAF);
+      window._gRenderRAF = null;
+    }
+
+    // After the suppression window, issue exactly one controlled render
+    setTimeout(function () {
+      _bfcacheSuppressUntil = 0;
+      if (typeof window.render === 'function') window.render();
+    }, BFCACHE_SUPPRESS_MS + 16); // +16ms = one extra frame for paint
+  });
+
+  // hashchange debounce — prevents rapid duplicate navigate() calls on
+  // Android when the hash is written then immediately re-read by the
+  // restored page history state.
+  let _hashChangeTimer = null;
+  const HASHCHANGE_DEBOUNCE_MS = 60;
+  const _origAddEventListener = EventTarget.prototype.addEventListener;
+
+  // We wrap window.navigate directly once it exists (see installAll loop)
+  // so we don't need to intercept addEventListener at a low level.
+
+  function _installHashChangeDebouncePatch() {
+    if (window.__fluidityHashDebouncePatched) return;
+    window.__fluidityHashDebouncePatched = true;
+
+    window.addEventListener('hashchange', function () {
+      if (window.__fluidityIsBfcacheSuppressed()) return;
+      clearTimeout(_hashChangeTimer);
+      _hashChangeTimer = setTimeout(function () {
+        const view = (location.hash || '').replace('#', '').trim();
+        const allowed = window.allowedViews || ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+        if (!allowed.includes(view)) return;
+        // Only navigate if the view actually differs from current state
+        if (window.state && window.state.view === view) return;
+        if (typeof window.navigate === 'function') window.navigate(view);
+      }, HASHCHANGE_DEBOUNCE_MS);
+    });
+  }
 
   function markPatched(fn, key) {
     try { fn[key] = true; } catch (_) {}
@@ -119,12 +199,17 @@
   }
 
   // 5) Bypass engine 400ms render gap after V3 install.
+  //    Also wraps render/scheduleRender to respect the bfcache suppression window.
   function installRenderBypassPatch() {
     if (typeof window.render !== 'function') return;
     if (window.render.__fluidityNoGapPatched) return;
     if (!window.render._isV3 && !window.__fluidityRenderBypassForce) return;
 
+    const _innerRender = window.render; // capture current V3 render
+
     const patched = function renderNoGapPatched() {
+      // Bail during bfcache suppression window
+      if (window.__fluidityIsBfcacheSuppressed()) return;
       // Allow render if view is login to prevent locking the screen on logout
       if (window._gRenderRAF || !window.state || window.state.booting || (window.state._loggedOut && window.state.view !== 'login')) return;
       window._gRenderRAF = requestAnimationFrame(() => {
@@ -156,6 +241,8 @@
     if (typeof window.scheduleRender === 'function' && !window.scheduleRender.__fluidityBootPatched) {
       const originalScheduleRender = window.scheduleRender;
       const schedulePatched = function (delay = 80) {
+        // Bail during bfcache suppression window
+        if (window.__fluidityIsBfcacheSuppressed()) return;
         const lastNav = window.__fluidityLastNavigateAt || 0;
         const inPostNavWindow = (performance.now() - lastNav) < POST_NAV_SCHEDULE_BLOCK_MS;
         const forceRender = !!(window.state && window.state._forceRender);
@@ -183,6 +270,7 @@
   }
 
   function installAll() {
+    _installHashChangeDebouncePatch();
     installHideBootPatch();
     installGsapAnimateViewPatch();
     installGsapWillChangePatch();
