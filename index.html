@@ -793,7 +793,7 @@
                 if (data.success) {
                     state.isOffline = false;
                     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
-                    handleLoginSuccess(data, credentials.password);
+                    await handleLoginSuccess(data, credentials.password);
                 } else {
                     throw new Error(data.error || "Login fallito");
                 }
@@ -904,14 +904,16 @@
             state.googleConnected = false;
             if (typeof window.checkGoogleStatus === 'function') window.checkGoogleStatus();
 
-            Promise.all([
-                (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e))
-            ]).then(() => {
-                if (typeof closeModal === 'function') closeModal();
-                alert(`✅ Benvenuto ${state.user.name}!`);
-                navigate('home');
-                if (window.scheduleRender) window.scheduleRender();
-            });
+            await Promise.all([
+                (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e)),
+                performSync(sessionManager.load()).catch(e => console.error("Post-login sync failed:", e)),
+                loadCircolari().catch(e => console.error("Post-login circolari load failed:", e))
+            ]);
+
+            if (typeof closeModal === 'function') closeModal();
+            alert(`✅ Benvenuto ${state.user.name}!`);
+            navigate('home');
+            if (window.scheduleRender) window.scheduleRender();
         }
         window.handleLoginSuccess = handleLoginSuccess;
 
