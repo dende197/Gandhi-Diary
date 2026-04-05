@@ -4793,19 +4793,6 @@ window.logout = async function () {
         if (currentUserId && currentUserId !== 'guest') {
             localStorage.setItem(`${currentLsPrefix}:planned_tasks`, JSON.stringify(state.plannedTasks || {}));
             localStorage.setItem(`${currentLsPrefix}:planner_updated_at`, new Date().toISOString());
-
-            try {
-                const payload = {
-                    plannedTasks: state.plannedTasks || {},
-                    plannedDetails: {},
-                    updatedAt: new Date().toISOString()
-                };
-                await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
-                    method: 'PUT',
-                    headers: getSessionHeaders(),
-                    body: JSON.stringify(payload)
-                });
-            } catch (e) { console.warn("Logout save failed", e); }
         }
 
         sessionManager.clear();
@@ -4828,6 +4815,20 @@ window.logout = async function () {
             window.navigate('login');
         } else {
             window.scheduleRender();
+        }
+
+        if (currentUserId && currentUserId !== 'guest') {
+            const payload = {
+                plannedTasks: state.plannedTasks || {},
+                plannedDetails: {},
+                updatedAt: new Date().toISOString()
+            };
+            fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
+                method: 'PUT',
+                headers: getSessionHeaders(),
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).catch((e) => { console.warn("Logout save failed", e); });
         }
     }
 };
