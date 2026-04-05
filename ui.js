@@ -4822,7 +4822,6 @@ window.logout = async function () {
         state.lastSync = null;
         state.plannedTasks = {};
 
-        state.view = 'login';
         window._bootRenderedOnce = false;
         if (window._threadsPoller) clearInterval(window._threadsPoller);
         if (window.navigate && window.navigate._isV3) {
