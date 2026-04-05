@@ -1990,8 +1990,8 @@ function renderAIAssistantView() {
                     <div class="ai-chat-welcome-eyebrow">G-Diary Assistant</div>
                     <div class="ai-chat-welcome-title">Come posso aiutarti oggi?</div>
                     <div class="ai-chat-suggest-grid">
-                        ${quickPrompts.map((prompt) => `
-                        <button class="ai-chat-suggest-btn" onclick="sendAIChatQuick(${JSON.stringify(prompt)})">
+                        ${quickPrompts.map((prompt, idx) => `
+                        <button class="ai-chat-suggest-btn" onclick="sendAIChatQuickAt(${idx})">
                             ${escapeHtml(prompt)}
                         </button>
                         `).join('')}
@@ -2025,7 +2025,7 @@ function renderAIAssistantView() {
             <div class="ai-chat-input-wrap">
                 <div class="ai-input-shell">
                   <div class="ai-input-dock">
-                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un messaggio…" value="${escapeHtml(state.aiChatInputValue || '')}" oninput="state.aiChatInputValue=this.value" onkeypress="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIChat();}">
+                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un messaggio…" value="${escapeHtml(state.aiChatInputValue || '')}" oninput="state.aiChatInputValue=this.value" onkeypress="handleAIChatInputKeypress(event)">
                     <button class="ai-chat-send-btn" onclick="sendAIChat()" ${state.aiChatPending ? 'disabled' : ''} title="Invia messaggio">
                         <i class="ph-bold ph-paper-plane-right"></i>
                     </button>
@@ -5209,6 +5209,24 @@ window.sendAIChatQuick = function (text) {
     const input = document.getElementById('aiChatInput');
     if (input) input.value = text;
     window.sendAIChat();
+};
+
+window.sendAIChatQuickAt = function (index) {
+    const quickPrompts = [
+        'Organizza la mia settimana 📅',
+        'Aiutami a ripassare per la verifica 📝',
+        'Consiglio produttività 🚀'
+    ];
+    const text = quickPrompts[index];
+    if (!text) return;
+    window.sendAIChatQuick(text);
+};
+
+window.handleAIChatInputKeypress = function (event) {
+    if (event?.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        window.sendAIChat();
+    }
 };
 
 window.clearAIChat = function () {
