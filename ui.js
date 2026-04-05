@@ -378,6 +378,7 @@ window.switchPlannerView = function (view) {
 
 window.navigateSubject = function (subjName) {
     if (!subjName) return;
+    state._gradeSubjectsScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
     state.activeSubject = subjName;
     scheduleRender(0);
 };
@@ -408,8 +409,15 @@ window.handleGradeSubjectClickFromEncoded = function (encodedSubjectName) {
 };
 
 window.closeSubject = function () {
+    const restoreY = Number.isFinite(state._gradeSubjectsScrollY) ? state._gradeSubjectsScrollY : null;
     state.activeSubject = null;
-    scheduleRender();
+    scheduleRender(0);
+    if (restoreY !== null) {
+        requestAnimationFrame(() => {
+            window.scrollTo({ top: restoreY, behavior: 'auto' });
+            state._gradeSubjectsScrollY = null;
+        });
+    }
 };
 // --- Google Calendar OAuth2 (Universal) ---
 window.refreshSessionToken = async function () {

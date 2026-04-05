@@ -269,23 +269,28 @@
     if (window.navigateSubject && window.navigateSubject._isV3) return;
     window.navigateSubject = function navigateSubject(subjName) {
       if (!subjName) return;
-      state._scrollTopAfterRender = true;
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      state._gradeSubjectsScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
       _exitCurrent('left', { duration: 0.14, distance: 12, scale: 0.995 }).then(() => {
         const targetView = state.view || 'voti';
         state.activeSubject = subjName;
         _renderViewDirect(targetView);
         _animateViewEntrance(targetView, 'right');
+        window.scrollTo({ top: 0, behavior: 'instant' });
       });
     };
     window.navigateSubject._isV3 = true;
 
     window.closeSubject = function closeSubject() {
+      const restoreY = Number.isFinite(state._gradeSubjectsScrollY) ? state._gradeSubjectsScrollY : null;
       _exitCurrent('right', { duration: 0.14, distance: 12, scale: 0.995 }).then(() => {
         const targetView = state.view || 'voti';
         state.activeSubject = null;
         _renderViewDirect(targetView);
         _animateViewEntrance(targetView, 'left');
+        if (restoreY !== null) {
+          window.scrollTo({ top: restoreY, behavior: 'instant' });
+          state._gradeSubjectsScrollY = null;
+        }
       });
     };
     window.closeSubject._isV3 = true;
