@@ -3962,6 +3962,14 @@
           }
         }
 
+        /* ── LOGIN VIEW: restore full-height centering ── */
+        #app .login-view {
+          min-height: 100svh !important;
+          padding-left: 24px !important;
+          padding-right: 24px !important;
+          padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+        }
+
         body::before {
           display: none !important;
         }
