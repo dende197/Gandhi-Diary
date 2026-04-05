@@ -99,11 +99,6 @@
           --meeting-gradient: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%);
         }
 
-        /* ── AUTO-ENTRANCE: ogni nuovo .view animato dopo render ── */
-        #app > .view:not(.ai-view):not(.login-view) {
-          animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
         /* === RESET === */
         *,
         *::before,
@@ -5626,4 +5621,9 @@
             border-radius: 15px;
             padding-left: 10px;
           }
+        }
+
+        /* ── AUTO-ENTRANCE: ogni nuovo .view animato dopo render ── */
+        #app > .view:not(.ai-view):not(.login-view) {
+          animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
