@@ -5690,3 +5690,29 @@
         @keyframes profile-loader-spin {
           to { transform: rotate(360deg); }
         }
+
+        @media (max-width: 600px) {
+          .ai-chat-message-content.ai-prose table {
+            min-width: 0;
+            width: 100%;
+            table-layout: fixed;
+          }
+          .ai-chat-message-content.ai-prose th,
+          .ai-chat-message-content.ai-prose td {
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            padding: 8px 9px;
+            font-size: 12px;
+            line-height: 1.35;
+          }
+          .ai-chat-message-content.ai-prose td:first-child {
+            width: auto;
+            white-space: normal;
+          }
+        }
+
+        #clearSyncDiagnosticsBtn:focus-visible {
+          outline: 2px solid #1A6B8A;
+          outline-offset: 2px;
+        }

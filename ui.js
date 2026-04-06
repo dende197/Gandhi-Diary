@@ -1823,6 +1823,24 @@ function renderProfile() {
                 </div>
             </div>
 
+            <div class="card" style="padding: 16px 18px; margin-bottom: 18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+                    <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em;">Log Sync / Scraping</div>
+                    <button id="clearSyncDiagnosticsBtn" aria-label="Pulisci log sync e scraping" onclick="clearSyncDiagnostics()" style="height:30px; padding:0 10px; border-radius:9px; border:1px solid rgba(0,0,0,0.08); background:#fff; color:var(--text-secondary); font-size:11px; font-weight:700; cursor:pointer;">Pulisci</button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow:auto;">
+                    ${(Array.isArray(state.syncDiagnostics) && state.syncDiagnostics.length ? state.syncDiagnostics : [{ ts: '--:--:--', source: 'sync', success: false, summary: 'Nessun log disponibile' }]).map(item => `
+                        <div style="padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:${item.success ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.06)'};">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;">
+                                <span style="font-size:11px; font-weight:800; color:${item.success ? 'var(--green)' : 'var(--red)'}; text-transform:uppercase;">${item.success ? 'OK' : 'KO'} · ${escapeHtml(item.source || 'sync')}</span>
+                                <span style="font-size:10px; color:var(--text-dim); font-family:'JetBrains Mono', monospace;">${escapeHtml(item.ts || '')}</span>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-secondary); line-height:1.4;">${escapeHtml(item.summary || '')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <button class="btn-primary" onclick="logout()" style="height: 52px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--red); box-shadow: none;">
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
@@ -4809,6 +4827,12 @@ window._renderCore = function () {
         window.scrollTo({ top: 0, behavior: 'auto' });
         state._scrollTopAfterRender = false;
     }
+    if (state.view === 'ai_assistant') {
+        requestAnimationFrame(() => {
+            const chatDiv = document.getElementById('aiChatMessages');
+            if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'auto' });
+        });
+    }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
     requestAnimationFrame(() => {
@@ -5553,7 +5577,12 @@ window.sendAIChat = async function () {
     state.aiChatPending = true;
     if (input) { input.value = ''; input.style.height = 'auto'; }
     window.scheduleRender();
-    setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'smooth' }); }, 100);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            const chatDiv = document.getElementById('aiChatMessages');
+            if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'auto' });
+        });
+    }
 
     const immediateAction = extractImmediateCalendarAction(text);
     if (immediateAction?.type === 'delete') {
@@ -5776,7 +5805,19 @@ REGOLE OPERATIVE:
 
     localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
     window.scheduleRender();
-    setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTop = chatDiv.scrollHeight; }, 50);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            const chatDiv = document.getElementById('aiChatMessages');
+            if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'auto' });
+        });
+    }
+};
+
+window.clearSyncDiagnostics = function () {
+    state.syncDiagnostics = [];
+    localStorage.setItem(lsKey('sync_diagnostics'), '[]');
+    window.scheduleRender();
+    showToast('Log sync puliti');
 };
 
 window.applyAIPlanFromChat = function (msgIndex) {

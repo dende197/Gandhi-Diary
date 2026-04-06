@@ -241,6 +241,7 @@
             aiChatHistory: [],
             aiChatPending: false,
             aiChatInputValue: '',
+            syncDiagnostics: [],
             lastSync: null,
             streak: 0,
             activeSubject: null,
@@ -269,6 +270,26 @@
             agendaSearchSubject: 'all'
         };
         window.state = state;
+
+        function appendSyncDiagnostic(entry) {
+            try {
+                const fallbackSummary = entry?.success ? 'Sync completato' : 'Sync fallito';
+                const rawSummary = (entry && typeof entry.summary === 'string') ? entry.summary.trim() : '';
+                const item = {
+                    ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    source: entry?.source || 'sync',
+                    success: !!entry?.success,
+                    summary: rawSummary || fallbackSummary
+                };
+                const maxItems = 20;
+                const next = [item, ...(Array.isArray(state.syncDiagnostics) ? state.syncDiagnostics : [])].slice(0, maxItems);
+                state.syncDiagnostics = next;
+                localStorage.setItem(lsKey('sync_diagnostics'), JSON.stringify(next));
+            } catch (err) {
+                console.warn('Failed to append sync diagnostic:', err?.message || err);
+            }
+        }
+        window.appendSyncDiagnostic = appendSyncDiagnostic;
 
         // --- NAVIGATE (defined early so fluidity-engine can upgrade it to v3) ---
         const _allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
@@ -514,6 +535,12 @@
                     state.lastSync = new Date().toLocaleTimeString();
                     state.didup.connected = true;
                     state.isOffline = false;
+                    const activitiesCount = Array.isArray(data.activities) ? data.activities.length : 0;
+                    appendSyncDiagnostic({
+                        source: 'sync',
+                        success: true,
+                        summary: `Scraping OK · Compiti: ${Array.isArray(data.tasks) ? data.tasks.length : 0} · Voti: ${Array.isArray(data.voti) ? data.voti.length : 0} · Attività classe: ${activitiesCount}`
+                    });
                     if (typeof window.warmWeeklyAgendaCache === 'function') {
                         setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
                     }
@@ -529,6 +556,11 @@
                 }
             } catch (e) {
                 console.warn("Sync error:", e);
+                appendSyncDiagnostic({
+                    source: 'sync',
+                    success: false,
+                    summary: `Scraping KO · ${e?.message || 'errore sconosciuto'}`
+                });
                 state.isOffline = true;
             } finally {
                 state.syncing = false;
@@ -611,6 +643,13 @@
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
                     state.classActivities = JSON.parse(localStorage.getItem(lsKey('class_activities'))) || [];
+                    const syncDiagnosticsRaw = localStorage.getItem(lsKey('sync_diagnostics'));
+                    try {
+                        const parsedSyncDiagnostics = JSON.parse(syncDiagnosticsRaw || '[]');
+                        state.syncDiagnostics = Array.isArray(parsedSyncDiagnostics) ? parsedSyncDiagnostics : [];
+                    } catch (_) {
+                        state.syncDiagnostics = [];
+                    }
                     const hydratedAiChat = JSON.parse(localStorage.getItem(lsKey('ai_chat')) || '[]');
                     state.aiChatHistory = Array.isArray(hydratedAiChat) ? hydratedAiChat : [];
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
@@ -950,12 +989,21 @@
                 state.voti = Array.isArray(data.voti) ? data.voti : [];
                 localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
             }
+            if (Array.isArray(data.activities)) {
+                state.classActivities = data.activities;
+                localStorage.setItem(lsKey('class_activities'), JSON.stringify(state.classActivities));
+            }
 
             state.isLoggedIn = true;
             state.didup.connected = true;
             state.isOffline = false;
             state.lastSync = new Date().toLocaleTimeString();
             if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
+            appendSyncDiagnostic({
+                source: 'login',
+                success: true,
+                summary: `Login+Scraping OK · Compiti: ${Array.isArray(data.tasks) ? data.tasks.length : 0} · Voti: ${Array.isArray(data.voti) ? data.voti.length : 0} · Attività classe: ${Array.isArray(data.activities) ? data.activities.length : 0}`
+            });
             // Reset Google state per il profilo appena caricato, poi riverifica dal server
             state.googleConnected = false;
             if (typeof window.checkGoogleStatus === 'function') window.checkGoogleStatus();
