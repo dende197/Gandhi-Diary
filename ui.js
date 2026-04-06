@@ -1826,7 +1826,7 @@ function renderProfile() {
             <div class="card" style="padding: 16px 18px; margin-bottom: 18px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
                     <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em;">Log Sync / Scraping</div>
-                    <button onclick="clearSyncDiagnostics()" style="height:30px; padding:0 10px; border-radius:9px; border:1px solid rgba(0,0,0,0.08); background:#fff; color:var(--text-secondary); font-size:11px; font-weight:700; cursor:pointer;">Pulisci</button>
+                    <button id="clearSyncDiagnosticsBtn" aria-label="Pulisci log sync e scraping" onclick="clearSyncDiagnostics()" style="height:30px; padding:0 10px; border-radius:9px; border:1px solid rgba(0,0,0,0.08); background:#fff; color:var(--text-secondary); font-size:11px; font-weight:700; cursor:pointer;">Pulisci</button>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow:auto;">
                     ${(Array.isArray(state.syncDiagnostics) && state.syncDiagnostics.length ? state.syncDiagnostics : [{ ts: '--:--:--', source: 'sync', success: false, summary: 'Nessun log disponibile' }]).map(item => `

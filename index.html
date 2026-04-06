@@ -273,17 +273,21 @@
 
         function appendSyncDiagnostic(entry) {
             try {
+                const fallbackSummary = entry?.success ? 'Sync completato' : 'Sync fallito';
+                const rawSummary = (entry && typeof entry.summary === 'string') ? entry.summary.trim() : '';
                 const item = {
                     ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
                     source: entry?.source || 'sync',
                     success: !!entry?.success,
-                    summary: String(entry?.summary || '').trim() || (entry?.success ? 'Sync completato' : 'Sync fallito')
+                    summary: rawSummary || fallbackSummary
                 };
                 const maxItems = 20;
                 const next = [item, ...(Array.isArray(state.syncDiagnostics) ? state.syncDiagnostics : [])].slice(0, maxItems);
                 state.syncDiagnostics = next;
                 localStorage.setItem(lsKey('sync_diagnostics'), JSON.stringify(next));
-            } catch (_) {}
+            } catch (err) {
+                console.warn('Failed to append sync diagnostic:', err?.message || err);
+            }
         }
         window.appendSyncDiagnostic = appendSyncDiagnostic;
 
@@ -639,7 +643,13 @@
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
                     state.classActivities = JSON.parse(localStorage.getItem(lsKey('class_activities'))) || [];
-                    state.syncDiagnostics = JSON.parse(localStorage.getItem(lsKey('sync_diagnostics')) || '[]');
+                    const syncDiagnosticsRaw = localStorage.getItem(lsKey('sync_diagnostics'));
+                    try {
+                        const parsedSyncDiagnostics = JSON.parse(syncDiagnosticsRaw || '[]');
+                        state.syncDiagnostics = Array.isArray(parsedSyncDiagnostics) ? parsedSyncDiagnostics : [];
+                    } catch (_) {
+                        state.syncDiagnostics = [];
+                    }
                     const hydratedAiChat = JSON.parse(localStorage.getItem(lsKey('ai_chat')) || '[]');
                     state.aiChatHistory = Array.isArray(hydratedAiChat) ? hydratedAiChat : [];
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
