@@ -5690,3 +5690,24 @@
         @keyframes profile-loader-spin {
           to { transform: rotate(360deg); }
         }
+
+        @media (max-width: 600px) {
+          .ai-prose table {
+            min-width: 0 !important;
+            width: 100% !important;
+            table-layout: fixed !important;
+          }
+          .ai-prose th,
+          .ai-prose td {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            padding: 8px 9px !important;
+            font-size: 12px !important;
+            line-height: 1.35 !important;
+          }
+          .ai-prose td:first-child {
+            width: auto !important;
+            white-space: normal !important;
+          }
+        }
