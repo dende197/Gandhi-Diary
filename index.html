@@ -441,9 +441,8 @@
         window.saveTasksToSupabase = saveTasksToSupabase;
 
         async function performSync(sessionData, options = {}) {
-            const opts = options || {};
-            const suppressRender = !!opts.suppressRender;
-            const suppressHideBoot = !!opts.suppressHideBoot;
+            const suppressRender = !!options.suppressRender;
+            const suppressHideBoot = !!options.suppressHideBoot;
             if (state.syncing || state._loggedOut) return;
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
