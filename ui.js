@@ -5377,8 +5377,8 @@ function extractImmediateCalendarAction(text) {
     const wantsDelete = /\b(elimina|rimuovi|cancella)\b/.test(normalized) && /\b(calendario|agenda)\b/.test(normalized);
     if (!wantsAdd && !wantsDelete) return null;
 
-    const dateIsoMatch = raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
-    const dateSlashMatch = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(20\d{2}))?\b/);
+    const dateIsoMatch = raw.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+    const dateSlashMatch = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/);
     let date = '';
     if (dateIsoMatch) {
         date = dateIsoMatch[1];
@@ -5406,7 +5406,9 @@ function extractImmediateCalendarAction(text) {
     if (quoted) textTask = quoted[1].trim();
     if (!textTask) {
         const after = raw.split(/(?:aggiungi|inserisci|crea|carica|programma)/i)[1] || '';
-        textTask = (after || raw).replace(/\b(calendario|agenda|alle|ore|il|del|per|materia)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+        if (after) {
+            textTask = after.replace(/\b(calendario|agenda|alle|ore|il|del|per|materia)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+        }
     }
 
     if (wantsDelete) {
@@ -5461,7 +5463,9 @@ function applyImmediateCalendarAction(action) {
 
 function normalizeAiResponseMarkdown(text) {
     const input = String(text || '').replace(/\r/g, '');
-    if (!/\|/.test(input)) return input;
+    // Defensive normalization: even if prompt asks for non-table markdown,
+    // models may still output tables; convert them to readable bullet sections.
+    if (!/(^|\n)\s*\|/.test(input)) return input;
     const lines = input.split('\n');
     const out = [];
     let i = 0;
@@ -5486,6 +5490,7 @@ function normalizeAiResponseMarkdown(text) {
             .map(r => r.split('|').map(c => c.trim()).filter(Boolean))
             .filter(cols => cols.length > 0);
         const header = rows[0] || [];
+        // Drop markdown table separator rows (---, :---:, etc.).
         const body = rows.slice(1).filter(cols => !cols.every(c => /^:?-{2,}:?$/.test(c)));
         if (!header.length || !body.length) {
             out.push(...table);
