@@ -441,7 +441,7 @@
         window.saveTasksToSupabase = saveTasksToSupabase;
 
         async function performSync(sessionData, options = {}) {
-            const opts = options && typeof options === 'object' ? options : {};
+            const opts = (options && options.constructor === Object) ? options : {};
             const suppressRender = !!opts.suppressRender;
             const suppressHideBoot = !!opts.suppressHideBoot;
             if (state.syncing || state._loggedOut) return;
