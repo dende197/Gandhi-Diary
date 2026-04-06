@@ -5369,6 +5369,177 @@ window.stopVoiceInput = function () {
     if (btn) { btn.classList.remove('mic-active'); btn.innerHTML = '<i class="ph ph-microphone"></i>'; }
 };
 
+function extractImmediateCalendarAction(text) {
+    const raw = String(text || '');
+    if (!raw) return null;
+    const normalized = raw.toLowerCase();
+    const wantsAdd = /\b(aggiungi|inserisci|crea|carica|programma)\b/.test(normalized) && /\b(calendario|agenda)\b/.test(normalized);
+    const wantsDelete = /\b(elimina|rimuovi|cancella)\b/.test(normalized) && /\b(calendario|agenda)\b/.test(normalized);
+    if (!wantsAdd && !wantsDelete) return null;
+
+    const dateIsoMatch = raw.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+    const dateSlashMatch = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/);
+    let date = '';
+    if (dateIsoMatch) {
+        date = dateIsoMatch[1];
+    } else if (dateSlashMatch) {
+        const day = String(Number(dateSlashMatch[1])).padStart(2, '0');
+        const month = String(Number(dateSlashMatch[2])).padStart(2, '0');
+        const now = new Date();
+        let yearNum = Number(dateSlashMatch[3] || now.getFullYear());
+        const candidate = new Date(yearNum, Number(month) - 1, Number(day), 12, 0, 0);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+        if (!dateSlashMatch[3] && !Number.isNaN(candidate.getTime()) && candidate < today) yearNum += 1;
+        date = `${String(yearNum).padStart(4, '0')}-${month}-${day}`;
+    }
+
+    const timeMatch = raw.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
+    const time = timeMatch ? `${String(timeMatch[1]).padStart(2, '0')}:${timeMatch[2]}` : '';
+
+    let subject = '';
+    const subjectMatch = raw.match(/(?:materia|subject)\s*[:\-]\s*([^\n,;]+)/i);
+    if (subjectMatch) subject = subjectMatch[1].trim();
+    if (!subject) {
+        const known = ['italiano', 'matematica', 'storia', 'inglese', 'informatica', 'fisica', 'chimica', 'scienze', 'latino', 'filosofia', 'arte', 'motoria', 'religione'];
+        const found = known.find(s => normalized.includes(s));
+        if (found) subject = found.charAt(0).toUpperCase() + found.slice(1);
+    }
+
+    let textTask = '';
+    const quoted = raw.match(/["“”']([^"“”']{3,140})["“”']/);
+    if (quoted) textTask = quoted[1].trim();
+    if (!textTask) {
+        const after = raw.split(/(?:aggiungi|inserisci|crea|carica|programma)/i)[1] || '';
+        if (after) {
+            textTask = after.replace(/\b(calendario|agenda|alle|ore|materia)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+        }
+    }
+
+    if (wantsDelete) {
+        const deleteMissing = [];
+        if (!date) deleteMissing.push('data (es. 2026-04-10)');
+        if (!textTask) deleteMissing.push('titolo attività');
+        return {
+            type: 'delete',
+            date,
+            text: textTask,
+            missing: deleteMissing
+        };
+    }
+
+    const missing = [];
+    if (!time) missing.push('orario (es. 16:30)');
+    if (!date) missing.push('data (es. 2026-04-10)');
+    if (!textTask) missing.push('attività');
+
+    return {
+        type: 'add',
+        date,
+        time,
+        subject: subject || 'Studio',
+        text: textTask,
+        missing
+    };
+}
+
+function applyImmediateCalendarAction(action) {
+    if (!action || action.type !== 'add' || !Array.isArray(action.missing) || action.missing.length) return { ok: false };
+    if (!state.plannedTasks || typeof state.plannedTasks !== 'object') state.plannedTasks = {};
+    if (!state.plannedDetails || typeof state.plannedDetails !== 'object') state.plannedDetails = {};
+    if (!Array.isArray(state.tasks)) state.tasks = [];
+
+    const id = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const task = {
+        id,
+        subject: action.subject || 'Studio',
+        text: action.text,
+        due_date: action.date,
+        done: false
+    };
+    state.tasks.push(task);
+    if (!Array.isArray(state.plannedTasks[action.date])) state.plannedTasks[action.date] = [];
+    if (!state.plannedTasks[action.date].includes(id)) state.plannedTasks[action.date].push(id);
+    state.plannedDetails[id] = { time: action.time };
+    if (typeof saveTasks === 'function') saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(200);
+    return { ok: true, id };
+}
+
+function normalizeAiResponseMarkdown(text) {
+    const input = String(text || '').replace(/\r/g, '');
+    // Defensive normalization: even if prompt asks for non-table markdown,
+    // models may still output tables; convert them to readable bullet sections.
+    if (!/(^|\n)\s*\|/.test(input)) return input;
+    const lines = input.split('\n');
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i];
+        const isTableRow = /\|/.test(line) && line.trim().startsWith('|');
+        if (!isTableRow) {
+            out.push(line);
+            i += 1;
+            continue;
+        }
+        const table = [];
+        while (i < lines.length && /\|/.test(lines[i]) && lines[i].trim().startsWith('|')) {
+            table.push(lines[i]);
+            i += 1;
+        }
+        if (table.length < 2) {
+            out.push(...table);
+            continue;
+        }
+        const rows = table
+            .map(r => r.split('|').map(c => c.trim()).filter(Boolean))
+            .filter(cols => cols.length > 0);
+        const header = rows[0] || [];
+        // Drop markdown table separator rows (---, :---:, etc.).
+        const body = rows.slice(1).filter(cols => !cols.every(c => /^:?-{2,}:?$/.test(c)));
+        if (!header.length || !body.length) {
+            out.push(...table);
+            continue;
+        }
+        body.forEach((cols, rowIdx) => {
+            out.push(`- **Riga ${rowIdx + 1}**`);
+            cols.forEach((cell, colIdx) => {
+                const label = header[colIdx] || `Colonna ${colIdx + 1}`;
+                out.push(`  - ${label}: ${cell || '-'}`);
+            });
+        });
+    }
+    return out.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
+function deleteImmediateCalendarAction(action) {
+    if (!action || action.type !== 'delete') return { ok: false };
+    const sourceTasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const normalizedNeedle = String(action.text || '').trim().toLowerCase();
+    const filtered = sourceTasks.filter((t) => {
+        if (!t || !t.id) return false;
+        if (!isUserGeneratedTaskId(t.id)) return false;
+        if (action.date && t.due_date !== action.date) return false;
+        if (normalizedNeedle) {
+            const hay = `${t.subject || ''} ${t.text || ''}`.toLowerCase();
+            if (!hay.includes(normalizedNeedle)) return false;
+        }
+        return true;
+    });
+    if (!filtered.length) return { ok: false, reason: 'not_found' };
+    const idsToDelete = new Set(filtered.map(t => t.id));
+    state.tasks = sourceTasks.filter(t => !idsToDelete.has(t.id));
+    Object.keys(state.plannedTasks || {}).forEach((dateKey) => {
+        const ids = state.plannedTasks[dateKey];
+        if (Array.isArray(ids)) state.plannedTasks[dateKey] = ids.filter(id => !idsToDelete.has(id));
+    });
+    Object.keys(state.plannedDetails || {}).forEach((id) => {
+        if (idsToDelete.has(id)) delete state.plannedDetails[id];
+    });
+    if (typeof saveTasks === 'function') saveTasks();
+    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(200);
+    return { ok: true, count: filtered.length };
+}
+
 window.sendAIChat = async function () {
     window.stopVoiceInput();
     if (state.aiChatPending) return;
@@ -5378,10 +5549,72 @@ window.sendAIChat = async function () {
     state.aiChatInputValue = '';
     const nowTs = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     state.aiChatHistory.push({ role: 'user', text, ts: nowTs });
+    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
     state.aiChatPending = true;
     if (input) { input.value = ''; input.style.height = 'auto'; }
     window.scheduleRender();
     setTimeout(() => { const chatDiv = document.getElementById('aiChatMessages'); if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'smooth' }); }, 100);
+
+    const immediateAction = extractImmediateCalendarAction(text);
+    if (immediateAction?.type === 'delete') {
+        if (immediateAction.missing.length) {
+            state.aiChatHistory.push({
+                role: 'ai',
+                text: `Per eliminare subito dal calendario mi mancano: ${immediateAction.missing.join(', ')}.`,
+                ts: nowTs
+            });
+            state.aiChatPending = false;
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            window.scheduleRender();
+            return;
+        }
+        const deleted = deleteImmediateCalendarAction(immediateAction);
+        if (deleted.ok) {
+            state.aiChatHistory.push({
+                role: 'ai',
+                text: `Fatto ✅ Ho eliminato ${deleted.count} attività dal calendario.`,
+                ts: nowTs
+            });
+            state.aiChatPending = false;
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            window.scheduleRender();
+            return;
+        }
+        state.aiChatHistory.push({
+            role: 'ai',
+            text: 'Non ho trovato attività da eliminare con i dettagli forniti. Indicami almeno titolo attività (tra virgolette) e data.',
+            ts: nowTs
+        });
+        state.aiChatPending = false;
+        localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+        window.scheduleRender();
+        return;
+    }
+    if (immediateAction?.type === 'add') {
+        if (immediateAction.missing.length) {
+            state.aiChatHistory.push({
+                role: 'ai',
+                text: `Per caricare subito nel calendario mi mancano: ${immediateAction.missing.join(', ')}. Dimmi tutto nella stessa frase.`,
+                ts: nowTs
+            });
+            state.aiChatPending = false;
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            window.scheduleRender();
+            return;
+        }
+        const applied = applyImmediateCalendarAction(immediateAction);
+        if (applied.ok) {
+            state.aiChatHistory.push({
+                role: 'ai',
+                text: `Fatto ✅ Ho caricato "${immediateAction.text}" il ${immediateAction.date} alle ${immediateAction.time} in calendario.`,
+                ts: nowTs
+            });
+            state.aiChatPending = false;
+            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
+            window.scheduleRender();
+            return;
+        }
+    }
 
     const today = new Date();
     const todayStr = getLocalDateString();
@@ -5432,6 +5665,13 @@ window.sendAIChat = async function () {
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
+    const activities = (state.classActivities || []).slice(0, 20).map(a => {
+        const d = a.date || a.datGiorno || 'data n/d';
+        const m = a.subject || a.materia || 'Materia';
+        const c = window._truncateWithEllipsis(a.content || a.text || a.argomento || '', 140);
+        return `- ${d} | ${m}: ${c}`;
+    }).join('\n');
+
     const systemContext = `Sei G-AI, tutor di G-Diary.
 Stile: amichevole, pratico, meno rigido, incoraggiante e chiaro.
 Rispondi in italiano naturale.
@@ -5468,15 +5708,20 @@ ${attendanceSummary}
 🗓️ GIÀ PIANIFICATO:
 ${plannedSummary || 'Niente pianificato'}
 
+🏫 ATTIVITÀ SVOLTE IN CLASSE:
+${activities || 'nessuna attività svolta disponibile'}
+
 OBIETTIVI:
 ${JSON.stringify(state.goals || {}, null, 2)}
 
 REGOLE OPERATIVE:
 1) Puoi usare TUTTI i dati sopra per decidere cosa proporre.
-2) Quando l'utente chiede pianificazione giornaliera o settimanale, usa una tabella Markdown semplice (non troppo elaborata), es. colonne: Giorno | Fascia oraria | Attività | Priorità.
+2) Quando l'utente chiede pianificazione giornaliera o settimanale, NON usare tabelle. Usa markdown semplice con sezioni, bullet e checklist.
 3) Prima di proporre il piano definitivo, se mancano dettagli essenziali fai 2-4 domande brevi su: livello di preparazione, urgenza/immediatezza, priorità, eventuali vincoli orari.
 4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
-5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.`;
+5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.
+6) Se l'utente esprime ansia/insicurezza prima di verifiche, includi supporto psicologico pratico (respiro, micro-obiettivi, rassicurazione non banale).
+7) Se l'utente chiede esplicitamente di caricare in calendario, chiedi sempre data+orario se mancanti. Mai eventi all-day.`;
 
     const clampedSystemContext = truncateWithEllipsis(systemContext, 9000);
     const contents = [
@@ -5519,7 +5764,8 @@ REGOLE OPERATIVE:
         });
         const data = await response.json();
         if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const aiText = data.candidates[0].content.parts[0].text;
+            const aiTextRaw = data.candidates[0].content.parts[0].text;
+            const aiText = normalizeAiResponseMarkdown(aiTextRaw);
             const hasPlan = /\b\d{1,2}[:.]\d{2}\b/.test(aiText) && /lune|mart|merc|giov|vend|sab|dom|\d{4}-\d{2}-\d{2}/i.test(aiText);
             state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
         } else {

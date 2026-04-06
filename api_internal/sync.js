@@ -5,7 +5,7 @@ const { getSupabase } = require('../lib/supabase');
 const {
     AdvancedArgo, resolveIdentityForProfile,
     getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
-    extractPromemoriaFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
+    extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
 
@@ -67,6 +67,7 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
+        const activities = extractClassActivitiesFromDashboard(dashboardData);
         const assenzeData = extractAssenzeFromDashboard(dashboardData);
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
@@ -156,6 +157,7 @@ module.exports = async function handler(req, res) {
             tasks,
             voti: grades,
             promemoria,
+            activities,
             assenzeData,
             verifiche: verificheData,
             new_tokens: { authToken, accessToken },
