@@ -611,7 +611,8 @@
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
                     state.classActivities = JSON.parse(localStorage.getItem(lsKey('class_activities'))) || [];
-                    state.aiChatHistory = JSON.parse(localStorage.getItem(lsKey('ai_chat')) || '[]');
+                    const hydratedAiChat = JSON.parse(localStorage.getItem(lsKey('ai_chat')) || '[]');
+                    state.aiChatHistory = Array.isArray(hydratedAiChat) ? hydratedAiChat : [];
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
                 } catch(e) {}

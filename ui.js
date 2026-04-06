@@ -5385,8 +5385,12 @@ function extractImmediateCalendarAction(text) {
     } else if (dateSlashMatch) {
         const day = String(Number(dateSlashMatch[1])).padStart(2, '0');
         const month = String(Number(dateSlashMatch[2])).padStart(2, '0');
-        const year = dateSlashMatch[3] || String(new Date().getFullYear());
-        date = `${year}-${month}-${day}`;
+        const now = new Date();
+        let yearNum = Number(dateSlashMatch[3] || now.getFullYear());
+        const candidate = new Date(yearNum, Number(month) - 1, Number(day), 12, 0, 0);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+        if (!dateSlashMatch[3] && !Number.isNaN(candidate.getTime()) && candidate < today) yearNum += 1;
+        date = `${String(yearNum).padStart(4, '0')}-${month}-${day}`;
     }
 
     const timeMatch = raw.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/);
@@ -5407,7 +5411,7 @@ function extractImmediateCalendarAction(text) {
     if (!textTask) {
         const after = raw.split(/(?:aggiungi|inserisci|crea|carica|programma)/i)[1] || '';
         if (after) {
-            textTask = after.replace(/\b(calendario|agenda|alle|ore|il|del|per|materia)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+            textTask = after.replace(/\b(calendario|agenda|alle|ore|materia)\b/gi, ' ').replace(/\s+/g, ' ').trim();
         }
     }
 
