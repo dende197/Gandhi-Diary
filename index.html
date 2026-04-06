@@ -441,7 +441,7 @@
         window.saveTasksToSupabase = saveTasksToSupabase;
 
         async function performSync(sessionData, options = {}) {
-            const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+            const opts = options || {};
             const suppressRender = !!opts.suppressRender;
             const suppressHideBoot = !!opts.suppressHideBoot;
             if (state.syncing || state._loggedOut) return;
@@ -548,12 +548,6 @@
         // --- BOOT FLOW ---
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
-            const finalizeBootHydrationRender = () => {
-                state._forceRender = true;
-                state._animateOnNextRender = true;
-                renderBootFallback();
-                hideBoot();
-            };
             const renderBootFallback = () => {
                 if (window._bootRenderedOnce) return;
                 window._bootRenderedOnce = true;
@@ -577,6 +571,12 @@
                     });
                 };
                 setTimeout(_doRender, 16);
+            };
+            const finalizeBootHydrationRender = () => {
+                state._forceRender = true;
+                state._animateOnNextRender = true;
+                renderBootFallback();
+                hideBoot();
             };
             
             // Assign offlineBadge reference for updateOfflineBadge()
@@ -610,15 +610,14 @@
                     loadCircolari()
                 ])
                     .then(() => {
-                        finalizeBootHydrationRender();
                         if (typeof window.warmWeeklyAgendaCache === 'function') {
                             setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
                         }
                     })
                     .catch((e) => {
                         console.warn('Background sync failed:', e);
-                        finalizeBootHydrationRender();
-                    });
+                    })
+                    .finally(finalizeBootHydrationRender);
             } else {
                 state.isLoggedIn = false;
                 state.view = 'login';
