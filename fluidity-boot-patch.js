@@ -2,13 +2,13 @@
   if (window.__fluidityBootPatchInstalled) return;
   window.__fluidityBootPatchInstalled = true;
 
-  const PATCH_VERSION = '1.1.0';
-  const LOADER_REMOVE_TIMEOUT_MS = 180;
-  const POST_NAV_SCHEDULE_BLOCK_MS = 160;
-  const PATCH_RETRY_INTERVAL_MS = 50;
-  const PATCH_RETRY_MAX_ATTEMPTS = 120;
+  const PATCH_VERSION = '1.2.0';
+  const LOADER_REMOVE_TIMEOUT_MS    = 180;
+  const POST_NAV_SCHEDULE_BLOCK_MS  = 160;
+  const PATCH_RETRY_INTERVAL_MS     = 50;
+  const PATCH_RETRY_MAX_ATTEMPTS    = 120;
 
-  // 1) Cold-start white flash guard (run as early as possible).
+  // ─── 0. Cold-start white flash guard ─────────────────────────
   try {
     const id = 'fluidity-boot-bg-patch';
     if (!document.getElementById(id)) {
@@ -19,72 +19,174 @@
     }
   } catch (_) {}
 
-  // ─────────────────────────────────────────────────────────────────
-  // FIX: Mobile multi-reload on manual refresh
+  // ═══════════════════════════════════════════════════════════════
+  //  PWA MULTI-RELOAD FIX  (v1.2.0)
   //
-  // Root causes:
-  //   A) iOS/Android bfcache: when the user pulls-to-refresh, the page
-  //      is restored from the back-forward cache and fires a "pageshow"
-  //      event with persisted=true.  If the app immediately calls
-  //      scheduleRender/render multiple times from the restored state it
-  //      triggers the full boot sequence again → the screen flashes and
-  //      the loader appears/disappears several times in rapid succession.
+  //  Three independent root causes addressed here:
   //
-  //   B) hashchange fires synchronously during the same bfcache restore
-  //      and can kick off a second navigate() → render() chain on top
-  //      of the one triggered by DOMContentLoaded / init code.
+  //  A) bfcache restore (iOS/Android pull-to-refresh):
+  //     pageshow with persisted=true fires, the app's restored JS state
+  //     triggers burst of render() / scheduleRender() calls.
   //
-  // Solution:
-  //   1. On "pageshow" with persisted=true we set a short suppression
-  //      window (BFCACHE_SUPPRESS_MS) during which all render() and
-  //      scheduleRender() calls are silently dropped, then we issue
-  //      exactly ONE controlled render after the paint settles.
-  //   2. We debounce hashchange so that rapid back-to-back fires
-  //      (common on Android Chrome) coalesce into a single navigate().
-  // ─────────────────────────────────────────────────────────────────
-  const BFCACHE_SUPPRESS_MS = 400; // guard window after bfcache restore
-  let _bfcacheSuppressUntil = 0;
+  //  B) visibilitychange / focus on PWA re-foreground:
+  //     Every time a PWA returns from background, iOS fires
+  //     visibilitychange(visible) + focus on window. Any listener
+  //     (sync timers, auth checks) that calls scheduleRender() inside
+  //     these handlers causes a visible flash.
+  //
+  //  C) Service Worker controllerchange → hard reload:
+  //     If the SW calls skipWaiting() on update and index.html has
+  //     navigator.serviceWorker.addEventListener('controllerchange',
+  //     () => location.reload()), the entire page reloads on every SW
+  //     update — causing a full white-screen flash on PWA launch.
+  //
+  //  D) PWA standalone entry boot burst:
+  //     When launching from the home screen, the boot sequence emits
+  //     scheduleRender() multiple times in <300ms (localStorage read,
+  //     server sync partial data, hashchange restore).  The 80ms
+  //     RENDER_MIN_GAP in fluidity-engine is not wide enough to
+  //     coalesce all of them into one DOM write.
+  //
+  //  Solution per cause:
+  //  A) pageshow guard (same as v1.1) — 400ms suppression window
+  //  B) visibilitychange + focus debounce — 250ms suppression
+  //  C) intercept controllerchange before index.html can see it
+  //  D) PWA entry lock — single render allowed in first 500ms
+  // ═══════════════════════════════════════════════════════════════
 
+  // ── Shared suppression clock ──────────────────────────────────
+  let _suppressUntil = 0;
+  function _suppress(ms) {
+    _suppressUntil = Math.max(_suppressUntil, performance.now() + ms);
+  }
   window.__fluidityIsBfcacheSuppressed = function () {
-    return performance.now() < _bfcacheSuppressUntil;
+    return performance.now() < _suppressUntil;
   };
 
-  // pageshow fires both on normal load (persisted=false) and bfcache
-  // restore (persisted=true).  We only need to act on bfcache restores.
-  window.addEventListener('pageshow', function onPageShow(e) {
-    if (!e.persisted) return; // normal load — nothing to do
-
-    // Suppress renders triggered by the bfcache restore burst
-    _bfcacheSuppressUntil = performance.now() + BFCACHE_SUPPRESS_MS;
-
-    // Cancel any already-queued render timers/RAFs from the restored state
+  // ── A) bfcache restore guard ──────────────────────────────────
+  const BFCACHE_SUPPRESS_MS = 420;
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    _suppress(BFCACHE_SUPPRESS_MS);
     clearTimeout(window._gRenderTimer);
-    if (window._gRenderRAF) {
-      cancelAnimationFrame(window._gRenderRAF);
-      window._gRenderRAF = null;
-    }
-
-    // After the suppression window, issue exactly one controlled render
+    if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
     setTimeout(function () {
-      _bfcacheSuppressUntil = 0;
+      _suppressUntil = 0;
       if (typeof window.render === 'function') window.render();
-    }, BFCACHE_SUPPRESS_MS + 16); // +16ms = one extra frame for paint
+    }, BFCACHE_SUPPRESS_MS + 16);
   });
 
-  // hashchange debounce — prevents rapid duplicate navigate() calls on
-  // Android when the hash is written then immediately re-read by the
-  // restored page history state.
+  // ── B) visibilitychange / focus PWA re-foreground guard ───────
+  //
+  // We DON'T suppress normal page operations — only prevent a
+  // spurious full re-render immediately after the app returns from
+  // background.  If real data has changed (taskCount, votiCount) the
+  // dedup in _renderCore will let the render through anyway.
+  //
+  const VISIBILITY_SUPPRESS_MS = 260;
+  let _visibilityTimer = null;
+
+  function _onVisibilityChange() {
+    if (document.visibilityState !== 'visible') return;
+    // Cancel any pending render that was scheduled while hidden
+    clearTimeout(window._gRenderTimer);
+    if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+    _suppress(VISIBILITY_SUPPRESS_MS);
+    clearTimeout(_visibilityTimer);
+    _visibilityTimer = setTimeout(function () {
+      _suppressUntil = 0;
+      // Only re-render if data may have changed while the app was hidden
+      if (typeof window.render === 'function' && window.state && window.state.isLoggedIn) {
+        window.render();
+      }
+    }, VISIBILITY_SUPPRESS_MS + 16);
+  }
+
+  document.addEventListener('visibilitychange', _onVisibilityChange);
+
+  // window.focus fires on iOS PWA when switching back from another app
+  let _focusTimer = null;
+  window.addEventListener('focus', function () {
+    // If visibilitychange already suppressed, bail out
+    if (window.__fluidityIsBfcacheSuppressed()) return;
+    clearTimeout(_focusTimer);
+    _suppress(180);
+    _focusTimer = setTimeout(function () {
+      _suppressUntil = 0;
+    }, 200);
+  });
+
+  // ── C) Service Worker controllerchange → block auto-reload ────
+  //
+  // The pattern `navigator.serviceWorker.addEventListener('controllerchange',
+  // () => location.reload())` is the #1 cause of PWA double-load.
+  // We intercept it by wrapping ServiceWorkerContainer.addEventListener
+  // so that any 'controllerchange' handler added AFTER this patch runs
+  // gets a no-op shim instead of a hard reload.
+  //
+  // SAFE: we only block 'controllerchange'. All other SW events are
+  // passed through normally.  The UI already handles stale content
+  // via its own sync mechanism.
+  //
+  try {
+    if (navigator.serviceWorker) {
+      const _origSWAddListener = navigator.serviceWorker.addEventListener.bind(navigator.serviceWorker);
+      navigator.serviceWorker.addEventListener = function (type, handler, opts) {
+        if (type === 'controllerchange') {
+          // Replace any handler that would call location.reload() with a
+          // safe version that just logs and lets the app stay alive.
+          const safeHandler = function (e) {
+            try {
+              // Heuristic: if the original handler calls location.reload()
+              // we catch that by overriding it in a sandboxed proxy.
+              // Since we can't introspect the closure, we simply skip it
+              // and schedule a soft re-render instead.
+              console.log('[FluidityPatch] SW controllerchange intercepted — soft render instead of reload');
+              if (window.state && window.state.isLoggedIn && typeof window.scheduleRender === 'function') {
+                window.scheduleRender(300);
+              }
+            } catch (_) {}
+          };
+          return _origSWAddListener(type, safeHandler, opts);
+        }
+        return _origSWAddListener(type, handler, opts);
+      };
+    }
+  } catch (_) {}
+
+  // ── D) PWA standalone entry — single-render lock ──────────────
+  //
+  // In standalone/fullscreen PWA mode, suppress ALL renders for the
+  // first 500ms, then release exactly one.  This coalesces the entire
+  // boot burst (localStorage, partial sync, hashchange) into a single
+  // DOM write, eliminating the multiple visible flashes on launch.
+  //
+  const isPWAStandalone = (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.navigator.standalone === true          // iOS legacy
+  );
+
+  if (isPWAStandalone) {
+    const PWA_BOOT_LOCK_MS = 500;
+    _suppress(PWA_BOOT_LOCK_MS);
+    const _pwaBootTimer = setTimeout(function () {
+      _suppressUntil = 0;
+      clearTimeout(window._gRenderTimer);
+      if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
+      if (typeof window.render === 'function') window.render();
+      console.log('[FluidityPatch] PWA boot lock released — single render fired');
+    }, PWA_BOOT_LOCK_MS);
+    console.log('[FluidityPatch] PWA standalone mode detected — boot lock active for', PWA_BOOT_LOCK_MS, 'ms');
+  }
+
+  // ── hashchange debounce (same as v1.1) ────────────────────────
   let _hashChangeTimer = null;
   const HASHCHANGE_DEBOUNCE_MS = 60;
-  const _origAddEventListener = EventTarget.prototype.addEventListener;
-
-  // We wrap window.navigate directly once it exists (see installAll loop)
-  // so we don't need to intercept addEventListener at a low level.
 
   function _installHashChangeDebouncePatch() {
     if (window.__fluidityHashDebouncePatched) return;
     window.__fluidityHashDebouncePatched = true;
-
     window.addEventListener('hashchange', function () {
       if (window.__fluidityIsBfcacheSuppressed()) return;
       clearTimeout(_hashChangeTimer);
@@ -92,13 +194,13 @@
         const view = (location.hash || '').replace('#', '').trim();
         const allowed = window.allowedViews || ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
         if (!allowed.includes(view)) return;
-        // Only navigate if the view actually differs from current state
         if (window.state && window.state.view === view) return;
         if (typeof window.navigate === 'function') window.navigate(view);
       }, HASHCHANGE_DEBOUNCE_MS);
     });
   }
 
+  // ── Patch helpers ─────────────────────────────────────────────
   function markPatched(fn, key) {
     try { fn[key] = true; } catch (_) {}
     return fn;
@@ -106,30 +208,25 @@
 
   function areCorePatchesInstalled() {
     return !!(
-      window.hideBoot && window.hideBoot.__fluidityBootPatched &&
-      window.gsapAnimateView && window.gsapAnimateView.__fluidityBootPatched &&
-      window.render && window.render.__fluidityNoGapPatched &&
-      window.scheduleRender && window.scheduleRender.__fluidityBootPatched &&
-      window.alert && window.alert.__fluidityBootPatched
+      window.hideBoot           && window.hideBoot.__fluidityBootPatched &&
+      window.gsapAnimateView    && window.gsapAnimateView.__fluidityBootPatched &&
+      window.render             && window.render.__fluidityNoGapPatched &&
+      window.scheduleRender     && window.scheduleRender.__fluidityBootPatched &&
+      window.alert              && window.alert.__fluidityBootPatched
     );
   }
 
-  // 2) hideBoot() without lingering loader layer.
+  // ── hideBoot — remove lingering loader ────────────────────────
   function installHideBootPatch() {
     if (typeof window.hideBoot !== 'function' || window.hideBoot.__fluidityBootPatched) return;
     const patched = function hideBootPatched() {
       const overlay = document.getElementById('boot-overlay');
-      if (overlay) {
-        overlay.style.opacity = '0';
-        overlay.style.display = 'none';
-      }
-
+      if (overlay) { overlay.style.opacity = '0'; overlay.style.display = 'none'; }
       const loader = document.getElementById('app-loader');
       if (loader) {
         let removed = false;
         const done = () => {
-          if (removed) return;
-          removed = true;
+          if (removed) return; removed = true;
           loader.removeEventListener('transitionend', done);
           if (loader.parentNode) loader.remove();
         };
@@ -141,7 +238,7 @@
     window.hideBoot = markPatched(patched, '__fluidityBootPatched');
   }
 
-  // 3) Disable heavy ui.js entrance animation when V3 engine is active.
+  // ── Disable heavy gsapAnimateView when V3 engine is active ────
   function installGsapAnimateViewPatch() {
     if (typeof window.gsapAnimateView !== 'function' || window.gsapAnimateView.__fluidityBootPatched) return;
     const original = window.gsapAnimateView;
@@ -152,73 +249,48 @@
     window.gsapAnimateView = markPatched(patched, '__fluidityBootPatched');
   }
 
-  // 4) Wrap GSAP to release will-change after tween completion.
+  // ── GSAP will-change cleanup ──────────────────────────────────
   function installGsapWillChangePatch() {
     if (!window.gsap || window.gsap.__fluidityWillChangePatched) return;
-
     const gsap = window.gsap;
-    const originalTo = gsap.to.bind(gsap);
+    const originalTo     = gsap.to.bind(gsap);
     const originalFromTo = gsap.fromTo.bind(gsap);
-
-    const resolveTargets = (targets) => {
-      if (!targets) return [];
-      if (typeof targets === 'string') return Array.from(document.querySelectorAll(targets));
-      if (targets instanceof Element) return [targets];
-      if (targets === window || targets === document) return [];
-      if (typeof targets.length === 'number') return Array.from(targets).filter(Boolean);
+    const resolveTargets = (t) => {
+      if (!t) return [];
+      if (typeof t === 'string') return Array.from(document.querySelectorAll(t));
+      if (t instanceof Element) return [t];
+      if (t === window || t === document) return [];
+      if (typeof t.length === 'number') return Array.from(t).filter(Boolean);
       return [];
     };
-
-    const withWillChangeCleanup = (targets, vars) => {
+    const withCleanup = (targets, vars) => {
       const resolved = resolveTargets(targets);
-      const nextVars = { ...(vars || {}) };
-      const prevOnComplete = nextVars.onComplete;
-      const prevParams = Array.isArray(nextVars.onCompleteParams) ? nextVars.onCompleteParams : [];
-      nextVars.onComplete = function onCompletePatched(...args) {
-        resolved.forEach((el) => {
-          if (el && el.style) el.style.willChange = 'auto';
-        });
-        if (typeof prevOnComplete === 'function') {
-          try {
-            return prevOnComplete.apply(this, args.length ? args : prevParams);
-          } catch (_) {}
-        }
+      const v = { ...(vars || {}) };
+      const prev = v.onComplete;
+      const prevP = Array.isArray(v.onCompleteParams) ? v.onCompleteParams : [];
+      v.onComplete = function (...args) {
+        resolved.forEach(el => { if (el && el.style) el.style.willChange = 'auto'; });
+        if (typeof prev === 'function') { try { return prev.apply(this, args.length ? args : prevP); } catch (_) {} }
       };
-      return nextVars;
+      return v;
     };
-
-    gsap.to = function toPatched(targets, vars) {
-      return originalTo(targets, withWillChangeCleanup(targets, vars));
-    };
-
-    gsap.fromTo = function fromToPatched(targets, fromVars, toVars) {
-      return originalFromTo(targets, fromVars, withWillChangeCleanup(targets, toVars));
-    };
-
+    gsap.to     = (t, v)       => originalTo(t, withCleanup(t, v));
+    gsap.fromTo = (t, fv, tv)  => originalFromTo(t, fv, withCleanup(t, tv));
     gsap.__fluidityWillChangePatched = true;
   }
 
-  // 5) Bypass engine 400ms render gap after V3 install.
-  //    Also wraps render/scheduleRender to respect the bfcache suppression window.
+  // ── Bypass 400ms render gap after V3 install ─────────────────
   function installRenderBypassPatch() {
-    if (typeof window.render !== 'function') return;
-    if (window.render.__fluidityNoGapPatched) return;
+    if (typeof window.render !== 'function' || window.render.__fluidityNoGapPatched) return;
     if (!window.render._isV3 && !window.__fluidityRenderBypassForce) return;
-
-    const _innerRender = window.render; // capture current V3 render
-
     const patched = function renderNoGapPatched() {
-      // Bail during bfcache suppression window
       if (window.__fluidityIsBfcacheSuppressed()) return;
-      // Allow render if view is login to prevent locking the screen on logout
       if (window._gRenderRAF || !window.state || window.state.booting || (window.state._loggedOut && window.state.view !== 'login')) return;
       window._gRenderRAF = requestAnimationFrame(() => {
         try {
           if (window.state && window.state._loggedOut && window.state.view !== 'login') return;
           if (typeof window._renderCore === 'function') window._renderCore();
-        } finally {
-          window._gRenderRAF = null;
-        }
+        } finally { window._gRenderRAF = null; }
       });
     };
     patched._isV3 = true;
@@ -226,47 +298,43 @@
     window.render = patched;
   }
 
-  // 6) Avoid duplicate post-login scheduleRender right after navigate.
+  // ── Post-navigate scheduleRender dedup ───────────────────────
   function installNavigateSchedulePatch() {
     if (typeof window.navigate === 'function' && !window.navigate.__fluidityBootPatched) {
-      const originalNavigate = window.navigate;
-      const navigatePatched = function (...args) {
+      const orig = window.navigate;
+      const p = function (...args) {
         window.__fluidityLastNavigateAt = performance.now();
-        return originalNavigate.apply(this, args);
+        return orig.apply(this, args);
       };
-      navigatePatched._isV3 = !!originalNavigate._isV3;
-      window.navigate = markPatched(navigatePatched, '__fluidityBootPatched');
+      p._isV3 = !!orig._isV3;
+      window.navigate = markPatched(p, '__fluidityBootPatched');
     }
-
     if (typeof window.scheduleRender === 'function' && !window.scheduleRender.__fluidityBootPatched) {
-      const originalScheduleRender = window.scheduleRender;
-      const schedulePatched = function (delay = 80) {
-        // Bail during bfcache suppression window
+      const orig = window.scheduleRender;
+      const p = function (delay = 80) {
         if (window.__fluidityIsBfcacheSuppressed()) return;
         const lastNav = window.__fluidityLastNavigateAt || 0;
-        const inPostNavWindow = (performance.now() - lastNav) < POST_NAV_SCHEDULE_BLOCK_MS;
-        const forceRender = !!(window.state && window.state._forceRender);
-        if (inPostNavWindow && !forceRender) return;
-        return originalScheduleRender.call(this, delay);
+        if ((performance.now() - lastNav) < POST_NAV_SCHEDULE_BLOCK_MS && !(window.state && window.state._forceRender)) return;
+        return orig.call(this, delay);
       };
-      window.scheduleRender = markPatched(schedulePatched, '__fluidityBootPatched');
+      window.scheduleRender = markPatched(p, '__fluidityBootPatched');
     }
   }
 
-  // 7) Convert blocking login welcome alert to toast.
+  // ── Convert blocking login alerts to toast ───────────────────
   function installAlertPatch() {
     if (typeof window.alert !== 'function' || window.alert.__fluidityBootPatched) return;
-    const nativeAlert = window.alert.bind(window);
-    const alertPatched = function (message) {
+    const native = window.alert.bind(window);
+    const p = function (message) {
       const text = String(message ?? '');
-      const isLoginWelcome = /^\s*✅/.test(text) || /welcome|benvenuto|bienven|bienvenu|willkommen|bem-vindo/i.test(text);
-      if (isLoginWelcome && typeof window.showToast === 'function') {
+      if ((/^\s*✅/.test(text) || /welcome|benvenuto|bienven|bienvenu|willkommen|bem-vindo/i.test(text)) &&
+          typeof window.showToast === 'function') {
         window.showToast(text.replace(/^✅\s*/, ''), 'success');
         return;
       }
-      return nativeAlert(message);
+      return native(message);
     };
-    window.alert = markPatched(alertPatched, '__fluidityBootPatched');
+    window.alert = markPatched(p, '__fluidityBootPatched');
   }
 
   function installAll() {
@@ -285,11 +353,11 @@
     console.log('🩹 Fluidity boot patch loaded', PATCH_VERSION);
     return;
   }
+
   let attempts = 0;
   const timer = setInterval(() => {
-    attempts += 1;
-    const ready = installAll();
-    if (ready) {
+    attempts++;
+    if (installAll()) {
       clearInterval(timer);
       window.__fluidityBootPatchVersion = PATCH_VERSION;
       console.log('🩹 Fluidity boot patch loaded', PATCH_VERSION);
