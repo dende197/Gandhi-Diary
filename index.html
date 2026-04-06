@@ -441,7 +441,7 @@
         window.saveTasksToSupabase = saveTasksToSupabase;
 
         async function performSync(sessionData, options = {}) {
-            const opts = (typeof options === 'object' && options !== null) ? options : {};
+            const opts = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
             const suppressRender = !!opts.suppressRender;
             const suppressHideBoot = !!opts.suppressHideBoot;
             if (state.syncing || state._loggedOut) return;
@@ -548,6 +548,12 @@
         // --- BOOT FLOW ---
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
+            const finalizeBootHydrationRender = () => {
+                state._forceRender = true;
+                state._animateOnNextRender = true;
+                renderBootFallback();
+                hideBoot();
+            };
             const renderBootFallback = () => {
                 if (window._bootRenderedOnce) return;
                 window._bootRenderedOnce = true;
@@ -604,20 +610,14 @@
                     loadCircolari()
                 ])
                     .then(() => {
-                        state._forceRender = true;
-                        state._animateOnNextRender = true;
-                        renderBootFallback();
-                        hideBoot();
+                        finalizeBootHydrationRender();
                         if (typeof window.warmWeeklyAgendaCache === 'function') {
                             setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
                         }
                     })
                     .catch((e) => {
                         console.warn('Background sync failed:', e);
-                        state._forceRender = true;
-                        state._animateOnNextRender = true;
-                        renderBootFallback();
-                        hideBoot();
+                        finalizeBootHydrationRender();
                     });
             } else {
                 state.isLoggedIn = false;
