@@ -257,6 +257,8 @@
             reminders: [],
             promemoria: [],
             plannedTasks: {},
+            plannedDetails: {},
+            classActivities: [],
             circolari: [],
             messages: {},
             threads: [],
@@ -416,6 +418,8 @@
 
         function saveTasks() {
             localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
+            localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails || {}));
             if (typeof saveTasksToSupabase === 'function') saveTasksToSupabase();
         }
         window.saveTasks = saveTasks;
@@ -430,7 +434,8 @@
                     headers: getSessionHeaders(),
                     body: JSON.stringify({
                         tasks: [],
-                        plannedTasks: state.plannedTasks || {}
+                        plannedTasks: state.plannedTasks || {},
+                        plannedDetails: state.plannedDetails || {}
                     })
                 });
                 console.log("✅ PlannedTasks synced to Supabase");
@@ -470,7 +475,9 @@
                     // 1. Process Planner Data FIRST (contains remote manual tasks & verifiche)
                     if (data.planner) {
                         state.plannedTasks = data.planner.plannedTasks || {};
+                        state.plannedDetails = data.planner.plannedDetails || {};
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
+                        localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails));
                         
                         // Handle manual verifiche from dedicated table
                         if (data.planner.manualVerifiche) {
@@ -494,6 +501,10 @@
                     if (data.verifiche) {
                         state.verifiche = data.verifiche;
                         localStorage.setItem(lsKey('verifiche'), JSON.stringify(state.verifiche));
+                    }
+                    if (data.activities) {
+                        state.classActivities = data.activities;
+                        localStorage.setItem(lsKey('class_activities'), JSON.stringify(state.classActivities));
                     }
                     if (data.student) {
                         state.user = { ...state.user, ...data.student };
@@ -596,8 +607,11 @@
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
+                    state.plannedDetails = JSON.parse(localStorage.getItem(lsKey('planned_details'))) || {};
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
+                    state.classActivities = JSON.parse(localStorage.getItem(lsKey('class_activities'))) || [];
+                    state.aiChatHistory = JSON.parse(localStorage.getItem(lsKey('ai_chat')) || '[]');
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
                 } catch(e) {}
@@ -669,6 +683,7 @@
         window.saveTasks = () => {
             localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
+            localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails || {}));
             if (state.isLoggedIn) {
                 if (window.saveTasksToSupabase) window.saveTasksToSupabase();
             }
@@ -679,6 +694,7 @@
         window.debouncedSavePlannerRemote = function(delay) {
             // Always persist plannedTasks to localStorage immediately
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
+            localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails || {}));
             // Debounce the Supabase save
             clearTimeout(_savePlannerTimer);
             _savePlannerTimer = setTimeout(function() {
