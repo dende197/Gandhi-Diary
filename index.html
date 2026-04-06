@@ -440,11 +440,14 @@
         }
         window.saveTasksToSupabase = saveTasksToSupabase;
 
-        async function performSync(sessionData) {
+        async function performSync(sessionData, options = {}) {
+            const opts = options && typeof options === 'object' ? options : {};
+            const suppressRender = !!opts.suppressRender;
+            const suppressHideBoot = !!opts.suppressHideBoot;
             if (state.syncing || state._loggedOut) return;
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
-            updateLoader("Contatto Server...");
+            if (!suppressHideBoot) updateLoader("Contatto Server...");
             if (!sessionData) sessionData = sessionManager.load();
             if (!sessionData) { state.syncing = false; return; }
             
@@ -519,10 +522,13 @@
                 state.isOffline = true;
             } finally {
                 state.syncing = false;
-                hideBoot();
+                if (!suppressHideBoot) hideBoot();
                 if (state._loggedOut) return; // Don't render after logout
-                state._forceRender = true;
-                if (window.scheduleRender) window.scheduleRender();
+                if (!suppressRender) {
+                    state._forceRender = true;
+                    state._animateOnNextRender = true;
+                    if (window.scheduleRender) window.scheduleRender();
+                }
             }
         }
         window.performSync = performSync;
@@ -592,19 +598,33 @@
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
-                renderBootFallback();
-                Promise.all([performSync(session), loadCircolari()])
+                showBoot("Sincronizzazione in corso...");
+                Promise.all([
+                    performSync(session, { suppressRender: true, suppressHideBoot: true }),
+                    loadCircolari()
+                ])
                     .then(() => {
+                        state._forceRender = true;
+                        state._animateOnNextRender = true;
+                        renderBootFallback();
+                        hideBoot();
                         if (typeof window.warmWeeklyAgendaCache === 'function') {
                             setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
                         }
                     })
-                    .catch((e) => console.warn('Background sync failed:', e));
+                    .catch((e) => {
+                        console.warn('Background sync failed:', e);
+                        state._forceRender = true;
+                        state._animateOnNextRender = true;
+                        renderBootFallback();
+                        hideBoot();
+                    });
             } else {
                 state.isLoggedIn = false;
                 state.view = 'login';
                 state.booting = false;
                 window._bootRenderedOnce = false;
+                state._animateOnNextRender = true;
                 renderBootFallback();
             }
             
@@ -927,13 +947,14 @@
 
             await Promise.all([
                 (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e)),
-                performSync(sessionManager.load()).catch(e => console.error("Post-login sync failed:", e)),
+                performSync(sessionManager.load(), { suppressRender: true }).catch(e => console.error("Post-login sync failed:", e)),
                 loadCircolari().catch(e => console.error("Post-login circolari load failed:", e))
             ]);
 
             if (typeof closeModal === 'function') closeModal();
             alert(`✅ Benvenuto ${state.user.name}!`);
             window._bootRenderedOnce = false;
+            state._animateOnNextRender = true;
             navigate('home');
             // navigate() already triggers a render — no extra scheduleRender needed
         }

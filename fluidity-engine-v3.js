@@ -119,10 +119,11 @@
       _lastRenderTime = now;
       window._gRenderRAF = requestAnimationFrame(() => {
         if (state._loggedOut && state.view !== 'login') { window._gRenderRAF = null; return; }
-        const isFirstOfView = (_lastAnimatedViewRender !== state.view);
+        const shouldAnimate = !!state._animateOnNextRender || (_lastAnimatedViewRender !== state.view);
         if (typeof _origRenderCore === 'function') _origRenderCore();
         window._gRenderRAF = null;
-        if (isFirstOfView && state.isLoggedIn && state.view !== 'login') {
+        if (shouldAnimate && state.isLoggedIn && state.view !== 'login') {
+          state._animateOnNextRender = false;
           _lastAnimatedViewRender = state.view;
           requestAnimationFrame(() => requestAnimationFrame(() => _animateViewEntrance(state.view, 'down')));
         }
