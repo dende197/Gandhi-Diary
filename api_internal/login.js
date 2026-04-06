@@ -7,7 +7,7 @@ const {
     AdvancedArgo, enrichProfiles, resolveIdentityForProfile,
     resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb,
     getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
-    extractPromemoriaFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
+    extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 
 module.exports = async function handler(req, res) {
@@ -91,6 +91,7 @@ module.exports = async function handler(req, res) {
         const gradesData = extractGradesFromDashboard(dashboardData);
         const tasksData = extractHomeworkFromDashboard(dashboardData);
         const announcementsData = extractPromemoriaFromDashboard(dashboardData);
+        const activitiesData = extractClassActivitiesFromDashboard(dashboardData);
         const assenzeData = extractAssenzeFromDashboard(dashboardData);
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
@@ -150,6 +151,7 @@ module.exports = async function handler(req, res) {
             tasks: tasksData,
             voti: gradesData,
             promemoria: announcementsData,
+            activities: activitiesData,
             assenzeData,
             verifiche: verificheData
         };
