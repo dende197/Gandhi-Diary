@@ -3648,7 +3648,7 @@ function shiftIsoWeekValue(weekValue, deltaWeeks) {
 function getClassActivitiesWeekOptions(selectedWeekValue) {
     const weeks = new Set();
     const today = new Date();
-    // Manteniamo una finestra ampia sulle settimane recenti/prossime per una scelta rapida e leggibile.
+    // Keep a wide recent/upcoming window so users can switch weeks quickly without raw ISO inputs.
     for (let offset = -CLASS_ACTIVITIES_WEEK_LOOKBACK; offset <= CLASS_ACTIVITIES_WEEK_LOOKAHEAD; offset += 1) {
         const d = new Date(today);
         d.setDate(today.getDate() + (offset * 7));
@@ -3666,7 +3666,7 @@ function getClassActivitiesWeekOptions(selectedWeekValue) {
         const bStart = parseIsoWeekRange(b)?.start?.getTime?.() ?? 0;
         return bStart - aStart;
     });
-    // Limite di sicurezza per mantenere menu snello anche con molti anni di attività storiche.
+    // Safety cap to keep the dropdown compact even when there are many historical school years.
     return sorted.slice(0, CLASS_ACTIVITIES_MAX_WEEK_OPTIONS);
 }
 
@@ -3731,7 +3731,7 @@ function renderClassActivitiesExportModalContent() {
     if (!modalContent) return;
     const selection = getClassActivitiesExportSelection();
     const weekOptions = getClassActivitiesWeekOptions(selection.weekValue);
-    if (!weekOptions.includes(selection.weekValue) && weekOptions.length) {
+    if (!weekOptions.includes(selection.weekValue) && weekOptions.length > 0) {
         selection.weekValue = weekOptions[0];
         state.classActivitiesExport = state.classActivitiesExport || {};
         state.classActivitiesExport.week = selection.weekValue;
