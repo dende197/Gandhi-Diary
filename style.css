@@ -4661,9 +4661,9 @@
 
           /* 7 ▸ Planner header — wrap title + action buttons vertically */
           .planner-view-header {
-            flex-direction: row !important;
+            flex-direction: column !important;
             align-items: center !important;
-            justify-content: space-between !important;
+            justify-content: center !important;
             gap: 10px !important;
             margin-bottom: 14px !important;
             padding-bottom: 12px !important;
@@ -4680,13 +4680,13 @@
           }
 
           .planner-header-controls {
-            flex-wrap: nowrap !important;
+            flex-wrap: wrap !important;
             gap: 6px !important;
-            width: auto !important;
+            width: 100% !important;
             min-width: 0;
-            flex: 1 1 auto;
-            justify-content: flex-end;
-            overflow-x: auto;
+            flex: 0 1 auto;
+            justify-content: center;
+            overflow: visible;
             scrollbar-width: none;
           }
 
@@ -4697,6 +4697,7 @@
           .planner-header-primary-actions {
             gap: 6px !important;
             flex-shrink: 0;
+            justify-content: center;
           }
 
           /* Planner action buttons — smaller on mobile */

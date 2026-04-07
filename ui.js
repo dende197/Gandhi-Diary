@@ -1715,8 +1715,8 @@ function renderPlanner() {
     const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
     const mobilePlannerDropdown = `
                         <div class="planner-mobile-actions" style="position: relative;">
-                            <button id="planner-menu-toggle" class="planner-mobile-menu-toggle" onclick="togglePlannerMobileDropdown(event)" aria-label="Azioni agenda" title="Azioni agenda">
-                                <i class="ph-bold ph-dots-three-outline"></i>
+                            <button id="planner-menu-toggle" class="planner-mobile-menu-toggle" onclick="togglePlannerMobileDropdown(event)" aria-label="Azioni agenda" title="Azioni agenda" aria-haspopup="true" aria-expanded="false">
+                                <i class="ph-bold ph-caret-down"></i>
                             </button>
                             <div id="planner-mobile-menu" class="planner-mobile-dropdown">
                                 <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')">
@@ -3855,6 +3855,7 @@ window.togglePlannerMobileDropdown = function (event) {
     } else {
         menu.classList.add('active');
         toggle.classList.add('active');
+        toggle.setAttribute('aria-expanded', 'true');
         
         // Add one-time listener to close when clicking outside
         const closeOnOutsideClick = (e) => {
@@ -3871,7 +3872,10 @@ window.closePlannerMobileDropdown = function () {
     const menu = document.getElementById('planner-mobile-menu');
     const toggle = document.getElementById('planner-menu-toggle');
     if (menu) menu.classList.remove('active');
-    if (toggle) toggle.classList.remove('active');
+    if (toggle) {
+        toggle.classList.remove('active');
+        toggle.setAttribute('aria-expanded', 'false');
+    }
 };
 
 window.handlePlannerMobileMenuAction = function (action) {
