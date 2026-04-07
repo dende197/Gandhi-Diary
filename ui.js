@@ -80,6 +80,9 @@ const AI_LIMIT_FALLBACK_MESSAGE = '⚠️ Richiesta non soddisfabile qui per lim
 const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
 const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
 const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
+const CLASS_ACTIVITIES_WEEK_LOOKBACK = 16;
+const CLASS_ACTIVITIES_WEEK_LOOKAHEAD = 8;
+const CLASS_ACTIVITIES_MAX_WEEK_OPTIONS = 80;
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -1711,22 +1714,9 @@ function renderPlanner() {
     if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
     const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
     const mobilePlannerDropdown = `
-                        <div class="planner-dropdown planner-mobile-actions">
-                            <button id="planner-cloud-btn" class="planner-mobile-menu-toggle" onclick="togglePlannerMenu(event)" aria-label="Azioni agenda" title="Azioni agenda" aria-expanded="false">
-                                <i class="ph-bold ph-caret-down"></i>
-                            </button>
-                            <div id="planner-cloud-menu" class="planner-dropdown-content planner-mobile-dropdown" onclick="event.stopPropagation()">
-                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')" aria-label="Pianifica settimana">
-                                    <i class="ph-bold ph-calendar-plus"></i> Pianifica
-                                </button>
-                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('pdf')" aria-label="Esporta attività in PDF">
-                                    <i class="ph-bold ph-file-pdf"></i> Attività PDF
-                                </button>
-                                <button class="pd-item danger" onclick="handlePlannerMobileMenuAction('clear')" aria-label="Svuota tutti i compiti pianificati">
-                                    <i class="ph-bold ph-trash"></i> Svuota pianificazione
-                                </button>
-                            </div>
-                        </div>
+                        <button class="planner-mobile-menu-toggle" onclick="openPlannerMobileActionsModal()" aria-label="Azioni agenda" title="Azioni agenda">
+                            <i class="ph-bold ph-dots-three-outline"></i>
+                        </button>
                     `;
     const plannerSecondaryButtons = isMobilePlanner
         ? mobilePlannerDropdown
@@ -1745,7 +1735,7 @@ function renderPlanner() {
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #DAD4CC; padding-bottom: 16px;">
-                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda & Compiti</h1>
+                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda</h1>
                 
                 <div class="planner-header-controls" style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
@@ -3636,6 +3626,50 @@ function getWeekSelectionDetailLabel(weekValue) {
     return `Settimana ${weekNumber} del ${weekYear} · da ${startLabel} a ${endLabel}`;
 }
 
+function getWeekSelectionOptionLabel(weekValue) {
+    const normalizedWeek = String(weekValue || '');
+    if (!/^\d{4}-W\d{2}$/.test(normalizedWeek)) return normalizedWeek;
+    const range = parseIsoWeekRange(normalizedWeek);
+    if (!range) return normalizedWeek;
+    const weekNumber = Number(normalizedWeek.slice(6));
+    const startLabel = range.start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    const endLabel = range.end.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    return `Settimana ${weekNumber} · ${startLabel} → ${endLabel}`;
+}
+
+function shiftIsoWeekValue(weekValue, deltaWeeks) {
+    const range = parseIsoWeekRange(weekValue);
+    if (!range || !Number.isFinite(deltaWeeks)) return weekValue;
+    const target = new Date(range.start);
+    target.setDate(target.getDate() + (deltaWeeks * 7));
+    return getIsoWeekInputValue(target);
+}
+
+function getClassActivitiesWeekOptions(selectedWeekValue) {
+    const weeks = new Set();
+    const today = new Date();
+    // Keep a wide recent/upcoming window so users can switch weeks quickly without raw ISO inputs.
+    for (let offset = -CLASS_ACTIVITIES_WEEK_LOOKBACK; offset <= CLASS_ACTIVITIES_WEEK_LOOKAHEAD; offset += 1) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + (offset * 7));
+        weeks.add(getIsoWeekInputValue(d));
+    }
+    getSortedCompletedClassActivities().forEach((activity) => {
+        if (activity?._parsedDate instanceof Date) {
+            weeks.add(getIsoWeekInputValue(activity._parsedDate));
+        }
+    });
+    const selected = selectedWeekValue || getIsoWeekInputValue(today);
+    weeks.add(selected);
+    const sorted = [...weeks].sort((a, b) => {
+        const aStart = parseIsoWeekRange(a)?.start?.getTime?.() ?? 0;
+        const bStart = parseIsoWeekRange(b)?.start?.getTime?.() ?? 0;
+        return bStart - aStart;
+    });
+    // Safety cap to keep the dropdown compact even when there are many historical school years.
+    return sorted.slice(0, CLASS_ACTIVITIES_MAX_WEEK_OPTIONS);
+}
+
 function getSortedCompletedClassActivities() {
     return (Array.isArray(state.classActivities) ? state.classActivities : [])
         .map((a) => ({ ...a, _parsedDate: getActivityDateObject(a) }))
@@ -3696,6 +3730,12 @@ function renderClassActivitiesExportModalContent() {
     const modalContent = document.getElementById('class-activities-export-modal-content');
     if (!modalContent) return;
     const selection = getClassActivitiesExportSelection();
+    const weekOptions = getClassActivitiesWeekOptions(selection.weekValue);
+    if (!weekOptions.includes(selection.weekValue) && weekOptions.length > 0) {
+        selection.weekValue = weekOptions[0];
+        state.classActivitiesExport = state.classActivitiesExport || {};
+        state.classActivitiesExport.week = selection.weekValue;
+    }
     const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue);
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
@@ -3703,8 +3743,18 @@ function renderClassActivitiesExportModalContent() {
     const periodControls = selection.period === 'month'
         ? `<input type="month" class="activities-export-input" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)">`
         : selection.period === 'week'
-            ? `<div style="display:flex; flex-direction:column; gap:6px; width:100%;">
-                <input type="week" class="activities-export-input" value="${escapeHtml(selection.weekValue)}" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">
+            ? `<div class="activities-week-picker-wrap">
+                <div class="activities-week-picker">
+                    <button type="button" class="activities-week-nav-btn" onclick="shiftClassActivitiesExportWeek(-1)" aria-label="Settimana precedente">
+                        <i class="ph-bold ph-caret-left"></i>
+                    </button>
+                    <select class="activities-export-input activities-week-select" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">
+                        ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue))}</option>`).join('')}
+                    </select>
+                    <button type="button" class="activities-week-nav-btn" onclick="shiftClassActivitiesExportWeek(1)" aria-label="Settimana successiva">
+                        <i class="ph-bold ph-caret-right"></i>
+                    </button>
+                </div>
                 ${weekDetailLabel ? `<small style="font-size:11px; color:#6B6761; font-weight:700;">${escapeHtml(weekDetailLabel)}</small>` : ''}
               </div>`
             : `<select class="activities-export-input" onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)">
@@ -3819,6 +3869,13 @@ window.updateClassActivitiesExportPeriodValue = function (period, value) {
     if (period === 'month') state.classActivitiesExport.month = value;
     if (period === 'week') state.classActivitiesExport.week = value;
     if (period === 'school_year') state.classActivitiesExport.schoolYear = value;
+    renderClassActivitiesExportModalContent();
+};
+
+window.shiftClassActivitiesExportWeek = function (deltaWeeks) {
+    state.classActivitiesExport = state.classActivitiesExport || {};
+    const current = state.classActivitiesExport.week || getIsoWeekInputValue(new Date());
+    state.classActivitiesExport.week = shiftIsoWeekValue(current, deltaWeeks);
     renderClassActivitiesExportModalContent();
 };
 
