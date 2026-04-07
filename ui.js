@@ -759,9 +759,14 @@ function getModalContainer() {
     }
     return el;
 }
+const modalRuntime = { pendingCloseTimeout: null };
 function showModal(html, className = '') {
     const container = getModalContainer();
     if (!container) return;
+    if (modalRuntime.pendingCloseTimeout) {
+        clearTimeout(modalRuntime.pendingCloseTimeout);
+        modalRuntime.pendingCloseTimeout = null;
+    }
     container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
                 <div class="modal-content ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;">
@@ -778,7 +783,11 @@ function closeModal(event) {
         const overlay = container.querySelector('.modal-overlay');
         if (overlay) {
             overlay.style.opacity = '0';
-            setTimeout(() => { container.innerHTML = ''; }, 200);
+            if (modalRuntime.pendingCloseTimeout) clearTimeout(modalRuntime.pendingCloseTimeout);
+            modalRuntime.pendingCloseTimeout = setTimeout(() => {
+                container.innerHTML = '';
+                modalRuntime.pendingCloseTimeout = null;
+            }, 200);
         } else {
             container.innerHTML = '';
         }
@@ -1701,12 +1710,26 @@ function renderPlanner() {
     const listHtml = cachedAgenda || renderWeeklyAgenda();
     if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
     const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const mobilePlannerDropdown = `
+                        <div class="planner-dropdown planner-mobile-actions">
+                            <button id="planner-cloud-btn" class="planner-mobile-menu-toggle" onclick="togglePlannerMenu(event)" aria-label="Azioni agenda" title="Azioni agenda" aria-expanded="false">
+                                <i class="ph-bold ph-caret-down"></i>
+                            </button>
+                            <div id="planner-cloud-menu" class="planner-dropdown-content planner-mobile-dropdown" onclick="event.stopPropagation()">
+                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')" aria-label="Pianifica settimana">
+                                    <i class="ph-bold ph-calendar-plus"></i> Pianifica
+                                </button>
+                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('pdf')" aria-label="Esporta attività in PDF">
+                                    <i class="ph-bold ph-file-pdf"></i> Attività PDF
+                                </button>
+                                <button class="pd-item danger" onclick="handlePlannerMobileMenuAction('clear')" aria-label="Svuota tutti i compiti pianificati">
+                                    <i class="ph-bold ph-trash"></i> Svuota pianificazione
+                                </button>
+                            </div>
+                        </div>
+                    `;
     const plannerSecondaryButtons = isMobilePlanner
-        ? `
-                        <button onclick="openPlannerMobileActionsModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-caret-down"></i> Menu
-                        </button>
-                    `
+        ? mobilePlannerDropdown
         : `
                         <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-calendar-plus"></i> Pianifica
@@ -1724,11 +1747,11 @@ function renderPlanner() {
             <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #DAD4CC; padding-bottom: 16px;">
                 <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda & Compiti</h1>
                 
-                <div style="display: flex; gap: 16px; align-items: center;">
+                <div class="planner-header-controls" style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-sparkle"></i> AI Chat
+                    <div class="planner-header-primary-actions" style="display: flex; gap: 8px;">
+                        <button class="planner-ai-btn" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-sparkle"></i> ${isMobilePlanner ? 'Chat' : 'AI Chat'}
                         </button>
                         ${plannerSecondaryButtons}
                     </div>
@@ -1737,7 +1760,7 @@ function renderPlanner() {
                         <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" data-planner-view="calendar" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: #FFFFFF; color: #4F4A43;'}">Calendar</button>
                         <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" data-planner-view="list" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: #FFFFFF; color: #4F4A43;'}">List</button>
                     </div>
-                    <button onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
+                    <button class="planner-header-add-btn" onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
                         <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Verifica
                     </button>
                 </div>
@@ -3776,6 +3799,21 @@ window.openPlannerMobileActionsModal = function () {
     `);
 };
 
+window.handlePlannerMobileMenuAction = function (action) {
+    closePlannerDropdown();
+    if (action === 'plan') {
+        showPlanWeekModal();
+        return;
+    }
+    if (action === 'pdf') {
+        openClassActivitiesExportModal();
+        return;
+    }
+    if (action === 'clear') {
+        clearPlannedCalendarTasks();
+    }
+};
+
 window.updateClassActivitiesExportPeriodValue = function (period, value) {
     state.classActivitiesExport = state.classActivitiesExport || {};
     if (period === 'month') state.classActivitiesExport.month = value;
@@ -4734,6 +4772,21 @@ function showOrganizeStudyModal() {
             </div>
         `;
 }
+function closePlannerDropdown() {
+    const menu = document.getElementById('planner-cloud-menu');
+    const btn = document.getElementById('planner-cloud-btn');
+    if (menu) menu.classList.remove('active');
+    if (btn) {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-expanded', 'false');
+    }
+    if (window._plannerMenuCloseHandler) {
+        document.removeEventListener('pointerdown', window._plannerMenuCloseHandler);
+        window._plannerMenuCloseHandler = null;
+    }
+}
+window.closePlannerDropdown = closePlannerDropdown;
+
 function togglePlannerMenu(event) {
     if (event) event.stopPropagation();
     const menu = document.getElementById('planner-cloud-menu');
@@ -4741,72 +4794,22 @@ function togglePlannerMenu(event) {
     if (!menu || !btn) return;
 
     const isVisible = menu.classList.contains('active');
-
-    // Chiudi tutti gli altri eventuali dropdown prima
-    document.querySelectorAll('.planner-dropdown-content').forEach(el => {
-        if (el !== menu) {
-            el.classList.remove('active');
-            el.style.display = 'none';
-        }
-    });
-
     if (!isVisible) {
-        // 🚀 TELETRASPORTO: Esci dai contenitori padri (v1.1.56)
-        if (menu.parentElement !== document.body) {
-            document.body.appendChild(menu);
-        }
-
-        // Calcola posizione esatta sullo schermo 
-        const isMobile = window.innerWidth <= 768;
-        const menuWidth = isMobile ? 240 : 300;
-
-        const updatePosition = () => {
-            const rect = btn.getBoundingClientRect();
-            const isMobile = window.innerWidth <= 768;
-            const menuWidth = isMobile ? 240 : 300;
-
-            // Calculate left position anchored to button's right edge (v1.1.58)
-            let leftPos = rect.right - menuWidth;
-            // Prevent overflow on left edge
-            if (leftPos < 8) leftPos = 8;
-            // Prevent overflow on right edge
-            if (leftPos + menuWidth > window.innerWidth - 8) {
-                leftPos = window.innerWidth - menuWidth - 8;
-            }
-
-            // Perfect Positioning (v1.1.64): Absolute relative to document to scroll NATURALLY
-            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-
-            menu.style.setProperty('position', 'absolute', 'important');
-            menu.style.setProperty('top', (scrollY + rect.bottom + 8) + 'px', 'important');
-            menu.style.setProperty('left', (scrollX + leftPos) + 'px', 'important');
-            menu.style.setProperty('right', 'auto', 'important');
-            menu.style.setProperty('z-index', '2147483647', 'important');
-            menu.style.setProperty('width', menuWidth + 'px', 'important');
-            menu.style.setProperty('min-width', menuWidth + 'px', 'important');
-            menu.style.setProperty('display', 'flex', 'important');
-            menu.style.setProperty('flex-direction', 'column', 'important');
-        };
-
-        updatePosition();
         menu.classList.add('active');
-
-        // Gestore chiusura universale
+        btn.classList.add('active');
+        btn.setAttribute('aria-expanded', 'true');
         const closeHandler = (e) => {
             if (!menu.contains(e.target) && !btn.contains(e.target)) {
-                menu.classList.remove('active');
-                menu.style.display = 'none';
-                document.removeEventListener('click', closeHandler);
+                closePlannerDropdown();
             }
         };
-
+        window._plannerMenuCloseHandler = closeHandler;
+        // Minimal delay to prevent the same tap used to open the menu from immediately closing it.
         setTimeout(() => {
-            document.addEventListener('click', closeHandler);
+            document.addEventListener('pointerdown', closeHandler);
         }, 10);
     } else {
-        menu.classList.remove('active');
-        menu.style.display = 'none';
+        closePlannerDropdown();
     }
 }
 function showTasksBySubjectModal() {

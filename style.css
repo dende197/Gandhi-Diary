@@ -518,6 +518,89 @@
           flex-direction: column;
         }
 
+        .planner-mobile-actions {
+          position: relative;
+          width: auto;
+          height: auto;
+        }
+
+        .planner-mobile-menu-toggle {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          border: 1px solid #D3CEC7;
+          background: #FFFFFF;
+          color: #141414;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 180ms ease, box-shadow 180ms ease;
+          padding: 0;
+        }
+
+        .planner-mobile-menu-toggle i {
+          font-size: 14px;
+          transition: transform 220ms ease;
+        }
+
+        .planner-mobile-menu-toggle.active i {
+          transform: rotate(180deg);
+        }
+
+        .planner-mobile-menu-toggle:active {
+          transform: scale(0.96);
+        }
+
+        .planner-mobile-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          left: auto;
+          min-width: 214px;
+          border-radius: 14px;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          box-shadow: 0 18px 44px rgba(0, 0, 0, 0.14);
+          background: #FFFFFF;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          overflow: hidden;
+          z-index: var(--planner-mobile-dropdown-z-index); /* Keep above planner header controls but below global modals/toasts */
+          transform-origin: top right;
+          opacity: 0;
+          transform: translateY(-6px) scale(0.98);
+          pointer-events: none;
+          transition: opacity 180ms ease, transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .planner-mobile-dropdown.active {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
+        }
+
+        .planner-mobile-dropdown .pd-item {
+          padding: 12px 14px;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          gap: 10px;
+        }
+
+        .planner-mobile-dropdown .pd-item i {
+          font-size: 15px;
+        }
+
+        .planner-mobile-dropdown .pd-item.danger {
+          color: #C62828;
+          background: #FFF5F4;
+        }
+
+        .planner-mobile-dropdown .pd-item.danger:hover {
+          background: #FFE9E6;
+        }
+
         .pd-item {
           display: flex;
           align-items: center;
@@ -557,6 +640,8 @@
           :root {
             --glass-blur: blur(10px);
             --card-shadow: 0 4px 15px rgba(139, 92, 246, 0.08);
+            --planner-mobile-dropdown-z-index: 80;
+            --planner-mobile-title-max-width: 42vw;
           }
 
           html,
@@ -4576,39 +4661,66 @@
 
           /* 7 ▸ Planner header — wrap title + action buttons vertically */
           .planner-view-header {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 8px !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 10px !important;
             margin-bottom: 14px !important;
             padding-bottom: 12px !important;
           }
 
           .planner-view-header h1 {
-            font-size: 20px !important;
+            font-size: 14px !important;
+            line-height: 1.1 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: var(--planner-mobile-title-max-width); /* Prevent title overlap with compact controls on very small phones */
+            margin-right: 6px;
           }
 
-          /* Planner action button group — wrap neatly */
-          .planner-view-header > div {
-            flex-wrap: wrap !important;
+          .planner-header-controls {
+            flex-wrap: nowrap !important;
             gap: 6px !important;
-            width: 100% !important;
+            width: auto !important;
+            min-width: 0;
+            flex: 1 1 auto;
+            justify-content: flex-end;
+            overflow-x: auto;
+            scrollbar-width: none;
+          }
+
+          .planner-header-controls::-webkit-scrollbar {
+            display: none;
+          }
+
+          .planner-header-primary-actions {
+            gap: 6px !important;
+            flex-shrink: 0;
           }
 
           /* Planner action buttons — smaller on mobile */
           .planner-view-header button {
             height: 32px !important;
             font-size: 10px !important;
-            padding: 0 10px !important;
+            padding: 0 8px !important;
+            flex-shrink: 0;
           }
 
           /* View switch buttons — compact */
           .planner-view-header .view-switch {
             padding: 3px !important;
+            flex-shrink: 0;
           }
 
           .planner-view-header .switch-btn {
-            padding: 5px 10px !important;
+            padding: 5px 8px !important;
             font-size: 10px !important;
+          }
+
+          .planner-header-add-btn {
+            padding: 0 8px !important;
+            min-width: auto !important;
           }
 
           /* 8 ▸ Subject detail grid (Voti view) — force 1 column */
