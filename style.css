@@ -565,7 +565,7 @@
           backdrop-filter: none;
           -webkit-backdrop-filter: none;
           overflow: hidden;
-          z-index: 80;
+          z-index: 80; /* Keep above planner header controls but below global modals/toasts */
           transform-origin: top right;
           opacity: 0;
           transform: translateY(-6px) scale(0.98);
@@ -4673,7 +4673,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 42vw;
+            max-width: 42vw; /* Prevent title overlap with compact controls on very small phones */
             margin-right: 6px;
           }
 

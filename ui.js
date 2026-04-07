@@ -759,13 +759,13 @@ function getModalContainer() {
     }
     return el;
 }
-let pendingModalCloseTimeout = null;
+const modalRuntime = { pendingCloseTimeout: null };
 function showModal(html, className = '') {
     const container = getModalContainer();
     if (!container) return;
-    if (pendingModalCloseTimeout) {
-        clearTimeout(pendingModalCloseTimeout);
-        pendingModalCloseTimeout = null;
+    if (modalRuntime.pendingCloseTimeout) {
+        clearTimeout(modalRuntime.pendingCloseTimeout);
+        modalRuntime.pendingCloseTimeout = null;
     }
     container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
@@ -783,10 +783,10 @@ function closeModal(event) {
         const overlay = container.querySelector('.modal-overlay');
         if (overlay) {
             overlay.style.opacity = '0';
-            if (pendingModalCloseTimeout) clearTimeout(pendingModalCloseTimeout);
-            pendingModalCloseTimeout = setTimeout(() => {
+            if (modalRuntime.pendingCloseTimeout) clearTimeout(modalRuntime.pendingCloseTimeout);
+            modalRuntime.pendingCloseTimeout = setTimeout(() => {
                 container.innerHTML = '';
-                pendingModalCloseTimeout = null;
+                modalRuntime.pendingCloseTimeout = null;
             }, 200);
         } else {
             container.innerHTML = '';
