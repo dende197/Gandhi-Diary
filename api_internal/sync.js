@@ -67,7 +67,9 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
-        const activities = extractClassActivitiesFromDashboard(dashboardData);
+        const activities = extractClassActivitiesFromDashboard(dashboardData, {
+            subjectId: profiles[profileIndex]?.idSoggetto
+        });
         const assenzeData = extractAssenzeFromDashboard(dashboardData);
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
