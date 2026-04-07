@@ -88,7 +88,7 @@ const PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH = 214;
 const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 180;
 const PLANNER_MOBILE_DROPDOWN_MARGIN = 10;
 const PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE = 12;
-const PLANNER_MOBILE_DROPDOWN_SCROLL_CAPTURE = true;
+const PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS = { capture: true };
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -3872,10 +3872,9 @@ window.togglePlannerMobileDropdown = function (event) {
         toggle.classList.add('active');
         toggle.setAttribute('aria-expanded', 'true');
         repositionPlannerMobileDropdown();
-        const reposition = () => repositionPlannerMobileDropdown();
-        window._plannerMobileDropdownReposition = reposition;
-        window.addEventListener('resize', reposition, { passive: true });
-        window.addEventListener('scroll', reposition, PLANNER_MOBILE_DROPDOWN_SCROLL_CAPTURE);
+        window._plannerMobileDropdownReposition = repositionPlannerMobileDropdown;
+        window.addEventListener('resize', window._plannerMobileDropdownReposition, { passive: true });
+        window.addEventListener('scroll', window._plannerMobileDropdownReposition, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
         
         // Add one-time listener to close when clicking outside
         const closeOnOutsideClick = (e) => {
@@ -3898,7 +3897,7 @@ window.closePlannerMobileDropdown = function () {
     }
     if (window._plannerMobileDropdownReposition) {
         window.removeEventListener('resize', window._plannerMobileDropdownReposition);
-        window.removeEventListener('scroll', window._plannerMobileDropdownReposition, PLANNER_MOBILE_DROPDOWN_SCROLL_CAPTURE);
+        window.removeEventListener('scroll', window._plannerMobileDropdownReposition, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
         window._plannerMobileDropdownReposition = null;
     }
 };
