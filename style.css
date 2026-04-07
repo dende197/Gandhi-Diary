@@ -5726,3 +5726,225 @@
           outline: 2px solid #1A6B8A;
           outline-offset: 2px;
         }
+
+        .activities-export-shell {
+          width: 100%;
+          max-width: 760px;
+          max-height: min(92dvh, 860px);
+          padding: 0;
+          overflow: hidden;
+          border-radius: 18px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          animation: modalSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalSlideUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.99);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .activities-export-modal {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          padding: 18px;
+          max-height: min(92dvh, 860px);
+          overflow-y: auto;
+        }
+
+        .activities-export-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .activities-export-title-wrap h2 {
+          margin: 0;
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: #141414;
+        }
+
+        .activities-export-title-wrap p {
+          margin: 4px 0 0;
+          color: #6B6761;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .activities-export-close {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          border: 1px solid #D8D3CB;
+          background: #FFFFFF;
+          color: #4F4A43;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .activities-export-info-card {
+          border: 1px solid #EAE6DF;
+          border-radius: 14px;
+          padding: 14px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,245,243,0.96) 100%);
+        }
+
+        .activities-export-info-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          border: 1px solid rgba(26, 107, 138, 0.25);
+          background: rgba(26, 107, 138, 0.08);
+          color: #1A6B8A;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          padding: 3px 10px;
+          margin-bottom: 8px;
+        }
+
+        .activities-export-info-card p {
+          margin: 0;
+          color: #3D3A35;
+          font-size: 13px;
+          line-height: 1.5;
+          font-weight: 600;
+        }
+
+        .activities-export-filters {
+          border: 1px solid #ECE8E2;
+          border-radius: 14px;
+          padding: 14px;
+          background: #FFFFFF;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .activities-export-filter-tabs {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .activities-export-filter-tabs button {
+          height: 34px;
+          border-radius: 10px;
+          border: 1px solid #D7D2CB;
+          background: #FFFFFF;
+          color: #4F4A43;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          padding: 0 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .activities-export-filter-tabs button.active {
+          background: #141414;
+          color: #FFFFFF;
+          border-color: #141414;
+        }
+
+        .activities-export-filter-input {
+          display: flex;
+        }
+
+        .activities-export-input {
+          width: 100%;
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid #D8D3CB;
+          background: #FAF9F7;
+          color: #141414;
+          padding: 0 12px;
+          font-size: 13px;
+          font-weight: 600;
+          outline: none;
+        }
+
+        .activities-export-input:focus {
+          border-color: #1A6B8A;
+          box-shadow: 0 0 0 3px rgba(26, 107, 138, 0.12);
+          background: #FFFFFF;
+        }
+
+        .activities-export-stats {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+          font-size: 12px;
+          color: #6B6761;
+        }
+
+        .activities-export-stats strong {
+          color: #141414;
+          font-size: 13px;
+        }
+
+        .activities-export-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .activities-export-download-btn {
+          height: 44px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          color: #FFFFFF;
+          background: linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #2DB86A 100%);
+          box-shadow: 0 10px 24px rgba(26, 107, 138, 0.25);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .activities-export-download-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 14px 26px rgba(26, 107, 138, 0.28);
+        }
+
+        .activities-export-actions small {
+          font-size: 11px;
+          color: #76706A;
+          font-weight: 600;
+        }
+
+        @media (max-width: 700px) {
+          .activities-export-shell {
+            max-width: 100%;
+            max-height: calc(100dvh - 24px);
+          }
+
+          .activities-export-modal {
+            padding: 14px;
+          }
+
+          .activities-export-title-wrap h2 {
+            font-size: 19px;
+          }
+        }

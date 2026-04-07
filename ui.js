@@ -1713,6 +1713,9 @@ function renderPlanner() {
                         <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-calendar-plus"></i> Pianifica
                         </button>
+                        <button onclick="openClassActivitiesExportModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-file-pdf"></i> Attività PDF
+                        </button>
                         <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-trash"></i> Svuota Pianifica
                         </button>
@@ -3537,6 +3540,269 @@ function renderWeeklyAgenda() {
     }).join('')}
         </div>`;
 }
+
+function getActivityDateObject(activity) {
+    const rawDate = activity?.date || activity?.datGiorno || '';
+    const parsed = parseArgoDate(rawDate);
+    if (!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+}
+
+function getCurrentSchoolYearLabel() {
+    const now = new Date();
+    const startYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    return `${startYear}-${startYear + 1}`;
+}
+
+function getSchoolYearLabelForDate(date) {
+    const startYear = date.getMonth() >= 8 ? date.getFullYear() : date.getFullYear() - 1;
+    return `${startYear}-${startYear + 1}`;
+}
+
+function getIsoWeekInputValue(date) {
+    const target = new Date(date.getTime());
+    target.setHours(0, 0, 0, 0);
+    const day = (target.getDay() + 6) % 7;
+    target.setDate(target.getDate() - day + 3);
+    const firstThursday = new Date(target.getFullYear(), 0, 4);
+    const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
+    firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
+    const week = 1 + Math.round((target - firstThursday) / (7 * 24 * 60 * 60 * 1000));
+    return `${target.getFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+function parseIsoWeekRange(weekValue) {
+    const match = String(weekValue || '').match(/^(\d{4})-W(\d{2})$/);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    if (!Number.isFinite(year) || !Number.isFinite(week)) return null;
+    const jan4 = new Date(year, 0, 4, 12, 0, 0);
+    const jan4Day = (jan4.getDay() + 6) % 7;
+    const week1Monday = new Date(jan4);
+    week1Monday.setDate(jan4.getDate() - jan4Day);
+    const start = new Date(week1Monday);
+    start.setDate(week1Monday.getDate() + (week - 1) * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+}
+
+function getSortedCompletedClassActivities() {
+    return (Array.isArray(state.classActivities) ? state.classActivities : [])
+        .map((a) => ({ ...a, _parsedDate: getActivityDateObject(a) }))
+        .filter((a) => a._parsedDate)
+        .sort((a, b) => {
+            const delta = b._parsedDate.getTime() - a._parsedDate.getTime();
+            if (delta !== 0) return delta;
+            return String(b?.id || '').localeCompare(String(a?.id || ''));
+        });
+}
+
+function getClassActivitiesExportSelection() {
+    const saved = state.classActivitiesExport || {};
+    const period = saved.period || 'month';
+    const monthValue = saved.month || getLocalDateString().slice(0, 7);
+    const weekValue = saved.week || getIsoWeekInputValue(new Date());
+    const schoolYearValue = saved.schoolYear || getCurrentSchoolYearLabel();
+    const all = getSortedCompletedClassActivities();
+    let items = all;
+    let periodLabel = 'Intero anno scolastico';
+
+    if (period === 'month') {
+        items = all.filter((a) => getLocalDateString(a._parsedDate).slice(0, 7) === monthValue);
+        const [y, m] = monthValue.split('-');
+        const monthName = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+        periodLabel = `Mese: ${monthName}`;
+    } else if (period === 'week') {
+        const range = parseIsoWeekRange(weekValue);
+        if (range) {
+            const startKey = getLocalDateString(range.start);
+            const endKey = getLocalDateString(range.end);
+            items = all.filter((a) => {
+                const key = getLocalDateString(a._parsedDate);
+                return key >= startKey && key <= endKey;
+            });
+            periodLabel = `Settimana: ${range.start.toLocaleDateString('it-IT')} - ${range.end.toLocaleDateString('it-IT')}`;
+        } else {
+            items = [];
+            periodLabel = 'Settimana non valida';
+        }
+    } else if (period === 'school_year') {
+        const m = schoolYearValue.match(/^(\d{4})-(\d{4})$/);
+        if (m) {
+            const start = new Date(Number(m[1]), 8, 1, 0, 0, 0);
+            const end = new Date(Number(m[2]), 7, 31, 23, 59, 59);
+            items = all.filter((a) => a._parsedDate >= start && a._parsedDate <= end);
+            periodLabel = `Anno scolastico: ${m[1]}/${m[2]}`;
+        } else {
+            items = [];
+            periodLabel = 'Anno scolastico non valido';
+        }
+    }
+
+    return { period, monthValue, weekValue, schoolYearValue, items, periodLabel, totalItems: all.length };
+}
+
+function renderClassActivitiesExportModalContent() {
+    const modalContent = document.getElementById('class-activities-export-modal-content');
+    if (!modalContent) return;
+    const selection = getClassActivitiesExportSelection();
+    const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
+    if (!years.length) years.push(getCurrentSchoolYearLabel());
+
+    const periodControls = selection.period === 'month'
+        ? `<input type="month" class="activities-export-input" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)">`
+        : selection.period === 'week'
+            ? `<input type="week" class="activities-export-input" value="${escapeHtml(selection.weekValue)}" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">`
+            : `<select class="activities-export-input" onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)">
+                ${years.map(y => `<option value="${escapeHtml(y)}" ${selection.schoolYearValue === y ? 'selected' : ''}>${escapeHtml(y.replace('-', '/'))}</option>`).join('')}
+              </select>`;
+
+    modalContent.innerHTML = `
+        <div class="activities-export-modal">
+            <div class="activities-export-head">
+                <div class="activities-export-title-wrap">
+                    <h2>Download attività svolte (PDF)</h2>
+                    <p>Solo attività svolte in classe, aggiornate automaticamente ad ogni nuovo sync.</p>
+                </div>
+                <button class="activities-export-close" onclick="closeModal()" aria-label="Chiudi">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <div class="activities-export-info-card">
+                <div class="activities-export-info-badge">Info point</div>
+                <p>Il Tutor AI ha limiti strutturali di contesto e può non restituire grandi volumi di attività in un solo messaggio. Da qui puoi esportare in PDF tutte le attività svolte e usarle su strumenti esterni (ChatGPT, Claude, NotebookLM) con un formato chiaro e lineare.</p>
+            </div>
+
+            <div class="activities-export-filters">
+                <div class="activities-export-filter-tabs">
+                    <button class="${selection.period === 'week' ? 'active' : ''}" onclick="setClassActivitiesExportPeriod('week')">Settimana</button>
+                    <button class="${selection.period === 'month' ? 'active' : ''}" onclick="setClassActivitiesExportPeriod('month')">Mese</button>
+                    <button class="${selection.period === 'school_year' ? 'active' : ''}" onclick="setClassActivitiesExportPeriod('school_year')">Anno scolastico</button>
+                </div>
+                <div class="activities-export-filter-input">${periodControls}</div>
+                <div class="activities-export-stats">
+                    <span>${escapeHtml(selection.periodLabel)}</span>
+                    <strong>${selection.items.length} attività trovate</strong>
+                </div>
+            </div>
+
+            <div class="activities-export-actions">
+                <button class="activities-export-download-btn" onclick="downloadClassActivitiesPdf()">
+                    <i class="ph-bold ph-file-pdf"></i>
+                    Genera PDF
+                </button>
+                <small>Si aprirà l’anteprima di stampa: scegli “Salva come PDF”.</small>
+            </div>
+        </div>
+    `;
+}
+
+window.openClassActivitiesExportModal = function () {
+    const modalContainer = getModalContainer();
+    if (!modalContainer) return;
+    if (!state.classActivitiesExport) {
+        state.classActivitiesExport = {
+            period: 'month',
+            month: getLocalDateString().slice(0, 7),
+            week: getIsoWeekInputValue(new Date()),
+            schoolYear: getCurrentSchoolYearLabel()
+        };
+    }
+    modalContainer.innerHTML = `
+        <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
+            <div id="class-activities-export-modal-content" class="modal-content glass-panel activities-export-shell" onclick="event.stopPropagation()"></div>
+        </div>
+    `;
+    renderClassActivitiesExportModalContent();
+};
+
+window.setClassActivitiesExportPeriod = function (period) {
+    state.classActivitiesExport = state.classActivitiesExport || {};
+    state.classActivitiesExport.period = period;
+    renderClassActivitiesExportModalContent();
+};
+
+window.updateClassActivitiesExportPeriodValue = function (period, value) {
+    state.classActivitiesExport = state.classActivitiesExport || {};
+    if (period === 'month') state.classActivitiesExport.month = value;
+    if (period === 'week') state.classActivitiesExport.week = value;
+    if (period === 'school_year') state.classActivitiesExport.schoolYear = value;
+    renderClassActivitiesExportModalContent();
+};
+
+window.downloadClassActivitiesPdf = function () {
+    const selection = getClassActivitiesExportSelection();
+    if (!selection.items.length) {
+        showToast('Nessuna attività svolta trovata per questo filtro.', 'warning');
+        return;
+    }
+    const renderedItems = selection.items.map((a, idx) => {
+        const dateText = (a.date || a.datGiorno || '').trim() || getLocalDateString(a._parsedDate);
+        const subjectText = (a.subject || a.materia || 'Materia').trim();
+        const contentText = (a.content || a.text || a.argomento || '').trim() || 'Contenuto non disponibile';
+        return `
+            <div class="entry">
+                <div class="entry-head">
+                    <span class="entry-index">#${idx + 1}</span>
+                    <span class="entry-date">${escapeHtml(dateText)}</span>
+                    <span class="entry-subject">${escapeHtml(subjectText)}</span>
+                </div>
+                <p>${escapeHtml(contentText)}</p>
+            </div>
+        `;
+    }).join('');
+
+    const printableHtml = `
+        <!doctype html>
+        <html lang="it">
+        <head>
+            <meta charset="utf-8">
+            <title>Attivita_svolte_${selection.period}_${new Date().toISOString().slice(0, 10)}</title>
+            <style>
+                @page { size: A4; margin: 18mm 14mm; }
+                body { font-family: Inter, -apple-system, BlinkMacSystemFont, Arial, sans-serif; color:#111; line-height:1.45; }
+                .doc-head { border-bottom: 1px solid #E6E6E6; padding-bottom: 12px; margin-bottom: 18px; }
+                .doc-head h1 { font-size: 20px; margin:0 0 4px 0; letter-spacing:-0.02em; }
+                .doc-head .meta { font-size: 12px; color:#555; }
+                .note { font-size: 12px; color:#444; background:#F7F7F7; border:1px solid #ECECEC; border-radius:10px; padding:10px 12px; margin-bottom:16px; }
+                .entry { border:1px solid #EAEAEA; border-radius:10px; padding:10px 12px; margin-bottom:10px; page-break-inside: avoid; }
+                .entry-head { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+                .entry-index { font-weight:700; font-size:11px; color:#3B82F6; }
+                .entry-date, .entry-subject { font-size:11px; color:#666; font-weight:600; }
+                .entry p { margin:0; font-size:13px; color:#111; white-space:pre-wrap; }
+            </style>
+        </head>
+        <body>
+            <div class="doc-head">
+                <h1>Attività svolte in classe</h1>
+                <div class="meta">${escapeHtml(selection.periodLabel)} · ${selection.items.length} attività · Generato il ${new Date().toLocaleString('it-IT')}</div>
+            </div>
+            <div class="note">
+                Documento esportato da G-Diary per condivisione su strumenti esterni. Include esclusivamente attività svolte in classe.
+            </div>
+            ${renderedItems}
+            <script>
+                window.addEventListener('load', function () {
+                    setTimeout(function () { window.print(); }, 220);
+                });
+            </script>
+        </body>
+        </html>
+    `;
+
+    const popup = window.open('', '_blank');
+    if (!popup) {
+        showToast('Popup bloccato: abilita i popup per generare il PDF.', 'warning');
+        return;
+    }
+    popup.document.open();
+    popup.document.write(printableHtml);
+    popup.document.close();
+};
+
 window.showPlanWeekModal = function() {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
@@ -5837,6 +6103,7 @@ REGOLE OPERATIVE:
         };
     }
 
+    const aiLimitFallback = '⚠️ Richiesta non soddisfabile qui per limiti strutturali del Tutor AI. Puoi scaricare tutte le attività svolte dalla sezione Agenda → Attività PDF.';
     try {
         const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
             method: 'POST',
@@ -5850,9 +6117,9 @@ REGOLE OPERATIVE:
             const hasPlan = /\b\d{1,2}[:.]\d{2}\b/.test(aiText) && /lune|mart|merc|giov|vend|sab|dom|\d{4}-\d{2}-\d{2}/i.test(aiText);
             state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
         } else {
-            state.aiChatHistory.push({ role: 'ai', text: '⚠️ IA momentaneamente non disponibile.', ts: nowTs });
+            state.aiChatHistory.push({ role: 'ai', text: aiLimitFallback, ts: nowTs });
         }
-    } catch (e) { state.aiChatHistory.push({ role: 'ai', text: '⚠️ Errore di connessione.', ts: nowTs }); }
+    } catch (e) { state.aiChatHistory.push({ role: 'ai', text: aiLimitFallback, ts: nowTs }); }
     state.aiChatPending = false;
 
     localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
