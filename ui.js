@@ -75,6 +75,8 @@ const AI_CHAT_QUICK_PROMPTS = [
     'Aiutami a ripassare per la verifica 📝',
     'Consiglio produttività 🚀'
 ];
+const PRINT_DIALOG_DELAY_MS = 220;
+const AI_LIMIT_FALLBACK_MESSAGE = '⚠️ Richiesta non soddisfabile qui per limiti strutturali del Tutor AI. Puoi scaricare tutte le attività svolte dalla sezione Agenda → Attività PDF.';
 const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
 const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
 const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
@@ -3789,7 +3791,7 @@ window.downloadClassActivitiesPdf = function () {
             <script>
                 window.addEventListener('load', function () {
                     // Piccolo delay per garantire che layout e font siano renderizzati prima del print dialog.
-                    setTimeout(function () { window.print(); }, 220);
+                    setTimeout(function () { window.print(); }, PRINT_DIALOG_DELAY_MS);
                 });
             </script>
         </body>
@@ -6106,7 +6108,6 @@ REGOLE OPERATIVE:
         };
     }
 
-    const aiLimitFallback = '⚠️ Richiesta non soddisfabile qui per limiti strutturali del Tutor AI. Puoi scaricare tutte le attività svolte dalla sezione Agenda → Attività PDF.';
     try {
         const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
             method: 'POST',
@@ -6120,9 +6121,9 @@ REGOLE OPERATIVE:
             const hasPlan = /\b\d{1,2}[:.]\d{2}\b/.test(aiText) && /lune|mart|merc|giov|vend|sab|dom|\d{4}-\d{2}-\d{2}/i.test(aiText);
             state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
         } else {
-            state.aiChatHistory.push({ role: 'ai', text: aiLimitFallback, ts: nowTs });
+            state.aiChatHistory.push({ role: 'ai', text: AI_LIMIT_FALLBACK_MESSAGE, ts: nowTs });
         }
-    } catch (e) { state.aiChatHistory.push({ role: 'ai', text: aiLimitFallback, ts: nowTs }); }
+    } catch (e) { state.aiChatHistory.push({ role: 'ai', text: AI_LIMIT_FALLBACK_MESSAGE, ts: nowTs }); }
     state.aiChatPending = false;
 
     localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
