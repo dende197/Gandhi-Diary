@@ -1715,7 +1715,7 @@ function renderPlanner() {
                             <i class="ph-bold ph-file-pdf"></i> Attività PDF
                         </button>
                         <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-trash"></i> Svuota Pianifica
+                            <i class="ph-bold ph-trash"></i> Svuota pianificazione
                         </button>
                     `;
     return `
@@ -3770,7 +3770,7 @@ window.openPlannerMobileActionsModal = function () {
                 <i class="ph-bold ph-file-pdf"></i> Attività PDF
             </button>
             <button onclick="closeModal(); clearPlannedCalendarTasks();" aria-label="Svuota tutti i compiti pianificati" style="height:44px; border-radius:12px; border:1px solid rgba(255,59,48,0.25); background:#FFF0EE; color:#C62828; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
-                <i class="ph-bold ph-trash"></i> Svuota pianifica
+                <i class="ph-bold ph-trash"></i> Svuota pianificazione
             </button>
         </div>
     `);
