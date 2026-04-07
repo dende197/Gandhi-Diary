@@ -5996,6 +5996,48 @@
           background: #FFFFFF;
         }
 
+        .activities-week-picker-wrap {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          width: 100%;
+        }
+
+        .activities-week-picker {
+          display: grid;
+          grid-template-columns: 36px minmax(0, 1fr) 36px;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+        }
+
+        .activities-week-nav-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          border: 1px solid #D8D3CB;
+          background: #FFFFFF;
+          color: #4F4A43;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .activities-week-nav-btn:hover {
+          border-color: #141414;
+          color: #141414;
+        }
+
+        .activities-week-nav-btn:active {
+          transform: scale(0.96);
+        }
+
+        .activities-week-select {
+          min-width: 0;
+        }
+
         .activities-export-stats {
           display: flex;
           justify-content: space-between;
@@ -6058,5 +6100,15 @@
 
           .activities-export-title-wrap h2 {
             font-size: 19px;
+          }
+
+          .activities-week-picker {
+            grid-template-columns: 34px minmax(0, 1fr) 34px;
+          }
+
+          .activities-week-nav-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
           }
         }
