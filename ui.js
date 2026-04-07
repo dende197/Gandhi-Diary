@@ -3628,7 +3628,7 @@ function parseIsoWeekRange(weekValue) {
     return { start, end };
 }
 
-function getWeekSelectionDetailLabel(weekValue) {
+function getWeekSelectionDetailLabel(weekValue, options = {}) {
     const match = String(weekValue || '').match(/^(\d{4})-W(\d{2})$/);
     const range = parseIsoWeekRange(weekValue);
     if (!match || !range) return '';
@@ -3636,17 +3636,19 @@ function getWeekSelectionDetailLabel(weekValue) {
     const weekYear = Number(match[1]);
     const startLabel = range.start.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
     const endLabel = range.end.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    if (options.compact) return `${startLabel} → ${endLabel}`;
     return `Settimana ${weekNumber} del ${weekYear} · da ${startLabel} a ${endLabel}`;
 }
 
-function getWeekSelectionOptionLabel(weekValue) {
+function getWeekSelectionOptionLabel(weekValue, options = {}) {
     const normalizedWeek = String(weekValue || '');
     if (!/^\d{4}-W\d{2}$/.test(normalizedWeek)) return normalizedWeek;
     const range = parseIsoWeekRange(normalizedWeek);
     if (!range) return normalizedWeek;
-    const weekNumber = Number(normalizedWeek.slice(6));
     const startLabel = range.start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
     const endLabel = range.end.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    if (options.compact) return `${startLabel} → ${endLabel}`;
+    const weekNumber = Number(normalizedWeek.slice(6));
     return `Settimana ${weekNumber} · ${startLabel} → ${endLabel}`;
 }
 
@@ -3749,7 +3751,8 @@ function renderClassActivitiesExportModalContent() {
         state.classActivitiesExport = state.classActivitiesExport || {};
         state.classActivitiesExport.week = selection.weekValue;
     }
-    const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue);
+    const compactWeekLabels = typeof window !== 'undefined' && window.innerWidth <= 700;
+    const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue, compactWeekLabels ? { compact: true } : {});
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
 
@@ -3762,7 +3765,7 @@ function renderClassActivitiesExportModalContent() {
                         <i class="ph-bold ph-caret-left"></i>
                     </button>
                     <select class="activities-export-input activities-week-select" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">
-                        ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue))}</option>`).join('')}
+                        ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue, compactWeekLabels ? { compact: true } : {}))}</option>`).join('')}
                     </select>
                     <button type="button" class="activities-week-nav-btn" onclick="shiftClassActivitiesExportWeek(1)" aria-label="Settimana successiva">
                         <i class="ph-bold ph-caret-right"></i>
@@ -3856,6 +3859,11 @@ window.togglePlannerMobileDropdown = function (event) {
         menu.classList.add('active');
         toggle.classList.add('active');
         toggle.setAttribute('aria-expanded', 'true');
+        repositionPlannerMobileDropdown();
+        const reposition = () => repositionPlannerMobileDropdown();
+        window._plannerMobileDropdownReposition = reposition;
+        window.addEventListener('resize', reposition, { passive: true });
+        window.addEventListener('scroll', reposition, true);
         
         // Add one-time listener to close when clicking outside
         const closeOnOutsideClick = (e) => {
@@ -3876,7 +3884,44 @@ window.closePlannerMobileDropdown = function () {
         toggle.classList.remove('active');
         toggle.setAttribute('aria-expanded', 'false');
     }
+    if (window._plannerMobileDropdownReposition) {
+        window.removeEventListener('resize', window._plannerMobileDropdownReposition);
+        window.removeEventListener('scroll', window._plannerMobileDropdownReposition, true);
+        window._plannerMobileDropdownReposition = null;
+    }
 };
+
+function repositionPlannerMobileDropdown() {
+    const menu = document.getElementById('planner-mobile-menu');
+    const toggle = document.getElementById('planner-menu-toggle');
+    if (!menu || !toggle || !menu.classList.contains('active')) return;
+
+    const toggleRect = toggle.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const menuWidth = menu.offsetWidth || 214;
+    const menuHeight = menu.offsetHeight || 180;
+    const margin = 10;
+
+    let left = toggleRect.right - menuWidth;
+    const minLeft = margin;
+    const maxLeft = Math.max(minLeft, viewportWidth - menuWidth - margin);
+    left = Math.min(Math.max(left, minLeft), maxLeft);
+
+    let top = toggleRect.bottom + 8;
+    const spaceBelow = viewportHeight - top - margin;
+    if (spaceBelow < menuHeight && toggleRect.top > (menuHeight + 12)) {
+        top = Math.max(margin, toggleRect.top - menuHeight - 8);
+        menu.style.transformOrigin = 'bottom right';
+    } else {
+        menu.style.transformOrigin = 'top right';
+    }
+
+    menu.style.position = 'fixed';
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.right = 'auto';
+}
 
 window.handlePlannerMobileMenuAction = function (action) {
     closePlannerMobileDropdown();
