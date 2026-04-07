@@ -1987,7 +1987,7 @@ function renderAIAssistantView() {
                         <span class="ai-chat-subtitle">${state.aiChatPending ? 'Sta scrivendo…' : 'Online'}</span>
                     </div>
                 </div>
-                <button class="ai-chat-reset-btn" onclick="clearAIChat(true)">
+                <button class="ai-chat-reset-btn" onclick="startNewAIChat()">
                     Nuova chat
                 </button>
             </div>
@@ -4792,7 +4792,7 @@ window._renderCore = function () {
         root.style.height = '';
     }
 
-    const prevChatMetrics = isAI ? (() => {
+    const chatScrollMetricsBeforeRender = isAI ? (() => {
         const chatDiv = document.getElementById('aiChatMessages');
         if (!chatDiv) return null;
         const maxScrollTop = Math.max(0, chatDiv.scrollHeight - chatDiv.clientHeight);
@@ -4823,13 +4823,13 @@ window._renderCore = function () {
     if (state.view === 'ai_assistant') {
         const chatDiv = document.getElementById('aiChatMessages');
         if (chatDiv) {
-            if (prevChatMetrics) {
-                if (prevChatMetrics.atBottom || state.aiChatPending) {
+            if (chatScrollMetricsBeforeRender) {
+                if (chatScrollMetricsBeforeRender.atBottom || state.aiChatPending) {
                     chatDiv.scrollTop = chatDiv.scrollHeight;
                 } else {
-                    const heightDelta = chatDiv.scrollHeight - prevChatMetrics.scrollHeight;
+                    const heightDelta = chatDiv.scrollHeight - chatScrollMetricsBeforeRender.scrollHeight;
                     const safeHeightDelta = Number.isFinite(heightDelta) ? heightDelta : 0;
-                    chatDiv.scrollTop = Math.max(0, prevChatMetrics.scrollTop + safeHeightDelta);
+                    chatDiv.scrollTop = Math.max(0, chatScrollMetricsBeforeRender.scrollTop + safeHeightDelta);
                 }
             } else {
                 chatDiv.scrollTop = chatDiv.scrollHeight;
@@ -5384,11 +5384,16 @@ window.handleAIChatInputKeypress = function (event) {
     }
 };
 
-window.clearAIChat = function (focusInput = false) {
+window.startNewAIChat = function () {
+    window.clearAIChat({ focusInput: true });
+};
+
+window.clearAIChat = function (options = {}) {
+    const focusInput = !!options.focusInput;
     state.aiChatHistory = [];
     state.aiChatPending = false;
     state.aiChatInputValue = '';
-    state._focusAIInputAfterRender = !!focusInput;
+    state._focusAIInputAfterRender = focusInput;
     localStorage.setItem(lsKey('ai_chat'), '[]');
     state.aiResponse = '';
     window.scheduleRender(0);
