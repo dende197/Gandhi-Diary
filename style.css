@@ -5566,6 +5566,16 @@
           color: #A09D98;
         }
 
+        .ai-chat-input-field,
+        .ai-chat-input-field:focus,
+        .ai-chat-input-field:focus-visible {
+          background: transparent !important;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          outline: none !important;
+        }
+
         .ai-chat-send-btn {
           width: 38px !important;
           height: 38px !important;

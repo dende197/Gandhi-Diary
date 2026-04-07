@@ -1823,24 +1823,6 @@ function renderProfile() {
                 </div>
             </div>
 
-            <div class="card" style="padding: 16px 18px; margin-bottom: 18px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
-                    <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em;">Log Sync / Scraping</div>
-                    <button id="clearSyncDiagnosticsBtn" aria-label="Pulisci log sync e scraping" onclick="clearSyncDiagnostics()" style="height:30px; padding:0 10px; border-radius:9px; border:1px solid rgba(0,0,0,0.08); background:#fff; color:var(--text-secondary); font-size:11px; font-weight:700; cursor:pointer;">Pulisci</button>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow:auto;">
-                    ${(Array.isArray(state.syncDiagnostics) && state.syncDiagnostics.length ? state.syncDiagnostics : [{ ts: '--:--:--', source: 'sync', success: false, summary: 'Nessun log disponibile' }]).map(item => `
-                        <div style="padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:${item.success ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.06)'};">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;">
-                                <span style="font-size:11px; font-weight:800; color:${item.success ? 'var(--green)' : 'var(--red)'}; text-transform:uppercase;">${item.success ? 'OK' : 'KO'} · ${escapeHtml(item.source || 'sync')}</span>
-                                <span style="font-size:10px; color:var(--text-dim); font-family:'JetBrains Mono', monospace;">${escapeHtml(item.ts || '')}</span>
-                            </div>
-                            <div style="font-size:12px; color:var(--text-secondary); line-height:1.4;">${escapeHtml(item.summary || '')}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <button class="btn-primary" onclick="logout()" style="height: 52px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--red); box-shadow: none;">
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
@@ -2005,7 +1987,7 @@ function renderAIAssistantView() {
                         <span class="ai-chat-subtitle">${state.aiChatPending ? 'Sta scrivendo…' : 'Online'}</span>
                     </div>
                 </div>
-                <button class="ai-chat-reset-btn" onclick="if(confirm('Vuoi cancellare tutta la cronologia della chat?')) clearAIChat()">
+                <button class="ai-chat-reset-btn" onclick="clearAIChat(true)">
                     Nuova chat
                 </button>
             </div>
@@ -4810,6 +4792,17 @@ window._renderCore = function () {
         root.style.height = '';
     }
 
+    const previousAIChatMetrics = isAI ? (() => {
+        const chatDiv = document.getElementById('aiChatMessages');
+        if (!chatDiv) return null;
+        const maxScrollTop = Math.max(0, chatDiv.scrollHeight - chatDiv.clientHeight);
+        return {
+            scrollTop: chatDiv.scrollTop,
+            scrollHeight: chatDiv.scrollHeight,
+            atBottom: (maxScrollTop - chatDiv.scrollTop) <= 32
+        };
+    })() : null;
+
     let html = '';
     switch (state.view) {
         case 'home': html = renderHome(); break;
@@ -4828,10 +4821,29 @@ window._renderCore = function () {
         state._scrollTopAfterRender = false;
     }
     if (state.view === 'ai_assistant') {
-        requestAnimationFrame(() => {
-            const chatDiv = document.getElementById('aiChatMessages');
-            if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'auto' });
-        });
+        const chatDiv = document.getElementById('aiChatMessages');
+        if (chatDiv) {
+            if (previousAIChatMetrics) {
+                if (previousAIChatMetrics.atBottom || state.aiChatPending) {
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+                } else {
+                    const heightDelta = chatDiv.scrollHeight - previousAIChatMetrics.scrollHeight;
+                    chatDiv.scrollTop = Math.max(0, previousAIChatMetrics.scrollTop + (Number.isFinite(heightDelta) ? heightDelta : 0));
+                }
+            } else {
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+            }
+        }
+        if (state._focusAIInputAfterRender) {
+            state._focusAIInputAfterRender = false;
+            requestAnimationFrame(() => {
+                const input = document.getElementById('aiChatInput');
+                if (!input) return;
+                input.focus();
+                const endPos = input.value.length;
+                if (typeof input.setSelectionRange === 'function') input.setSelectionRange(endPos, endPos);
+            });
+        }
     }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
@@ -5084,7 +5096,7 @@ window.refreshDailyQuote = async function (btn) {
         if (icon) icon.style.transform = 'rotate(0deg)';
         btn.style.opacity = '0.6';
     }
-    window.scheduleRender();
+    window.scheduleRender(0);
 };
 
 window.refreshCircolari = function () {
@@ -5290,7 +5302,7 @@ window.adjustNextGradeSimulator = function (delta) {
 
 window.selectDay = function (day) {
     state.selectedDay = day;
-    window.scheduleRender();
+    window.scheduleRender(0);
 };
 
 window.getVotiData = function () {
@@ -5371,13 +5383,14 @@ window.handleAIChatInputKeypress = function (event) {
     }
 };
 
-window.clearAIChat = function () {
+window.clearAIChat = function (focusInput = false) {
     state.aiChatHistory = [];
     state.aiChatPending = false;
     state.aiChatInputValue = '';
+    state._focusAIInputAfterRender = !!focusInput;
     localStorage.setItem(lsKey('ai_chat'), '[]');
     state.aiResponse = '';
-    window.scheduleRender();
+    window.scheduleRender(0);
 };
 
 window.deleteAIChatMessage = function (index) {
@@ -5594,7 +5607,7 @@ window.sendAIChat = async function () {
             });
             state.aiChatPending = false;
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender();
+            window.scheduleRender(0);
             return;
         }
         const deleted = deleteImmediateCalendarAction(immediateAction);
@@ -5606,7 +5619,7 @@ window.sendAIChat = async function () {
             });
             state.aiChatPending = false;
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender();
+            window.scheduleRender(0);
             return;
         }
         state.aiChatHistory.push({
@@ -5616,7 +5629,7 @@ window.sendAIChat = async function () {
         });
         state.aiChatPending = false;
         localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-        window.scheduleRender();
+        window.scheduleRender(0);
         return;
     }
     if (immediateAction?.type === 'add') {
@@ -5628,7 +5641,7 @@ window.sendAIChat = async function () {
             });
             state.aiChatPending = false;
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender();
+            window.scheduleRender(0);
             return;
         }
         const applied = applyImmediateCalendarAction(immediateAction);
@@ -5640,7 +5653,7 @@ window.sendAIChat = async function () {
             });
             state.aiChatPending = false;
             localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender();
+            window.scheduleRender(0);
             return;
         }
     }
@@ -5837,7 +5850,7 @@ REGOLE OPERATIVE:
     state.aiChatPending = false;
 
     localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-    window.scheduleRender();
+    window.scheduleRender(0);
     if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(() => {
             const chatDiv = document.getElementById('aiChatMessages');
