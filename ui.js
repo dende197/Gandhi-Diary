@@ -83,6 +83,11 @@ const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
 const CLASS_ACTIVITIES_WEEK_LOOKBACK = 16;
 const CLASS_ACTIVITIES_WEEK_LOOKAHEAD = 8;
 const CLASS_ACTIVITIES_MAX_WEEK_OPTIONS = 80;
+const MOBILE_WEEK_LABEL_BREAKPOINT = 700;
+const PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH = 214;
+const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 180;
+const PLANNER_MOBILE_DROPDOWN_MARGIN = 10;
+const PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE = 12;
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -3751,7 +3756,7 @@ function renderClassActivitiesExportModalContent() {
         state.classActivitiesExport = state.classActivitiesExport || {};
         state.classActivitiesExport.week = selection.weekValue;
     }
-    const compactWeekLabels = typeof window !== 'undefined' && window.innerWidth <= 700;
+    const compactWeekLabels = typeof window !== 'undefined' && window.innerWidth <= MOBILE_WEEK_LABEL_BREAKPOINT;
     const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue, compactWeekLabels ? { compact: true } : {});
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
@@ -3899,9 +3904,9 @@ function repositionPlannerMobileDropdown() {
     const toggleRect = toggle.getBoundingClientRect();
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const menuWidth = menu.offsetWidth || 214;
-    const menuHeight = menu.offsetHeight || 180;
-    const margin = 10;
+    const menuWidth = menu.offsetWidth || PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH;
+    const menuHeight = menu.offsetHeight || PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT;
+    const margin = PLANNER_MOBILE_DROPDOWN_MARGIN;
 
     let left = toggleRect.right - menuWidth;
     const minLeft = margin;
@@ -3910,7 +3915,7 @@ function repositionPlannerMobileDropdown() {
 
     let top = toggleRect.bottom + 8;
     const spaceBelow = viewportHeight - top - margin;
-    if (spaceBelow < menuHeight && toggleRect.top > (menuHeight + 12)) {
+    if (spaceBelow < menuHeight && toggleRect.top > (menuHeight + PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE)) {
         top = Math.max(margin, toggleRect.top - menuHeight - 8);
         menu.style.transformOrigin = 'bottom right';
     } else {
