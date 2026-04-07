@@ -80,6 +80,9 @@ const AI_LIMIT_FALLBACK_MESSAGE = '⚠️ Richiesta non soddisfabile qui per lim
 const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
 const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
 const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
+const CLASS_ACTIVITIES_WEEK_LOOKBACK = 16;
+const CLASS_ACTIVITIES_WEEK_LOOKAHEAD = 8;
+const CLASS_ACTIVITIES_MAX_WEEK_OPTIONS = 80;
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -3624,10 +3627,11 @@ function getWeekSelectionDetailLabel(weekValue) {
 }
 
 function getWeekSelectionOptionLabel(weekValue) {
-    const match = String(weekValue || '').match(/^(\d{4})-W(\d{2})$/);
-    const range = parseIsoWeekRange(weekValue);
-    if (!match || !range) return weekValue || '';
-    const weekNumber = Number(match[2]);
+    const normalizedWeek = String(weekValue || '');
+    if (!/^\d{4}-W\d{2}$/.test(normalizedWeek)) return normalizedWeek;
+    const range = parseIsoWeekRange(normalizedWeek);
+    if (!range) return normalizedWeek;
+    const weekNumber = Number(normalizedWeek.slice(6));
     const startLabel = range.start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
     const endLabel = range.end.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
     return `Settimana ${weekNumber} · ${startLabel} → ${endLabel}`;
@@ -3644,7 +3648,8 @@ function shiftIsoWeekValue(weekValue, deltaWeeks) {
 function getClassActivitiesWeekOptions(selectedWeekValue) {
     const weeks = new Set();
     const today = new Date();
-    for (let offset = -16; offset <= 8; offset += 1) {
+    // Manteniamo una finestra ampia sulle settimane recenti/prossime per una scelta rapida e leggibile.
+    for (let offset = -CLASS_ACTIVITIES_WEEK_LOOKBACK; offset <= CLASS_ACTIVITIES_WEEK_LOOKAHEAD; offset += 1) {
         const d = new Date(today);
         d.setDate(today.getDate() + (offset * 7));
         weeks.add(getIsoWeekInputValue(d));
@@ -3661,7 +3666,8 @@ function getClassActivitiesWeekOptions(selectedWeekValue) {
         const bStart = parseIsoWeekRange(b)?.start?.getTime?.() ?? 0;
         return bStart - aStart;
     });
-    return sorted.slice(0, 80);
+    // Limite di sicurezza per mantenere menu snello anche con molti anni di attività storiche.
+    return sorted.slice(0, CLASS_ACTIVITIES_MAX_WEEK_OPTIONS);
 }
 
 function getSortedCompletedClassActivities() {
