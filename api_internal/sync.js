@@ -67,7 +67,7 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
-        const activities = extractClassActivitiesFromDashboard(dashboardData, {
+        const activitiesData = extractClassActivitiesFromDashboard(dashboardData, {
             subjectId: profiles[profileIndex]?.idSoggetto
         });
         const assenzeData = extractAssenzeFromDashboard(dashboardData);
@@ -159,7 +159,8 @@ module.exports = async function handler(req, res) {
             tasks,
             voti: grades,
             promemoria,
-            activities,
+            activities: Array.isArray(activitiesData?.svolte) ? activitiesData.svolte : [],
+            plannedActivities: Array.isArray(activitiesData?.pianificate) ? activitiesData.pianificate : [],
             assenzeData,
             verifiche: verificheData,
             new_tokens: { authToken, accessToken },

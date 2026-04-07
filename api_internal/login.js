@@ -153,7 +153,8 @@ module.exports = async function handler(req, res) {
             tasks: tasksData,
             voti: gradesData,
             promemoria: announcementsData,
-            activities: activitiesData,
+            activities: Array.isArray(activitiesData?.svolte) ? activitiesData.svolte : [],
+            plannedActivities: Array.isArray(activitiesData?.pianificate) ? activitiesData.pianificate : [],
             assenzeData,
             verifiche: verificheData
         };
