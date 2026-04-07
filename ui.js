@@ -89,6 +89,7 @@ const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 180;
 const PLANNER_MOBILE_DROPDOWN_MARGIN = 10;
 const PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE = 12;
 const PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS = { capture: true };
+let plannerMobileDropdownRepositionListener = null;
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -3635,7 +3636,6 @@ function parseIsoWeekRange(weekValue) {
 }
 
 function getViewportWidth() {
-    if (typeof window === 'undefined') return 0;
     return window.innerWidth || document.documentElement.clientWidth || 0;
 }
 
@@ -3763,7 +3763,7 @@ function renderClassActivitiesExportModalContent() {
         state.classActivitiesExport.week = selection.weekValue;
     }
     const viewportWidth = getViewportWidth();
-    const compactWeekLabels = viewportWidth > 0 && viewportWidth <= MOBILE_WEEK_LABEL_BREAKPOINT;
+    const compactWeekLabels = viewportWidth <= MOBILE_WEEK_LABEL_BREAKPOINT;
     const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue, compactWeekLabels ? { compact: true } : {});
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
@@ -3872,9 +3872,9 @@ window.togglePlannerMobileDropdown = function (event) {
         toggle.classList.add('active');
         toggle.setAttribute('aria-expanded', 'true');
         repositionPlannerMobileDropdown();
-        window._plannerMobileDropdownReposition = repositionPlannerMobileDropdown;
-        window.addEventListener('resize', window._plannerMobileDropdownReposition, { passive: true });
-        window.addEventListener('scroll', window._plannerMobileDropdownReposition, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
+        plannerMobileDropdownRepositionListener = repositionPlannerMobileDropdown;
+        window.addEventListener('resize', plannerMobileDropdownRepositionListener, { passive: true });
+        window.addEventListener('scroll', plannerMobileDropdownRepositionListener, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
         
         // Add one-time listener to close when clicking outside
         const closeOnOutsideClick = (e) => {
@@ -3895,10 +3895,10 @@ window.closePlannerMobileDropdown = function () {
         toggle.classList.remove('active');
         toggle.setAttribute('aria-expanded', 'false');
     }
-    if (window._plannerMobileDropdownReposition) {
-        window.removeEventListener('resize', window._plannerMobileDropdownReposition);
-        window.removeEventListener('scroll', window._plannerMobileDropdownReposition, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
-        window._plannerMobileDropdownReposition = null;
+    if (plannerMobileDropdownRepositionListener) {
+        window.removeEventListener('resize', plannerMobileDropdownRepositionListener);
+        window.removeEventListener('scroll', plannerMobileDropdownRepositionListener, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
+        plannerMobileDropdownRepositionListener = null;
     }
 };
 
