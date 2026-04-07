@@ -5694,18 +5694,37 @@ window.sendAIChat = async function () {
         return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
     }).filter(Boolean).join('\n');
 
-    const activities = (state.classActivities || []).slice(0, 20).map(a => {
+    const getActivityDateKey = (activity) => {
+        const raw = String(activity?.date || activity?.datGiorno || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        const ddmmyyyy = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+        return '0000-00-00';
+    };
+    const sortActivitiesByNewest = (list) => list.slice().sort((a, b) => {
+        const dateA = getActivityDateKey(a);
+        const dateB = getActivityDateKey(b);
+        if (dateA !== dateB) return dateA > dateB ? -1 : 1;
+        return String(b?.id || '').localeCompare(String(a?.id || ''));
+    });
+    const formatActivityLine = (a) => {
         const d = a.date || a.datGiorno || 'data n/d';
         const m = a.subject || a.materia || 'Materia';
         const c = window._truncateWithEllipsis(a.content || a.text || a.argomento || '', 140);
         return `- ${d} | ${m}: ${c}`;
-    }).join('\n');
-    const plannedActivities = (state.plannedClassActivities || []).slice(0, 20).map(a => {
-        const d = a.date || a.datGiorno || 'data n/d';
-        const m = a.subject || a.materia || 'Materia';
-        const c = window._truncateWithEllipsis(a.content || a.text || a.argomento || '', 140);
-        return `- ${d} | ${m}: ${c}`;
-    }).join('\n');
+    };
+    const recentCompletedActivities = sortActivitiesByNewest(state.classActivities || []).slice(0, 20);
+    const recentPlannedActivities = sortActivitiesByNewest(state.plannedClassActivities || []).slice(0, 20);
+    const latestCompletedActivity = recentCompletedActivities[0] || null;
+    const latestPlannedActivity = recentPlannedActivities[0] || null;
+    const activities = recentCompletedActivities.map(formatActivityLine).join('\n');
+    const plannedActivities = recentPlannedActivities.map(formatActivityLine).join('\n');
+    const latestCompletedActivitySummary = latestCompletedActivity
+        ? `${latestCompletedActivity.date || latestCompletedActivity.datGiorno || 'data n/d'} | ${latestCompletedActivity.subject || latestCompletedActivity.materia || 'Materia'}: ${truncateWithEllipsis(latestCompletedActivity.content || latestCompletedActivity.text || latestCompletedActivity.argomento || '', 180)}`
+        : 'nessuna attività svolta disponibile';
+    const latestPlannedActivitySummary = latestPlannedActivity
+        ? `${latestPlannedActivity.date || latestPlannedActivity.datGiorno || 'data n/d'} | ${latestPlannedActivity.subject || latestPlannedActivity.materia || 'Materia'}: ${truncateWithEllipsis(latestPlannedActivity.content || latestPlannedActivity.text || latestPlannedActivity.argomento || '', 180)}`
+        : 'nessuna attività pianificata disponibile';
 
     const systemContext = `Sei G-AI, tutor di G-Diary.
 Stile: amichevole, pratico, meno rigido, incoraggiante e chiaro.
@@ -5743,11 +5762,15 @@ ${attendanceSummary}
 🗓️ GIÀ PIANIFICATO:
 ${plannedSummary || 'Niente pianificato'}
 
-🧾 ATTIVITÀ PIANIFICATE/ASSEGNATE (REGISTRO):
-${plannedActivities || 'nessuna attività pianificata disponibile'}
-
-🏫 ATTIVITÀ SVOLTE IN CLASSE:
-${activities || 'nessuna attività svolta disponibile'}
+ 🧭 ULTIME ATTIVITÀ (RIFERIMENTO RAPIDO):
+ Ultima attività svolta: ${latestCompletedActivitySummary}
+ Ultima attività pianificata: ${latestPlannedActivitySummary}
+ 
+ 🧾 ATTIVITÀ PIANIFICATE/ASSEGNATE (REGISTRO) — ORDINE: PIÙ RECENTI PRIMA:
+ ${plannedActivities || 'nessuna attività pianificata disponibile'}
+ 
+ 🏫 ATTIVITÀ SVOLTE IN CLASSE — ORDINE: PIÙ RECENTI PRIMA:
+ ${activities || 'nessuna attività svolta disponibile'}
 
 OBIETTIVI:
 ${JSON.stringify(state.goals || {}, null, 2)}
@@ -5759,7 +5782,8 @@ REGOLE OPERATIVE:
 4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
 5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.
 6) Se l'utente esprime ansia/insicurezza prima di verifiche, includi supporto psicologico pratico (respiro, micro-obiettivi, rassicurazione non banale).
-7) Se l'utente chiede esplicitamente di caricare in calendario, chiedi sempre data+orario se mancanti. Mai eventi all-day.`;
+ 7) Se l'utente chiede esplicitamente di caricare in calendario, chiedi sempre data+orario se mancanti. Mai eventi all-day.
+ 8) Quando l'utente chiede "ultima attività svolta/pianificata", usa SEMPRE prima il blocco "ULTIME ATTIVITÀ (RIFERIMENTO RAPIDO)".`;
 
     const clampedSystemContext = truncateWithEllipsis(systemContext, 9000);
     const contents = [
