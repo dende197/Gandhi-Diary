@@ -1700,6 +1700,24 @@ function renderPlanner() {
     const cachedAgenda = getCachedWeeklyAgendaHtml();
     const listHtml = cachedAgenda || renderWeeklyAgenda();
     if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
+    const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const plannerSecondaryButtons = isMobilePlanner
+        ? `
+                        <button onclick="openPlannerMobileActionsModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-caret-down"></i> Menu
+                        </button>
+                    `
+        : `
+                        <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-calendar-plus"></i> Pianifica
+                        </button>
+                        <button onclick="openClassActivitiesExportModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-file-pdf"></i> Attività PDF
+                        </button>
+                        <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <i class="ph-bold ph-trash"></i> Svuota Pianifica
+                        </button>
+                    `;
     return `
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
@@ -1712,15 +1730,7 @@ function renderPlanner() {
                         <button onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <i class="ph-bold ph-sparkle"></i> AI Chat
                         </button>
-                        <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-calendar-plus"></i> Pianifica
-                        </button>
-                        <button onclick="openClassActivitiesExportModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-file-pdf"></i> Attività PDF
-                        </button>
-                        <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-trash"></i> Svuota Pianifica
-                        </button>
+                        ${plannerSecondaryButtons}
                     </div>
 
                     <div class="view-switch" style="background:#F6F5F3; border:1px solid #D3CEC7; padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
@@ -3592,6 +3602,17 @@ function parseIsoWeekRange(weekValue) {
     return { start, end };
 }
 
+function getWeekSelectionDetailLabel(weekValue) {
+    const match = String(weekValue || '').match(/^(\d{4})-W(\d{2})$/);
+    const range = parseIsoWeekRange(weekValue);
+    if (!match || !range) return '';
+    const weekNumber = Number(match[2]);
+    const weekYear = Number(match[1]);
+    const startLabel = range.start.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    const endLabel = range.end.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    return `Settimana ${weekNumber} del ${weekYear} · da ${startLabel} a ${endLabel}`;
+}
+
 function getSortedCompletedClassActivities() {
     return (Array.isArray(state.classActivities) ? state.classActivities : [])
         .map((a) => ({ ...a, _parsedDate: getActivityDateObject(a) }))
@@ -3627,7 +3648,7 @@ function getClassActivitiesExportSelection() {
                 const key = getLocalDateString(a._parsedDate);
                 return key >= startKey && key <= endKey;
             });
-            periodLabel = `Settimana: ${range.start.toLocaleDateString('it-IT')} - ${range.end.toLocaleDateString('it-IT')}`;
+            periodLabel = getWeekSelectionDetailLabel(weekValue) || `Settimana: ${range.start.toLocaleDateString('it-IT')} - ${range.end.toLocaleDateString('it-IT')}`;
         } else {
             items = [];
             periodLabel = 'Settimana non valida';
@@ -3652,13 +3673,17 @@ function renderClassActivitiesExportModalContent() {
     const modalContent = document.getElementById('class-activities-export-modal-content');
     if (!modalContent) return;
     const selection = getClassActivitiesExportSelection();
+    const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue);
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
 
     const periodControls = selection.period === 'month'
         ? `<input type="month" class="activities-export-input" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)">`
         : selection.period === 'week'
-            ? `<input type="week" class="activities-export-input" value="${escapeHtml(selection.weekValue)}" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">`
+            ? `<div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+                <input type="week" class="activities-export-input" value="${escapeHtml(selection.weekValue)}" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">
+                ${weekDetailLabel ? `<small style="font-size:11px; color:#6B6761; font-weight:700;">${escapeHtml(weekDetailLabel)}</small>` : ''}
+              </div>`
             : `<select class="activities-export-input" onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)">
                 ${years.map(y => `<option value="${escapeHtml(y)}" ${selection.schoolYearValue === y ? 'selected' : ''}>${escapeHtml(y.replace('-', '/'))}</option>`).join('')}
               </select>`;
@@ -3727,6 +3752,28 @@ window.setClassActivitiesExportPeriod = function (period) {
     state.classActivitiesExport = state.classActivitiesExport || {};
     state.classActivitiesExport.period = period;
     renderClassActivitiesExportModalContent();
+};
+
+window.openPlannerMobileActionsModal = function () {
+    showModal(`
+        <div style="padding:20px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                <h2 style="margin:0; font-size:18px; font-weight:800; color:#141414;">Azioni agenda</h2>
+                <button onclick="closeModal()" style="width:32px; height:32px; border-radius:10px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+            <button onclick="closeModal(); showPlanWeekModal();" style="height:44px; border-radius:12px; border:1px solid #D8D3CB; background:#FFFFFF; color:#141414; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+                <i class="ph-bold ph-calendar-plus"></i> Pianifica
+            </button>
+            <button onclick="closeModal(); openClassActivitiesExportModal();" style="height:44px; border-radius:12px; border:1px solid #D8D3CB; background:#FFFFFF; color:#141414; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+                <i class="ph-bold ph-file-pdf"></i> Attività PDF
+            </button>
+            <button onclick="closeModal(); clearPlannedCalendarTasks();" aria-label="Svuota tutti i compiti pianificati" style="height:44px; border-radius:12px; border:1px solid rgba(255,59,48,0.25); background:#FFF0EE; color:#C62828; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+                <i class="ph-bold ph-trash"></i> Svuota pianifica
+            </button>
+        </div>
+    `);
 };
 
 window.updateClassActivitiesExportPeriodValue = function (period, value) {
