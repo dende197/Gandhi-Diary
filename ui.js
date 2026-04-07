@@ -1710,7 +1710,6 @@ function renderPlanner() {
     const listHtml = cachedAgenda || renderWeeklyAgenda();
     if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
     const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
-    const aiChatLabel = isMobilePlanner ? 'Chat' : 'AI Chat';
     const mobilePlannerDropdown = `
                         <div class="planner-dropdown planner-mobile-actions">
                             <button id="planner-cloud-btn" class="planner-mobile-menu-toggle" onclick="togglePlannerMenu(event)" aria-label="Azioni agenda" title="Azioni agenda" aria-expanded="false">
@@ -1752,7 +1751,7 @@ function renderPlanner() {
                     <!-- AI & Planning Buttons -->
                     <div class="planner-header-primary-actions" style="display: flex; gap: 8px;">
                         <button class="planner-ai-btn" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-sparkle"></i> ${aiChatLabel}
+                            <i class="ph-bold ph-sparkle"></i> ${isMobilePlanner ? 'Chat' : 'AI Chat'}
                         </button>
                         ${plannerSecondaryButtons}
                     </div>
