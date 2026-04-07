@@ -4792,7 +4792,7 @@ window._renderCore = function () {
         root.style.height = '';
     }
 
-    const previousAIChatMetrics = isAI ? (() => {
+    const prevChatMetrics = isAI ? (() => {
         const chatDiv = document.getElementById('aiChatMessages');
         if (!chatDiv) return null;
         const maxScrollTop = Math.max(0, chatDiv.scrollHeight - chatDiv.clientHeight);
@@ -4823,12 +4823,13 @@ window._renderCore = function () {
     if (state.view === 'ai_assistant') {
         const chatDiv = document.getElementById('aiChatMessages');
         if (chatDiv) {
-            if (previousAIChatMetrics) {
-                if (previousAIChatMetrics.atBottom || state.aiChatPending) {
+            if (prevChatMetrics) {
+                if (prevChatMetrics.atBottom || state.aiChatPending) {
                     chatDiv.scrollTop = chatDiv.scrollHeight;
                 } else {
-                    const heightDelta = chatDiv.scrollHeight - previousAIChatMetrics.scrollHeight;
-                    chatDiv.scrollTop = Math.max(0, previousAIChatMetrics.scrollTop + (Number.isFinite(heightDelta) ? heightDelta : 0));
+                    const heightDelta = chatDiv.scrollHeight - prevChatMetrics.scrollHeight;
+                    const safeHeightDelta = Number.isFinite(heightDelta) ? heightDelta : 0;
+                    chatDiv.scrollTop = Math.max(0, prevChatMetrics.scrollTop + safeHeightDelta);
                 }
             } else {
                 chatDiv.scrollTop = chatDiv.scrollHeight;
