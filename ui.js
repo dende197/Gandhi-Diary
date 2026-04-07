@@ -759,13 +759,13 @@ function getModalContainer() {
     }
     return el;
 }
-let modalCloseTimeoutId = null;
+let pendingModalCloseTimeout = null;
 function showModal(html, className = '') {
     const container = getModalContainer();
     if (!container) return;
-    if (modalCloseTimeoutId) {
-        clearTimeout(modalCloseTimeoutId);
-        modalCloseTimeoutId = null;
+    if (pendingModalCloseTimeout) {
+        clearTimeout(pendingModalCloseTimeout);
+        pendingModalCloseTimeout = null;
     }
     container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
@@ -783,10 +783,10 @@ function closeModal(event) {
         const overlay = container.querySelector('.modal-overlay');
         if (overlay) {
             overlay.style.opacity = '0';
-            if (modalCloseTimeoutId) clearTimeout(modalCloseTimeoutId);
-            modalCloseTimeoutId = setTimeout(() => {
+            if (pendingModalCloseTimeout) clearTimeout(pendingModalCloseTimeout);
+            pendingModalCloseTimeout = setTimeout(() => {
                 container.innerHTML = '';
-                modalCloseTimeoutId = null;
+                pendingModalCloseTimeout = null;
             }, 200);
         } else {
             container.innerHTML = '';
@@ -1716,10 +1716,10 @@ function renderPlanner() {
                                 <i class="ph-bold ph-caret-down"></i>
                             </button>
                             <div id="planner-cloud-menu" class="planner-dropdown-content planner-mobile-dropdown" onclick="event.stopPropagation()">
-                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')">
+                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')" aria-label="Pianifica settimana">
                                     <i class="ph-bold ph-calendar-plus"></i> Pianifica
                                 </button>
-                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('pdf')">
+                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('pdf')" aria-label="Esporta attività in PDF">
                                     <i class="ph-bold ph-file-pdf"></i> Attività PDF
                                 </button>
                                 <button class="pd-item danger" onclick="handlePlannerMobileMenuAction('clear')" aria-label="Svuota tutti i compiti pianificati">
@@ -4804,6 +4804,7 @@ function togglePlannerMenu(event) {
             }
         };
         window._plannerMenuCloseHandler = closeHandler;
+        // Delay minimo per evitare che lo stesso tap usato per aprire il menu lo richiuda subito.
         setTimeout(() => {
             document.addEventListener('pointerdown', closeHandler);
         }, 10);
