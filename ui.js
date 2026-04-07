@@ -83,6 +83,13 @@ const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
 const CLASS_ACTIVITIES_WEEK_LOOKBACK = 16;
 const CLASS_ACTIVITIES_WEEK_LOOKAHEAD = 8;
 const CLASS_ACTIVITIES_MAX_WEEK_OPTIONS = 80;
+const MOBILE_WEEK_LABEL_BREAKPOINT = 700;
+const PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH = 214;
+const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 180;
+const PLANNER_MOBILE_DROPDOWN_MARGIN = 10;
+const PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE = 12;
+const PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS = { capture: true };
+let plannerMobileDropdownRepositionListener = null;
 let subjectTrendAnimationFrame = null;
 const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
@@ -3628,7 +3635,11 @@ function parseIsoWeekRange(weekValue) {
     return { start, end };
 }
 
-function getWeekSelectionDetailLabel(weekValue) {
+function getViewportWidth() {
+    return window.innerWidth || document.documentElement.clientWidth || 0;
+}
+
+function getWeekSelectionDetailLabel(weekValue, options = {}) {
     const match = String(weekValue || '').match(/^(\d{4})-W(\d{2})$/);
     const range = parseIsoWeekRange(weekValue);
     if (!match || !range) return '';
@@ -3636,17 +3647,19 @@ function getWeekSelectionDetailLabel(weekValue) {
     const weekYear = Number(match[1]);
     const startLabel = range.start.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
     const endLabel = range.end.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    if (options.compact) return `${startLabel} → ${endLabel}`;
     return `Settimana ${weekNumber} del ${weekYear} · da ${startLabel} a ${endLabel}`;
 }
 
-function getWeekSelectionOptionLabel(weekValue) {
+function getWeekSelectionOptionLabel(weekValue, options = {}) {
     const normalizedWeek = String(weekValue || '');
     if (!/^\d{4}-W\d{2}$/.test(normalizedWeek)) return normalizedWeek;
     const range = parseIsoWeekRange(normalizedWeek);
     if (!range) return normalizedWeek;
-    const weekNumber = Number(normalizedWeek.slice(6));
     const startLabel = range.start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
     const endLabel = range.end.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    if (options.compact) return `${startLabel} → ${endLabel}`;
+    const weekNumber = Number(normalizedWeek.slice(6));
     return `Settimana ${weekNumber} · ${startLabel} → ${endLabel}`;
 }
 
@@ -3749,7 +3762,9 @@ function renderClassActivitiesExportModalContent() {
         state.classActivitiesExport = state.classActivitiesExport || {};
         state.classActivitiesExport.week = selection.weekValue;
     }
-    const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue);
+    const viewportWidth = getViewportWidth();
+    const compactWeekLabels = viewportWidth <= MOBILE_WEEK_LABEL_BREAKPOINT;
+    const weekDetailLabel = getWeekSelectionDetailLabel(selection.weekValue, compactWeekLabels ? { compact: true } : {});
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
 
@@ -3762,7 +3777,7 @@ function renderClassActivitiesExportModalContent() {
                         <i class="ph-bold ph-caret-left"></i>
                     </button>
                     <select class="activities-export-input activities-week-select" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">
-                        ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue))}</option>`).join('')}
+                        ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue, compactWeekLabels ? { compact: true } : {}))}</option>`).join('')}
                     </select>
                     <button type="button" class="activities-week-nav-btn" onclick="shiftClassActivitiesExportWeek(1)" aria-label="Settimana successiva">
                         <i class="ph-bold ph-caret-right"></i>
@@ -3856,6 +3871,10 @@ window.togglePlannerMobileDropdown = function (event) {
         menu.classList.add('active');
         toggle.classList.add('active');
         toggle.setAttribute('aria-expanded', 'true');
+        repositionPlannerMobileDropdown();
+        plannerMobileDropdownRepositionListener = repositionPlannerMobileDropdown;
+        window.addEventListener('resize', plannerMobileDropdownRepositionListener, { passive: true });
+        window.addEventListener('scroll', plannerMobileDropdownRepositionListener, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
         
         // Add one-time listener to close when clicking outside
         const closeOnOutsideClick = (e) => {
@@ -3876,7 +3895,44 @@ window.closePlannerMobileDropdown = function () {
         toggle.classList.remove('active');
         toggle.setAttribute('aria-expanded', 'false');
     }
+    if (plannerMobileDropdownRepositionListener) {
+        window.removeEventListener('resize', plannerMobileDropdownRepositionListener);
+        window.removeEventListener('scroll', plannerMobileDropdownRepositionListener, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
+        plannerMobileDropdownRepositionListener = null;
+    }
 };
+
+function repositionPlannerMobileDropdown() {
+    const menu = document.getElementById('planner-mobile-menu');
+    const toggle = document.getElementById('planner-menu-toggle');
+    if (!menu || !toggle || !menu.classList.contains('active')) return;
+
+    const toggleRect = toggle.getBoundingClientRect();
+    const viewportWidth = getViewportWidth();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const menuWidth = menu.offsetWidth || PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH;
+    const menuHeight = menu.offsetHeight || PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT;
+    const margin = PLANNER_MOBILE_DROPDOWN_MARGIN;
+
+    let left = toggleRect.right - menuWidth;
+    const minLeft = margin;
+    const maxLeft = Math.max(minLeft, viewportWidth - menuWidth - margin);
+    left = Math.min(Math.max(left, minLeft), maxLeft);
+
+    let top = toggleRect.bottom + 8;
+    const spaceBelow = viewportHeight - top - margin;
+    if (spaceBelow < menuHeight && toggleRect.top > (menuHeight + PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE)) {
+        top = Math.max(margin, toggleRect.top - menuHeight - 8);
+        menu.style.transformOrigin = 'bottom right';
+    } else {
+        menu.style.transformOrigin = 'top right';
+    }
+
+    menu.style.position = 'fixed';
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.right = 'auto';
+}
 
 window.handlePlannerMobileMenuAction = function (action) {
     closePlannerMobileDropdown();
