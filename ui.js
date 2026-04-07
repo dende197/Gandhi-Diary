@@ -3791,7 +3791,7 @@ window.downloadClassActivitiesPdf = function () {
             <script>
                 window.addEventListener('load', function () {
                     // Piccolo delay per garantire che layout e font siano renderizzati prima del print dialog.
-                    setTimeout(function () { window.print(); }, PRINT_DIALOG_DELAY_MS);
+                    setTimeout(function () { window.print(); }, ${PRINT_DIALOG_DELAY_MS});
                 });
             </script>
         </body>
