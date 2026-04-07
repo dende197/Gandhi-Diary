@@ -5700,6 +5700,12 @@ window.sendAIChat = async function () {
         const c = window._truncateWithEllipsis(a.content || a.text || a.argomento || '', 140);
         return `- ${d} | ${m}: ${c}`;
     }).join('\n');
+    const plannedActivities = (state.plannedClassActivities || []).slice(0, 20).map(a => {
+        const d = a.date || a.datGiorno || 'data n/d';
+        const m = a.subject || a.materia || 'Materia';
+        const c = window._truncateWithEllipsis(a.content || a.text || a.argomento || '', 140);
+        return `- ${d} | ${m}: ${c}`;
+    }).join('\n');
 
     const systemContext = `Sei G-AI, tutor di G-Diary.
 Stile: amichevole, pratico, meno rigido, incoraggiante e chiaro.
@@ -5736,6 +5742,9 @@ ${attendanceSummary}
 
 🗓️ GIÀ PIANIFICATO:
 ${plannedSummary || 'Niente pianificato'}
+
+🧾 ATTIVITÀ PIANIFICATE/ASSEGNATE (REGISTRO):
+${plannedActivities || 'nessuna attività pianificata disponibile'}
 
 🏫 ATTIVITÀ SVOLTE IN CLASSE:
 ${activities || 'nessuna attività svolta disponibile'}

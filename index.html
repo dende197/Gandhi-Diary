@@ -260,6 +260,7 @@
             plannedTasks: {},
             plannedDetails: {},
             classActivities: [],
+            plannedClassActivities: [],
             circolari: [],
             messages: {},
             threads: [],
@@ -527,6 +528,8 @@
                         state.classActivities = data.activities;
                         localStorage.setItem(lsKey('class_activities'), JSON.stringify(state.classActivities));
                     }
+                    state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
+                    localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
                     if (data.student) {
                         state.user = { ...state.user, ...data.student };
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
@@ -643,6 +646,7 @@
                     state.assenzeData = JSON.parse(localStorage.getItem(lsKey('assenzeData'))) || null;
                     state.verifiche = JSON.parse(localStorage.getItem(lsKey('verifiche'))) || [];
                     state.classActivities = JSON.parse(localStorage.getItem(lsKey('class_activities'))) || [];
+                    state.plannedClassActivities = JSON.parse(localStorage.getItem(lsKey('planned_class_activities'))) || [];
                     const syncDiagnosticsRaw = localStorage.getItem(lsKey('sync_diagnostics'));
                     try {
                         const parsedSyncDiagnostics = JSON.parse(syncDiagnosticsRaw || '[]');
@@ -993,6 +997,8 @@
                 state.classActivities = data.activities;
                 localStorage.setItem(lsKey('class_activities'), JSON.stringify(state.classActivities));
             }
+            state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
+            localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
 
             state.isLoggedIn = true;
             state.didup.connected = true;
