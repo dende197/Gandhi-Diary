@@ -1714,9 +1714,22 @@ function renderPlanner() {
     if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
     const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
     const mobilePlannerDropdown = `
-                        <button class="planner-mobile-menu-toggle" onclick="openPlannerMobileActionsModal()" aria-label="Azioni agenda" title="Azioni agenda">
-                            <i class="ph-bold ph-dots-three-outline"></i>
-                        </button>
+                        <div class="planner-mobile-actions" style="position: relative;">
+                            <button id="planner-menu-toggle" class="planner-mobile-menu-toggle" onclick="togglePlannerMobileDropdown(event)" aria-label="Azioni agenda" title="Azioni agenda">
+                                <i class="ph-bold ph-dots-three-outline"></i>
+                            </button>
+                            <div id="planner-mobile-menu" class="planner-mobile-dropdown">
+                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')">
+                                    <i class="ph-bold ph-calendar-plus"></i> Pianifica
+                                </button>
+                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('pdf')">
+                                    <i class="ph-bold ph-file-pdf"></i> Attività PDF
+                                </button>
+                                <button class="pd-item danger" onclick="handlePlannerMobileMenuAction('clear')" style="color: #C62828 !important; background: #FFF0EE !important; border-top: 1px solid rgba(0,0,0,0.05);">
+                                    <i class="ph-bold ph-trash"></i> Svuota pianifica
+                                </button>
+                            </div>
+                        </div>
                     `;
     const plannerSecondaryButtons = isMobilePlanner
         ? mobilePlannerDropdown
@@ -1735,7 +1748,7 @@ function renderPlanner() {
     <div class="dashboard view" style="width: 100%;">
         <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
             <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #DAD4CC; padding-bottom: 16px;">
-                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda</h1>
+                <h1 style="display: ${isMobilePlanner ? 'none' : 'block'}; font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda</h1>
                 
                 <div class="planner-header-controls" style="display: flex; gap: 16px; align-items: center;">
                     <!-- AI & Planning Buttons -->
@@ -3827,30 +3840,42 @@ window.setClassActivitiesExportPeriod = function (period) {
     renderClassActivitiesExportModalContent();
 };
 
-window.openPlannerMobileActionsModal = function () {
-    showModal(`
-        <div style="padding:20px; display:flex; flex-direction:column; gap:12px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                <h2 style="margin:0; font-size:18px; font-weight:800; color:#141414;">Azioni agenda</h2>
-                <button onclick="closeModal()" style="width:32px; height:32px; border-radius:10px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                    <i class="ph-bold ph-x"></i>
-                </button>
-            </div>
-            <button onclick="closeModal(); showPlanWeekModal();" style="height:44px; border-radius:12px; border:1px solid #D8D3CB; background:#FFFFFF; color:#141414; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
-                <i class="ph-bold ph-calendar-plus"></i> Pianifica
-            </button>
-            <button onclick="closeModal(); openClassActivitiesExportModal();" style="height:44px; border-radius:12px; border:1px solid #D8D3CB; background:#FFFFFF; color:#141414; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
-                <i class="ph-bold ph-file-pdf"></i> Attività PDF
-            </button>
-            <button onclick="closeModal(); clearPlannedCalendarTasks();" aria-label="Svuota tutti i compiti pianificati" style="height:44px; border-radius:12px; border:1px solid rgba(255,59,48,0.25); background:#FFF0EE; color:#C62828; font-size:12px; font-weight:800; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
-                <i class="ph-bold ph-trash"></i> Svuota pianificazione
-            </button>
-        </div>
-    `);
+window.togglePlannerMobileDropdown = function (event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('planner-mobile-menu');
+    const toggle = document.getElementById('planner-menu-toggle');
+    if (!menu || !toggle) return;
+
+    const isActive = menu.classList.contains('active');
+    
+    // Close all other dropdowns first if any (optional but good practice)
+    
+    if (isActive) {
+        closePlannerMobileDropdown();
+    } else {
+        menu.classList.add('active');
+        toggle.classList.add('active');
+        
+        // Add one-time listener to close when clicking outside
+        const closeOnOutsideClick = (e) => {
+            if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+                closePlannerMobileDropdown();
+                document.removeEventListener('click', closeOnOutsideClick);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeOnOutsideClick), 0);
+    }
+};
+
+window.closePlannerMobileDropdown = function () {
+    const menu = document.getElementById('planner-mobile-menu');
+    const toggle = document.getElementById('planner-menu-toggle');
+    if (menu) menu.classList.remove('active');
+    if (toggle) toggle.classList.remove('active');
 };
 
 window.handlePlannerMobileMenuAction = function (action) {
-    closePlannerDropdown();
+    closePlannerMobileDropdown();
     if (action === 'plan') {
         showPlanWeekModal();
         return;
