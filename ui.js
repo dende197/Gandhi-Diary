@@ -3550,11 +3550,13 @@ function getActivityDateObject(activity) {
 
 function getCurrentSchoolYearLabel() {
     const now = new Date();
+    // Convenzione scolastica italiana: anno scolastico da settembre ad agosto.
     const startYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
     return `${startYear}-${startYear + 1}`;
 }
 
 function getSchoolYearLabelForDate(date) {
+    // Convenzione scolastica italiana: anno scolastico da settembre ad agosto.
     const startYear = date.getMonth() >= 8 ? date.getFullYear() : date.getFullYear() - 1;
     return `${startYear}-${startYear + 1}`;
 }
@@ -3786,6 +3788,7 @@ window.downloadClassActivitiesPdf = function () {
             ${renderedItems}
             <script>
                 window.addEventListener('load', function () {
+                    // Piccolo delay per garantire che layout e font siano renderizzati prima del print dialog.
                     setTimeout(function () { window.print(); }, 220);
                 });
             </script>
