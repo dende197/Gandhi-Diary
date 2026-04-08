@@ -510,8 +510,18 @@ window.syncGoogleCalendar = async function () {
         });
         const data = await res.json();
         if (data.success) {
+            state.googleConnected = true;
+            localStorage.setItem('gc_google_connected_cache', '1');
             showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'success', 'var(--green)');
         } else {
+            if (data?.error === 'GOOGLE_AUTH_EXPIRED') {
+                state.googleConnected = false;
+                localStorage.setItem('gc_google_connected_cache', '0');
+                // Force a full render because render dedup may otherwise skip profile card refresh.
+                state._forceRender = true;
+                window.scheduleRender(0);
+                throw new Error('Sessione Google scaduta. Ricollega Google dal profilo.');
+            }
             throw new Error(data.error || 'Sync fallito');
         }
     } catch (err) {
@@ -532,8 +542,10 @@ window.disconnectGoogle = async function () {
         const data = await res.json();
         if (data.success) {
             state.googleConnected = false;
+            localStorage.setItem('gc_google_connected_cache', '0');
+            state._forceRender = true;
             showToast('Google Calendar disconnesso.', 'warning', 'var(--orange)');
-            window.scheduleRender();
+            window.scheduleRender(0);
         }
     } catch (e) { showToast('Errore disconnessione Google', 'error', 'var(--red)'); }
 };
@@ -542,16 +554,30 @@ window.checkGoogleStatus = async function () {
     try {
         const userId = window.getUserId();
         if (!userId || userId === 'guest') return;
+        const prevConnected = !!state.googleConnected;
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`, {
             method: 'GET',
             headers: getSessionHeaders()
         });
         const data = await res.json();
-        state.googleConnected = data.connected || false;
-        localStorage.setItem('gc_google_connected_cache', state.googleConnected ? '1' : '0');
+        const nextConnected = !!data.connected;
+        state.googleConnected = nextConnected;
+        localStorage.setItem('gc_google_connected_cache', nextConnected ? '1' : '0');
         // State updated silently — profile view reads state.googleConnected on navigation
         // No full re-render needed (eliminates double render on boot)
-    } catch (e) { state.googleConnected = false; localStorage.setItem('gc_google_connected_cache', '0'); }
+        if (prevConnected !== nextConnected && state.view === 'profile') {
+            state._forceRender = true;
+            window.scheduleRender(0);
+        }
+    } catch (e) {
+        const wasConnected = !!state.googleConnected;
+        state.googleConnected = false;
+        localStorage.setItem('gc_google_connected_cache', '0');
+        if (wasConnected && state.view === 'profile') {
+            state._forceRender = true;
+            window.scheduleRender(0);
+        }
+    }
 };
 
 window.saveArgoToSupabase = async function () {

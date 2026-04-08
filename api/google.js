@@ -251,6 +251,17 @@ module.exports = async function handler(req, res) {
                         debugLog('[Google OAuth] Invalid state payload from client', e.message);
                     }
                 }
+                if (!argoCreds) {
+                    const credsFromVault = getArgoCredentials(normalizedUserId);
+                    if (credsFromVault?.password) {
+                        argoCreds = {
+                            schoolCode: credsFromVault.schoolCode,
+                            username: credsFromVault.username,
+                            password: credsFromVault.password,
+                            profileIndex: credsFromVault.profileIndex ?? 0
+                        };
+                    }
+                }
 
                 const signedState = signOAuthState({
                     userId: normalizedUserId,
@@ -340,8 +351,9 @@ module.exports = async function handler(req, res) {
                 const session = body.session; // Argo session
 
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+                const normalizedUserId = normalizeUserId(userId);
 
-                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                if (!verifySessionToken(req, normalizedUserId)) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 
@@ -362,48 +374,83 @@ module.exports = async function handler(req, res) {
                     let schoolCode = session.schoolCode;
                     let userName = session.userName || session.username;
                     let password = session.password;
+                    let resolvedProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
                     
                     // Fallback: se la password non arriva dal client, usa le credenziali Argo salvate in Supabase
                     if (!password && tokenRow) {
                         schoolCode = schoolCode || tokenRow.argo_school_code;
                         userName = userName || tokenRow.argo_username;
                         password = decryptArgoPassword(tokenRow.argo_password);
+                        resolvedProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? resolvedProfileIndex;
+                    }
+
+                    // Resilient fallback: use session vault when available (recently logged-in user).
+                    if (!password) {
+                        const credsFromVault = getArgoCredentials(normalizedUserId);
+                        if (credsFromVault?.password) {
+                            schoolCode = schoolCode || credsFromVault.schoolCode;
+                            userName = userName || credsFromVault.username;
+                            password = credsFromVault.password;
+                            resolvedProfileIndex = session.profileIndex ?? credsFromVault.profileIndex ?? resolvedProfileIndex;
+                        }
+                    }
+
+                    // Resilient fallback: try Argo tokens already available in the client session.
+                    if (!password && session?.accessToken && session?.authToken && schoolCode) {
+                        try {
+                            const headersFromSession = createHeaders(
+                                schoolCode,
+                                session.accessToken,
+                                session.authToken,
+                                session.idSoggetto || session.subjectId || null
+                            );
+                            const dashboardData = await getDashboard(headersFromSession);
+                            tasks = extractHomeworkFromDashboard(dashboardData);
+                        } catch (sessionTokenErr) {
+                            debugLog('[Google sync] Session token fallback failed', {
+                                userId: normalizedUserId,
+                                reason: sessionTokenErr?.message || 'unknown'
+                            });
+                            // Se i token sessione non sono più validi si prosegue con i fallback tradizionali
+                        }
                     }
                     
-                    if (!password) {
+                    if (!tasks && !password) {
                         return res.status(400).json({ 
                             success: false, 
                             error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.' 
                         });
                     }
                     
-                    try {
-                        const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
-                        const { access_token, profiles } = loginRes;
-                        if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
+                    if (!tasks) {
+                        try {
+                            const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
+                            const { access_token, profiles } = loginRes;
+                            if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
 
-                        const rawProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
-                        const parsedProfileIndex = Number(rawProfileIndex);
-                        const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
-                        // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
-                        // or, in some responses, only by array position.
-                        const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
-                        const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
-                            ? profiles[profileIndex]
-                            : null;
-                        // Fallback order: explicit profile index field -> validated array index -> first available profile.
-                        const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
-                        const authToken = targetProfile.token;
-                        const subjectId = targetProfile.idSoggetto;
-                        const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
-                        const dashboardData = await getDashboard(headers);
-                        tasks = extractHomeworkFromDashboard(dashboardData);
-                    } catch (argoErr) {
-                        console.error('Argo fetch failed:', argoErr.message);
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Impossibile recuperare i compiti da Argo: ' + argoErr.message 
-                        });
+                            const rawProfileIndex = resolvedProfileIndex;
+                            const parsedProfileIndex = Number(rawProfileIndex);
+                            const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
+                            // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
+                            // or, in some responses, only by array position.
+                            const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
+                            const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
+                                ? profiles[profileIndex]
+                                : null;
+                            // Fallback order: explicit profile index field -> validated array index -> first available profile.
+                            const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
+                            const authToken = targetProfile.token;
+                            const subjectId = targetProfile.idSoggetto;
+                            const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
+                            const dashboardData = await getDashboard(headers);
+                            tasks = extractHomeworkFromDashboard(dashboardData);
+                        } catch (argoErr) {
+                            console.error('Argo fetch failed:', argoErr.message);
+                            return res.status(500).json({
+                                success: false,
+                                error: 'Impossibile recuperare i compiti da Argo: ' + argoErr.message
+                            });
+                        }
                     }
                 }
 
