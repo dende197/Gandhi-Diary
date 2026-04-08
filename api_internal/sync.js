@@ -17,6 +17,9 @@ module.exports = async function handler(req, res) {
     const school = (body.schoolCode || '').trim().toUpperCase();
     const username = (body.username || '').trim().toLowerCase();
     const password = body.password || '';
+    const sessionAccessToken = String(body.accessToken || '').trim();
+    const sessionAuthToken = String(body.authToken || '').trim();
+    const sessionSubjectId = body.subjectId ?? body.idSoggetto ?? null;
     let profileIndex = parseInt(body.profileIndex) || 0;
     if (!school || !username) {
         return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
@@ -30,40 +33,52 @@ module.exports = async function handler(req, res) {
         debugLog('SYNC REQUEST', { school, profileIndex });
 
         const credentialKey = generatePid(school, username, profileIndex);
-        // Password may be omitted client-side: credentials are resolved from session-vault via getArgoCredentials.
-        // If neither body password nor vault password exists, sync explicitly fails with 401.
         const fromVault = getArgoCredentials(credentialKey);
         const user = username || fromVault?.username;
         const pwd = password || fromVault?.password;
-        if (!pwd) {
-            return res.status(401).json({ success: false, error: 'Password non disponibile: rieffettua il login' });
-        }
-        setArgoCredentials(credentialKey, {
-            schoolCode: school,
-            username: user,
-            password: pwd,
-            profileIndex
-        });
 
-        let accessToken = null;
-        let authToken = null;
+        let accessToken = sessionAccessToken || null;
+        let authToken = sessionAuthToken || null;
         let profiles = [];
+        let dashboardData = null;
 
-        try {
-            const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
-            accessToken = loginRes.access_token;
-            profiles = loginRes.profiles || [];
-            if (profiles.length > 0) {
-                if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
-                authToken = profiles[profileIndex].token;
+        if (accessToken && authToken) {
+            try {
+                const headersFromSession = createHeaders(school, accessToken, authToken, sessionSubjectId);
+                dashboardData = await getDashboard(headersFromSession);
+            } catch (e) {
+                debugLog('⚠️ Sync Session Tokens Fail', e.message);
+                accessToken = null;
+                authToken = null;
             }
-        } catch (e) {
-            debugLog('⚠️ Sync Login Fail', e.message);
-            throw e;
         }
 
-        const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
-        const dashboardData = await getDashboard(headers);
+        if (!dashboardData) {
+            if (!pwd) {
+                return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: rieffettua il login' });
+            }
+            setArgoCredentials(credentialKey, {
+                schoolCode: school,
+                username: user,
+                password: pwd,
+                profileIndex
+            });
+            try {
+                const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
+                accessToken = loginRes.access_token;
+                profiles = loginRes.profiles || [];
+                if (profiles.length > 0) {
+                    if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
+                    authToken = profiles[profileIndex].token;
+                }
+            } catch (e) {
+                debugLog('⚠️ Sync Login Fail', e.message);
+                throw e;
+            }
+
+            const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
+            dashboardData = await getDashboard(headers);
+        }
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
