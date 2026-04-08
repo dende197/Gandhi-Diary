@@ -554,7 +554,7 @@
 
         .planner-mobile-dropdown {
           position: absolute;
-          top: calc(100% + 8px);
+          top: calc(100% + 4px);
           right: 0;
           left: auto;
           min-width: 204px;

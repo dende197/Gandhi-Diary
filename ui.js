@@ -88,6 +88,7 @@ const PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH = 214;
 const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 180;
 const PLANNER_MOBILE_DROPDOWN_MARGIN = 10;
 const PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE = 12;
+const PLANNER_MOBILE_DROPDOWN_OFFSET = 4;
 const PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS = { capture: true };
 let plannerMobileDropdownRepositionListener = null;
 let subjectTrendAnimationFrame = null;
@@ -3945,10 +3946,10 @@ function repositionPlannerMobileDropdown() {
     const maxLeft = Math.max(minLeft, viewportWidth - menuWidth - margin);
     left = Math.min(Math.max(left, minLeft), maxLeft);
 
-    let top = toggleRect.bottom + 8;
+    let top = toggleRect.bottom + PLANNER_MOBILE_DROPDOWN_OFFSET;
     const spaceBelow = viewportHeight - top - margin;
     if (spaceBelow < menuHeight && toggleRect.top > (menuHeight + PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE)) {
-        top = Math.max(margin, toggleRect.top - menuHeight - 8);
+        top = Math.max(margin, toggleRect.top - menuHeight - PLANNER_MOBILE_DROPDOWN_OFFSET);
         menu.style.transformOrigin = 'bottom right';
     } else {
         menu.style.transformOrigin = 'top right';
