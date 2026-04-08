@@ -437,29 +437,60 @@ window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
     if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
-    const payload = {
-        schoolCode: s.schoolCode,
-        username: s.userName || s.username,
-        password: '',
-        profileIndex: s.profileIndex
-    };
+    // Strategy 1: use in-memory password (app still in RAM from recent login)
+    if (window._argoPasswordRuntime) {
+        try {
+            const res = await fetch(`${window.API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    schoolCode: s.schoolCode,
+                    username: s.userName || s.username,
+                    password: window._argoPasswordRuntime,
+                    profileIndex: s.profileIndex
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data?.success && data?.sessionToken) {
+                localStorage.setItem('argo_session', JSON.stringify({
+                    ...s, ...data.session,
+                    studentId: data.student?.id || s.studentId,
+                    sessionToken: data.sessionToken
+                }));
+                console.log('[refreshSessionToken] ✅ Refreshed via in-memory password');
+                return true;
+            }
+        } catch (e) {
+            console.warn('[refreshSessionToken] Strategy 1 (RAM) failed:', e.message);
+        }
+    }
 
-    const res = await fetch(`${window.API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data?.success || !data?.sessionToken) return false;
+    // Strategy 2: server-side refresh using Supabase-stored encrypted credentials
+    const userId = (typeof window.getUserId === 'function' ? window.getUserId() : null) || s.studentId;
+    if (userId && userId !== 'guest') {
+        try {
+            const res = await fetch(`${window.API_BASE_URL}/api/auth?action=refresh-session`, {
+                method: 'POST',
+                headers: getSessionHeaders(),
+                body: JSON.stringify({ userId })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data?.success && data?.sessionToken) {
+                localStorage.setItem('argo_session', JSON.stringify({
+                    ...s, ...data.session,
+                    studentId: data.student?.id || s.studentId,
+                    sessionToken: data.sessionToken
+                }));
+                console.log('[refreshSessionToken] ✅ Refreshed via server-side credentials');
+                return true;
+            }
+        } catch (e) {
+            console.warn('[refreshSessionToken] Strategy 2 (server) failed:', e.message);
+        }
+    }
 
-    const updated = {
-        ...s,
-        ...data.session,
-        studentId: data.student?.id || s.studentId,
-        sessionToken: data.sessionToken
-    };
-    localStorage.setItem('argo_session', JSON.stringify(updated));
-    return true;
+    console.warn('[refreshSessionToken] ❌ All strategies failed');
+    return false;
 };
 
 window.googleFetchWithAuthRetry = async function (url, options = {}) {
@@ -586,7 +617,8 @@ window.saveArgoToSupabase = async function () {
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
         const userId = window.getUserId();
         if (!userId || userId === 'guest' || !session.userName) return;
-        // Credentials are stored server-side at login, no client password persistence.
+        // Include runtime password so server can persist encrypted credentials in Supabase
+        const pwd = window._argoPasswordRuntime || '';
 
         await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=save-argo`, {
             method: 'POST',
@@ -595,10 +627,11 @@ window.saveArgoToSupabase = async function () {
                 userId,
                 schoolCode: session.schoolCode,
                 username: session.userName || session.username,
+                password: pwd,
                 profileIndex: session.profileIndex ?? 0
             })
         });
-        console.log('✅ Credenziali Argo salvate per sync background');
+        console.log('✅ Credenziali Argo (con password cifrata) salvate per sync background');
     } catch (e) {
         console.error('Errore salvataggio Argo su Supabase:', e);
     }

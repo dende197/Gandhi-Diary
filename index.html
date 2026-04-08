@@ -482,7 +482,7 @@
                 const requestBody = {
                     schoolCode: sessionData.schoolCode,
                     username: sessionData.userName || sessionData.username,
-                    password: '',
+                    password: window._argoPasswordRuntime || '',
                     profileIndex: sessionData.profileIndex,
                     accessToken: sessionData.accessToken || '',
                     authToken: sessionData.authToken || '',
@@ -602,10 +602,12 @@
 
         const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
         const AUTO_SYNC_MIN_GAP_MS = 5 * 60 * 1000;
+        const FOREGROUND_RESYNC_THRESHOLD_MS = 3 * 60 * 1000;
         let _autoSyncTimer = null;
         let _autoSyncInFlight = false;
         let _lastAutoSyncAt = 0;
         let _autoSyncListenersBound = false;
+        let _lastHiddenAt = null;
 
         async function runSilentGoogleSync(sessionData = null) {
             if (!state.isLoggedIn || state._loggedOut) return;
@@ -669,10 +671,28 @@
             if (_autoSyncListenersBound) return;
             _autoSyncListenersBound = true;
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') runAutomaticSyncCycle('visible', { force: true });
+                if (document.visibilityState === 'hidden') {
+                    _lastHiddenAt = Date.now();
+                    return;
+                }
+                // App returned to foreground
+                const awayMs = _lastHiddenAt ? Date.now() - _lastHiddenAt : Infinity;
+                if (awayMs < FOREGROUND_RESYNC_THRESHOLD_MS) {
+                    console.log(`[Foreground] Back after ${Math.round(awayMs/1000)}s — skip resync (< 3min)`);
+                    return;
+                }
+                console.log(`[Foreground] Back after ${Math.round(awayMs/1000)}s — triggering resync`);
+                runAutomaticSyncCycle('visible', { force: true });
             });
             window.addEventListener('focus', () => runAutomaticSyncCycle('focus', { force: true }));
             window.addEventListener('online', () => runAutomaticSyncCycle('online', { force: true }));
+            // iOS Safari bfcache fallback: page restored from back-forward cache
+            window.addEventListener('pageshow', (e) => {
+                if (e.persisted) {
+                    console.log('[Foreground] Page restored from bfcache — triggering resync');
+                    runAutomaticSyncCycle('pageshow', { force: true });
+                }
+            });
         }
 
         async function loadCircolari() {
@@ -1013,6 +1033,8 @@
             if (!pass) {
                 throw new Error('Password Argo non disponibile nella sessione corrente. Rieffettua il login.');
             }
+            // Keep password in volatile memory for session refresh (never persisted to localStorage)
+            window._argoPasswordRuntime = pass;
 
             // 1. Session Save
             if (data.session) {
@@ -1182,7 +1204,7 @@
                 try {
                     if (typeof showBoot === 'function') showBoot("Ricerca profili...");
                     const user = stored.userName || stored.username;
-                    const pass = '';
+                    const pass = window._argoPasswordRuntime || '';
 
                     const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
@@ -1199,7 +1221,7 @@
                     hideBoot();
 
                     if (response.ok && data.status === 'MULTIPLE_PROFILES') {
-                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: '' });
+                        if (typeof showProfileSelectionModal === 'function') showProfileSelectionModal(data.profiles, { schoolCode: stored.schoolCode, username: user, password: pass });
                     } else if (response.ok && data.success) {
                         handleLoginSuccess(data, pass);
                     } else {
