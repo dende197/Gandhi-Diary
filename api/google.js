@@ -383,7 +383,7 @@ module.exports = async function handler(req, res) {
                         resolvedProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? resolvedProfileIndex;
                     }
 
-                    // Fallback elastico: usa la session vault se disponibile (utente loggato di recente)
+                    // Resilient fallback: use session vault when available (recently logged-in user).
                     if (!password) {
                         const credsFromVault = getArgoCredentials(normalizeUserId(userId));
                         if (credsFromVault?.password) {
@@ -394,7 +394,7 @@ module.exports = async function handler(req, res) {
                         }
                     }
 
-                    // Fallback elastico: prova con i token Argo già presenti nella sessione client
+                    // Resilient fallback: try Argo tokens already available in the client session.
                     if (!password && session?.accessToken && session?.authToken && schoolCode) {
                         try {
                             const headersFromSession = createHeaders(

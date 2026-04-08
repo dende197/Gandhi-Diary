@@ -517,6 +517,7 @@ window.syncGoogleCalendar = async function () {
             if (data?.error === 'GOOGLE_AUTH_EXPIRED') {
                 state.googleConnected = false;
                 localStorage.setItem('gc_google_connected_cache', '0');
+                // Force a full render because render dedup may otherwise skip profile card refresh.
                 state._forceRender = true;
                 window.scheduleRender(0);
                 throw new Error('Sessione Google scaduta. Ricollega Google dal profilo.');
