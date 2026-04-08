@@ -483,7 +483,10 @@
                     schoolCode: sessionData.schoolCode,
                     username: sessionData.userName || sessionData.username,
                     password: '',
-                    profileIndex: sessionData.profileIndex
+                    profileIndex: sessionData.profileIndex,
+                    accessToken: sessionData.accessToken || '',
+                    authToken: sessionData.authToken || '',
+                    subjectId: sessionData.idSoggetto || null
                 };
                 const executeSyncRequest = () => fetch(`${API_BASE_URL}/sync`, {
                     method: 'POST',
@@ -544,6 +547,15 @@
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
                     
+                    const nextAccessToken = String(data?.new_tokens?.accessToken || '').trim();
+                    const nextAuthToken = String(data?.new_tokens?.authToken || '').trim();
+                    if (nextAccessToken && nextAuthToken) {
+                        sessionManager.save({
+                            accessToken: nextAccessToken,
+                            authToken: nextAuthToken
+                        });
+                    }
+
                     state.lastSync = new Date().toLocaleTimeString();
                     state.didup.connected = true;
                     state.isOffline = false;
@@ -574,6 +586,7 @@
                     summary: `Scraping KO · ${e?.message || 'errore sconosciuto'}`
                 });
                 state.isOffline = true;
+                state.didup.connected = false;
             } finally {
                 state.syncing = false;
                 if (!suppressHideBoot) hideBoot();
@@ -656,9 +669,9 @@
             if (_autoSyncListenersBound) return;
             _autoSyncListenersBound = true;
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') runAutomaticSyncCycle('visible');
+                if (document.visibilityState === 'visible') runAutomaticSyncCycle('visible', { force: true });
             });
-            window.addEventListener('focus', () => runAutomaticSyncCycle('focus'));
+            window.addEventListener('focus', () => runAutomaticSyncCycle('focus', { force: true }));
             window.addEventListener('online', () => runAutomaticSyncCycle('online', { force: true }));
         }
 
@@ -1010,6 +1023,7 @@
                     class: data.student?.class || data.selectedProfile?.class,
                     specialization: data.student?.specialization || data.selectedProfile?.specialization,
                     avatar: data.student?.avatar || data.selectedProfile?.avatar,
+                    idSoggetto: data.selectedProfile?.idSoggetto || null,
                     sessionToken: data.sessionToken || null
                 };
                 sessionManager.save(sessionData);
