@@ -547,10 +547,12 @@
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
                     
-                    if (data.new_tokens && (data.new_tokens.accessToken || data.new_tokens.authToken)) {
+                    const nextAccessToken = String(data?.new_tokens?.accessToken || '').trim();
+                    const nextAuthToken = String(data?.new_tokens?.authToken || '').trim();
+                    if (nextAccessToken && nextAuthToken) {
                         sessionManager.save({
-                            accessToken: data.new_tokens.accessToken || sessionData.accessToken || '',
-                            authToken: data.new_tokens.authToken || sessionData.authToken || ''
+                            accessToken: nextAccessToken,
+                            authToken: nextAuthToken
                         });
                     }
 
