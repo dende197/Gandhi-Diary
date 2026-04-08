@@ -592,6 +592,7 @@
         let _autoSyncTimer = null;
         let _autoSyncInFlight = false;
         let _lastAutoSyncAt = 0;
+        let _autoSyncListenersBound = false;
 
         async function runSilentGoogleSync(sessionData = null) {
             if (!state.isLoggedIn || state._loggedOut) return;
@@ -647,11 +648,13 @@
         }
 
         function ensureAutomaticSyncScheduler() {
-            if (_autoSyncTimer) return;
-            _autoSyncTimer = setInterval(() => {
-                runAutomaticSyncCycle('interval');
-            }, AUTO_SYNC_INTERVAL_MS);
-
+            if (!_autoSyncTimer) {
+                _autoSyncTimer = setInterval(() => {
+                    runAutomaticSyncCycle('interval');
+                }, AUTO_SYNC_INTERVAL_MS);
+            }
+            if (_autoSyncListenersBound) return;
+            _autoSyncListenersBound = true;
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') runAutomaticSyncCycle('visible');
             });
