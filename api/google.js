@@ -351,8 +351,9 @@ module.exports = async function handler(req, res) {
                 const session = body.session; // Argo session
 
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
+                const normalizedUserId = normalizeUserId(userId);
 
-                if (!verifySessionToken(req, normalizeUserId(userId))) {
+                if (!verifySessionToken(req, normalizedUserId)) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 
@@ -385,7 +386,7 @@ module.exports = async function handler(req, res) {
 
                     // Resilient fallback: use session vault when available (recently logged-in user).
                     if (!password) {
-                        const credsFromVault = getArgoCredentials(normalizeUserId(userId));
+                        const credsFromVault = getArgoCredentials(normalizedUserId);
                         if (credsFromVault?.password) {
                             schoolCode = schoolCode || credsFromVault.schoolCode;
                             userName = userName || credsFromVault.username;
@@ -407,7 +408,7 @@ module.exports = async function handler(req, res) {
                             tasks = extractHomeworkFromDashboard(dashboardData);
                         } catch (sessionTokenErr) {
                             debugLog('[Google sync] Session token fallback failed', {
-                                userId: normalizeUserId(userId),
+                                userId: normalizedUserId,
                                 reason: sessionTokenErr?.message || 'unknown'
                             });
                             // Se i token sessione non sono più validi si prosegue con i fallback tradizionali
