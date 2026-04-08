@@ -55,7 +55,7 @@ module.exports = async function handler(req, res) {
 
         if (!dashboardData) {
             if (!pwd) {
-                return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: rieffettua il login' });
+                return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: effettua di nuovo il login' });
             }
             setArgoCredentials(credentialKey, {
                 schoolCode: school,
