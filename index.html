@@ -470,6 +470,7 @@
         async function performSync(sessionData, options = {}) {
             const suppressRender = !!options.suppressRender;
             const suppressHideBoot = !!options.suppressHideBoot;
+            const allowAuthRetry = options.allowAuthRetry !== false;
             if (state.syncing || state._loggedOut) return;
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
@@ -478,16 +479,24 @@
             if (!sessionData) { state.syncing = false; return; }
             
             try {
-                const response = await fetch(`${API_BASE_URL}/sync`, {
+                const requestBody = {
+                    schoolCode: sessionData.schoolCode,
+                    username: sessionData.userName || sessionData.username,
+                    password: '',
+                    profileIndex: sessionData.profileIndex
+                };
+                const executeSyncRequest = () => fetch(`${API_BASE_URL}/sync`, {
                     method: 'POST',
                     headers: getSessionHeaders(),
-                    body: JSON.stringify({
-                        schoolCode: sessionData.schoolCode,
-                        username: sessionData.userName || sessionData.username,
-                        password: '',
-                        profileIndex: sessionData.profileIndex
-                    })
+                    body: JSON.stringify(requestBody)
                 });
+                let response = await executeSyncRequest();
+                if (response.status === 403 && allowAuthRetry && typeof window.refreshSessionToken === 'function') {
+                    const refreshed = await window.refreshSessionToken().catch(() => false);
+                    if (refreshed) {
+                        response = await executeSyncRequest();
+                    }
+                }
                 if (!response.ok) throw new Error("Sync failed: " + response.status);
                 const data = await response.json();
                 
@@ -577,6 +586,81 @@
             }
         }
         window.performSync = performSync;
+
+        const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
+        const AUTO_SYNC_MIN_GAP_MS = 5 * 60 * 1000;
+        let _autoSyncTimer = null;
+        let _autoSyncInFlight = false;
+        let _lastAutoSyncAt = 0;
+        let _autoSyncListenersBound = false;
+
+        async function runSilentGoogleSync(sessionData = null) {
+            if (!state.isLoggedIn || state._loggedOut) return;
+            if (typeof window.checkGoogleStatus === 'function') {
+                await window.checkGoogleStatus().catch(() => {});
+            }
+            if (!state.googleConnected) return;
+
+            const userId = typeof window.getUserId === 'function' ? window.getUserId() : (state.user?.id || 'guest');
+            if (!userId || userId === 'guest') return;
+
+            const currentSession = sessionData || sessionManager.load();
+            if (!currentSession) return;
+            const fullSession = { ...currentSession, profileIndex: currentSession.profileIndex ?? 0 };
+            const request = () => fetch(`${API_BASE_URL}/api/google?action=sync`, {
+                method: 'POST',
+                headers: getSessionHeaders(),
+                body: JSON.stringify({ userId, session: fullSession })
+            });
+
+            let res = await request();
+            if (res.status === 403 && typeof window.refreshSessionToken === 'function') {
+                const refreshed = await window.refreshSessionToken().catch(() => false);
+                if (refreshed) {
+                    res = await request();
+                }
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                console.warn('[AutoSync] Google sync failed:', err?.error || res.status);
+            }
+        }
+
+        async function runAutomaticSyncCycle(reason = 'interval', options = {}) {
+            const force = !!options.force;
+            if (!state.isLoggedIn || state._loggedOut || state.syncing || _autoSyncInFlight) return;
+            const now = Date.now();
+            if (!force && _lastAutoSyncAt && (now - _lastAutoSyncAt) < AUTO_SYNC_MIN_GAP_MS) return;
+
+            const session = sessionManager.load();
+            if (!session || !sessionManager.isLoggedIn()) return;
+
+            _autoSyncInFlight = true;
+            _lastAutoSyncAt = now;
+            try {
+                await performSync(session, { suppressHideBoot: true, suppressRender: false });
+                await runSilentGoogleSync(session);
+            } catch (e) {
+                console.warn(`[AutoSync:${reason}] failed:`, e?.message || e);
+            } finally {
+                _autoSyncInFlight = false;
+            }
+        }
+
+        function ensureAutomaticSyncScheduler() {
+            if (!_autoSyncTimer) {
+                _autoSyncTimer = setInterval(() => {
+                    runAutomaticSyncCycle('interval');
+                }, AUTO_SYNC_INTERVAL_MS);
+            }
+            if (_autoSyncListenersBound) return;
+            _autoSyncListenersBound = true;
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') runAutomaticSyncCycle('visible');
+            });
+            window.addEventListener('focus', () => runAutomaticSyncCycle('focus'));
+            window.addEventListener('online', () => runAutomaticSyncCycle('online', { force: true }));
+        }
 
         async function loadCircolari() {
             try {
@@ -697,8 +781,10 @@
                     if (state.googleConnected && typeof window.saveArgoToSupabase === 'function') {
                         window.saveArgoToSupabase();
                     }
+                    runSilentGoogleSync(sessionManager.load()).catch(() => {});
                 });
             }
+            if (state.isLoggedIn) ensureAutomaticSyncScheduler();
 
             // Handle hash-based navigation: update view when URL hash changes
             // (covers both the simple navigate fallback and browser back/forward)
@@ -1013,12 +1099,14 @@
             // Reset Google state per il profilo appena caricato, poi riverifica dal server
             state.googleConnected = false;
             if (typeof window.checkGoogleStatus === 'function') window.checkGoogleStatus();
+            ensureAutomaticSyncScheduler();
 
             await Promise.all([
                 (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e)),
                 performSync(sessionManager.load(), { suppressRender: true }).catch(e => console.error("Post-login sync failed:", e)),
                 loadCircolari().catch(e => console.error("Post-login circolari load failed:", e))
             ]);
+            runSilentGoogleSync(sessionManager.load()).catch(() => {});
 
             if (typeof closeModal === 'function') closeModal();
             alert(`✅ Benvenuto ${state.user.name}!`);
