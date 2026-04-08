@@ -405,7 +405,11 @@ module.exports = async function handler(req, res) {
                             );
                             const dashboardData = await getDashboard(headersFromSession);
                             tasks = extractHomeworkFromDashboard(dashboardData);
-                        } catch (_) {
+                        } catch (sessionTokenErr) {
+                            debugLog('[Google sync] Session token fallback failed', {
+                                userId: normalizeUserId(userId),
+                                reason: sessionTokenErr?.message || 'unknown'
+                            });
                             // Se i token sessione non sono più validi si prosegue con i fallback tradizionali
                         }
                     }
@@ -417,33 +421,35 @@ module.exports = async function handler(req, res) {
                         });
                     }
                     
-                    if (!tasks) try {
-                        const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
-                        const { access_token, profiles } = loginRes;
-                        if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
+                    if (!tasks) {
+                        try {
+                            const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
+                            const { access_token, profiles } = loginRes;
+                            if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
 
-                        const rawProfileIndex = resolvedProfileIndex;
-                        const parsedProfileIndex = Number(rawProfileIndex);
-                        const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
-                        // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
-                        // or, in some responses, only by array position.
-                        const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
-                        const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
-                            ? profiles[profileIndex]
-                            : null;
-                        // Fallback order: explicit profile index field -> validated array index -> first available profile.
-                        const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
-                        const authToken = targetProfile.token;
-                        const subjectId = targetProfile.idSoggetto;
-                        const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
-                        const dashboardData = await getDashboard(headers);
-                        tasks = extractHomeworkFromDashboard(dashboardData);
-                    } catch (argoErr) {
-                        console.error('Argo fetch failed:', argoErr.message);
-                        return res.status(500).json({ 
-                            success: false, 
-                            error: 'Impossibile recuperare i compiti da Argo: ' + argoErr.message 
-                        });
+                            const rawProfileIndex = resolvedProfileIndex;
+                            const parsedProfileIndex = Number(rawProfileIndex);
+                            const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
+                            // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
+                            // or, in some responses, only by array position.
+                            const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
+                            const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
+                                ? profiles[profileIndex]
+                                : null;
+                            // Fallback order: explicit profile index field -> validated array index -> first available profile.
+                            const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
+                            const authToken = targetProfile.token;
+                            const subjectId = targetProfile.idSoggetto;
+                            const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
+                            const dashboardData = await getDashboard(headers);
+                            tasks = extractHomeworkFromDashboard(dashboardData);
+                        } catch (argoErr) {
+                            console.error('Argo fetch failed:', argoErr.message);
+                            return res.status(500).json({
+                                success: false,
+                                error: 'Impossibile recuperare i compiti da Argo: ' + argoErr.message
+                            });
+                        }
                     }
                 }
 
