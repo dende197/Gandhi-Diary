@@ -3503,8 +3503,7 @@ function renderWeeklyAgenda() {
     // --- LIVE FILTERING LOGIC ---
     const query = (state.agendaSearchQuery || "").toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || "all";
-    const sortOrder = "due_desc";
-    if (state.agendaSortOrder !== sortOrder) state.agendaSortOrder = sortOrder;
+    if (state.agendaSortOrder !== "due_desc") state.agendaSortOrder = "due_desc";
 
     const preparedList = list.map(t => ({
         ...t,
