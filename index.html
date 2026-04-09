@@ -408,12 +408,14 @@
                 const key = `${subject}||${text}||${isoDate}`;
                 const match = localIndex.get(key);
                 const serverAssignedAt = t.assigned_at || t.assignedAt || t.assigned_datetime || t.assignedDateTime || t.datOraIns || t.datOraInserimento || t.dataOraInserimento || null;
+                const hasServerAssignedDate = !!(t.assigned_date || t.assignedDate || t.datGiorno || t.dataAssegnazione);
+                const hasServerAssignedAt = !!(t.assigned_at || t.assignedAt || t.assigned_datetime || t.assignedDateTime || t.datOraIns || t.datOraInserimento || t.dataOraInserimento);
                 
                 return {
                     id: t.id || stableTaskId({ subject, text, due_date: isoDate }),
                     text, subject, due_date: isoDate,
-                    assigned_date: match?.assigned_date || assignedIso,
-                    assigned_at: match?.assigned_at || serverAssignedAt || null,
+                    assigned_date: hasServerAssignedDate ? assignedIso : (match?.assigned_date || assignedIso),
+                    assigned_at: hasServerAssignedAt ? (serverAssignedAt || match?.assigned_at || null) : (match?.assigned_at || serverAssignedAt || null),
                     done: match ? !!match.done : !!t.done,
                     hasValidDate: !isNaN(dateObj.getTime())
                 };
