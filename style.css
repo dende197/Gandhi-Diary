@@ -558,6 +558,7 @@
           right: 0;
           left: auto;
           min-width: 204px;
+          min-height: 220px;
           max-width: min(276px, calc(100vw - var(--planner-mobile-dropdown-viewport-gutter, 24px)));
           border-radius: 16px;
           border: 1px solid rgba(20, 20, 20, 0.12);

@@ -90,10 +90,10 @@ const CLASS_ACTIVITIES_WEEK_LOOKAHEAD = 8;
 const CLASS_ACTIVITIES_MAX_WEEK_OPTIONS = 80;
 const MOBILE_WEEK_LABEL_BREAKPOINT = 700;
 const PLANNER_MOBILE_DROPDOWN_DEFAULT_WIDTH = 214;
-const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 180;
+const PLANNER_MOBILE_DROPDOWN_DEFAULT_HEIGHT = 220;
 const PLANNER_MOBILE_DROPDOWN_MARGIN = 10;
 const PLANNER_MOBILE_DROPDOWN_FLIP_CLEARANCE = 12;
-const PLANNER_MOBILE_DROPDOWN_OFFSET = 4;
+const PLANNER_MOBILE_DROPDOWN_OFFSET = -2;
 const PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS = { capture: true };
 let plannerMobileDropdownRepositionListener = null;
 let subjectTrendAnimationFrame = null;
@@ -3503,20 +3503,11 @@ function renderWeeklyAgenda() {
     // --- LIVE FILTERING LOGIC ---
     const query = (state.agendaSearchQuery || "").toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || "all";
-    const sortOrder = state.agendaSortOrder || "due_desc";
+    const sortOrder = "due_desc";
+    if (state.agendaSortOrder !== sortOrder) state.agendaSortOrder = sortOrder;
 
-    const getAssignmentTimestamp = (task) => {
-        const raw = task.assigned_at || task.assignedAt || task.assigned_datetime || task.assignedDateTime || null;
-        if (raw) {
-            const parsed = new Date(raw);
-            if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
-        }
-        const fallback = parseArgoDate(task.assigned_date || task.displayDate);
-        return fallback.getTime();
-    };
     const preparedList = list.map(t => ({
         ...t,
-        _assignedTs: getAssignmentTimestamp(t),
         _dueTs: parseArgoDate(t.displayDate).getTime()
     }));
 
@@ -3529,14 +3520,7 @@ function renderWeeklyAgenda() {
             (t.subject || "").toLowerCase().trim() === filterSubject.toLowerCase().trim();
 
         return matchesQuery && matchesSubject;
-    }).sort((a, b) => {
-        if (sortOrder === "assignment_asc") {
-            // "Per assegnazione" request: show most recent first (descending)
-            if (b._assignedTs !== a._assignedTs) return b._assignedTs - a._assignedTs;
-            return b._dueTs - a._dueTs;
-        }
-        return b._dueTs - a._dueTs;
-    });
+    }).sort((a, b) => b._dueTs - a._dueTs);
 
     // Extract unique subjects for chips
     const allSubjects = [...new Set(list.map(t => t.subject?.trim()).filter(Boolean))].sort();
@@ -3552,16 +3536,13 @@ function renderWeeklyAgenda() {
                                oninput="handleAgendaSearch(event)">
                     </div>
                     <div class="agenda-filters-scroll">
-                        <div class="filter-chip ${filterSubject === 'all' && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='due_desc'; state.agendaSearchSubject='all'; state._filterJustTriggered=true; refreshAgenda();">
+                        <div class="filter-chip ${filterSubject === 'all' ? 'active' : ''}" onclick="state.agendaSearchSubject='all'; state._filterJustTriggered=true; refreshAgenda();">
                             <i class="ph ph-rows"></i> Tutti
-                        </div>
-                        <div class="filter-chip ${sortOrder === 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='assignment_asc'; state.agendaSearchSubject='all'; state._filterJustTriggered=true; refreshAgenda();">
-                            <i class="ph ph-sort-ascending"></i> Per assegnazione
                         </div>
                         ${allSubjects.map(s => {
                             const escapedS = s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
                             return `
-                                <div class="filter-chip ${filterSubject === s && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='due_desc'; state.agendaSearchSubject='${escapedS}'; state._filterJustTriggered=true; refreshAgenda();">
+                                <div class="filter-chip ${filterSubject === s ? 'active' : ''}" onclick="state.agendaSearchSubject='${escapedS}'; state._filterJustTriggered=true; refreshAgenda();">
                                     ${s}
                                 </div>
                             `;
@@ -3585,21 +3566,7 @@ function renderWeeklyAgenda() {
         if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
         grouped[t.displayDate].push(t);
     });
-    const groupedAssignmentMax = {};
-    if (sortOrder === 'assignment_asc') {
-        Object.entries(grouped).forEach(([dateKey, tasks]) => {
-            groupedAssignmentMax[dateKey] = Math.max(...tasks.map(t => t._assignedTs || parseArgoDate(t.assigned_date || t.displayDate).getTime()));
-        });
-    }
-    const sortedDates = Object.keys(grouped).sort((a, b) => {
-        if (sortOrder === 'assignment_asc') {
-            const maxAssignedA = groupedAssignmentMax[a] ?? parseArgoDate(a).getTime();
-            const maxAssignedB = groupedAssignmentMax[b] ?? parseArgoDate(b).getTime();
-            if (maxAssignedA !== maxAssignedB) return maxAssignedB - maxAssignedA;
-            return parseArgoDate(b).getTime() - parseArgoDate(a).getTime();
-        }
-        return parseArgoDate(b).getTime() - parseArgoDate(a).getTime();
-    });
+    const sortedDates = Object.keys(grouped).sort((a, b) => parseArgoDate(b).getTime() - parseArgoDate(a).getTime());
 
     return `
         <div id="weekly-agenda-list" class="weekly-agenda-root" style="display: flex; flex-direction: column; gap: 32px;">
@@ -3639,15 +3606,6 @@ function renderWeeklyAgenda() {
             const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
             const timeStr = timeMatch ? timeMatch[1] : '';
             
-            // Format assignment date for feedback when sorting by it
-            const assignedLabel = (() => {
-                if (sortOrder !== 'assignment_asc') return '';
-                const aDate = t.assigned_date || (t.assigned_at ? t.assigned_at.split('T')[0] : null);
-                if (!aDate) return '';
-                const parts = aDate.split('-');
-                return `<span style="font-family: var(--font-main); font-size:9px; font-weight:600; color:var(--accent); background:rgba(99, 102, 241, 0.08); padding:2px 6px; border-radius:4px; margin-left:auto;">Assegnato il ${parts[2]}/${parts[1]}</span>`;
-            })();
-
             const displayText = (t.text || t.description || 'Task')
                 .replace(/^\[AI\]\s*/i, '')
                 .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
@@ -3663,7 +3621,6 @@ function renderWeeklyAgenda() {
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
                                 <span class="agenda-subject-badge" style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
                                 ${timeStr ? `<span class="agenda-time-badge" style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
-                                ${assignedLabel}
                             </div>
                             <div data-task-text="${escapeHtml(t.id)}" style="font-family: var(--font-main); font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
