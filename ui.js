@@ -452,11 +452,16 @@ window.refreshSessionToken = async function () {
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data?.success && data?.sessionToken) {
-                localStorage.setItem('argo_session', JSON.stringify({
-                    ...s, ...data.session,
+                const sessionData = {
+                    ...data.session,
                     studentId: data.student?.id || s.studentId,
                     sessionToken: data.sessionToken
-                }));
+                };
+                if (typeof sessionManager !== 'undefined' && sessionManager.save) {
+                    sessionManager.save(sessionData);
+                } else {
+                    localStorage.setItem('argo_session', JSON.stringify({ ...s, ...sessionData }));
+                }
                 console.log('[refreshSessionToken] ✅ Refreshed via in-memory password');
                 return true;
             }
@@ -476,11 +481,16 @@ window.refreshSessionToken = async function () {
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data?.success && data?.sessionToken) {
-                localStorage.setItem('argo_session', JSON.stringify({
-                    ...s, ...data.session,
+                const sessionData = {
+                    ...data.session,
                     studentId: data.student?.id || s.studentId,
                     sessionToken: data.sessionToken
-                }));
+                };
+                if (typeof sessionManager !== 'undefined' && sessionManager.save) {
+                    sessionManager.save(sessionData);
+                } else {
+                    localStorage.setItem('argo_session', JSON.stringify({ ...s, ...sessionData }));
+                }
                 console.log('[refreshSessionToken] ✅ Refreshed via server-side credentials');
                 return true;
             }

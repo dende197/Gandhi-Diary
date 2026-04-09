@@ -115,7 +115,8 @@ module.exports = async function handler(req, res) {
                 authToken,
                 accessToken,
                 userName: username,
-                profileIndex: safeIndex
+                profileIndex: safeIndex,
+                idSoggetto: targetProfile.idSoggetto
             },
             student: {
                 id: pid,
