@@ -48,9 +48,14 @@ window.scrollToSearch = function () {
     }, 300);
 };
 
+let _agendaSearchDebounceTimer = null;
 window.handleAgendaSearch = function (event) {
     state.agendaSearchQuery = event.target.value;
-    refreshAgenda();
+    clearTimeout(_agendaSearchDebounceTimer);
+    _agendaSearchDebounceTimer = setTimeout(() => {
+        state._filterJustTriggered = true; // Use light animation
+        refreshAgenda();
+    }, 120);
 };
 
 window.setAgendaFilter = function (subject) {
@@ -224,8 +229,16 @@ window.refreshAgenda = function () {
         temp.innerHTML = html;
         const newList = temp.firstElementChild;
         if (newList) {
-            list.parentNode.replaceChild(newList, list);
-            if (typeof animatePlannerSurface === 'function') animatePlannerSurface('list');
+        newList.id = 'weekly-agenda-list'; // Ensure ID consistency
+        list.parentNode.replaceChild(newList, list);
+        // Avoid lag by using light animation for filters
+        if (!state._filterJustTriggered && typeof animatePlannerSurface === 'function') {
+            animatePlannerSurface('list');
+        } else if (state._filterJustTriggered) {
+             // Subtle fade for filter results instead of heavy stagger
+             gsap.fromTo(newList.querySelectorAll('.agenda-task-card'), { opacity: 0.5 }, { opacity: 1, duration: 0.2 });
+             state._filterJustTriggered = false;
+        }
         } else {
             list.innerHTML = '';
         }
@@ -3485,7 +3498,7 @@ function renderWeeklyAgenda() {
         });
     }
 
-    list.sort((a, b) => parseArgoDate(b.displayDate) - parseArgoDate(a.displayDate));
+
 
     // --- LIVE FILTERING LOGIC ---
     const query = (state.agendaSearchQuery || "").toLowerCase().trim();
@@ -3518,8 +3531,9 @@ function renderWeeklyAgenda() {
         return matchesQuery && matchesSubject;
     }).sort((a, b) => {
         if (sortOrder === "assignment_asc") {
-            if (a._assignedTs !== b._assignedTs) return a._assignedTs - b._assignedTs;
-            return a._dueTs - b._dueTs;
+            // "Per assegnazione" request: show most recent first (descending)
+            if (b._assignedTs !== a._assignedTs) return b._assignedTs - a._assignedTs;
+            return b._dueTs - a._dueTs;
         }
         return b._dueTs - a._dueTs;
     });
@@ -3538,17 +3552,21 @@ function renderWeeklyAgenda() {
                                oninput="handleAgendaSearch(event)">
                     </div>
                     <div class="agenda-filters-scroll">
-                        <div class="filter-chip ${filterSubject === 'all' && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="setAgendaFilter('all'); state.agendaSortOrder='due_desc'; refreshAgenda();">
+                        <div class="filter-chip ${filterSubject === 'all' && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='due_desc'; state.agendaSearchSubject='all'; state._filterJustTriggered=true; refreshAgenda();">
                             <i class="ph ph-rows"></i> Tutti
                         </div>
-                        <div class="filter-chip ${sortOrder === 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='assignment_asc'; state.agendaSearchSubject='all'; refreshAgenda();">
+                        <div class="filter-chip ${sortOrder === 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='assignment_asc'; state.agendaSearchSubject='all'; state._filterJustTriggered=true; refreshAgenda();">
                             <i class="ph ph-sort-ascending"></i> Per assegnazione
                         </div>
-                        ${allSubjects.map(s => `
-                            <div class="filter-chip ${filterSubject === s && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="setAgendaFilter('${s.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'); state.agendaSortOrder='due_desc';">
-                                ${s}
-                            </div>
-                        `).join('')}                    </div>
+                        ${allSubjects.map(s => {
+                            const escapedS = s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+                            return `
+                                <div class="filter-chip ${filterSubject === s && sortOrder !== 'assignment_asc' ? 'active' : ''}" onclick="state.agendaSortOrder='due_desc'; state.agendaSearchSubject='${escapedS}'; state._filterJustTriggered=true; refreshAgenda();">
+                                    ${s}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
             `;
 

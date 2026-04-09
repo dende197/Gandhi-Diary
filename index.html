@@ -734,6 +734,14 @@
                         requestAnimationFrame(() => {
                             if (loader) {
                                 loader.style.opacity = '0';
+                                const appElement = document.getElementById('app');
+                                if (appElement) {
+                                    appElement.style.opacity = '0';
+                                    appElement.style.transition = 'opacity 0.4s ease-out';
+                                    requestAnimationFrame(() => {
+                                        appElement.style.opacity = '1';
+                                    });
+                                }
                                 setTimeout(() => { if (loader.parentNode) loader.remove(); }, 220);
                             }
                         });
