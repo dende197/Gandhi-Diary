@@ -3585,18 +3585,18 @@ function renderWeeklyAgenda() {
         if (!grouped[t.displayDate]) grouped[t.displayDate] = [];
         grouped[t.displayDate].push(t);
     });
-    const groupedAssignmentMin = {};
+    const groupedAssignmentMax = {};
     if (sortOrder === 'assignment_asc') {
         Object.entries(grouped).forEach(([dateKey, tasks]) => {
-            groupedAssignmentMin[dateKey] = Math.min(...tasks.map(t => t._assignedTs || parseArgoDate(t.assigned_date || t.displayDate).getTime()));
+            groupedAssignmentMax[dateKey] = Math.max(...tasks.map(t => t._assignedTs || parseArgoDate(t.assigned_date || t.displayDate).getTime()));
         });
     }
     const sortedDates = Object.keys(grouped).sort((a, b) => {
         if (sortOrder === 'assignment_asc') {
-            const minAssignedA = groupedAssignmentMin[a] ?? parseArgoDate(a).getTime();
-            const minAssignedB = groupedAssignmentMin[b] ?? parseArgoDate(b).getTime();
-            if (minAssignedA !== minAssignedB) return minAssignedA - minAssignedB;
-            return parseArgoDate(a).getTime() - parseArgoDate(b).getTime();
+            const maxAssignedA = groupedAssignmentMax[a] ?? parseArgoDate(a).getTime();
+            const maxAssignedB = groupedAssignmentMax[b] ?? parseArgoDate(b).getTime();
+            if (maxAssignedA !== maxAssignedB) return maxAssignedB - maxAssignedA;
+            return parseArgoDate(b).getTime() - parseArgoDate(a).getTime();
         }
         return parseArgoDate(b).getTime() - parseArgoDate(a).getTime();
     });
@@ -3638,6 +3638,16 @@ function renderWeeklyAgenda() {
             const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
             const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
             const timeStr = timeMatch ? timeMatch[1] : '';
+            
+            // Format assignment date for feedback when sorting by it
+            const assignedLabel = (() => {
+                if (sortOrder !== 'assignment_asc') return '';
+                const aDate = t.assigned_date || (t.assigned_at ? t.assigned_at.split('T')[0] : null);
+                if (!aDate) return '';
+                const parts = aDate.split('-');
+                return `<span style="font-family: var(--font-main); font-size:9px; font-weight:600; color:var(--accent); background:rgba(99, 102, 241, 0.08); padding:2px 6px; border-radius:4px; margin-left:auto;">Assegnato il ${parts[2]}/${parts[1]}</span>`;
+            })();
+
             const displayText = (t.text || t.description || 'Task')
                 .replace(/^\[AI\]\s*/i, '')
                 .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
@@ -3653,6 +3663,7 @@ function renderWeeklyAgenda() {
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
                                 <span class="agenda-subject-badge" style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
                                 ${timeStr ? `<span class="agenda-time-badge" style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
+                                ${assignedLabel}
                             </div>
                             <div data-task-text="${escapeHtml(t.id)}" style="font-family: var(--font-main); font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
