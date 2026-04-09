@@ -394,6 +394,9 @@
                 const key = `${lt.subject}||${lt.text}||${lt.due_date}`;
                 localIndex.set(key, lt);
             });
+            const hasAnyField = (obj, fields) => fields.some((field) => !!obj?.[field]);
+            const assignedDateFields = ['assigned_date', 'assignedDate', 'datGiorno', 'dataAssegnazione'];
+            const assignedAtFields = ['assigned_at', 'assignedAt', 'assigned_datetime', 'assignedDateTime', 'datOraIns', 'datOraInserimento', 'dataOraInserimento'];
 
             const formatted = newTasks.map(t => {
                 const dateObj = parseArgoDate(t.due_date || t.datConsegna);
@@ -408,12 +411,14 @@
                 const key = `${subject}||${text}||${isoDate}`;
                 const match = localIndex.get(key);
                 const serverAssignedAt = t.assigned_at || t.assignedAt || t.assigned_datetime || t.assignedDateTime || t.datOraIns || t.datOraInserimento || t.dataOraInserimento || null;
+                const hasServerAssignedDate = hasAnyField(t, assignedDateFields);
+                const hasServerAssignedAt = hasAnyField(t, assignedAtFields);
                 
                 return {
                     id: t.id || stableTaskId({ subject, text, due_date: isoDate }),
                     text, subject, due_date: isoDate,
-                    assigned_date: match?.assigned_date || assignedIso,
-                    assigned_at: match?.assigned_at || serverAssignedAt || null,
+                    assigned_date: hasServerAssignedDate ? assignedIso : (match?.assigned_date || assignedIso),
+                    assigned_at: hasServerAssignedAt ? serverAssignedAt : (match?.assigned_at || null),
                     done: match ? !!match.done : !!t.done,
                     hasValidDate: !isNaN(dateObj.getTime())
                 };
