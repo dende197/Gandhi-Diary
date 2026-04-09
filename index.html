@@ -415,7 +415,7 @@
                     id: t.id || stableTaskId({ subject, text, due_date: isoDate }),
                     text, subject, due_date: isoDate,
                     assigned_date: hasServerAssignedDate ? assignedIso : (match?.assigned_date || assignedIso),
-                    assigned_at: hasServerAssignedAt ? (serverAssignedAt || match?.assigned_at || null) : (match?.assigned_at || serverAssignedAt || null),
+                    assigned_at: hasServerAssignedAt ? serverAssignedAt : (match?.assigned_at || null),
                     done: match ? !!match.done : !!t.done,
                     hasValidDate: !isNaN(dateObj.getTime())
                 };
