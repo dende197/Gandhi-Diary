@@ -67,7 +67,8 @@ module.exports = async function handler(req, res) {
 
         // Source 2: In-process session-vault (volatile, plaintext in RAM)
         if (!password) {
-            const fromVault = getArgoCredentials(normalizedUserId);
+            const pidKey = (schoolCode && username) ? generatePid(schoolCode, username, profileIndex) : null;
+            const fromVault = (pidKey ? getArgoCredentials(pidKey) : null) || getArgoCredentials(normalizedUserId);
             if (fromVault?.password) {
                 schoolCode = schoolCode || fromVault.schoolCode;
                 username = username || fromVault.username;

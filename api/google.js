@@ -16,7 +16,7 @@ const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('..
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
 const {
     createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword,
-    handleCors, verifySessionToken, normalizeUserId, SESSION_TOKEN_HEX_LENGTH
+    handleCors, verifySessionToken, normalizeUserId, generatePid, SESSION_TOKEN_HEX_LENGTH
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const { getArgoCredentials } = require('../lib/session-vault');
@@ -145,6 +145,36 @@ function parseAndValidateClassSchedule(rawClassSchedule) {
     return { value: schedule };
 }
 
+function parseProfileIndex(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function getVaultCredentialsByCandidates(candidates = []) {
+    const dedupedCandidates = [...new Set(
+        candidates
+            .map(candidate => String(candidate || '').trim().toLowerCase())
+            .filter(Boolean)
+    )];
+
+    for (const candidate of dedupedCandidates) {
+        const creds = getArgoCredentials(candidate);
+        if (creds?.password) return creds;
+    }
+    return null;
+}
+
+function getVaultCredentialsFromContext({ userId, schoolCode, username, profileIndex } = {}) {
+    const normalizedUserId = normalizeUserId(userId);
+    const candidates = [normalizedUserId];
+
+    if (schoolCode && username) {
+        candidates.push(generatePid(schoolCode, username, parseProfileIndex(profileIndex, 0)));
+    }
+
+    return getVaultCredentialsByCandidates(candidates);
+}
+
 // --- Token Storage (Supabase) ---
 async function saveTokens(userId, tokens, argoCreds = null) {
     const normalizedUserId = normalizeUserId(userId);
@@ -252,7 +282,7 @@ module.exports = async function handler(req, res) {
                     }
                 }
                 if (!argoCreds) {
-                    const credsFromVault = getArgoCredentials(normalizedUserId);
+                    const credsFromVault = getVaultCredentialsFromContext({ userId: normalizedUserId });
                     if (credsFromVault?.password) {
                         argoCreds = {
                             schoolCode: credsFromVault.schoolCode,
@@ -386,7 +416,12 @@ module.exports = async function handler(req, res) {
 
                     // Resilient fallback: use session vault when available (recently logged-in user).
                     if (!password) {
-                        const credsFromVault = getArgoCredentials(normalizedUserId);
+                        const credsFromVault = getVaultCredentialsFromContext({
+                            userId: normalizedUserId,
+                            schoolCode: schoolCode || tokenRow.argo_school_code,
+                            username: userName || tokenRow.argo_username,
+                            profileIndex: resolvedProfileIndex
+                        });
                         if (credsFromVault?.password) {
                             schoolCode = schoolCode || credsFromVault.schoolCode;
                             userName = userName || credsFromVault.username;
@@ -522,7 +557,12 @@ module.exports = async function handler(req, res) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 
-                const fromVault = getArgoCredentials(normalizeUserId(userId));
+                const fromVault = getVaultCredentialsFromContext({
+                    userId,
+                    schoolCode,
+                    username,
+                    profileIndex
+                });
                 const resolvedSchoolCode = schoolCode || fromVault?.schoolCode || null;
                 const resolvedUsername = username || fromVault?.username || null;
                 const resolvedPassword = password || fromVault?.password || null;

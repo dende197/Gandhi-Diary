@@ -28,6 +28,7 @@ function secureEquals(left, right) {
 
 function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
+    oauth2._refreshPersistError = null;
     oauth2.setCredentials({
         access_token: tokenRow.access_token,
         refresh_token: tokenRow.refresh_token,
@@ -40,9 +41,20 @@ function buildAuthenticatedOAuth2Client(tokenRow) {
             if (newTokens.expiry_date) update.expiry_date = newTokens.expiry_date;
             if (newTokens.refresh_token) update.refresh_token = newTokens.refresh_token;
             await getSupabase().from('google_tokens').update(update).eq('user_id', tokenRow.user_id);
-        } catch (e) { console.error(`[Cron] Refresh save failed for ${tokenRow.user_id}:`, e.message); }
+        } catch (e) {
+            oauth2._refreshPersistError = new Error(`[Cron] Refresh save failed for ${tokenRow.user_id}: ${e.message}`);
+            console.error(oauth2._refreshPersistError.message);
+        }
     });
     return oauth2;
+}
+
+function resolveTargetProfile(profiles, rawProfileIndex) {
+    const parsedIndex = Number(rawProfileIndex);
+    const safeIndex = Number.isInteger(parsedIndex) && parsedIndex >= 0 ? parsedIndex : 0;
+    const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === safeIndex);
+    const profileByArrayIndex = safeIndex < profiles.length ? profiles[safeIndex] : null;
+    return profileByIndexField || profileByArrayIndex || profiles[0];
 }
 
 function parseStoredSchedule(scheduleRaw, userId) {
@@ -143,9 +155,11 @@ module.exports = async function handler(req, res) {
                 );
                 const { access_token, profiles } = loginRes;
                 if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
-                
-                const authToken = profiles[0].token;
-                const subjectId = profiles[0].idSoggetto;
+
+                const targetProfile = resolveTargetProfile(profiles, user.profile_index);
+                const authToken = targetProfile?.token;
+                const subjectId = targetProfile?.idSoggetto;
+                if (!authToken) throw new Error('Token profilo Argo non disponibile');
                 const headers = createHeaders(user.argo_school_code, access_token, authToken, subjectId);
                 
                 // 3. Fetch Tasks
@@ -188,6 +202,7 @@ module.exports = async function handler(req, res) {
                     );
                     if (!attendanceSync.success) throw new Error(attendanceSync.errors.join(', '));
                 }
+                if (auth._refreshPersistError) throw auth._refreshPersistError;
 
                 results.success++;
                 results.users.push({
