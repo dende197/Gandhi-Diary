@@ -127,7 +127,10 @@ module.exports = async function handler(req, res) {
     const romeHour = getRomeHour(new Date());
     const forceAttendanceCheck = (req.query?.forceAttendanceCheck === '1' || req.query?.forceAttendanceCheck === 'true');
     const simulateUnjustified = (req.query?.simulateUnjustified === '1' || req.query?.simulateUnjustified === 'true');
-    const shouldCheckAttendance = forceAttendanceCheck || romeHour === 13;
+    // Check attendance at 13:00 (after school) and 20:00 (evening fallback).
+    // Two windows ensure reminders are created even if one cron run fails.
+    const ATTENDANCE_CHECK_HOURS = [13, 20];
+    const shouldCheckAttendance = forceAttendanceCheck || ATTENDANCE_CHECK_HOURS.includes(romeHour);
 
     try {
         // 1. Fetch all users with Argo credentials
