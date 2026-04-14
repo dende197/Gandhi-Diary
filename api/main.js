@@ -8,6 +8,8 @@ module.exports = async function handler(req, res) {
         const { handleCors } = require('../lib/helpers');
         if (handleCors(req, res)) return;
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+        // Public config endpoint: avoid proxy/browser persistence of env-derived values.
+        res.setHeader('Cache-Control', 'no-store, max-age=0');
         return res.json({
             supabaseUrl: process.env.SUPABASE_URL || '',
             supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ''
