@@ -28,7 +28,7 @@ function secureEquals(left, right) {
 
 function buildAuthenticatedOAuth2Client(tokenRow) {
     const oauth2 = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
-    oauth2._refreshPersistError = null;
+    oauth2.tokenPersistError = null;
     oauth2.setCredentials({
         access_token: tokenRow.access_token,
         refresh_token: tokenRow.refresh_token,
@@ -42,8 +42,8 @@ function buildAuthenticatedOAuth2Client(tokenRow) {
             if (newTokens.refresh_token) update.refresh_token = newTokens.refresh_token;
             await getSupabase().from('google_tokens').update(update).eq('user_id', tokenRow.user_id);
         } catch (e) {
-            oauth2._refreshPersistError = new Error(`[Cron] Refresh save failed for ${tokenRow.user_id}: ${e.message}`);
-            console.error(oauth2._refreshPersistError.message);
+            oauth2.tokenPersistError = new Error(`[Cron] Refresh save failed for ${tokenRow.user_id}: ${e.message}`);
+            console.error(oauth2.tokenPersistError.message);
         }
     });
     return oauth2;
@@ -202,7 +202,7 @@ module.exports = async function handler(req, res) {
                     );
                     if (!attendanceSync.success) throw new Error(attendanceSync.errors.join(', '));
                 }
-                if (auth._refreshPersistError) throw auth._refreshPersistError;
+                if (auth.tokenPersistError) throw auth.tokenPersistError;
 
                 results.success++;
                 results.users.push({
