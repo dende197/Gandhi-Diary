@@ -81,7 +81,7 @@ module.exports = async function handler(req, res) {
                             pwd = decrypted;
                             if (Number.isInteger(tokenRow.profile_index) && tokenRow.profile_index >= 0) {
                                 profileIndex = tokenRow.profile_index;
-                                credentialKey = generatePid(school, username, profileIndex);
+                                credentialKey = generatePid(school, user, profileIndex);
                                 fromVault = getArgoCredentials(credentialKey) || fromVault;
                             }
                         }
