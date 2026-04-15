@@ -12,7 +12,7 @@
 
 const {
     handleCors, debugLog, generatePid, normalizeClass, isValidName,
-    createHeaders, generateSessionToken, verifySessionToken, decryptArgoPassword, getRequestBody,
+    createHeaders, generateSessionToken, verifySessionToken, decryptArgoPassword, encryptArgoPassword, getRequestBody,
     normalizeUserId
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
@@ -88,7 +88,12 @@ module.exports = async function handler(req, res) {
         // Perform a fresh DIDUP login
         const loginRes = await AdvancedArgo.rawLogin(schoolCode, username, password);
         const accessToken = loginRes.access_token;
-        const profiles = loginRes.profiles || [];
+        let profiles = loginRes.profiles || [];
+        try {
+            profiles = await enrichProfiles(schoolCode, accessToken, profiles);
+        } catch (e) {
+            debugLog('[refresh-session] enrichProfiles failed', e.message);
+        }
 
         if (!profiles.length) {
             throw new Error('Nessun profilo Argo trovato');
@@ -105,6 +110,20 @@ module.exports = async function handler(req, res) {
         // Refresh session-vault entry with fresh credentials
         const pid = generatePid(schoolCode, username, safeIndex);
         setArgoCredentials(pid, { schoolCode, username, password, profileIndex: safeIndex });
+        if (supabase) {
+            try {
+                await supabase.from('google_tokens').upsert({
+                    user_id: pid,
+                    argo_school_code: schoolCode,
+                    argo_username: username,
+                    argo_password: encryptArgoPassword(password),
+                    profile_index: safeIndex,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+            } catch (e) {
+                debugLog('[refresh-session] google_tokens upsert failed', e.message);
+            }
+        }
 
         const sessionToken = generateSessionToken(pid);
 

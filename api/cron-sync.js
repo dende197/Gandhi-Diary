@@ -17,6 +17,7 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 const BEARER_PREFIX = 'Bearer ';
 const CRON_SECRET = process.env.CRON_SECRET;
+const USER_SYNC_TIMEOUT_MS = Number(process.env.CRON_USER_TIMEOUT_MS || 45000);
 
 function secureEquals(left, right) {
     if (typeof left !== 'string' || typeof right !== 'string') return false;
@@ -92,6 +93,18 @@ function getTodayRomeISODate() {
     return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+async function withTimeout(promise, timeoutMs, message) {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    });
+    try {
+        return await Promise.race([promise, timeout]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
+
 // ============= HANDLER =============
 module.exports = async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -137,6 +150,7 @@ module.exports = async function handler(req, res) {
         const { data: users, error } = await supabase
             .from('google_tokens')
             .select('*')
+            .not('argo_school_code', 'is', null)
             .not('argo_username', 'is', null)
             .not('argo_password', 'is', null);
 
@@ -148,74 +162,76 @@ module.exports = async function handler(req, res) {
             console.log(`[Cron] Processing user: ${user.user_id}`);
             
             try {
-                // 2. Login to Argo
-                const argoPassword = decryptArgoPassword(user.argo_password);
-                if (!argoPassword) throw new Error('Failed to decrypt Argo password');
-                const loginRes = await AdvancedArgo.rawLogin(
-                    user.argo_school_code,
-                    user.argo_username,
-                    argoPassword
-                );
-                const { access_token, profiles } = loginRes;
-                if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
-
-                const targetProfile = resolveTargetProfile(profiles, user.profile_index);
-                const authToken = targetProfile?.token;
-                const subjectId = targetProfile?.idSoggetto;
-                if (!authToken) throw new Error('Token profilo Argo non disponibile');
-                const headers = createHeaders(user.argo_school_code, access_token, authToken, subjectId);
-                
-                // 3. Fetch Tasks
-                const dashboardData = await getDashboard(headers);
-                const tasks = extractHomeworkFromDashboard(dashboardData);
-                let assenzeData = shouldCheckAttendance ? extractAssenzeFromDashboard(dashboardData) : null;
-                if (shouldCheckAttendance && simulateUnjustified && (assenzeData?.daGiustificare || 0) === 0) {
-                    assenzeData = {
-                        ...(assenzeData || {}),
-                        assenze: [
-                            ...(assenzeData?.assenze || []),
-                            {
-                                id: `simulated-unjustified-absence-${crypto.randomUUID()}`,
-                                data: getTodayRomeISODate(),
-                                tipo: 'assenza',
-                                giustificata: false,
-                                daGiustificare: true,
-                                nota: 'SIMULAZIONE TEST PROMEMORIA'
-                            }
-                        ],
-                        daGiustificare: 1
-                    };
-                }
-                
-                const auth = buildAuthenticatedOAuth2Client(user);
-                const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
-                let taskSync = { success: true, added: 0, skipped: 0, errors: [] };
-                if (tasks.length > 0) {
-                    // 4. Sync to Google Calendar (use per-user class schedule if stored)
-                    taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
-                    if (!taskSync.success) throw new Error(taskSync.errors.join(', '));
-                }
-
-                let attendanceSync = null;
-                if (shouldCheckAttendance) {
-                    attendanceSync = await syncUnjustifiedAttendanceReminders(
-                        assenzeData,
-                        user.calendar_id || 'primary',
-                        auth
+                await withTimeout((async () => {
+                    // 2. Login to Argo
+                    const argoPassword = decryptArgoPassword(user.argo_password);
+                    if (!argoPassword) throw new Error('Failed to decrypt Argo password');
+                    const loginRes = await AdvancedArgo.rawLogin(
+                        user.argo_school_code,
+                        user.argo_username,
+                        argoPassword
                     );
-                    if (!attendanceSync.success) throw new Error(attendanceSync.errors.join(', '));
-                }
-                if (auth.tokenPersistError) throw auth.tokenPersistError;
+                    const { access_token, profiles } = loginRes;
+                    if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
 
-                results.success++;
-                results.users.push({
-                    id: user.user_id,
-                    added: taskSync.added || 0,
-                    skipped: taskSync.skipped || 0,
-                    attendancePending: attendanceSync?.pending || 0,
-                    remindersScheduled: attendanceSync?.scheduled || 0,
-                    remindersUpdated: attendanceSync?.updated || 0
-                });
+                    const targetProfile = resolveTargetProfile(profiles, user.profile_index);
+                    const authToken = targetProfile?.token;
+                    const subjectId = targetProfile?.idSoggetto;
+                    if (!authToken) throw new Error('Token profilo Argo non disponibile');
+                    const headers = createHeaders(user.argo_school_code, access_token, authToken, subjectId);
+
+                    // 3. Fetch Tasks
+                    const dashboardData = await getDashboard(headers);
+                    const tasks = extractHomeworkFromDashboard(dashboardData);
+                    let assenzeData = shouldCheckAttendance ? extractAssenzeFromDashboard(dashboardData) : null;
+                    if (shouldCheckAttendance && simulateUnjustified && (assenzeData?.daGiustificare || 0) === 0) {
+                        assenzeData = {
+                            ...(assenzeData || {}),
+                            assenze: [
+                                ...(assenzeData?.assenze || []),
+                                {
+                                    id: `simulated-unjustified-absence-${crypto.randomUUID()}`,
+                                    data: getTodayRomeISODate(),
+                                    tipo: 'assenza',
+                                    giustificata: false,
+                                    daGiustificare: true,
+                                    nota: 'SIMULAZIONE TEST PROMEMORIA'
+                                }
+                            ],
+                            daGiustificare: 1
+                        };
+                    }
+
+                    const auth = buildAuthenticatedOAuth2Client(user);
+                    const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
+                    let taskSync = { success: true, added: 0, skipped: 0, errors: [] };
+                    if (tasks.length > 0) {
+                        // 4. Sync to Google Calendar (use per-user class schedule if stored)
+                        taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
+                        if (!taskSync.success) throw new Error((taskSync.errors || []).join(', '));
+                    }
+
+                    let attendanceSync = null;
+                    if (shouldCheckAttendance) {
+                        attendanceSync = await syncUnjustifiedAttendanceReminders(
+                            assenzeData,
+                            user.calendar_id || 'primary',
+                            auth
+                        );
+                        if (!attendanceSync.success) throw new Error((attendanceSync.errors || []).join(', '));
+                    }
+                    if (auth.tokenPersistError) throw auth.tokenPersistError;
+
+                    results.success++;
+                    results.users.push({
+                        id: user.user_id,
+                        added: taskSync.added || 0,
+                        skipped: taskSync.skipped || 0,
+                        attendancePending: attendanceSync?.pending || 0,
+                        remindersScheduled: attendanceSync?.scheduled || 0,
+                        remindersUpdated: attendanceSync?.updated || 0
+                    });
+                })(), USER_SYNC_TIMEOUT_MS, `User sync timeout after ${USER_SYNC_TIMEOUT_MS}ms`);
 
             } catch (err) {
                 console.error(`[Cron] Failed for ${user.user_id}:`, err.message);
