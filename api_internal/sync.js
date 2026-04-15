@@ -125,7 +125,12 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
-        const subjectId = sessionSubjectId ?? profiles[profileIndex]?.idSoggetto ?? null;
+        const activeProfile = (
+            Array.isArray(profiles) &&
+            profileIndex >= 0 &&
+            profileIndex < profiles.length
+        ) ? profiles[profileIndex] : null;
+        const subjectId = sessionSubjectId ?? activeProfile?.idSoggetto ?? null;
         const activitiesData = extractClassActivitiesFromDashboard(dashboardData, {
             subjectId
         });
