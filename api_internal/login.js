@@ -1,5 +1,6 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken, isSessionSecurityConfigured, getRequestBody
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken,
+    isSessionSecurityConfigured, getRequestBody, encryptArgoPassword
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const { setArgoCredentials } = require('../lib/session-vault');
@@ -38,7 +39,11 @@ module.exports = async function handler(req, res) {
         const accessToken = loginRes.access_token;
         let profiles = loginRes.profiles || [];
 
-        profiles = await enrichProfiles(school, accessToken, profiles);
+        try {
+            profiles = await enrichProfiles(school, accessToken, profiles);
+        } catch (e) {
+            debugLog('⚠️ enrichProfiles failed during login', e.message);
+        }
 
         if (profiles.length > 1 && selectedProfileIndex === null) {
             return res.status(200).json({
@@ -50,8 +55,8 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        let targetIndex = 0;
-        if (selectedProfileIndex !== null) targetIndex = parseInt(selectedProfileIndex);
+        const parsedTargetIndex = parseInt(selectedProfileIndex, 10);
+        let targetIndex = (!isNaN(parsedTargetIndex) && parsedTargetIndex >= 0) ? parsedTargetIndex : 0;
         if (targetIndex < 0 || targetIndex >= profiles.length) targetIndex = 0;
 
         const targetProfile = profiles[targetIndex];
@@ -74,15 +79,19 @@ module.exports = async function handler(req, res) {
 
         // Fallback HTML scraping via cookie jar (per scuole con API limitate)
         const jar = loginRes.jar;
-        if (!isValidName(studentName, username) || studentClass === 'N/D') {
-            const webId = await resolveIdentityFromWebUI(jar);
-            if (webId.name && isValidName(webId.name, username)) studentName = webId.name;
-            if (webId.cls && webId.cls !== 'N/D') studentClass = normalizeClass(webId.cls) || studentClass;
+        if (jar && (!isValidName(studentName, username) || studentClass === 'N/D')) {
+            try {
+                const webId = await resolveIdentityFromWebUI(jar);
+                if (webId.name && isValidName(webId.name, username)) studentName = webId.name;
+                if (webId.cls && webId.cls !== 'N/D') studentClass = normalizeClass(webId.cls) || studentClass;
 
-            if (!isValidName(studentName, username) || !normalizeClass(studentClass)) {
-                const webAna = await resolveClassFromAnagraficaWeb(jar);
-                if (webAna.cls) studentClass = normalizeClass(webAna.cls) || studentClass;
-                if (webAna.name && !isValidName(studentName, username)) studentName = webAna.name;
+                if (!isValidName(studentName, username) || !normalizeClass(studentClass)) {
+                    const webAna = await resolveClassFromAnagraficaWeb(jar);
+                    if (webAna.cls) studentClass = normalizeClass(webAna.cls) || studentClass;
+                    if (webAna.name && !isValidName(studentName, username)) studentName = webAna.name;
+                }
+            } catch (e) {
+                debugLog('⚠️ Login fallback identity resolution failed', e.message);
             }
         }
 
@@ -127,6 +136,15 @@ module.exports = async function handler(req, res) {
                     avatar: storedAvatar || null,
                     last_active: new Date().toISOString()
                 }, { onConflict: 'id' });
+
+                await supabase.from('google_tokens').upsert({
+                    user_id: pid,
+                    argo_school_code: school,
+                    argo_username: username,
+                    argo_password: encryptArgoPassword(password),
+                    profile_index: targetIndex,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
             } catch (e) {
                 debugLog('⚠️ Supabase sync error', e.message);
             }
@@ -140,7 +158,8 @@ module.exports = async function handler(req, res) {
                 authToken,
                 accessToken,
                 userName: username,
-                profileIndex: targetIndex
+                profileIndex: targetIndex,
+                idSoggetto: targetProfile?.idSoggetto || null
             },
             student: {
                 id: pid,

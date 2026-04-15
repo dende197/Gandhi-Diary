@@ -1,9 +1,9 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody, decryptArgoPassword
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
-    AdvancedArgo, resolveIdentityForProfile,
+    AdvancedArgo, resolveIdentityForProfile, enrichProfiles,
     getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
@@ -20,7 +20,8 @@ module.exports = async function handler(req, res) {
     const sessionAccessToken = String(body.accessToken || '').trim();
     const sessionAuthToken = String(body.authToken || '').trim();
     const sessionSubjectId = body.subjectId ?? body.idSoggetto ?? null;
-    let profileIndex = parseInt(body.profileIndex) || 0;
+    const parsedProfileIndex = parseInt(body.profileIndex, 10);
+    let profileIndex = Number.isInteger(parsedProfileIndex) && parsedProfileIndex >= 0 ? parsedProfileIndex : 0;
     if (!school || !username) {
         return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
     }
@@ -31,11 +32,12 @@ module.exports = async function handler(req, res) {
 
     try {
         debugLog('SYNC REQUEST', { school, profileIndex });
+        const supabase = getSupabase();
 
-        const credentialKey = generatePid(school, username, profileIndex);
-        const fromVault = getArgoCredentials(credentialKey);
+        let credentialKey = generatePid(school, username, profileIndex);
+        let fromVault = getArgoCredentials(credentialKey);
         const user = username || fromVault?.username;
-        const pwd = password || fromVault?.password;
+        let pwd = password || fromVault?.password;
 
         let accessToken = sessionAccessToken || null;
         let authToken = sessionAuthToken || null;
@@ -54,6 +56,40 @@ module.exports = async function handler(req, res) {
         }
 
         if (!dashboardData) {
+            if (!pwd && supabase) {
+                try {
+                    let tokenRow = null;
+                    const { data: tokenByPid } = await supabase
+                        .from('google_tokens')
+                        .select('argo_school_code, argo_username, argo_password, profile_index')
+                        .eq('user_id', credentialKey)
+                        .maybeSingle();
+                    tokenRow = tokenByPid || null;
+                    if (!tokenRow) {
+                        const { data: tokenBySchoolUser } = await supabase
+                            .from('google_tokens')
+                            .select('argo_school_code, argo_username, argo_password, profile_index')
+                            .eq('argo_school_code', school)
+                            .eq('argo_username', user)
+                            .eq('profile_index', profileIndex)
+                            .maybeSingle();
+                        tokenRow = tokenBySchoolUser || null;
+                    }
+                    if (tokenRow?.argo_password) {
+                        const decrypted = decryptArgoPassword(tokenRow.argo_password);
+                        if (decrypted) {
+                            pwd = decrypted;
+                            if (Number.isInteger(tokenRow.profile_index) && tokenRow.profile_index >= 0) {
+                                profileIndex = tokenRow.profile_index;
+                                credentialKey = generatePid(school, username, profileIndex);
+                                fromVault = getArgoCredentials(credentialKey) || fromVault;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    debugLog('⚠️ Supabase credential lookup failed', e.message);
+                }
+            }
             if (!pwd) {
                 return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: effettua di nuovo il login' });
             }
@@ -66,9 +102,16 @@ module.exports = async function handler(req, res) {
             try {
                 const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
                 accessToken = loginRes.access_token;
-                profiles = loginRes.profiles || [];
+                profiles = await enrichProfiles(school, accessToken, loginRes.profiles || []);
                 if (profiles.length > 0) {
                     if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
+                    credentialKey = generatePid(school, user, profileIndex);
+                    setArgoCredentials(credentialKey, {
+                        schoolCode: school,
+                        username: user,
+                        password: pwd,
+                        profileIndex
+                    });
                     authToken = profiles[profileIndex].token;
                 }
             } catch (e) {
@@ -82,15 +125,15 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);
         const promemoria = extractPromemoriaFromDashboard(dashboardData);
+        const subjectId = sessionSubjectId ?? profiles[profileIndex]?.idSoggetto ?? null;
         const activitiesData = extractClassActivitiesFromDashboard(dashboardData, {
-            subjectId: profiles[profileIndex]?.idSoggetto
+            subjectId
         });
         const assenzeData = extractAssenzeFromDashboard(dashboardData);
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
         let enrichedStudent = null;
         let plannerData = null;
-        const supabase = getSupabase();
 
         if (supabase) {
             try {
