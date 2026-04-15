@@ -102,7 +102,12 @@ module.exports = async function handler(req, res) {
             try {
                 const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
                 accessToken = loginRes.access_token;
-                profiles = await enrichProfiles(school, accessToken, loginRes.profiles || []);
+                profiles = loginRes.profiles || [];
+                try {
+                    profiles = await enrichProfiles(school, accessToken, profiles);
+                } catch (enrichError) {
+                    debugLog('⚠️ Sync enrichProfiles failed', enrichError.message);
+                }
                 if (profiles.length > 0) {
                     if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
                     credentialKey = generatePid(school, user, profileIndex);
