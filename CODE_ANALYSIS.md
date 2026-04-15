@@ -205,22 +205,24 @@ if (state.assenzeData?._debug) {
 
 ## 3. Problemi di Sicurezza
 
-### 3.1 — Protezione CRON_SECRET disabilitata (commentata)
+### 3.1 — ~~Protezione CRON_SECRET disabilitata (commentata)~~ ✅ RISOLTO
+
+La protezione `CRON_SECRET` è ora attiva. Il handler verifica il secret tramite confronto timing-safe (`crypto.timingSafeEqual`) e fallisce subito con HTTP 401 se il secret non corrisponde, o con HTTP 500 se `CRON_SECRET` non è configurato:
 
 ```js
-// api/cron-sync.js righe 52–55
-const cronSecret = req.headers['x-vercel-cron-secret'] || req.query.secret;
-// if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
-//     return res.status(401).json({ success: false, error: 'Unauthorized' });
-// }
+// api/cron-sync.js
+if (!CRON_SECRET) {
+    return res.status(500).json({ success: false, error: 'CRON_SECRET non configurato' });
+}
+const authHeader = req.headers.authorization || '';
+const bearerToken = authHeader.startsWith(BEARER_PREFIX) ? authHeader.slice(BEARER_PREFIX.length).trim() : '';
+const cronSecret = bearerToken || req.headers['x-vercel-cron-secret'] || req.query.secret;
+if (!secureEquals(cronSecret, CRON_SECRET)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+}
 ```
 
-**Problema:** Il check di autenticazione è commentato. Chiunque conosca l'URL `/api/cron-sync` può attivare manualmente il job, causando:
-- Login multipli non autorizzati alle credenziali Argo di tutti gli utenti
-- Consumo delle quote Google Calendar
-- Potenziale DoS
-
-**Fix:** Decommentare il blocco e configurare `CRON_SECRET` in Vercel. Vercel stessa inietta `x-vercel-cron-secret` automaticamente quando configurato.
+**Configurazione richiesta:** Impostare `CRON_SECRET` sia su Vercel (Environment Variables) che come GitHub Actions Secret (`secrets.CRON_SECRET`). I valori devono essere identici.
 
 ---
 
@@ -253,36 +255,15 @@ upsertData.argo_password = argoCreds.password; // password Argo in chiaro nel DB
 
 ## 4. Variabili e Configurazioni Inutilizzate o Obsolete
 
-### 4.1 — `.env.example` contiene variabili mai lette dal codice
+### 4.1 — ~~`.env.example` contiene variabili mai lette dal codice~~ ✅ RISOLTO
 
-```
-# .env.example righe 12–22 — TUTTE OBSOLETE
-GOOGLE_SERVICE_ACCOUNT_EMAIL=your-bot@project-id.iam.gserviceaccount.com
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-GOOGLE_CALENDAR_ID=your-email@gmail.com
-
-ARGO_SCHOOL_CODE=YOUR_SCHOOL_CODE
-ARGO_USERNAME=your_argo_username
-ARGO_PASSWORD=your_argo_password
-```
-
-Una ricerca completa del repository conferma che **nessuna di queste 6 variabili viene mai letta da nessun file `.js`**. Sono residui di una architettura precedente (service account Google e credenziali Argo globali) che è stata rimpiazzata con OAuth2 per-utente e credenziali per-utente nel DB.
-
-**Fix:** Rimuovere le 6 voci obsolete da `.env.example`. Aggiungere le variabili effettivamente usate: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `CRON_SECRET`.
+Il file `.env.example` è stato aggiornato. Le voci obsolete (`GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID`, `ARGO_SCHOOL_CODE`, `ARGO_USERNAME`, `ARGO_PASSWORD`) sono state rimosse. Il file contiene ora le sole variabili effettivamente usate dal codice: `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `CRON_SECRET`, `ARGO_ENCRYPTION_KEY`, `CLASS_SCHEDULE`.
 
 ---
 
-### 4.2 — Variabile `cronSecret` in `api/cron-sync.js` dichiarata ma mai usata
+### 4.2 — ~~Variabile `cronSecret` in `api/cron-sync.js` dichiarata ma mai usata~~ ✅ RISOLTO
 
-```js
-// api/cron-sync.js riga 52–55
-const cronSecret = req.headers['x-vercel-cron-secret'] || req.query.secret;
-// if (...cronSecret...) { ... }   ← bloccato dalla commento
-```
-
-La variabile `cronSecret` è dichiarata ma il codice che la usa è commentato (punto 3.1). Questo crea un warning di "unused variable" e confusione.
-
-**Fix:** Decommentare il blocco di validazione (punto 3.1) oppure eliminare la dichiarazione.
+La variabile `cronSecret` è ora usata attivamente nella validazione del secret (vedere punto 3.1 — risolto). Il blocco di autenticazione è stato decommentato e usa `secureEquals(cronSecret, CRON_SECRET)` per il confronto timing-safe.
 
 ---
 
