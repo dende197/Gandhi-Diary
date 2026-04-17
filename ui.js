@@ -518,7 +518,7 @@ window.refreshSessionToken = async function () {
 
 window.googleFetchWithAuthRetry = async function (url, options = {}) {
     let res = await fetch(url, options);
-    if (res.status !== 403) return res;
+    if (res.status !== 401 && res.status !== 403) return res;
 
     const refreshed = await window.refreshSessionToken().catch(() => false);
     if (!refreshed) return res;

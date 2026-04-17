@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody, decryptArgoPassword
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody, decryptArgoPassword, normalizeUserId
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -8,6 +8,21 @@ const {
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
+const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at';
+
+function buildCredentialCandidateUserIds(primaryUserId, fallbackUserId) {
+    const normalizedPrimary = normalizeUserId(primaryUserId);
+    const normalizedFallback = normalizeUserId(fallbackUserId);
+    if (normalizedPrimary && normalizedFallback && normalizedPrimary !== normalizedFallback) {
+        return [normalizedPrimary, normalizedFallback];
+    }
+    return [normalizedPrimary || normalizedFallback].filter(Boolean);
+}
+
+function extractHttpStatusCode(error) {
+    const code = Number(error?.status || error?.response?.status || 0);
+    return Number.isFinite(code) ? code : 0;
+}
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
@@ -19,6 +34,7 @@ module.exports = async function handler(req, res) {
     const password = body.password || '';
     const sessionAccessToken = String(body.accessToken || '').trim();
     const sessionAuthToken = String(body.authToken || '').trim();
+    const sessionUserId = normalizeUserId(body.userId || body.studentId || '');
     const sessionSubjectId = body.subjectId ?? body.idSoggetto ?? null;
     const parsedProfileIndex = parseInt(body.profileIndex, 10);
     let profileIndex = Number.isInteger(parsedProfileIndex) && parsedProfileIndex >= 0 ? parsedProfileIndex : 0;
@@ -26,7 +42,8 @@ module.exports = async function handler(req, res) {
         return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
     }
     const pidForAuth = generatePid(school, username, profileIndex);
-    if (!verifySessionToken(req, pidForAuth)) {
+    const hasValidSessionToken = verifySessionToken(req, pidForAuth) || (sessionUserId && verifySessionToken(req, sessionUserId));
+    if (!hasValidSessionToken) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
     }
 
@@ -59,21 +76,38 @@ module.exports = async function handler(req, res) {
             if (!pwd && supabase) {
                 try {
                     let tokenRow = null;
-                    const { data: tokenByPid } = await supabase
-                        .from('google_tokens')
-                        .select('argo_school_code, argo_username, argo_password, profile_index')
-                        .eq('user_id', credentialKey)
-                        .maybeSingle();
-                    tokenRow = tokenByPid || null;
+                    const candidateUserIds = buildCredentialCandidateUserIds(credentialKey, sessionUserId);
+                    for (const candidateUserId of candidateUserIds) {
+                        const { data: tokenByPid } = await supabase
+                            .from('google_tokens')
+                            .select(TOKEN_SELECT_COLUMNS)
+                            .eq('user_id', candidateUserId)
+                            .maybeSingle();
+                        if (tokenByPid?.argo_password) {
+                            tokenRow = tokenByPid;
+                            break;
+                        }
+                    }
                     if (!tokenRow) {
                         const { data: tokenBySchoolUser } = await supabase
                             .from('google_tokens')
-                            .select('argo_school_code, argo_username, argo_password, profile_index')
+                            .select(TOKEN_SELECT_COLUMNS)
                             .eq('argo_school_code', school)
                             .eq('argo_username', user)
                             .eq('profile_index', profileIndex)
                             .maybeSingle();
                         tokenRow = tokenBySchoolUser || null;
+                    }
+                    if (!tokenRow) {
+                        const { data: tokenByLatestSchoolUser } = await supabase
+                            .from('google_tokens')
+                            .select(TOKEN_SELECT_COLUMNS)
+                            .eq('argo_school_code', school)
+                            .eq('argo_username', user)
+                            .order('updated_at', { ascending: false, nullsFirst: false })
+                            .limit(1)
+                            .maybeSingle();
+                        tokenRow = tokenByLatestSchoolUser || null;
                     }
                     if (tokenRow?.argo_password) {
                         const decrypted = decryptArgoPassword(tokenRow.argo_password);
@@ -240,7 +274,18 @@ module.exports = async function handler(req, res) {
         debugLog('❌ SYNC FAILED', e.message);
         const msg = (e && e.message) ? e.message : 'Errore sincronizzazione';
         const lower = String(msg).toLowerCase();
-        const isAuthError = lower.includes('credenziali') || lower.includes('password') || lower.includes('unauthorized') || lower.includes('forbidden');
-        res.status(isAuthError ? 401 : 500).json({ success: false, error: msg });
+        const statusCode = extractHttpStatusCode(e);
+        const isAuthStatus = statusCode === 401 || statusCode === 403;
+        const isAuthError = isAuthStatus ||
+            lower.includes('credenziali') ||
+            lower.includes('password') ||
+            lower.includes('unauthorized') ||
+            lower.includes('forbidden') ||
+            lower.includes('sessione didup scaduta') ||
+            lower.includes('status code 401') ||
+            lower.includes('status code 403') ||
+            lower.includes('token');
+        const responseStatus = isAuthStatus ? statusCode : (isAuthError ? 401 : 500);
+        res.status(responseStatus).json({ success: false, error: msg });
     }
 }
