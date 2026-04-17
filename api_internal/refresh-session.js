@@ -22,7 +22,8 @@ const {
     extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
-const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at';
+const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry';
+const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
 
 /**
  * Parse canonical PID values in the format `p:<schoolCode>:<username>:<profileIndex>`.
@@ -112,6 +113,44 @@ module.exports = async function handler(req, res) {
                 profileIndex = tokenRow.profile_index ?? 0;
                 debugLog('[refresh-session] Credentials from Supabase', { userId: normalizedUserId });
             }
+
+            // ── Attempt cached Argo tokens before rawLogin ──
+            if (tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
+                const expiry = tokenRow.argo_tokens_expiry
+                    ? new Date(tokenRow.argo_tokens_expiry)
+                    : null;
+                if (expiry && expiry > new Date()) {
+                    try {
+                        const cachedHeaders = createHeaders(
+                            schoolCode,
+                            tokenRow.argo_access_token,
+                            tokenRow.argo_auth_token
+                        );
+                        // Quick validation: if getDashboard succeeds, tokens are valid
+                        await getDashboard(cachedHeaders);
+
+                        const pid = generatePid(schoolCode, username, profileIndex);
+                        const sessionToken = generateSessionToken(pid);
+                        debugLog('[refresh-session] ✅ Session refreshed via cached tokens', { userId: normalizedUserId, pid });
+                        return res.status(200).json({
+                            success: true,
+                            sessionToken,
+                            session: {
+                                schoolCode,
+                                authToken: tokenRow.argo_auth_token,
+                                accessToken: tokenRow.argo_access_token,
+                                userName: username,
+                                profileIndex,
+                                idSoggetto: null
+                            },
+                            student: { id: pid, name: null, class: null },
+                            fromCache: true
+                        });
+                    } catch (cachedErr) {
+                        debugLog('[refresh-session] ⚠️ Cached tokens invalid, falling back to rawLogin', cachedErr.message);
+                    }
+                }
+            }
         }
 
         // Source 2: In-process session-vault (volatile, plaintext in RAM)
@@ -161,14 +200,19 @@ module.exports = async function handler(req, res) {
         setArgoCredentials(pid, { schoolCode, username, password, profileIndex: safeIndex });
         if (supabase) {
             try {
+                const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
                 await supabase.from('google_tokens').upsert({
                     user_id: pid,
                     argo_school_code: schoolCode,
                     argo_username: username,
                     argo_password: encryptArgoPassword(password),
                     profile_index: safeIndex,
+                    argo_access_token: accessToken,
+                    argo_auth_token: authToken,
+                    argo_tokens_expiry: expiry,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id' });
+                debugLog('[refresh-session] ✅ Persisted fresh Argo tokens to Supabase');
             } catch (e) {
                 debugLog('[refresh-session] google_tokens upsert failed', e.message);
             }
@@ -194,7 +238,7 @@ module.exports = async function handler(req, res) {
             }
         };
 
-        debugLog('[refresh-session] ✅ Session refreshed', { userId: normalizedUserId, pid });
+        debugLog('[refresh-session] ✅ Session refreshed via rawLogin', { userId: normalizedUserId, pid });
         return res.status(200).json(resp);
 
     } catch (e) {

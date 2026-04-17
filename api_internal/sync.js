@@ -8,7 +8,8 @@ const {
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
-const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at';
+const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry';
+const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL (Argo tokens last ~8h)
 
 function buildCredentialCandidateUserIds(primaryUserId, fallbackUserId) {
     const normalizedPrimary = normalizeUserId(primaryUserId);
@@ -72,10 +73,11 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // --- Token recovery: cached tokens (Supabase) → rawLogin fallback ---
+        let tokenRow = null;
         if (!dashboardData) {
-            if (!pwd && supabase) {
+            if (supabase) {
                 try {
-                    let tokenRow = null;
                     const candidateUserIds = buildCredentialCandidateUserIds(credentialKey, sessionUserId);
                     for (const candidateUserId of candidateUserIds) {
                         const { data: tokenByPid } = await supabase
@@ -120,46 +122,93 @@ module.exports = async function handler(req, res) {
                             }
                         }
                     }
+
+                    // ── Attempt 2: try cached Argo tokens from Supabase before rawLogin ──
+                    if (!dashboardData && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
+                        const expiry = tokenRow.argo_tokens_expiry
+                            ? new Date(tokenRow.argo_tokens_expiry)
+                            : null;
+                        const isExpired = !expiry || expiry <= new Date();
+                        if (!isExpired) {
+                            try {
+                                const cachedHeaders = createHeaders(
+                                    school,
+                                    tokenRow.argo_access_token,
+                                    tokenRow.argo_auth_token,
+                                    sessionSubjectId
+                                );
+                                dashboardData = await getDashboard(cachedHeaders);
+                                accessToken = tokenRow.argo_access_token;
+                                authToken = tokenRow.argo_auth_token;
+                                debugLog('✅ Sync: used cached Argo tokens from Supabase');
+                            } catch (cachedErr) {
+                                debugLog('⚠️ Cached Argo tokens expired early, falling back to rawLogin', cachedErr.message);
+                                dashboardData = null;
+                            }
+                        } else {
+                            debugLog('⏳ Cached Argo tokens expired, proceeding to rawLogin');
+                        }
+                    }
                 } catch (e) {
-                    debugLog('⚠️ Supabase credential lookup failed', e.message);
+                    debugLog('⚠️ Supabase credential/token lookup failed', e.message);
                 }
-            }
-            if (!pwd) {
-                return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: effettua di nuovo il login' });
-            }
-            setArgoCredentials(credentialKey, {
-                schoolCode: school,
-                username: user,
-                password: pwd,
-                profileIndex
-            });
-            try {
-                const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
-                accessToken = loginRes.access_token;
-                profiles = loginRes.profiles || [];
-                try {
-                    profiles = await enrichProfiles(school, accessToken, profiles);
-                } catch (enrichError) {
-                    debugLog('⚠️ Sync enrichProfiles failed', enrichError.message);
-                }
-                if (profiles.length > 0) {
-                    if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
-                    credentialKey = generatePid(school, user, profileIndex);
-                    setArgoCredentials(credentialKey, {
-                        schoolCode: school,
-                        username: user,
-                        password: pwd,
-                        profileIndex
-                    });
-                    authToken = profiles[profileIndex].token;
-                }
-            } catch (e) {
-                debugLog('⚠️ Sync Login Fail', e.message);
-                throw e;
             }
 
-            const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
-            dashboardData = await getDashboard(headers);
+            // ── Attempt 3: full rawLogin with password ──
+            if (!dashboardData) {
+                if (!pwd) {
+                    return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: effettua di nuovo il login' });
+                }
+                setArgoCredentials(credentialKey, {
+                    schoolCode: school,
+                    username: user,
+                    password: pwd,
+                    profileIndex
+                });
+                try {
+                    const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
+                    accessToken = loginRes.access_token;
+                    profiles = loginRes.profiles || [];
+                    try {
+                        profiles = await enrichProfiles(school, accessToken, profiles);
+                    } catch (enrichError) {
+                        debugLog('⚠️ Sync enrichProfiles failed', enrichError.message);
+                    }
+                    if (profiles.length > 0) {
+                        if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
+                        credentialKey = generatePid(school, user, profileIndex);
+                        setArgoCredentials(credentialKey, {
+                            schoolCode: school,
+                            username: user,
+                            password: pwd,
+                            profileIndex
+                        });
+                        authToken = profiles[profileIndex].token;
+                    }
+                } catch (e) {
+                    debugLog('⚠️ Sync Login Fail', e.message);
+                    throw e;
+                }
+
+                const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
+                dashboardData = await getDashboard(headers);
+
+                // ── Persist fresh Argo tokens to Supabase ──
+                if (supabase && accessToken && authToken) {
+                    try {
+                        const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
+                        await supabase.from('google_tokens').update({
+                            argo_access_token: accessToken,
+                            argo_auth_token: authToken,
+                            argo_tokens_expiry: expiry,
+                            updated_at: new Date().toISOString()
+                        }).eq('user_id', credentialKey);
+                        debugLog('✅ Sync: persisted fresh Argo tokens to Supabase');
+                    } catch (persistErr) {
+                        debugLog('⚠️ Token cache save failed', persistErr.message);
+                    }
+                }
+            }
         }
         const grades = extractGradesFromDashboard(dashboardData);
         const tasks = extractHomeworkFromDashboard(dashboardData);

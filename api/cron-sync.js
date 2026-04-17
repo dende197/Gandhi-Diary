@@ -8,8 +8,10 @@ const crypto = require('crypto');
 const { google } = require('googleapis');
 const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard } = require('../lib/argo');
 const { syncTasksToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
-const { createHeaders, decryptArgoPassword } = require('../lib/helpers');
+const { createHeaders, decryptArgoPassword, debugLog } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
+
+const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
 
 // --- Google OAuth2 Setup ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -163,25 +165,70 @@ module.exports = async function handler(req, res) {
             
             try {
                 await withTimeout((async () => {
-                    // 2. Login to Argo
-                    const argoPassword = decryptArgoPassword(user.argo_password);
-                    if (!argoPassword) throw new Error('Failed to decrypt Argo password');
-                    const loginRes = await AdvancedArgo.rawLogin(
-                        user.argo_school_code,
-                        user.argo_username,
-                        argoPassword
-                    );
-                    const { access_token, profiles } = loginRes;
-                    if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
+                    // 2. Try cached Argo tokens first, rawLogin as fallback
+                    let access_token = null;
+                    let authToken = null;
+                    let subjectId = null;
+                    let headers = null;
+                    let dashboardData = null;
+                    let usedCache = false;
 
-                    const targetProfile = resolveTargetProfile(profiles, user.profile_index);
-                    const authToken = targetProfile?.token;
-                    const subjectId = targetProfile?.idSoggetto;
-                    if (!authToken) throw new Error('Token profilo Argo non disponibile');
-                    const headers = createHeaders(user.argo_school_code, access_token, authToken, subjectId);
+                    // Attempt 1: cached tokens
+                    if (user.argo_access_token && user.argo_auth_token) {
+                        const expiry = user.argo_tokens_expiry
+                            ? new Date(user.argo_tokens_expiry)
+                            : null;
+                        if (expiry && expiry > new Date()) {
+                            try {
+                                headers = createHeaders(user.argo_school_code, user.argo_access_token, user.argo_auth_token);
+                                dashboardData = await getDashboard(headers);
+                                access_token = user.argo_access_token;
+                                authToken = user.argo_auth_token;
+                                usedCache = true;
+                                debugLog(`[Cron] ✅ Used cached Argo tokens for ${user.user_id}`);
+                            } catch (cachedErr) {
+                                debugLog(`[Cron] ⚠️ Cached tokens failed for ${user.user_id}, falling back to rawLogin`, cachedErr.message);
+                                dashboardData = null;
+                            }
+                        }
+                    }
 
-                    // 3. Fetch Tasks
-                    const dashboardData = await getDashboard(headers);
+                    // Attempt 2: full rawLogin
+                    if (!dashboardData) {
+                        const argoPassword = decryptArgoPassword(user.argo_password);
+                        if (!argoPassword) throw new Error('Failed to decrypt Argo password');
+                        const loginRes = await AdvancedArgo.rawLogin(
+                            user.argo_school_code,
+                            user.argo_username,
+                            argoPassword
+                        );
+                        access_token = loginRes.access_token;
+                        const profiles = loginRes.profiles || [];
+                        if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
+
+                        const targetProfile = resolveTargetProfile(profiles, user.profile_index);
+                        authToken = targetProfile?.token;
+                        subjectId = targetProfile?.idSoggetto;
+                        if (!authToken) throw new Error('Token profilo Argo non disponibile');
+                        headers = createHeaders(user.argo_school_code, access_token, authToken, subjectId);
+
+                        // 3. Fetch dashboard with fresh tokens
+                        dashboardData = await getDashboard(headers);
+
+                        // Persist fresh tokens to Supabase
+                        try {
+                            const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
+                            await supabase.from('google_tokens').update({
+                                argo_access_token: access_token,
+                                argo_auth_token: authToken,
+                                argo_tokens_expiry: expiry,
+                                updated_at: new Date().toISOString()
+                            }).eq('user_id', user.user_id);
+                            debugLog(`[Cron] ✅ Persisted fresh Argo tokens for ${user.user_id}`);
+                        } catch (persistErr) {
+                            console.warn(`[Cron] ⚠️ Token persist failed for ${user.user_id}:`, persistErr.message);
+                        }
+                    }
                     const tasks = extractHomeworkFromDashboard(dashboardData);
                     let assenzeData = shouldCheckAttendance ? extractAssenzeFromDashboard(dashboardData) : null;
                     if (shouldCheckAttendance && simulateUnjustified && (assenzeData?.daGiustificare || 0) === 0) {

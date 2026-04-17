@@ -137,12 +137,17 @@ module.exports = async function handler(req, res) {
                     last_active: new Date().toISOString()
                 }, { onConflict: 'id' });
 
+                const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
+                const tokenExpiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
                 await supabase.from('google_tokens').upsert({
                     user_id: pid,
                     argo_school_code: school,
                     argo_username: username,
                     argo_password: encryptArgoPassword(password),
                     profile_index: targetIndex,
+                    argo_access_token: accessToken,
+                    argo_auth_token: authToken,
+                    argo_tokens_expiry: tokenExpiry,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id' });
             } catch (e) {
