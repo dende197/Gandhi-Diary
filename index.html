@@ -486,10 +486,13 @@
             try {
                 const getFreshRequestBody = () => {
                     const s = sessionManager.load() || sessionData;
+                    const resolvedUserId = (typeof window.getUserId === 'function')
+                        ? window.getUserId()
+                        : (s.studentId || null);
                     return {
                         schoolCode: s.schoolCode,
                         username: s.userName || s.username,
-                        userId: (typeof window.getUserId === 'function' ? window.getUserId() : (s.studentId || null)),
+                        userId: resolvedUserId,
                         password: window._argoPasswordRuntime || '',
                         profileIndex: s.profileIndex,
                         accessToken: s.accessToken || '',
