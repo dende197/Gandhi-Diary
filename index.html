@@ -489,6 +489,7 @@
                     return {
                         schoolCode: s.schoolCode,
                         username: s.userName || s.username,
+                        userId: (typeof window.getUserId === 'function' ? window.getUserId() : (s.studentId || null)),
                         password: window._argoPasswordRuntime || '',
                         profileIndex: s.profileIndex,
                         accessToken: s.accessToken || '',
@@ -504,7 +505,7 @@
                 });
 
                 let response = await executeSyncRequest();
-                if (response.status === 403 && allowAuthRetry && typeof window.refreshSessionToken === 'function') {
+                if ((response.status === 401 || response.status === 403) && allowAuthRetry && typeof window.refreshSessionToken === 'function') {
                     const refreshed = await window.refreshSessionToken().catch(() => false);
                     if (refreshed) {
                         // Crucial: After refresh, executeSyncRequest() will now pick up the NEW tokens
@@ -641,7 +642,7 @@
             });
 
             let res = await request();
-            if (res.status === 403 && typeof window.refreshSessionToken === 'function') {
+            if ((res.status === 401 || res.status === 403) && typeof window.refreshSessionToken === 'function') {
                 const refreshed = await window.refreshSessionToken().catch(() => false);
                 if (refreshed) {
                     res = await request();

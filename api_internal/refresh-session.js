@@ -23,6 +23,17 @@ const {
     extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 
+function parseUserPid(userId) {
+    const parts = String(userId || '').split(':');
+    if (parts.length < 4 || parts[0] !== 'p') return null;
+    const profileIndexRaw = Number(parts[3]);
+    return {
+        schoolCode: parts[1] ? String(parts[1]).toUpperCase() : null,
+        username: parts[2] ? String(parts[2]).toLowerCase() : null,
+        profileIndex: Number.isInteger(profileIndexRaw) && profileIndexRaw >= 0 ? profileIndexRaw : 0
+    };
+}
+
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -50,11 +61,42 @@ module.exports = async function handler(req, res) {
         // Source 1: Supabase google_tokens (persistent, encrypted)
         const supabase = getSupabase();
         if (supabase) {
-            const { data: tokenRow } = await supabase
+            let tokenRow = null;
+            const { data: tokenByUserId } = await supabase
                 .from('google_tokens')
-                .select('argo_school_code, argo_username, argo_password, profile_index')
+                .select('argo_school_code, argo_username, argo_password, profile_index, updated_at')
                 .eq('user_id', normalizedUserId)
-                .single();
+                .maybeSingle();
+            tokenRow = tokenByUserId || null;
+
+            if (!tokenRow) {
+                const parsedPid = parseUserPid(normalizedUserId);
+                if (parsedPid?.schoolCode && parsedPid?.username) {
+                    const { data: tokenBySchoolUserProfile } = await supabase
+                        .from('google_tokens')
+                        .select('argo_school_code, argo_username, argo_password, profile_index, updated_at')
+                        .eq('argo_school_code', parsedPid.schoolCode)
+                        .eq('argo_username', parsedPid.username)
+                        .eq('profile_index', parsedPid.profileIndex)
+                        .maybeSingle();
+                    tokenRow = tokenBySchoolUserProfile || null;
+                }
+            }
+
+            if (!tokenRow) {
+                const parsedPid = parseUserPid(normalizedUserId);
+                if (parsedPid?.schoolCode && parsedPid?.username) {
+                    const { data: tokenBySchoolUserLatest } = await supabase
+                        .from('google_tokens')
+                        .select('argo_school_code, argo_username, argo_password, profile_index, updated_at')
+                        .eq('argo_school_code', parsedPid.schoolCode)
+                        .eq('argo_username', parsedPid.username)
+                        .order('updated_at', { ascending: false, nullsFirst: false })
+                        .limit(1)
+                        .maybeSingle();
+                    tokenRow = tokenBySchoolUserLatest || null;
+                }
+            }
 
             if (tokenRow?.argo_password) {
                 schoolCode = tokenRow.argo_school_code;
