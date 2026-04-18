@@ -8,7 +8,7 @@ const {
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
-const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry';
+const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry, argo_id_soggetto';
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL (Argo tokens last ~8h)
 
 function buildCredentialCandidateUserIds(primaryUserId, fallbackUserId) {
@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     const parsedProfileIndex = parseInt(body.profileIndex, 10);
     let profileIndex = Number.isInteger(parsedProfileIndex) && parsedProfileIndex >= 0 ? parsedProfileIndex : 0;
     if (!school || !username) {
-        return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
+        return res.status(400).json({ success: false, error: 'Credenziali mancanti' });
     }
     const pidForAuth = generatePid(school, username, profileIndex);
     const hasValidSessionToken = verifySessionToken(req, pidForAuth) || (sessionUserId && verifySessionToken(req, sessionUserId));
@@ -190,6 +190,10 @@ module.exports = async function handler(req, res) {
                     throw e;
                 }
 
+                if (!authToken) {
+                    throw new Error('Token di autorizzazione non disponibile: nessun profilo trovato dopo il login');
+                }
+
                 const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
                 dashboardData = await getDashboard(headers);
 
@@ -197,12 +201,15 @@ module.exports = async function handler(req, res) {
                 if (supabase && accessToken && authToken) {
                     try {
                         const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                        await supabase.from('google_tokens').update({
+                        const persistUserId = tokenRow?.user_id || credentialKey;
+                        await supabase.from('google_tokens').upsert({
+                            user_id: persistUserId,
                             argo_access_token: accessToken,
                             argo_auth_token: authToken,
                             argo_tokens_expiry: expiry,
+                            argo_id_soggetto: profiles[profileIndex]?.idSoggetto ?? null,
                             updated_at: new Date().toISOString()
-                        }).eq('user_id', credentialKey);
+                        }, { onConflict: 'user_id' });
                         debugLog('✅ Sync: persisted fresh Argo tokens to Supabase');
                     } catch (persistErr) {
                         debugLog('⚠️ Token cache save failed', persistErr.message);

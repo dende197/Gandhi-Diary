@@ -1,4 +1,4 @@
-const { handleCors, getRequestBody } = require('../../lib/helpers');
+const { handleCors, getRequestBody, verifySessionToken } = require('../../lib/helpers');
 const { getGroq } = require('../../lib/groq');
 
 module.exports = async function handler(req, res) {
@@ -9,7 +9,11 @@ module.exports = async function handler(req, res) {
     if (!groq) return res.status(500).json({ error: 'Backend error: GROQ_API_KEY non configurata.' });
 
     const body = getRequestBody(req);
-    const { messages } = body;
+    const { messages, userId } = body;
+
+    if (!userId || !verifySessionToken(req, userId)) {
+        return res.status(403).json({ error: 'Non autorizzato' });
+    }
 
     try {
         const openAIMessages = (messages || []).map(m => ({

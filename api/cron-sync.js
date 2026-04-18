@@ -324,11 +324,13 @@ module.exports = async function handler(req, res) {
         }
 
         const duration = (Date.now() - startTime) / 1000;
-        const hasFailures = results.failed > 0;
+        const allFailed = results.failed > 0 && results.success === 0;
+        const partialFailure = results.failed > 0 && results.success > 0;
+        const statusCode = allFailed ? 500 : (partialFailure ? 207 : 200);
         console.log(`[Cron] Universal Sync Finished in ${duration}s. Success: ${results.success}/${results.total}. Failed: ${results.failed}`);
 
-        return res.status(hasFailures ? 500 : 200).json({
-            success: !hasFailures,
+        return res.status(statusCode).json({
+            success: results.failed === 0,
             duration: `${duration}s`,
             shouldCheckAttendance,
             romeHour,
