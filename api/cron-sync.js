@@ -141,22 +141,23 @@ module.exports = async function handler(req, res) {
     const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, users: [] };
     const romeHour = getRomeHour(new Date());
 
-    // Skip overnight hours (00:00–05:59 Rome time) to reduce cold-start load on Argo.
-    // The inclusive `<= NIGHT_HOURS_END` (5) covers hours 0,1,2,3,4,5 (six hours total).
+    // Skip nighttime hours 20:00–07:59 Rome time (12-hour quiet window).
+    // Active window: 08:00–19:59 — cron runs every hour inside this window.
     // Allow forced runs via query param ?force=1 to override this guard.
-    const NIGHT_HOURS_START = 0;
-    const NIGHT_HOURS_END = 5;
+    const NIGHT_RANGE_START = 20; // First hour to skip (20:xx)
+    const NIGHT_RANGE_END   = 7;  // Last hour to skip  (07:xx)
     const forceRun = (req.query?.force === '1' || req.query?.force === 'true');
-    if (!forceRun && romeHour <= NIGHT_HOURS_END) {
-        console.log(`[Cron] Skipping — nighttime hours (Rome ${romeHour}:xx). Use ?force=1 to override.`);
+    const isOutsideActiveHours = romeHour >= NIGHT_RANGE_START || romeHour <= NIGHT_RANGE_END;
+    if (!forceRun && isOutsideActiveHours) {
+        console.log(`[Cron] Skipping — nighttime hours (Rome ${romeHour}:xx, window 20–07). Use ?force=1 to override.`);
         return res.status(200).json({ success: true, skipped: true, reason: 'nighttime', romeHour });
     }
 
     const forceAttendanceCheck = (req.query?.forceAttendanceCheck === '1' || req.query?.forceAttendanceCheck === 'true');
     const simulateUnjustified = (req.query?.simulateUnjustified === '1' || req.query?.simulateUnjustified === 'true');
-    // Check attendance at 13:00 (after school) and 20:00 (evening fallback).
+    // Check attendance at 13:00 (after school) and 18:00 (evening fallback, within active window).
     // Two windows ensure reminders are created even if one cron run fails.
-    const ATTENDANCE_CHECK_HOURS = [13, 20];
+    const ATTENDANCE_CHECK_HOURS = [13, 18];
     const shouldCheckAttendance = forceAttendanceCheck || ATTENDANCE_CHECK_HOURS.includes(romeHour);
 
     try {
