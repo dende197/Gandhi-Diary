@@ -6,8 +6,8 @@
 
 const crypto = require('crypto');
 const { google } = require('googleapis');
-const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard } = require('../lib/argo');
-const { syncTasksToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
+const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard } = require('../lib/argo');
+const { syncTasksToCalendar, syncVerificheToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
 const { createHeaders, decryptArgoPassword, debugLog } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
@@ -140,6 +140,17 @@ module.exports = async function handler(req, res) {
     const startTime = Date.now();
     const results = { total: 0, processed: 0, success: 0, failed: 0, users: [] };
     const romeHour = getRomeHour(new Date());
+
+    // Skip overnight hours (00:00-05:59 Rome time) to reduce cold-start load on Argo.
+    // Allow forced runs via query param ?force=1 to override this guard.
+    const NIGHT_HOURS_START = 0;
+    const NIGHT_HOURS_END = 5;
+    const forceRun = (req.query?.force === '1' || req.query?.force === 'true');
+    if (!forceRun && romeHour >= NIGHT_HOURS_START && romeHour <= NIGHT_HOURS_END) {
+        console.log(`[Cron] Skipping — nighttime hours (Rome ${romeHour}:xx). Use ?force=1 to override.`);
+        return res.status(200).json({ success: true, skipped: true, reason: 'nighttime', romeHour });
+    }
+
     const forceAttendanceCheck = (req.query?.forceAttendanceCheck === '1' || req.query?.forceAttendanceCheck === 'true');
     const simulateUnjustified = (req.query?.simulateUnjustified === '1' || req.query?.simulateUnjustified === 'true');
     // Check attendance at 13:00 (after school) and 20:00 (evening fallback).
@@ -253,9 +264,20 @@ module.exports = async function handler(req, res) {
                     const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
                     let taskSync = { success: true, added: 0, skipped: 0, errors: [] };
                     if (tasks.length > 0) {
-                        // 4. Sync to Google Calendar (use per-user class schedule if stored)
+                        // 4. Sync homework to Google Calendar (use per-user class schedule if stored)
                         taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
                         if (!taskSync.success) throw new Error((taskSync.errors || []).join(', '));
+                    }
+
+                    // 5. Extract and sync upcoming tests (verifiche) to Google Calendar
+                    const verifiche = extractVerificheFromDashboard(dashboardData);
+                    let verificheSync = { success: true, added: 0, skipped: 0, filtered: 0, errors: [] };
+                    if (verifiche.length > 0) {
+                        verificheSync = await syncVerificheToCalendar(verifiche, user.calendar_id || 'primary', auth);
+                        if (!verificheSync.success) {
+                            // Non-fatal: log but do not abort the user sync
+                            console.warn(`[Cron] ⚠️ Verifiche sync partial failure for ${user.user_id}:`, verificheSync.errors);
+                        }
                     }
 
                     let attendanceSync = null;
@@ -281,8 +303,10 @@ module.exports = async function handler(req, res) {
                     results.success++;
                     results.users.push({
                         id: user.user_id,
-                        added: taskSync.added || 0,
-                        skipped: taskSync.skipped || 0,
+                        tasksAdded: taskSync.added || 0,
+                        tasksSkipped: taskSync.skipped || 0,
+                        verificheAdded: verificheSync.added || 0,
+                        verificheSkipped: verificheSync.skipped || 0,
                         attendancePending: attendanceSync?.pending || 0,
                         remindersScheduled: attendanceSync?.scheduled || 0,
                         remindersUpdated: attendanceSync?.updated || 0
