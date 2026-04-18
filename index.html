@@ -632,6 +632,30 @@
         }
         window.performSync = performSync;
 
+        async function runManualOwaResync() {
+            if (!state.isLoggedIn || state._loggedOut) return false;
+            if (state.syncing) {
+                if (typeof showToast === 'function') showToast('Sincronizzazione già in corso...');
+                return false;
+            }
+            const session = sessionManager.load();
+            if (!session) return false;
+            try {
+                if (typeof showBoot === 'function') showBoot('Resync manuale OWA in corso...');
+                await performSync(session, { suppressRender: false, suppressHideBoot: true, allowAuthRetry: true });
+                await runSilentGoogleSync(session);
+                if (typeof loadCircolari === 'function') await loadCircolari();
+                if (typeof showToast === 'function') showToast('✅ Resync manuale completato');
+                return true;
+            } catch (e) {
+                if (typeof showToast === 'function') showToast(e?.message || 'Resync manuale fallito. Verifica la connessione e riprova.', 'error', '#ff453a');
+                return false;
+            } finally {
+                if (typeof hideBoot === 'function') hideBoot();
+            }
+        }
+        window.runManualOwaResync = runManualOwaResync;
+
         const AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour — full sync including DiDUP rescrape
         const AUTO_SYNC_MIN_GAP_MS = 5 * 60 * 1000;
         const FOREGROUND_RESYNC_THRESHOLD_MS = 3 * 60 * 1000;

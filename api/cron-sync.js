@@ -6,8 +6,8 @@
 
 const crypto = require('crypto');
 const { google } = require('googleapis');
-const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard } = require('../lib/argo');
-const { syncTasksToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
+const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard } = require('../lib/argo');
+const { syncTasksToCalendar, syncVerificheToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
 const { createHeaders, decryptArgoPassword, debugLog } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 
@@ -138,13 +138,26 @@ module.exports = async function handler(req, res) {
 
     console.log('[Cron] Starting Universal Sync...');
     const startTime = Date.now();
-    const results = { total: 0, processed: 0, success: 0, failed: 0, users: [] };
+    const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, users: [] };
     const romeHour = getRomeHour(new Date());
+
+    // Skip nighttime hours 20:00–07:59 Rome time (12-hour quiet window).
+    // Active window: 08:00–19:59 — cron runs every hour inside this window.
+    // Allow forced runs via query param ?force=1 to override this guard.
+    const NIGHT_RANGE_START = 20; // First hour to skip (20:xx)
+    const NIGHT_RANGE_END   = 7;  // Last hour to skip  (07:xx)
+    const forceRun = (req.query?.force === '1' || req.query?.force === 'true');
+    const isOutsideActiveHours = romeHour >= NIGHT_RANGE_START || romeHour <= NIGHT_RANGE_END;
+    if (!forceRun && isOutsideActiveHours) {
+        console.log(`[Cron] Skipping — nighttime hours (Rome ${romeHour}:xx, window 20–07). Use ?force=1 to override.`);
+        return res.status(200).json({ success: true, skipped: true, reason: 'nighttime', romeHour });
+    }
+
     const forceAttendanceCheck = (req.query?.forceAttendanceCheck === '1' || req.query?.forceAttendanceCheck === 'true');
     const simulateUnjustified = (req.query?.simulateUnjustified === '1' || req.query?.simulateUnjustified === 'true');
-    // Check attendance at 13:00 (after school) and 20:00 (evening fallback).
+    // Check attendance at 13:00 (after school) and 18:00 (evening fallback, within active window).
     // Two windows ensure reminders are created even if one cron run fails.
-    const ATTENDANCE_CHECK_HOURS = [13, 20];
+    const ATTENDANCE_CHECK_HOURS = [13, 18];
     const shouldCheckAttendance = forceAttendanceCheck || ATTENDANCE_CHECK_HOURS.includes(romeHour);
 
     try {
@@ -253,9 +266,21 @@ module.exports = async function handler(req, res) {
                     const classSchedule = parseStoredSchedule(user.class_schedule, user.user_id);
                     let taskSync = { success: true, added: 0, skipped: 0, errors: [] };
                     if (tasks.length > 0) {
-                        // 4. Sync to Google Calendar (use per-user class schedule if stored)
+                        // 4. Sync homework to Google Calendar (use per-user class schedule if stored)
                         taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
                         if (!taskSync.success) throw new Error((taskSync.errors || []).join(', '));
+                    }
+
+                    // 5. Extract and sync upcoming tests (verifiche) to Google Calendar
+                    const verifiche = extractVerificheFromDashboard(dashboardData);
+                    let verificheSync = { success: true, added: 0, skipped: 0, filtered: 0, errors: [] };
+                    if (verifiche.length > 0) {
+                        verificheSync = await syncVerificheToCalendar(verifiche, user.calendar_id || 'primary', auth);
+                        if (!verificheSync.success) {
+                            // Non-fatal: log and track but do not abort the user sync
+                            console.warn(`[Cron] ⚠️ Verifiche sync partial failure for ${user.user_id}:`, verificheSync.errors);
+                            results.verificheFailures++;
+                        }
                     }
 
                     let attendanceSync = null;
@@ -281,8 +306,10 @@ module.exports = async function handler(req, res) {
                     results.success++;
                     results.users.push({
                         id: user.user_id,
-                        added: taskSync.added || 0,
-                        skipped: taskSync.skipped || 0,
+                        tasksAdded: taskSync.added || 0,
+                        tasksSkipped: taskSync.skipped || 0,
+                        verificheAdded: verificheSync.added || 0,
+                        verificheSkipped: verificheSync.skipped || 0,
                         attendancePending: attendanceSync?.pending || 0,
                         remindersScheduled: attendanceSync?.scheduled || 0,
                         remindersUpdated: attendanceSync?.updated || 0
