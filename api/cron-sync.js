@@ -138,15 +138,16 @@ module.exports = async function handler(req, res) {
 
     console.log('[Cron] Starting Universal Sync...');
     const startTime = Date.now();
-    const results = { total: 0, processed: 0, success: 0, failed: 0, users: [] };
+    const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, users: [] };
     const romeHour = getRomeHour(new Date());
 
-    // Skip overnight hours (00:00-05:59 Rome time) to reduce cold-start load on Argo.
+    // Skip overnight hours (00:00–05:59 Rome time) to reduce cold-start load on Argo.
+    // The inclusive `<= NIGHT_HOURS_END` (5) covers hours 0,1,2,3,4,5 (six hours total).
     // Allow forced runs via query param ?force=1 to override this guard.
     const NIGHT_HOURS_START = 0;
     const NIGHT_HOURS_END = 5;
     const forceRun = (req.query?.force === '1' || req.query?.force === 'true');
-    if (!forceRun && romeHour >= NIGHT_HOURS_START && romeHour <= NIGHT_HOURS_END) {
+    if (!forceRun && romeHour <= NIGHT_HOURS_END) {
         console.log(`[Cron] Skipping — nighttime hours (Rome ${romeHour}:xx). Use ?force=1 to override.`);
         return res.status(200).json({ success: true, skipped: true, reason: 'nighttime', romeHour });
     }
@@ -275,8 +276,9 @@ module.exports = async function handler(req, res) {
                     if (verifiche.length > 0) {
                         verificheSync = await syncVerificheToCalendar(verifiche, user.calendar_id || 'primary', auth);
                         if (!verificheSync.success) {
-                            // Non-fatal: log but do not abort the user sync
+                            // Non-fatal: log and track but do not abort the user sync
                             console.warn(`[Cron] ⚠️ Verifiche sync partial failure for ${user.user_id}:`, verificheSync.errors);
+                            results.verificheFailures++;
                         }
                     }
 
