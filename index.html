@@ -509,11 +509,14 @@
 
                 let response = await executeSyncRequest();
                 if ((response.status === 401 || response.status === 403) && allowAuthRetry && typeof window.refreshSessionToken === 'function') {
+                    console.log('[Sync] Auth failed, attempting session refresh...');
                     const refreshed = await window.refreshSessionToken().catch(() => false);
                     if (refreshed) {
                         // Crucial: After refresh, executeSyncRequest() will now pick up the NEW tokens
                         // from sessionManager.load() via getFreshRequestBody()
                         response = await executeSyncRequest();
+                    } else {
+                        console.warn('[Sync] Session refresh failed — will retry on next cycle');
                     }
                 }
                 if (!response.ok) throw new Error("Sync failed: " + response.status);
@@ -601,8 +604,20 @@
                     success: false,
                     summary: `Scraping KO · ${e?.message || 'errore sconosciuto'}`
                 });
+                // Only mark offline — DON'T reset didup.connected if we have local cached data
+                // This prevents showing "NON COLLEGATO" when we still have valid data to display
+                const hasLocalData = (state.tasks && state.tasks.length > 0) || (state.voti && state.voti.length > 0);
+                if (!hasLocalData) {
+                    state.didup.connected = false;
+                }
                 state.isOffline = true;
-                state.didup.connected = false;
+                // Schedule a retry after 2 minutes if we're online
+                if (navigator.onLine && state.isLoggedIn && !state._loggedOut) {
+                    setTimeout(() => {
+                        console.log('[Sync] Retry after previous failure...');
+                        runAutomaticSyncCycle('retry-after-failure', { force: true });
+                    }, 2 * 60 * 1000);
+                }
             } finally {
                 state.syncing = false;
                 if (!suppressHideBoot) hideBoot();
@@ -616,7 +631,7 @@
         }
         window.performSync = performSync;
 
-        const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
+        const AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour — full sync including DiDUP rescrape
         const AUTO_SYNC_MIN_GAP_MS = 5 * 60 * 1000;
         const FOREGROUND_RESYNC_THRESHOLD_MS = 3 * 60 * 1000;
         let _autoSyncTimer = null;
@@ -669,8 +684,19 @@
             _autoSyncInFlight = true;
             _lastAutoSyncAt = now;
             try {
-                await performSync(session, { suppressHideBoot: true, suppressRender: false });
-                await runSilentGoogleSync(session);
+                // Pre-refresh session tokens to keep DiDUP connection alive
+                // This ensures cached Argo tokens on the server are always fresh
+                if (typeof window.refreshSessionToken === 'function') {
+                    const refreshed = await window.refreshSessionToken().catch(() => false);
+                    if (refreshed) {
+                        console.log(`[AutoSync:${reason}] Session tokens pre-refreshed`);
+                    }
+                }
+                await performSync(sessionManager.load() || session, { suppressHideBoot: true, suppressRender: false });
+                // Mark DiDUP connected after successful sync in auto-cycle
+                state.didup.connected = true;
+                state.isOffline = false;
+                await runSilentGoogleSync(sessionManager.load() || session);
             } catch (e) {
                 console.warn(`[AutoSync:${reason}] failed:`, e?.message || e);
             } finally {
