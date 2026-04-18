@@ -237,7 +237,7 @@
         const state = {
             view: 'home',
             user: { id: null, name: 'Studente', class: '...', avatar: null, specialization: null },
-            didup: { connected: false, lastUpdate: null },
+            didup: { connected: false, lastUpdate: null, lastSuccessTs: 0, stale: false },
             aiChatHistory: [],
             aiChatPending: false,
             aiChatInputValue: '',
@@ -577,6 +577,9 @@
 
                     state.lastSync = new Date().toLocaleTimeString();
                     state.didup.connected = true;
+                    state.didup.stale = false;
+                    state.didup.lastSuccessTs = Date.now();
+                    localStorage.setItem(lsKey('didup_last_success_ts'), String(Date.now()));
                     state.isOffline = false;
                     const activitiesCount = Array.isArray(data.activities) ? data.activities.length : 0;
                     appendSyncDiagnostic({
@@ -604,12 +607,10 @@
                     success: false,
                     summary: `Scraping KO · ${e?.message || 'errore sconosciuto'}`
                 });
-                // Only mark offline — DON'T reset didup.connected if we have local cached data
-                // This prevents showing "NON COLLEGATO" when we still have valid data to display
+                // ALWAYS mark DiDUP as disconnected on sync failure — no false positives
+                state.didup.connected = false;
                 const hasLocalData = (state.tasks && state.tasks.length > 0) || (state.voti && state.voti.length > 0);
-                if (!hasLocalData) {
-                    state.didup.connected = false;
-                }
+                state.didup.stale = hasLocalData; // stale = we have cached data but can't verify freshness
                 state.isOffline = true;
                 // Schedule a retry after 2 minutes if we're online
                 if (navigator.onLine && state.isLoggedIn && !state._loggedOut) {
@@ -693,12 +694,14 @@
                     }
                 }
                 await performSync(sessionManager.load() || session, { suppressHideBoot: true, suppressRender: false });
-                // Mark DiDUP connected after successful sync in auto-cycle
-                state.didup.connected = true;
+                // performSync already sets didup.connected = true on success
                 state.isOffline = false;
                 await runSilentGoogleSync(sessionManager.load() || session);
             } catch (e) {
                 console.warn(`[AutoSync:${reason}] failed:`, e?.message || e);
+                state.didup.connected = false;
+                const hasLocalData = (state.tasks && state.tasks.length > 0) || (state.voti && state.voti.length > 0);
+                state.didup.stale = hasLocalData;
             } finally {
                 _autoSyncInFlight = false;
             }
@@ -825,6 +828,16 @@
                     state.aiChatHistory = Array.isArray(hydratedAiChat) ? hydratedAiChat : [];
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
+                    // Restore DiDUP sync timestamp to determine data freshness
+                    const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+                    const didupTs = parseInt(localStorage.getItem(lsKey('didup_last_success_ts')) || '0');
+                    state.didup.lastSuccessTs = didupTs;
+                    if (didupTs && (Date.now() - didupTs) < STALE_THRESHOLD_MS) {
+                        state.didup.stale = false;
+                    } else if (didupTs) {
+                        state.didup.stale = true;
+                    }
+                    // didup.connected remains FALSE until performSync actually succeeds
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
@@ -1174,6 +1187,9 @@
 
             state.isLoggedIn = true;
             state.didup.connected = true;
+            state.didup.stale = false;
+            state.didup.lastSuccessTs = Date.now();
+            localStorage.setItem(lsKey('didup_last_success_ts'), String(Date.now()));
             state.isOffline = false;
             state.lastSync = new Date().toLocaleTimeString();
             if (typeof updateOfflineBadge === 'function') updateOfflineBadge();

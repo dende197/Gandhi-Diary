@@ -303,6 +303,15 @@ module.exports = async function handler(req, res) {
             } catch (e) {
                 debugLog('⚠️ Sync Supabase error', e.message);
             }
+
+            // Update last_argo_sync timestamp for connection status tracking
+            try {
+                await supabase.from('google_tokens').update({
+                    last_argo_sync: new Date().toISOString()
+                }).eq('user_id', credentialKey);
+            } catch (syncTsErr) {
+                debugLog('⚠️ last_argo_sync update failed', syncTsErr.message);
+            }
         }
 
         res.json({
@@ -316,7 +325,8 @@ module.exports = async function handler(req, res) {
             verifiche: verificheData,
             new_tokens: { authToken, accessToken },
             planner: plannerData,
-            student: enrichedStudent
+            student: enrichedStudent,
+            lastArgoSync: new Date().toISOString()
         });
 
     } catch (e) {

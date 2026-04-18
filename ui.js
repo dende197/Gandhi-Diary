@@ -1900,19 +1900,33 @@ function renderProfile() {
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px;">
-                <!-- Connection Card -->
+                ${(() => {
+                    const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
+                    const didupTs = state.didup.lastSuccessTs || 0;
+                    const isStale = state.didup.stale || (!state.didup.connected && didupTs > 0);
+                    const isFresh = state.didup.connected && didupTs && (Date.now() - didupTs) < STALE_THRESHOLD_MS;
+                    const statusColor = isFresh ? 'var(--green)' : isStale ? 'var(--orange)' : 'var(--red)';
+                    const statusIcon = isFresh ? 'ph-plugs-connected' : isStale ? 'ph-cloud-warning' : 'ph-plugs';
+                    const statusIconBg = isFresh ? 'rgba(16, 185, 129, 0.1)' : isStale ? 'rgba(255, 159, 10, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    const statusText = isFresh ? 'COLLEGATO' : isStale ? 'DATI NON AGGIORNATI' : 'NON COLLEGATO';
+                    const statusDetail = didupTs
+                        ? 'Ultimo sync: ' + new Date(didupTs).toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' })
+                        : 'Mai sincronizzato';
+                    return `
                 <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 12px;">
-                    <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--green);">
-                        <i class="ph-fill ph-plugs-connected" style="font-size: 24px;"></i>
+                    <div style="width: 48px; height: 48px; border-radius: 14px; background: ${statusIconBg}; display: flex; align-items: center; justify-content: center; color: ${statusColor};">
+                        <i class="ph-fill ${statusIcon}" style="font-size: 24px;"></i>
                     </div>
                     <div>
                         <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Connessione DidUP</div>
-                        <div style="font-size: 16px; font-weight: 800; color: ${state.didup.connected ? 'var(--green)' : 'var(--red)'}; margin-top: 2px;">
-                            ${state.didup.connected ? 'COLLEGATO' : 'NON COLLEGATO'}
+                        <div style="font-size: 16px; font-weight: 800; color: ${statusColor}; margin-top: 2px;">
+                            ${statusText}
                         </div>
                     </div>
-                    ${state.lastSync ? `<div style="font-size: 12px; color: var(--text-dim); font-weight: 500;">Ultimo Sync: ${state.lastSync}</div>` : ''}
-                </div>
+                    <div style="font-size: 12px; color: var(--text-dim); font-weight: 500;">${statusDetail}</div>
+                    ${isStale ? '<div style="font-size: 10px; color: var(--orange); font-weight: 600; margin-top: 2px;">Utilizzo dati in cache — ricarica per aggiornare</div>' : ''}
+                </div>`;
+                })()}
 
                 <!-- Google Calendar Card (Universal OAuth2) -->
                 <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 16px;">
@@ -5416,6 +5430,8 @@ window.logout = async function () {
         state.booting = false;
         state.syncing = false;
         state.didup.connected = false;
+        state.didup.stale = false;
+        state.didup.lastSuccessTs = 0;
         state.user = { name: '', class: '' };
         state.tasks = [];
         state.voti = [];

@@ -269,6 +269,15 @@ module.exports = async function handler(req, res) {
                     }
                     if (auth.tokenPersistError) throw auth.tokenPersistError;
 
+                    // Track last successful sync timestamp for connection status
+                    try {
+                        await supabase.from('google_tokens').update({
+                            last_argo_sync: new Date().toISOString()
+                        }).eq('user_id', user.user_id);
+                    } catch (syncTsErr) {
+                        console.warn(`[Cron] ⚠️ last_argo_sync update failed for ${user.user_id}:`, syncTsErr.message);
+                    }
+
                     results.success++;
                     results.users.push({
                         id: user.user_id,
