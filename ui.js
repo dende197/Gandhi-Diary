@@ -6380,8 +6380,8 @@ REGOLE OPERATIVE:
     try {
         const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: (typeof window.getSessionHeaders === 'function') ? window.getSessionHeaders() : { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, userId: state.user?.id })
         });
         const data = await response.json();
         if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {

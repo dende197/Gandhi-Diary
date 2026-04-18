@@ -8,7 +8,7 @@ const {
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
-const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry';
+const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry, argo_id_soggetto';
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL (Argo tokens last ~8h)
 
 function buildCredentialCandidateUserIds(primaryUserId, fallbackUserId) {
@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     const parsedProfileIndex = parseInt(body.profileIndex, 10);
     let profileIndex = Number.isInteger(parsedProfileIndex) && parsedProfileIndex >= 0 ? parsedProfileIndex : 0;
     if (!school || !username) {
-        return res.status(401).json({ success: false, error: 'Credenziali mancanti' });
+        return res.status(400).json({ success: false, error: 'Credenziali mancanti' });
     }
     const pidForAuth = generatePid(school, username, profileIndex);
     const hasValidSessionToken = verifySessionToken(req, pidForAuth) || (sessionUserId && verifySessionToken(req, sessionUserId));
@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
 
         let credentialKey = generatePid(school, username, profileIndex);
         let fromVault = getArgoCredentials(credentialKey);
-        const user = username || fromVault?.username;
+        const user = username;
         let pwd = password || fromVault?.password;
 
         let accessToken = sessionAccessToken || null;
@@ -140,6 +140,14 @@ module.exports = async function handler(req, res) {
                                 dashboardData = await getDashboard(cachedHeaders);
                                 accessToken = tokenRow.argo_access_token;
                                 authToken = tokenRow.argo_auth_token;
+                                // Extend TTL on successful cached-token use (sliding window)
+                                if (supabase && tokenRow?.user_id) {
+                                    const newExpiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
+                                    supabase.from('google_tokens').update({
+                                        argo_tokens_expiry: newExpiry,
+                                        updated_at: new Date().toISOString()
+                                    }).eq('user_id', tokenRow.user_id).catch(e => debugLog('⚠️ TTL extend failed', e.message));
+                                }
                                 debugLog('✅ Sync: used cached Argo tokens from Supabase');
                             } catch (cachedErr) {
                                 debugLog('⚠️ Cached Argo tokens expired early, falling back to rawLogin', cachedErr.message);
@@ -190,6 +198,10 @@ module.exports = async function handler(req, res) {
                     throw e;
                 }
 
+                if (!authToken) {
+                    throw new Error('Token di autorizzazione non disponibile: nessun profilo trovato dopo il login');
+                }
+
                 const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
                 dashboardData = await getDashboard(headers);
 
@@ -197,12 +209,15 @@ module.exports = async function handler(req, res) {
                 if (supabase && accessToken && authToken) {
                     try {
                         const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                        await supabase.from('google_tokens').update({
+                        const persistUserId = tokenRow?.user_id || credentialKey;
+                        await supabase.from('google_tokens').upsert({
+                            user_id: persistUserId,
                             argo_access_token: accessToken,
                             argo_auth_token: authToken,
                             argo_tokens_expiry: expiry,
+                            argo_id_soggetto: profiles[profileIndex]?.idSoggetto ?? null,
                             updated_at: new Date().toISOString()
-                        }).eq('user_id', credentialKey);
+                        }, { onConflict: 'user_id' });
                         debugLog('✅ Sync: persisted fresh Argo tokens to Supabase');
                     } catch (persistErr) {
                         debugLog('⚠️ Token cache save failed', persistErr.message);
@@ -260,8 +275,9 @@ module.exports = async function handler(req, res) {
                 else if (existingProfile?.name && isValidName(existingProfile.name, user)) payload.name = existingProfile.name;
                 else payload.name = null;
 
-                const sClassNorm = normalizeClass(sClass || existingProfile?.class);
-                if (sClassNorm) payload.class = sClassNorm;
+                // sClass is already normalized (or raw when normalization returns null); avoid double normalize
+                if (sClass) payload.class = sClass;
+                else if (existingProfile?.class) payload.class = normalizeClass(existingProfile.class) || existingProfile.class;
 
                 await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
 
@@ -306,9 +322,10 @@ module.exports = async function handler(req, res) {
 
             // Update last_argo_sync timestamp for connection status tracking
             try {
+                const syncUserId = tokenRow?.user_id || credentialKey;
                 await supabase.from('google_tokens').update({
                     last_argo_sync: new Date().toISOString()
-                }).eq('user_id', credentialKey);
+                }).eq('user_id', syncUserId);
             } catch (syncTsErr) {
                 debugLog('⚠️ last_argo_sync update failed', syncTsErr.message);
             }

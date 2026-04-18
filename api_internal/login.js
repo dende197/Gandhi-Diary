@@ -96,7 +96,12 @@ module.exports = async function handler(req, res) {
         }
 
         const headers = createHeaders(school, accessToken, authToken, targetProfile?.idSoggetto);
-        const dashboardData = await getDashboard(headers);
+        let dashboardData = {};
+        try {
+            dashboardData = await getDashboard(headers);
+        } catch (dashErr) {
+            debugLog('⚠️ Login getDashboard failed (non-fatal)', dashErr.message);
+        }
         const gradesData = extractGradesFromDashboard(dashboardData);
         const tasksData = extractHomeworkFromDashboard(dashboardData);
         const announcementsData = extractPromemoriaFromDashboard(dashboardData);
@@ -148,6 +153,7 @@ module.exports = async function handler(req, res) {
                     argo_access_token: accessToken,
                     argo_auth_token: authToken,
                     argo_tokens_expiry: tokenExpiry,
+                    argo_id_soggetto: targetProfile?.idSoggetto ?? null,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id' });
             } catch (e) {

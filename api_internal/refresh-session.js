@@ -22,7 +22,7 @@ const {
     extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
-const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry';
+const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry, argo_id_soggetto';
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
 
 /**
@@ -141,7 +141,7 @@ module.exports = async function handler(req, res) {
                                 accessToken: tokenRow.argo_access_token,
                                 userName: username,
                                 profileIndex,
-                                idSoggetto: null
+                                idSoggetto: tokenRow.argo_id_soggetto ?? null
                             },
                             student: { id: pid, name: null, class: null },
                             fromCache: true
@@ -210,6 +210,7 @@ module.exports = async function handler(req, res) {
                     argo_access_token: accessToken,
                     argo_auth_token: authToken,
                     argo_tokens_expiry: expiry,
+                    argo_id_soggetto: targetProfile.idSoggetto ?? null,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id' });
                 debugLog('[refresh-session] ✅ Persisted fresh Argo tokens to Supabase');

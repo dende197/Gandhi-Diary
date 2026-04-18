@@ -37,6 +37,11 @@ module.exports = async function handler(req, res) {
 
     } catch (e) {
         debugLog('⚠️ resolve_profile error', e.message);
-        res.status(500).json({ success: false, error: e.message });
+        const msg = String(e.message || '');
+        const lower = msg.toLowerCase();
+        const isAuth = lower.includes('credenziali') || lower.includes('password') ||
+            lower.includes('unauthorized') || lower.includes('forbidden') ||
+            lower.includes('invalid') || e?.response?.status === 401 || e?.response?.status === 403;
+        res.status(isAuth ? 401 : 500).json({ success: false, error: msg || 'Errore risoluzione profilo' });
     }
 }

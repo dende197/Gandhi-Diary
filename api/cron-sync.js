@@ -138,7 +138,7 @@ module.exports = async function handler(req, res) {
 
     console.log('[Cron] Starting Universal Sync...');
     const startTime = Date.now();
-    const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, users: [] };
+    const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, attendanceFailures: 0, users: [] };
     const romeHour = getRomeHour(new Date());
 
     // Skip nighttime hours 20:00–07:59 Rome time (12-hour quiet window).
@@ -268,7 +268,10 @@ module.exports = async function handler(req, res) {
                     if (tasks.length > 0) {
                         // 4. Sync homework to Google Calendar (use per-user class schedule if stored)
                         taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
-                        if (!taskSync.success) throw new Error((taskSync.errors || []).join(', '));
+                        if (!taskSync.success) {
+                            // Non-fatal: individual task failures should not abort the user sync
+                            console.warn(`[Cron] ⚠️ Task sync partial failure for ${user.user_id}:`, taskSync.errors);
+                        }
                     }
 
                     // 5. Extract and sync upcoming tests (verifiche) to Google Calendar
@@ -290,7 +293,11 @@ module.exports = async function handler(req, res) {
                             user.calendar_id || 'primary',
                             auth
                         );
-                        if (!attendanceSync.success) throw new Error((attendanceSync.errors || []).join(', '));
+                        if (!attendanceSync.success) {
+                            // Non-fatal: log and track but do not abort the user sync
+                            console.warn(`[Cron] ⚠️ Attendance sync failure for ${user.user_id}:`, attendanceSync.errors);
+                            results.attendanceFailures++;
+                        }
                     }
                     if (auth.tokenPersistError) throw auth.tokenPersistError;
 
@@ -312,7 +319,8 @@ module.exports = async function handler(req, res) {
                         verificheSkipped: verificheSync.skipped || 0,
                         attendancePending: attendanceSync?.pending || 0,
                         remindersScheduled: attendanceSync?.scheduled || 0,
-                        remindersUpdated: attendanceSync?.updated || 0
+                        remindersUpdated: attendanceSync?.updated || 0,
+                        remindersDeleted: attendanceSync?.deleted || 0
                     });
                 })(), USER_SYNC_TIMEOUT_MS, `User sync timeout after ${USER_SYNC_TIMEOUT_MS}ms`);
 
@@ -324,11 +332,13 @@ module.exports = async function handler(req, res) {
         }
 
         const duration = (Date.now() - startTime) / 1000;
-        const hasFailures = results.failed > 0;
+        const allFailed = results.failed > 0 && results.success === 0;
+        const partialFailure = results.failed > 0 && results.success > 0;
+        const statusCode = allFailed ? 500 : (partialFailure ? 207 : 200);
         console.log(`[Cron] Universal Sync Finished in ${duration}s. Success: ${results.success}/${results.total}. Failed: ${results.failed}`);
 
-        return res.status(hasFailures ? 500 : 200).json({
-            success: !hasFailures,
+        return res.status(statusCode).json({
+            success: results.failed === 0,
             duration: `${duration}s`,
             shouldCheckAttendance,
             romeHour,
