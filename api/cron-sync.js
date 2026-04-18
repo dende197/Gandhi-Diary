@@ -138,7 +138,7 @@ module.exports = async function handler(req, res) {
 
     console.log('[Cron] Starting Universal Sync...');
     const startTime = Date.now();
-    const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, users: [] };
+    const results = { total: 0, processed: 0, success: 0, failed: 0, verificheFailures: 0, attendanceFailures: 0, users: [] };
     const romeHour = getRomeHour(new Date());
 
     // Skip nighttime hours 20:00–07:59 Rome time (12-hour quiet window).
@@ -293,7 +293,11 @@ module.exports = async function handler(req, res) {
                             user.calendar_id || 'primary',
                             auth
                         );
-                        if (!attendanceSync.success) throw new Error((attendanceSync.errors || []).join(', '));
+                        if (!attendanceSync.success) {
+                            // Non-fatal: log and track but do not abort the user sync
+                            console.warn(`[Cron] ⚠️ Attendance sync failure for ${user.user_id}:`, attendanceSync.errors);
+                            results.attendanceFailures++;
+                        }
                     }
                     if (auth.tokenPersistError) throw auth.tokenPersistError;
 
@@ -315,7 +319,8 @@ module.exports = async function handler(req, res) {
                         verificheSkipped: verificheSync.skipped || 0,
                         attendancePending: attendanceSync?.pending || 0,
                         remindersScheduled: attendanceSync?.scheduled || 0,
-                        remindersUpdated: attendanceSync?.updated || 0
+                        remindersUpdated: attendanceSync?.updated || 0,
+                        remindersDeleted: attendanceSync?.deleted || 0
                     });
                 })(), USER_SYNC_TIMEOUT_MS, `User sync timeout after ${USER_SYNC_TIMEOUT_MS}ms`);
 
