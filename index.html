@@ -643,12 +643,12 @@
             try {
                 if (typeof showBoot === 'function') showBoot('Resync manuale OWA in corso...');
                 await performSync(session, { suppressRender: false, suppressHideBoot: true, allowAuthRetry: true });
-                await runSilentGoogleSync(sessionManager.load() || session);
+                await runSilentGoogleSync(session);
                 if (typeof loadCircolari === 'function') await loadCircolari();
                 if (typeof showToast === 'function') showToast('✅ Resync manuale completato');
                 return true;
             } catch (e) {
-                if (typeof showToast === 'function') showToast(e?.message || 'Resync manuale fallito', 'error', '#ff453a');
+                if (typeof showToast === 'function') showToast(e?.message || 'Resync manuale fallito. Verifica la connessione e riprova.', 'error', '#ff453a');
                 return false;
             } finally {
                 if (typeof hideBoot === 'function') hideBoot();
