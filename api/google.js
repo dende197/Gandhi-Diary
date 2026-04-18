@@ -16,7 +16,8 @@ const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('..
 const { syncTasksToCalendar } = require('../lib/googleCalendar');
 const {
     createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword,
-    handleCors, verifySessionToken, normalizeUserId, generatePid, SESSION_TOKEN_HEX_LENGTH
+    handleCors, verifySessionToken, normalizeUserId, generatePid, SESSION_TOKEN_HEX_LENGTH,
+    getRequestBody
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const { getArgoCredentials } = require('../lib/session-vault');
@@ -264,7 +265,7 @@ module.exports = async function handler(req, res) {
                     return res.status(405).json({ success: false, error: 'Method not allowed' });
                 }
 
-                const userId = req.query.userId || req.body?.userId;
+                const userId = req.query.userId || getRequestBody(req).userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
 
                 const normalizedUserId = normalizeUserId(userId);
@@ -359,7 +360,7 @@ module.exports = async function handler(req, res) {
 
             // ============= STATUS =============
             case 'status': {
-                const userId = req.query.userId || req.body?.userId;
+                const userId = req.query.userId || getRequestBody(req).userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
 
                 if (!verifySessionToken(req, normalizeUserId(userId))) {
@@ -376,7 +377,7 @@ module.exports = async function handler(req, res) {
 
             // ============= SYNC =============
             case 'sync': {
-                const body = req.body || {};
+                const body = getRequestBody(req);
                 const userId = body.userId;
                 const session = body.session; // Argo session
 
@@ -548,7 +549,7 @@ module.exports = async function handler(req, res) {
 
             // ============= SAVE ARGO CREDENTIALS =============
             case 'save-argo': {
-                const { userId, schoolCode, username, password, profileIndex } = req.body || {};
+                const { userId, schoolCode, username, password, profileIndex } = getRequestBody(req);
                 if (!userId) {
                     return res.status(400).json({ success: false, error: 'userId richiesto' });
                 }
@@ -594,7 +595,7 @@ module.exports = async function handler(req, res) {
 
             // ============= SAVE CLASS SCHEDULE =============
             case 'save-schedule': {
-                const { userId, classSchedule } = req.body || {};
+                const { userId, classSchedule } = getRequestBody(req);
                 if (!userId || !classSchedule) {
                     return res.status(400).json({ success: false, error: 'userId e classSchedule richiesti' });
                 }
@@ -620,7 +621,7 @@ module.exports = async function handler(req, res) {
 
             // ============= DISCONNECT =============
             case 'disconnect': {
-                const userId = req.query.userId || req.body?.userId;
+                const userId = req.query.userId || getRequestBody(req).userId;
                 if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
 
                 if (!verifySessionToken(req, normalizeUserId(userId))) {

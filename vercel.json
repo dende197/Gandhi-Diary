@@ -14,6 +14,10 @@
       "destination": "/api/auth?action=sync"
     },
     {
+      "source": "/api/resolve-profile",
+      "destination": "/api/auth?action=resolve-profile"
+    },
+    {
       "source": "/api/planner/:user_id",
       "destination": "/api/resources"
     },

@@ -268,7 +268,10 @@ module.exports = async function handler(req, res) {
                     if (tasks.length > 0) {
                         // 4. Sync homework to Google Calendar (use per-user class schedule if stored)
                         taskSync = await syncTasksToCalendar(tasks, user.calendar_id || 'primary', auth, classSchedule);
-                        if (!taskSync.success) throw new Error((taskSync.errors || []).join(', '));
+                        if (!taskSync.success) {
+                            // Non-fatal: individual task failures should not abort the user sync
+                            console.warn(`[Cron] ⚠️ Task sync partial failure for ${user.user_id}:`, taskSync.errors);
+                        }
                     }
 
                     // 5. Extract and sync upcoming tests (verifiche) to Google Calendar

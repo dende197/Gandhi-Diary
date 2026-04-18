@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', normalizeUserId(user_id)).single();
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', normalizedUserId).single();
         if (error?.code === 'PGRST116') return res.status(404).json({ success: false, error: 'Profilo non trovato' }); // PGRST116 = no rows returned
         if (error) throw error;
 

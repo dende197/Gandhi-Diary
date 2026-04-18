@@ -62,12 +62,11 @@ module.exports = async function handler(req, res) {
     if (req.method === 'PUT') {
         const body = getRequestBody(req);
 
-        // Embed stressVents into stress_levels as __vents key (no separate DB column needed)
+        // Embed stressVents into stress_levels as __vents key (no separate DB column needed).
+        // Always set __vents (even to {}) so callers can clear it by sending stressVents: {}
         const stressLevels = body.stressLevels || body.stress_levels || {};
         const stressVents = body.stressVents || body.stress_vents || {};
-        if (Object.keys(stressVents).length > 0) {
-            stressLevels.__vents = stressVents;
-        }
+        stressLevels.__vents = stressVents;
 
         const payload = {
             user_id: userId,
@@ -80,38 +79,41 @@ module.exports = async function handler(req, res) {
         };
 
         const supabase = getSupabase();
-        if (supabase) {
-            try {
-                const { data, error } = await supabase
-                    .from('planners')
-                    .upsert(payload, { onConflict: 'user_id' })
-                    .select()
-                    .single();
+        if (!supabase) return res.status(503).json({ success: false, error: 'Supabase non configurato' });
 
-                if (!error && data) {
-                    return res.json({
-                        success: true,
-                        data: {
-                            userId: data.user_id,
-                            plannedTasks: parseJsonb(data.planned_tasks, {}),
-                            stressLevels: parseJsonb(data.stress_levels, {}),
-                            plannedDetails: parseJsonb(data.planned_details, {}),
-                            tasks: parseJsonb(data.tasks, []),
-                            prepLevels: parseJsonb(data.prep_levels, {}),
-                            stressVents: parseJsonb(data.stress_levels, {}).__vents || {},
-                            updatedAt: data.updated_at
-                        }
-                    });
-                }
+        try {
+            const { data, error } = await supabase
+                .from('planners')
+                .upsert(payload, { onConflict: 'user_id' })
+                .select()
+                .single();
 
-                if (error) console.error('planner upsert error:', error.message);
-
-            } catch (e) {
-                console.error('planner upsert exception:', e.message);
+            if (error) {
+                console.error('planner upsert error:', error.message);
+                return res.status(500).json({ success: false, error: error.message || 'Errore aggiornamento planner' });
             }
-        }
 
-        return res.status(503).json({ success: false, error: 'Supabase non configurato o upsert fallito' });
+            if (!data) {
+                return res.status(500).json({ success: false, error: 'Nessun dato restituito dal database' });
+            }
+
+            return res.json({
+                success: true,
+                data: {
+                    userId: data.user_id,
+                    plannedTasks: parseJsonb(data.planned_tasks, {}),
+                    stressLevels: parseJsonb(data.stress_levels, {}),
+                    plannedDetails: parseJsonb(data.planned_details, {}),
+                    tasks: parseJsonb(data.tasks, []),
+                    prepLevels: parseJsonb(data.prep_levels, {}),
+                    stressVents: parseJsonb(data.stress_levels, {}).__vents || {},
+                    updatedAt: data.updated_at
+                }
+            });
+        } catch (e) {
+            console.error('planner upsert exception:', e.message);
+            return res.status(500).json({ success: false, error: e.message || 'Errore aggiornamento planner' });
+        }
     }
 
     res.status(405).json({ error: 'Method not allowed' });

@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
 
         let credentialKey = generatePid(school, username, profileIndex);
         let fromVault = getArgoCredentials(credentialKey);
-        const user = username || fromVault?.username;
+        const user = username;
         let pwd = password || fromVault?.password;
 
         let accessToken = sessionAccessToken || null;
@@ -140,6 +140,14 @@ module.exports = async function handler(req, res) {
                                 dashboardData = await getDashboard(cachedHeaders);
                                 accessToken = tokenRow.argo_access_token;
                                 authToken = tokenRow.argo_auth_token;
+                                // Extend TTL on successful cached-token use (sliding window)
+                                if (supabase && tokenRow?.user_id) {
+                                    const newExpiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
+                                    supabase.from('google_tokens').update({
+                                        argo_tokens_expiry: newExpiry,
+                                        updated_at: new Date().toISOString()
+                                    }).eq('user_id', tokenRow.user_id).catch(e => debugLog('⚠️ TTL extend failed', e.message));
+                                }
                                 debugLog('✅ Sync: used cached Argo tokens from Supabase');
                             } catch (cachedErr) {
                                 debugLog('⚠️ Cached Argo tokens expired early, falling back to rawLogin', cachedErr.message);
@@ -267,8 +275,9 @@ module.exports = async function handler(req, res) {
                 else if (existingProfile?.name && isValidName(existingProfile.name, user)) payload.name = existingProfile.name;
                 else payload.name = null;
 
-                const sClassNorm = normalizeClass(sClass || existingProfile?.class);
-                if (sClassNorm) payload.class = sClassNorm;
+                // sClass is already normalized (or raw when normalization returns null); avoid double normalize
+                if (sClass) payload.class = sClass;
+                else if (existingProfile?.class) payload.class = normalizeClass(existingProfile.class) || existingProfile.class;
 
                 await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
 
@@ -313,9 +322,10 @@ module.exports = async function handler(req, res) {
 
             // Update last_argo_sync timestamp for connection status tracking
             try {
+                const syncUserId = tokenRow?.user_id || credentialKey;
                 await supabase.from('google_tokens').update({
                     last_argo_sync: new Date().toISOString()
-                }).eq('user_id', credentialKey);
+                }).eq('user_id', syncUserId);
             } catch (syncTsErr) {
                 debugLog('⚠️ last_argo_sync update failed', syncTsErr.message);
             }
