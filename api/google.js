@@ -455,13 +455,14 @@ module.exports = async function handler(req, res) {
                     // Fallback: cached Argo tokens persisted in Supabase (usable even without password)
                     if (!tasks && !password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
                         const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
-                        if (expiry && expiry > new Date()) {
+                        const resolvedSchoolCodeForCache = tokenRow.argo_school_code || schoolCode;
+                        if (expiry && expiry > new Date() && resolvedSchoolCodeForCache) {
                             try {
                                 const cachedHeaders = createHeaders(
-                                    schoolCode || tokenRow.argo_school_code,
+                                    resolvedSchoolCodeForCache,
                                     tokenRow.argo_access_token,
                                     tokenRow.argo_auth_token,
-                                    tokenRow.argo_id_soggetto || session?.idSoggetto || null
+                                    session?.idSoggetto || tokenRow.argo_id_soggetto || null
                                 );
                                 const dashboardData = await getDashboard(cachedHeaders);
                                 tasks = extractHomeworkFromDashboard(dashboardData);
@@ -509,7 +510,7 @@ module.exports = async function handler(req, res) {
                                     argo_access_token: access_token,
                                     argo_auth_token: authToken,
                                     argo_tokens_expiry: expiry,
-                                    argo_id_soggetto: targetProfile?.idSoggetto ?? null,
+                                    argo_id_soggetto: subjectId ?? null,
                                     updated_at: new Date().toISOString()
                                 }, { onConflict: 'user_id' });
                                 if (persistError) throw persistError;
