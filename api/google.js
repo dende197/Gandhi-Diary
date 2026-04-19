@@ -32,6 +32,8 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL (Argo tokens typically live ~8h)
+const RECENT_TOKEN_EXPIRY_STAGGER_MS = 5 * 60 * 1000; // 5 minutes
 const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
 const WEEK_DAYS = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
 const HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -451,11 +453,48 @@ module.exports = async function handler(req, res) {
                         }
                     }
                     
+                    // Fallback: cached Argo tokens persisted in Supabase (usable even without password)
+                    if (!tasks && !password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
+                        const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
+                        const resolvedSchoolCodeForCache = tokenRow.argo_school_code || schoolCode;
+                        if (expiry && expiry > new Date() && resolvedSchoolCodeForCache) {
+                            try {
+                                const cachedHeaders = createHeaders(
+                                    resolvedSchoolCodeForCache,
+                                    tokenRow.argo_access_token,
+                                    tokenRow.argo_auth_token,
+                                    session?.idSoggetto || tokenRow.argo_id_soggetto || null
+                                );
+                                const dashboardData = await getDashboard(cachedHeaders);
+                                tasks = extractHomeworkFromDashboard(dashboardData);
+                                debugLog('[Google sync] ✅ Used cached Argo tokens from Supabase');
+                            } catch (cachedErr) {
+                                debugLog('[Google sync] ⚠️ Supabase cached tokens failed', cachedErr.message);
+                            }
+                        }
+                    }
+
                     if (!tasks && !password) {
                         return res.status(400).json({ 
                             success: false, 
                             error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.' 
                         });
+                    }
+
+                    if (!tasks && password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
+                        const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
+                        const msElapsedSinceExpiry = expiry ? (Date.now() - expiry.getTime()) : Infinity;
+                        if (msElapsedSinceExpiry >= 0 && msElapsedSinceExpiry < RECENT_TOKEN_EXPIRY_STAGGER_MS) {
+                            debugLog('[Google sync] ⏳ Token refresh likely in progress, returning retriable 503', {
+                                userId: normalizedUserId,
+                                msElapsedSinceExpiry
+                            });
+                            return res.status(503).json({
+                                success: false,
+                                error: 'TOKEN_REFRESH_IN_PROGRESS',
+                                retryAfter: 5
+                            });
+                        }
                     }
                     
                     if (!tasks) {
@@ -480,6 +519,25 @@ module.exports = async function handler(req, res) {
                             const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
                             const dashboardData = await getDashboard(headers);
                             tasks = extractHomeworkFromDashboard(dashboardData);
+
+                            try {
+                                const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
+                                const { error: persistError } = await getSupabase().from('google_tokens').upsert({
+                                    user_id: normalizedUserId,
+                                    argo_school_code: schoolCode || null,
+                                    argo_username: userName || null,
+                                    profile_index: Number.isInteger(profileIndex) ? profileIndex : null,
+                                    argo_access_token: access_token,
+                                    argo_auth_token: authToken,
+                                    argo_tokens_expiry: expiry,
+                                    argo_id_soggetto: subjectId ?? null,
+                                    updated_at: new Date().toISOString()
+                                }, { onConflict: 'user_id' });
+                                if (persistError) throw persistError;
+                                debugLog('[Google sync] ✅ Persisted fresh Argo tokens');
+                            } catch (persistErr) {
+                                debugLog('[Google sync] ⚠️ Token persist failed', persistErr.message);
+                            }
                         } catch (argoErr) {
                             console.error('Argo fetch failed:', argoErr.message);
                             return res.status(500).json({
@@ -580,14 +638,14 @@ module.exports = async function handler(req, res) {
 
                 const { error } = await getSupabase()
                     .from('google_tokens')
-                    .update({
+                    .upsert({
+                        user_id: normalizeUserId(userId),
                         argo_school_code: resolvedSchoolCode,
                         argo_username: resolvedUsername,
                         argo_password: encryptArgoPassword(resolvedPassword),
                         profile_index: resolvedProfileIndex,
                         updated_at: new Date().toISOString()
-                    })
-                    .eq('user_id', normalizeUserId(userId));
+                    }, { onConflict: 'user_id' });
 
                 if (error) throw error;
                 return res.json({ success: true, message: 'Credenziali Argo salvate' });

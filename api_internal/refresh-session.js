@@ -10,6 +10,7 @@
  *   4. Returns the new sessionToken + session data to the client
  */
 
+const axios = require('axios');
 const {
     handleCors, debugLog, generatePid, normalizeClass, isValidName,
     createHeaders, generateSessionToken, verifySessionToken, decryptArgoPassword, encryptArgoPassword, getRequestBody,
@@ -18,12 +19,13 @@ const {
 const { getSupabase } = require('../lib/supabase');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
 const {
-    AdvancedArgo, enrichProfiles, getDashboard,
+    AdvancedArgo, enrichProfiles,
     extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
 const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry, argo_id_soggetto';
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
+const ARGO_PROFILE_ENDPOINT = 'https://www.portaleargo.it/appfamiglia/api/rest/profilo';
 
 /**
  * Parse canonical PID values in the format `p:<schoolCode>:<username>:<profileIndex>`.
@@ -106,6 +108,12 @@ module.exports = async function handler(req, res) {
                 }
             }
 
+            if (tokenRow) {
+                schoolCode = schoolCode || tokenRow.argo_school_code || null;
+                username = username || tokenRow.argo_username || null;
+                profileIndex = Number.isInteger(tokenRow.profile_index) ? tokenRow.profile_index : profileIndex;
+            }
+
             if (tokenRow?.argo_password) {
                 schoolCode = tokenRow.argo_school_code;
                 username = tokenRow.argo_username;
@@ -124,10 +132,14 @@ module.exports = async function handler(req, res) {
                         const cachedHeaders = createHeaders(
                             schoolCode,
                             tokenRow.argo_access_token,
-                            tokenRow.argo_auth_token
+                            tokenRow.argo_auth_token,
+                            tokenRow.argo_id_soggetto ?? null
                         );
-                        // Quick validation: if getDashboard succeeds, tokens are valid
-                        await getDashboard(cachedHeaders);
+                        // Quick validation: lightweight profile endpoint
+                        await axios.get(ARGO_PROFILE_ENDPOINT, {
+                            headers: cachedHeaders,
+                            timeout: 5000
+                        });
 
                         const pid = generatePid(schoolCode, username, profileIndex);
                         const sessionToken = generateSessionToken(pid);
@@ -147,7 +159,11 @@ module.exports = async function handler(req, res) {
                             fromCache: true
                         });
                     } catch (cachedErr) {
-                        debugLog('[refresh-session] ⚠️ Cached tokens invalid, falling back to rawLogin', cachedErr.message);
+                        const statusCode = Number(cachedErr?.response?.status || cachedErr?.status || 0);
+                        debugLog('[refresh-session] ⚠️ Cached token profile validation failed, falling back to rawLogin', {
+                            status: statusCode,
+                            reason: cachedErr.message
+                        });
                     }
                 }
             }

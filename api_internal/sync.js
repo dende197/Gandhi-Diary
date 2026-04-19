@@ -135,7 +135,7 @@ module.exports = async function handler(req, res) {
                                     school,
                                     tokenRow.argo_access_token,
                                     tokenRow.argo_auth_token,
-                                    sessionSubjectId
+                                    sessionSubjectId || tokenRow.argo_id_soggetto || null
                                 );
                                 dashboardData = await getDashboard(cachedHeaders);
                                 accessToken = tokenRow.argo_access_token;
@@ -159,6 +159,40 @@ module.exports = async function handler(req, res) {
                     }
                 } catch (e) {
                     debugLog('⚠️ Supabase credential/token lookup failed', e.message);
+                }
+
+                if (!tokenRow) {
+                    try {
+                        const { data: tokenForCache } = await supabase
+                            .from('google_tokens')
+                            .select(TOKEN_SELECT_COLUMNS)
+                            .eq('user_id', credentialKey)
+                            .maybeSingle();
+                        if (tokenForCache?.argo_access_token && tokenForCache?.argo_auth_token) {
+                            const expiry = tokenForCache.argo_tokens_expiry
+                                ? new Date(tokenForCache.argo_tokens_expiry)
+                                : null;
+                            if (expiry && expiry > new Date()) {
+                                try {
+                                    const cachedHeaders = createHeaders(
+                                        school,
+                                        tokenForCache.argo_access_token,
+                                        tokenForCache.argo_auth_token,
+                                        sessionSubjectId || tokenForCache.argo_id_soggetto
+                                    );
+                                    dashboardData = await getDashboard(cachedHeaders);
+                                    accessToken = tokenForCache.argo_access_token;
+                                    authToken = tokenForCache.argo_auth_token;
+                                    tokenRow = tokenForCache;
+                                    debugLog('✅ Sync: recovered via cached tokens (no password row)');
+                                } catch (e2) {
+                                    debugLog('⚠️ Recovery cached tokens also failed', e2.message);
+                                }
+                            }
+                        }
+                    } catch (lookupErr) {
+                        debugLog('⚠️ Secondary cached-token recovery lookup failed', lookupErr.message);
+                    }
                 }
             }
 
