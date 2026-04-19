@@ -162,9 +162,15 @@ module.exports = async function handler(req, res) {
                 }
             }
 
-            // ── Attempt 3: full rawLogin with password ──
+            // ── Attempt 3: full rawLogin with password (with retry for transient Argo errors) ──
             if (!dashboardData) {
                 if (!pwd) {
+                    debugLog('❌ Sync: no password available for rawLogin', {
+                        userId: sessionUserId,
+                        credentialKey,
+                        hasVault: !!fromVault,
+                        hasTokenRow: !!tokenRow
+                    });
                     return res.status(401).json({ success: false, error: 'Sessione DidUP scaduta: effettua di nuovo il login' });
                 }
                 setArgoCredentials(credentialKey, {
@@ -173,29 +179,51 @@ module.exports = async function handler(req, res) {
                     password: pwd,
                     profileIndex
                 });
-                try {
-                    const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
-                    accessToken = loginRes.access_token;
-                    profiles = loginRes.profiles || [];
+
+                const MAX_LOGIN_ATTEMPTS = 2;
+                const LOGIN_RETRY_DELAY_MS = 2000;
+                let loginSuccess = false;
+
+                for (let attempt = 1; attempt <= MAX_LOGIN_ATTEMPTS; attempt++) {
                     try {
-                        profiles = await enrichProfiles(school, accessToken, profiles);
-                    } catch (enrichError) {
-                        debugLog('⚠️ Sync enrichProfiles failed', enrichError.message);
-                    }
-                    if (profiles.length > 0) {
-                        if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
-                        credentialKey = generatePid(school, user, profileIndex);
-                        setArgoCredentials(credentialKey, {
-                            schoolCode: school,
-                            username: user,
-                            password: pwd,
-                            profileIndex
+                        if (attempt > 1) {
+                            debugLog(`⏳ Sync rawLogin retry #${attempt} after ${LOGIN_RETRY_DELAY_MS}ms`);
+                            await new Promise(r => setTimeout(r, LOGIN_RETRY_DELAY_MS));
+                        }
+                        const loginRes = await AdvancedArgo.rawLogin(school, user, pwd);
+                        accessToken = loginRes.access_token;
+                        profiles = loginRes.profiles || [];
+                        try {
+                            profiles = await enrichProfiles(school, accessToken, profiles);
+                        } catch (enrichError) {
+                            debugLog('⚠️ Sync enrichProfiles failed', enrichError.message);
+                        }
+                        if (profiles.length > 0) {
+                            if (profileIndex < 0 || profileIndex >= profiles.length) profileIndex = 0;
+                            credentialKey = generatePid(school, user, profileIndex);
+                            setArgoCredentials(credentialKey, {
+                                schoolCode: school,
+                                username: user,
+                                password: pwd,
+                                profileIndex
+                            });
+                            authToken = profiles[profileIndex].token;
+                        }
+                        loginSuccess = true;
+                        break;
+                    } catch (e) {
+                        const statusCode = e.status || e.response?.status || 0;
+                        debugLog(`⚠️ Sync rawLogin attempt ${attempt}/${MAX_LOGIN_ATTEMPTS} failed`, {
+                            status: statusCode,
+                            message: e.message
                         });
-                        authToken = profiles[profileIndex].token;
+                        // Don't retry on definitive auth failures (wrong password, 403 block)
+                        if (statusCode === 403) {
+                            debugLog('⛔ Sync: Argo 403 block, not retrying');
+                            throw e;
+                        }
+                        if (attempt === MAX_LOGIN_ATTEMPTS) throw e;
                     }
-                } catch (e) {
-                    debugLog('⚠️ Sync Login Fail', e.message);
-                    throw e;
                 }
 
                 if (!authToken) {

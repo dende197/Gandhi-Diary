@@ -167,14 +167,57 @@ module.exports = async function handler(req, res) {
         }
 
         if (!schoolCode || !username || !password) {
+            debugLog('[refresh-session] ❌ No credentials found', {
+                userId: normalizedUserId,
+                hasSchoolCode: !!schoolCode,
+                hasUsername: !!username,
+                hasPassword: !!password,
+                source: 'none'
+            });
             return res.status(401).json({
                 success: false,
                 error: 'Nessuna credenziale Argo trovata. Rieffettua il login.'
             });
         }
 
-        // Perform a fresh DIDUP login
-        const loginRes = await AdvancedArgo.rawLogin(schoolCode, username, password);
+        // Perform a fresh DIDUP login (with retry for transient 401s from Argo)
+        let loginRes = null;
+        let lastLoginError = null;
+        const MAX_LOGIN_ATTEMPTS = 2;
+        const LOGIN_RETRY_DELAY_MS = 2000;
+
+        for (let attempt = 1; attempt <= MAX_LOGIN_ATTEMPTS; attempt++) {
+            try {
+                if (attempt > 1) {
+                    debugLog(`[refresh-session] rawLogin retry #${attempt} after ${LOGIN_RETRY_DELAY_MS}ms delay`);
+                    await new Promise(r => setTimeout(r, LOGIN_RETRY_DELAY_MS));
+                }
+                loginRes = await AdvancedArgo.rawLogin(schoolCode, username, password);
+                lastLoginError = null;
+                break; // success
+            } catch (e) {
+                lastLoginError = e;
+                const statusCode = e.status || e.response?.status || 0;
+                debugLog(`[refresh-session] ⚠️ rawLogin attempt ${attempt}/${MAX_LOGIN_ATTEMPTS} failed`, {
+                    status: statusCode,
+                    message: e.message,
+                    userId: normalizedUserId
+                });
+                // Don't retry on definitive auth failures (wrong password etc.)
+                if (statusCode === 403) break;
+            }
+        }
+
+        if (!loginRes || lastLoginError) {
+            const err = lastLoginError || new Error('rawLogin returned no result');
+            console.error('[refresh-session] FAILURE after retries:', err.message);
+            const status = err.status || (err.response?.status) || 401;
+            return res.status(status).json({
+                success: false,
+                error: err.message || 'Errore refresh sessione'
+            });
+        }
+
         const accessToken = loginRes.access_token;
         let profiles = loginRes.profiles || [];
         try {

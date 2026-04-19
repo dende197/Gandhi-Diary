@@ -484,6 +484,17 @@
             if (!sessionData) { state.syncing = false; return; }
             
             try {
+                // Ensure password is available from sessionStorage if RAM copy was lost
+                if (!window._argoPasswordRuntime) {
+                    try {
+                        const storedPwd = sessionStorage.getItem('_argo_pwd_session');
+                        if (storedPwd) {
+                            window._argoPasswordRuntime = decodeURIComponent(escape(atob(storedPwd)));
+                            console.log('[performSync] Restored password from sessionStorage');
+                        }
+                    } catch(_) {}
+                }
+
                 const getFreshRequestBody = () => {
                     const s = sessionManager.load() || sessionData;
                     const resolvedUserId = (typeof window.getUserId === 'function')
@@ -706,6 +717,17 @@
             const session = sessionManager.load();
             if (!session || !sessionManager.isLoggedIn()) return;
 
+            // Restore password from sessionStorage if RAM copy was lost (iOS process kill)
+            if (!window._argoPasswordRuntime) {
+                try {
+                    const stored = sessionStorage.getItem('_argo_pwd_session');
+                    if (stored) {
+                        window._argoPasswordRuntime = decodeURIComponent(escape(atob(stored)));
+                        console.log('[AutoSync] Restored password from sessionStorage');
+                    }
+                } catch(_) {}
+            }
+
             _autoSyncInFlight = true;
             _lastAutoSyncAt = now;
             try {
@@ -825,6 +847,17 @@
             if (session && sessionManager.isLoggedIn()) {
                 state.isLoggedIn = true;
                 state.booting = false;
+
+                // Restore password from sessionStorage if available (survives page refresh, iOS PWA restart)
+                if (!window._argoPasswordRuntime) {
+                    try {
+                        const storedPwd = sessionStorage.getItem('_argo_pwd_session');
+                        if (storedPwd) {
+                            window._argoPasswordRuntime = decodeURIComponent(escape(atob(storedPwd)));
+                            console.log('[Boot] Restored Argo password from sessionStorage');
+                        }
+                    } catch(_) {}
+                }
                 
                 // Hydrate
                 try {
@@ -1122,6 +1155,9 @@
             }
             // Keep password in volatile memory for session refresh (never persisted to localStorage)
             window._argoPasswordRuntime = pass;
+            // Also persist in sessionStorage so it survives page refreshes and iOS PWA process restarts
+            // sessionStorage is cleared on tab close (safe) but survives reloads
+            try { sessionStorage.setItem('_argo_pwd_session', btoa(unescape(encodeURIComponent(pass)))); } catch(_) {}
 
             // 1. Session Save
             if (data.session) {

@@ -193,7 +193,7 @@ function saveWeeklyAgendaCache(html) {
     state._weeklyAgendaCacheHtml = html || '';
     try {
         localStorage.setItem(getAgendaCacheKey(), state._weeklyAgendaCacheHtml);
-    } catch (_) {}
+    } catch (_) { }
 }
 
 /**
@@ -229,16 +229,16 @@ window.refreshAgenda = function () {
         temp.innerHTML = html;
         const newList = temp.firstElementChild;
         if (newList) {
-        newList.id = 'weekly-agenda-list'; // Ensure ID consistency
-        list.parentNode.replaceChild(newList, list);
-        // Avoid lag by using light animation for filters
-        if (!state._filterJustTriggered && typeof animatePlannerSurface === 'function') {
-            animatePlannerSurface('list');
-        } else if (state._filterJustTriggered) {
-             // Subtle fade for filter results instead of heavy stagger
-             gsap.fromTo(newList.querySelectorAll('.agenda-task-card'), { opacity: 0.5 }, { opacity: 1, duration: 0.2 });
-             state._filterJustTriggered = false;
-        }
+            newList.id = 'weekly-agenda-list'; // Ensure ID consistency
+            list.parentNode.replaceChild(newList, list);
+            // Avoid lag by using light animation for filters
+            if (!state._filterJustTriggered && typeof animatePlannerSurface === 'function') {
+                animatePlannerSurface('list');
+            } else if (state._filterJustTriggered) {
+                // Subtle fade for filter results instead of heavy stagger
+                gsap.fromTo(newList.querySelectorAll('.agenda-task-card'), { opacity: 0.5 }, { opacity: 1, duration: 0.2 });
+                state._filterJustTriggered = false;
+            }
         } else {
             list.innerHTML = '';
         }
@@ -450,6 +450,31 @@ window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
     if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
+    // Restore password from sessionStorage if RAM copy was lost (iOS process kill, page reload)
+    if (!window._argoPasswordRuntime) {
+        try {
+            const stored = sessionStorage.getItem('_argo_pwd_session');
+            if (stored) {
+                window._argoPasswordRuntime = decodeURIComponent(escape(atob(stored)));
+                console.log('[refreshSessionToken] Restored password from sessionStorage');
+            }
+        } catch (_) {}
+    }
+
+    // Helper: apply refreshed session data from server response
+    const _applyRefreshedSession = (data) => {
+        const sessionData = {
+            ...data.session,
+            studentId: data.student?.id || s.studentId,
+            sessionToken: data.sessionToken
+        };
+        if (typeof sessionManager !== 'undefined' && sessionManager.save) {
+            sessionManager.save(sessionData);
+        } else {
+            localStorage.setItem('argo_session', JSON.stringify({ ...s, ...sessionData }));
+        }
+    };
+
     // Strategy 1: use in-memory password (app still in RAM from recent login)
     if (window._argoPasswordRuntime) {
         try {
@@ -465,16 +490,7 @@ window.refreshSessionToken = async function () {
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data?.success && data?.sessionToken) {
-                const sessionData = {
-                    ...data.session,
-                    studentId: data.student?.id || s.studentId,
-                    sessionToken: data.sessionToken
-                };
-                if (typeof sessionManager !== 'undefined' && sessionManager.save) {
-                    sessionManager.save(sessionData);
-                } else {
-                    localStorage.setItem('argo_session', JSON.stringify({ ...s, ...sessionData }));
-                }
+                _applyRefreshedSession(data);
                 console.log('[refreshSessionToken] ✅ Refreshed via in-memory password');
                 return true;
             }
@@ -486,29 +502,32 @@ window.refreshSessionToken = async function () {
     // Strategy 2: server-side refresh using Supabase-stored encrypted credentials
     const userId = (typeof window.getUserId === 'function' ? window.getUserId() : null) || s.studentId;
     if (userId && userId !== 'guest') {
-        try {
-            const res = await fetch(`${window.API_BASE_URL}/api/auth?action=refresh-session`, {
-                method: 'POST',
-                headers: getSessionHeaders(),
-                body: JSON.stringify({ userId })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok && data?.success && data?.sessionToken) {
-                const sessionData = {
-                    ...data.session,
-                    studentId: data.student?.id || s.studentId,
-                    sessionToken: data.sessionToken
-                };
-                if (typeof sessionManager !== 'undefined' && sessionManager.save) {
-                    sessionManager.save(sessionData);
-                } else {
-                    localStorage.setItem('argo_session', JSON.stringify({ ...s, ...sessionData }));
+        // Attempt up to 2 times with a short delay (Argo sometimes returns transient 401s)
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                if (attempt > 1) {
+                    console.log(`[refreshSessionToken] Strategy 2 retry #${attempt} after 2s delay...`);
+                    await new Promise(r => setTimeout(r, 2000));
                 }
-                console.log('[refreshSessionToken] ✅ Refreshed via server-side credentials');
-                return true;
+                const res = await fetch(`${window.API_BASE_URL}/api/auth?action=refresh-session`, {
+                    method: 'POST',
+                    headers: getSessionHeaders(),
+                    body: JSON.stringify({ userId })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data?.success && data?.sessionToken) {
+                    _applyRefreshedSession(data);
+                    console.log(`[refreshSessionToken] ✅ Refreshed via server-side credentials (attempt ${attempt})`);
+                    return true;
+                }
+                // If server returned 403 (session token invalid), no point retrying
+                if (res.status === 403) {
+                    console.warn('[refreshSessionToken] Strategy 2: 403 Non autorizzato — sessionToken invalid, stopping retry');
+                    break;
+                }
+            } catch (e) {
+                console.warn(`[refreshSessionToken] Strategy 2 attempt ${attempt} failed:`, e.message);
             }
-        } catch (e) {
-            console.warn('[refreshSessionToken] Strategy 2 (server) failed:', e.message);
         }
     }
 
@@ -754,7 +773,7 @@ function getNextGradeSimulatorValue() {
     try {
         const stored = Number(localStorage.getItem(lsKey('next_grade_sim')));
         if (Number.isFinite(stored)) return Math.max(1, Math.min(10, Math.round(stored)));
-    } catch (_) {}
+    } catch (_) { }
     return 7;
 }
 
@@ -763,7 +782,7 @@ function setNextGradeSimulatorValue(value) {
     state.nextGradeSimulator = next;
     try {
         localStorage.setItem(lsKey('next_grade_sim'), String(next));
-    } catch (_) {}
+    } catch (_) { }
     return next;
 }
 function getMotivationalFallback() {
@@ -1063,7 +1082,7 @@ function updatePlannerCounter() {
 function normalizeTipoVerifica(tipo, upperCase = true) {
     const t = (tipo || '').toString().toLowerCase().trim();
     if (t === 'scritta') return upperCase ? 'SCRITTA' : 'Scritta';
-    if (t === 'orale')   return upperCase ? 'ORALE'   : 'Orale';
+    if (t === 'orale') return upperCase ? 'ORALE' : 'Orale';
     return upperCase ? 'VERIFICA' : 'Valutazione';
 }
 function getHomeTaskWidgetData() {
@@ -1901,18 +1920,18 @@ function renderProfile() {
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px;">
                 ${(() => {
-                    const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
-                    const didupTs = state.didup.lastSuccessTs || 0;
-                    const isStale = state.didup.stale || (!state.didup.connected && didupTs > 0);
-                    const isFresh = state.didup.connected && didupTs && (Date.now() - didupTs) < STALE_THRESHOLD_MS;
-                    const statusColor = isFresh ? 'var(--green)' : isStale ? 'var(--orange)' : 'var(--red)';
-                    const statusIcon = isFresh ? 'ph-plugs-connected' : isStale ? 'ph-cloud-warning' : 'ph-plugs';
-                    const statusIconBg = isFresh ? 'rgba(16, 185, 129, 0.1)' : isStale ? 'rgba(255, 159, 10, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-                    const statusText = isFresh ? 'COLLEGATO' : isStale ? 'DATI NON AGGIORNATI' : 'NON COLLEGATO';
-                    const statusDetail = didupTs
-                        ? 'Ultimo sync: ' + new Date(didupTs).toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' })
-                        : 'Mai sincronizzato';
-                    return `
+            const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
+            const didupTs = state.didup.lastSuccessTs || 0;
+            const isStale = state.didup.stale || (!state.didup.connected && didupTs > 0);
+            const isFresh = state.didup.connected && didupTs && (Date.now() - didupTs) < STALE_THRESHOLD_MS;
+            const statusColor = isFresh ? 'var(--green)' : isStale ? 'var(--orange)' : 'var(--red)';
+            const statusIcon = isFresh ? 'ph-plugs-connected' : isStale ? 'ph-cloud-warning' : 'ph-plugs';
+            const statusIconBg = isFresh ? 'rgba(16, 185, 129, 0.1)' : isStale ? 'rgba(255, 159, 10, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+            const statusText = isFresh ? 'COLLEGATO' : isStale ? 'DATI NON AGGIORNATI' : 'NON COLLEGATO';
+            const statusDetail = didupTs
+                ? 'Ultimo sync: ' + new Date(didupTs).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+                : 'Mai sincronizzato';
+            return `
                 <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 12px;">
                     <div style="width: 48px; height: 48px; border-radius: 14px; background: ${statusIconBg}; display: flex; align-items: center; justify-content: center; color: ${statusColor};">
                         <i class="ph-fill ${statusIcon}" style="font-size: 24px;"></i>
@@ -1926,7 +1945,7 @@ function renderProfile() {
                     <div style="font-size: 12px; color: var(--text-dim); font-weight: 500;">${statusDetail}</div>
                     ${isStale ? '<div style="font-size: 10px; color: var(--orange); font-weight: 600; margin-top: 2px;">Utilizzo dati in cache — ricarica per aggiornare</div>' : ''}
                 </div>`;
-                })()}
+        })()}
 
                 <!-- Google Calendar Card (Universal OAuth2) -->
                 <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 16px;">
@@ -2910,12 +2929,12 @@ function mostraAssenzeModal() {
                                 </div>
                                 <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
                                     ${(() => {
-            const tipo = (a.tipo || '').toString();
-            const nota = (a.nota || '').toString().trim();
-            const tipoLabel = tipo ? (tipo.charAt(0).toUpperCase() + tipo.slice(1)) : 'Evento';
-            const showNota = nota && nota.toLowerCase() !== tipo.trim().toLowerCase();
-            return `${tipoLabel}${showNota ? ` • ${nota}` : ''}`;
-        })()}
+                    const tipo = (a.tipo || '').toString();
+                    const nota = (a.nota || '').toString().trim();
+                    const tipoLabel = tipo ? (tipo.charAt(0).toUpperCase() + tipo.slice(1)) : 'Evento';
+                    const showNota = nota && nota.toLowerCase() !== tipo.trim().toLowerCase();
+                    return `${tipoLabel}${showNota ? ` • ${nota}` : ''}`;
+                })()}
                                 </div>
                                 <div style="margin-top:5px;">
                                     <span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; background:${a.giustificata ? 'rgba(40,205,65,0.14)' : 'rgba(239,68,68,0.14)'}; color:${a.giustificata ? '#15803D' : '#B91C1C'}; border:1px solid ${a.giustificata ? 'rgba(40,205,65,0.35)' : 'rgba(239,68,68,0.35)'};">
@@ -2973,21 +2992,21 @@ function mostraVerificheModal() {
                             <div style="font-size:14px; color:var(--text-dim); text-align:center; font-weight:600;">Nessuna verifica in programma</div>
                         </div>
                     ` : (() => {
-                        let lastDateLabel = '';
-                        return all.map(v => {
-                            const d = parseLocalDate(v.data);
-                            const days = Math.ceil((d - today) / 86400000);
-                            const abbr = getSubjectAbbrev(v.materia);
-                            const key = abbr.toLowerCase();
-                            const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
-                            const tipoLabel = normalizedTipo === 'scritta' ? 'Scritta' : normalizedTipo === 'orale' ? 'Orale' : '';
+            let lastDateLabel = '';
+            return all.map(v => {
+                const d = parseLocalDate(v.data);
+                const days = Math.ceil((d - today) / 86400000);
+                const abbr = getSubjectAbbrev(v.materia);
+                const key = abbr.toLowerCase();
+                const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
+                const tipoLabel = normalizedTipo === 'scritta' ? 'Scritta' : normalizedTipo === 'orale' ? 'Orale' : '';
 
-                            const fullDate = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
-                            const dateKey = v.data;
-                            const showDateHeader = dateKey !== lastDateLabel;
-                            lastDateLabel = dateKey;
+                const fullDate = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+                const dateKey = v.data;
+                const showDateHeader = dateKey !== lastDateLabel;
+                lastDateLabel = dateKey;
 
-                            return `
+                return `
                                 ${showDateHeader ? `<div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; padding: 8px 0 4px 0;">${fullDate}</div>` : ''}
                                 <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(0,0,0,0.02); border-radius:14px; border:1px solid rgba(0,0,0,0.04);">
                                     <div style="width:44px; height:44px; border-radius:12px; background:var(--${key},var(--mat)); color:var(--${key}-t,var(--mat-t)); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; flex-shrink:0; letter-spacing:-0.02em;">
@@ -3009,8 +3028,8 @@ function mostraVerificheModal() {
                                     </div>
                                 </div>
                             `;
-                        }).join('');
-                    })()}
+            }).join('');
+        })()}
                 </div>
 
                 <div style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:transparent; flex:0 0 auto;">
@@ -3289,7 +3308,7 @@ function clearPlannedCalendarTasks() {
 function notifyPlannerChanged() {
     // ✅ FIX: invalida sempre la cache agenda prima di aggiornare
     state._weeklyAgendaCacheHtml = '';
-    try { localStorage.removeItem(getAgendaCacheKey()); } catch(_) {}
+    try { localStorage.removeItem(getAgendaCacheKey()); } catch (_) { }
 
     // badge sul bottone Organizza Oggi e Dashboard
     if (typeof updatePlannerCounter === 'function') updatePlannerCounter();
@@ -3553,13 +3572,13 @@ function renderWeeklyAgenda() {
                             <i class="ph ph-rows"></i> Tutti
                         </div>
                         ${allSubjects.map(s => {
-                            const escapedS = s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-                            return `
+        const escapedS = s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        return `
                                 <div class="filter-chip ${filterSubject === s ? 'active' : ''}" onclick="state.agendaSearchSubject='${escapedS}'; state._filterJustTriggered=true; refreshAgenda();">
                                     ${s}
                                 </div>
                             `;
-                        }).join('')}
+    }).join('')}
                     </div>
                 </div>
             `;
@@ -3618,7 +3637,7 @@ function renderWeeklyAgenda() {
             const cleanSubject = (t.subject || '').replace(/\*/g, '').trim();
             const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
             const timeStr = timeMatch ? timeMatch[1] : '';
-            
+
             const displayText = (t.text || t.description || 'Task')
                 .replace(/^\[AI\]\s*/i, '')
                 .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
@@ -3931,9 +3950,9 @@ window.togglePlannerMobileDropdown = function (event) {
     if (!menu || !toggle) return;
 
     const isActive = menu.classList.contains('active');
-    
+
     // Close all other dropdowns first if any (optional but good practice)
-    
+
     if (isActive) {
         closePlannerMobileDropdown();
     } else {
@@ -3944,7 +3963,7 @@ window.togglePlannerMobileDropdown = function (event) {
         plannerMobileDropdownRepositionListener = repositionPlannerMobileDropdown;
         window.addEventListener('resize', plannerMobileDropdownRepositionListener, { passive: true });
         window.addEventListener('scroll', plannerMobileDropdownRepositionListener, PLANNER_MOBILE_DROPDOWN_SCROLL_LISTENER_OPTIONS);
-        
+
         // Add one-time listener to close when clicking outside
         const closeOnOutsideClick = (e) => {
             if (!menu.contains(e.target) && !toggle.contains(e.target)) {
@@ -4104,7 +4123,7 @@ window.downloadClassActivitiesPdf = function () {
     popup.document.close();
 };
 
-window.showPlanWeekModal = function() {
+window.showPlanWeekModal = function () {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
     state.planWeekInitialPlannedCount = getPlannedTasksTotalCount();
@@ -4181,7 +4200,7 @@ function getGoalProjection(media, goal, count) {
         if (denom <= 1e-9) continue;
 
         const nNeeded = Math.ceil((safeGoal * safeCount - currentSum) / denom);
-        
+
         if (nNeeded >= 1 && nNeeded <= 5) {
             scenarios.push({
                 n: nNeeded,
@@ -4233,11 +4252,11 @@ function getGoalProjection(media, goal, count) {
     if (uniqueScenarios.length === 0) {
         const exact = (safeGoal * (safeCount + 1)) - currentSum;
         if (exact > 0 && exact <= 10) {
-            uniqueScenarios.push({ 
-                n: 1, 
-                grade: exact, 
-                exact: true, 
-                label: `Prossimo voto esatto: ${exact.toFixed(2)}` 
+            uniqueScenarios.push({
+                n: 1,
+                grade: exact,
+                exact: true,
+                label: `Prossimo voto esatto: ${exact.toFixed(2)}`
             });
         }
     }
@@ -5425,6 +5444,9 @@ window.logout = async function () {
         }
 
         sessionManager.clear();
+        // Clear Argo password from RAM and sessionStorage
+        window._argoPasswordRuntime = null;
+        try { sessionStorage.removeItem('_argo_pwd_session'); } catch(_) {}
         if (supabaseClient && supabaseClient.auth) supabaseClient.auth.signOut().catch(e => console.warn('[Logout] Supabase signOut failed:', e));
 
         state.booting = false;
