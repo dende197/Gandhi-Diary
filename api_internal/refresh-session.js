@@ -25,6 +25,7 @@ const {
 } = require('../lib/argo');
 const TOKEN_SELECT_COLUMNS = 'argo_school_code, argo_username, argo_password, profile_index, updated_at, argo_access_token, argo_auth_token, argo_tokens_expiry, argo_id_soggetto';
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
+const ARGO_PROFILE_ENDPOINT = 'https://www.portaleargo.it/appfamiglia/api/rest/profilo';
 
 /**
  * Parse canonical PID values in the format `p:<schoolCode>:<username>:<profileIndex>`.
@@ -135,7 +136,7 @@ module.exports = async function handler(req, res) {
                             tokenRow.argo_id_soggetto ?? null
                         );
                         // Quick validation: lightweight profile endpoint
-                        await axios.get('https://www.portaleargo.it/appfamiglia/api/rest/profilo', {
+                        await axios.get(ARGO_PROFILE_ENDPOINT, {
                             headers: cachedHeaders,
                             timeout: 5000
                         });
