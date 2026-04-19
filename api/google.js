@@ -507,6 +507,9 @@ module.exports = async function handler(req, res) {
                                 const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
                                 const { error: persistError } = await getSupabase().from('google_tokens').upsert({
                                     user_id: normalizeUserId(userId),
+                                    argo_school_code: schoolCode || null,
+                                    argo_username: userName || null,
+                                    profile_index: Number.isInteger(profileIndex) ? profileIndex : null,
                                     argo_access_token: access_token,
                                     argo_auth_token: authToken,
                                     argo_tokens_expiry: expiry,
