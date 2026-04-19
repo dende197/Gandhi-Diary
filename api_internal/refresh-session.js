@@ -10,6 +10,7 @@
  *   4. Returns the new sessionToken + session data to the client
  */
 
+const axios = require('axios');
 const {
     handleCors, debugLog, generatePid, normalizeClass, isValidName,
     createHeaders, generateSessionToken, verifySessionToken, decryptArgoPassword, encryptArgoPassword, getRequestBody,
@@ -18,7 +19,7 @@ const {
 const { getSupabase } = require('../lib/supabase');
 const { getArgoCredentials, setArgoCredentials } = require('../lib/session-vault');
 const {
-    AdvancedArgo, enrichProfiles, getDashboard,
+    AdvancedArgo, enrichProfiles,
     extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
@@ -106,6 +107,12 @@ module.exports = async function handler(req, res) {
                 }
             }
 
+            if (tokenRow) {
+                schoolCode = schoolCode || tokenRow.argo_school_code || null;
+                username = username || tokenRow.argo_username || null;
+                profileIndex = Number.isInteger(tokenRow.profile_index) ? tokenRow.profile_index : profileIndex;
+            }
+
             if (tokenRow?.argo_password) {
                 schoolCode = tokenRow.argo_school_code;
                 username = tokenRow.argo_username;
@@ -124,10 +131,14 @@ module.exports = async function handler(req, res) {
                         const cachedHeaders = createHeaders(
                             schoolCode,
                             tokenRow.argo_access_token,
-                            tokenRow.argo_auth_token
+                            tokenRow.argo_auth_token,
+                            tokenRow.argo_id_soggetto ?? null
                         );
-                        // Quick validation: if getDashboard succeeds, tokens are valid
-                        await getDashboard(cachedHeaders);
+                        // Quick validation: lightweight profile endpoint
+                        await axios.get('https://www.portaleargo.it/appfamiglia/api/rest/profilo', {
+                            headers: cachedHeaders,
+                            timeout: 5000
+                        });
 
                         const pid = generatePid(schoolCode, username, profileIndex);
                         const sessionToken = generateSessionToken(pid);

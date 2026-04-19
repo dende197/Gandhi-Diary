@@ -135,7 +135,7 @@ module.exports = async function handler(req, res) {
                                     school,
                                     tokenRow.argo_access_token,
                                     tokenRow.argo_auth_token,
-                                    sessionSubjectId
+                                    sessionSubjectId || tokenRow.argo_id_soggetto || null
                                 );
                                 dashboardData = await getDashboard(cachedHeaders);
                                 accessToken = tokenRow.argo_access_token;

@@ -33,6 +33,7 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
+const RECENT_TOKEN_EXPIRY_STAGGER_MS = 5 * 60 * 1000; // 5 minutes
 const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
 const WEEK_DAYS = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
 const HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -478,6 +479,22 @@ module.exports = async function handler(req, res) {
                             success: false, 
                             error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.' 
                         });
+                    }
+
+                    if (!tasks && password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
+                        const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
+                        const msSinceExpiry = expiry ? (Date.now() - expiry.getTime()) : Infinity;
+                        if (msSinceExpiry >= 0 && msSinceExpiry < RECENT_TOKEN_EXPIRY_STAGGER_MS) {
+                            debugLog('[Google sync] ⏳ Token refresh likely in progress, returning retriable 503', {
+                                userId: normalizedUserId,
+                                msSinceExpiry
+                            });
+                            return res.status(503).json({
+                                success: false,
+                                error: 'TOKEN_REFRESH_IN_PROGRESS',
+                                retryAfter: 5
+                            });
+                        }
                     }
                     
                     if (!tasks) {
