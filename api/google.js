@@ -32,6 +32,7 @@ const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL
 const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
 const WEEK_DAYS = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
 const HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -502,15 +503,15 @@ module.exports = async function handler(req, res) {
                             tasks = extractHomeworkFromDashboard(dashboardData);
 
                             try {
-                                const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
                                 const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                                await getSupabase().from('google_tokens').update({
+                                await getSupabase().from('google_tokens').upsert({
+                                    user_id: normalizeUserId(userId),
                                     argo_access_token: access_token,
                                     argo_auth_token: authToken,
                                     argo_tokens_expiry: expiry,
                                     argo_id_soggetto: targetProfile?.idSoggetto ?? null,
                                     updated_at: new Date().toISOString()
-                                }).eq('user_id', normalizeUserId(userId));
+                                }, { onConflict: 'user_id' });
                                 debugLog('[Google sync] ✅ Persisted fresh Argo tokens');
                             } catch (persistErr) {
                                 debugLog('[Google sync] ⚠️ Token persist failed', persistErr.message);

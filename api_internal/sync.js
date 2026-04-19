@@ -190,8 +190,8 @@ module.exports = async function handler(req, res) {
                                 }
                             }
                         }
-                    } catch {
-                        // silently ignore
+                    } catch (lookupErr) {
+                        debugLog('⚠️ Secondary cached-token recovery lookup failed', lookupErr.message);
                     }
                 }
             }
