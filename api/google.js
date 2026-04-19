@@ -504,7 +504,7 @@ module.exports = async function handler(req, res) {
 
                             try {
                                 const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                                await getSupabase().from('google_tokens').upsert({
+                                const { error: persistError } = await getSupabase().from('google_tokens').upsert({
                                     user_id: normalizeUserId(userId),
                                     argo_access_token: access_token,
                                     argo_auth_token: authToken,
@@ -512,6 +512,7 @@ module.exports = async function handler(req, res) {
                                     argo_id_soggetto: targetProfile?.idSoggetto ?? null,
                                     updated_at: new Date().toISOString()
                                 }, { onConflict: 'user_id' });
+                                if (persistError) throw persistError;
                                 debugLog('[Google sync] ✅ Persisted fresh Argo tokens');
                             } catch (persistErr) {
                                 debugLog('[Google sync] ⚠️ Token persist failed', persistErr.message);
