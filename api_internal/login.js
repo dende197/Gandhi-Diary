@@ -144,7 +144,15 @@ module.exports = async function handler(req, res) {
 
                 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
                 const tokenExpiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                await supabase.from('google_tokens').upsert({
+
+                // Smart merge: load existing row so we can preserve Google tokens that
+                // may already be linked, instead of overwriting them with NULL.
+                const { data: existingTokenRow, error: fetchError } = await supabase.from('google_tokens')
+                    .select('access_token, refresh_token, expiry_date, calendar_id')
+                    .eq('user_id', pid).maybeSingle();
+                if (fetchError) debugLog('⚠️ Could not fetch existing token row for merge', fetchError.message);
+
+                const argoUpsertData = {
                     user_id: pid,
                     argo_school_code: school,
                     argo_username: username,
@@ -155,7 +163,15 @@ module.exports = async function handler(req, res) {
                     argo_tokens_expiry: tokenExpiry,
                     argo_id_soggetto: targetProfile?.idSoggetto ?? null,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                };
+
+                // Carry forward existing Google tokens so the Argo upsert never nullifies them.
+                if (existingTokenRow?.access_token) argoUpsertData.access_token = existingTokenRow.access_token;
+                if (existingTokenRow?.refresh_token) argoUpsertData.refresh_token = existingTokenRow.refresh_token;
+                if (existingTokenRow?.expiry_date) argoUpsertData.expiry_date = existingTokenRow.expiry_date;
+                if (existingTokenRow?.calendar_id) argoUpsertData.calendar_id = existingTokenRow.calendar_id;
+
+                await supabase.from('google_tokens').upsert(argoUpsertData, { onConflict: 'user_id' });
             } catch (e) {
                 debugLog('⚠️ Supabase sync error', e.message);
             }

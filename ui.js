@@ -673,9 +673,9 @@ window.saveArgoToSupabase = async function () {
                 profileIndex: session.profileIndex ?? 0
             })
         });
-        console.log('✅ Credenziali Argo (con password cifrata) salvate per sync background');
+        console.log('✅ Credenziali Argo salvate correttamente nel cloud');
     } catch (e) {
-        console.error('Errore salvataggio Argo su Supabase:', e);
+        console.error('❌ Errore salvataggio cloud', e);
     }
 };
 // ------------------------------------------------------------
