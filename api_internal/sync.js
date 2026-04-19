@@ -267,13 +267,12 @@ module.exports = async function handler(req, res) {
                 const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
                 dashboardData = await getDashboard(headers);
 
-                // ── Persist fresh Argo tokens to Supabase ──
+                // ── Persist fresh Argo tokens to Supabase (smart merge) ──
                 if (supabase && accessToken && authToken) {
                     try {
                         const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
                         const persistUserId = tokenRow?.user_id || credentialKey;
-                        await supabase.from('google_tokens').upsert({
-                            user_id: persistUserId,
+                        const argoData = {
                             argo_school_code: school,
                             argo_username: user,
                             argo_password: encryptArgoPassword(pwd),
@@ -283,7 +282,17 @@ module.exports = async function handler(req, res) {
                             argo_tokens_expiry: expiry,
                             argo_id_soggetto: profiles[profileIndex]?.idSoggetto ?? null,
                             updated_at: new Date().toISOString()
-                        }, { onConflict: 'user_id' });
+                        };
+                        // Prefer .update() so Google token columns are never touched.
+                        // Fall back to .insert() only when the row doesn't exist yet.
+                        const { data: updatedRows, error: updateError } = await supabase.from('google_tokens')
+                            .update(argoData)
+                            .eq('user_id', persistUserId)
+                            .select('user_id');
+                        if (updateError) debugLog('⚠️ Sync: update failed, will attempt insert', updateError.message);
+                        if (!updatedRows || updatedRows.length === 0) {
+                            await supabase.from('google_tokens').insert({ user_id: persistUserId, ...argoData });
+                        }
                         debugLog('✅ Sync: persisted fresh Argo tokens to Supabase');
                     } catch (persistErr) {
                         debugLog('⚠️ Token cache save failed', persistErr.message);
