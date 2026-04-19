@@ -1,5 +1,5 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody, decryptArgoPassword, normalizeUserId
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody, decryptArgoPassword, encryptArgoPassword, normalizeUserId
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
@@ -212,6 +212,10 @@ module.exports = async function handler(req, res) {
                         const persistUserId = tokenRow?.user_id || credentialKey;
                         await supabase.from('google_tokens').upsert({
                             user_id: persistUserId,
+                            argo_school_code: school,
+                            argo_username: user,
+                            argo_password: encryptArgoPassword(pwd),
+                            profile_index: profileIndex,
                             argo_access_token: accessToken,
                             argo_auth_token: authToken,
                             argo_tokens_expiry: expiry,
