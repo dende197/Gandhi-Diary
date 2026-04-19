@@ -159,7 +159,11 @@ module.exports = async function handler(req, res) {
                             fromCache: true
                         });
                     } catch (cachedErr) {
-                        debugLog('[refresh-session] ⚠️ Cached tokens invalid, falling back to rawLogin', cachedErr.message);
+                        const statusCode = Number(cachedErr?.response?.status || cachedErr?.status || 0);
+                        debugLog('[refresh-session] ⚠️ Cached token profile validation failed, falling back to rawLogin', {
+                            status: statusCode,
+                            reason: cachedErr.message
+                        });
                     }
                 }
             }

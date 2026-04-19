@@ -483,11 +483,11 @@ module.exports = async function handler(req, res) {
 
                     if (!tasks && password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
                         const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
-                        const msFromExpiry = expiry ? (Date.now() - expiry.getTime()) : Infinity;
-                        if (msFromExpiry >= 0 && msFromExpiry < RECENT_TOKEN_EXPIRY_STAGGER_MS) {
+                        const msElapsedSinceExpiry = expiry ? (Date.now() - expiry.getTime()) : Infinity;
+                        if (msElapsedSinceExpiry >= 0 && msElapsedSinceExpiry < RECENT_TOKEN_EXPIRY_STAGGER_MS) {
                             debugLog('[Google sync] ⏳ Token refresh likely in progress, returning retriable 503', {
                                 userId: normalizedUserId,
-                                msFromExpiry
+                                msElapsedSinceExpiry
                             });
                             return res.status(503).json({
                                 success: false,
@@ -523,7 +523,7 @@ module.exports = async function handler(req, res) {
                             try {
                                 const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
                                 const { error: persistError } = await getSupabase().from('google_tokens').upsert({
-                                    user_id: normalizeUserId(userId),
+                                    user_id: normalizedUserId,
                                     argo_school_code: schoolCode || null,
                                     argo_username: userName || null,
                                     profile_index: Number.isInteger(profileIndex) ? profileIndex : null,
