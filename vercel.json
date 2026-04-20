@@ -19,11 +19,11 @@
     },
     {
       "source": "/api/planner/:user_id",
-      "destination": "/api/resources"
+      "destination": "/api/planner/:user_id"
     },
     {
       "source": "/api/profile/:user_id",
-      "destination": "/api/resources"
+      "destination": "/api/profile/:user_id"
     },
     {
       "source": "/api/ai/:action",
