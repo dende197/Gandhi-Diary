@@ -672,32 +672,6 @@ module.exports = async function handler(req, res) {
                 return res.json({ success: true, message: 'Credenziali Argo salvate' });
             }
 
-            // ============= SAVE CLASS SCHEDULE =============
-            case 'save-schedule': {
-                const { userId, classSchedule } = getRequestBody(req);
-                if (!userId || !classSchedule) {
-                    return res.status(400).json({ success: false, error: 'userId e classSchedule richiesti' });
-                }
-
-                const normalizedUserId = normalizeUserId(userId);
-                if (!verifySessionToken(req, normalizedUserId)) {
-                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
-                }
-
-                const parsedSchedule = parseAndValidateClassSchedule(classSchedule);
-                if (parsedSchedule.error) {
-                    return res.status(400).json({ success: false, error: parsedSchedule.error });
-                }
-
-                const { error: schedErr } = await getSupabase()
-                    .from('google_tokens')
-                    .update({ class_schedule: parsedSchedule.value, updated_at: new Date().toISOString() })
-                    .eq('user_id', normalizedUserId);
-
-                if (schedErr) throw schedErr;
-                return res.json({ success: true, message: 'Orario scolastico salvato' });
-            }
-
             // ============= DISCONNECT =============
             case 'disconnect': {
                 const userId = req.query.userId || getRequestBody(req).userId;

@@ -1988,32 +1988,12 @@ function renderProfile() {
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button class="btn-primary" onclick="window.forceReloadApp()" style="height: 52px; background: rgba(20, 20, 20, 0.05); border: 1px solid rgba(0,0,0,0.1); color: var(--text-primary); box-shadow: none;">
-                    <i class="ph-bold ph-arrows-clockwise" style="font-size: 20px;"></i> Forza Aggiornamento App
-                </button>
                 <button class="btn-primary" onclick="logout()" style="height: 52px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--red); box-shadow: none;">
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
                 </button>
             </div>
         </div> `;
 }
-
-window.forceReloadApp = function() {
-    if (confirm('L\'app verrà riavviata per scaricare l\'ultima versione. Continuare?')) {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for (let registration of registrations) {
-                    registration.unregister();
-                }
-                window.location.reload(true);
-            }).catch(() => {
-                window.location.reload(true);
-            });
-        } else {
-            window.location.reload(true);
-        }
-    }
-};
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
@@ -5169,46 +5149,6 @@ function togglePollCreatorUI() {
     }
 }
 
-
-// ── 3. PATCH: refreshDailyQuote ──
-window.refreshDailyQuote = function (btnEl) {
-    window._quoteOffset = (window._quoteOffset || 0) + 1;
-    const quotes = [
-        "Un piccolo passo oggi vale più di dieci domani.",
-        "La costanza batte il talento quando il talento non è costante.",
-        "Fatto è meglio di perfetto.",
-        "Studia con calma, migliora ogni giorno.",
-        "La conoscenza è potere.",
-        "La curiosità è il motore dell'apprendimento.",
-        "Ogni errore è un passo verso la comprensione.",
-        "La disciplina è il ponte tra gli obiettivi e i risultati.",
-        "Un libro è un giardino tascabile.",
-        "Imparare senza riflettere è tempo perso.",
-    ];
-    const day = new Date().getDate();
-    const idx = (day + window._quoteOffset) % quotes.length;
-
-    const heroStatus = document.querySelector('.hero-status span[style*="italic"]');
-    if (heroStatus) {
-        heroStatus.style.opacity = '0';
-        heroStatus.style.transform = 'translateY(-4px)';
-        heroStatus.style.transition = 'all 0.2s ease';
-        setTimeout(() => {
-            heroStatus.textContent = `"${quotes[idx]}"`;
-            heroStatus.style.opacity = '0.8';
-            heroStatus.style.transform = 'translateY(0)';
-        }, 200);
-    }
-
-    if (btnEl) {
-        btnEl.style.transform = 'rotate(360deg)';
-        btnEl.style.transition = 'transform 0.4s cubic-bezier(0.16,1,0.3,1)';
-        setTimeout(() => {
-            btnEl.style.transform = '';
-            btnEl.style.transition = '';
-        }, 400);
-    }
-};
 
 // ── 4. PATCH: animationend listener ──
 document.addEventListener('animationend', (e) => {

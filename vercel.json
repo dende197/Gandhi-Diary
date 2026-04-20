@@ -34,14 +34,6 @@
       "destination": "/api/main?action=config"
     },
     {
-      "source": "/api/ping",
-      "destination": "/api/main?action=ping"
-    },
-    {
-      "source": "/api/debug/:action",
-      "destination": "/api/main?action=:action"
-    },
-    {
       "source": "/api/circolari/:action",
       "destination": "/api/circolari?action=:action"
     }
