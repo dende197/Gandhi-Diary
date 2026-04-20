@@ -18,6 +18,14 @@
       "destination": "/api/auth?action=resolve-profile"
     },
     {
+      "source": "/api/planner/:user_id",
+      "destination": "/api/planner/:user_id"
+    },
+    {
+      "source": "/api/profile/:user_id",
+      "destination": "/api/profile/:user_id"
+    },
+    {
       "source": "/api/ai/:action",
       "destination": "/api/ai"
     },

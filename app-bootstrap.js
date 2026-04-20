@@ -947,7 +947,7 @@ const APP_VERSION = '3.3.8';
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker
-                    .register('service-worker.js?v=3.3.8')
+                    .register(`service-worker.js?v=${APP_VERSION}`)
                     .then((registration) => {
                         registration.update().catch(() => {});
                     })
