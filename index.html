@@ -1099,9 +1099,16 @@
                 };
 
                 if (profileIndex === null) {
-                    const savedSession = sessionManager.load();
-                    if (savedSession && savedSession.profileIndex !== undefined) {
-                        payload.profileIndex = savedSession.profileIndex;
+                    // Only reuse the saved profileIndex during background re-syncs
+                    // (login form is NOT visible). When the user is explicitly logging
+                    // in from the form, leave profileIndex null so the backend returns
+                    // MULTIPLE_PROFILES and the selection modal is shown.
+                    const isExplicitLogin = !!document.getElementById('argo-school');
+                    if (!isExplicitLogin) {
+                        const savedSession = sessionManager.load();
+                        if (savedSession && savedSession.profileIndex !== undefined) {
+                            payload.profileIndex = savedSession.profileIndex;
+                        }
                     }
                 }
 
