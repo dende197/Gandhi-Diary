@@ -181,8 +181,7 @@ function getVaultCredentialsFromContext({ userId, schoolCode, username, profileI
 // --- Token Storage (Supabase) ---
 async function saveTokens(userId, tokens, argoCreds = null) {
     const normalizedUserId = normalizeUserId(userId);
-    const upsertData = {
-        user_id: normalizedUserId,
+    const updateData = {
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expiry_date: tokens.expiry_date || null,
@@ -192,33 +191,31 @@ async function saveTokens(userId, tokens, argoCreds = null) {
 
     // If argo credentials provided (during initial link), save them too
     if (argoCreds) {
-        upsertData.argo_school_code = argoCreds.schoolCode;
-        upsertData.argo_username = argoCreds.username;
-        upsertData.argo_password = encryptArgoPassword(argoCreds.password);
-        upsertData.profile_index = argoCreds.profileIndex ?? 0;
+        updateData.argo_school_code = argoCreds.schoolCode;
+        updateData.argo_username = argoCreds.username;
+        updateData.argo_password = encryptArgoPassword(argoCreds.password);
+        updateData.profile_index = argoCreds.profileIndex ?? 0;
     }
 
-    // Use safe merging: only update the fields we have to avoid wiping others (like Argo credentials)
-    const { data: existing } = await getSupabase()
+    // Try to update the existing row first: this is a safe partial update that only touches
+    // the columns present in updateData, preserving Argo credentials when only refreshing
+    // Google tokens (i.e. when argoCreds is null).
+    const { data: updated, error: updateError } = await getSupabase()
         .from('google_tokens')
-        .select('user_id')
+        .update(updateData)
         .eq('user_id', normalizedUserId)
-        .maybeSingle();
+        .select('user_id');
 
-    if (existing) {
-        const { error } = await getSupabase()
+    if (updateError) throw new Error(`Supabase save error: ${updateError.message}`);
+
+    // If no row was updated the user is new — insert a fresh row.
+    if (!updated || updated.length === 0) {
+        const { error: insertError } = await getSupabase()
             .from('google_tokens')
-            .update(upsertData)
-            .eq('user_id', normalizedUserId);
-        if (error) throw new Error(`Supabase update error: ${error.message}`);
-    } else {
-        const { error } = await getSupabase()
-            .from('google_tokens')
-            .insert(upsertData);
-        if (error) throw new Error(`Supabase insert error: ${error.message}`);
+            .insert({ user_id: normalizedUserId, ...updateData });
+        if (insertError) throw new Error(`Supabase save error: ${insertError.message}`);
     }
 
-    if (error) throw new Error(`Supabase save error: ${error.message}`);
 }
 
 async function loadTokens(userId) {
@@ -539,17 +536,24 @@ module.exports = async function handler(req, res) {
 
                             try {
                                 const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                                const { error: persistError } = await getSupabase().from('google_tokens').upsert({
-                                    user_id: normalizedUserId,
-                                    argo_school_code: schoolCode || null,
-                                    argo_username: userName || null,
-                                    profile_index: Number.isInteger(profileIndex) ? profileIndex : null,
+                                // Use .update() (row is guaranteed to exist — tokenRow was verified above).
+                                // Only specify fields we actually have values for so we never
+                                // accidentally nullify existing credentials from the other service.
+                                const persistData = {
                                     argo_access_token: access_token,
                                     argo_auth_token: authToken,
                                     argo_tokens_expiry: expiry,
                                     argo_id_soggetto: subjectId ?? null,
                                     updated_at: new Date().toISOString()
-                                }, { onConflict: 'user_id' });
+                                };
+                                if (schoolCode) persistData.argo_school_code = schoolCode;
+                                if (userName) persistData.argo_username = userName;
+                                if (password) persistData.argo_password = encryptArgoPassword(password);
+                                if (Number.isInteger(profileIndex)) persistData.profile_index = profileIndex;
+                                const { error: persistError } = await getSupabase()
+                                    .from('google_tokens')
+                                    .update(persistData)
+                                    .eq('user_id', normalizedUserId);
                                 if (persistError) throw persistError;
                                 debugLog('[Google sync] ✅ Persisted fresh Argo tokens');
                             } catch (persistErr) {

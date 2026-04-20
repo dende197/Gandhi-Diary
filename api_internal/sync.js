@@ -267,40 +267,31 @@ module.exports = async function handler(req, res) {
                 const headers = createHeaders(school, accessToken, authToken, profiles[profileIndex]?.idSoggetto);
                 dashboardData = await getDashboard(headers);
 
-                // ── Persist fresh Argo tokens to Supabase (Safe Merging) ──
-                if (supabase && accessToken && authToken) {
-                    try {
-                        const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                        const persistUserId = tokenRow?.user_id || credentialKey;
-                        
-                        const argoCacheData = {
-                            argo_school_code: school,
-                            argo_username: user,
-                            argo_password: encryptArgoPassword(pwd),
-                            profile_index: profileIndex,
-                            argo_access_token: accessToken,
-                            argo_auth_token: authToken,
-                            argo_tokens_expiry: expiry,
-                            argo_id_soggetto: profiles[profileIndex]?.idSoggetto ?? null,
-                            updated_at: new Date().toISOString()
-                        };
-
-                        const { data: existing } = await supabase
-                            .from('google_tokens')
-                            .select('user_id')
-                            .eq('user_id', persistUserId)
-                            .maybeSingle();
-
-                        if (existing) {
-                            await supabase.from('google_tokens').update(argoCacheData).eq('user_id', persistUserId);
-                            debugLog('✅ Sync: fresh Argo tokens updated in Supabase (merged)');
-                        } else {
-                            await supabase.from('google_tokens').insert({ user_id: persistUserId, ...argoCacheData });
-                            debugLog('✅ Sync: fresh Argo tokens inserted in Supabase');
-                        }
-                    } catch (persistErr) {
-                        debugLog('⚠️ Token cache save failed', persistErr.message);
+                        // Prefer .update() so Google token columns are never touched.
+                try {
+                    const argoData = {
+                        argo_school_code: school,
+                        argo_username: user,
+                        argo_password: encryptArgoPassword(pwd),
+                        profile_index: profileIndex,
+                        argo_access_token: accessToken,
+                        argo_auth_token: authToken,
+                        argo_tokens_expiry: new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString(),
+                        argo_id_soggetto: profiles[profileIndex]?.idSoggetto ?? null,
+                        updated_at: new Date().toISOString()
+                    };
+                    const persistUserId = tokenRow?.user_id || credentialKey;
+                    const { data: updatedRows, error: updateError } = await supabase.from('google_tokens')
+                        .update(argoData)
+                        .eq('user_id', persistUserId)
+                        .select('user_id');
+                    if (updateError) debugLog('⚠️ Sync: update failed, will attempt insert', updateError.message);
+                    if (!updatedRows || updatedRows.length === 0) {
+                        await supabase.from('google_tokens').insert({ user_id: persistUserId, ...argoData });
                     }
+                    debugLog('✅ Sync: persisted fresh Argo tokens to Supabase');
+                } catch (persistErr) {
+                    debugLog('⚠️ Token cache save failed', persistErr.message);
                 }
             }
         }
