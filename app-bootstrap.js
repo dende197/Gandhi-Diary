@@ -1,7 +1,6 @@
         // ==============================================================================
         // G-CONNECT CORE SYSTEM v3.0
         // ==============================================================================
-const APP_VERSION = '3.3.8';
         const GCONNECT_DEFAULT_API_BACKEND = 'https://g-connect-backend-r5j1.vercel.app';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
 
@@ -947,7 +946,7 @@ const APP_VERSION = '3.3.8';
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker
-                    .register(`service-worker.js?v=${APP_VERSION}`)
+                    .register('service-worker.js')
                     .then((registration) => {
                         registration.update().catch(() => {});
                     })
