@@ -144,8 +144,8 @@ module.exports = async function handler(req, res) {
 
                 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
                 const tokenExpiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                await supabase.from('google_tokens').upsert({
-                    user_id: pid,
+                
+                const argoData = {
                     argo_school_code: school,
                     argo_username: username,
                     argo_password: encryptArgoPassword(password),
@@ -155,8 +155,31 @@ module.exports = async function handler(req, res) {
                     argo_tokens_expiry: tokenExpiry,
                     argo_id_soggetto: targetProfile?.idSoggetto ?? null,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                };
+
+                // Use safe merging: check if row exists to avoid wiping other columns (like Google tokens)
+                const { data: existingToken } = await supabase
+                    .from('google_tokens')
+                    .select('user_id')
+                    .eq('user_id', pid)
+                    .maybeSingle();
+
+                if (existingToken) {
+                    const { error: upErr } = await supabase
+                        .from('google_tokens')
+                        .update(argoData)
+                        .eq('user_id', pid);
+                    if (upErr) throw upErr;
+                    debugLog('✅ Argo credentials updated in Supabase (merged)', { user_id: pid });
+                } else {
+                    const { error: inErr } = await supabase
+                        .from('google_tokens')
+                        .insert({ user_id: pid, ...argoData });
+                    if (inErr) throw inErr;
+                    debugLog('✅ Argo credentials inserted in Supabase', { user_id: pid });
+                }
             } catch (e) {
+                console.error('❌ Supabase sync error:', e.message);
                 debugLog('⚠️ Supabase sync error', e.message);
             }
         }

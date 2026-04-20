@@ -25,8 +25,8 @@ const { getArgoCredentials } = require('../lib/session-vault');
 // --- Google OAuth2 Config ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 
-    (process.env.VERCEL_URL 
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
+    (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}/api/google?action=callback`
         : 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback');
 
@@ -198,9 +198,25 @@ async function saveTokens(userId, tokens, argoCreds = null) {
         upsertData.profile_index = argoCreds.profileIndex ?? 0;
     }
 
-    const { error } = await getSupabase()
+    // Use safe merging: only update the fields we have to avoid wiping others (like Argo credentials)
+    const { data: existing } = await getSupabase()
         .from('google_tokens')
-        .upsert(upsertData, { onConflict: 'user_id' });
+        .select('user_id')
+        .eq('user_id', normalizedUserId)
+        .maybeSingle();
+
+    if (existing) {
+        const { error } = await getSupabase()
+            .from('google_tokens')
+            .update(upsertData)
+            .eq('user_id', normalizedUserId);
+        if (error) throw new Error(`Supabase update error: ${error.message}`);
+    } else {
+        const { error } = await getSupabase()
+            .from('google_tokens')
+            .insert(upsertData);
+        if (error) throw new Error(`Supabase insert error: ${error.message}`);
+    }
 
     if (error) throw new Error(`Supabase save error: ${error.message}`);
 }
@@ -235,7 +251,7 @@ function getAuthenticatedClient(tokenRow) {
     // Auto-refresh: when tokens are refreshed, update Supabase
     oauth2.on('tokens', async (newTokens) => {
         try {
-            const update = { 
+            const update = {
                 access_token: newTokens.access_token,
                 expiry_date: newTokens.expiry_date,
                 updated_at: new Date().toISOString()
@@ -345,7 +361,7 @@ module.exports = async function handler(req, res) {
                 try {
                     const oauth2 = getOAuth2Client();
                     const { tokens } = await oauth2.getToken(code);
-                    
+
                     await saveTokens(userId, tokens, argoCreds);
                     debugLog('Google Calendar linked', { userId, hasArgo: !!argoCreds });
 
@@ -401,14 +417,14 @@ module.exports = async function handler(req, res) {
 
                 // 2. Get Argo tasks
                 let tasks = body.tasks; // Client can send tasks directly
-                
+
                 if (!tasks && session) {
                     // Fetch fresh tasks from Argo
                     let schoolCode = session.schoolCode;
                     let userName = session.userName || session.username;
                     let password = session.password;
                     let resolvedProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
-                    
+
                     // Fallback: se la password non arriva dal client, usa le credenziali Argo salvate in Supabase
                     if (!password && tokenRow) {
                         schoolCode = schoolCode || tokenRow.argo_school_code;
@@ -474,10 +490,11 @@ module.exports = async function handler(req, res) {
                         }
                     }
 
+
                     if (!tasks && !password) {
-                        return res.status(400).json({ 
-                            success: false, 
-                            error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.' 
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.'
                         });
                     }
 
@@ -496,7 +513,7 @@ module.exports = async function handler(req, res) {
                             });
                         }
                     }
-                    
+
                     if (!tasks) {
                         try {
                             const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
@@ -691,7 +708,7 @@ module.exports = async function handler(req, res) {
                     const tokenRow = await loadTokens(userId);
                     if (tokenRow?.access_token) {
                         const oauth2 = getOAuth2Client();
-                        await oauth2.revokeToken(tokenRow.access_token).catch(() => {});
+                        await oauth2.revokeToken(tokenRow.access_token).catch(() => { });
                     }
                 } catch (e) { /* ignore revoke errors */ }
 

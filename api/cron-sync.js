@@ -175,7 +175,7 @@ module.exports = async function handler(req, res) {
         for (const user of (users || [])) {
             results.processed++;
             console.log(`[Cron] Processing user: ${user.user_id}`);
-            
+
             try {
                 await withTimeout((async () => {
                     // 2. Try cached Argo tokens first, rawLogin as fallback
@@ -193,7 +193,7 @@ module.exports = async function handler(req, res) {
                             : null;
                         if (expiry && expiry > new Date()) {
                             try {
-                                headers = createHeaders(user.argo_school_code, user.argo_access_token, user.argo_auth_token);
+                                headers = createHeaders(user.argo_school_code, user.argo_access_token, user.argo_auth_token, user.argo_id_soggetto || null);
                                 dashboardData = await getDashboard(headers);
                                 access_token = user.argo_access_token;
                                 authToken = user.argo_auth_token;
@@ -234,9 +234,11 @@ module.exports = async function handler(req, res) {
                             await supabase.from('google_tokens').update({
                                 argo_access_token: access_token,
                                 argo_auth_token: authToken,
+                                argo_id_soggetto: subjectId ?? null,
                                 argo_tokens_expiry: expiry,
                                 updated_at: new Date().toISOString()
                             }).eq('user_id', user.user_id);
+
                             debugLog(`[Cron] ✅ Persisted fresh Argo tokens for ${user.user_id}`);
                         } catch (persistErr) {
                             console.warn(`[Cron] ⚠️ Token persist failed for ${user.user_id}:`, persistErr.message);

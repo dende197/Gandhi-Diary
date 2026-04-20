@@ -598,6 +598,7 @@
                         success: true,
                         summary: `Scraping OK · Compiti: ${Array.isArray(data.tasks) ? data.tasks.length : 0} · Voti: ${Array.isArray(data.voti) ? data.voti.length : 0} · Attività classe: ${activitiesCount}`
                     });
+                    console.log('[performSync] ✅ Sync success updated lastSync:', state.lastSync);
                     if (typeof window.warmWeeklyAgendaCache === 'function') {
                         setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
                     }
@@ -610,9 +611,12 @@
                             }
                         }, 2000);
                     }
+                } else {
+                    console.warn('[performSync] ⚠️ API returned success:false', data);
+                    throw new Error(data.error || 'Il server ha restituito un errore di sincronizzazione.');
                 }
             } catch (e) {
-                console.warn("Sync error:", e);
+                console.error("❌ Sync error:", e);
                 appendSyncDiagnostic({
                     source: 'sync',
                     success: false,

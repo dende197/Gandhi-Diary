@@ -1988,12 +1988,32 @@ function renderProfile() {
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="btn-primary" onclick="window.forceReloadApp()" style="height: 52px; background: rgba(20, 20, 20, 0.05); border: 1px solid rgba(0,0,0,0.1); color: var(--text-primary); box-shadow: none;">
+                    <i class="ph-bold ph-arrows-clockwise" style="font-size: 20px;"></i> Forza Aggiornamento App
+                </button>
                 <button class="btn-primary" onclick="logout()" style="height: 52px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--red); box-shadow: none;">
                     <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
                 </button>
             </div>
         </div> `;
 }
+
+window.forceReloadApp = function() {
+    if (confirm('L\'app verrà riavviata per scaricare l\'ultima versione. Continuare?')) {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+                window.location.reload(true);
+            }).catch(() => {
+                window.location.reload(true);
+            });
+        } else {
+            window.location.reload(true);
+        }
+    }
+};
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
