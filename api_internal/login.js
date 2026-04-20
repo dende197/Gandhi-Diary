@@ -150,7 +150,7 @@ module.exports = async function handler(req, res) {
                 const { data: existingTokenRow, error: fetchError } = await supabase.from('google_tokens')
                     .select('access_token, refresh_token, expiry_date, calendar_id')
                     .eq('user_id', pid).maybeSingle();
-                if (fetchError) debugLog('⚠️ Could not fetch existing token row for merge', fetchError.message);
+                if (fetchError) console.warn('⚠️ Could not fetch existing token row for merge:', fetchError.message);
 
                 const argoUpsertData = {
                     user_id: pid,
@@ -171,7 +171,12 @@ module.exports = async function handler(req, res) {
                 if (existingTokenRow?.expiry_date) argoUpsertData.expiry_date = existingTokenRow.expiry_date;
                 if (existingTokenRow?.calendar_id) argoUpsertData.calendar_id = existingTokenRow.calendar_id;
 
-                await supabase.from('google_tokens').upsert(argoUpsertData, { onConflict: 'user_id' });
+                const { error: upsertError } = await supabase.from('google_tokens').upsert(argoUpsertData, { onConflict: 'user_id' });
+                if (upsertError) {
+                    console.error('❌ LOGIN: Argo credential upsert FAILED:', upsertError.message, JSON.stringify(upsertError));
+                    throw upsertError;
+                }
+                console.log(`✅ LOGIN: Argo credentials saved to Supabase for ${pid} (school=${school}, user=${username})`);
             } catch (e) {
                 console.error('❌ Supabase sync error:', e.message);
                 debugLog('⚠️ Supabase sync error', e.message);

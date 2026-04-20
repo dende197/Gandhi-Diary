@@ -285,13 +285,20 @@ module.exports = async function handler(req, res) {
                         .update(argoData)
                         .eq('user_id', persistUserId)
                         .select('user_id');
-                    if (updateError) debugLog('⚠️ Sync: update failed, will attempt insert', updateError.message);
-                    if (!updatedRows || updatedRows.length === 0) {
-                        await supabase.from('google_tokens').insert({ user_id: persistUserId, ...argoData });
+                    if (updateError) {
+                        console.warn('⚠️ Sync: update failed, will attempt insert:', updateError.message);
                     }
-                    debugLog('✅ Sync: persisted fresh Argo tokens to Supabase');
+                    if (!updatedRows || updatedRows.length === 0) {
+                        const { error: insertError } = await supabase.from('google_tokens')
+                            .insert({ user_id: persistUserId, ...argoData });
+                        if (insertError) {
+                            console.error('❌ SYNC: Argo credential insert FAILED:', insertError.message, JSON.stringify(insertError));
+                            throw insertError;
+                        }
+                    }
+                    console.log(`✅ SYNC: Argo credentials persisted for ${persistUserId}`);
                 } catch (persistErr) {
-                    debugLog('⚠️ Token cache save failed', persistErr.message);
+                    console.error('⚠️ SYNC: Token cache save failed:', persistErr.message);
                 }
             }
         }

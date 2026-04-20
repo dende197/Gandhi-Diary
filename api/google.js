@@ -555,9 +555,9 @@ module.exports = async function handler(req, res) {
                                     .update(persistData)
                                     .eq('user_id', normalizedUserId);
                                 if (persistError) throw persistError;
-                                debugLog('[Google sync] ✅ Persisted fresh Argo tokens');
+                                console.log(`[Google sync] ✅ Persisted fresh Argo tokens for ${normalizedUserId}`);
                             } catch (persistErr) {
-                                debugLog('[Google sync] ⚠️ Token persist failed', persistErr.message);
+                                console.error('[Google sync] ⚠️ Token persist failed:', persistErr.message);
                             }
                         } catch (argoErr) {
                             console.error('Argo fetch failed:', argoErr.message);
