@@ -55,7 +55,7 @@ Nel pannello Vercel (Settings → Environment Variables), assicurati di avere:
   - **Obbligatoria**: deve essere una stringa esadecimale da 64 caratteri.
   - Se mancante/non valida, il backend rifiuta login e accesso agli endpoint protetti da `x-session-token`.
 
-> **Nota**: `CLASS_SCHEDULE` è **opzionale**. Se non impostato, viene usato automaticamente l'orario predefinito della classe 4D (Lun-Sab, 08:00–13:00). È comunque possibile impostare un orario personalizzato **per singolo utente** tramite l'azione `save-schedule` (vedere sezione API).
+> **Nota**: `CLASS_SCHEDULE` è **opzionale**. Se non impostato, viene usato automaticamente l'orario predefinito della classe 4D (Lun-Sab, 08:00–13:00).
 
 ### Sicurezza sessione e credenziali
 
@@ -64,30 +64,11 @@ Nel pannello Vercel (Settings → Environment Variables), assicurati di avere:
   - `Authorization: Bearer <CRON_SECRET>` oppure
   - `x-vercel-cron-secret: <CRON_SECRET>`
 
-### 5. Orario Scolastico per-utente (Google Calendar Sync)
+### 5. Orario Scolastico per sync (Google Calendar)
 
-Ogni utente può salvare il proprio orario scolastico personale, che viene usato per determinare l'orario preciso degli eventi su Google Calendar. Se non impostato, viene usato il valore dell'env var `CLASS_SCHEDULE` (globale) oppure l'orario di default della classe 4D.
+Puoi passare l'orario scolastico direttamente alla chiamata di sync. Se non presente, viene usato il valore dell'env var `CLASS_SCHEDULE` (globale) oppure l'orario di default della classe 4D.
 
-**Salva l'orario tramite API:**
-```
-POST /api/google?action=save-schedule
-x-session-token: <session_token>
-Content-Type: application/json
-
-{
-  "userId": "...",
-  "classSchedule": {
-    "lunedi":   [{"materia":"MATEMATICA","inizio":"08:00","fine":"09:00"}, ...],
-    "martedi":  [...],
-    "mercoledi":[...],
-    "giovedi":  [...],
-    "venerdi":  [...],
-    "sabato":   [...]
-  }
-}
-```
-
-**Passa l'orario direttamente al sync (senza salvarlo):**
+**Passa l'orario direttamente al sync:**
 ```
 POST /api/google?action=sync
 Content-Type: application/json
