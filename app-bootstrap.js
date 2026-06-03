@@ -135,9 +135,7 @@
             view: 'home',
             user: { id: null, name: 'Studente', class: '...', avatar: null, specialization: null },
             didup: { connected: false, lastUpdate: null, lastSuccessTs: 0, stale: false },
-            aiChatHistory: [],
-            aiChatPending: false,
-            aiChatInputValue: '',
+
             syncDiagnostics: [],
             lastSync: null,
             streak: 0,
@@ -190,7 +188,7 @@
         window.appendSyncDiagnostic = appendSyncDiagnostic;
 
         // --- NAVIGATE (defined early so fluidity-engine can upgrade it to v3) ---
-        const _allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+        const _allowedViews = ['home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
         window.navigate = function navigate(v) {
             if (!_allowedViews.includes(v)) v = 'home';
             location.hash = v;
@@ -321,7 +319,7 @@
                 };
             });
 
-            // Keep only assigned tasks from Argo (manual/AI tasks are intentionally discarded)
+            // Keep only assigned tasks from Argo (manual tasks are intentionally discarded)
             const combined = [...formatted];
             
             // Final Deduplicate (by true ID)
@@ -782,10 +780,9 @@
                     } catch (_) {
                         state.syncDiagnostics = [];
                     }
-                    const hydratedAiChat = JSON.parse(localStorage.getItem(lsKey('ai_chat')) || '[]');
-                    state.aiChatHistory = Array.isArray(hydratedAiChat) ? hydratedAiChat : [];
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
+                    try { localStorage.removeItem(lsKey('ai_chat')); } catch (_) {}
                     // Restore DiDUP sync timestamp to determine data freshness
                     const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
                     const didupTs = parseInt(localStorage.getItem(lsKey('didup_last_success_ts')) || '0');

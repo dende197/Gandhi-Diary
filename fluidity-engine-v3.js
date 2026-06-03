@@ -156,8 +156,6 @@
     return [
       (state.tasks  || []).length,
       (state.voti   || []).length,
-      (state.aiChatHistory || []).length,
-      !!state.aiChatPending,
       state.view,
       state.isLoggedIn
     ].join('|');
@@ -181,7 +179,7 @@
     if (typeof window.navigate !== 'function' || window.navigate._isV3) return;
 
     window.navigate = function navigate(v) {
-      const allowed = ['login', 'home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+      const allowed = ['login', 'home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
       if (!allowed.includes(v) || (!state.isLoggedIn && v !== 'login')) v = state.isLoggedIn ? 'home' : 'login';
       if (v !== 'login' && state.isLoggedIn && state._loggedOut) state._loggedOut = false;
 
@@ -230,23 +228,17 @@
       return;
     }
     document.body.classList.remove('logged-out');
-    const isAI = view === 'ai_assistant';
-    if (isAI) {
-      document.body.classList.add('is-ai-mode');
-      document.body.style.overflow = 'hidden'; document.body.style.height = '100svh';
-      root.style.overflow = 'hidden'; root.style.height = '100%';
-    } else {
-      document.body.classList.remove('is-ai-mode');
-      document.body.style.overflow = ''; document.body.style.height = '';
-      root.style.overflow = 'visible'; root.style.height = '';
-    }
+    document.body.classList.remove('is-ai-mode');
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+    root.style.overflow = 'visible';
+    root.style.height = '';
 
     let html = '';
     switch (view) {
       case 'home':             html = (typeof renderHome === 'function') ? renderHome() : ''; break;
       case 'planner':          html = (typeof renderPlanner === 'function') ? renderPlanner() : ''; break;
       case 'voti':             html = (typeof renderGradesView === 'function') ? renderGradesView() : ''; break;
-      case 'ai_assistant':     html = (typeof renderAIAssistantView === 'function') ? renderAIAssistantView() : ''; break;
       case 'academic_profile': html = (typeof renderAcademicProfile === 'function') ? renderAcademicProfile() : ''; break;
       case 'profile':          html = (typeof renderProfile === 'function') ? renderProfile() : ''; break;
       case 'circolari':        html = (typeof renderCircolariView === 'function') ? renderCircolariView() : ''; break;
