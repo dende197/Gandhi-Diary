@@ -167,6 +167,7 @@ window._truncateWithEllipsis = function truncateWithEllipsis(value, max = 180) {
     if (!txt) return '';
     return txt.length > max ? `${txt.slice(0, max)}…` : txt;
 };
+const truncateWithEllipsis = window._truncateWithEllipsis;
 
 function getAgendaCacheKey() {
     try {
@@ -880,72 +881,31 @@ function showModal(html, className = '') {
         modalRuntime.pendingCloseTimeout = null;
     }
     container.innerHTML = `
-            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
-                <div class="modal-content ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;">
+            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(20px);box-sizing:border-box;transition: opacity 0.3s ease;">
+                <div class="modal-content liquid-glass rounded-[40px] deep-shadow ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;padding:32px;animation: modalAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);">
                     ${html}
                 </div>
             </div>
         `;
 }
-function closeModal(event) {
-    if (event) event.stopPropagation();
-    const container = document.getElementById('modal-container');
-    if (container) {
-        // Animazione uscita
-        const overlay = container.querySelector('.modal-overlay');
-        if (overlay) {
-            overlay.style.opacity = '0';
-            if (modalRuntime.pendingCloseTimeout) clearTimeout(modalRuntime.pendingCloseTimeout);
-            modalRuntime.pendingCloseTimeout = setTimeout(() => {
-                container.innerHTML = '';
-                modalRuntime.pendingCloseTimeout = null;
-            }, 200);
-        } else {
-            container.innerHTML = '';
-        }
-    }
-}
+
 function showToast(message, type = 'success', customBackground = '') {
     const existing = document.getElementById('g-toast');
     if (existing) existing.remove();
 
     const typeValue = typeof type === 'string' ? type.toLowerCase() : '';
-    const bgColor = customBackground || (typeValue === 'warning'
-        ? '#FF9500'
-        : typeValue === 'error'
-            ? '#FF3B30'
-            : BRAND_GRADIENT);
-    const toastIconByType = {
-        warning: 'ph-warning',
-        error: 'ph-x-circle',
-        success: 'ph-check-circle'
-    };
-    const icon = toastIconByType[typeValue] || toastIconByType.success;
+    const color = typeValue === 'warning' ? '#FF9500' : typeValue === 'error' ? '#FF3B30' : '#0058bc';
 
     const toast = document.createElement('div');
-    toast.setAttribute('role', 'status');
-    toast.setAttribute('aria-live', typeValue === 'error' ? 'assertive' : 'polite');
     toast.id = 'g-toast';
-    toast.style = `
-                position: fixed;
-                bottom: 160px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: ${bgColor};
-                color: white;
-                padding: 12px 24px;
-                border-radius: 50px;
-                font-weight: 700;
-                font-size: 14px;
-                z-index: 9999;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                animation: toastPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            `;
-    const iconEl = document.createElement('i');
-    iconEl.className = `ph-bold ${icon}`;
-    iconEl.style.marginRight = '8px';
-    toast.appendChild(iconEl);
-    toast.appendChild(document.createTextNode(message || ''));
+    toast.className = 'liquid-glass rounded-full px-6 py-3 fixed bottom-24 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-3 deep-shadow';
+    toast.style.border = `1px solid ${color}40`;
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined text-[20px]" style="color: ${color}">${typeValue === 'error' ? 'error' : typeValue === 'warning' ? 'warning' : 'check_circle'}</span>
+        <span class="text-[14px] font-bold text-on-surface">${message}</span>
+    `;
+
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -953,7 +913,7 @@ function showToast(message, type = 'success', customBackground = '') {
         toast.style.transform = 'translateX(-50%) translateY(20px)';
         toast.style.transition = 'all 0.4s ease-in';
         setTimeout(() => toast.remove(), 400);
-    }, typeValue === 'warning' ? 4000 : 1800);
+    }, 2500);
 }
 function showBoot(text) {
     const el = document.getElementById('boot-overlay');
@@ -1006,43 +966,22 @@ function isValidName(name) {
     return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
 }
 function renderNav() {
-    const h = new Date().getHours();
-    const shortName = getSafeUserName();
+    const views = [
+        { id: 'home', label: 'Overview', icon: 'dashboard' },
+        { id: 'planner', label: 'Planner', icon: 'calendar_today' },
+        { id: 'voti', label: 'Grades', icon: 'analytics' },
+        { id: 'circolari', label: 'Circulars', icon: 'newspaper' }
+    ];
 
     return `
-        <!-- ── TOPBAR V6 ──────────────────────────────────────────── -->
-        <div class="topbar" style="background: var(--bg-body); border-bottom: 1px solid var(--border-light); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(20px);">
-          
-          <div class="logo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;"></div>
-
-          <div class="nav-pills" style="display: flex; gap: 4px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
-            <button class="nav-pill ${state.view === 'home' ? 'active' : ''}" onclick="navigate('home')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'home' ? 'white' : 'transparent'}; color: ${state.view === 'home' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'home' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Panoramica</button>
-            <button class="nav-pill ${state.view === 'planner' ? 'active' : ''}" onclick="navigate('planner')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'planner' ? 'white' : 'transparent'}; color: ${state.view === 'planner' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'planner' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Agenda</button>
-            <button class="nav-pill ${state.view === 'voti' ? 'active' : ''}" onclick="navigate('voti')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'voti' ? 'white' : 'transparent'}; color: ${state.view === 'voti' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'voti' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Voti</button>
-            <button class="nav-pill ${state.view === 'circolari' ? 'active' : ''}" onclick="navigate('circolari')" style="border:none; border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: ${state.view === 'circolari' ? 'white' : 'transparent'}; color: ${state.view === 'circolari' ? 'black' : 'var(--text-dim)'}; box-shadow: ${state.view === 'circolari' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'};">Circolari</button>
-          </div>
-
-          <nav class="mobile-dock" aria-label="Navigazione principale">
-              <button class="dock-item ${state.view === 'home' ? 'dock-active' : ''}" onclick="navigate('home')" aria-label="Panoramica">
-                  <span>Panoramica</span>
-              </button>
-              <button class="dock-item ${state.view === 'planner' ? 'dock-active' : ''}" onclick="navigate('planner')" aria-label="Agenda">
-                  <span>Agenda</span>
-              </button>
-              <button class="dock-item ${state.view === 'voti' ? 'dock-active' : ''}" onclick="navigate('voti')" aria-label="Voti">
-                  <span>Voti</span>
-              </button>
-              <button class="dock-item ${state.view === 'circolari' ? 'dock-active' : ''}" onclick="navigate('circolari')" aria-label="Circolari">
-                  <span>Circolari</span>
-              </button>
-          </nav>
-
-          <div class="topbar-right" style="display: flex; align-items: center; gap: 24px;">
-            <span id="topbar-clock" class="time-chip" style="font-size: 13px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums;">
-                ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </span>
-          </div>
-        </div>`;
+        <nav class="floating-pill-nav">
+            ${views.map(v => `
+                <a href="#${v.id}" class="nav-item ${state.view === v.id ? 'active' : ''}" onclick="navigate('${v.id}')">
+                    <span class="material-symbols-outlined">${v.icon}</span>
+                    <span>${v.label}</span>
+                </a>
+            `).join('')}
+        </nav>`;
 }
 function updatePlanTaskUI(taskId, isPlanned) {
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1578,24 +1517,24 @@ function renderLogin() {
     const hasSession = savedSession && sessionManager.isLoggedIn();
 
     return `
-        <div class="view login-view" style="min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) 24px calc(env(safe-area-inset-bottom, 0px) + 24px); text-align: center;">
-            <div style="width: 80px; height: 80px; background: var(--meeting-gradient); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 10px 24px rgba(13,31,45,0.25); overflow: hidden;">
-                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-512.png';" style="width: 60px; height: 60px; border-radius: 14px; object-fit: cover;">
+        <div class="view login-view min-h-screen flex flex-col justify-center items-center p-8 text-center bg-background">
+            <div class="w-24 h-24 bg-primary/10 rounded-[32px] liquid-glass flex items-center justify-center mb-10 liquid-shadow">
+                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" class="w-16 h-16 rounded-2xl object-cover">
             </div>
             
-            <h1 style="font-size: 32px; font-weight: 800; margin: 0;"></h1>
-            <p style="color: var(--text-secondary); font-size: 16px; margin: 8px 0 40px 0; max-width: 280px;">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
+            <h1 class="headline-lg text-primary mb-2">G-Connect</h1>
+            <p class="body-lg text-on-surface-variant/60 mb-12 max-w-[280px]">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
             
-            <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 16px;">
-                <button class="btn-primary" onclick="openArgoLogin()" style="width: 100%; height: 52px; font-size: 16px; background: var(--meeting-gradient); border: none; color: #fff;">
-                    <i class="ph-bold ph-sign-in"></i> Accedi con DidUP
+            <div class="w-full max-w-[320px] flex flex-col gap-4">
+                <button class="btn btn-primary w-full h-14 text-lg" onclick="openArgoLogin()">
+                    <span class="material-symbols-outlined">login</span> Accedi con DidUP
                 </button>
                 
                 ${hasSession ? `
-                <div style="padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; margin-top: 12px;">
-                    <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Sessione salvata</div>
-                    <div style="font-size: 15px; font-weight: 700; margin: 4px 0 16px 0;">${escapeHtml(state.user?.name || 'Utente')}</div>
-                    <button onclick="logout()" style="width: 100%; height: 40px; border-radius: 10px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); color: var(--red); font-size: 13px; font-weight: 700; cursor: pointer;">
+                <div class="p-6 liquid-glass rounded-[28px] mt-4 liquid-shadow">
+                    <div class="label-sm text-on-surface-variant/40 mb-1">Sessione salvata</div>
+                    <div class="title-md mb-4">${escapeHtml(state.user?.name || 'Utente')}</div>
+                    <button onclick="logout()" class="w-full py-3 rounded-2xl bg-error/10 text-error font-bold text-[13px] hover:bg-error/20 transition-all">
                         Usa altro account
                     </button>
                 </div>
@@ -1611,279 +1550,240 @@ function renderLogin() {
 function renderHome() {
     const todayStr = getLocalDateString();
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    const shortName = getSafeUserName();
 
     // Media
-    const mediaStr = calcolaMedia(state.voti) || '0';
+    const mediaStr = calcolaMedia(state.voti) || '0.00';
     const media = parseFloat(mediaStr);
-
-    // Greeting
-    const h = new Date().getHours();
-    const days = ['Domenica', 'Lun\xecdì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-    const period = h < 5 ? 'NOTTE' : h < 12 ? 'MATTINA' : h < 17 ? 'POMERIGGIO' : 'SERA';
-    const greeting = h < 5 ? 'Buonanotte' : h < 12 ? 'Buongiorno' : h < 17 ? 'Buon pomeriggio' : 'Buona sera';
-    const quote = (typeof getDailyQuote === 'function' ? getDailyQuote() : '') || getMotivationalFallback();
-    const shortName = getSafeUserName();
-    const dayOfWeek = days[new Date().getDay()].toUpperCase();
-
-    // Streak dots
-    const streak = state.streak || 0;
-    const streakDots = [...Array(7)].map((_, i) => {
-        const isLast = i === 6;
-        const filled = i < streak;
-        const bg = isLast && filled ? 'background:#2DB86A' : filled ? 'background:#141414' : 'background:#F0EDE8';
-        return `<div class="sdot ${filled ? 'on' : ''} ${isLast ? 'today' : ''}" style="width:8px;height:8px;border-radius:50%;${bg}"></div>`;
-    }).join('');
-
-    // Prossima verifica (scraped from DidUp) — carousel
-    const todayISO = getLocalDateString(today);
-    const allVerifiche = (state.verifiche || [])
-        .filter(v => v.data && v.data >= todayISO)
-        .sort((a, b) => a.data.localeCompare(b.data));
-    // Manual Verifiche from dedicated database table
-    const manualExams = (state.manualVerifiche || [])
-        .filter(v => !v.done && v.date && v.date >= todayISO)
-        .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
-
-    const combined = [...allVerifiche, ...manualExams];
-    const seen = new Set();
-    const allUpcoming = combined.filter(v => {
-        const key = `${v.data}||${(v.materia || '').toLowerCase()}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    }).sort((a, b) => a.data.localeCompare(b.data));
-
-    // Carousel index
-    if (typeof window._verificheIdx === 'undefined') window._verificheIdx = 0;
-    if (window._verificheIdx >= allUpcoming.length) window._verificheIdx = 0;
-    const vIdx = window._verificheIdx;
-    const currentVerifica = allUpcoming[vIdx] || null;
-    const daysToExam = currentVerifica ? Math.ceil((parseLocalDate(currentVerifica.data) - today) / 86400000) : null;
-    const examAbbr = currentVerifica ? getSubjectAbbrev(currentVerifica.materia) : 'N/D';
-    const examKey = examAbbr.toLowerCase();
-    const examTipo = (currentVerifica?.tipo || '').toString().trim().toLowerCase();
-    const examTipoLabel = examTipo === 'scritta' ? 'SCRITTA' : examTipo === 'orale' ? 'ORALE' : '';
-    const verificheCount = allUpcoming.length;
-
-    // Ultima circolare
-    const lastCirc = (state.circolari && state.circolari.length > 0)
-        ? state.circolari[0]
-        : { data: '--/--/----', titolo: 'Nessuna circolare', id: null };
-
-    // Presenze (from real assenzeData)
-    const ad = state.assenzeData || {};
-    const totAssenze = ad.totaleAssenze || 0;
-    const totRitardi = ad.totaleRitardi || 0;
-    const totUscite = ad.totaleUscite || 0;
-    const oreAssenza = ad.oreAssenzaTotali || 0;
-    const presenze = totAssenze > 0
-        ? Math.max(0, Math.round((1 - totAssenze / (state.giorniScuola || 200)) * 100))
-        : (state.assenze != null ? Math.round((1 - state.assenze / (state.giorniScuola || 200)) * 100) : 94);
-
-    // Voti recenti (ultimi 6, ordinati per data decrescente)
-    const recentGrades = (state.voti || [])
-        .filter(v => v.data || v.date)
-        .sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))
-        .slice(0, 6);
-
-    const homeTaskData = getHomeTaskWidgetData();
-
-    // Media delta vs mese scorso
     const prevMedia = state.lastMedia || media;
     const delta = (media - prevMedia).toFixed(2);
-    const deltaStr = delta > 0 ? `\u2191 +${delta}` : delta < 0 ? `\u2193 ${delta}` : '';
-    const deltaColor = delta >= 0 ? 'var(--ing-t, #1A6B3A)' : 'var(--lat-t, #8A1A1A)';
+    const deltaStr = delta > 0 ? `+${delta}` : delta;
+
+    // Upcoming tasks for "Today" and "Tomorrow"
+    const todayISO = getLocalDateString(today);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowISO = getLocalDateString(tomorrow);
+
+    const todayTasks = (state.tasks || []).filter(t => t.due_date === todayISO && !t.done).slice(0, 2);
+    const tomorrowTasks = (state.tasks || []).filter(t => t.due_date === tomorrowISO).slice(0, 1);
 
     return `
-    <div class="dashboard view" style="width: 100%;">
-
-      <!-- ROW 1: Greeting · Prossima Verifica (Expanded) -->
-      <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 320px; gap:14px; margin-bottom:16px;">
-        <div class="card greeting-card" onclick="window.scrollTo({ top: 0, behavior: 'auto' }); navigate('profile')" style="cursor:pointer; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); border:none; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.15); position:relative;">
-          <button onclick="window.handleManualOwaResyncClick(event)" title="Resync manuale OWA" aria-label="Resync manuale OWA" style="position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:9px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            <i class="ph-bold ph-arrow-clockwise" style="font-size:14px;"></i>
-          </button>
-          <div class="greeting-period" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.7); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">${dayOfWeek} &middot; ${period}</div>
-          <div class="greeting-text" style="font-size:19px; font-weight:700; color:#ffffff; letter-spacing:-0.03em; line-height:1.2;">${greeting}, ${shortName}.</div>
-          <div class="greeting-quote" style="font-size:14px; color:rgba(255,255,255,0.7); font-style:italic; line-height:1.6; margin-top:8px;">&ldquo;${quote}&rdquo;</div>
-        </div>
- 
-        <div id="widget-verifiche" class="card verifica-card" onclick="mostraVerificheModal()" style="cursor:pointer; border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; position:relative; height: 154px; overflow: hidden;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">VERIFICHE</div>
-            <div style="display:flex; gap:4px;">
-              ${verificheCount > 1 ? `
-              <button onclick="event.stopPropagation(); window._navVerifica(-1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">‹</button>
-              <button onclick="event.stopPropagation(); window._navVerifica(1)" style="width:20px; height:20px; border-radius:50%; border:1px solid #E0DDD8; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:#908C86; padding:0;">›</button>
-              ` : ''}
+    <div class="view overview-view pb-32">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 pt-4">
+            <div>
+                <h1 class="headline-lg text-primary">Buongiorno, ${shortName}</h1>
+                <p class="body-md text-on-surface-variant/60">Media generale</p>
             </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px; margin-bottom:5px;">
-            <span id="vw-abbr" style="display:inline-flex; background:var(--${examKey},var(--mat)); color:var(--${examKey}-t,var(--mat-t)); border-radius:7px; padding:3px 9px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;">${examAbbr}</span>
-            <span id="vw-tipo" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; text-transform:uppercase;">${examTipoLabel}</span>
-            <span id="vw-counter" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#BCB8B2; margin-left:auto;">${verificheCount > 1 ? `${vIdx + 1}/${verificheCount}` : ''}</span>
-          </div>
-          <div id="vw-desc" style="font-size:12px; font-weight:600; color:#141414; line-height:1.3; margin-bottom:6px; height:32px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${currentVerifica ? escapeHtml((currentVerifica.text || '').substring(0, 45)) : 'Nessuna verifica'}</div>
-          <div style="display:flex; align-items:baseline; gap:4px; margin-top:auto;"><span id="vw-days" style="font-size:30px; font-weight:700; color:#141414; letter-spacing:-0.04em; line-height:1;">${daysToExam !== null ? daysToExam : '--'}</span><span style="font-size:11px; color:#908C86;">giorni</span></div>
-          <div id="vw-bar" style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:8px; overflow:hidden;">${currentVerifica ? `<div id="vw-bar-fill" style="height:100%; width:${Math.max(5, 100 - daysToExam * 8)}%; background:var(--${examKey}-dot,var(--mat-dot)); border-radius:100px;"></div>` : ''}</div>
-        </div>
- 
-      </div>
+            <div class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center text-primary cursor-pointer" onclick="navigate('profile')">
+                <span class="material-symbols-outlined">school</span>
+            </div>
+        </header>
 
-      <!-- ROW 2: Media Voti · Presenze · Ultima Circolare -->
-      <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
-
-        <div class="card" onclick="navigate('voti')" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:10px;">Media voti</div>
-            <div style="font-size:42px; font-weight:700; color:#1A5F8A; letter-spacing:-0.05em; line-height:1;">${media ? media.toFixed(2) : '—'}</div>
-            <div style="font-size:11px; color:#5A9EC0; margin-top:5px;">${deltaStr ? `${deltaStr} rispetto al mese scorso` : 'voti registrati: ' + (state.voti || []).length}</div>
-          </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:14px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (media / 10) * 100)}%; background:#3B9DD4; border-radius:100px;"></div></div>
-        </div>
-
-        <div class="card" onclick="mostraAssenzeModal()" style="cursor:pointer; border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ASSENZE</div>
-            <div style="font-size:32px; font-weight:700; color:#8A1A1A; letter-spacing:-0.05em; line-height:1;">${((oreAssenza / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2)}%</div>
-            <div style="font-size:10px; color:#A64A4A; margin-top:4px;">${totAssenze} assenz${totAssenze === 1 ? 'a' : 'e'} (${oreAssenza.toFixed(2)}h)${totRitardi > 0 ? ` · ${totRitardi} ritard${totRitardi === 1 ? 'o' : 'i'}` : ''}${totUscite > 0 ? ` · ${totUscite} uscit${totUscite === 1 ? 'a' : 'e'}` : ''}</div>
-          </div>
-          <div style="height:3px; background:#F0EDE8; border-radius:100px; margin-top:12px; overflow:hidden;"><div style="height:100%; width:${Math.min(100, (oreAssenza / ((state.giorniScuola || 200) * 5)) * 100)}%; background:#EF4444; border-radius:100px;"></div></div>
-        </div>
-
-        <div class="card circ-widget" ${lastCirc.id ? `onclick="mostraCircolare('${escapeJsSingleQuote(lastCirc.id)}')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:18px 22px; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <div style="font-size:8px; color:#BCB8B2; letter-spacing:0.12em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:8px;">ULTIMA CIRCOLARE</div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#C0BBB4; margin-bottom:4px;">${lastCirc.data}</div>
-            <div style="font-size:14px; font-weight:600; color:#141414; line-height:1.35; letter-spacing:-0.01em;">${escapeHtml(lastCirc.titolo)}</div>
-          </div>
-          <span style="display:inline-flex; margin-top:14px; background:linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF 100%); color:#fff; font-family:'JetBrains Mono',monospace; font-size:9px; border-radius:100px; padding:3px 9px; letter-spacing:0.05em; align-self:flex-start;">● nuova</span>
-        </div>
-
-      </div>
-
-      <!-- ROW 3: Voti recenti · Task di oggi -->
-      <div class="home-grid-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-
-        <div style="display:flex; flex-direction:column; min-height:0;">
-          <div class="widget-header" style="display:flex; align-items:center; height:26px; margin-bottom:8px;">
-            <div style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">Voti Recenti</div>
-          </div>
-          <div class="card" ${recentGrades.length ? `onclick="navigate('voti')" style="cursor:pointer;"` : ''} style="border-radius:18px; padding:16px 18px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-            <div style="display:flex; flex-direction:column;">
-            ${recentGrades.length ? recentGrades.slice(0, 6).map(v => {
-        const subContent = v.materia || v.subject || 'N/A';
-        const abbr = getSubjectAbbrev(subContent);
-        const key = abbr.toLowerCase();
-        const rawVal = v.valore || v.value || '';
-        const giu = isGiustifica(rawVal);
-        const val = giu ? 0 : parseFloat(rawVal);
-        const valStr = giu ? 'GIU' : rawVal.toString();
-        const pct = giu ? 0 : Math.min(100, (val / 10) * 100);
-        return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE;">
-                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:500; border-radius:6px; padding:3px 6px; flex-shrink:0; width:34px; text-align:center; background:var(--${key},#EEE); color:var(--${key}-t,#333);">${abbr}</span>
-                <div style="flex:1; height:3px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                  <div style="height:100%; width:${pct}%; background:var(--${key}-dot,#3B9DD4); border-radius:100px;"></div>
+        <!-- Main Stats Card -->
+        <section class="liquid-glass rounded-[40px] p-8 mb-10 relative overflow-hidden">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h2 class="text-[56px] font-bold text-primary leading-none mb-2">${media.toFixed(2)}</h2>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">trending_up</span> ${deltaStr}
+                        </span>
+                        <span class="text-on-surface-variant/40 text-[12px] font-medium">from last semester</span>
+                    </div>
                 </div>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:${giu ? '9' : '12.5'}px; font-weight:500; width:${giu ? '30' : '26'}px; text-align:right; color:${giu ? '#BCB8B2' : `var(--${key}-t,#333)`};">${valStr}</span>
-              </div>`;
-    }).join('') : '<div style="font-size:11px; color:#C0BBB4; padding:12px 0; text-align:center;">Nessun voto</div>'}
             </div>
-          </div>
-        </div>
 
-        <div style="display:flex; flex-direction:column; min-height:0;">
-          <div class="widget-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; min-height:38px;">
-            <div id="home-focus-label" style="font-size:9px; color:#BCB8B2; letter-spacing:0.15em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">${homeTaskData.title}</div>
-            <div style="display:flex; gap:8px;">
-                <div style="display:flex; gap:4px;">
-                    <button id="home-focus-btn-today" onclick="setHomeTaskFocus('today')" style="min-width:60px; height:36px; border-radius:10px; border:1px solid ${homeTaskData.mode === 'today' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'today' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'today' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 14px;" aria-label="Visualizza oggi" title="Oggi">
-                        <span style="font-size:11px; font-weight:800; letter-spacing:0.05em;">OGGI</span>
-                    </button>
-                    <button id="home-focus-btn-tomorrow" onclick="setHomeTaskFocus('tomorrow')" style="min-width:72px; height:36px; border-radius:10px; border:1px solid ${homeTaskData.mode === 'tomorrow' ? '#141414' : '#D3CEC7'}; background:${homeTaskData.mode === 'tomorrow' ? '#141414' : '#FFFFFF'}; color:${homeTaskData.mode === 'tomorrow' ? '#FFFFFF' : '#4F4A43'}; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 14px;" aria-label="Visualizza domani" title="Domani">
-                        <span style="font-size:11px; font-weight:800; letter-spacing:0.05em;">DOMANI</span>
-                    </button>
+            <!-- Graph Placeholder -->
+            <div class="flex items-end gap-3 h-24 mb-2">
+                <div class="flex-1 bg-primary/10 rounded-t-xl h-[20%]"></div>
+                <div class="flex-1 bg-primary/20 rounded-t-xl h-[40%]"></div>
+                <div class="flex-1 bg-primary/30 rounded-t-xl h-[30%]"></div>
+                <div class="flex-1 bg-primary/40 rounded-t-xl h-[60%]"></div>
+                <div class="flex-1 bg-primary/60 rounded-t-xl h-[50%]"></div>
+                <div class="flex-1 bg-primary rounded-t-xl h-[80%] relative">
+                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded-md font-bold">Now</div>
                 </div>
-                <button onclick="window.showPlanWeekModal()" style="min-width:90px; height:36px; border-radius:10px; border:1px solid #D3CEC7; background:#FFFFFF; color:#4F4A43; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 14px;" aria-label="Pianifica"><i class="ph-bold ph-calendar-plus" style="font-size:12px; margin-right:5px;"></i><span style="font-size:11px; font-weight:800; letter-spacing:0.05em;">PIANIFICA</span></button>
             </div>
-          </div>
-          <div id="home-focus-task-list" class="card" style="border-radius:18px; padding:16px 18px; overflow-y:auto;">
-            ${renderHomeTaskListHtml(homeTaskData)}
-          </div>
-        </div>
+        </section>
 
-      </div>
+        <!-- Today Section -->
+        <section class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="title-md">Oggi</h2>
+                <button class="text-primary font-bold text-[13px]" onclick="navigate('planner')">See all</button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                ${todayTasks.length ? todayTasks.map(t => `
+                    <div class="liquid-glass rounded-[28px] p-6 liquid-shadow flex justify-between items-center">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">${getSubjectIcon(t.subject)}</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-[16px]">${t.subject}</h3>
+                                <p class="text-on-surface-variant/60 text-[13px]">${truncateWithEllipsis(t.text, 30)}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-on-surface-variant/40 text-[12px] font-bold">10:00 - 11:30</p>
+                        </div>
+                    </div>
+                `).join('') : `
+                    <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40 text-[14px]">
+                        Nessun compito per oggi.
+                    </div>
+                `}
+            </div>
+        </section>
+
+        <!-- Tomorrow Section -->
+        <section>
+            <h2 class="title-md mb-4">Domani</h2>
+            <div class="flex flex-col gap-4">
+                ${tomorrowTasks.length ? tomorrowTasks.map(t => `
+                    <div class="liquid-glass rounded-[28px] p-6 border-l-4 border-error/40 relative overflow-hidden">
+                        <div class="absolute top-4 right-6 bg-error/10 text-error px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">EXAM</div>
+                        <div class="flex gap-4 items-center mb-4">
+                             <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                                <span class="material-symbols-outlined">history</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-[18px]">${t.subject}</h3>
+                                <p class="text-on-surface-variant/40 text-[12px] flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">schedule</span> 09:00 - 12:00
+                                </p>
+                            </div>
+                        </div>
+                        <p class="text-on-surface-variant/60 italic text-[14px]">"${truncateWithEllipsis(t.text, 60)}"</p>
+                    </div>
+                `).join('') : `
+                    <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40 text-[14px]">
+                        Nessuna verifica per domani.
+                    </div>
+                `}
+            </div>
+        </section>
     </div>`;
 }
 
+function getSubjectIcon(subject) {
+    const s = normalizeSubjectName(subject);
+    if (s.includes('matem')) return 'functions';
+    if (s.includes('fisic')) return 'science';
+    if (s.includes('storia')) return 'history_edu';
+    if (s.includes('arte') || s.includes('disegno')) return 'palette';
+    if (s.includes('lingua') || s.includes('inglese') || s.includes('italiano')) return 'menu_book';
+    return 'school';
+}
+
 function renderPlanner() {
-    const cachedAgenda = getCachedWeeklyAgendaHtml();
-    const listHtml = cachedAgenda || renderWeeklyAgenda();
-    if (!cachedAgenda && listHtml) saveWeeklyAgendaCache(listHtml);
-    const isMobilePlanner = typeof window !== 'undefined' && window.innerWidth <= 768;
-    const mobilePlannerDropdown = `
-                        <div class="planner-mobile-actions" style="position: relative;">
-                            <button id="planner-menu-toggle" class="planner-mobile-menu-toggle" onclick="togglePlannerMobileDropdown(event)" aria-label="Azioni agenda" title="Azioni agenda" aria-haspopup="true" aria-expanded="false">
-                                <i class="ph-bold ph-caret-down"></i>
-                            </button>
-                            <div id="planner-mobile-menu" class="planner-mobile-dropdown">
-                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('plan')">
-                                    <i class="ph-bold ph-calendar-plus"></i> Pianifica
-                                </button>
-                                <button class="pd-item" onclick="handlePlannerMobileMenuAction('pdf')">
-                                    <i class="ph-bold ph-file-pdf"></i> Attività PDF
-                                </button>
-                                <button class="pd-item danger" onclick="handlePlannerMobileMenuAction('clear')" style="color: #C62828 !important; background: #FFF0EE !important; border-top: 1px solid rgba(0,0,0,0.05);">
-                                    <i class="ph-bold ph-trash"></i> Svuota pianifica
-                                </button>
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = getLocalDateString(today);
+
+    // Week Scroller Data
+    const weekDays = [];
+    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    const startOfWeek = new Date(today);
+    const day = today.getDay();
+    const diff = today.getDate() - day; // Sunday is 0
+    startOfWeek.setDate(diff);
+
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
+        const iso = getLocalDateString(d);
+        weekDays.push({
+            label: dayLabels[d.getDay()],
+            dayNum: d.getDate(),
+            iso: iso,
+            isToday: iso === todayISO
+        });
+    }
+
+    // Tasks for the smart timeline (using today as default if none selected)
+    const selectedDate = state.selectedDate || todayISO;
+    const dayTasks = (state.tasks || []).filter(t => t.due_date === selectedDate);
+
+    return `
+    <div class="view planner-view pb-32">
+        <header class="flex justify-between items-center mb-6 pt-4">
+            <h1 class="text-primary font-bold text-xl">Agenda</h1>
+            <button class="text-primary font-bold text-[12px] uppercase tracking-widest hover:opacity-80 transition-opacity" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
+        </header>
+
+        <!-- Week Scroller -->
+        <section class="mb-8">
+            <div class="flex overflow-x-auto no-scrollbar gap-3 py-2">
+                ${weekDays.map(d => `
+                    <div class="flex-none w-14 h-20 flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-all duration-300 ${d.iso === selectedDate ? 'bg-primary text-on-primary active-liquid-shadow scale-105' : 'liquid-glass liquid-shadow hover:translate-y-[-2px]'}"
+                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
+                        <span class="text-[10px] uppercase mb-1 font-bold ${d.iso === selectedDate ? 'opacity-80' : 'text-on-surface-variant/60'}">${d.label}</span>
+                        <span class="text-[18px] font-bold">${d.dayNum}</span>
+                        ${d.isToday && d.iso !== selectedDate ? '<div class="h-1 w-1 bg-primary rounded-full mt-1"></div>' : ''}
+                        ${d.iso === selectedDate ? '<div class="h-1 w-1 bg-white rounded-full mt-1"></div>' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+
+        <!-- Smart Agenda Timeline -->
+        <section class="flex flex-col gap-6">
+            ${dayTasks.length ? dayTasks.map(t => {
+                const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
+                const colorClass = isExam ? 'error' : 'primary';
+                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+                const timeStr = timeMatch ? timeMatch[1] : '08:30';
+
+                return `
+                <div class="flex gap-4">
+                    <div class="w-12 flex flex-col items-end pt-3 shrink-0">
+                        <span class="text-[12px] text-on-surface-variant font-bold">${timeStr}</span>
+                        <span class="text-[10px] text-on-surface-variant/40 mt-0.5">09:30</span>
+                    </div>
+                    <div class="flex-1 liquid-glass rounded-[28px] p-5 relative group hover:shadow-xl transition-all duration-300 liquid-shadow overflow-visible ${isExam ? 'bg-error-container/5 border-error/10' : ''}">
+                        <div class="absolute left-0 top-4 bottom-4 w-1 bg-${colorClass} rounded-full"></div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex flex-col pl-3">
+                                <span class="text-[10px] text-${colorClass} uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
+                                    ${isExam ? '<span class="material-symbols-outlined text-[12px]">warning</span> SIMULAZIONE' : 'LEZIONE'}
+                                </span>
+                                <h3 class="title-md text-on-surface">${t.subject}</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-${colorClass}/10 flex items-center justify-center text-${colorClass} border border-white/40 shadow-sm shrink-0">
+                                <span class="material-symbols-outlined text-[22px]">${getSubjectIcon(t.subject)}</span>
                             </div>
                         </div>
-                    `;
-    const plannerSecondaryButtons = isMobilePlanner
-        ? mobilePlannerDropdown
-        : `
-                        <button onclick="showPlanWeekModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-calendar-plus"></i> Pianifica
-                        </button>
-                        <button onclick="openClassActivitiesExportModal()" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-file-pdf"></i> Attività PDF
-                        </button>
-                        <button onclick="clearPlannedCalendarTasks()" aria-label="Svuota tutti i compiti pianificati" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFF0EE; color: #C62828; border: 1px solid rgba(255,59,48,0.25); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-trash"></i> Svuota pianificazione
-                        </button>
-                    `;
-    return `
-    <div class="dashboard view" style="width: 100%;">
-        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
-            <div class="planner-view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 2px solid #DAD4CC; padding-bottom: 16px;">
-                <h1 style="display: ${isMobilePlanner ? 'none' : 'block'}; font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; color: #141414;">Agenda</h1>
-                
-                <div class="planner-header-controls" style="display: flex; gap: 16px; align-items: center;">
-                    <!-- AI & Planning Buttons -->
-                    <div class="planner-header-primary-actions" style="display: flex; gap: 8px;">
-                        <button class="planner-ai-btn" onclick="navigate('ai_assistant')" style="height: 36px; padding: 0 12px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FFFFFF; color: #141414; border: 1px solid #D3CEC7; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
-                            <i class="ph-bold ph-sparkle"></i> ${isMobilePlanner ? 'Chat' : 'AI Chat'}
-                        </button>
-                        ${plannerSecondaryButtons}
+                        <p class="body-md text-on-surface-variant/70 mb-3 pl-3">${t.text}</p>
+                        <div class="flex items-center gap-2 pl-3">
+                            <span class="material-symbols-outlined text-[16px] text-${colorClass}/60">location_on</span>
+                            <span class="body-md text-[13px] text-on-surface-variant">Aula 3B</span>
+                        </div>
+                        ${!t.done && !isExam ? `
+                            <button class="w-full liquid-pill py-3 px-4 mt-4 flex items-center justify-center gap-2 hover:bg-white/80 transition-all text-primary font-bold text-[14px]" onclick="toggleTask('${t.id}')">
+                                <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                                <span>Segna completato</span>
+                            </button>
+                        ` : t.done ? `
+                             <div class="w-full py-3 px-4 mt-4 flex items-center justify-center gap-2 text-green font-bold text-[14px]">
+                                <span class="material-symbols-outlined text-[20px]">task_alt</span>
+                                <span>Completato</span>
+                            </div>
+                        ` : ''}
                     </div>
-
-                    <div class="view-switch" style="background:#F6F5F3; border:1px solid #D3CEC7; padding: 4px; border-radius: 8px; display: flex; gap: 4px;">
-                        <button class="switch-btn ${state.uiMode === 'calendar' ? 'active' : ''}" data-planner-view="calendar" onclick="switchPlannerView('calendar')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'calendar' ? 'background: #141414; color: white;' : 'background: #FFFFFF; color: #4F4A43;'}">Calendar</button>
-                        <button class="switch-btn ${state.uiMode === 'list' ? 'active' : ''}" data-planner-view="list" onclick="switchPlannerView('list')" style="font-family: 'JetBrains Mono', monospace; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; ${state.uiMode === 'list' ? 'background: #141414; color: white;' : 'background: #FFFFFF; color: #4F4A43;'}">List</button>
-                    </div>
-                    <button class="planner-header-add-btn" onclick="showAddRegistroTaskModal()" style="height: 36px; padding: 0 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase; background: #FF9F0A; color: #141414; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(255,159,10,0.3);">
-                        <i class="ph-bold ph-plus" style="font-size: 14px;"></i> Verifica
-                    </button>
+                </div>`;
+            }).join('') : `
+                <div class="liquid-glass rounded-[40px] p-12 text-center flex flex-col items-center gap-4">
+                    <span class="material-symbols-outlined text-[48px] text-on-surface-variant/20">event_busy</span>
+                    <p class="body-lg text-on-surface-variant/40 font-medium">Nessuna attività programmata</p>
                 </div>
-            </div>
-
-            <div id="planner-main-content" class="section-animate">
-                ${state.uiMode === 'calendar' ? '<div id="calendar"></div>' : listHtml}
-            </div>
-        </div> 
-    </div>
-    ${state.uiMode === 'calendar' ? `<script>setTimeout(() => { if(typeof renderCustomCalendar === 'function') renderCustomCalendar(); if(typeof warmWeeklyAgendaCache === 'function') warmWeeklyAgendaCache(); }, 100);</script>` : ''}`;
+            `}
+        </section>
+    </div>`;
+}`;
 }
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
@@ -1898,101 +1798,60 @@ function formatFullDate(dateInput) {
 }
 function renderProfile() {
     const isGoogleConnected = state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1';
-    const oauthHost = (() => {
-        try { return new URL(API_BASE_URL).host; } catch (_) { return window.location.host; }
-    })();
+
     return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding-top: 0; padding-bottom: 48px; box-sizing: border-box;">
-            <div style="display:flex; align-items:center; gap:12px; padding: 8px 0 16px 0;">
-                <button onclick="navigate('home')" aria-label="Torna alla panoramica" style="background:#141414; border:none; color:#FFF; cursor:pointer; width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;">
-                    <i class="ph-bold ph-arrow-left" style="font-size:16px;"></i>
+        <div class="view profile-view pb-32">
+            <header class="flex items-center gap-4 mb-8 pt-4">
+                <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
+                    <span class="material-symbols-outlined">arrow_back</span>
                 </button>
-                <span style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color:#908C86; text-transform: uppercase; letter-spacing: 0.08em;">Panoramica</span>
-            </div>
-            <div class="card" style="padding: 20px 32px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                 <div>
-                    <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">${escapeHtml(state.user.name || 'Utente')}</div>
-                    <div style="font-size: 13px; font-weight: 800; color: var(--accent); background: rgba(99, 102, 241, 0.08); padding: 6px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
-                        CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
+                    <h1 class="headline-lg text-primary">Profilo</h1>
+                    <p class="body-md text-on-surface-variant/60">Gestione account e impostazioni</p>
+                </div>
+            </header>
+
+            <section class="liquid-glass rounded-[40px] p-8 mb-6 flex flex-col items-center text-center liquid-shadow">
+                <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold mb-4">
+                    ${(state.user.name || 'S')[0].toUpperCase()}
+                </div>
+                <h2 class="title-md text-on-surface mb-1">${escapeHtml(state.user.name || 'Utente')}</h2>
+                <div class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest">
+                    CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <!-- DidUP Status -->
+                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-green/10 flex items-center justify-center text-green">
+                        <span class="material-symbols-outlined text-[28px]">sync_saved_locally</span>
                     </div>
+                    <div>
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Status DidUP</div>
+                        <div class="font-bold text-green">COLLEGATO</div>
+                    </div>
+                </div>
+
+                <!-- Google Calendar -->
+                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center text-error">
+                        <span class="material-symbols-outlined text-[28px]">calendar_month</span>
+                    </div>
+                    <div>
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Google Calendar</div>
+                        <div class="font-bold text-on-surface">${isGoogleConnected ? 'Collegato ✓' : 'Non collegato'}</div>
+                    </div>
+                    <button class="w-full py-3 rounded-2xl bg-primary text-on-primary font-bold text-[13px] hover:opacity-90 transition-all" onclick="${isGoogleConnected ? 'window.syncGoogleCalendar()' : 'window.connectGoogle()'}">
+                        ${isGoogleConnected ? 'Sincronizza ora' : 'Collega Google'}
+                    </button>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px;">
-                ${(() => {
-            const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
-            const didupTs = state.didup.lastSuccessTs || 0;
-            const isStale = state.didup.stale || (!state.didup.connected && didupTs > 0);
-            const isFresh = state.didup.connected && didupTs && (Date.now() - didupTs) < STALE_THRESHOLD_MS;
-            const statusColor = isFresh ? 'var(--green)' : isStale ? 'var(--orange)' : 'var(--red)';
-            const statusIcon = isFresh ? 'ph-plugs-connected' : isStale ? 'ph-cloud-warning' : 'ph-plugs';
-            const statusIconBg = isFresh ? 'rgba(16, 185, 129, 0.1)' : isStale ? 'rgba(255, 159, 10, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-            const statusText = isFresh ? 'COLLEGATO' : isStale ? 'DATI NON AGGIORNATI' : 'NON COLLEGATO';
-            const statusDetail = didupTs
-                ? 'Ultimo sync: ' + new Date(didupTs).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-                : 'Mai sincronizzato';
-            return `
-                <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 12px;">
-                    <div style="width: 48px; height: 48px; border-radius: 14px; background: ${statusIconBg}; display: flex; align-items: center; justify-content: center; color: ${statusColor};">
-                        <i class="ph-fill ${statusIcon}" style="font-size: 24px;"></i>
-                    </div>
-                    <div>
-                        <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Connessione DidUP</div>
-                        <div style="font-size: 16px; font-weight: 800; color: ${statusColor}; margin-top: 2px;">
-                            ${statusText}
-                        </div>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-dim); font-weight: 500;">${statusDetail}</div>
-                    ${isStale ? '<div style="font-size: 10px; color: var(--orange); font-weight: 600; margin-top: 2px;">Utilizzo dati in cache — ricarica per aggiornare</div>' : ''}
-                </div>`;
-        })()}
-
-                <!-- Google Calendar Card (Universal OAuth2) -->
-                <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; gap: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(234, 67, 53, 0.1); display: flex; align-items: center; justify-content: center; color: #EA4335;">
-                        <i class="ph-fill ph-calendar-check" style="font-size: 24px;"></i>
-                    </div>
-                    <div>
-                        <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Google Calendar</div>
-                        <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
-                            ${isGoogleConnected ? 'Collegato ✓' : 'Non collegato'}
-                        </div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; width: 100%; gap: 8px;">
-                    ${isGoogleConnected ? `
-                        <button class="btn-primary" onclick="window.syncGoogleCalendar()" style="height: 40px; font-size: 13px; gap: 8px; background: #EA4335; border: none; width: 100%; justify-content: center;">
-                            <i class="ph-bold ph-arrows-clockwise"></i> Sincronizza Compiti
-                        </button>
-                        <button onclick="window.disconnectGoogle()" style="height: 36px; font-size: 12px; background: transparent; border: 1px solid rgba(234,67,53,0.3); color: #EA4335; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; justify-content: center;">
-                            <i class="ph-bold ph-sign-out"></i> Disconnetti Google
-                        </button>
-                    ` : `
-                        <button class="btn-primary" onclick="window.connectGoogle()" style="height: 44px; font-size: 13px; gap: 8px; background: #EA4335; border: none; font-weight: 700; width: 100%; justify-content: center;">
-                            <i class="ph-bold ph-google-logo"></i> Accedi con Google
-                        </button>
-                        <div style="width: 100%; text-align: left; margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: rgba(234,67,53,0.06); border: 1px solid rgba(234,67,53,0.2);">
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: #B42318; text-transform: uppercase; margin-bottom: 6px;">Info accesso Google</div>
-                            <div style="font-size: 12px; line-height: 1.45; color: var(--text-secondary);">
-                                1) Clicca <b>Accedi con Google</b>.<br>
-                                2) Scegli il profilo Google e clicca <b>Continua</b>.<br>
-                                3) Se compare “Google non ha verificato questa app”, clicca <b>Avanzate</b> (in basso a sinistra).<br>
-                                4) Clicca <b>Apri ${escapeHtml(oauthHost)} (non sicura)</b> e completa l'accesso.
-                            </div>
-                            <div style="margin-top: 6px; font-size: 11px; color: var(--text-dim);">
-                                Screenshot guida: <a href="https://github.com/user-attachments/assets/c2d6362b-c5bd-4f24-a949-ea78aa391032" target="_blank" rel="noopener noreferrer">1</a> · <a href="https://github.com/user-attachments/assets/043874a9-966e-43c6-99b3-aa8dccf4b32f" target="_blank" rel="noopener noreferrer">2</a> · <a href="https://github.com/user-attachments/assets/3c4a6068-32e6-4146-8356-efbb3fc16081" target="_blank" rel="noopener noreferrer">3</a>
-                            </div>
-                        </div>
-                    `}
-                    </div>
-                </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button class="btn-primary" onclick="logout()" style="height: 52px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--red); box-shadow: none;">
-                    <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i> Esci dall'Account
-                </button>
-            </div>
-        </div> `;
+            <button onclick="logout()" class="w-full h-14 rounded-3xl bg-error/10 text-error font-bold text-[16px] flex items-center justify-center gap-3 hover:bg-error/20 transition-all">
+                <span class="material-symbols-outlined">logout</span> Esci dall'Account
+            </button>
+        </div>`;
 }
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
@@ -2000,11 +1859,6 @@ function renderGradesView() {
     const votiData = getVotiData();
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
     const media = averageFromNumeric(numericVotes) || 0;
-    const goal = Number.isFinite(Number(state.goals?.overall)) ? Number(state.goals.overall) : 8.0;
-    const firstTermVotes = getVotesBySchoolTerm(votiData, 'first');
-    const secondTermVotes = getVotesBySchoolTerm(votiData, 'second');
-    const firstTermAvg = averageFromNumeric(firstTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
-    const secondTermAvg = averageFromNumeric(secondTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
 
     const subjectsMap = {};
     votiData.forEach(v => {
@@ -2016,317 +1870,194 @@ function renderGradesView() {
 
     const subjects = Object.values(subjectsMap).map(({ name, list }) => {
         const subMedia = averageFromNumeric(list.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
-        const trend = list.slice(-5).map(getNumericGradeValue).filter(v => Number.isFinite(v));
-        const goal = state.goals?.[name] || 8.0;
-        const numericCount = list.map(getNumericGradeValue).filter(v => Number.isFinite(v)).length;
-        const projection = getGoalProjection(subMedia, goal, numericCount);
-        return { name, media: subMedia, count: numericCount, trend, goal, projection };
+        const lastVote = list.sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))[0];
+        const lastVal = getNumericGradeValue(lastVote);
+        return { name, media: subMedia, lastVote: lastVal };
     }).sort((a, b) => b.media - a.media);
 
     return `
-    <div class="dashboard view" style="width: 100%;">
-        <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto; box-sizing: border-box;">
-            
-            <!-- V6 HEADER -->
-            <div style="margin-bottom: 32px; border-bottom: 2px solid #E5E5EA; padding-bottom: 16px;">
-                <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; letter-spacing: -0.05em; text-transform: uppercase; color: var(--text-primary);">Voti & Rendimento</h1>
+    <div class="view grades-view pb-32">
+        <header class="flex justify-between items-center mb-6 pt-4">
+            <h1 class="text-primary font-bold text-xl">Voti & Rendimento</h1>
+        </header>
+
+        <!-- Main Media Card -->
+        <section class="liquid-glass rounded-[40px] p-8 mb-10 relative overflow-hidden">
+            <h2 class="body-md text-on-surface-variant/60 mb-2">Media Generale</h2>
+            <div class="flex items-center gap-4 mb-4">
+                <span class="text-[56px] font-bold text-primary leading-none">${media.toFixed(1)}</span>
+                <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">trending_up</span> +0.2
+                </span>
             </div>
+            <p class="text-on-surface-variant/40 text-[11px] mb-8">Ultimo aggiornamento: Oggi</p>
 
-            ${(() => {
-            const count = numericVotes.length;
-            const projection = getGoalProjection(media, goal, count);
-            const alreadyDone = projection.done;
-            const scenarios = projection.scenarios || [];
-            const gap = projection.gap;
+            <!-- Media Graph Placeholder -->
+            <div class="flex items-end gap-2 h-24">
+                <div class="flex-1 bg-primary/5 rounded-t-lg h-[20%]"></div>
+                <div class="flex-1 bg-primary/10 rounded-t-lg h-[40%]"></div>
+                <div class="flex-1 bg-primary/20 rounded-t-lg h-[30%]"></div>
+                <div class="flex-1 bg-primary/30 rounded-t-lg h-[60%]"></div>
+                <div class="flex-1 bg-primary/40 rounded-t-lg h-[50%]"></div>
+                <div class="flex-1 bg-primary/50 rounded-t-lg h-[70%]"></div>
+                <div class="flex-1 bg-primary rounded-t-lg h-[90%] relative">
+                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-on-surface-variant/60 text-[9px] font-bold">Feb</div>
+                </div>
+            </div>
+        </section>
 
-            let statusLine = '';
-            let scenariosHtml = '';
+        <h2 class="title-md mb-6">Materie</h2>
 
-            if (alreadyDone) {
-                statusLine = `<span style="color:#2DB86A; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em;">&#10003; Obiettivo raggiunto</span>`;
-            } else {
-                statusLine = `<span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em;">Gap: <strong style="color:white;">-${gap.toFixed(2)}</strong></span>`;
-                if (scenarios.length > 0) {
-                    scenariosHtml = scenarios.map(s => `
-                            <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 9px; background:rgba(255,255,255,0.06); border-radius:9px; margin-top:6px;">
-                                <div style="display:flex; flex-direction:column; gap:2px;">
-                                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.5);">
-                                        ${getProjectionScenarioLabel(s, true)}
-                                    </span>
-                                    ${s.combo ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.65);">${s.label}</span>` : ''}
-                                    ${s.n > 10 ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#BCB8B2; text-transform:uppercase; letter-spacing:0.04em;">(Lungo termine)</span>` : ''}
-                                </div>
-                                <span class="goal-overall-scenario-grade" style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; color:white;">
-                                      ${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}
-                                  </span>
-                             </div>`).join('');
-                } else {
-                    // Se goal è > 10 o irraggiungibile anche con cento 10
-                    const isImpossible = goal > 10;
-                    scenariosHtml = `<div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,0.4); margin-top:8px;">${isImpossible ? 'Obiettivo non raggiungibile' : 'Continua a registrare voti per vedere le proiezioni.'}</div>`;
-                }
-            }
+        <!-- Subjects Grid -->
+        <div class="flex flex-col gap-4">
+            ${subjects.map(s => {
+                const status = s.media >= 8 ? 'Ottimo' : s.media >= 7 ? 'Buono' : s.media >= 6 ? 'Discreto' : 'Insufficiente';
+                const statusColor = s.media >= 8 ? 'green' : s.media >= 7 ? 'primary' : s.media >= 6 ? 'orange' : 'error';
 
-            return `
-                <div class="card goal-overall-card" onclick="promptSetGoal('overall')" style="cursor:pointer; margin-bottom:18px; border-radius:16px; padding:16px; display:flex; align-items:flex-start; gap:16px; background:#121214; box-shadow:0 8px 20px rgba(0,0,0,0.12); transition:transform 0.2s;">
-                    <div style="display:flex; gap:10px; align-items:flex-start; flex-shrink:0;">
-                        <div style="width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.07); display:flex; align-items:center; justify-content:center; font-size:17px; color:white; flex-shrink:0;">
-                            <i class="ph-fill ph-target"></i>
+                return `
+                <div class="liquid-glass rounded-[28px] p-6 liquid-shadow cursor-pointer transition-all hover:scale-[1.02]" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined">${getSubjectIcon(s.name)}</span>
                         </div>
-                        <div>
-                            <div style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:3px;">Obiettivo media</div>
-                            <div class="goal-overall-value" style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:white; letter-spacing:-0.04em; line-height:1; display:flex; align-items:center; gap:6px;">
-                                ${goal.toFixed(2)}<i class="ph ph-pencil-simple" style="font-size:14px; opacity:0.3;"></i>
-                            </div>
-                            <div style="margin-top:6px;">${statusLine}</div>
+                        <span class="bg-${statusColor}/10 text-${statusColor} px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">${status}</span>
+                    </div>
+                    <h3 class="title-md text-on-surface mb-1">${s.name}</h3>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[32px] font-bold text-primary">${s.media.toFixed(1)}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-on-surface-variant/40 text-[12px] font-medium">Ultimo: ${s.lastVote || '—'}</span>
+                            ${s.lastVote ? `<span class="material-symbols-outlined text-[14px] ${s.lastVote >= s.media ? 'text-green' : 'text-error'}">${s.lastVote >= s.media ? 'trending_up' : 'trending_down'}</span>` : ''}
                         </div>
                     </div>
-                    ${!alreadyDone ? `
-                    <div style="flex:1; min-width:0;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:2px;">Come arrivarci</div>
-                        ${scenariosHtml}
-                    </div>` : ''}
-                </div>
-                `;
-        })()}
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:16px;">
-                <div class="card" style="border-radius:14px; padding:14px;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
-                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
-                </div>
-                <div class="card" style="border-radius:14px; padding:14px;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
-                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(secondTermAvg) ? secondTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 feb → 30 giu · ${secondTermVotes.length} voti</div>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 24px;">
-                <h2 style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px;">
-                    <span style="flex:1; height:1px; background:#E5E5EA;"></span>
-                    Riepilogo Materie
-                    <span style="flex:1; height:1px; background:#E5E5EA;"></span>
-                </h2>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
-                ${subjects.map(s => {
-            const subjColor = getSubjectColor(s.name);
-            const subjBg = colorWithAlpha(subjColor, 0.13);
-            const subjText = subjColor;
-
-            const encodedSubjectArg = encodeURIComponent(s.name || '').replace(/'/g, '%27');
-            return `
-                    <div class="card grade-subject-widget" style="padding: 14px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; border-left: 4px solid ${subjColor}; min-height: 84px;" onclick="handleGradeSubjectClickFromEncoded('${encodedSubjectArg}')" >
-                        <div style="width: 42px; height: 42px; border-radius: 10px; background: ${subjBg}; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-weight: 800; color: ${subjText}; font-size: 11px; flex-shrink: 0;">
-                            ${escapeHtml(getSubjectAbbrev(s.name))}
-                        </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; line-height:1.3;">${escapeHtml(s.name)}</div>
-                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">${s.count} vot${s.count === 1 ? 'o' : 'i'} registrat${s.count === 1 ? 'o' : 'i'}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 24px; font-weight: 800; color: ${s.media >= 6 ? 'var(--green)' : 'var(--red)'}; letter-spacing: -0.03em; line-height:1;">${s.media.toFixed(2)}</div>
-                        </div>
-                    </div > `;
-        }).join('')}
-            </div>
-        </div> 
+                </div>`;
+            }).join('')}
+        </div>
     </div>`;
 }
 function renderAIAssistantView() {
     const chat = state.aiChatHistory || [];
 
     return `
-        <div class="view ai-view ai-chat-view">
-            <div class="ai-chat-header">
-                <div class="ai-chat-header-main">
-                    <button class="ai-chat-back-btn" onclick="navigate('planner')" title="Torna al planner">
-                        <i class="ph-bold ph-arrow-left"></i>
+        <div class="view ai-view ai-chat-view flex flex-col h-screen">
+            <header class="ai-chat-header flex items-center justify-between p-4 border-b border-white/20 bg-white/40 backdrop-blur-md">
+                <div class="flex items-center gap-3">
+                    <button class="w-10 h-10 rounded-xl liquid-glass flex items-center justify-center text-primary" onclick="navigate('home')">
+                        <span class="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <div class="ai-chat-title-wrap">
-                        <span class="ai-chat-title">Tutor AI</span>
-                        <span class="ai-chat-subtitle">${state.aiChatPending ? 'Sta scrivendo…' : 'Online'}</span>
+                    <div>
+                        <span class="font-bold text-on-surface">Tutor AI</span>
+                        <span class="block text-[10px] text-primary uppercase font-bold tracking-widest">${state.aiChatPending ? 'Sta scrivendo…' : 'Online'}</span>
                     </div>
                 </div>
-                <button class="ai-chat-reset-btn" onclick="startNewAIChat()">
+                <button class="liquid-pill px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-primary border border-primary/20" onclick="startNewAIChat()">
                     Nuova chat
                 </button>
-            </div>
+            </header>
 
-            <div id="aiChatMessages" class="ai-chat-messages">
+            <div id="aiChatMessages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 no-scrollbar">
                 ${chat.length === 0 ? `
-                <div class="ai-chat-welcome">
-                    <div class="ai-chat-welcome-eyebrow">G-Diary Assistant</div>
-                    <div class="ai-chat-welcome-title">Come posso aiutarti oggi?</div>
-                    <div class="ai-chat-suggest-grid">
+                <div class="m-auto max-w-[320px] text-center">
+                    <div class="w-20 h-20 rounded-[28px] liquid-glass flex items-center justify-center text-primary mx-auto mb-6 liquid-shadow">
+                        <span class="material-symbols-outlined text-4xl">auto_awesome</span>
+                    </div>
+                    <h2 class="title-md mb-2">Come posso aiutarti?</h2>
+                    <p class="body-md text-on-surface-variant/60 mb-8">Chiedimi di organizzare la settimana o di ripassare un argomento.</p>
+                    <div class="flex flex-col gap-2">
                         ${AI_CHAT_QUICK_PROMPTS.map((prompt, idx) => `
-                        <button class="ai-chat-suggest-btn" onclick="sendAIChatQuickAt(${idx})">
+                        <button class="liquid-pill p-4 text-left text-sm font-medium hover:bg-white/60 transition-all border border-white/40" onclick="sendAIChatQuickAt(${idx})">
                             ${escapeHtml(prompt)}
                         </button>
                         `).join('')}
                     </div>
                 </div>
                 ` : chat.map((msg, idx) => `
-                <div class="ai-chat-row ${msg.role === 'user' ? 'is-user' : 'is-ai'}">
-                    <div class="ai-chat-avatar ${msg.role === 'user' ? 'user' : 'ai'}">${msg.role === 'user' ? 'TU' : 'AI'}</div>
-                    <div class="ai-chat-message-bubble ${msg.role === 'user' ? 'msg-user' : 'msg-ai'}">
-                        <div class="ai-chat-meta">${msg.role === 'user' ? 'Tu' : 'Tutor AI'}${msg.ts ? ` · ${msg.ts}` : ''}</div>
-                        <div class="ai-prose ai-chat-message-content">
+                <div class="flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-on-primary rounded-[24px] rounded-tr-sm' : 'liquid-glass text-on-surface rounded-[24px] rounded-tl-sm liquid-shadow'} p-4">
+                        <div class="ai-prose">
                             ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
                         </div>
-                        ${msg.hasPlan ? `
-                        <button class="ai-chat-apply-btn" onclick="applyAIPlanFromChat(${idx})">Applica piano</button>` : ''}
                     </div>
                 </div>
                 `).join('')}
                 ${state.aiChatPending ? `
-                <div class="ai-chat-row is-ai ai-chat-typing-row">
-                    <div class="ai-chat-avatar ai">AI</div>
-                    <div class="ai-chat-message-bubble msg-ai ai-chat-typing-bubble">
-                        <span class="typing-dot"></span>
-                        <span class="typing-dot"></span>
-                        <span class="typing-dot"></span>
+                <div class="flex justify-start">
+                    <div class="liquid-glass rounded-[24px] rounded-tl-sm p-4 flex gap-1">
+                        <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></span>
+                        <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                        <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                     </div>
                 </div>
                 ` : ''}
             </div>
 
-            <div class="ai-chat-input-wrap">
-                <div class="ai-input-shell">
-                  <div class="ai-input-dock">
-                    <input id="aiChatInput" class="ai-chat-input-field" type="text" placeholder="Scrivi un messaggio…" value="${escapeHtml(state.aiChatInputValue || '')}" oninput="state.aiChatInputValue=this.value" onkeypress="handleAIChatInputKeypress(event)">
-                    <button class="ai-chat-send-btn" onclick="sendAIChat()" ${state.aiChatPending ? 'disabled' : ''} title="Invia messaggio">
-                        <i class="ph-bold ph-paper-plane-right"></i>
+            <footer class="p-4 pb-24">
+                <div class="liquid-glass rounded-full p-2 flex items-center gap-2 border border-white/60 shadow-lg">
+                    <input id="aiChatInput" class="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium placeholder:text-on-surface-variant/40" type="text" placeholder="Chiedi qualcosa..." value="${escapeHtml(state.aiChatInputValue || '')}" oninput="state.aiChatInputValue=this.value" onkeypress="handleAIChatInputKeypress(event)">
+                    <button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-all" onclick="sendAIChat()" ${state.aiChatPending ? 'disabled' : ''}>
+                        <span class="material-symbols-outlined text-[20px]">send</span>
                     </button>
-                  </div>
                 </div>
-            </div>
+            </footer>
         </div>`;
 }
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
     return `
-            <div class="view">
-                <div style="margin-bottom: 24px;">
-                    <h1 style="font-size: 28px; color: var(--text-primary);">Profilo Accademico</h1>
-                    <p style="font-size: 15px; color: var(--text-secondary);">Analisi e impostazioni studio</p>
-               </div>
+            <div class="view academic-profile-view pb-32">
+                <header class="mb-8 pt-4">
+                    <h1 class="headline-lg text-primary mb-1">Profilo Accademico</h1>
+                    <p class="body-md text-on-surface-variant/60">Analisi e impostazioni studio</p>
+               </header>
 
                 <!-- Study Availability -->
-                <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
-                    <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">Disponibilità Studio</div>
-                    <div style="display:flex; gap:16px; align-items:center;">
-                        <div style="flex:1;">
-                            <label style="display:block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">INIZIO</label>
+                <section class="liquid-glass rounded-[40px] p-8 mb-6 liquid-shadow">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined">schedule</span>
+                        </div>
+                        <h2 class="title-md">Disponibilità Studio</h2>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="label-sm text-on-surface-variant/40">Inizio</label>
                             <input type="time" id="studyStart" value="${state.availability.start}" onchange="saveAvailability()" 
-                                style="width:100%; height:48px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color:white; padding:0 12px; outline:none; font-family: inherit;">
+                                class="bg-surface-container-low border border-white/40 rounded-2xl h-14 px-4 font-bold text-on-surface">
                        </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">FINE</label>
+                        <div class="flex flex-col gap-2">
+                            <label class="label-sm text-on-surface-variant/40">Fine</label>
                             <input type="time" id="studyEnd" value="${state.availability.end}" onchange="saveAvailability()" 
-                                style="width:100%; height:48px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color:white; padding:0 12px; outline:none; font-family: inherit;">
+                                class="bg-surface-container-low border border-white/40 rounded-2xl h-14 px-4 font-bold text-on-surface">
                        </div>
                    </div>
-               </div>
+               </section>
 
                 <!-- Difficult Subjects -->
-                <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
-                    <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Materie Critiche</div>
-                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Seleziona le materie in cui hai più difficoltà.</p>
-                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                <section class="liquid-glass rounded-[40px] p-8 mb-6 liquid-shadow">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error">
+                            <span class="material-symbols-outlined">priority_high</span>
+                        </div>
+                        <h2 class="title-md">Materie Critiche</h2>
+                    </div>
+                    <p class="body-md text-on-surface-variant/60 mb-6">Seleziona le materie in cui hai più difficoltà.</p>
+                    <div class="flex flex-wrap gap-2">
                         ${subjects.length > 0 ? subjects.map(s => {
         const active = state.difficulty.includes(s);
         const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        return `<button onclick="toggleDifficulty('${safeS}')" style="padding:10px 16px; border-radius:12px; border:1px solid ${active ? 'var(--orange)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(255,159,10,0.15)' : 'rgba(255,255,255,0.03)'}; color:${active ? 'var(--orange)' : 'var(--text-primary)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">${s}</button>`;
-    }).join('') : '<div style="font-size:13px; color: var(--text-secondary); padding:10px;">Nessuna materia trovata.</div>'}
+        return `
+            <button onclick="toggleDifficulty('${safeS}')" class="liquid-pill px-5 py-3 text-[13px] font-bold transition-all border ${active ? 'bg-primary text-on-primary border-primary shadow-lg' : 'bg-white/40 text-on-surface border-white/60'}">
+                ${s}
+            </button>`;
+    }).join('') : '<div class="body-md text-on-surface-variant/40 p-4">Nessuna materia trovata.</div>'}
                    </div>
-               </div>
+               </section>
            </div>`;
 }
 function renderMediaGauge(target = 0) {
-    const canvas = document.getElementById('mediaGaugeCanvas');
-    const valueEl = document.getElementById('mediaValue');
-    if (!canvas || !valueEl) return;
-
-    const { ctx, rect } = setupCanvas(canvas);
-    const W = rect.width, H = rect.height;
-    const cx = W / 2, cy = H * 0.95;
-    const radius = Math.min(W, H * 2) / 2.3;
-    const start = Math.PI;
-    const endMax = 2 * Math.PI;
-    const lineW = 12;
-
-    if (!state.__mediaGauge) state.__mediaGauge = { current: 0, target: -1 };
-
-    function arcGradient(val) {
-        const g = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-        if (val >= 6) { g.addColorStop(0, '#30D158'); g.addColorStop(1, '#61e26c'); }
-        else if (val >= 5) { g.addColorStop(0, '#FF9F0A'); g.addColorStop(1, '#ffb340'); }
-        else { g.addColorStop(0, '#FF453A'); g.addColorStop(1, '#ff6b63'); }
-        return g;
-    }
-
-    function drawFrame(currentVal) {
-        ctx.clearRect(0, 0, W, H);
-        ctx.lineWidth = lineW;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-        ctx.beginPath(); ctx.arc(cx, cy, radius, start, endMax, false); ctx.stroke();
-
-        const progress = (currentVal / 10);
-        const end = start + progress * Math.PI;
-        ctx.strokeStyle = arcGradient(currentVal);
-        ctx.shadowColor = 'rgba(0,0,0,0.15)';
-        ctx.shadowBlur = 4;
-        ctx.beginPath(); ctx.arc(cx, cy, radius, start, end, false); ctx.stroke();
-
-        const knobX = cx + radius * Math.cos(end);
-        const knobY = cy + radius * Math.sin(end);
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 6;
-        ctx.beginPath(); ctx.arc(knobX, knobY, 7, 0, Math.PI * 2); ctx.fill();
-
-        valueEl.textContent = (Math.round(currentVal * 100) / 100).toFixed(2);
-        valueEl.style.color = currentVal >= 6 ? 'var(--green)' : (currentVal >= 5 ? 'var(--orange)' : 'var(--red)');
-    }
-
-    // Se siamo già a target, disegna frame fisso e stop
-    if (state.__mediaGauge.target === target && Math.abs(state.__mediaGauge.current - target) < 0.005) {
-        state.__mediaGauge.current = target;
-        drawFrame(target);
-        if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
-        __mediaGaugeRAF = null;
-        return;
-    }
-
-    state.__mediaGauge.target = target;
-    if (__mediaGaugeRAF) cancelAnimationFrame(__mediaGaugeRAF);
-
-    function animate() {
-        if (!document.getElementById('mediaGaugeCanvas')) {
-            __mediaGaugeRAF = null;
-            return;
-        }
-        const diff = target - state.__mediaGauge.current;
-        if (Math.abs(diff) < 0.005) {
-            state.__mediaGauge.current = target;
-            drawFrame(target);
-            __mediaGaugeRAF = null;
-            saveTasks(); // Persisti lo stato finale
-            return;
-        }
-        state.__mediaGauge.current += diff * 0.08;
-        drawFrame(state.__mediaGauge.current);
-        __mediaGaugeRAF = requestAnimationFrame(animate);
-    }
-
-    // Disegna subito il primo frame per evitare flicker (blank canvas)
-    drawFrame(state.__mediaGauge.current);
-    __mediaGaugeRAF = requestAnimationFrame(animate);
+    // Redundant in Liquid Glass design - replaced by bar charts in renderHome/renderGradesView
+    return;
 }
 
 
@@ -2696,261 +2427,108 @@ function initGradesCharts() {
 }
 function renderSubjectDetailView(subjectName) {
     const normalizedSubject = normalizeSubjectName(subjectName);
-    const safeSubjectNameJs = escapeJsSingleQuote(subjectName);
     const votiData = getVotiData()
         .filter(v => areSubjectsEquivalent(v.materia || v.subject, normalizedSubject))
         .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
     const media = parseFloat(calcolaMedia(votiData)) || 0;
     const goal = state.goals?.[subjectName] || 8.0;
-    const subjColor = getSubjectColor(subjectName);
-    const abbr = getSubjectAbbrev(subjectName);
-    const key = abbr.toLowerCase();
-    const projection = getGoalProjection(media, goal, votiData.length);
-    const progressPct = Math.min(100, (media / Math.max(1, goal)) * 100);
-    const subjectScenarios = projection.scenarios || [];
-    const firstTermVotes = getVotesBySchoolTerm(votiData, 'first');
-    const secondTermVotes = getVotesBySchoolTerm(votiData, 'second');
-    const firstTermAvg = averageFromNumeric(firstTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
-    const secondTermAvg = averageFromNumeric(secondTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v)));
-    const currentTerm = getCurrentSchoolTerm(new Date());
-    const currentTermVotes = currentTerm ? getVotesBySchoolTerm(votiData, currentTerm) : [];
-    const currentTermNumeric = currentTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const simulatorValue = getNextGradeSimulatorValue();
-    const currentTermAvg = averageFromNumeric(currentTermNumeric);
-    const simulatedAvg = averageFromNumeric([...currentTermNumeric, simulatorValue]);
-    const simulatedDelta = Number.isFinite(currentTermAvg) && Number.isFinite(simulatedAvg) ? (simulatedAvg - currentTermAvg) : null;
-    const currentTermLabel = currentTerm === 'first' ? 'Primo quadrimestre' : (currentTerm === 'second' ? 'Secondo quadrimestre' : 'Nessun quadrimestre attivo');
-    const subjectGoalStatusLine = projection.done
-        ? `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#2DB86A; font-weight:800; text-transform:uppercase;">✓ Obiettivo raggiunto</span>`
-        : `<span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:800; text-transform:uppercase;">Gap ${projection.gap.toFixed(2)}</span>`;
-    const subjectScenariosHtml = (() => {
-        if (projection.done) return '';
-        if (subjectScenarios.length > 0) {
-            return subjectScenarios.map(s => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#F9F8F6; border:1px solid #ECEAE6; border-radius:10px; padding:8px 10px;">
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${getProjectionScenarioLabel(s, false)}</span>
-                            ${s.combo ? `<span style="font-family:'JetBrains Mono', monospace; font-size:9px; color:#6A655F; font-weight:700;">${s.label}</span>` : ''}
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#141414; font-weight:800;">${s.exact ? '' : '≥ '}${s.grade.toFixed(2)}</span>
-                        </div>
-                    `).join('');
-        }
-        return `<div style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">${goal > 10 ? 'Obiettivo non raggiungibile' : 'Aggiungi altri voti per stimare la proiezione'}</div>`;
-    })();
-
-    const trendItems = [...votiData]
-        .sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date))
-        .map(v => {
-            const rawVal = (v.valore || v.value || '').toString();
-            if (isGiustifica(rawVal)) return null;
-            const parsed = parseFloat(rawVal.replace(',', '.'));
-            if (!Number.isFinite(parsed)) return null;
-            const dateObj = parseArgoDate(v.data || v.date);
-            if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return null;
-            return { value: parsed, date: dateObj };
-        })
-        .filter(v => v && Number.isFinite(v.value));
 
     return `
-        <div class="view" style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 4px 0 24px;">
-            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 32px;">
-                <button onclick="window.closeSubject()" style="width: 48px; height: 48px; border-radius: 16px; background: #FFFFFF; border: 1px solid #141414; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s;">
-                    <i class="ph-bold ph-arrow-left" style="font-size: 20px;"></i>
+        <div class="view subject-detail-view pb-32">
+            <header class="flex items-center gap-4 mb-8 pt-4">
+                <button onclick="window.closeSubject()" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
+                    <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div>
-                    <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: #141414;">${subjectName}</h1>
-                    <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px;">// DETTAGLIO_MATERIA</div>
+                    <h1 class="headline-lg text-primary">${subjectName}</h1>
+                    <p class="body-md text-on-surface-variant/60">Dettaglio voti e andamento</p>
                 </div>
-            </div>
+            </header>
 
-            <div class="card" style="background:#FFFFFF; border: 1px solid #141414; border-radius: 24px; padding: 24px; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
-                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: ${subjColor};"></div>
-                <div style="display: flex; gap: 32px; align-items: center;">
-                    <div style="min-width: 112px; height: 112px; border-radius: 20px; border:1px solid #ECEAE6; background:#FAF9F7; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; padding:10px;">
-                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color:#908C86; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Media</div>
-                        <div style="font-size: 34px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.05em; line-height:1; margin-top:4px;">${media.toFixed(2)}</div>
-                        <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color:#908C86; margin-top:6px;">${votiData.length} voti</div>
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
-                            <div>
-                                <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">MEDIA</div>
-                                <div style="font-size: 24px; font-weight: 800; color: ${media >= 6 ? '#28CD41' : '#FF3B30'}; letter-spacing: -0.02em;">${media.toFixed(2)}</div>
-                            </div>
-                            <div onclick="promptSetGoal(decodeURIComponent('${encodeURIComponent(subjectName)}'))" style="cursor: pointer;">
-                                <div style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">OBIETTIVO</div>
-                                <div style="font-size: 24px; font-weight: 800; color: #141414; display: flex; align-items: center; gap: 6px; letter-spacing: -0.02em;">
-                                    ${goal.toFixed(2)} <i class="ph-bold ph-pencil-simple" style="font-size: 14px; color: #007AFF;"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="height:6px; background:#F0EDE8; border-radius:100px; overflow:hidden;">
-                            <div style="height:100%; width:${progressPct}%; background:${projection.done ? '#2DB86A' : subjColor}; border-radius:100px;"></div>
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86; font-weight:700; text-transform:uppercase;">Progresso obiettivo</span>
-                            ${subjectGoalStatusLine}
-                        </div>
-                    </div>
-                </div>
-                ${projection.done ? '' : `
-                <div style="margin-top:20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-                    ${subjectScenariosHtml}
-                </div>`}
-            </div>
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:14px;">
-                <div class="card" style="border-radius:14px; padding:14px;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Primo quadrimestre</div>
-                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(firstTermAvg) ? firstTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 set → 31 gen · ${firstTermVotes.length} voti</div>
-                </div>
-                <div class="card" style="border-radius:14px; padding:14px;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Secondo quadrimestre</div>
-                    <div style="font-size:26px; font-weight:800; color:#141414; letter-spacing:-0.03em; margin-top:4px;">${Number.isFinite(secondTermAvg) ? secondTermAvg.toFixed(2) : '—'}</div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#908C86; margin-top:4px;">1 feb → 30 giu · ${secondTermVotes.length} voti</div>
-                </div>
-            </div>
-
-            <div class="card" style="border-radius:14px; padding:14px; margin-bottom:14px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
+            <section class="liquid-glass rounded-[40px] p-8 mb-10 liquid-shadow relative overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
                     <div>
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:#908C86; text-transform:uppercase; letter-spacing:0.1em;">Simula prossima verifica</div>
-                        <div style="font-size:12px; color:#7A7670; margin-top:4px;">Simulazione attiva solo per il <span id="next-grade-current-term-label" aria-live="polite" aria-atomic="true">${currentTermLabel}</span>.</div>
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Media Materia</div>
+                        <div class="text-[48px] font-bold text-primary leading-none">${media.toFixed(2)}</div>
                     </div>
-                    <div id="next-grade-sim-value" style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#141414; background:#F6F5F3; border:1px solid #E0DDD8; border-radius:10px; padding:6px 10px;">voto: ${simulatorValue}</div>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                    <button onclick="window.adjustNextGradeSimulator(-1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">−</button>
-                    <button onclick="window.adjustNextGradeSimulator(1)" style="width:34px; height:34px; border-radius:10px; border:1px solid #141414; background:#FFFFFF; color:#141414; font-size:18px; font-weight:800; cursor:pointer;">+</button>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
-                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media attuale</div>
-                        <div id="next-grade-current-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(currentTermAvg) ? currentTermAvg.toFixed(2) : '—'}</div>
-                    </div>
-                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Media simulata</div>
-                        <div id="next-grade-sim-avg" style="font-size:18px; font-weight:800; color:#141414; letter-spacing:-0.02em;">${Number.isFinite(simulatedAvg) ? simulatedAvg.toFixed(2) : '—'}</div>
-                    </div>
-                    <div style="border:1px solid #E8E5E0; border-radius:10px; padding:8px 10px; background:#FAF9F7;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:#908C86; text-transform:uppercase; font-weight:800;">Impatto</div>
-                        <div id="next-grade-sim-impact" style="font-size:18px; font-weight:800; color:${Number.isFinite(simulatedDelta) ? (simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30') : '#908C86'}; letter-spacing:-0.02em;">${Number.isFinite(simulatedDelta) ? `${simulatedDelta >= 0 ? '+' : ''}${simulatedDelta.toFixed(2)}` : '—'}</div>
+                    <div class="text-right" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Obiettivo</div>
+                        <div class="text-2xl font-bold text-on-surface flex items-center justify-end gap-2">
+                            ${goal.toFixed(1)} <span class="material-symbols-outlined text-primary text-sm">edit</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+                <div class="h-2 bg-primary/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-primary" style="width: ${(media / goal * 100).toFixed(0)}%"></div>
+                </div>
+            </section>
 
-            <div class="card" style="padding:14px; border-radius:14px; margin-bottom:14px; border:1px solid var(--border-light);">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-                    <h2 style="font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.08em;">Trend andamento</h2>
-                    <span style="font-family:'JetBrains Mono', monospace; font-size:10px; color:#908C86;">${trendItems.length} punti</span>
-                </div>
-                <div style="background:#F8F7F5; border:1px solid #ECEAE6; border-radius:10px; padding:8px;">
-                    ${trendItems.length ? `<canvas id="subjectTrendCanvas" data-color="${escapeHtml(subjColor)}" data-points="${encodeURIComponent(JSON.stringify(trendItems.map(item => ({ value: item.value, date: item.date.toISOString() }))))}" width="820" height="160" aria-label="Grafico cartesiano andamento voti" style="width:100%; height:160px; display:block;"></canvas>` : '<div style="font-size:12px; color:#908C86;">Trend disponibile dopo almeno un voto numerico.</div>'}
-                </div>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <h2 style="font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; color: #141414; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 10px;">
-                    Voti ricevuti
-                    <span style="flex:1; height:1px; background:#E0DDD8;"></span>
-                </h2>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 60px;">
+            <h2 class="title-md mb-6">Voti Ricevuti</h2>
+            <div class="flex flex-col gap-4">
                 ${votiData.map(v => {
-        const rawVal = v.valore || v.value || '0';
-        const giu = isGiustifica(rawVal);
-        const val = giu ? 0 : parseFloat(rawVal.toString().replace(',', '.'));
-        const isSuff = !giu && val >= 6;
-        const displayVal = giu ? 'GIU' : (v.valore || v.value);
-        return `
-                    <div class="card" style="background:#FFFFFF; border: 1px solid #E0DDD8; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 20px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                        <div style="width: 56px; height: 56px; border-radius: 16px; background: ${giu ? 'rgba(188,184,178,0.1)' : (isSuff ? 'rgba(40, 205, 65, 0.1)' : 'rgba(255, 59, 48, 0.1)')}; display: flex; align-items: center; justify-content: center; font-size: ${giu ? '14' : '22'}px; font-weight: 800; color: ${giu ? '#BCB8B2' : (isSuff ? '#28CD41' : '#FF3B30')}; border: 1px solid ${giu ? 'rgba(188,184,178,0.2)' : (isSuff ? 'rgba(40, 205, 65, 0.2)' : 'rgba(255, 59, 48, 0.2)')};">
-                            ${displayVal}
+                    const val = getNumericGradeValue(v);
+                    const isSuff = val >= 6;
+                    return `
+                    <div class="liquid-glass rounded-[28px] p-6 liquid-shadow flex items-center gap-6">
+                        <div class="w-14 h-14 rounded-2xl ${isSuff ? 'bg-green/10 text-green' : 'bg-error/10 text-error'} flex items-center justify-center text-2xl font-bold border border-white/40">
+                            ${v.valore || v.value}
                         </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 16px; font-weight: 700; color: #141414; margin-bottom: 2px;">${normalizeTipoVerifica(v.tipo, false)}</div>
-                            <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #908C86; text-transform: uppercase;">${new Date(v.data || v.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-on-surface">${normalizeTipoVerifica(v.tipo, false)}</h3>
+                            <p class="text-on-surface-variant/40 text-[13px] font-medium">${v.data || v.date}</p>
                         </div>
-                        ${v.commento ? `<i class="ph-bold ph-chat-circle-dots" style="color: #007AFF; font-size: 22px; cursor: help;" title="${v.commento}"></i>` : ''}
+                        ${v.commento ? `<span class="material-symbols-outlined text-primary/40" title="${escapeHtml(v.commento)}">chat_bubble</span>` : ''}
                     </div>`;
-    }).join('')}
+                }).join('')}
             </div>
         </div> `;
 }
 function mostraAssenzeModal() {
     const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0 };
-    const all = [...ad.assenze.map(x => ({ ...x, icon: 'ph-calendar-x', color: '#EF4444' })),
-    ...ad.ritardi.map(x => ({ ...x, icon: 'ph-clock-clockwise', color: '#F59E0B' })),
-    ...ad.uscite.map(x => ({ ...x, icon: 'ph-clock-counter-clockwise', color: '#3B82F6' }))];
+    const all = [...ad.assenze.map(x => ({ ...x, icon: 'event_busy', color: 'error' })),
+    ...ad.ritardi.map(x => ({ ...x, icon: 'schedule', color: 'orange' })),
+    ...ad.uscite.map(x => ({ ...x, icon: 'logout', color: 'primary' }))];
 
     all.sort((a, b) => new Date(b.data) - new Date(a.data));
 
-    const percAssenza = ((ad.oreAssenzaTotali / ((state.giorniScuola || 200) * 5)) * 100).toFixed(2);
-
     showModal(`
-            <div class="assenze-modal-shell" style="display:flex; flex-direction:column; text-align:left; max-height:70svh;">
-                <header class="assenze-modal-header" style="padding:14px 24px 12px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Riepilogo Assenze</div>
-                    <div style="display:flex; align-items:baseline; gap:12px;">
-                        <h2 style="margin:0; font-size:28px; font-weight:800; color:#EF4444;">${percAssenza}%</h2>
-                        <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">${ad.oreAssenzaTotali.toFixed(2)} ore totali</span>
-                    </div>
-                </header>
-                <div class="assenze-modal-summary" style="padding:12px 24px 0; flex:0 0 auto;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
-                    <div style="background:rgba(239, 68, 68, 0.05); padding:12px; border-radius:14px; border:1px solid rgba(239, 68, 68, 0.1);">
-                        <div style="font-size:10px; color:#EF4444; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Assenze</div>
-                        <div style="font-size:18px; font-weight:800;">${ad.totaleAssenze}</div>
-                    </div>
-                    <div style="background:rgba(245, 158, 11, 0.05); padding:12px; border-radius:14px; border:1px solid rgba(245, 158, 11, 0.1);">
-                        <div style="font-size:10px; color:#F59E0B; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Ritardi/Uscite</div>
-                        <div style="font-size:18px; font-weight:800;">${ad.totaleRitardi + ad.totaleUscite}</div>
-                    </div>
-                </div>
-                <div style="margin:8px 0 16px 0; padding:10px 12px; border-radius:12px; border:1px solid ${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(40,205,65,0.25)'}; background:${ad.daGiustificare > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(40,205,65,0.08)'}; font-size:12px; font-weight:700; color:${ad.daGiustificare > 0 ? '#B91C1C' : '#166534'};">
-                    ${ad.daGiustificare > 0 ? `Da giustificare: ${ad.daGiustificare}` : 'Tutti gli eventi risultano giustificati'}
-                </div>
-                </div>
+        <div class="flex flex-col gap-6">
+            <header>
+                <h2 class="title-md text-primary mb-1">Riepilogo Assenze</h2>
+                <p class="body-md text-on-surface-variant/60">Totale ore assenza: <b>${ad.oreAssenzaTotali.toFixed(1)}h</b></p>
+            </header>
 
-                <div class="assenze-modal-list-wrap" style="min-height:0; flex:1 1 auto; padding:0 24px 0; overflow:hidden; display:flex; flex-direction:column;">
-                <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">Cronologia Eventi</div>
-                <div class="assenze-modal-list" style="flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:10px; padding-right:4px; padding-bottom:8px;">
-                    ${all.length === 0 ? `<div style="text-align:center; padding:30px; color:var(--text-dim); font-size:13px;">Nessun evento registrato</div>` :
-            all.map(a => `
-                        <div style="display:flex; align-items:center; gap:14px; padding:12px; background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid rgba(0,0,0,0.03);">
-                            <div style="width:36px; height:36px; border-radius:10px; background:${a.color}15; color:${a.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                <i class="ph-bold ${a.icon}" style="font-size:18px;"></i>
-                            </div>
-                            <div style="flex:1; min-width:0;">
-                                <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                                    <span style="font-size:13px; font-weight:700; color:var(--text-primary);">${new Date(a.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
-                                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);">${a.oreEffettive ? a.oreEffettive.toFixed(2) : '?.??'}h</span>
-                                </div>
-                                <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">
-                                    ${(() => {
-                    const tipo = (a.tipo || '').toString();
-                    const nota = (a.nota || '').toString().trim();
-                    const tipoLabel = tipo ? (tipo.charAt(0).toUpperCase() + tipo.slice(1)) : 'Evento';
-                    const showNota = nota && nota.toLowerCase() !== tipo.trim().toLowerCase();
-                    return `${tipoLabel}${showNota ? ` • ${nota}` : ''}`;
-                })()}
-                                </div>
-                                <div style="margin-top:5px;">
-                                    <span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; background:${a.giustificata ? 'rgba(40,205,65,0.14)' : 'rgba(239,68,68,0.14)'}; color:${a.giustificata ? '#15803D' : '#B91C1C'}; border:1px solid ${a.giustificata ? 'rgba(40,205,65,0.35)' : 'rgba(239,68,68,0.35)'};">
-                                        ${a.giustificata ? 'Giustificata' : 'Da giustificare'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                      `).join('')}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-4 rounded-2xl bg-error/10 text-error border border-error/10">
+                    <div class="label-sm opacity-60 mb-1">Assenze</div>
+                    <div class="text-2xl font-bold">${ad.totaleAssenze}</div>
                 </div>
-                </div>
-                <div class="assenze-modal-actions" style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:transparent; flex:0 0 auto;">
-                    <button onclick="closeModal()" style="width:100%; height:44px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer;">Chiudi</button>
+                <div class="p-4 rounded-2xl bg-orange/10 text-orange border border-orange/10">
+                    <div class="label-sm opacity-60 mb-1">Ritardi/Uscite</div>
+                    <div class="text-2xl font-bold">${ad.totaleRitardi + ad.totaleUscite}</div>
                 </div>
             </div>
-            `, 'assenze-modal-fixed');
+
+            <div class="flex flex-col gap-3 max-h-[300px] overflow-y-auto no-scrollbar">
+                ${all.map(a => `
+                    <div class="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low border border-white/40">
+                        <div class="w-10 h-10 rounded-full bg-${a.color}/10 flex items-center justify-center text-${a.color}">
+                            <span class="material-symbols-outlined text-[20px]">${a.icon}</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-sm">${new Date(a.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</div>
+                            <div class="text-[11px] text-on-surface-variant/60 uppercase font-bold">${a.tipo || 'Evento'}</div>
+                        </div>
+                        <div class="text-right">
+                             <div class="label-sm ${a.giustificata ? 'text-green' : 'text-error'}">${a.giustificata ? 'OK' : 'DA GIUST.'}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <button class="btn btn-primary w-full" onclick="closeModal()">Chiudi</button>
+        </div>
+    `);
 }
 window.mostraAssenzeModal = mostraAssenzeModal;
 
@@ -2961,7 +2539,6 @@ function mostraVerificheModal() {
     const allVerifiche = (state.verifiche || [])
         .filter(v => v.data && v.data >= todayISO)
         .sort((a, b) => a.data.localeCompare(b.data));
-    // Manual Verifiche from dedicated database table
     const manualExams = (state.manualVerifiche || [])
         .filter(v => !v.done && v.date && v.date >= todayISO)
         .map(v => ({ materia: v.subject, data: v.date, text: v.args, tipo: v.type, source: 'manual', id: v.id }));
@@ -2976,67 +2553,39 @@ function mostraVerificheModal() {
     }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
 
     showModal(`
-            <div style="display:flex; flex-direction:column; text-align:left; max-height:70svh;">
-                <header style="padding:14px 24px 12px; border-bottom:1px solid rgba(0,0,0,0.06); flex:0 0 auto;">
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Prossime Verifiche</div>
-                    <div style="display:flex; align-items:baseline; gap:12px;">
-                        <h2 style="margin:0; font-size:24px; font-weight:800; color:var(--text-primary);">Calendario Verifiche</h2>
-                        <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">${all.length > 0 ? all.length + ' event' + (all.length === 1 ? 'o' : 'i') : ''}</span>
+        <div class="flex flex-col gap-6">
+            <header>
+                <h2 class="title-md text-primary mb-1">Prossime Verifiche</h2>
+                <p class="body-md text-on-surface-variant/60">Calendario prove ed esami</p>
+            </header>
+
+            <div class="flex flex-col gap-4 max-h-[400px] overflow-y-auto no-scrollbar">
+                ${all.length === 0 ? `
+                    <div class="p-12 text-center text-on-surface-variant/40">
+                        <span class="material-symbols-outlined text-4xl mb-2">event_available</span>
+                        <p class="font-medium">Nessuna verifica in programma</p>
                     </div>
-                </header>
-
-                <div style="min-height:0; flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:12px 20px; display:flex; flex-direction:column; gap:8px;">
-                    ${all.length === 0 ? `
-                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; gap:12px;">
-                            <i class="ph-bold ph-calendar-check" style="font-size:40px; color:var(--text-dim); opacity:0.5;"></i>
-                            <div style="font-size:14px; color:var(--text-dim); text-align:center; font-weight:600;">Nessuna verifica in programma</div>
+                ` : all.map(v => `
+                    <div class="p-5 rounded-[28px] bg-surface-container-low border border-white/40 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            ${getSubjectAbbrev(v.materia)}
                         </div>
-                    ` : (() => {
-            let lastDateLabel = '';
-            return all.map(v => {
-                const d = parseLocalDate(v.data);
-                const days = Math.ceil((d - today) / 86400000);
-                const abbr = getSubjectAbbrev(v.materia);
-                const key = abbr.toLowerCase();
-                const normalizedTipo = (v.tipo || '').toString().trim().toLowerCase();
-                const tipoLabel = normalizedTipo === 'scritta' ? 'Scritta' : normalizedTipo === 'orale' ? 'Orale' : '';
-
-                const fullDate = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
-                const dateKey = v.data;
-                const showDateHeader = dateKey !== lastDateLabel;
-                lastDateLabel = dateKey;
-
-                return `
-                                ${showDateHeader ? `<div style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; padding: 8px 0 4px 0;">${fullDate}</div>` : ''}
-                                <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(0,0,0,0.02); border-radius:14px; border:1px solid rgba(0,0,0,0.04);">
-                                    <div style="width:44px; height:44px; border-radius:12px; background:var(--${key},var(--mat)); color:var(--${key}-t,var(--mat-t)); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; flex-shrink:0; letter-spacing:-0.02em;">
-                                        ${abbr}
-                                    </div>
-                                    <div style="flex:1; min-width:0;">
-                                        <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.text || (normalizedTipo === 'scritta' ? 'Verifica Scritta' : normalizedTipo === 'orale' ? 'Interrogazione Orale' : 'Verifica'))}</div>
-                                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                            <span style="font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(v.materia || '')}</span>
-                                            ${tipoLabel ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:var(--text-dim); background:rgba(0,0,0,0.05); border-radius:5px; padding:2px 6px; text-transform:uppercase;">${tipoLabel}</span>` : ''}
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                        ${v.source === 'manual' ? `
-                                            <button onclick="deleteManualVerifica('${v.id}')" aria-label="Elimina verifica" style="background:none; border:none; color:var(--red, #FF3B30); cursor:pointer; padding:2px; opacity:0.5; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;">
-                                                <i class="ph-bold ph-trash" style="font-size:14px;"></i>
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `;
-            }).join('');
-        })()}
-                </div>
-
-                <div style="padding:12px 24px 16px; border-top:1px solid rgba(0,0,0,0.06); background:transparent; flex:0 0 auto;">
-                    <button onclick="closeModal()" style="width:100%; height:44px; border-radius:14px; border:none; background:#141414; color:white; font-weight:700; cursor:pointer; font-size:14px;">Chiudi</button>
-                </div>
+                        <div class="flex-1 min-width-0">
+                            <h3 class="font-bold text-[15px] truncate">${escapeHtml(v.text || v.materia)}</h3>
+                            <p class="text-[12px] text-on-surface-variant/60 uppercase font-bold tracking-wider">${v.data}</p>
+                        </div>
+                        ${v.source === 'manual' ? `
+                            <button onclick="deleteManualVerifica('${v.id}')" class="w-8 h-8 rounded-full bg-error/10 text-error flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                `).join('')}
             </div>
-            `, 'verifiche-modal-fixed');
+
+            <button class="btn btn-primary w-full" onclick="closeModal()">Chiudi</button>
+        </div>
+    `);
 }
 window.mostraVerificheModal = mostraVerificheModal;
 
@@ -3077,60 +2626,40 @@ function mostraCircolare(id) {
     if (!c) return;
 
     showModal(`
-            <div class="circolare-layout">
-                <aside class="circolare-side">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <p style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#908C86; text-transform:uppercase; letter-spacing:0.1em; margin:0;">
-                            // CIRCOLARE_DOC N. ${c.numero}
-                        </p>
-                        <h2 style="font-size:20px; font-weight:800; color:#141414; line-height:1.2; margin:0; letter-spacing:-0.02em;">
-                            ${c.titolo}
-                        </h2>
-                        <p style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#BCB8B2; margin-top:4px; display:flex; align-items:center; gap:6px;">
-                            <i class="ph-bold ph-calendar"></i> ${c.data}
-                        </p>
-                    </div>
-                    
-                    <div style="display:flex; flex-direction:column; gap:12px; margin-top:auto;">
-                        <button onclick="window.open('${c.link}', '_blank')" 
-                            style="width:100%; height:48px; border-radius:12px; background:#141414; 
-                            color:#FFF; font-weight:800; border:none; cursor:pointer; 
-                            display:flex; align-items:center; justify-content:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; transition: all 0.2s;">
-                            <i class="ph-bold ph-file-pdf" style="font-size:18px;"></i>
-                            Apri Documento
-                        </button>
-                        <button onclick="closeModal()" 
-                            style="width:100%; height:44px; border-radius:12px; background:rgba(0,0,0,0.04); 
-                            color:#908C86; font-weight:700; border:none; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase;">
-                            Chiudi
-                        </button>
-                    </div>
-                </aside>
+        <div class="flex flex-col h-full">
+            <header class="mb-6">
+                <div class="label-sm text-primary mb-2">Circolare N. ${c.numero}</div>
+                <h2 class="title-md text-on-surface mb-2">${c.titolo}</h2>
+                <p class="body-md text-on-surface-variant/60 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">calendar_today</span> ${c.data}
+                </p>
+            </header>
 
-                <section class="circolare-main">
-                    <div id="sintesi-box-${c.id}" style="height: 100%;">
-                        ${c.sintesi ? `<div class="ai-prose">${marked.parse(c.sintesi)}</div>` : `
-                            <div id="sintesi-placeholder-${c.id}" style="height: 100%; display:flex; flex-direction:column; gap:20px; align-items:center; justify-content:center; text-align:center;">
-                                <div style="width:56px; height:56px; border-radius:18px; background:#F6F5F3; display:flex; align-items:center; justify-content:center; color:#DEDAD4;">
-                                    <i class="ph-bold ph-sparkle" style="font-size:28px;"></i>
-                                </div>
-                                <div>
-                                    <p style="color:#141414; font-size:15px; font-weight:700; margin:0 0 4px 0;">Analisi AI Disponibile</p>
-                                    <p style="color:#908C86; font-size:13px; margin:0; max-width: 260px;">Genera una sintesi dei punti chiave tramite il nostro motore neurale.</p>
-                                </div>
-                                <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" 
-                                    id="btn-sintesi-${c.id}"
-                                    class="btn-engineering"
-                                    style="padding:12px 28px;">
-                                    <i class="ph-bold ph-cpu"></i> Elabora Sintesi
-                                </button>
+            <div class="flex-1 overflow-y-auto no-scrollbar mb-6 p-6 rounded-[32px] bg-surface-container-low border border-white/40">
+                <div id="sintesi-box-${c.id}" class="h-full">
+                    ${c.sintesi ? `<div class="ai-prose">${marked.parse(c.sintesi)}</div>` : `
+                        <div class="flex flex-col items-center justify-center h-full text-center gap-4">
+                            <div class="w-16 h-16 rounded-2xl liquid-glass flex items-center justify-center text-primary mb-2">
+                                <span class="material-symbols-outlined text-3xl">auto_awesome</span>
                             </div>
-                        `}
-                    </div>
-                </section>
+                            <p class="body-md font-bold text-on-surface">Analisi AI Disponibile</p>
+                            <p class="body-md text-on-surface-variant/60 max-w-[240px] mb-4">Ottieni una sintesi intelligente dei punti chiave.</p>
+                            <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" class="btn btn-glass w-full">
+                                Elabora Sintesi
+                            </button>
+                        </div>
+                    `}
+                </div>
             </div>
-            `, 'circolare-modal');
 
+            <div class="flex flex-col gap-3">
+                <button onclick="window.open('${c.link}', '_blank')" class="btn btn-primary w-full h-14">
+                    <span class="material-symbols-outlined">open_in_new</span> Apri Documento
+                </button>
+                <button onclick="closeModal()" class="btn btn-glass w-full h-14">Chiudi</button>
+            </div>
+        </div>
+    `);
 }
 function renderDayDetailModal(dateStr) {
     const container = getModalContainer();
@@ -3140,8 +2669,6 @@ function renderDayDetailModal(dateStr) {
     const formattedDate = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
     const tasksForDay = getCalendarTasksForDate(dateStr);
-
-    // Gather verifiche for this day
     const verificheForDay = [];
     (state.verifiche || []).filter(v => v.data === dateStr).forEach(v => {
         verificheForDay.push({ subject: v.materia || v.subject || '', text: v.text || v.descrizione || '', tipo: v.tipo || '' });
@@ -3152,86 +2679,54 @@ function renderDayDetailModal(dateStr) {
 
     const hasContent = tasksForDay.length > 0 || verificheForDay.length > 0;
 
-    container.innerHTML = `
-                <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-                    <div class="modal-content" onclick="event.stopPropagation()" style="font-family:'Inter',system-ui,-apple-system,sans-serif; max-width:440px; padding:28px; border-radius:22px; background:#FFFFFF; color:#141414; border:1px solid rgba(0,0,0,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.04); width: calc(100% - 32px); max-height: 90vh; display:flex; flex-direction:column;">
+    showModal(`
+        <div class="flex flex-col gap-6">
+            <header>
+                <div class="label-sm text-primary mb-1">Agenda Giornaliera</div>
+                <h2 class="title-md text-on-surface capitalize">${formattedDate}</h2>
+            </header>
 
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-shrink:0;">
-                            <div>
-                                <div style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#007AFF; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:8px; background: rgba(0,122,255,0.06); padding: 4px 10px; border-radius: 8px; display:inline-block;">
-                                    Agenda Compiti
-                                </div>
-                                <h2 style="font-family:'Inter',system-ui,-apple-system,sans-serif; margin:0; font-size:24px; font-weight:800; text-transform:capitalize; letter-spacing:-0.03em; color:#141414;">${formattedDate}</h2>
-                            </div>
-                            <button onclick="closeModal()" style="background:#F6F5F3; border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#908C86; cursor:pointer; transition: all 0.2s; flex-shrink:0;" onmouseover="this.style.background='#EDEBE7';this.style.color='#141414'" onmouseout="this.style.background='#F6F5F3';this.style.color='#908C86'">
-                                <i class="ph ph-x" style="font-size:18px;"></i>
-                            </button>
+            <div id="modal-task-list" class="flex flex-col gap-4 max-h-[400px] overflow-y-auto no-scrollbar">
+                ${!hasContent ? `
+                    <div class="p-12 text-center text-on-surface-variant/40">
+                        <span class="material-symbols-outlined text-4xl mb-2">event_note</span>
+                        <p class="font-medium">Nessun impegno pianificato</p>
+                    </div>
+                ` : ''}
+
+                ${verificheForDay.map(v => `
+                    <div class="p-5 rounded-[28px] bg-error/5 border border-error/20 flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error">
+                            <span class="material-symbols-outlined text-[20px]">warning</span>
                         </div>
+                        <div class="flex-1">
+                            <div class="label-sm text-error mb-1">${escapeHtml(normalizeTipoVerifica(v.tipo))}</div>
+                            <h3 class="font-bold text-[15px]">${escapeHtml(v.text || v.subject)}</h3>
+                        </div>
+                    </div>
+                `).join('')}
 
-                        <div id="modal-task-list" style="display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1; min-height:0; padding-right:4px;">
-                            ${!hasContent ? `
-                                <div style="text-align:center; padding:56px 20px; color:#908C86;">
-                                    <i class="ph ph-calendar-blank" style="font-size:48px; display:block; margin:0 auto 14px; opacity:0.12;"></i>
-                                    <div style="font-family:'Inter',system-ui,sans-serif; font-size:15px; font-weight:600; opacity:0.5;">Nessun compito pianificato</div>
-                                </div>
-                            ` : ''}
-                            ${verificheForDay.map(v => {
-        const color = getSubjectColor(v.subject);
-        return `
-                                    <div style="flex-shrink:0; border-radius:16px; display:flex; align-items:stretch; overflow:hidden; background:#FFFBF0; border:1px solid rgba(255,159,10,0.2); box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
-                                        <div style="width:4px; background:#FF9F0A; flex-shrink:0;"></div>
-                                        <div style="flex:1; padding:16px 16px; min-width:0;">
-                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.08em; background:${colorWithAlpha(color, 0.12)}; padding:3px 8px; border-radius:6px;">${escapeHtml(v.subject || getSubjectAbbrev(v.subject))}</span>
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:#FF9F0A; text-transform:uppercase;">${escapeHtml(normalizeTipoVerifica(v.tipo))}</span>
-                                            </div>
-                                            <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word;">${escapeHtml(v.text || v.subject)}</div>
-                                        </div>
-                                    </div>
-                                `;
-    }).join('')}
-                            ${tasksForDay.filter(t => !/check-?list|check\s*liste|checklist\s*&\s*review/i.test(t.text)).map(t => {
-        const subContent = t.subject || 'N/A';
-        const color = getSubjectColor(subContent);
-        const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-        const timeStr = timeMatch ? timeMatch[1] : '';
-        const displayText = (t.text || '')
-            .replace(/^\[AI\]\s*/i, '')
-            .replace(/^\d{2}:\d{2}\s*[—\-]\s*/, '')
-            .replace(/\*/g, '')
-            .replace(/[\s|]+$/, '')
-            .trim();
-        return `
-                                    <div style="flex-shrink:0; border-radius:16px; display:flex; align-items:stretch; overflow:hidden; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border:1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.08)'}; box-shadow: 0 1px 4px rgba(0,0,0,0.04); opacity: ${t.done ? 0.65 : 1}; transition: all 0.2s;">
-                                        <div style="width:4px; background:${color}; flex-shrink:0;"></div>
-                                        <div style="flex:1; padding:16px 16px; min-width:0;">
-                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                                <span style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.08em; background:${colorWithAlpha(color, 0.12)}; padding:3px 8px; border-radius:6px;">${escapeHtml(subContent)}</span>
-                                                ${timeStr ? `<span style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:3px 8px; border-radius:20px;">${escapeHtml(timeStr)}</span>` : ''}
-                                            </div>
-                                            <div style="font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; font-weight:600; color:#141414; line-height:1.55; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(displayText)}</div>
-                                        </div>
-                                        <div style="padding:12px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;">
-                                            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); renderDayDetailModal('${escapeJsSingleQuote(dateStr)}');" style="width:34px; height:34px; border-radius:10px; background:${t.done ? '#141414' : '#F6F5F3'}; border:1px solid ${t.done ? '#141414' : 'rgba(0,0,0,0.06)'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;">
-                                                <i class="ph-bold ph-check" style="font-size:16px; color:${t.done ? 'white' : '#C8C5C0'};"></i>
-                                            </button>
-                                            ${isUserGeneratedTaskId(t.id) ? `<button onclick="deleteCalendarTask('${escapeJsSingleQuote(t.id)}', '${escapeJsSingleQuote(dateStr)}');" style="width:34px; height:34px; border-radius:10px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;" aria-label="Elimina attività" title="Elimina attività" onmouseover="this.style.background='#FFE0DC'" onmouseout="this.style.background='#FFF0EE'">
-                                                <i class="ph-bold ph-trash" style="font-size:14px; color:#FF3B30;"></i>
-                                            </button>` : ''}
-                                        </div>
-                                    </div>
-                                `;
-    }).join('')}
-                       </div>
-
-                        ${hasContent ? `
-                        <div style="margin-top:20px; padding-top:16px; border-top:1px solid #F0EDE8; flex-shrink:0;">
-                            <button onclick="closeModal()" style="font-family:'Inter',system-ui,-apple-system,sans-serif; width:100%; height:48px; background:#141414; color:white; border:none; border-radius:14px; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:0.3px; transition: all 0.2s;" onmouseover="this.style.background='#2A2A2A'" onmouseout="this.style.background='#141414'">Chiudi</button>
-                       </div>
+                ${tasksForDay.map(t => `
+                    <div class="p-5 rounded-[28px] bg-surface-container-low border border-white/40 flex items-center gap-4 ${t.done ? 'opacity-50' : ''}">
+                        <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); renderDayDetailModal('${escapeJsSingleQuote(dateStr)}');" class="w-10 h-10 rounded-xl ${t.done ? 'bg-green/10 text-green' : 'bg-primary/10 text-primary'} flex items-center justify-center border border-white/60">
+                            <span class="material-symbols-outlined text-[20px]">${t.done ? 'task_alt' : 'circle'}</span>
+                        </button>
+                        <div class="flex-1 min-width-0">
+                            <div class="label-sm text-on-surface-variant/40 mb-1">${escapeHtml(t.subject)}</div>
+                            <h3 class="font-bold text-[15px] truncate ${t.done ? 'line-through' : ''}">${escapeHtml(t.text)}</h3>
+                        </div>
+                        ${isUserGeneratedTaskId(t.id) ? `
+                            <button onclick="deleteCalendarTask('${escapeJsSingleQuote(t.id)}', '${escapeJsSingleQuote(dateStr)}')" class="w-8 h-8 rounded-full bg-error/10 text-error flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
                         ` : ''}
-                   </div>
-               </div>
-            `;
+                    </div>
+                `).join('')}
+            </div>
+
+            <button class="btn btn-primary w-full h-14" onclick="closeModal()">Chiudi</button>
+        </div>
+    `);
 }
 function togglePlanInModal(dateStr, taskId) {
     // Utilizziamo la logica esistente ma aggiorniamo il modale
@@ -4273,37 +3768,41 @@ function renderVoti() {
 
     if (votiData.length === 0) {
         return `
-        <div style="text-align:center; padding: 48px 24px; color: var(--text-muted);">
-                    <i class="ph ph-graduation-cap" style="font-size: 56px; opacity: 0.2; margin-bottom: 16px; display: block;"></i>
-                    <p style="margin-bottom:20px; font-size:16px;">Nessun voto registrato.</p>
-                    <button onclick="performArgoSync()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto;">Sincronizza DidUP</button>
-               </div> `;
+        <div class="liquid-glass rounded-[40px] p-12 text-center flex flex-col items-center gap-6">
+            <div class="w-20 h-20 rounded-[28px] bg-primary/10 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined text-4xl">school</span>
+            </div>
+            <div>
+                <p class="body-lg text-on-surface-variant/60 font-medium mb-6">Nessun voto registrato.</p>
+                <button onclick="performArgoSync()" class="btn btn-primary">Sincronizza DidUP</button>
+            </div>
+        </div> `;
     }
 
     return `
-        <div class="view">
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    ${votiData.map(v => {
-        const rawVal = (v.valore || v.value || '').toString();
-        const giu = isGiustifica(rawVal);
-        const displayVal = giu ? 'GIU' : rawVal;
-        const mat = v.materia || v.subject || 'Materia';
-        const subjColor = getSubjectColor(mat);
-        const subjBg = giu ? '#F2F1EF' : colorWithAlpha(subjColor, 0.13);
-        const subjText = giu ? '#908C86' : subjColor;
-        const subjDot = giu ? '#BCB8B2' : subjColor;
-        const encodedMat = encodeURIComponent(mat || '').replace(/'/g, '%27');
-        return `
-                        <div class="card" onclick="handleGradeSubjectClickFromEncoded('${encodedMat}')" style="padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:0; cursor:pointer;">
-                            <div style="width:54px; height:54px; border-radius:12px; background:${subjBg}; border:1px solid ${subjDot}30; display:flex; align-items:center; justify-content:center; font-size:${giu ? '14' : '24'}px; font-weight:800; color:${subjText};">${displayVal}</div>
-                            <div style="flex:1; text-align:left;">
-                                <div style="font-weight:700; font-size:16px; color:var(--text-primary);">${mat}</div>
-                                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${v.data || v.date || ''} • ${v.tipo || v.type || ''}</div>
-                            </div>
-                        </div>`;
-    }).join('')}
-               </div>
-           </div> `;
+        <div class="flex flex-col gap-4">
+            ${votiData.map(v => {
+                const rawVal = (v.valore || v.value || '').toString();
+                const giu = isGiustifica(rawVal);
+                const displayVal = giu ? 'GIU' : rawVal;
+                const mat = v.materia || v.subject || 'Materia';
+                const val = getNumericGradeValue(v);
+                const isSuff = val >= 6;
+                const encodedMat = encodeURIComponent(mat || '').replace(/'/g, '%27');
+
+                return `
+                <div class="liquid-glass rounded-[28px] p-6 liquid-shadow cursor-pointer transition-all hover:scale-[1.02] flex items-center gap-6" onclick="handleGradeSubjectClickFromEncoded('${encodedMat}')">
+                    <div class="w-14 h-14 rounded-2xl ${giu ? 'bg-surface-dim text-on-surface/40' : (isSuff ? 'bg-green/10 text-green' : 'bg-error/10 text-error')} flex items-center justify-center text-2xl font-bold border border-white/40">
+                        ${displayVal}
+                    </div>
+                    <div class="flex-1 min-width-0">
+                        <h3 class="font-bold text-on-surface truncate">${mat}</h3>
+                        <p class="text-on-surface-variant/40 text-[12px] font-bold uppercase tracking-wider">${v.data || v.date} • ${v.tipo || v.type}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant/20">chevron_right</span>
+                </div>`;
+            }).join('')}
+        </div> `;
 }
 function showBachecaModal() {
     // ⭐ Prova prima promemoria, poi announcements
@@ -6678,44 +6177,69 @@ console.log('✅ GSAP Animations consolidated into ui.js');
 
 function renderCircolariView() {
     const list = state.circolari || [];
-    const toShow = list.slice(0, 15);
+    const urgent = list.slice(0, 2);
+    const recent = list.slice(2, 6);
 
     return `
-<div class="dashboard view" style="width: 100%;">
-    <div class="planner-content" style="padding: 16px 32px 40px; width: 100%; max-width: 1180px; margin: 0 auto;">
-        
-        <header style="margin-bottom: 32px;">
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">
-                Comunicazioni Ufficiali
-            </div>
-            <h1 style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800; text-transform: uppercase; margin: 0; color: #141414; letter-spacing: -0.02em;">
-                Circolari
-            </h1>
-            <div style="margin-top:14px;">
-                <a href="https://www.liceogandhi.edu.it" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; background:#141414; color:#FFF; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:800; text-transform:uppercase; text-decoration:none;">
-                    <i class="ph-bold ph-globe" style="font-size:14px;"></i> Vai al sito
-                </a>
-            </div>
+    <div class="view circulars-view pb-32">
+        <header class="mb-8 pt-4">
+            <h1 class="headline-lg text-primary mb-1">In Evidenza</h1>
+            <p class="body-md text-on-surface-variant/60">Important updates</p>
         </header>
 
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-            ${toShow.length ? toShow.map(c => `
-            <div class="card" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" style="cursor: pointer; padding: 24px; border-radius: 18px; display: flex; align-items: center; gap: 20px; transition: all 0.2s;">
-                <div style="width: 52px; height: 52px; border-radius: 12px; background: #F0F0F3; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i class="ph-bold ph-file-text" style="font-size: 24px; color: #141414;"></i>
-                </div>
-                <div style="flex: 1;">
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: var(--accent-warm); text-transform: uppercase; margin-bottom: 4px;">
-                        Circolare N. ${escapeHtml(c.numero)} &middot; ${escapeHtml(c.data)}
+        <!-- Urgent Circulars (Horizontal Scroll) -->
+        <section class="mb-10">
+            <div class="flex overflow-x-auto no-scrollbar gap-4 py-2">
+                ${urgent.length ? urgent.map(c => `
+                    <div class="flex-none w-[280px] liquid-glass rounded-[32px] p-6 liquid-shadow relative overflow-hidden group cursor-pointer" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-primary text-[10px] font-bold uppercase tracking-wider">Urgent</span>
+                            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                <span class="material-symbols-outlined text-[18px]">campaign</span>
+                            </div>
+                        </div>
+                        <h3 class="title-md text-on-surface line-clamp-2 mb-4 h-14">${c.titolo}</h3>
+                        <p class="body-md text-on-surface-variant/40 line-clamp-2 mb-6 text-[13px]">Please review the updated examination timetable ...</p>
+                        <div class="flex justify-between items-center mt-auto">
+                            <span class="text-on-surface-variant/40 text-[11px] font-medium">${c.data}</span>
+                            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                            </div>
+                        </div>
+                        <!-- Glow effect -->
+                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
                     </div>
-                    <div style="font-size: 16px; font-weight: 700; color: #141414; line-height: 1.4;">
-                        ${escapeHtml(c.titolo)}
+                `).join('') : `
+                    <div class="flex-none w-full liquid-glass rounded-[32px] p-12 text-center text-on-surface-variant/40">
+                        Nessun avviso in evidenza.
                     </div>
-                </div>
-                <i class="ph-bold ph-caret-right" style="font-size: 20px; color: #BCB8B2;"></i>
+                `}
             </div>
-            `).join('') : '<div class="card" style="padding: 40px; text-align: center; color: var(--text-dim);">Nessuna circolare trovata.</div>'}
-        </div>
-    </div>
-</div>`;
+        </section>
+
+        <section>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="title-md">Recent Circulars</h2>
+                <button class="text-primary font-bold text-[13px]">View All</button>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                ${recent.length ? recent.map(c => `
+                    <div class="liquid-glass rounded-[24px] p-5 liquid-shadow flex justify-between items-center group cursor-pointer transition-all hover:translate-x-1" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')">
+                        <div class="flex-1 min-width-0 pr-4">
+                            <h3 class="font-bold text-[15px] text-on-surface truncate mb-1">${c.titolo}</h3>
+                            <p class="text-on-surface-variant/40 text-[12px] font-medium">New healthy options added to the daily rotat...</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="text-on-surface-variant/40 text-[11px] font-bold">${c.data}</p>
+                        </div>
+                    </div>
+                `).join('') : `
+                    <div class="liquid-glass rounded-[24px] p-8 text-center text-on-surface-variant/40">
+                        Nessuna circolare recente.
+                    </div>
+                `}
+            </div>
+        </section>
+    </div>`;
 }

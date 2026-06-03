@@ -5,3 +5,5 @@ cache_sintesi.json
 server.log
 *.old
 index.html_*
+.vercel
+.env*
