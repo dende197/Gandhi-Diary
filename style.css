@@ -446,3 +446,56 @@ h1, h2, h3, h4, h5, h6 {
     background-color: #E5A7A7;
     border-radius: 0 4px 4px 0;
 }
+
+/* --- NUOVI STILI DEL MOCKUP --- */
+.view-fullbleed {
+    margin-left: calc(-1 * var(--margin-mobile));
+    margin-right: calc(-1 * var(--margin-mobile));
+    width: calc(100% + 2 * var(--margin-mobile));
+    background-color: #F3F6F8;
+}
+
+@media (min-width: 1024px) {
+    .view-fullbleed {
+        margin-left: calc(-1 * var(--margin-desktop));
+        margin-right: calc(-1 * var(--margin-desktop));
+        width: calc(100% + 2 * var(--margin-desktop));
+    }
+}
+
+.card-assenze-bg {
+    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,240,240,1) 50%, rgba(255,225,225,0.8) 100%);
+    box-shadow: 0 10px 30px -5px rgba(189, 17, 24, 0.1), inset 0 0 0 1px rgba(255,255,255,0.5);
+    backdrop-filter: blur(10px);
+}
+
+.avatar-group > img {
+    border: 2px solid white;
+    margin-left: -10px;
+}
+.avatar-group > img:first-child {
+    margin-left: 0;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.border-left-accent {
+    position: relative;
+}
+.border-left-accent::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10%;
+    height: 80%;
+    width: 4px;
+    background-color: #e5a7a7;
+    border-radius: 0 4px 4px 0;
+}
+
