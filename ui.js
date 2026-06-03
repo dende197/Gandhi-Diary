@@ -75,13 +75,7 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #0D1F2D 0%, #1A6B8A 45%, #C6F2DF
 const GOAL_GRADE_OPTIONS_DESC = GOAL_GRADE_SCALE_DESC.includes(PASSING_GRADE_THRESHOLD)
     ? GOAL_GRADE_SCALE_DESC
     : [...GOAL_GRADE_SCALE_DESC, PASSING_GRADE_THRESHOLD].sort((a, b) => b - a);
-const AI_CHAT_QUICK_PROMPTS = [
-    'Organizza la mia settimana 📅',
-    'Aiutami a ripassare per la verifica 📝',
-    'Consiglio produttività 🚀'
-];
 const PRINT_DIALOG_DELAY_MS = 220;
-const AI_LIMIT_FALLBACK_MESSAGE = '⚠️ Richiesta non soddisfabile qui per limiti strutturali del Tutor AI. Puoi scaricare tutte le attività svolte dalla sezione Agenda → Attività PDF.';
 const SUBJECT_TREND_GRADIENT_TOP_ALPHA = 0.95;
 const SUBJECT_TREND_GRADIENT_MID_ALPHA = 0.4;
 const SUBJECT_TREND_GRADIENT_BOTTOM_ALPHA = 0.08;
@@ -148,13 +142,9 @@ function getSubjectGroupKey(subject) {
     return normalized;
 }
 
-function isAiTask(task) {
-    return !!(task && typeof task.id === 'string' && task.id.startsWith('ai_'));
-}
-
 function isUserGeneratedTaskId(id) {
     if (typeof id !== 'string') return false;
-    return id.startsWith('manual_') || id.startsWith('ai_') || id.startsWith('quest-');
+    return id.startsWith('manual_') || id.startsWith('quest-');
 }
 
 function hasPlannedTasks(plannedTasks) {
@@ -1036,7 +1026,6 @@ function getHomeTaskWidgetData() {
     if (mode === 'today') {
         const plannedTodayIds = (state.plannedTasks && state.plannedTasks[todayStr]) || [];
         const tasks = (state.tasks || []).filter(t => {
-            if (t.id && t.id.startsWith('ai_')) return false;
             if (t.subject === 'QUEST') return false;
             if (t.isExam) return false;
             return plannedTodayIds.includes(t.id);
@@ -1051,7 +1040,6 @@ function getHomeTaskWidgetData() {
     }
 
     const tasks = (state.tasks || []).filter(t => {
-        if (t.id && t.id.startsWith('ai_')) return false;
         if (t.subject === 'QUEST') return false;
         if (t.isExam) return false;
         return t.due_date === tomorrowStr;
@@ -1220,7 +1208,7 @@ function getCalendarTasksForDate(dateStr) {
     const tasks = Array.isArray(state.tasks) ? state.tasks : [];
     const merged = new Map();
     tasks.forEach(t => {
-        if (!t || isAiTask(t) || t.subject === 'QUEST' || t.isExam) return;
+        if (!t || t.subject === 'QUEST' || t.isExam) return;
         if (t.due_date === dateStr || plannedIds.includes(t.id)) {
             merged.set(t.id, t);
         }
@@ -1467,7 +1455,7 @@ function renderCalendarWeekList(weekStart) {
                     ${dayTasks.map(t => {
             const subjColor = getSubjectColor(t.subject);
             const abbr = getSubjectAbbrev(t.subject);
-            const displayText = (t.text || '').replace(/^\[AI\]\s*/i, '').replace(/\*/g, '').trim();
+            const displayText = (t.text || '').replace(/\*/g, '').trim();
             return `
                         <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
                             <div class="asw-task-stripe" style="background:${t.done ? '#C8C5C0' : subjColor};"></div>
@@ -1934,72 +1922,6 @@ function renderGradesView() {
             }).join('')}
         </div>
     </div>`;
-}
-function renderAIAssistantView() {
-    const chat = state.aiChatHistory || [];
-
-    return `
-        <div class="view ai-view ai-chat-view flex flex-col h-screen">
-            <header class="ai-chat-header flex items-center justify-between p-4 border-b border-white/20 bg-white/40 backdrop-blur-md">
-                <div class="flex items-center gap-3">
-                    <button class="w-10 h-10 rounded-xl liquid-glass flex items-center justify-center text-primary" onclick="navigate('home')">
-                        <span class="material-symbols-outlined">arrow_back</span>
-                    </button>
-                    <div>
-                        <span class="font-bold text-on-surface">Tutor AI</span>
-                        <span class="block text-[10px] text-primary uppercase font-bold tracking-widest">${state.aiChatPending ? 'Sta scrivendo…' : 'Online'}</span>
-                    </div>
-                </div>
-                <button class="liquid-pill px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-primary border border-primary/20" onclick="startNewAIChat()">
-                    Nuova chat
-                </button>
-            </header>
-
-            <div id="aiChatMessages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 no-scrollbar">
-                ${chat.length === 0 ? `
-                <div class="m-auto max-w-[320px] text-center">
-                    <div class="w-20 h-20 rounded-[28px] liquid-glass flex items-center justify-center text-primary mx-auto mb-6 liquid-shadow">
-                        <span class="material-symbols-outlined text-4xl">auto_awesome</span>
-                    </div>
-                    <h2 class="title-md mb-2">Come posso aiutarti?</h2>
-                    <p class="body-md text-on-surface-variant/60 mb-8">Chiedimi di organizzare la settimana o di ripassare un argomento.</p>
-                    <div class="flex flex-col gap-2">
-                        ${AI_CHAT_QUICK_PROMPTS.map((prompt, idx) => `
-                        <button class="liquid-pill p-4 text-left text-sm font-medium hover:bg-white/60 transition-all border border-white/40" onclick="sendAIChatQuickAt(${idx})">
-                            ${escapeHtml(prompt)}
-                        </button>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : chat.map((msg, idx) => `
-                <div class="flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
-                    <div class="max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-on-primary rounded-[24px] rounded-tr-sm' : 'liquid-glass text-on-surface rounded-[24px] rounded-tl-sm liquid-shadow'} p-4">
-                        <div class="ai-prose">
-                            ${typeof marked !== 'undefined' ? marked.parse(msg.text) : msg.text}
-                        </div>
-                    </div>
-                </div>
-                `).join('')}
-                ${state.aiChatPending ? `
-                <div class="flex justify-start">
-                    <div class="liquid-glass rounded-[24px] rounded-tl-sm p-4 flex gap-1">
-                        <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></span>
-                        <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                        <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-
-            <footer class="p-4 pb-24">
-                <div class="liquid-glass rounded-full p-2 flex items-center gap-2 border border-white/60 shadow-lg">
-                    <input id="aiChatInput" class="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium placeholder:text-on-surface-variant/40" type="text" placeholder="Chiedi qualcosa..." value="${escapeHtml(state.aiChatInputValue || '')}" oninput="state.aiChatInputValue=this.value" onkeypress="handleAIChatInputKeypress(event)">
-                    <button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-all" onclick="sendAIChat()" ${state.aiChatPending ? 'disabled' : ''}>
-                        <span class="material-symbols-outlined text-[20px]">send</span>
-                    </button>
-                </div>
-            </footer>
-        </div>`;
 }
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
@@ -3012,7 +2934,7 @@ function renderWeeklyAgenda() {
 
     if (state.plannerMode === 'registro') {
         tasks.forEach(t => {
-            if (!isAiTask(t) && t.subject !== 'QUEST' && !t.isExam && t.due_date) {
+            if (t.subject !== 'QUEST' && !t.isExam && t.due_date) {
                 list.push({ ...t, displayDate: t.due_date });
             }
         });
@@ -4696,7 +4618,7 @@ document.addEventListener('animationend', (e) => {
 
 
 // ── RENDERING HEART & NAVIGATION SETTINGS ──
-window.allowedViews = ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+window.allowedViews = ['home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
 
 window.currentViewFromHash = function () {
     const v = (location.hash || '').replace('#', '').trim();
@@ -4739,8 +4661,6 @@ let _lastRenderedView = null;
 let _lastRenderedLoggedIn = null;
 let _lastRenderedTaskCount = -1;
 let _lastRenderedVotiCount = -1;
-let _lastRenderedAICount = -1;
-let _lastRenderedAIPending = null;
 
 window._renderCore = function () {
     if (state._loggedOut) return; // Post-logout guard
@@ -4762,15 +4682,10 @@ window._renderCore = function () {
     // Deduplicate: skip full re-render if same view + same data counts + same AI state
     const taskCount = (state.tasks || []).length;
     const votiCount = (state.voti || []).length;
-    const aiCount = (state.aiChatHistory || []).length;
-    const aiPending = !!state.aiChatPending;
-
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
         _lastRenderedTaskCount === taskCount &&
         _lastRenderedVotiCount === votiCount &&
-        _lastRenderedAICount === aiCount &&
-        _lastRenderedAIPending === aiPending &&
         !state._forceRender) {
         return;
     }
@@ -4778,47 +4693,22 @@ window._renderCore = function () {
     _lastRenderedView = state.view;
     _lastRenderedTaskCount = taskCount;
     _lastRenderedVotiCount = votiCount;
-    _lastRenderedAICount = aiCount;
-    _lastRenderedAIPending = aiPending;
     state._forceRender = false;
 
     document.body.classList.remove('logged-out');
 
     nav.innerHTML = renderNav();
 
-    // Fix: Set AI mode class BEFORE innerHTML so CSS rules are active during first layout
-    const isAI = state.view === 'ai_assistant';
-    if (isAI) {
-        document.body.classList.add('is-ai-mode');
-        document.body.style.overflow = 'hidden';
-        document.body.style.height = '100svh';
-        root.style.overflow = 'hidden';
-        root.style.height = '100%';
-    } else {
-        document.body.classList.remove('is-ai-mode');
-        document.body.style.overflow = '';
-        document.body.style.height = '';
-        root.style.overflow = 'visible';
-        root.style.height = '';
-    }
-
-    const chatScrollMetricsBeforeRender = isAI ? (() => {
-        const chatDiv = document.getElementById('aiChatMessages');
-        if (!chatDiv) return null;
-        const maxScrollTop = Math.max(0, chatDiv.scrollHeight - chatDiv.clientHeight);
-        return {
-            scrollTop: chatDiv.scrollTop,
-            scrollHeight: chatDiv.scrollHeight,
-            atBottom: (maxScrollTop - chatDiv.scrollTop) <= 32
-        };
-    })() : null;
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+    root.style.overflow = 'visible';
+    root.style.height = '';
 
     let html = '';
     switch (state.view) {
         case 'home': html = renderHome(); break;
         case 'planner': html = renderPlanner(); break;
         case 'voti': html = renderGradesView(); break;
-        case 'ai_assistant': html = renderAIAssistantView(); break;
         case 'academic_profile': html = renderAcademicProfile(); break;
         case 'profile': html = renderProfile(); break;
         case 'circolari': html = (typeof renderCircolariView === 'function') ? renderCircolariView() : renderHome(); break;
@@ -4829,32 +4719,6 @@ window._renderCore = function () {
     if (state._scrollTopAfterRender) {
         window.scrollTo({ top: 0, behavior: 'auto' });
         state._scrollTopAfterRender = false;
-    }
-    if (state.view === 'ai_assistant') {
-        const chatDiv = document.getElementById('aiChatMessages');
-        if (chatDiv) {
-            if (chatScrollMetricsBeforeRender) {
-                if (chatScrollMetricsBeforeRender.atBottom || state.aiChatPending) {
-                    chatDiv.scrollTop = chatDiv.scrollHeight;
-                } else {
-                    const heightDelta = chatDiv.scrollHeight - chatScrollMetricsBeforeRender.scrollHeight;
-                    const safeHeightDelta = Number.isFinite(heightDelta) ? heightDelta : 0;
-                    chatDiv.scrollTop = Math.max(0, chatScrollMetricsBeforeRender.scrollTop + safeHeightDelta);
-                }
-            } else {
-                chatDiv.scrollTop = chatDiv.scrollHeight;
-            }
-        }
-        if (state._focusAIInputAfterRender) {
-            state._focusAIInputAfterRender = false;
-            requestAnimationFrame(() => {
-                const input = document.getElementById('aiChatInput');
-                if (!input) return;
-                input.focus();
-                const endPos = input.value.length;
-                if (typeof input.setSelectionRange === 'function') input.setSelectionRange(endPos, endPos);
-            });
-        }
     }
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
@@ -5216,7 +5080,7 @@ window.refreshPlanWeekModalContent = function () {
     const now2w = new Date(); now2w.setHours(0, 0, 0, 0);
     const twoWeeksLater = new Date(now2w); twoWeeksLater.setDate(now2w.getDate() + 14);
     const calendarTasks = (Array.isArray(state.tasks) ? state.tasks : []).filter(t => {
-        if (t.done || !t.due_date || t.subject === 'QUEST' || isAiTask(t)) return false;
+        if (t.done || !t.due_date || t.subject === 'QUEST') return false;
         const d = parseArgoDate(t.due_date);
         return d >= now2w && d <= twoWeeksLater;
     });

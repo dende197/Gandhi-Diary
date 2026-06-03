@@ -192,7 +192,7 @@
       clearTimeout(_hashChangeTimer);
       _hashChangeTimer = setTimeout(function () {
         const view = (location.hash || '').replace('#', '').trim();
-        const allowed = window.allowedViews || ['home', 'planner', 'voti', 'ai_assistant', 'academic_profile', 'profile', 'circolari'];
+        const allowed = window.allowedViews || ['home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
         if (!allowed.includes(view)) return;
         if (window.state && window.state.view === view) return;
         if (typeof window.navigate === 'function') window.navigate(view);
