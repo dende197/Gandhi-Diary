@@ -324,3 +324,104 @@ h1, h2, h3, h4, h5, h6 {
 .view {
   animation: fadeIn 0.5s ease-out both;
 }
+
+/* ============================================
+   G-CONNECT — LIQUID GLASS PREMIUM DESIGN SYSTEM
+   ============================================ */
+
+/* ============================================
+   MULTI-WIDGET DASHBOARD
+   ============================================ */
+.widgets-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 0;
+    margin: 0 calc(-1 * var(--margin-mobile));
+    padding: 0 var(--margin-mobile);
+}
+
+.widgets-container::-webkit-scrollbar {
+    display: none;
+}
+
+.widget-card {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    width: 100%;
+    min-height: calc(100vh - 160px);
+    padding-bottom: 40px;
+}
+
+.widget-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-bottom: 80px;
+}
+
+.widget-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--surface-variant);
+    transition: all 0.3s ease;
+}
+
+.widget-indicator.active {
+    background-color: var(--primary);
+    width: 24px;
+    border-radius: 4px;
+}
+
+/* Bar grow animation */
+@keyframes barGrow {
+    from {
+        transform: scaleY(0);
+        transform-origin: bottom;
+    }
+    to {
+        transform: scaleY(1);
+        transform-origin: bottom;
+    }
+}
+
+/* Swipe gesture hints */
+.greeting-text {
+    position: relative;
+}
+
+/* Progress ring animation for Assenze chart */
+.progress-ring__circle {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+/* === CAROUSEL STYLES === */
+.carousel-container { position: relative; width: 100%; overflow: hidden; }
+.carousel-track { display: flex; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); width: 200%; }
+.carousel-card { width: 50%; flex-shrink: 0; padding: 4px; }
+.card-media-bg { background: linear-gradient(135deg, rgba(224,242,254,1) 0%, rgba(240,249,255,0.8) 50%, rgba(255,255,255,1) 100%); box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
+.card-assenze-bg { background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(254,242,242,0.9) 60%, rgba(254,226,226,0.7) 100%); box-shadow: 0 15px 35px -10px rgba(239, 68, 68, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
+.progress-ring__circle { transition: stroke-dashoffset 0.5s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.border-left-accent { position: relative; }
+.border-left-accent::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 5px; background-color: #E2B6B6; border-radius: 8px 0 0 8px; }
+:root { --primaryBlue: #0250C5; --primaryRed: #BD1118; --brandBlue: #0056C6; }
+.text-primaryBlue { color: var(--primaryBlue); }
+.bg-primaryBlue { background-color: var(--primaryBlue); }
+.text-primaryRed { color: var(--primaryRed); }
+.bg-primaryRed { background-color: var(--primaryRed); }
+.text-brandBlue { color: var(--brandBlue); }
+.text-textMain { color: #1F2937; }
+.text-textMuted { color: #6B7280; }
+.bg-cardBg { background-color: #FAFCFE; }
+.shadow-card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02); }

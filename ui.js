@@ -957,21 +957,60 @@ function isValidName(name) {
 }
 function renderNav() {
     const views = [
-        { id: 'home', label: 'Overview', icon: 'dashboard' },
-        { id: 'planner', label: 'Planner', icon: 'calendar_today' },
-        { id: 'voti', label: 'Grades', icon: 'analytics' },
-        { id: 'circolari', label: 'Circulars', icon: 'newspaper' }
+        { id: 'home', label: 'Home', icon: 'layout-grid' },
+        { id: 'planner', label: 'Calendario', icon: 'calendar' },
+        { id: 'circolari', label: 'Circolari', icon: 'file-text' },
+        { id: 'profile', label: 'Profilo', icon: 'user' }
     ];
 
     return `
-        <nav class="floating-pill-nav">
-            ${views.map(v => `
-                <a href="#${v.id}" class="nav-item ${state.view === v.id ? 'active' : ''}" onclick="navigate('${v.id}')">
-                    <span class="material-symbols-outlined">${v.icon}</span>
-                    <span>${v.label}</span>
-                </a>
-            `).join('')}
-        </nav>`;
+        <nav class="bottom-navigation py-3 px-8 flex justify-between items-center z-40 fixed bottom-6 left-6 right-6 bg-white/90 backdrop-blur-xl rounded-[32px] shadow-lg border border-white/50">
+            <button onclick="navigate('home'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 relative ${state.view === 'home' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
+                <i data-lucide="layout-grid" class="w-6 h-6 ${state.view === 'home' ? 'fill-current stroke-0' : ''}" stroke-width="${state.view === 'home' ? '0' : '1.8'}"></i>
+                ${state.view === 'home' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            </button>
+            
+            <button onclick="navigate('planner'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 ${state.view === 'planner' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
+                <i data-lucide="calendar" class="w-6 h-6" stroke-width="${state.view === 'planner' ? '0' : '1.8'}"></i>
+                ${state.view === 'planner' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            </button>
+            
+            <button onclick="navigate('circolari'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 ${state.view === 'circolari' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
+                <i data-lucide="file-text" class="w-6 h-6" stroke-width="${state.view === 'circolari' ? '0' : '1.8'}"></i>
+                ${state.view === 'circolari' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            </button>
+            
+            <button onclick="navigate('profile'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 ${state.view === 'profile' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
+                <i data-lucide="user" class="w-6 h-6" stroke-width="${state.view === 'profile' ? '0' : '1.8'}"></i>
+                ${state.view === 'profile' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            </button>
+        </nav>
+
+        <div id="drawerOverlay" onclick="closeDrawer()" class="drawer-overlay absolute inset-0 opacity-0 pointer-events-none z-50 flex items-end transition-opacity duration-300" style="display: none;">
+            <div id="drawerContent" onclick="event.stopPropagation()" class="drawer-content w-full bg-white rounded-t-[36px] p-8 pb-10 shadow-2xl transform translate-y-full flex flex-col max-h-[80%] overflow-y-auto transition-transform duration-300">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0"></div>
+                <div id="drawerDynamicBody"></div>
+            </div>
+        </div>
+
+        <div id="dialogOverlay" class="absolute inset-0 bg-slate-900/40 backdrop-blur-xs opacity-0 pointer-events-none z-50 flex items-center justify-center px-6 transition-opacity duration-200" style="display: none;">
+            <div class="bg-white rounded-3xl p-6 w-full max-h-[80%] overflow-y-auto shadow-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 id="dialogTitle" class="text-lg font-bold text-slate-900">Dettagli</h4>
+                    <button onclick="closeDialog()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="dialogBody" class="space-y-4 text-sm text-slate-600"></div>
+            </div>
+        </div>
+
+        <script>
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        </script>
+    `;
 }
 function updatePlanTaskUI(taskId, isPlanned) {
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1532,12 +1571,13 @@ function renderLogin() {
 }
 
 // ================================================================
-// G-CONNECT — renderHome() PATCH v6
+// G-CONNECT — renderHome() PATCH v7
 // ================================================================
+// Multi-widget dashboard with swipeable interface
 
 function renderHome() {
-    const todayStr = getLocalDateString();
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayISO = getLocalDateString(today);
     const shortName = getSafeUserName();
 
     // Media
@@ -1547,115 +1587,438 @@ function renderHome() {
     const delta = (media - prevMedia).toFixed(2);
     const deltaStr = delta > 0 ? `+${delta}` : delta;
 
-    // Upcoming tasks for "Today" and "Tomorrow"
-    const todayISO = getLocalDateString(today);
+    // Tomorrow
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
     const tomorrowISO = getLocalDateString(tomorrow);
 
-    const todayTasks = (state.tasks || []).filter(t => t.due_date === todayISO && !t.done).slice(0, 2);
-    const tomorrowTasks = (state.tasks || []).filter(t => t.due_date === tomorrowISO).slice(0, 1);
+    // Get assenze data
+    const assenzeData = state.assenzeData || {};
+    const assenzeTotali = assenzeData.oreAssenzaTotali || assenzeData.totali || 0;
+    const ritardiTotali = assenzeData.totaleRitardi || 0;
+    const usciteTotali = assenzeData.totaleUscite || 0;
+    const assenzeGiorni = assenzeData.totaleAssenze || 0;
+    const daGiustificare = assenzeData.daGiustificare || 0;
+
+    // Calculate progress for circular chart (75% filled example)
+    const maxOre = 100;
+    const progressPercent = Math.min((assenzeTotali / maxOre) * 100, 100);
+    const circumference = 2 * Math.PI * 40;
+    const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+
+    // Get today's tasks (lessons)
+    const todayTasks = (state.tasks || []).filter(t => {
+        if (t.subject === 'QUEST') return false;
+        return true;
+    }).slice(0, 2);
+
+    // Get tomorrow's exams
+    const tomorrowExams = (state.tasks || []).filter(t => {
+        if (t.subject === 'QUEST') return false;
+        return t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
+    }).slice(0, 2);
+
+    // Day names
+    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    const tomorrowDayName = dayNames[tomorrow.getDay()];
+
+    // Get today's day name
+    const todayDayName = dayNames[today.getDay()];
+
+    // Format date for display
+    const formatDateShort = (d) => {
+        const day = d.getDate();
+        const month = d.toLocaleDateString('it-IT', { month: 'short' });
+        return `${day} ${month}`;
+    };
 
     return `
     <div class="view overview-view pb-32">
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-8 pt-4">
-            <div>
-                <h1 class="headline-lg text-primary">Buongiorno, ${shortName}</h1>
-                <p class="body-md text-on-surface-variant/60">Media generale</p>
-            </div>
-            <div class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center text-primary cursor-pointer" onclick="navigate('profile')">
-                <span class="material-symbols-outlined">school</span>
-            </div>
-        </header>
-
-        <!-- Main Stats Card -->
-        <section class="liquid-glass rounded-[40px] p-8 mb-10 relative overflow-hidden">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <h2 class="text-[56px] font-bold text-primary leading-none mb-2">${media.toFixed(2)}</h2>
-                    <div class="flex items-center gap-2">
-                        <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">trending_up</span> ${deltaStr}
-                        </span>
-                        <span class="text-on-surface-variant/40 text-[12px] font-medium">from last semester</span>
+        <!-- Multi-Widget Container -->
+        <div class="widgets-container">
+            
+            <!-- Widget 1: Dashboard (Greeting + Oggi + Domani) -->
+            <div class="widget-card" id="widget-dashboard">
+                <header class="flex justify-between items-start mb-6 pt-4 px-6">
+                    <div>
+                        <h1 class="headline-lg greeting-text">Buongiorno, ${shortName}</h1>
+                        <p class="body-md text-on-surface-variant/60">${formatDateShort(today)}, ${todayDayName}</p>
                     </div>
-                </div>
-            </div>
+                    <div class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center text-primary cursor-pointer" onclick="navigate('profile')">
+                        <span class="material-symbols-outlined">school</span>
+                    </div>
+                </header>
 
-            <!-- Graph Placeholder -->
-            <div class="flex items-end gap-3 h-24 mb-2">
-                <div class="flex-1 bg-primary/10 rounded-t-xl h-[20%]"></div>
-                <div class="flex-1 bg-primary/20 rounded-t-xl h-[40%]"></div>
-                <div class="flex-1 bg-primary/30 rounded-t-xl h-[30%]"></div>
-                <div class="flex-1 bg-primary/40 rounded-t-xl h-[60%]"></div>
-                <div class="flex-1 bg-primary/60 rounded-t-xl h-[50%]"></div>
-                <div class="flex-1 bg-primary rounded-t-xl h-[80%] relative">
-                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded-md font-bold">Now</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Today Section -->
-        <section class="mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="title-md">Oggi</h2>
-                <button class="text-primary font-bold text-[13px]" onclick="navigate('planner')">See all</button>
-            </div>
-
-            <div class="flex flex-col gap-4">
-                ${todayTasks.length ? todayTasks.map(t => `
-                    <div class="liquid-glass rounded-[28px] p-6 liquid-shadow flex justify-between items-center">
-                        <div class="flex gap-4 items-center">
-                            <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                                <span class="material-symbols-outlined">${getSubjectIcon(t.subject)}</span>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-[16px]">${t.subject}</h3>
-                                <p class="text-on-surface-variant/60 text-[13px]">${truncateWithEllipsis(t.text, 30)}</p>
+                <!-- Media Card -->
+                <section class="liquid-glass rounded-[40px] p-6 mb-6 relative overflow-hidden mx-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <span class="label-sm text-on-surface-variant/60 uppercase tracking-wider">Media</span>
+                            <h2 class="text-[48px] font-bold text-primary leading-none">${media.toFixed(2)}</h2>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">trending_up</span> ${deltaStr}
+                                </span>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-on-surface-variant/40 text-[12px] font-bold">10:00 - 11:30</p>
-                        </div>
                     </div>
-                `).join('') : `
-                    <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40 text-[14px]">
-                        Nessun compito per oggi.
+                    <!-- Simple progress bar -->
+                    <div class="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full" style="width: ${Math.min(media * 10, 100)}%"></div>
                     </div>
-                `}
-            </div>
-        </section>
+                </section>
 
-        <!-- Tomorrow Section -->
-        <section>
-            <h2 class="title-md mb-4">Domani</h2>
-            <div class="flex flex-col gap-4">
-                ${tomorrowTasks.length ? tomorrowTasks.map(t => `
-                    <div class="liquid-glass rounded-[28px] p-6 border-l-4 border-error/40 relative overflow-hidden">
-                        <div class="absolute top-4 right-6 bg-error/10 text-error px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">EXAM</div>
-                        <div class="flex gap-4 items-center mb-4">
-                             <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                <!-- Oggi Section -->
+                <section class="mb-8 px-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="title-md">Oggi</h2>
+                        <button class="text-primary font-bold text-[13px]" onclick="navigate('planner')">See all</button>
+                    </div>
+
+                    ${todayTasks.length ? todayTasks.map(t => {
+                        const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
+                        return `
+                        <div class="liquid-glass rounded-[28px] p-5 mb-4 liquid-shadow group">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                    <span class="material-symbols-outlined">${getSubjectIcon(t.subject)}</span>
+                                </div>
+                                <span class="text-[12px] font-medium text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">
+                                    10:00 - 11:30
+                                </span>
+                            </div>
+                            <h4 class="text-[18px] font-semibold mb-2">${t.subject}</h4>
+                            <div class="flex items-center text-on-surface-variant/60 text-[13px] mb-4">
+                                <span class="material-symbols-outlined text-[16px] mr-2">location_on</span>
+                                <span>Room 302, Building A</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="flex">
+                                    <img src="https://i.pravatar.cc/100?img=47" alt="" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2 first:ml-0">
+                                    <img src="https://i.pravatar.cc/100?img=11" alt="" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2">
+                                    <img src="https://i.pravatar.cc/100?img=41" alt="" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2">
+                                </div>
+                                <span class="ml-2 text-[13px] font-medium text-on-surface-variant bg-surface-container-low rounded-full px-2 py-1">+12</span>
+                            </div>
+                        </div>
+                        `}).join('') : `
+                        <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40">
+                            Nessuna lezione oggi
+                        </div>
+                        `}
+                </section>
+
+                <!-- Domani Section -->
+                <section class="px-6">
+                    <h2 class="title-md mb-4">Domani, ${tomorrowDayName}</h2>
+                    
+                    ${tomorrowExams.length ? tomorrowExams.map(t => `
+                    <div class="liquid-glass rounded-[28px] p-5 border-l-4 border-primary/60 relative">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center text-error">
                                 <span class="material-symbols-outlined">history</span>
                             </div>
-                            <div>
-                                <h3 class="font-bold text-[18px]">${t.subject}</h3>
-                                <p class="text-on-surface-variant/40 text-[12px] flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[14px]">schedule</span> 09:00 - 12:00
-                                </p>
+                            <span class="inline-block bg-error/10 text-error text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                                EXAM
+                            </span>
+                        </div>
+                        <h4 class="text-[18px] font-semibold mb-3">${t.subject}</h4>
+                        <div class="space-y-2 mb-3">
+                            <div class="flex items-center text-[14px]">
+                                <span class="material-symbols-outlined text-[16px] mr-3 text-on-surface-variant">schedule</span>
+                                <span class="font-medium">09:00 - 12:00</span>
+                            </div>
+                            <div class="flex items-center text-[14px]">
+                                <span class="material-symbols-outlined text-[16px] mr-3 text-on-surface-variant">location_on</span>
+                                <span class="font-medium">Main Hall</span>
                             </div>
                         </div>
-                        <p class="text-on-surface-variant/60 italic text-[14px]">"${truncateWithEllipsis(t.text, 60)}"</p>
+                        <p class="text-[14px] text-on-surface-variant/60 italic">"${truncateWithEllipsis(t.text, 60)}"</p>
                     </div>
-                `).join('') : `
-                    <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40 text-[14px]">
-                        Nessuna verifica per domani.
+                    `).join('') : `
+                    <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40">
+                        Nessuna verifica domani
                     </div>
-                `}
+                    `}
+                </section>
             </div>
-        </section>
+
+            <!-- Widget 2: Assenze -->
+            <div class="widget-card" id="widget-assenze">
+                <header class="mb-6 pt-4 px-6">
+                    <h1 class="headline-lg text-primary">Assenze</h1>
+                    <p class="body-md text-on-surface-variant/60">Riepilogo ore e statistiche</p>
+                </header>
+
+                <!-- Assenze Card con stile premium -->
+                <section class="mx-6 mb-8">
+                    <div class="bg-gradient-to-br from-white via-red-50/50 to-red-100/20 rounded-[24px] p-6 relative overflow-hidden"
+                         style="box-shadow: 0 10px 30px -5px rgba(189, 17, 24, 0.1), inset 0 0 0 1px rgba(255,255,255,0.5);">
+                        
+                        <h2 class="text-primary font-semibold text-xl mb-6">Assenze</h2>
+                        
+                        <div class="flex justify-between items-center mb-8">
+                            <!-- Numero grande ore -->
+                            <div class="text-6xl font-bold text-primary tracking-tight">
+                                ${assenzeTotali.toFixed(1).replace('.', '.')}h
+                            </div>
+                            
+                            <!-- Grafico circolare SVG -->
+                            <div class="relative w-20 h-20">
+                                <svg class="w-full h-full" viewBox="0 0 100 100">
+                                    <circle class="text-red-100 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                    <circle class="text-primary progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}"></circle>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <!-- Statistiche inferiori -->
+                        <div class="flex justify-between gap-3">
+                            <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-4 flex-1 text-center" style="box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
+                                <div class="font-bold text-primary text-lg">${assenzeGiorni}</div>
+                                <div class="text-[10px] font-semibold text-on-surface-variant tracking-wider mt-1 uppercase">Assenze</div>
+                            </div>
+                            <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-4 flex-1 text-center" style="box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
+                                <div class="font-bold text-on-surface text-lg">${ritardiTotali}</div>
+                                <div class="text-[10px] font-semibold text-on-surface-variant tracking-wider mt-1 uppercase">Ritardi</div>
+                            </div>
+                            <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-4 flex-1 text-center" style="box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
+                                <div class="font-bold text-on-surface text-lg">${usciteTotali}</div>
+                                <div class="text-[10px] font-semibold text-on-surface-variant tracking-wider mt-1 uppercase">Uscite</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Swipe hint -->
+                <div class="flex items-center justify-center gap-2 text-on-surface-variant/40 text-[12px] mt-4 px-6">
+                    <span class="material-symbols-outlined text-[16px]">swipe</span>
+                    <span>Scorri per tornare alla dashboard</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget Indicators -->
+        <div class="widget-indicators">
+            <div class="widget-indicator active"></div>
+            <div class="widget-indicator"></div>
+        </div>
     </div>`;
 }
+
+
+
+// ========================================
+// CAROUSEL & NAVIGATION FUNCTIONS
+// ========================================
+
+// 1. CAROUSEL SYSTEM VARIABLES & FUNCTION
+let currentSlide = 0;
+
+window.slideTo = function(index) {
+    currentSlide = index;
+    const track = document.getElementById('carouselTrack');
+    if (track) {
+        track.style.transform = `translateX(-${index * 50}%)`;
+    }
+    
+    const dot0 = document.getElementById('dot0');
+    const dot1 = document.getElementById('dot1');
+    
+    if(dot0 && dot1) {
+        if(index === 0) {
+            dot0.className = 'w-2.5 h-2.5 rounded-full bg-primaryBlue transition-all duration-300';
+            dot1.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 transition-all duration-300';
+        } else {
+            dot0.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 transition-all duration-300';
+            dot1.className = 'w-2.5 h-2.5 rounded-full bg-primaryRed transition-all duration-300';
+        }
+    }
+};
+
+// 2. ACTIVE NAVIGATION ICON TOGGLING
+window.setActiveNav = function(element) {
+    if (!element || !element.parentElement) return;
+    const items = element.parentElement.children;
+    for(let item of items) {
+        item.className = "flex flex-col items-center justify-center w-12 h-12 text-slate-400 hover:text-slate-700 transition-colors";
+        const dot = item.querySelector('div');
+        if (dot) dot.remove();
+    }
+    
+    element.className = "flex flex-col items-center justify-center w-12 h-12 relative text-primaryBlue transition-colors";
+    
+    const newDot = document.createElement('div');
+    newDot.className = "absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue";
+    element.appendChild(newDot);
+};
+
+// 3. LESSON DRAWER (Bottom Panel)
+window.openLessonDrawer = function(idx) {
+    const tasks = (state.tasks || []).filter(t => t.subject !== 'QUEST');
+    const task = tasks[idx];
+    if (!task) return;
+    
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const drawerContent = document.getElementById('drawerContent');
+    const drawerBody = document.getElementById('drawerDynamicBody');
+    
+    if (!drawerBody) return;
+    
+    drawerBody.innerHTML = `
+        <div class="flex items-center space-x-4 mb-6">
+            <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                <i data-lucide="book-open" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(task.subject || 'Lezione')}</h3>
+                <p class="text-xs font-semibold text-slate-500">Dettagli compito</p>
+            </div>
+        </div>
+        <div class="space-y-4 text-sm text-slate-600">
+            <div class="bg-slate-50 p-4 rounded-2xl">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Descrizione</span>
+                <p class="font-semibold text-slate-800 mt-1">${escapeHtml(task.text || 'Nessuna descrizione')}</p>
+            </div>
+            ${task.due_date ? `
+            <div>
+                <h4 class="font-bold text-slate-800 mb-2">Scadenza</h4>
+                <p class="text-slate-600">${new Date(task.due_date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    if (drawerOverlay) {
+        drawerOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        drawerOverlay.style.display = 'flex';
+    }
+    if (drawerContent) {
+        drawerContent.classList.remove('translate-y-full');
+    }
+    
+    // Re-render icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+};
+
+window.closeDrawer = function() {
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const drawerContent = document.getElementById('drawerContent');
+    
+    if (drawerOverlay) {
+        drawerOverlay.classList.add('opacity-0', 'pointer-events-none');
+        drawerOverlay.style.display = 'none';
+    }
+    if (drawerContent) {
+        drawerContent.classList.add('translate-y-full');
+    }
+};
+
+// 4. CIRCULAR MODAL
+window.openCircolareModal = function(circularId) {
+    const circular = (state.circolari || []).find(c => (c.id || c.numero || '') === circularId);
+    if (!circular) return;
+    
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const drawerContent = document.getElementById('drawerContent');
+    const drawerBody = document.getElementById('drawerDynamicBody');
+    
+    if (!drawerBody) return;
+    
+    drawerBody.innerHTML = `
+        <div class="flex items-center space-x-4 mb-6">
+            <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                <i data-lucide="megaphone" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(circular.oggetto || circular.title || 'Circolare')}</h3>
+                <p class="text-xs font-semibold text-slate-500">${circular.data ? new Date(circular.data).toLocaleDateString('it-IT') : ''}</p>
+            </div>
+        </div>
+        <div class="space-y-4 text-sm text-slate-600">
+            <p class="leading-relaxed">${escapeHtml(circular.descrizione || circular.text || '')}</p>
+        </div>
+    `;
+    
+    if (drawerOverlay) {
+        drawerOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        drawerOverlay.style.display = 'flex';
+    }
+    if (drawerContent) {
+        drawerContent.classList.remove('translate-y-full');
+    }
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+};
+
+// 5. DIALOG & "SEE ALL" MODAL
+window.showSeeAllModal = function(title) {
+    const dialogOverlay = document.getElementById('dialogOverlay');
+    const dialogTitle = document.getElementById('dialogTitle');
+    const dialogBody = document.getElementById('dialogBody');
+    
+    if (dialogTitle) dialogTitle.innerText = `Calendario Completo: ${title}`;
+    
+    if (dialogBody) {
+        const tasks = (state.tasks || []).filter(t => t.subject !== 'QUEST').slice(0, 10);
+        dialogBody.innerHTML = tasks.length ? tasks.map(t => `
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between">
+                <div>
+                    <p class="font-bold text-slate-800">${escapeHtml(t.subject || 'Lezione')}</p>
+                    <p class="text-xs text-slate-500">${escapeHtml(truncateWithEllipsis(t.text, 40))}</p>
+                </div>
+                <span class="text-xs font-semibold text-slate-500">${t.due_date ? new Date(t.due_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : 'N/D'}</span>
+            </div>
+        `).join('') : '<p class="text-slate-500">Nessun compito</p>';
+    }
+    
+    if (dialogOverlay) {
+        dialogOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        dialogOverlay.style.display = 'flex';
+    }
+};
+
+window.closeDialog = function() {
+    const dialogOverlay = document.getElementById('dialogOverlay');
+    if (dialogOverlay) {
+        dialogOverlay.classList.add('opacity-0', 'pointer-events-none');
+        dialogOverlay.style.display = 'none';
+    }
+};
+
+// ========================================
+// SWIPE GESTURE HANDLER
+// ========================================
+document.addEventListener('DOMContentLoaded', function() {
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleCarouselSwipe();
+    }, { passive: true });
+    
+    function handleCarouselSwipe() {
+        const carousel = document.querySelector('.carousel-container');
+        if (!carousel) return;
+        
+        const threshold = 50;
+        if (touchStartX - touchEndX > threshold) {
+            window.slideTo(1);
+        } else if (touchEndX - touchStartX > threshold) {
+            window.slideTo(0);
+        }
+    }
+});
+
 
 function getSubjectIcon(subject) {
     const s = normalizeSubjectName(subject);
@@ -3851,49 +4214,7 @@ function togglePomodoro() {
     if (container) container.innerHTML = renderFocusTimer();
 }
 function toggleVoiceInput() {
-    const btn = document.getElementById('aiMicBtn');
-    const input = document.getElementById('aiChatInput');
-
-    if (!recognition) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("Il tuo browser non supporta il riconoscimento vocale.");
-            return;
-        }
-        recognition = new SpeechRecognition();
-        recognition.lang = 'it-IT';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = () => {
-            if (btn) btn.classList.add('mic-active');
-            if (btn) btn.innerHTML = '<i class="ph-fill ph-microphone"></i>';
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            if (input) {
-                input.value = (input.value ? input.value + ' ' : '') + transcript;
-                state.aiChatInputValue = input.value;
-                // Trigger resize
-                input.style.height = 'auto';
-                input.style.height = Math.min(input.scrollHeight, 100) + 'px';
-            }
-        };
-
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            stopVoiceInput();
-        };
-
-        recognition.onend = () => {
-            stopVoiceInput();
-        };
-
-        recognition.start();
-    } else {
-        stopVoiceInput();
-    }
+    // Voice input removed - AI chat functionality has been disabled
 }
 function promptAddBacklog() { showAddBacklogModal(); }
 function showAddBacklogModal() {
@@ -4742,6 +5063,11 @@ window._renderCore = function () {
             gsapAnimateView();
         }
         if (window.removeLoader) window.removeLoader();
+        
+        // Initialize Lucide icons for new content
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
     });
 };
 
@@ -5247,54 +5573,25 @@ window.removeBacklog = function (index) {
 
 // ── AI ASSISTANT HELPERS ──
 window.sendAIChatQuick = function (text) {
-    if (typeof text !== 'string') return;
-    const normalizedText = text.trim();
-    if (!normalizedText) return;
-    state.aiChatInputValue = normalizedText;
-    const input = document.getElementById('aiChatInput');
-    if (input) input.value = normalizedText;
-    window.sendAIChat();
+    // AI chat functionality has been disabled
 };
-
 window.sendAIChatQuickAt = function (index) {
-    const text = AI_CHAT_QUICK_PROMPTS[index];
-    if (!text) return;
-    window.sendAIChatQuick(text);
+    // AI chat functionality has been disabled
 };
-
 window.handleAIChatInputKeypress = function (event) {
-    if (event?.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        window.sendAIChat();
-    }
+    // AI chat functionality has been disabled
 };
-
 window.startNewAIChat = function () {
-    window.clearAIChat({ focusInput: true });
+    // AI chat functionality has been disabled
 };
-
 window.clearAIChat = function (options = {}) {
-    const focusInput = !!options.focusInput;
-    state.aiChatHistory = [];
-    state.aiChatPending = false;
-    state.aiChatInputValue = '';
-    state._focusAIInputAfterRender = focusInput;
-    localStorage.setItem(lsKey('ai_chat'), '[]');
-    state.aiResponse = '';
-    window.scheduleRender(0);
+    // AI chat functionality has been disabled
 };
-
 window.deleteAIChatMessage = function (index) {
-    if (!confirm('Eliminare questo messaggio?')) return;
-    state.aiChatHistory.splice(index, 1);
-    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-    window.scheduleRender();
+    // AI chat functionality has been disabled
 };
-
 window.stopVoiceInput = function () {
-    if (window.recognition) { window.recognition.stop(); window.recognition = null; }
-    const btn = document.getElementById('aiMicBtn');
-    if (btn) { btn.classList.remove('mic-active'); btn.innerHTML = '<i class="ph ph-microphone"></i>'; }
+    // AI chat functionality has been disabled
 };
 
 function extractImmediateCalendarAction(text) {
@@ -5468,286 +5765,10 @@ function deleteImmediateCalendarAction(action) {
     return { ok: true, count: filtered.length };
 }
 
+// AI chat functionality has been disabled
 window.sendAIChat = async function () {
-    window.stopVoiceInput();
-    if (state.aiChatPending) return;
-    const input = document.getElementById('aiChatInput');
-    const text = (input?.value || '').trim();
-    if (!text) return;
-    state.aiChatInputValue = '';
-    const nowTs = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    state.aiChatHistory.push({ role: 'user', text, ts: nowTs });
-    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-    state.aiChatPending = true;
-    if (input) { input.value = ''; input.style.height = 'auto'; }
-    window.scheduleRender();
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => {
-            const chatDiv = document.getElementById('aiChatMessages');
-            if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'auto' });
-        });
-    }
-
-    const immediateAction = extractImmediateCalendarAction(text);
-    if (immediateAction?.type === 'delete') {
-        if (immediateAction.missing.length) {
-            state.aiChatHistory.push({
-                role: 'ai',
-                text: `Per eliminare subito dal calendario mi mancano: ${immediateAction.missing.join(', ')}.`,
-                ts: nowTs
-            });
-            state.aiChatPending = false;
-            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender(0);
-            return;
-        }
-        const deleted = deleteImmediateCalendarAction(immediateAction);
-        if (deleted.ok) {
-            state.aiChatHistory.push({
-                role: 'ai',
-                text: `Fatto ✅ Ho eliminato ${deleted.count} attività dal calendario.`,
-                ts: nowTs
-            });
-            state.aiChatPending = false;
-            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender(0);
-            return;
-        }
-        state.aiChatHistory.push({
-            role: 'ai',
-            text: 'Non ho trovato attività da eliminare con i dettagli forniti. Indicami almeno titolo attività (tra virgolette) e data.',
-            ts: nowTs
-        });
-        state.aiChatPending = false;
-        localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-        window.scheduleRender(0);
-        return;
-    }
-    if (immediateAction?.type === 'add') {
-        if (immediateAction.missing.length) {
-            state.aiChatHistory.push({
-                role: 'ai',
-                text: `Per caricare subito nel calendario mi mancano: ${immediateAction.missing.join(', ')}. Dimmi tutto nella stessa frase.`,
-                ts: nowTs
-            });
-            state.aiChatPending = false;
-            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender(0);
-            return;
-        }
-        const applied = applyImmediateCalendarAction(immediateAction);
-        if (applied.ok) {
-            state.aiChatHistory.push({
-                role: 'ai',
-                text: `Fatto ✅ Ho caricato "${immediateAction.text}" il ${immediateAction.date} alle ${immediateAction.time} in calendario.`,
-                ts: nowTs
-            });
-            state.aiChatPending = false;
-            localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-            window.scheduleRender(0);
-            return;
-        }
-    }
-
-    const today = new Date();
-    const todayStr = getLocalDateString();
-    const hour = today.getHours();
-    const endOfWeek = new Date(today);
-    endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
-
-    const argoTasks = (state.tasks || []).filter(t => {
-        if (t.done || isAiTask(t) || t.subject === 'QUEST') return false;
-        if (!t.due_date) return true;
-        if (hour >= 14 && t.due_date <= todayStr) return false;
-        return true;
-    }).sort((a, b) => (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1);
-
-    const truncateWithEllipsis = window._truncateWithEllipsis;
-    const thisWeekTasks = [], laterTasks = [];
-    argoTasks.forEach(t => {
-        const dueDate = t.due_date ? parseArgoDate(t.due_date) : null;
-        const dueDateStr = dueDate ? dueDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/D';
-        const entry = `- [${truncateWithEllipsis(t.subject, 40) || 'Materia'}] ${truncateWithEllipsis(t.text, 160)} → consegna: ${dueDateStr}`;
-        (dueDate && dueDate <= endOfWeek) ? thisWeekTasks.push(entry) : laterTasks.push(entry);
-    });
-
-    const exams = (state.exams || []).slice(0, 10).map(ex => {
-        const typeText = truncateWithEllipsis(ex.type, 32);
-        const subjectText = truncateWithEllipsis(ex.subject, 40);
-        const dateText = truncateWithEllipsis(ex.date, 24);
-        const topicText = truncateWithEllipsis(ex.topic || 'gen.', 60);
-        return `- ${typeText} di ${subjectText} il ${dateText} (${topicText})`;
-    }).join('\n');
-    const verifiche = (state.verifiche || []).slice(0, 14).map(v => `- ${truncateWithEllipsis(v.materia || v.subject || 'Materia', 40)}: ${truncateWithEllipsis(v.argomento || v.topic || 'N/D', 110)} (${truncateWithEllipsis(v.data || v.date || 'data non indicata', 24)})`).join('\n');
-    const reminders = (state.reminders || state.promemoria || []).slice(0, 10).map(r => `- ${truncateWithEllipsis(r.text || r.title || r.descrizione || r.oggetto || 'Promemoria', 140)}`).join('\n');
-    const backlog = (state.backlog || []).slice(0, 10).map(b => `- ${truncateWithEllipsis(b.subject || 'Generale', 40)}: ${truncateWithEllipsis(b.text || b.title || b.task || '', 120)}`).join('\n');
-    const grades = (state.voti || []).slice(0, 18).map(v => `- ${truncateWithEllipsis(v.materia || v.subject || 'Materia', 40)}: ${truncateWithEllipsis(v.valore || v.value || 'N/D', 10)} (${truncateWithEllipsis(v.data || v.date || 'data n/d', 24)})`).join('\n');
-    const attendanceSummary = state.assenzeData ? [
-        `Assenze totali: ${state.assenzeData.totaleAssenze ?? 0}`,
-        `Ritardi totali: ${state.assenzeData.totaleRitardi ?? 0}`,
-        `Uscite totali: ${state.assenzeData.totaleUscite ?? 0}`,
-        `Ore assenza totali: ${state.assenzeData.oreAssenzaTotali ?? 0}`,
-        `Da giustificare: ${state.assenzeData.daGiustificare ?? 0}`
-    ].join(' | ') : 'Nessun dato presenze/assenze disponibile';
-
-    const plannedSummary = Object.entries(state.plannedTasks || {}).filter(([date]) => date >= todayStr).slice(0, 8).map(([date, ids]) => {
-        const dayTasks = ids.slice(0, 6).map(id => {
-            const t = (state.tasks || []).find(x => x.id === id);
-            return t ? `[${truncateWithEllipsis(t.subject, 32)}] ${truncateWithEllipsis(t.text, 80)}` : null;
-        }).filter(Boolean);
-        return dayTasks.length ? `  ${date}: ${dayTasks.join(', ')}` : null;
-    }).filter(Boolean).join('\n');
-
-    const getActivityDateKey = (activity) => {
-        const raw = String(activity?.date || activity?.datGiorno || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-        const ddmmyyyy = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
-        return '0000-00-00';
-    };
-    const sortActivitiesByNewest = (list) => list.slice().sort((a, b) => {
-        const dateA = getActivityDateKey(a);
-        const dateB = getActivityDateKey(b);
-        if (dateA !== dateB) return dateA > dateB ? -1 : 1;
-        return String(b?.id || '').localeCompare(String(a?.id || ''));
-    });
-    const formatActivityLine = (a) => {
-        const d = a.date || a.datGiorno || 'data n/d';
-        const m = a.subject || a.materia || 'Materia';
-        const c = window._truncateWithEllipsis(a.content || a.text || a.argomento || '', 140);
-        return `- ${d} | ${m}: ${c}`;
-    };
-    const recentCompletedActivities = sortActivitiesByNewest(state.classActivities || []).slice(0, 20);
-    const recentPlannedActivities = sortActivitiesByNewest(state.plannedClassActivities || []).slice(0, 20);
-    const latestCompletedActivity = recentCompletedActivities[0] || null;
-    const latestPlannedActivity = recentPlannedActivities[0] || null;
-    const activities = recentCompletedActivities.map(formatActivityLine).join('\n');
-    const plannedActivities = recentPlannedActivities.map(formatActivityLine).join('\n');
-    const latestCompletedActivitySummary = latestCompletedActivity
-        ? `${latestCompletedActivity.date || latestCompletedActivity.datGiorno || 'data n/d'} | ${latestCompletedActivity.subject || latestCompletedActivity.materia || 'Materia'}: ${truncateWithEllipsis(latestCompletedActivity.content || latestCompletedActivity.text || latestCompletedActivity.argomento || '', 180)}`
-        : 'nessuna attività svolta disponibile';
-    const latestPlannedActivitySummary = latestPlannedActivity
-        ? `${latestPlannedActivity.date || latestPlannedActivity.datGiorno || 'data n/d'} | ${latestPlannedActivity.subject || latestPlannedActivity.materia || 'Materia'}: ${truncateWithEllipsis(latestPlannedActivity.content || latestPlannedActivity.text || latestPlannedActivity.argomento || '', 180)}`
-        : 'nessuna attività pianificata disponibile';
-
-    const systemContext = `Sei G-AI, tutor di G-Diary.
-Stile: amichevole, pratico, meno rigido, incoraggiante e chiaro.
-Rispondi in italiano naturale.
-
-OGGI: ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
-PROFILO: ${state.user?.name || 'Studente'} (${state.user?.class || 'classe n/d'})
-DISPONIBILITÀ: ${state.availability?.start || '15:00'}-${state.availability?.end || '19:00'}
-ULTIMO SYNC: ${state.lastSync || 'n/d'} | STREAK: ${state.streak ?? 0}
-
-🔴 SCADENZE QUESTA SETTIMANA:
-${thisWeekTasks.length ? thisWeekTasks.join('\n') : 'Nessuna'}
-
-📋 COMPITI FUTURI:
-${laterTasks.length ? laterTasks.join('\n') : 'Nessuno'}
-
-📝 ESAMI:
-${exams || 'nessuno'}
-
-📚 VERIFICHE:
-${verifiche || 'nessuna'}
-
-📊 VOTI RECENTI:
-${grades || 'nessuno'}
-
-📌 PROMEMORIA:
-${reminders || 'nessuno'}
-
-🧩 BACKLOG:
-${backlog || 'vuoto'}
-
-🏫 PRESENZE/ASSENZE:
-${attendanceSummary}
-
-🗓️ GIÀ PIANIFICATO:
-${plannedSummary || 'Niente pianificato'}
-
- 🧭 ULTIME ATTIVITÀ (RIFERIMENTO RAPIDO):
- Ultima attività svolta: ${latestCompletedActivitySummary}
- Ultima attività pianificata: ${latestPlannedActivitySummary}
- 
- 🧾 ATTIVITÀ PIANIFICATE/ASSEGNATE (REGISTRO) — ORDINE: PIÙ RECENTI PRIMA:
- ${plannedActivities || 'nessuna attività pianificata disponibile'}
- 
- 🏫 ATTIVITÀ SVOLTE IN CLASSE — ORDINE: PIÙ RECENTI PRIMA:
- ${activities || 'nessuna attività svolta disponibile'}
-
-OBIETTIVI:
-${JSON.stringify(state.goals || {}, null, 2)}
-
-REGOLE OPERATIVE:
-1) Puoi usare TUTTI i dati sopra per decidere cosa proporre.
-2) Quando l'utente chiede pianificazione giornaliera o settimanale, NON usare tabelle. Usa markdown semplice con sezioni, bullet e checklist.
-3) Prima di proporre il piano definitivo, se mancano dettagli essenziali fai 2-4 domande brevi su: livello di preparazione, urgenza/immediatezza, priorità, eventuali vincoli orari.
-4) Se ci sono dati su assenze/ritardi/da giustificare, ricordali in modo utile e non giudicante.
-5) Mantieni risposte utili e concrete, evitando rigidità e formalismi eccessivi.
-6) Se l'utente esprime ansia/insicurezza prima di verifiche, includi supporto psicologico pratico (respiro, micro-obiettivi, rassicurazione non banale).
- 7) Se l'utente chiede esplicitamente di caricare in calendario, chiedi sempre data+orario se mancanti. Mai eventi all-day.
- 8) Quando l'utente chiede "ultima attività svolta/pianificata", usa SEMPRE prima il blocco "ULTIME ATTIVITÀ (RIFERIMENTO RAPIDO)".`;
-
-    const clampedSystemContext = truncateWithEllipsis(systemContext, 9000);
-    const contents = [
-        { role: 'user', parts: [{ text: clampedSystemContext }] },
-        { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] }
-    ];
-    const toModelMessage = (msg, maxLen) => {
-        const role = msg.role === 'user' ? 'user' : 'model';
-        const textValue = truncateWithEllipsis(msg.text, maxLen);
-        if (!textValue) return null;
-        return { role, parts: [{ text: textValue }] };
-    };
-    const recentHistory = (state.aiChatHistory || []).slice(-12);
-    recentHistory.forEach((msg) => {
-        const mapped = toModelMessage(msg, 700);
-        if (mapped) contents.push(mapped);
-    });
-
-    // Vercel request-body limits are far above this value and can vary by plan/configuration; we intentionally cap client payload at 120KB.
-    // This guards against extra bytes from JSON encoding, HTTP headers, and future growth of system prompt/chat history.
-    const payloadSizeLimitBytes = 120 * 1024; // 120KB conservative client-side cap to reduce edge-case 413 errors.
-    let payload = { messages: contents };
-    const payloadSize = new TextEncoder().encode(JSON.stringify(payload)).length;
-    if (payloadSize > payloadSizeLimitBytes) {
-        const trimmedHistory = recentHistory.slice(-6).map(msg => toModelMessage(msg, 400)).filter(Boolean);
-        payload = {
-            messages: [
-                { role: 'user', parts: [{ text: truncateWithEllipsis(systemContext, 5000) }] },
-                { role: 'model', parts: [{ text: 'Capito! Sono il tuo tutor AI. Come posso aiutarti oggi? 📚' }] },
-                ...trimmedHistory
-            ]
-        };
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
-            method: 'POST',
-            headers: (typeof window.getSessionHeaders === 'function') ? window.getSessionHeaders() : { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...payload, userId: state.user?.id })
-        });
-        const data = await response.json();
-        if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const aiTextRaw = data.candidates[0].content.parts[0].text;
-            const aiText = normalizeAiResponseMarkdown(aiTextRaw);
-            const hasPlan = /\b\d{1,2}[:.]\d{2}\b/.test(aiText) && /lune|mart|merc|giov|vend|sab|dom|\d{4}-\d{2}-\d{2}/i.test(aiText);
-            state.aiChatHistory.push({ role: 'ai', text: aiText, ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), hasPlan });
-        } else {
-            state.aiChatHistory.push({ role: 'ai', text: AI_LIMIT_FALLBACK_MESSAGE, ts: nowTs });
-        }
-    } catch (e) { state.aiChatHistory.push({ role: 'ai', text: AI_LIMIT_FALLBACK_MESSAGE, ts: nowTs }); }
-    state.aiChatPending = false;
-
-    localStorage.setItem(lsKey('ai_chat'), JSON.stringify(state.aiChatHistory));
-    window.scheduleRender(0);
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => {
-            const chatDiv = document.getElementById('aiChatMessages');
-            if (chatDiv) chatDiv.scrollTo({ top: chatDiv.scrollHeight, behavior: 'auto' });
-        });
-    }
+    // AI chat functionality has been disabled
+    showToast('Chat AI disattivata', 'info');
 };
 
 window.clearSyncDiagnostics = function () {
@@ -5758,15 +5779,13 @@ window.clearSyncDiagnostics = function () {
 };
 
 window.applyAIPlanFromChat = function (msgIndex) {
-    const msg = state.aiChatHistory[msgIndex];
-    if (!msg || msg.role !== 'ai') return;
-    showToast('Piano AI non inseribile come task: restano solo compiti assegnati.');
+    // AI chat functionality has been disabled
 };
 
 window.saveGeminiKey = function () {
-    const val = document.getElementById('geminiApiKeyInput')?.value?.trim();
-    if (val) { state.geminiKey = val; localStorage.setItem('g_diary_gemini_key', val); showToast('Chiave salvata! 🛡️'); window.scheduleRender(); }
+    // AI chat functionality has been disabled
 };
+
 // ========================================
 // GSAP ANIMATION SYSTEM — Premium Transitions
 // ========================================
