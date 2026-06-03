@@ -2134,7 +2134,6 @@ function renderPlanner() {
             `}
         </section>
     </div>`;
-}`;
 }
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
@@ -5072,6 +5071,15 @@ window._renderCore = function () {
 };
 
 // ── UI HELPERS & PROFILE ──
+window.removeLoader = function () {
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+        loader.style.transition = 'opacity 0.5s ease';
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 500);
+    }
+};
+
 window.logout = async function () {
     if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
