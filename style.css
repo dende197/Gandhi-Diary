@@ -404,59 +404,45 @@ h1, h2, h3, h4, h5, h6 {
     transform-origin: 50% 50%;
 }
 
-/* === CAROUSEL STYLES === */
-.carousel-container { position: relative; width: 100%; overflow: hidden; }
-.carousel-track { display: flex; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); width: 200%; }
-.carousel-card { width: 50%; flex-shrink: 0; padding: 4px; }
-.card-media-bg {
-    background: linear-gradient(135deg, rgba(224,242,254,1) 0%, rgba(240,249,255,0.8) 50%, rgba(255,255,255,1) 100%);
-    box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+/* --- NUOVO SISTEMA CAROSELLO E STRUTTURA PREMIUM --- */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-.card-assenze-bg {
-    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(254,242,242,0.9) 60%, rgba(254,226,226,0.7) 100%);
-    box-shadow: 0 15px 35px -10px rgba(239, 68, 68, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+/* Widget 1: Media Generale (Look Premium coordinato) */
+.card-media-premium {
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 60%, #ffffff 100%);
+    box-shadow: 0 12px 35px -8px rgba(59, 130, 246, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
+/* Widget 2: Assenze (Preso letteralmente da widget_assenze.html) */
+.card-assenze-premium {
+    background: linear-gradient(135deg, #ffffff 0%, #fff0f0 60%, #ffe5e5 100%);
+    box-shadow: 0 12px 35px -8px rgba(189, 17, 24, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+/* SVG Progress Ring delle Assenze */
 .progress-ring__circle {
-    transition: stroke-dashoffset 0.5s ease;
+    transition: stroke-dashoffset 0.4s ease;
     transform: rotate(-90deg);
     transform-origin: 50% 50%;
 }
 
-.scroll-hide::-webkit-scrollbar { display: none; }
-.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-.snap-x-mandatory { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-.snap-center { scroll-snap-align: center; }
-
-.border-left-accent {
+/* Accento sinistro per la sezione Domani */
+.border-left-red-accent {
     position: relative;
 }
-.border-left-accent::before {
+.border-left-red-accent::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    height: 100%;
-    width: 5px;
-    background-color: #E2B6B6;
-    border-radius: 8px 0 0 8px;
+    top: 12%;
+    height: 76%;
+    width: 4.5px;
+    background-color: #E5A7A7;
+    border-radius: 0 4px 4px 0;
 }
-
-.nav-bottom-glass {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
-    border-top: 1px solid rgba(255,255,255,0.8);
-}
-:root { --primaryBlue: #0250C5; --primaryRed: #BD1118; --brandBlue: #0056C6; }
-.text-primaryBlue { color: var(--primaryBlue); }
-.bg-primaryBlue { background-color: var(--primaryBlue); }
-.text-primaryRed { color: var(--primaryRed); }
-.bg-primaryRed { background-color: var(--primaryRed); }
-.text-brandBlue { color: var(--brandBlue); }
-.text-textMain { color: #1F2937; }
-.text-textMuted { color: #6B7280; }
-.bg-cardBg { background-color: #FAFCFE; }
-.shadow-card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02); }
