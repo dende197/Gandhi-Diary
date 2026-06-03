@@ -1575,130 +1575,173 @@ function renderLogin() {
 // Multi-widget dashboard with swipeable interface
 
 function renderHome() {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const todayISO = getLocalDateString(today);
-    const shortName = getSafeUserName();
-    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-    const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    const todayDayName = dayNames[today.getDay()];
+    const media = parseFloat(calcolaMedia(getVotiData())) || 0;
+    const assenze = state.assenzeData || { oreAssenzaTotali: 0 };
+    const verifiche = state.manualVerifiche || [];
     
-    const formatDateShort = (d) => {
-        const day = d.getDate();
-        const month = d.toLocaleDateString('it-IT', { month: 'short' });
-        return `${day} ${month}`;
-    };
+    // Calcolo fittizio della percentuale assenze (modificalo in base alla logica del tuo backend)
+    const maxAssenze = 250;
+    const percentualeAssenze = Math.min((assenze.oreAssenzaTotali / maxAssenze) * 100, 100);
+    const dashOffset = 251.2 - (251.2 * (percentualeAssenze / 100));
 
-    let weekScrollerHtml = '<div class="flex overflow-x-auto no-scrollbar gap-3 px-1 py-4 -mx-1 overflow-visible">';
-    for(let i = -2; i <= 4; i++) {
-        let d = new Date(today);
-        d.setDate(today.getDate() + i);
-        let dayName = dayNamesShort[d.getDay()];
-        let dayNum = d.getDate();
-        if (i === 0) {
-            weekScrollerHtml += `
-            <div class="flex-none w-12 h-20 flex flex-col items-center justify-center rounded-2xl bg-primary text-on-primary active-liquid-shadow scale-105 transition-all duration-300 cursor-pointer z-10 shadow-lg" onclick="if(window.scheduleRender) window.scheduleRender(0)">
-                <span class="font-label-sm text-[9px] text-on-primary/80 uppercase mb-1">${dayName}</span>
-                <span class="font-title-md text-[16px] font-bold">${dayNum}</span>
-                <div class="h-1 w-1 bg-white rounded-full mt-1.5"></div>
-            </div>`;
-        } else {
-            weekScrollerHtml += `
-            <div class="flex-none w-12 h-20 flex flex-col items-center justify-center rounded-2xl liquid-glass liquid-shadow transition-all duration-300 hover:translate-y-[-2px] cursor-pointer group" onclick="if(window.scheduleRender) window.scheduleRender(0)">
-                <span class="font-label-sm text-[9px] text-on-surface-variant/60 uppercase mb-1 group-hover:text-primary transition-colors">${dayName}</span>
-                <span class="font-title-md text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">${dayNum}</span>
-            </div>`;
-        }
-    }
-    weekScrollerHtml += '</div>';
+    // Logica per filtrare Oggi e Domani
+    const oggi = window.getLocalDateString ? window.getLocalDateString(new Date()) : new Date().toISOString().split('T')[0];
+    const dataDomani = new Date();
+    dataDomani.setDate(dataDomani.getDate() + 1);
+    const domani = window.getLocalDateString ? window.getLocalDateString(dataDomani) : dataDomani.toISOString().split('T')[0];
 
-    const pendingTasks = (state.tasks || []).filter(t => !t.done && t.subject !== 'QUEST');
-    pendingTasks.sort((a,b) => (a.date || '').localeCompare(b.date || ''));
-    
-    let timelineHtml = '';
-    if (pendingTasks.length === 0) {
-        timelineHtml = '<div class="text-center p-8 text-on-surface-variant/60 font-body-md">Nessun impegno in programma! 🎉</div>';
-    } else {
-        timelineHtml = pendingTasks.map(t => {
-            const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-            const isHomework = !isExam && /compiti|esercizi|studiare/i.test(t.text);
-            
-            let colorCls = 'bg-primary';
-            let bgCls = 'liquid-glass';
-            let textCls = 'text-primary';
-            let icon = 'functions';
-            let badgeText = 'Lezione';
-            
-            if (isExam) {
-                colorCls = 'bg-error';
-                bgCls = 'liquid-glass bg-error-container/5 border-error/5';
-                textCls = 'text-error';
-                icon = 'history_edu';
-                badgeText = '<span class="material-symbols-outlined text-[10px] mr-1">warning</span> Valutazione';
-            } else if (isHomework) {
-                colorCls = 'bg-secondary';
-                textCls = 'text-secondary';
-                icon = 'book';
-                badgeText = 'Compiti';
-            }
+    const verificheOggi = verifiche.filter(v => v.date === oggi);
+    const verificheDomani = verifiche.filter(v => v.date === domani);
 
-            return `
-            <div class="flex gap-3 overflow-visible">
-                <div class="w-12 flex flex-col items-end pt-3 shrink-0">
-                    <span class="font-label-sm text-[11px] text-on-surface-variant font-bold">${t.display_date || ''}</span>
-                    <span class="font-label-sm text-[9px] text-on-surface-variant/40 mt-0.5">Scadenza</span>
-                </div>
-                <div class="flex-1 ${bgCls} rounded-3xl p-4 relative group hover:shadow-xl transition-all duration-300 liquid-shadow overflow-visible">
-                    <div class="absolute left-0 top-3 bottom-3 w-1 ${colorCls} rounded-full"></div>
-                    <div class="flex justify-between items-start mb-1">
-                        <div class="flex flex-col pl-2">
-                            <span class="font-label-sm text-[9px] ${textCls} uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">${badgeText}</span>
-                            <h3 class="font-title-md text-title-md text-on-surface">${escapeHtml(t.subject || 'Generale')}</h3>
-                        </div>
-                        <div class="w-9 h-9 rounded-2xl bg-surface-container-low flex items-center justify-center ${textCls} border border-white/40 shadow-sm shrink-0">
-                            <span class="material-symbols-outlined text-[20px]">${icon}</span>
-                        </div>
+    // Generatore di Card per Oggi
+    const htmlOggi = verificheOggi.length > 0
+        ? verificheOggi.map(v => `
+            <div class="bg-[#FAFCFE] rounded-3xl p-5 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.02)] border border-white mb-4 cursor-pointer hover:scale-[1.01] transition-all duration-200">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                        <i data-lucide="${v.type?.toLowerCase().includes('orale') ? 'message-circle' : 'calculator'}" class="w-5 h-5 stroke-[2]"></i>
                     </div>
-                    <p class="font-body-md text-body-md text-on-surface-variant/70 mb-4 pl-2">${escapeHtml(t.text)}</p>
-                    ${!isExam ? `
-                    <button onclick="toggleTaskDone('${t.id}')" class="w-full liquid-pill py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/80 transition-all ${textCls} font-bold text-[13px] group/btn active:scale-[0.98]">
-                        <span class="material-symbols-outlined text-[18px] group-hover/btn:scale-110 transition-transform">${t.done ? 'task_alt' : 'check_circle'}</span>
-                        <span>${t.done ? 'Completato' : 'Segna completato'}</span>
-                    </button>
-                    ` : ''}
+                    <div class="text-xs font-semibold text-slate-500 bg-slate-100/80 px-3 py-1 rounded-full uppercase tracking-wider">
+                        ${v.type || 'Verifica'}
+                    </div>
                 </div>
-            </div>`;
-        }).join('');
-    }
+
+                <h4 class="text-[17px] font-bold text-slate-900 mb-1">${v.subject || 'Materia sconosciuta'}</h4>
+
+                <div class="flex items-center text-slate-500 text-xs mb-2">
+                    <i data-lucide="info" class="w-3.5 h-3.5 mr-1.5 stroke-[2.5]"></i>
+                    <span>${v.args || 'Nessun dettaglio aggiuntivo'}</span>
+                </div>
+            </div>
+        `).join('')
+        : `<p class="text-slate-500 text-sm px-1 mb-4 italic">Nessun impegno in programma per oggi.</p>`;
+
+    // Generatore di Card per Domani
+    const htmlDomani = verificheDomani.length > 0
+        ? verificheDomani.map(v => `
+            <div class="bg-[#FAFCFE] rounded-3xl p-5 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.02)] border border-white border-left-accent cursor-pointer hover:scale-[1.01] transition-all duration-200 mb-4">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center text-red-500">
+                        <i data-lucide="${v.type?.toLowerCase().includes('orale') ? 'mic' : 'book-open'}" class="w-5 h-5 stroke-[2]"></i>
+                    </div>
+                    <span class="inline-block bg-red-50 text-red-600 text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full border border-red-100">
+                        ${v.type || 'Verifica'}
+                    </span>
+                </div>
+
+                <h4 class="text-[17px] font-bold text-slate-900 mb-3">${v.subject || 'Materia sconosciuta'}</h4>
+
+                <div class="pt-3.5 border-t border-slate-100">
+                    <p class="text-xs text-slate-500 italic font-medium">"${v.args || 'Preparazione generale'}"</p>
+                </div>
+            </div>
+        `).join('')
+        : `<p class="text-slate-500 text-sm px-1 mb-4 italic">Nessun impegno in programma per domani.</p>`;
+
+    // setTimeout per inizializzare le icone Lucide dopo che il DOM è stato renderizzato
+    setTimeout(() => {
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }, 50);
 
     return `
-    <header class="w-full pt-6 pb-2 px-margin-mobile flex justify-between items-center max-w-2xl mx-auto sticky top-0 z-40 bg-background/40 backdrop-blur-md">
-        <div class="flex items-center gap-2">
-            <h1 class="text-primary font-bold tracking-tight text-xl">Agenda</h1>
-        </div>
-        <button class="text-primary font-label-sm text-[11px] uppercase tracking-widest font-bold hover:opacity-80 transition-opacity">Oggi</button>
-    </header>
-    
-    <main class="max-w-2xl mx-auto px-margin-mobile flex flex-col gap-6 mt-2 overflow-visible view pb-32">
-        <header class="flex justify-between items-start mb-2">
-            <div>
-                <h1 class="headline-lg greeting-text">Buongiorno, ${shortName}</h1>
-                <p class="body-md text-on-surface-variant/60">${formatDateShort(today)}, ${todayDayName}</p>
-            </div>
-            <div class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center text-primary cursor-pointer shadow-sm" onclick="navigate('profile')">
-                <span class="material-symbols-outlined">school</span>
-            </div>
-        </header>
+    <main class="w-full h-full bg-[#F8FAFC] font-sans overflow-y-auto scroll-hide pb-28 pt-6 px-6 relative">
 
-        <section class="flex flex-col overflow-visible relative z-30">
-            ${weekScrollerHtml}
-        </section>
-        
-        <section class="flex flex-col gap-4 overflow-visible pb-8 relative z-10">
-            ${timelineHtml}
-        </section>
+        <div class="flex justify-between items-center pb-4 text-xs font-semibold text-slate-800 select-none">
+            <h1 class="text-xl font-bold text-slate-900">Dashboard</h1>
+        </div>
+
+        <div class="relative w-full overflow-hidden mb-6 rounded-3xl">
+            <div class="flex overflow-x-auto hide-scrollbar snap-x-mandatory gap-4 scroll-hide pb-2">
+
+                <div class="snap-center shrink-0 w-full card-media-bg rounded-3xl p-6 relative h-[240px] flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-[#0250C5] font-bold text-xl tracking-tight leading-tight">Buongiorno, ${getSafeUserName()}</h2>
+                            <p class="text-blue-500/80 text-sm font-medium mt-0.5">Media generale.</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-blue-100/60 flex items-center justify-center text-[#0250C5]">
+                            <i data-lucide="graduation-cap" class="w-5 h-5 stroke-[2]"></i>
+                        </div>
+                    </div>
+
+                    <div class="flex items-baseline space-x-3 mt-2">
+                        <span class="text-5xl font-extrabold text-[#0250C5] tracking-tight">${media.toFixed(2)}</span>
+                    </div>
+
+                    <div class="flex items-end justify-between h-14 mt-3 px-1 relative">
+                        <div class="w-[12%] bg-blue-600/20 rounded-lg" style="height: 40%"></div>
+                        <div class="w-[12%] bg-blue-600/25 rounded-lg" style="height: 55%"></div>
+                        <div class="w-[12%] bg-blue-600/20 rounded-lg" style="height: 45%"></div>
+                        <div class="w-[12%] bg-blue-600/30 rounded-lg" style="height: 65%"></div>
+                        <div class="w-[12%] bg-blue-600/40 rounded-lg" style="height: 78%"></div>
+                        <div class="w-[12%] bg-[#0250C5] rounded-lg relative flex justify-center" style="height: 95%">
+                            <div class="absolute -top-6 bg-slate-900 text-white text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md shadow-md">
+                                Now
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="snap-center shrink-0 w-full card-assenze-bg rounded-3xl p-6 relative h-[240px] flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <h2 class="text-[#BD1118] font-bold text-xl tracking-tight">Assenze</h2>
+                        <div class="w-10 h-10 rounded-full bg-red-100/50 flex items-center justify-center text-[#BD1118]">
+                            <i data-lucide="user-x" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center my-1">
+                        <div class="text-5xl font-extrabold text-[#BD1118] tracking-tight">
+                            ${assenze.oreAssenzaTotali.toFixed(1)}<span class="text-3xl font-semibold">h</span>
+                        </div>
+
+                        <div class="relative w-16 h-16 flex items-center justify-center">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle class="text-red-100 stroke-current" stroke-width="10" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                <circle class="text-[#BD1118] progress-ring__circle stroke-current" stroke-width="10" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
+                            </svg>
+                            <span class="absolute text-[11px] font-bold text-[#BD1118]">${Math.round(percentualeAssenze)}%</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between gap-2.5 mt-2">
+                        <div class="bg-white/70 backdrop-blur-sm rounded-xl py-2 flex-1 text-center border border-white/60 shadow-sm">
+                            <div class="font-extrabold text-[#BD1118] text-sm">${assenze.oreAssenzaTotali.toFixed(0)}h</div>
+                            <div class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5 uppercase">Assenze</div>
+                        </div>
+                        <div class="bg-white/70 backdrop-blur-sm rounded-xl py-2 flex-1 text-center border border-white/60 shadow-sm">
+                            <div class="font-extrabold text-slate-800 text-sm">-</div>
+                            <div class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5 uppercase">Ritardi</div>
+                        </div>
+                        <div class="bg-white/70 backdrop-blur-sm rounded-xl py-2 flex-1 text-center border border-white/60 shadow-sm">
+                            <div class="font-extrabold text-slate-800 text-sm">-</div>
+                            <div class="text-[9px] font-bold text-slate-500 tracking-wider mt-0.5 uppercase">Uscite</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex justify-between items-baseline mb-3.5 px-1">
+                <h3 class="text-xl font-bold text-slate-900">Oggi</h3>
+                <button class="text-[#0056C6] font-semibold text-xs hover:opacity-80 transition-opacity">Vedi tutto</button>
+            </div>
+            ${htmlOggi}
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-bold text-slate-900 mb-3.5 px-1">Domani</h3>
+            ${htmlDomani}
+        </div>
+
     </main>
     `;
 }
+
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
