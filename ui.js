@@ -1568,7 +1568,6 @@ function renderLogin() {
             </div>
         </div>`;
 }
-
 // ================================================================
 // G-CONNECT — renderHome() PATCH v7
 // ================================================================
@@ -1596,10 +1595,10 @@ function renderHome() {
     const verifiche = state.manualVerifiche || [];
     
     // 2. Calcolo dinamico per l'anello di progresso del widget Assenze
-    const oreAssenzaTotali = assenze.oreAssenzaTotali || assenze.totali || 0;
-    const ritardiTotali = assenze.ritardi || assenze.totaleRitardi || 0;
-    const usciteTotali = assenze.uscite || assenze.totaleUscite || 0;
-    const assenzeGiorni = assenze.assenze || assenze.totaleAssenze || 0;
+    const oreAssenzaTotali = typeof assenze.oreAssenzaTotali === 'number' ? assenze.oreAssenzaTotali : 0;
+    const ritardiTotali = typeof assenze.totaleRitardi === 'number' ? assenze.totaleRitardi : 0;
+    const usciteTotali = typeof assenze.totaleUscite === 'number' ? assenze.totaleUscite : 0;
+    const assenzeGiorni = typeof assenze.totaleAssenze === 'number' ? assenze.totaleAssenze : 0;
     
     const maxOreIpotetiche = 100; // Imposta il limite massimo per il calcolo della percentuale
     const progressPercentage = Math.min((oreAssenzaTotali / maxOreIpotetiche) * 100, 100);
@@ -1681,7 +1680,7 @@ function renderHome() {
             const icon = getSubjectLucideIcon(item.title);
             const colors = getSubjectColorClasses(item.title, item.isExam);
             return `
-            <div class="bg-cardBg rounded-3xl p-5 shadow-soft mb-4 border border-white cursor-pointer hover:scale-[1.01] transition-all duration-200" onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}">
+            <div class="home-card-item mb-4 cursor-pointer hover:scale-[1.01] transition-all duration-200" onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}">
                 <div class="flex justify-between items-start mb-4">
                     <div class="w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center ${colors.text}">
                         <i data-lucide="${icon}" class="w-6 h-6 stroke-[1.5]"></i>
@@ -1712,7 +1711,7 @@ function renderHome() {
                 </div>
             </div>`;
         }).join('')
-        : `<div class="text-center p-8 bg-cardBg rounded-3xl border border-white shadow-soft text-[#6B7280] italic mb-4">Nessun impegno programmato per oggi.</div>`;
+        : `<div class="text-center p-8 home-card-item text-[#6B7280] italic mb-4">Nessun impegno programmato per oggi.</div>`;
 
     // 5. Generatore Dinamico delle Card per la sezione "Domani" (con accento rosso a sinistra)
     const htmlDomani = allTomorrowItems.length > 0
@@ -1720,7 +1719,7 @@ function renderHome() {
             const icon = getSubjectLucideIcon(item.title);
             const colors = getSubjectColorClasses(item.title, item.isExam);
             return `
-            <div class="bg-cardBg rounded-3xl p-5 shadow-soft border border-white border-left-accent cursor-pointer hover:scale-[1.01] transition-all duration-200 mb-4" onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}">
+            <div class="home-card-item border-left-accent cursor-pointer hover:scale-[1.01] transition-all duration-200 mb-4" onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}">
                 <div class="flex justify-between items-start mb-4">
                     <div class="w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center ${colors.text}">
                         <i data-lucide="${icon}" class="w-6 h-6 stroke-[1.5]"></i>
@@ -1744,7 +1743,7 @@ function renderHome() {
                 </div>
             </div>`;
         }).join('')
-        : `<div class="text-center p-8 bg-cardBg rounded-3xl border border-white shadow-soft text-[#6B7280] italic mb-4">Nessun impegno programmato per domani.</div>`;
+        : `<div class="text-center p-8 home-card-item text-[#6B7280] italic mb-4">Nessun impegno programmato per domani.</div>`;
 
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
@@ -1755,14 +1754,14 @@ function renderHome() {
 
         <div class="px-0">
 
-            <!-- CAROUSEL: gap-0 invece di gap-4, e scroll-padding-left corretto -->
+            <!-- CAROUSEL: gap-4, min-w-[calc(100%-48px)] per visualizzare una singola card con scroll-padding -->
             <div class="w-full overflow-hidden mb-5">
-                <div class="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-0 hide-scrollbar pb-3 px-6"
+                <div id="home-carousel" class="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 hide-scrollbar pb-3 px-6"
                      style="scroll-padding-left: 24px;"
                      onscroll="handleCarouselScroll(this)">
 
                     <!-- Widget 1: Media Generale (Look Premium) -->
-                    <div class="snap-start shrink-0 w-full px-0 pr-4">
+                    <div class="snap-start shrink-0 w-[calc(100%-48px)]">
                         <div class="card-media-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
                             <div class="flex justify-between items-start">
                                 <div>
@@ -1792,32 +1791,32 @@ function renderHome() {
                     </div>
 
                     <!-- Widget 2: Assenze (Preso letteralmente da mockup) -->
-                    <div class="snap-start shrink-0 w-full px-0 pl-4">
+                    <div class="snap-start shrink-0 w-[calc(100%-48px)]">
                         <div class="card-assenze-bg rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
                             <div class="flex justify-between items-start">
-                                <h2 class="text-primaryRed font-semibold text-xl">Assenze</h2>
-                                <div class="w-10 h-10 rounded-full bg-red-100/50 flex items-center justify-center text-primaryRed">
+                                <h2 class="font-semibold text-xl" style="color: #BD1118;">Assenze</h2>
+                                <div class="w-10 h-10 rounded-full bg-red-100/50 flex items-center justify-center" style="color: #BD1118;">
                                     <i data-lucide="user-x" class="w-5 h-5"></i>
                                 </div>
                             </div>
 
                             <div class="flex justify-between items-center my-2">
-                                <div class="text-6xl font-bold text-primaryRed tracking-tight">
+                                <div class="text-6xl font-bold tracking-tight" style="color: #BD1118;">
                                     ${oreAssenzaTotali.toFixed(1)}<span class="text-4xl font-semibold">h</span>
                                 </div>
 
                                 <div class="relative w-20 h-20 flex items-center justify-center">
                                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                                         <circle class="text-red-100 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                        <circle class="text-primaryRed progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
+                                        <circle class="progress-ring__circle" style="stroke: #BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
                                     </svg>
-                                    <span class="absolute text-[11px] font-bold text-[#BD1118]">${Math.round(progressPercentage)}%</span>
+                                    <span class="absolute text-[11px] font-bold" style="color: #BD1118;">${Math.round(progressPercentage)}%</span>
                                 </div>
                             </div>
 
                             <div class="flex justify-between gap-3">
                                 <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-2.5 px-2 flex-1 text-center shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.02)]">
-                                    <div class="font-bold text-[#BD1118] text-base">${assenzeGiorni}g</div>
+                                    <div class="font-bold text-base" style="color: #BD1118;">${assenzeGiorni}g</div>
                                     <div class="text-[9px] font-semibold text-[#6B7280] tracking-wider mt-0.5 uppercase">Assenze</div>
                                 </div>
                                 <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-2.5 px-2 flex-1 text-center shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.02)]">
@@ -1861,7 +1860,6 @@ function renderHome() {
     </main>
     `;
 }
-
 
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
