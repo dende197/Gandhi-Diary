@@ -956,34 +956,33 @@ function isValidName(name) {
     return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
 }
 function renderNav() {
-    const views = [
-        { id: 'home', label: 'Home', icon: 'layout-grid' },
-        { id: 'planner', label: 'Calendario', icon: 'calendar' },
-        { id: 'circolari', label: 'Circolari', icon: 'file-text' },
-        { id: 'profile', label: 'Profilo', icon: 'user' }
-    ];
-
     return `
-        <nav class="bottom-navigation py-3 px-8 flex justify-between items-center z-40 fixed bottom-6 left-6 right-6 bg-white/90 backdrop-blur-xl rounded-[32px] shadow-lg border border-white/50">
-            <button onclick="navigate('home'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 relative ${state.view === 'home' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
-                <i data-lucide="layout-grid" class="w-6 h-6 ${state.view === 'home' ? 'fill-current stroke-0' : ''}" stroke-width="${state.view === 'home' ? '0' : '1.8'}"></i>
-                ${state.view === 'home' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+        <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[90%] max-w-sm rounded-full border border-white/60 bg-white/40 dark:bg-black/40 backdrop-blur-[30px] deep-shadow z-50 flex justify-around items-center py-3 px-2 md:hidden">
+            
+            <button onclick="navigate('home')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'home' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
+                ${state.view === 'home' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
+                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'home' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">dashboard</span>
+                <span class="font-label-sm text-[9px] uppercase font-bold">Overview</span>
             </button>
             
-            <button onclick="navigate('planner'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 ${state.view === 'planner' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
-                <i data-lucide="calendar" class="w-6 h-6" stroke-width="${state.view === 'planner' ? '0' : '1.8'}"></i>
-                ${state.view === 'planner' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            <button onclick="navigate('planner')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'planner' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
+                ${state.view === 'planner' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
+                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'planner' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">calendar_today</span>
+                <span class="font-label-sm text-[9px] uppercase font-bold tracking-wider">Planner</span>
             </button>
             
-            <button onclick="navigate('circolari'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 ${state.view === 'circolari' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
-                <i data-lucide="file-text" class="w-6 h-6" stroke-width="${state.view === 'circolari' ? '0' : '1.8'}"></i>
-                ${state.view === 'circolari' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            <button onclick="navigate('voti')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'voti' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
+                ${state.view === 'voti' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
+                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'voti' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">analytics</span>
+                <span class="font-label-sm text-[9px] uppercase font-bold">Grades</span>
             </button>
             
-            <button onclick="navigate('profile'); setActiveNav(this)" class="flex flex-col items-center justify-center w-12 h-12 ${state.view === 'profile' ? 'text-primaryBlue' : 'text-slate-400'} transition-colors">
-                <i data-lucide="user" class="w-6 h-6" stroke-width="${state.view === 'profile' ? '0' : '1.8'}"></i>
-                ${state.view === 'profile' ? '<div class="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue"></div>' : ''}
+            <button onclick="navigate('circolari')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'circolari' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
+                ${state.view === 'circolari' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
+                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'circolari' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">newspaper</span>
+                <span class="font-label-sm text-[9px] uppercase font-bold">Circulars</span>
             </button>
+            
         </nav>
 
         <div id="drawerOverlay" onclick="closeDrawer()" class="drawer-overlay absolute inset-0 opacity-0 pointer-events-none z-50 flex items-end transition-opacity duration-300" style="display: none;">
@@ -1579,711 +1578,126 @@ function renderHome() {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const todayISO = getLocalDateString(today);
     const shortName = getSafeUserName();
-
-    // Media
-    const mediaStr = calcolaMedia(state.voti) || '0.00';
-    const media = parseFloat(mediaStr);
-    const prevMedia = state.lastMedia || media;
-    const delta = (media - prevMedia).toFixed(2);
-    const deltaStr = delta > 0 ? `+${delta}` : delta;
-
-    // Tomorrow
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    const tomorrowISO = getLocalDateString(tomorrow);
-
-    // Get assenze data
-    const assenzeData = state.assenzeData || {};
-    const assenzeTotali = assenzeData.oreAssenzaTotali || assenzeData.totali || 0;
-    const ritardiTotali = assenzeData.totaleRitardi || 0;
-    const usciteTotali = assenzeData.totaleUscite || 0;
-    const assenzeGiorni = assenzeData.totaleAssenze || 0;
-    const daGiustificare = assenzeData.daGiustificare || 0;
-
-    // Calculate progress for circular chart (75% filled example)
-    const maxOre = 100;
-    const progressPercent = Math.min((assenzeTotali / maxOre) * 100, 100);
-    const circumference = 2 * Math.PI * 40;
-    const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
-
-    // Get today's tasks (lessons)
-    const todayTasks = (state.tasks || []).filter(t => {
-        if (t.subject === 'QUEST') return false;
-        return true;
-    }).slice(0, 2);
-
-    // Get tomorrow's exams
-    const tomorrowExams = (state.tasks || []).filter(t => {
-        if (t.subject === 'QUEST') return false;
-        return t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-    }).slice(0, 2);
-
-    // Day names
     const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-    const tomorrowDayName = dayNames[tomorrow.getDay()];
-
-    // Get today's day name
+    const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     const todayDayName = dayNames[today.getDay()];
-
-    // Format date for display
+    
     const formatDateShort = (d) => {
         const day = d.getDate();
         const month = d.toLocaleDateString('it-IT', { month: 'short' });
         return `${day} ${month}`;
     };
 
-    return `
-    <div class="view overview-view pb-32">
-        <!-- Multi-Widget Container -->
-        <div class="widgets-container">
-            
-            <!-- Widget 1: Dashboard (Greeting + Oggi + Domani) -->
-            <div class="widget-card" id="widget-dashboard">
-                <header class="flex justify-between items-start mb-6 pt-4 px-6">
-                    <div>
-                        <h1 class="headline-lg greeting-text">Buongiorno, ${shortName}</h1>
-                        <p class="body-md text-on-surface-variant/60">${formatDateShort(today)}, ${todayDayName}</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center text-primary cursor-pointer" onclick="navigate('profile')">
-                        <span class="material-symbols-outlined">school</span>
-                    </div>
-                </header>
-
-                <!-- Media Card -->
-                <section class="liquid-glass rounded-[40px] p-6 mb-6 relative overflow-hidden mx-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <span class="label-sm text-on-surface-variant/60 uppercase tracking-wider">Media</span>
-                            <h2 class="text-[48px] font-bold text-primary leading-none">${media.toFixed(2)}</h2>
-                            <div class="flex items-center gap-2 mt-2">
-                                <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[14px]">trending_up</span> ${deltaStr}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Simple progress bar -->
-                    <div class="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
-                        <div class="h-full bg-primary rounded-full" style="width: ${Math.min(media * 10, 100)}%"></div>
-                    </div>
-                </section>
-
-                <!-- Oggi Section -->
-                <section class="mb-8 px-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="title-md">Oggi</h2>
-                        <button class="text-primary font-bold text-[13px]" onclick="navigate('planner')">See all</button>
-                    </div>
-
-                    ${todayTasks.length ? todayTasks.map(t => {
-                        const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-                        return `
-                        <div class="liquid-glass rounded-[28px] p-5 mb-4 liquid-shadow group">
-                            <div class="flex justify-between items-start mb-3">
-                                <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                    <span class="material-symbols-outlined">${getSubjectIcon(t.subject)}</span>
-                                </div>
-                                <span class="text-[12px] font-medium text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">
-                                    10:00 - 11:30
-                                </span>
-                            </div>
-                            <h4 class="text-[18px] font-semibold mb-2">${t.subject}</h4>
-                            <div class="flex items-center text-on-surface-variant/60 text-[13px] mb-4">
-                                <span class="material-symbols-outlined text-[16px] mr-2">location_on</span>
-                                <span>Room 302, Building A</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="flex">
-                                    <img src="https://i.pravatar.cc/100?img=47" alt="" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2 first:ml-0">
-                                    <img src="https://i.pravatar.cc/100?img=11" alt="" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2">
-                                    <img src="https://i.pravatar.cc/100?img=41" alt="" class="w-8 h-8 rounded-full object-cover border-2 border-white -ml-2">
-                                </div>
-                                <span class="ml-2 text-[13px] font-medium text-on-surface-variant bg-surface-container-low rounded-full px-2 py-1">+12</span>
-                            </div>
-                        </div>
-                        `}).join('') : `
-                        <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40">
-                            Nessuna lezione oggi
-                        </div>
-                        `}
-                </section>
-
-                <!-- Domani Section -->
-                <section class="px-6">
-                    <h2 class="title-md mb-4">Domani, ${tomorrowDayName}</h2>
-                    
-                    ${tomorrowExams.length ? tomorrowExams.map(t => `
-                    <div class="liquid-glass rounded-[28px] p-5 border-l-4 border-primary/60 relative">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center text-error">
-                                <span class="material-symbols-outlined">history</span>
-                            </div>
-                            <span class="inline-block bg-error/10 text-error text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
-                                EXAM
-                            </span>
-                        </div>
-                        <h4 class="text-[18px] font-semibold mb-3">${t.subject}</h4>
-                        <div class="space-y-2 mb-3">
-                            <div class="flex items-center text-[14px]">
-                                <span class="material-symbols-outlined text-[16px] mr-3 text-on-surface-variant">schedule</span>
-                                <span class="font-medium">09:00 - 12:00</span>
-                            </div>
-                            <div class="flex items-center text-[14px]">
-                                <span class="material-symbols-outlined text-[16px] mr-3 text-on-surface-variant">location_on</span>
-                                <span class="font-medium">Main Hall</span>
-                            </div>
-                        </div>
-                        <p class="text-[14px] text-on-surface-variant/60 italic">"${truncateWithEllipsis(t.text, 60)}"</p>
-                    </div>
-                    `).join('') : `
-                    <div class="liquid-glass rounded-[28px] p-6 text-center text-on-surface-variant/40">
-                        Nessuna verifica domani
-                    </div>
-                    `}
-                </section>
-            </div>
-
-            <!-- Widget 2: Assenze -->
-            <div class="widget-card" id="widget-assenze">
-                <header class="mb-6 pt-4 px-6">
-                    <h1 class="headline-lg text-primary">Assenze</h1>
-                    <p class="body-md text-on-surface-variant/60">Riepilogo ore e statistiche</p>
-                </header>
-
-                <!-- Assenze Card con stile premium -->
-                <section class="mx-6 mb-8">
-                    <div class="bg-gradient-to-br from-white via-red-50/50 to-red-100/20 rounded-[24px] p-6 relative overflow-hidden"
-                         style="box-shadow: 0 10px 30px -5px rgba(189, 17, 24, 0.1), inset 0 0 0 1px rgba(255,255,255,0.5);">
-                        
-                        <h2 class="text-primary font-semibold text-xl mb-6">Assenze</h2>
-                        
-                        <div class="flex justify-between items-center mb-8">
-                            <!-- Numero grande ore -->
-                            <div class="text-6xl font-bold text-primary tracking-tight">
-                                ${assenzeTotali.toFixed(1).replace('.', '.')}h
-                            </div>
-                            
-                            <!-- Grafico circolare SVG -->
-                            <div class="relative w-20 h-20">
-                                <svg class="w-full h-full" viewBox="0 0 100 100">
-                                    <circle class="text-red-100 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                    <circle class="text-primary progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}"></circle>
-                                </svg>
-                            </div>
-                        </div>
-                        
-                        <!-- Statistiche inferiori -->
-                        <div class="flex justify-between gap-3">
-                            <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-4 flex-1 text-center" style="box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
-                                <div class="font-bold text-primary text-lg">${assenzeGiorni}</div>
-                                <div class="text-[10px] font-semibold text-on-surface-variant tracking-wider mt-1 uppercase">Assenze</div>
-                            </div>
-                            <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-4 flex-1 text-center" style="box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
-                                <div class="font-bold text-on-surface text-lg">${ritardiTotali}</div>
-                                <div class="text-[10px] font-semibold text-on-surface-variant tracking-wider mt-1 uppercase">Ritardi</div>
-                            </div>
-                            <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-4 flex-1 text-center" style="box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
-                                <div class="font-bold text-on-surface text-lg">${usciteTotali}</div>
-                                <div class="text-[10px] font-semibold text-on-surface-variant tracking-wider mt-1 uppercase">Uscite</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Swipe hint -->
-                <div class="flex items-center justify-center gap-2 text-on-surface-variant/40 text-[12px] mt-4 px-6">
-                    <span class="material-symbols-outlined text-[16px]">swipe</span>
-                    <span>Scorri per tornare alla dashboard</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Widget Indicators -->
-        <div class="widget-indicators">
-            <div class="widget-indicator active"></div>
-            <div class="widget-indicator"></div>
-        </div>
-    </div>`;
-}
-
-
-
-// ========================================
-// CAROUSEL & NAVIGATION FUNCTIONS
-// ========================================
-
-// 1. CAROUSEL SYSTEM VARIABLES & FUNCTION
-let currentSlide = 0;
-
-window.slideTo = function(index) {
-    currentSlide = index;
-    const track = document.getElementById('carouselTrack');
-    if (track) {
-        track.style.transform = `translateX(-${index * 50}%)`;
-    }
-    
-    const dot0 = document.getElementById('dot0');
-    const dot1 = document.getElementById('dot1');
-    
-    if(dot0 && dot1) {
-        if(index === 0) {
-            dot0.className = 'w-2.5 h-2.5 rounded-full bg-primaryBlue transition-all duration-300';
-            dot1.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 transition-all duration-300';
+    let weekScrollerHtml = '<div class="flex overflow-x-auto no-scrollbar gap-3 px-1 py-4 -mx-1 overflow-visible">';
+    for(let i = -2; i <= 4; i++) {
+        let d = new Date(today);
+        d.setDate(today.getDate() + i);
+        let dayName = dayNamesShort[d.getDay()];
+        let dayNum = d.getDate();
+        if (i === 0) {
+            weekScrollerHtml += `
+            <div class="flex-none w-12 h-20 flex flex-col items-center justify-center rounded-2xl bg-primary text-on-primary active-liquid-shadow scale-105 transition-all duration-300 cursor-pointer z-10 shadow-lg" onclick="if(window.scheduleRender) window.scheduleRender(0)">
+                <span class="font-label-sm text-[9px] text-on-primary/80 uppercase mb-1">${dayName}</span>
+                <span class="font-title-md text-[16px] font-bold">${dayNum}</span>
+                <div class="h-1 w-1 bg-white rounded-full mt-1.5"></div>
+            </div>`;
         } else {
-            dot0.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 transition-all duration-300';
-            dot1.className = 'w-2.5 h-2.5 rounded-full bg-primaryRed transition-all duration-300';
+            weekScrollerHtml += `
+            <div class="flex-none w-12 h-20 flex flex-col items-center justify-center rounded-2xl liquid-glass liquid-shadow transition-all duration-300 hover:translate-y-[-2px] cursor-pointer group" onclick="if(window.scheduleRender) window.scheduleRender(0)">
+                <span class="font-label-sm text-[9px] text-on-surface-variant/60 uppercase mb-1 group-hover:text-primary transition-colors">${dayName}</span>
+                <span class="font-title-md text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">${dayNum}</span>
+            </div>`;
         }
     }
-};
+    weekScrollerHtml += '</div>';
 
-// 2. ACTIVE NAVIGATION ICON TOGGLING
-window.setActiveNav = function(element) {
-    if (!element || !element.parentElement) return;
-    const items = element.parentElement.children;
-    for(let item of items) {
-        item.className = "flex flex-col items-center justify-center w-12 h-12 text-slate-400 hover:text-slate-700 transition-colors";
-        const dot = item.querySelector('div');
-        if (dot) dot.remove();
-    }
+    const pendingTasks = (state.tasks || []).filter(t => !t.done && t.subject !== 'QUEST');
+    pendingTasks.sort((a,b) => (a.date || '').localeCompare(b.date || ''));
     
-    element.className = "flex flex-col items-center justify-center w-12 h-12 relative text-primaryBlue transition-colors";
-    
-    const newDot = document.createElement('div');
-    newDot.className = "absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primaryBlue";
-    element.appendChild(newDot);
-};
+    let timelineHtml = '';
+    if (pendingTasks.length === 0) {
+        timelineHtml = '<div class="text-center p-8 text-on-surface-variant/60 font-body-md">Nessun impegno in programma! 🎉</div>';
+    } else {
+        timelineHtml = pendingTasks.map(t => {
+            const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
+            const isHomework = !isExam && /compiti|esercizi|studiare/i.test(t.text);
+            
+            let colorCls = 'bg-primary';
+            let bgCls = 'liquid-glass';
+            let textCls = 'text-primary';
+            let icon = 'functions';
+            let badgeText = 'Lezione';
+            
+            if (isExam) {
+                colorCls = 'bg-error';
+                bgCls = 'liquid-glass bg-error-container/5 border-error/5';
+                textCls = 'text-error';
+                icon = 'history_edu';
+                badgeText = '<span class="material-symbols-outlined text-[10px] mr-1">warning</span> Valutazione';
+            } else if (isHomework) {
+                colorCls = 'bg-secondary';
+                textCls = 'text-secondary';
+                icon = 'book';
+                badgeText = 'Compiti';
+            }
 
-// 3. LESSON DRAWER (Bottom Panel)
-window.openLessonDrawer = function(idx) {
-    const tasks = (state.tasks || []).filter(t => t.subject !== 'QUEST');
-    const task = tasks[idx];
-    if (!task) return;
-    
-    const drawerOverlay = document.getElementById('drawerOverlay');
-    const drawerContent = document.getElementById('drawerContent');
-    const drawerBody = document.getElementById('drawerDynamicBody');
-    
-    if (!drawerBody) return;
-    
-    drawerBody.innerHTML = `
-        <div class="flex items-center space-x-4 mb-6">
-            <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-                <i data-lucide="book-open" class="w-7 h-7"></i>
-            </div>
-            <div>
-                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(task.subject || 'Lezione')}</h3>
-                <p class="text-xs font-semibold text-slate-500">Dettagli compito</p>
-            </div>
-        </div>
-        <div class="space-y-4 text-sm text-slate-600">
-            <div class="bg-slate-50 p-4 rounded-2xl">
-                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Descrizione</span>
-                <p class="font-semibold text-slate-800 mt-1">${escapeHtml(task.text || 'Nessuna descrizione')}</p>
-            </div>
-            ${task.due_date ? `
-            <div>
-                <h4 class="font-bold text-slate-800 mb-2">Scadenza</h4>
-                <p class="text-slate-600">${new Date(task.due_date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-            </div>
-            ` : ''}
-        </div>
-    `;
-    
-    if (drawerOverlay) {
-        drawerOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        drawerOverlay.style.display = 'flex';
-    }
-    if (drawerContent) {
-        drawerContent.classList.remove('translate-y-full');
-    }
-    
-    // Re-render icons
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-};
-
-window.closeDrawer = function() {
-    const drawerOverlay = document.getElementById('drawerOverlay');
-    const drawerContent = document.getElementById('drawerContent');
-    
-    if (drawerOverlay) {
-        drawerOverlay.classList.add('opacity-0', 'pointer-events-none');
-        drawerOverlay.style.display = 'none';
-    }
-    if (drawerContent) {
-        drawerContent.classList.add('translate-y-full');
-    }
-};
-
-// 4. CIRCULAR MODAL
-window.openCircolareModal = function(circularId) {
-    const circular = (state.circolari || []).find(c => (c.id || c.numero || '') === circularId);
-    if (!circular) return;
-    
-    const drawerOverlay = document.getElementById('drawerOverlay');
-    const drawerContent = document.getElementById('drawerContent');
-    const drawerBody = document.getElementById('drawerDynamicBody');
-    
-    if (!drawerBody) return;
-    
-    drawerBody.innerHTML = `
-        <div class="flex items-center space-x-4 mb-6">
-            <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
-                <i data-lucide="megaphone" class="w-7 h-7"></i>
-            </div>
-            <div>
-                <h3 class="text-xl font-bold text-slate-900">${escapeHtml(circular.oggetto || circular.title || 'Circolare')}</h3>
-                <p class="text-xs font-semibold text-slate-500">${circular.data ? new Date(circular.data).toLocaleDateString('it-IT') : ''}</p>
-            </div>
-        </div>
-        <div class="space-y-4 text-sm text-slate-600">
-            <p class="leading-relaxed">${escapeHtml(circular.descrizione || circular.text || '')}</p>
-        </div>
-    `;
-    
-    if (drawerOverlay) {
-        drawerOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        drawerOverlay.style.display = 'flex';
-    }
-    if (drawerContent) {
-        drawerContent.classList.remove('translate-y-full');
-    }
-    
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-};
-
-// 5. DIALOG & "SEE ALL" MODAL
-window.showSeeAllModal = function(title) {
-    const dialogOverlay = document.getElementById('dialogOverlay');
-    const dialogTitle = document.getElementById('dialogTitle');
-    const dialogBody = document.getElementById('dialogBody');
-    
-    if (dialogTitle) dialogTitle.innerText = `Calendario Completo: ${title}`;
-    
-    if (dialogBody) {
-        const tasks = (state.tasks || []).filter(t => t.subject !== 'QUEST').slice(0, 10);
-        dialogBody.innerHTML = tasks.length ? tasks.map(t => `
-            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between">
-                <div>
-                    <p class="font-bold text-slate-800">${escapeHtml(t.subject || 'Lezione')}</p>
-                    <p class="text-xs text-slate-500">${escapeHtml(truncateWithEllipsis(t.text, 40))}</p>
+            return `
+            <div class="flex gap-3 overflow-visible">
+                <div class="w-12 flex flex-col items-end pt-3 shrink-0">
+                    <span class="font-label-sm text-[11px] text-on-surface-variant font-bold">${t.display_date || ''}</span>
+                    <span class="font-label-sm text-[9px] text-on-surface-variant/40 mt-0.5">Scadenza</span>
                 </div>
-                <span class="text-xs font-semibold text-slate-500">${t.due_date ? new Date(t.due_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : 'N/D'}</span>
-            </div>
-        `).join('') : '<p class="text-slate-500">Nessun compito</p>';
-    }
-    
-    if (dialogOverlay) {
-        dialogOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        dialogOverlay.style.display = 'flex';
-    }
-};
-
-window.closeDialog = function() {
-    const dialogOverlay = document.getElementById('dialogOverlay');
-    if (dialogOverlay) {
-        dialogOverlay.classList.add('opacity-0', 'pointer-events-none');
-        dialogOverlay.style.display = 'none';
-    }
-};
-
-// ========================================
-// SWIPE GESTURE HANDLER
-// ========================================
-document.addEventListener('DOMContentLoaded', function() {
-    let touchStartX = 0;
-    let touchEndX = 0;
-    
-    document.addEventListener('touchstart', function(e) {
-        touchStartX = e.changedTouches[0].screenX;
-    }, { passive: true });
-    
-    document.addEventListener('touchend', function(e) {
-        touchEndX = e.changedTouches[0].screenX;
-        handleCarouselSwipe();
-    }, { passive: true });
-    
-    function handleCarouselSwipe() {
-        const carousel = document.querySelector('.carousel-container');
-        if (!carousel) return;
-        
-        const threshold = 50;
-        if (touchStartX - touchEndX > threshold) {
-            window.slideTo(1);
-        } else if (touchEndX - touchStartX > threshold) {
-            window.slideTo(0);
-        }
-    }
-});
-
-
-function getSubjectIcon(subject) {
-    const s = normalizeSubjectName(subject);
-    if (s.includes('matem')) return 'functions';
-    if (s.includes('fisic')) return 'science';
-    if (s.includes('storia')) return 'history_edu';
-    if (s.includes('arte') || s.includes('disegno')) return 'palette';
-    if (s.includes('lingua') || s.includes('inglese') || s.includes('italiano')) return 'menu_book';
-    return 'school';
-}
-
-function renderPlanner() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = getLocalDateString(today);
-
-    // Week Scroller Data
-    const weekDays = [];
-    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    const startOfWeek = new Date(today);
-    const day = today.getDay();
-    const diff = today.getDate() - day; // Sunday is 0
-    startOfWeek.setDate(diff);
-
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(startOfWeek);
-        d.setDate(startOfWeek.getDate() + i);
-        const iso = getLocalDateString(d);
-        weekDays.push({
-            label: dayLabels[d.getDay()],
-            dayNum: d.getDate(),
-            iso: iso,
-            isToday: iso === todayISO
-        });
-    }
-
-    // Tasks for the smart timeline (using today as default if none selected)
-    const selectedDate = state.selectedDate || todayISO;
-    const dayTasks = (state.tasks || []).filter(t => t.due_date === selectedDate);
-
-    return `
-    <div class="view planner-view pb-32">
-        <header class="flex justify-between items-center mb-6 pt-4">
-            <h1 class="text-primary font-bold text-xl">Agenda</h1>
-            <button class="text-primary font-bold text-[12px] uppercase tracking-widest hover:opacity-80 transition-opacity" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
-        </header>
-
-        <!-- Week Scroller -->
-        <section class="mb-8">
-            <div class="flex overflow-x-auto no-scrollbar gap-3 py-2">
-                ${weekDays.map(d => `
-                    <div class="flex-none w-14 h-20 flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-all duration-300 ${d.iso === selectedDate ? 'bg-primary text-on-primary active-liquid-shadow scale-105' : 'liquid-glass liquid-shadow hover:translate-y-[-2px]'}"
-                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
-                        <span class="text-[10px] uppercase mb-1 font-bold ${d.iso === selectedDate ? 'opacity-80' : 'text-on-surface-variant/60'}">${d.label}</span>
-                        <span class="text-[18px] font-bold">${d.dayNum}</span>
-                        ${d.isToday && d.iso !== selectedDate ? '<div class="h-1 w-1 bg-primary rounded-full mt-1"></div>' : ''}
-                        ${d.iso === selectedDate ? '<div class="h-1 w-1 bg-white rounded-full mt-1"></div>' : ''}
-                    </div>
-                `).join('')}
-            </div>
-        </section>
-
-        <!-- Smart Agenda Timeline -->
-        <section class="flex flex-col gap-6">
-            ${dayTasks.length ? dayTasks.map(t => {
-                const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-                const colorClass = isExam ? 'error' : 'primary';
-                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-                const timeStr = timeMatch ? timeMatch[1] : '08:30';
-
-                return `
-                <div class="flex gap-4">
-                    <div class="w-12 flex flex-col items-end pt-3 shrink-0">
-                        <span class="text-[12px] text-on-surface-variant font-bold">${timeStr}</span>
-                        <span class="text-[10px] text-on-surface-variant/40 mt-0.5">09:30</span>
-                    </div>
-                    <div class="flex-1 liquid-glass rounded-[28px] p-5 relative group hover:shadow-xl transition-all duration-300 liquid-shadow overflow-visible ${isExam ? 'bg-error-container/5 border-error/10' : ''}">
-                        <div class="absolute left-0 top-4 bottom-4 w-1 bg-${colorClass} rounded-full"></div>
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex flex-col pl-3">
-                                <span class="text-[10px] text-${colorClass} uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
-                                    ${isExam ? '<span class="material-symbols-outlined text-[12px]">warning</span> SIMULAZIONE' : 'LEZIONE'}
-                                </span>
-                                <h3 class="title-md text-on-surface">${t.subject}</h3>
-                            </div>
-                            <div class="w-10 h-10 rounded-2xl bg-${colorClass}/10 flex items-center justify-center text-${colorClass} border border-white/40 shadow-sm shrink-0">
-                                <span class="material-symbols-outlined text-[22px]">${getSubjectIcon(t.subject)}</span>
-                            </div>
+                <div class="flex-1 ${bgCls} rounded-3xl p-4 relative group hover:shadow-xl transition-all duration-300 liquid-shadow overflow-visible">
+                    <div class="absolute left-0 top-3 bottom-3 w-1 ${colorCls} rounded-full"></div>
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="flex flex-col pl-2">
+                            <span class="font-label-sm text-[9px] ${textCls} uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">${badgeText}</span>
+                            <h3 class="font-title-md text-title-md text-on-surface">${escapeHtml(t.subject || 'Generale')}</h3>
                         </div>
-                        <p class="body-md text-on-surface-variant/70 mb-3 pl-3">${t.text}</p>
-                        <div class="flex items-center gap-2 pl-3">
-                            <span class="material-symbols-outlined text-[16px] text-${colorClass}/60">location_on</span>
-                            <span class="body-md text-[13px] text-on-surface-variant">Aula 3B</span>
+                        <div class="w-9 h-9 rounded-2xl bg-surface-container-low flex items-center justify-center ${textCls} border border-white/40 shadow-sm shrink-0">
+                            <span class="material-symbols-outlined text-[20px]">${icon}</span>
                         </div>
-                        ${!t.done && !isExam ? `
-                            <button class="w-full liquid-pill py-3 px-4 mt-4 flex items-center justify-center gap-2 hover:bg-white/80 transition-all text-primary font-bold text-[14px]" onclick="toggleTask('${t.id}')">
-                                <span class="material-symbols-outlined text-[20px]">check_circle</span>
-                                <span>Segna completato</span>
-                            </button>
-                        ` : t.done ? `
-                             <div class="w-full py-3 px-4 mt-4 flex items-center justify-center gap-2 text-green font-bold text-[14px]">
-                                <span class="material-symbols-outlined text-[20px]">task_alt</span>
-                                <span>Completato</span>
-                            </div>
-                        ` : ''}
                     </div>
-                </div>`;
-            }).join('') : `
-                <div class="liquid-glass rounded-[40px] p-12 text-center flex flex-col items-center gap-4">
-                    <span class="material-symbols-outlined text-[48px] text-on-surface-variant/20">event_busy</span>
-                    <p class="body-lg text-on-surface-variant/40 font-medium">Nessuna attività programmata</p>
-                </div>
-            `}
-        </section>
-    </div>`;
-}
-function formatFullDate(dateInput) {
-    if (!dateInput) return '';
-    const date = new Date(dateInput);
-    if (isNaN(date.getTime())) return '';
-    const months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-    const day = date.getDate();
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
-    const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    return `${day} ${month} ${year} • ${time} `;
-}
-function renderProfile() {
-    const isGoogleConnected = state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1';
-
-    return `
-        <div class="view profile-view pb-32">
-            <header class="flex items-center gap-4 mb-8 pt-4">
-                <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </button>
-                <div>
-                    <h1 class="headline-lg text-primary">Profilo</h1>
-                    <p class="body-md text-on-surface-variant/60">Gestione account e impostazioni</p>
-                </div>
-            </header>
-
-            <section class="liquid-glass rounded-[40px] p-8 mb-6 flex flex-col items-center text-center liquid-shadow">
-                <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold mb-4">
-                    ${(state.user.name || 'S')[0].toUpperCase()}
-                </div>
-                <h2 class="title-md text-on-surface mb-1">${escapeHtml(state.user.name || 'Utente')}</h2>
-                <div class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest">
-                    CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
-                </div>
-            </section>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <!-- DidUP Status -->
-                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-green/10 flex items-center justify-center text-green">
-                        <span class="material-symbols-outlined text-[28px]">sync_saved_locally</span>
-                    </div>
-                    <div>
-                        <div class="label-sm text-on-surface-variant/40 mb-1">Status DidUP</div>
-                        <div class="font-bold text-green">COLLEGATO</div>
-                    </div>
-                </div>
-
-                <!-- Google Calendar -->
-                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center text-error">
-                        <span class="material-symbols-outlined text-[28px]">calendar_month</span>
-                    </div>
-                    <div>
-                        <div class="label-sm text-on-surface-variant/40 mb-1">Google Calendar</div>
-                        <div class="font-bold text-on-surface">${isGoogleConnected ? 'Collegato ✓' : 'Non collegato'}</div>
-                    </div>
-                    <button class="w-full py-3 rounded-2xl bg-primary text-on-primary font-bold text-[13px] hover:opacity-90 transition-all" onclick="${isGoogleConnected ? 'window.syncGoogleCalendar()' : 'window.connectGoogle()'}">
-                        ${isGoogleConnected ? 'Sincronizza ora' : 'Collega Google'}
+                    <p class="font-body-md text-body-md text-on-surface-variant/70 mb-4 pl-2">${escapeHtml(t.text)}</p>
+                    ${!isExam ? `
+                    <button onclick="toggleTaskDone('${t.id}')" class="w-full liquid-pill py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/80 transition-all ${textCls} font-bold text-[13px] group/btn active:scale-[0.98]">
+                        <span class="material-symbols-outlined text-[18px] group-hover/btn:scale-110 transition-transform">${t.done ? 'task_alt' : 'check_circle'}</span>
+                        <span>${t.done ? 'Completato' : 'Segna completato'}</span>
                     </button>
+                    ` : ''}
                 </div>
-            </div>
-
-            <button onclick="logout()" class="w-full h-14 rounded-3xl bg-error/10 text-error font-bold text-[16px] flex items-center justify-center gap-3 hover:bg-error/20 transition-all">
-                <span class="material-symbols-outlined">logout</span> Esci dall'Account
-            </button>
-        </div>`;
-}
-function renderGradesView() {
-    if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
-
-    const votiData = getVotiData();
-    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const media = averageFromNumeric(numericVotes) || 0;
-
-    const subjectsMap = {};
-    votiData.forEach(v => {
-        const sub = v.materia || v.subject || 'Altro';
-        const subjectKey = getSubjectGroupKey(sub);
-        if (!subjectsMap[subjectKey]) subjectsMap[subjectKey] = { name: sub, list: [] };
-        subjectsMap[subjectKey].list.push(v);
-    });
-
-    const subjects = Object.values(subjectsMap).map(({ name, list }) => {
-        const subMedia = averageFromNumeric(list.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
-        const lastVote = list.sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))[0];
-        const lastVal = getNumericGradeValue(lastVote);
-        return { name, media: subMedia, lastVote: lastVal };
-    }).sort((a, b) => b.media - a.media);
+            </div>`;
+        }).join('');
+    }
 
     return `
-    <div class="view grades-view pb-32">
-        <header class="flex justify-between items-center mb-6 pt-4">
-            <h1 class="text-primary font-bold text-xl">Voti & Rendimento</h1>
+    <header class="w-full pt-6 pb-2 px-margin-mobile flex justify-between items-center max-w-2xl mx-auto sticky top-0 z-40 bg-background/40 backdrop-blur-md">
+        <div class="flex items-center gap-2">
+            <h1 class="text-primary font-bold tracking-tight text-xl">Agenda</h1>
+        </div>
+        <button class="text-primary font-label-sm text-[11px] uppercase tracking-widest font-bold hover:opacity-80 transition-opacity">Oggi</button>
+    </header>
+    
+    <main class="max-w-2xl mx-auto px-margin-mobile flex flex-col gap-6 mt-2 overflow-visible view pb-32">
+        <header class="flex justify-between items-start mb-2">
+            <div>
+                <h1 class="headline-lg greeting-text">Buongiorno, ${shortName}</h1>
+                <p class="body-md text-on-surface-variant/60">${formatDateShort(today)}, ${todayDayName}</p>
+            </div>
+            <div class="w-12 h-12 rounded-full liquid-glass flex items-center justify-center text-primary cursor-pointer shadow-sm" onclick="navigate('profile')">
+                <span class="material-symbols-outlined">school</span>
+            </div>
         </header>
 
-        <!-- Main Media Card -->
-        <section class="liquid-glass rounded-[40px] p-8 mb-10 relative overflow-hidden">
-            <h2 class="body-md text-on-surface-variant/60 mb-2">Media Generale</h2>
-            <div class="flex items-center gap-4 mb-4">
-                <span class="text-[56px] font-bold text-primary leading-none">${media.toFixed(1)}</span>
-                <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[14px]">trending_up</span> +0.2
-                </span>
-            </div>
-            <p class="text-on-surface-variant/40 text-[11px] mb-8">Ultimo aggiornamento: Oggi</p>
-
-            <!-- Media Graph Placeholder -->
-            <div class="flex items-end gap-2 h-24">
-                <div class="flex-1 bg-primary/5 rounded-t-lg h-[20%]"></div>
-                <div class="flex-1 bg-primary/10 rounded-t-lg h-[40%]"></div>
-                <div class="flex-1 bg-primary/20 rounded-t-lg h-[30%]"></div>
-                <div class="flex-1 bg-primary/30 rounded-t-lg h-[60%]"></div>
-                <div class="flex-1 bg-primary/40 rounded-t-lg h-[50%]"></div>
-                <div class="flex-1 bg-primary/50 rounded-t-lg h-[70%]"></div>
-                <div class="flex-1 bg-primary rounded-t-lg h-[90%] relative">
-                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-on-surface-variant/60 text-[9px] font-bold">Feb</div>
-                </div>
-            </div>
+        <section class="flex flex-col overflow-visible relative z-30">
+            ${weekScrollerHtml}
         </section>
-
-        <h2 class="title-md mb-6">Materie</h2>
-
-        <!-- Subjects Grid -->
-        <div class="flex flex-col gap-4">
-            ${subjects.map(s => {
-                const status = s.media >= 8 ? 'Ottimo' : s.media >= 7 ? 'Buono' : s.media >= 6 ? 'Discreto' : 'Insufficiente';
-                const statusColor = s.media >= 8 ? 'green' : s.media >= 7 ? 'primary' : s.media >= 6 ? 'orange' : 'error';
-
-                return `
-                <div class="liquid-glass rounded-[28px] p-6 liquid-shadow cursor-pointer transition-all hover:scale-[1.02]" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-symbols-outlined">${getSubjectIcon(s.name)}</span>
-                        </div>
-                        <span class="bg-${statusColor}/10 text-${statusColor} px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">${status}</span>
-                    </div>
-                    <h3 class="title-md text-on-surface mb-1">${s.name}</h3>
-                    <div class="flex justify-between items-baseline">
-                        <span class="text-[32px] font-bold text-primary">${s.media.toFixed(1)}</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-on-surface-variant/40 text-[12px] font-medium">Ultimo: ${s.lastVote || '—'}</span>
-                            ${s.lastVote ? `<span class="material-symbols-outlined text-[14px] ${s.lastVote >= s.media ? 'text-green' : 'text-error'}">${s.lastVote >= s.media ? 'trending_up' : 'trending_down'}</span>` : ''}
-                        </div>
-                    </div>
-                </div>`;
-            }).join('')}
-        </div>
-    </div>`;
+        
+        <section class="flex flex-col gap-4 overflow-visible pb-8 relative z-10">
+            ${timelineHtml}
+        </section>
+    </main>
+    `;
 }
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
