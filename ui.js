@@ -956,58 +956,101 @@ function isValidName(name) {
     return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
 }
 function renderNav() {
+    // Config delle voci nav — icone Material Symbols + label uppercase
+    const navItems = [
+        { view: 'home',      icon: 'space_dashboard', label: 'OVERVIEW'  },
+        { view: 'planner',   icon: 'calendar_today',  label: 'PLANNER'   },
+        { view: 'voti',      icon: 'bar_chart',       label: 'GRADES'    },
+        { view: 'circolari', icon: 'newspaper',        label: 'CIRCULARS' },
+    ];
+
+    const navButtons = navItems.map(item => {
+        const isActive = state.view === item.view;
+        return `
+        <button onclick="navigate('${item.view}')" style="
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:2px; position:relative; padding:8px 10px; border:none; background:none;
+            cursor:pointer; -webkit-tap-highlight-color:transparent;
+            color:${isActive ? '#0250C5' : '#6B7280'};
+            transition:color 0.2s ease;
+            min-width:56px;
+        ">
+            <span class="material-symbols-outlined" style="
+                font-size:22px;
+                font-variation-settings:'FILL' ${isActive ? 1 : 0},'wght' ${isActive ? 600 : 400};
+                transition:font-variation-settings 0.2s ease;
+            ">${item.icon}</span>
+            <span style="
+                font-size:9px; font-weight:${isActive ? 800 : 600};
+                letter-spacing:0.06em; text-transform:uppercase;
+                transition:font-weight 0.2s ease;
+            ">${item.label}</span>
+            <!-- Dot indicatore attivo -->
+            <div style="
+                position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+                width:${isActive ? '18px' : '0'}; height:2px; border-radius:999px;
+                background:#0250C5; opacity:${isActive ? 1 : 0};
+                transition:width 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease;
+            "></div>
+        </button>`;
+    }).join('');
+
     return `
-        <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[90%] max-w-sm rounded-full border border-white/60 bg-white/40 dark:bg-black/40 backdrop-blur-[30px] deep-shadow z-50 flex justify-around items-center py-3 px-2 md:hidden">
-            
-            <button onclick="navigate('home')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'home' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
-                ${state.view === 'home' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
-                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'home' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">dashboard</span>
-                <span class="font-label-sm text-[9px] uppercase font-bold">Overview</span>
-            </button>
-            
-            <button onclick="navigate('planner')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'planner' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
-                ${state.view === 'planner' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
-                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'planner' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">calendar_today</span>
-                <span class="font-label-sm text-[9px] uppercase font-bold tracking-wider">Planner</span>
-            </button>
-            
-            <button onclick="navigate('voti')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'voti' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
-                ${state.view === 'voti' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
-                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'voti' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">analytics</span>
-                <span class="font-label-sm text-[9px] uppercase font-bold">Grades</span>
-            </button>
-            
-            <button onclick="navigate('circolari')" class="flex flex-col items-center justify-center transition-all duration-300 group ${state.view === 'circolari' ? 'text-primary relative' : 'text-on-surface-variant/40 hover:text-primary'}">
-                ${state.view === 'circolari' ? '<div class="absolute -inset-x-3 -inset-y-1 bg-primary/10 rounded-full -z-10 blur-[4px]"></div>' : ''}
-                <span class="material-symbols-outlined mb-0.5 text-[22px] ${state.view === 'circolari' ? 'font-variation-[FILL_1]' : 'group-hover:font-variation-[FILL_1]'}">newspaper</span>
-                <span class="font-label-sm text-[9px] uppercase font-bold">Circulars</span>
-            </button>
-            
+        <!-- ══ BOTTOM NAV — dark pill con blur ══ -->
+        <nav id="bottom-nav" style="
+            position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+            width:min(420px, calc(100vw - 32px));
+            background:rgba(50, 55, 65, 0.88);
+            backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+            border-radius:32px;
+            box-shadow:0 8px 32px rgba(0,0,0,0.18);
+            display:flex; justify-content:space-around; align-items:center;
+            padding:4px 8px 8px;
+            z-index:1000;
+        " class="md:hidden">
+            ${navButtons}
         </nav>
 
-        <div id="drawerOverlay" onclick="closeDrawer()" class="drawer-overlay absolute inset-0 opacity-0 pointer-events-none z-50 flex items-end transition-opacity duration-300" style="display: none;">
-            <div id="drawerContent" onclick="event.stopPropagation()" class="drawer-content w-full bg-white rounded-t-[36px] p-8 pb-10 shadow-2xl transform translate-y-full flex flex-col max-h-[80%] overflow-y-auto transition-transform duration-300">
-                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0"></div>
+        <!-- Drawer overlay -->
+        <div id="drawerOverlay" onclick="closeDrawer()" style="
+            position:fixed; inset:0; background:rgba(15,23,42,0.45);
+            backdrop-filter:blur(4px); opacity:0; pointer-events:none;
+            z-index:9999; display:flex; align-items:flex-end;
+            transition:opacity 0.3s ease;">
+            <div id="drawerContent" onclick="event.stopPropagation()" style="
+                width:100%; background:white; border-radius:36px 36px 0 0;
+                padding:32px 32px 40px; box-shadow:0 -10px 40px rgba(0,0,0,0.12);
+                transform:translateY(100%); display:flex; flex-direction:column;
+                max-height:80%; overflow-y:auto;
+                transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);">
+                <div style="width:44px;height:5px;background:#E2E8F0;border-radius:999px;margin:0 auto 24px;flex-shrink:0;"></div>
                 <div id="drawerDynamicBody"></div>
             </div>
         </div>
 
-        <div id="dialogOverlay" class="absolute inset-0 bg-slate-900/40 backdrop-blur-xs opacity-0 pointer-events-none z-50 flex items-center justify-center px-6 transition-opacity duration-200" style="display: none;">
-            <div class="bg-white rounded-3xl p-6 w-full max-h-[80%] overflow-y-auto shadow-2xl">
-                <div class="flex justify-between items-center mb-4">
-                    <h4 id="dialogTitle" class="text-lg font-bold text-slate-900">Dettagli</h4>
-                    <button onclick="closeDialog()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                        <i data-lucide="x" class="w-4 h-4"></i>
+        <!-- Dialog overlay -->
+        <div id="dialogOverlay" style="
+            position:fixed; inset:0; background:rgba(15,23,42,0.45);
+            backdrop-filter:blur(4px); opacity:0; pointer-events:none;
+            z-index:9999; display:flex; align-items:center; justify-content:center;
+            padding:0 24px; transition:opacity 0.2s ease;">
+            <div style="background:white; border-radius:24px; padding:24px;
+                        width:100%; max-height:80%; overflow-y:auto;
+                        box-shadow:0 25px 50px rgba(0,0,0,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h4 id="dialogTitle" style="font-size:1.1rem;font-weight:700;color:#0F172A;">Dettagli</h4>
+                    <button onclick="closeDialog()" style="width:32px;height:32px;border-radius:50%;
+                        background:#F1F5F9;border:none;display:flex;align-items:center;
+                        justify-content:center;color:#64748B;cursor:pointer;">
+                        <i data-lucide="x" style="width:16px;height:16px;"></i>
                     </button>
                 </div>
-                <div id="dialogBody" class="space-y-4 text-sm text-slate-600"></div>
+                <div id="dialogBody" style="font-size:0.875rem;color:#475569;"></div>
             </div>
         </div>
 
         <script>
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         </script>
     `;
 }
@@ -1582,9 +1625,13 @@ function renderHome() {
         const dots = document.querySelectorAll('.carousel-dot');
         dots.forEach((dot, idx) => {
             if (idx === index) {
-                dot.className = 'w-6 h-2 rounded-full bg-[#1D4ED8] carousel-dot transition-all duration-300';
+                dot.style.width = '20px';
+                dot.style.height = '6px';
+                dot.style.background = '#0250C5';
             } else {
-                dot.className = 'w-2 h-2 rounded-full bg-gray-300 carousel-dot transition-all duration-300';
+                dot.style.width = '6px';
+                dot.style.height = '6px';
+                dot.style.background = '#CBD5E1';
             }
         });
     };
@@ -1600,7 +1647,7 @@ function renderHome() {
     const usciteTotali = typeof assenze.totaleUscite === 'number' ? assenze.totaleUscite : 0;
     const assenzeGiorni = typeof assenze.totaleAssenze === 'number' ? assenze.totaleAssenze : 0;
     
-    const maxOreIpotetiche = 100; // Imposta il limite massimo per il calcolo della percentuale
+    const maxOreIpotetiche = 100;
     const progressPercentage = Math.min((oreAssenzaTotali / maxOreIpotetiche) * 100, 100);
     const dashOffset = 251.2 - (251.2 * (progressPercentage / 100));
 
@@ -1612,14 +1659,7 @@ function renderHome() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowISO = getLocalDateString(tomorrow);
 
-    // Filtriamo i dati reali per Oggi e Domani da compiti e verifiche
-    const todayVerifiche = (state.verifiche || []).filter(v => v.data === todayISO);
-    const todayHomework = (state.tasks || []).filter(t => t.due_date === todayISO);
-    const allTodayItems = [
-        ...todayVerifiche.map(v => ({ id: v.id, isExam: true, title: v.materia || v.subject, desc: v.text || v.descrizione, done: false })),
-        ...todayHomework.map(h => ({ id: h.id, isExam: false, title: h.subject, desc: h.text, done: h.done }))
-    ];
-
+    // Filtriamo i dati reali per Domani
     const tomorrowVerifiche = (state.verifiche || []).filter(v => v.data === tomorrowISO);
     const tomorrowHomework = (state.tasks || []).filter(t => t.due_date === tomorrowISO);
     const allTomorrowItems = [
@@ -1645,12 +1685,12 @@ function renderHome() {
         })
         .sort((a, b) => a.data.localeCompare(b.data));
 
-    const nextVerifica = upcomingVerifiche[0]; // La prima in ordine cronologico
+    const nextVerifica = upcomingVerifiche[0];
 
     let daysDiff = 0;
     let countdownText = '';
-    let urgencyLabel = ''; // HARD, MEDIUM, EASY
-    let urgencyColor = ''; // Red, Amber, Green
+    let urgencyLabel = '';
+    let urgencyColor = '';
     let progressWidth = 100;
 
     if (nextVerifica) {
@@ -1660,29 +1700,22 @@ function renderHome() {
         const timeDiff = examDate.getTime() - todayZero.getTime();
         daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-        if (daysDiff < 0) {
-            countdownText = 'Superata';
-        } else if (daysDiff === 0) {
-            countdownText = 'Oggi';
-        } else if (daysDiff === 1) {
-            countdownText = 'Domani';
-        } else {
-            countdownText = `${daysDiff} gg`;
-        }
+        if (daysDiff < 0) countdownText = 'Superata';
+        else if (daysDiff === 0) countdownText = 'Oggi';
+        else if (daysDiff === 1) countdownText = 'Domani';
+        else countdownText = `${daysDiff} gg`;
 
-        // Urgency Badge
         if (daysDiff <= 2) {
             urgencyLabel = 'HARD';
-            urgencyColor = 'text-red-600 bg-red-100 border border-red-200';
+            urgencyColor = 'color:#DC2626; background:#FEF2F2; border:1px solid #FECACA;';
         } else if (daysDiff <= 5) {
             urgencyLabel = 'MEDIUM';
-            urgencyColor = 'text-amber-600 bg-amber-100 border border-amber-200';
+            urgencyColor = 'color:#D97706; background:#FFFBEB; border:1px solid #FDE68A;';
         } else {
             urgencyLabel = 'EASY';
-            urgencyColor = 'text-emerald-600 bg-emerald-100 border border-emerald-200';
+            urgencyColor = 'color:#059669; background:#F0FDF4; border:1px solid #A7F3D0;';
         }
 
-        // Progress bar: window of 10 days
         progressWidth = Math.max(0, Math.min(100, ((10 - daysDiff) / 10) * 100));
     }
 
@@ -1698,207 +1731,230 @@ function renderHome() {
         return 'graduation-cap';
     };
 
-    // Helper per colori delle materie
-    const getSubjectColorClasses = (subject, isExam) => {
-        if (isExam) {
-            return {
-                bg: 'bg-red-50',
-                text: 'text-red-600',
-                border: 'border-red-100',
-                icon: 'text-red-600'
-            };
-        }
+    // Helper per colori inline delle materie
+    const getSubjectInlineColors = (subject, isExam) => {
+        if (isExam) return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' };
         const s = (subject || '').toLowerCase();
-        if (s.includes('matem') || s.includes('math')) {
-            return {
-                bg: 'bg-blue-50',
-                text: 'text-blue-600',
-                border: 'border-blue-100',
-                icon: 'text-blue-600'
-            };
-        }
-        if (s.includes('fisic') || s.includes('physics') || s.includes('scienz') || s.includes('chimic')) {
-            return {
-                bg: 'bg-green-50',
-                text: 'text-green-600',
-                border: 'border-green-100',
-                icon: 'text-green-600'
-            };
-        }
-        return {
-            bg: 'bg-indigo-50',
-            text: 'text-indigo-600',
-            border: 'border-indigo-100',
-            icon: 'text-indigo-600'
-        };
+        if (s.includes('matem') || s.includes('math')) return { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' };
+        if (s.includes('fisic') || s.includes('physics') || s.includes('scienz') || s.includes('chimic')) return { bg: '#F0FDF4', text: '#16A34A', border: '#BBF7D0' };
+        return { bg: '#EEF2FF', text: '#4F46E5', border: '#C7D2FE' };
     };
 
-    // 5. Generatore Dinamico delle Card per la sezione "Domani" (con accento rosso a sinistra)
+    // 5. Card compatte per sezione "Domani" — border-radius ridotto, padding ridotto, icone più piccole
     const htmlDomani = allTomorrowItems.length > 0
         ? allTomorrowItems.map(item => {
             const icon = getSubjectLucideIcon(item.title);
-            const colors = getSubjectColorClasses(item.title, item.isExam);
+            const colors = getSubjectInlineColors(item.title, item.isExam);
             return `
-            <div class="home-card-item border-left-accent cursor-pointer hover:scale-[1.01] transition-all duration-200 mb-4" onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center ${colors.text}">
-                        <i data-lucide="${icon}" class="w-6 h-6 stroke-[1.5]"></i>
+            <div style="
+                background:white; border-radius:22px; padding:16px 18px;
+                box-shadow:0 2px 12px -2px rgba(0,0,0,0.04);
+                border:1px solid #EEF0F3; margin-bottom:10px;
+                position:relative; overflow:hidden; cursor:pointer;
+                transition:transform 0.2s ease;
+            " onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}"
+               onmouseenter="this.style.transform='scale(1.01)'" onmouseleave="this.style.transform='scale(1)'">
+                <!-- Accento laterale rosso -->
+                <div style="position:absolute;left:0;top:12%;height:76%;width:4px;background:#E5A7A7;border-radius:0 4px 4px 0;"></div>
+
+                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;padding-left:10px;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:${colors.bg};display:flex;align-items:center;justify-content:center;color:${colors.text};">
+                        <i data-lucide="${icon}" style="width:18px;height:18px;stroke-width:1.5;"></i>
                     </div>
-                    <span class="inline-block ${colors.bg} ${colors.text} text-xs font-bold tracking-wider uppercase px-3 py-1.5 rounded-full border ${colors.border}">
-                        ${item.isExam ? 'Verifica' : 'Compito'}
-                    </span>
+                    <span style="
+                        display:inline-block; background:${colors.bg}; color:${colors.text};
+                        font-size:10px; font-weight:700; letter-spacing:0.06em;
+                        text-transform:uppercase; padding:4px 10px; border-radius:999px;
+                        border:1px solid ${colors.border};
+                    ">${item.isExam ? 'Verifica' : 'Compito'}</span>
                 </div>
                 
-                <h4 class="text-xl font-bold text-[#1F2937] mb-2">${escapeHtml(item.title || 'Generico')}</h4>
+                <h4 style="font-size:1rem;font-weight:700;color:#1F2937;margin:0 0 4px 10px;">${escapeHtml(item.title || 'Generico')}</h4>
                 
-                <div class="space-y-2 mb-4">
-                    <div class="flex items-center text-[#1F2937] text-sm">
-                        <i data-lucide="clock" class="w-4 h-4 mr-3 stroke-[2] text-[#6B7280]"></i>
-                        <span class="font-medium">${item.isExam ? '09:00 - 12:00' : 'Scadenza domani'}</span>
-                    </div>
+                <div style="display:flex;align-items:center;color:#6B7280;font-size:12px;margin-left:10px;">
+                    <i data-lucide="clock" style="width:13px;height:13px;margin-right:6px;stroke-width:2;"></i>
+                    <span style="font-weight:500;">${item.isExam ? '09:00 - 12:00' : 'Scadenza domani'}</span>
                 </div>
-                
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <p class="text-sm text-[#6B7280] italic">"${escapeHtml(item.desc || 'Studio capitoli assegnati')}"</p>
-                </div>
+
+                ${item.desc ? `<p style="font-size:12px;color:#9CA3AF;font-style:italic;margin:8px 0 0 10px;border-top:1px solid #F3F4F6;padding-top:8px;">"${escapeHtml(truncateWithEllipsis(item.desc, 100))}"</p>` : ''}
             </div>`;
         }).join('')
-        : `<div class="text-center p-8 home-card-item text-[#6B7280] italic mb-4">Nessun impegno programmato per domani.</div>`;
+        : `<div style="text-align:center;padding:32px 16px;background:white;border-radius:22px;border:1px solid #EEF0F3;color:#9CA3AF;font-style:italic;">Nessun impegno programmato per domani.</div>`;
 
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
 
-    // 6. Ritorno dell'HTML strutturale della Dashboard Premium con Fullbleed layout
+    // Avatar utente
+    const userPhoto = state.userPhoto || '';
+    const avatarHtml = userPhoto
+        ? `<img src="${escapeHtml(userPhoto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid #EEF0F3;" onclick="navigate('profile')" alt="Profilo">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:#1F2937;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid #EEF0F3;" onclick="navigate('profile')">
+            <span class="material-symbols-outlined" style="font-size:20px;color:white;">person</span>
+           </div>`;
+
+    // 6. Ritorno dell'HTML strutturale della Dashboard
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#1F2937] antialiased overflow-y-auto hide-scrollbar">
 
-        <div class="px-0">
+        <div style="padding:0;">
 
-            <!-- CAROUSEL: gap-0, w-full slides con internal padding per edge-to-edge layout perfetto -->
-            <div class="w-full overflow-hidden mb-5">
-                <div id="home-carousel" class="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-0 hide-scrollbar pb-3 px-0"
-                     onscroll="handleCarouselScroll(this)">
+            <!-- HEADER: GANDHI DIARY + Avatar -->
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0 24px 16px;">
+                <h1 style="font-size:13px;font-weight:800;letter-spacing:0.12em;color:#9CA3AF;text-transform:uppercase;margin:0;">GANDHI DIARY</h1>
+                ${avatarHtml}
+            </div>
 
-                    <!-- Widget 1: Media Generale (Look Premium) -->
-                    <div class="w-full shrink-0 px-6 snap-start">
-                        <div class="card-media-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
-                            <div class="flex justify-between items-start">
+            <!-- CAROUSEL: gap-0, w-full slides con internal padding per edge-to-edge -->
+            <div style="width:100%;overflow:hidden;margin-bottom:16px;">
+                <div id="home-carousel" style="
+                    display:flex;flex-wrap:nowrap;overflow-x:auto;
+                    scroll-snap-type:x mandatory;gap:0;
+                    -ms-overflow-style:none;scrollbar-width:none;
+                    padding:0;
+                " onscroll="handleCarouselScroll(this)">
+
+                    <!-- Widget 1: Media Generale — sfondo bianco piatto -->
+                    <div style="min-width:100%;flex-shrink:0;scroll-snap-align:start;padding:0 24px;">
+                        <div style="
+                            background:white; border-radius:28px; padding:24px;
+                            border:1px solid #EEF0F3;
+                            box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
+                            display:flex;flex-direction:column;justify-content:space-between;height:220px;
+                        ">
+                            <div style="display:flex;justify-content:space-between;align-items:start;">
                                 <div>
-                                    <h2 class="text-[#0250C5] font-bold text-xl tracking-tight leading-tight">Buongiorno, ${getSafeUserName()}</h2>
-                                    <p class="text-blue-600/70 text-sm font-medium mt-0.5">Media generale attiva</p>
+                                    <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
+                                    <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
                                 </div>
-                                <div class="w-11 h-11 rounded-full bg-blue-100/60 flex items-center justify-center text-[#0250C5]">
-                                    <i data-lucide="graduation-cap" class="w-5 h-5 stroke-[2]"></i>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
+                                    <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
                                 </div>
                             </div>
 
-                            <div class="flex items-baseline mt-2">
-                                <span class="text-6xl font-extrabold text-[#0250C5] tracking-tight">${media.toFixed(2)}</span>
+                            <div style="margin-top:8px;">
+                                <span style="font-size:3.2rem;font-weight:800;color:#0250C5;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
                             </div>
 
-                            <div class="flex items-end justify-between h-12 mt-2 px-1 relative">
-                                <div class="w-[12%] bg-blue-600/10 rounded-lg h-[40%]"></div>
-                                <div class="w-[12%] bg-blue-600/15 rounded-lg h-[60%]"></div>
-                                <div class="w-[12%] bg-blue-600/10 rounded-lg h-[45%]"></div>
-                                <div class="w-[12%] bg-blue-600/20 rounded-lg h-[70%]"></div>
-                                <div class="w-[12%] bg-blue-600/30 rounded-lg h-[85%]"></div>
-                                <div class="w-[12%] bg-[#0250C5] rounded-lg relative flex justify-center h-[95%]">
-                                    <div class="absolute -top-6 bg-[#1F2937] text-white text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md shadow-md">NOW</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
+                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:40%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.12);border-radius:6px;height:60%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:45%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.16);border-radius:6px;height:70%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.24);border-radius:6px;height:85%;"></div>
+                                <div style="width:12%;background:#0250C5;border-radius:6px;height:95%;position:relative;display:flex;justify-content:center;">
+                                    <div style="position:absolute;top:-22px;background:#1F2937;color:white;font-size:7px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">NOW</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Widget 2: Assenze (Preso letteralmente da mockup) -->
-                    <div class="w-full shrink-0 px-6 snap-start">
-                        <div class="card-assenze-bg rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
-                            <div class="flex justify-between items-start">
-                                <h2 class="font-semibold text-xl" style="color: #BD1118;">Assenze</h2>
-                                <div class="w-10 h-10 rounded-full bg-red-100/50 flex items-center justify-center" style="color: #BD1118;">
-                                    <i data-lucide="user-x" class="w-5 h-5"></i>
+                    <!-- Widget 2: Assenze — sfondo bianco piatto -->
+                    <div style="min-width:100%;flex-shrink:0;scroll-snap-align:start;padding:0 24px;">
+                        <div style="
+                            background:white; border-radius:28px; padding:24px;
+                            border:1px solid #EEF0F3;
+                            box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
+                            display:flex;flex-direction:column;justify-content:space-between;height:220px;
+                        ">
+                            <div style="display:flex;justify-content:space-between;align-items:start;">
+                                <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
+                                    <i data-lucide="user-x" style="width:20px;height:20px;"></i>
                                 </div>
                             </div>
 
-                            <div class="flex justify-between items-center my-2">
-                                <div class="text-6xl font-bold tracking-tight" style="color: #BD1118;">
-                                    ${oreAssenzaTotali.toFixed(1)}<span class="text-4xl font-semibold">h</span>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
+                                <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
+                                    ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
                                 </div>
 
-                                <div class="relative w-20 h-20 flex items-center justify-center">
-                                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                        <circle class="text-red-100 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                        <circle class="progress-ring__circle" style="stroke: #BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
+                                <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+                                    <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
+                                        <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                        <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
                                     </svg>
-                                    <span class="absolute text-[11px] font-bold" style="color: #BD1118;">${Math.round(progressPercentage)}%</span>
+                                    <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
                                 </div>
                             </div>
 
-                            <div class="flex justify-between gap-3">
-                                <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-2.5 px-2 flex-1 text-center shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.02)]">
-                                    <div class="font-bold text-base" style="color: #BD1118;">${assenzeGiorni}g</div>
-                                    <div class="text-[9px] font-semibold text-[#6B7280] tracking-wider mt-0.5 uppercase">Assenze</div>
+                            <div style="display:flex;justify-content:space-between;gap:10px;">
+                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                    <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
+                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
                                 </div>
-                                <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-2.5 px-2 flex-1 text-center shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.02)]">
-                                    <div class="font-bold text-[#1F2937] text-base">${ritardiTotali}</div>
-                                    <div class="text-[9px] font-semibold text-[#6B7280] tracking-wider mt-0.5 uppercase">Ritardi</div>
+                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
+                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
                                 </div>
-                                <div class="bg-white/60 backdrop-blur-sm rounded-2xl py-2.5 px-2 flex-1 text-center shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.02)]">
-                                    <div class="font-bold text-[#1F2937] text-base">${usciteTotali}</div>
-                                    <div class="text-[9px] font-semibold text-[#6B7280] tracking-wider mt-0.5 uppercase">Uscite</div>
+                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
+                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Widget 3: Prossime Verifiche (Look Premium con countdown) -->
-                    <div class="w-full shrink-0 px-6 snap-start">
+                    <!-- Widget 3: Prossime Verifiche — sfondo bianco piatto -->
+                    <div style="min-width:100%;flex-shrink:0;scroll-snap-align:start;padding:0 24px;">
                         ${nextVerifica ? `
-                            <div class="card-verifiche-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex flex-col">
-                                        <h2 class="font-semibold text-xl" style="color: #059669;">Prossime Verifiche</h2>
-                                        <p class="text-emerald-600/70 text-xs font-medium mt-0.5">${upcomingVerifiche.length} verifiche in programma</p>
+                            <div style="
+                                background:white; border-radius:28px; padding:24px;
+                                border:1px solid #EEF0F3;
+                                box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
+                                display:flex;flex-direction:column;justify-content:space-between;height:220px;
+                            ">
+                                <div style="display:flex;justify-content:space-between;align-items:start;">
+                                    <div style="display:flex;flex-direction:column;">
+                                        <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                        <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
                                     </div>
-                                    <div class="w-10 h-10 rounded-full bg-emerald-100/50 flex items-center justify-center text-[#059669]">
-                                        <i data-lucide="calendar" class="w-5 h-5"></i>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-between items-center my-1">
-                                    <div class="flex flex-col min-w-0 pr-2">
-                                        <span class="text-xl font-bold tracking-tight text-[#1F2937] truncate">${escapeHtml(nextVerifica.materia)}</span>
-                                        <span class="text-xs text-[#6B7280] truncate mt-0.5">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
-                                    </div>
-                                    <div class="flex flex-col items-end shrink-0">
-                                        <span class="text-3xl font-extrabold text-emerald-600 tracking-tight">${countdownText}</span>
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase mt-1 ${urgencyColor}">
-                                            ${urgencyLabel}
-                                        </span>
+                                    <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                        <i data-lucide="calendar" style="width:20px;height:20px;"></i>
                                     </div>
                                 </div>
 
-                                <div class="w-full">
-                                    <div class="flex justify-between text-[9px] font-bold text-[#6B7280] mb-1 px-0.5">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
+                                    <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
+                                        <span style="font-size:1.1rem;font-weight:700;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
+                                        <span style="font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
+                                        <span style="font-size:1.8rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">${countdownText}</span>
+                                        <span style="
+                                            display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
+                                            font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+                                            margin-top:3px;${urgencyColor}
+                                        ">${urgencyLabel}</span>
+                                    </div>
+                                </div>
+
+                                <div style="width:100%;">
+                                    <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:#9CA3AF;margin-bottom:4px;padding:0 2px;">
                                         <span>STATO STUDIO</span>
                                         <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
                                     </div>
-                                    <div class="w-full bg-emerald-100/40 rounded-full h-2 overflow-hidden">
-                                        <div class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${progressWidth}%; background-color: #059669;"></div>
+                                    <div style="width:100%;background:#E5E7EB;border-radius:999px;height:6px;overflow:hidden;">
+                                        <div style="height:100%;border-radius:999px;transition:width 0.5s ease-out;width:${progressWidth}%;background:#059669;"></div>
                                     </div>
                                 </div>
                             </div>
                         ` : `
-                            <div class="card-verifiche-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
-                                <div class="flex justify-between items-start">
-                                    <h2 class="font-semibold text-xl" style="color: #059669;">Prossime Verifiche</h2>
-                                    <div class="w-10 h-10 rounded-full bg-emerald-100/50 flex items-center justify-center text-[#059669]">
-                                        <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                            <div style="
+                                background:white; border-radius:28px; padding:24px;
+                                border:1px solid #EEF0F3;
+                                box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
+                                display:flex;flex-direction:column;justify-content:space-between;height:220px;
+                            ">
+                                <div style="display:flex;justify-content:space-between;align-items:start;">
+                                    <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                    <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                        <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
                                     </div>
                                 </div>
-                                <div class="flex flex-col items-center justify-center my-auto text-center">
-                                    <span class="material-symbols-outlined text-3xl text-emerald-600/40 mb-1">event_available</span>
-                                    <p class="text-sm font-semibold text-emerald-800">Nessuna verifica</p>
-                                    <p class="text-[11px] text-[#6B7280] mt-0.5">Niente da studiare per ora!</p>
+                                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
+                                    <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
+                                    <p style="font-size:13px;font-weight:600;color:#065F46;">Nessuna verifica</p>
+                                    <p style="font-size:11px;color:#9CA3AF;margin-top:2px;">Niente da studiare per ora!</p>
                                 </div>
                             </div>
                         `}
@@ -1908,18 +1964,18 @@ function renderHome() {
             </div>
 
             <!-- Indicatori di paginazione (Dots) -->
-            <div class="flex justify-center gap-2 mb-8">
-                <div class="w-6 h-2 rounded-full bg-[#1D4ED8] carousel-dot transition-all duration-300"></div>
-                <div class="w-2 h-2 rounded-full bg-gray-300 carousel-dot transition-all duration-300"></div>
-                <div class="w-2 h-2 rounded-full bg-gray-300 carousel-dot transition-all duration-300"></div>
+            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:24px;">
+                <div class="carousel-dot" style="width:20px;height:6px;border-radius:999px;background:#0250C5;transition:all 0.3s ease;"></div>
+                <div class="carousel-dot" style="width:6px;height:6px;border-radius:999px;background:#CBD5E1;transition:all 0.3s ease;"></div>
+                <div class="carousel-dot" style="width:6px;height:6px;border-radius:999px;background:#CBD5E1;transition:all 0.3s ease;"></div>
             </div>
 
-            <!-- Sezione Domani promossa con padding esplicito px-6 -->
-            <div class="px-6">
-                <div class="mb-8">
-                    <div class="flex justify-between items-end mb-4 px-1">
-                        <h3 class="text-2xl font-bold text-[#1F2937]">Domani</h3>
-                        <a href="#" class="text-[#1D4ED8] font-medium text-sm hover:underline" onclick="navigate('planner')">See all</a>
+            <!-- Sezione Domani — compatta -->
+            <div style="padding:0 24px;">
+                <div style="margin-bottom:24px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
+                        <h3 style="font-size:1.35rem;font-weight:700;color:#1F2937;margin:0;">Domani</h3>
+                        <a href="#" style="color:#0250C5;font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">See all</a>
                     </div>
                     ${htmlDomani}
                 </div>

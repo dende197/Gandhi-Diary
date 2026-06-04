@@ -413,23 +413,14 @@ h1, h2, h3, h4, h5, h6 {
     scrollbar-width: none;
 }
 
-/* Widget 1: Media Generale (Look Premium coordinato) */
-.card-media-premium {
-    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 60%, #ffffff 100%);
-    box-shadow: 0 12px 35px -8px rgba(59, 130, 246, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
-}
-
-/* Widget 2: Assenze (Preso letteralmente da widget_assenze.html) */
-.card-assenze-premium {
-    background: linear-gradient(135deg, #ffffff 0%, #fff0f0 60%, #ffe5e5 100%);
-    box-shadow: 0 12px 35px -8px rgba(189, 17, 24, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
-}
-
-/* Widget 3: Prossime Verifiche (Look Premium coordinato) */
-.card-verifiche-premium {
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 60%, #ffffff 100%);
-    box-shadow: 0 12px 35px -8px rgba(16, 185, 129, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(80px);
+/* Widget cards — flat white, no gradients */
+.card-media-premium,
+.card-assenze-premium,
+.card-verifiche-premium,
+.card-assenze-bg {
+    background: white;
+    border: 1px solid #EEF0F3;
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.06);
 }
 
 /* SVG Progress Ring delle Assenze */
@@ -437,21 +428,6 @@ h1, h2, h3, h4, h5, h6 {
     transition: stroke-dashoffset 0.4s ease;
     transform: rotate(-90deg);
     transform-origin: 50% 50%;
-}
-
-/* Accento sinistro per la sezione Domani */
-.border-left-red-accent {
-    position: relative;
-}
-.border-left-red-accent::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 12%;
-    height: 76%;
-    width: 4.5px;
-    background-color: #E5A7A7;
-    border-radius: 0 4px 4px 0;
 }
 
 /* --- NUOVI STILI DEL MOCKUP --- */
@@ -471,19 +447,13 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+/* Card items for Domani section — compact */
 .home-card-item {
-    background: #FAFCFE;
-    border-radius: 24px;
-    padding: 20px;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-    border: 1px solid white;
-}
-
-
-.card-assenze-bg {
-    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,240,240,1) 50%, rgba(255,225,225,0.8) 100%);
-    box-shadow: 0 10px 30px -5px rgba(189, 17, 24, 0.1), inset 0 0 0 1px rgba(255,255,255,0.5);
-    backdrop-filter: blur(10px);
+    background: white;
+    border-radius: 22px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.04);
+    border: 1px solid #EEF0F3;
 }
 
 .avatar-group > img {
@@ -502,17 +472,8 @@ h1, h2, h3, h4, h5, h6 {
     display: none;
 }
 
-.border-left-accent {
-    position: relative;
-}
-.border-left-accent::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 10%;
-    height: 80%;
-    width: 4px;
-    background-color: #e5a7a7;
-    border-radius: 0 4px 4px 0;
+/* Carousel scrollbar hide for webkit */
+#home-carousel::-webkit-scrollbar {
+    display: none;
 }
 
