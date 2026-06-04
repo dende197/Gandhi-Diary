@@ -477,3 +477,31 @@ h1, h2, h3, h4, h5, h6 {
     display: none;
 }
 
+/* Stile della barra fluttuante bottom su Mobile */
+.liquid-navbar {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.1);
+}
+
+/* Cerchio di luce azzurra per l'icona attiva */
+.active-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 46px;
+    height: 46px;
+    background: rgba(0, 86, 210, 0.08);
+    border-radius: 50%;
+    filter: blur(2px);
+    z-index: 0;
+}
+
+.nav-item i, .nav-item span {
+    position: relative;
+    z-index: 10;
+}
+

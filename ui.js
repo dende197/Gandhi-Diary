@@ -956,59 +956,36 @@ function isValidName(name) {
     return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
 }
 function renderNav() {
-    // Config delle voci nav — icone Material Symbols + label uppercase
-    const navItems = [
-        { view: 'home',      icon: 'space_dashboard', label: 'OVERVIEW'  },
-        { view: 'planner',   icon: 'calendar_today',  label: 'PLANNER'   },
-        { view: 'voti',      icon: 'bar_chart',       label: 'GRADES'    },
-        { view: 'circolari', icon: 'newspaper',        label: 'CIRCULARS' },
-    ];
+    const currentView = state.view;
 
-    const navButtons = navItems.map(item => {
-        const isActive = state.view === item.view;
+    // Helper to generate a nav item link with Liquid Glass aesthetics
+    const renderNavItem = (view, iconBase, label) => {
+        const isActive = currentView === view;
+        const color = isActive ? '#0056D2' : '#8B95A5';
+        const fontStyle = isActive ? 'font-bold' : 'font-semibold';
+        const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
+        const glowHtml = isActive ? '<div class="active-glow"></div>' : '';
+
         return `
-        <button onclick="navigate('${item.view}')" style="
-            display:flex; flex-direction:column; align-items:center; justify-content:center;
-            gap:2px; position:relative; padding:8px 10px; border:none; background:none;
-            cursor:pointer; -webkit-tap-highlight-color:transparent;
-            color:${isActive ? '#0250C5' : '#6B7280'};
-            transition:color 0.2s ease;
-            min-width:56px;
-        ">
-            <span class="material-symbols-outlined" style="
-                font-size:22px;
-                font-variation-settings:'FILL' ${isActive ? 1 : 0},'wght' ${isActive ? 600 : 400};
-                transition:font-variation-settings 0.2s ease;
-            ">${item.icon}</span>
-            <span style="
-                font-size:9px; font-weight:${isActive ? 800 : 600};
-                letter-spacing:0.06em; text-transform:uppercase;
-                transition:font-weight 0.2s ease;
-            ">${item.label}</span>
-            <!-- Dot indicatore attivo -->
-            <div style="
-                position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
-                width:${isActive ? '18px' : '0'}; height:2px; border-radius:999px;
-                background:#0250C5; opacity:${isActive ? 1 : 0};
-                transition:width 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease;
-            "></div>
-        </button>`;
-    }).join('');
+        <a href="#" onclick="navigate('${view}')" 
+           class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-colors"
+           style="color: ${color}; text-decoration: none; -webkit-tap-highlight-color: transparent;"
+           onmouseenter="if(!${isActive}) this.style.color='#475569'"
+           onmouseleave="if(!${isActive}) this.style.color='#8B95A5'">
+            ${glowHtml}
+            <i class="${iconClass} text-[28px]"></i>
+            <span class="text-[13px] ${fontStyle} tracking-wide">${label}</span>
+        </a>
+        `;
+    };
 
     return `
-        <!-- ══ BOTTOM NAV — dark pill con blur ══ -->
-        <nav id="bottom-nav" style="
-            position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-            width:min(420px, calc(100vw - 32px));
-            background:rgba(50, 55, 65, 0.88);
-            backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-            border-radius:32px;
-            box-shadow:0 8px 32px rgba(0,0,0,0.18);
-            display:flex; justify-content:space-around; align-items:center;
-            padding:4px 8px 8px;
-            z-index:1000;
-        " class="md:hidden">
-            ${navButtons}
+        <!-- ══ BOTTOM NAV — Liquid Glass ══ -->
+        <nav class="liquid-navbar fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-around px-4 py-2 rounded-[32px] z-[1000] w-[92%] max-w-[380px] h-[76px] md:hidden">
+            ${renderNavItem('home', 'ph-squares-four', 'Overview')}
+            ${renderNavItem('planner', 'ph-calendar-blank', 'Planner')}
+            ${renderNavItem('voti', 'ph-exam', 'Grades')}
+            ${renderNavItem('circolari', 'ph-newspaper', 'Circulars')}
         </nav>
 
         <!-- Drawer overlay -->
@@ -1804,170 +1781,132 @@ function renderHome() {
                 ${avatarHtml}
             </div>
 
-            <!-- CAROUSEL: gap-0, w-full slides con internal padding per edge-to-edge -->
-            <div style="width:100%;overflow:hidden;margin-bottom:16px;">
-                <div id="home-carousel" style="
-                    display:flex;flex-wrap:nowrap;overflow-x:auto;
-                    scroll-snap-type:x mandatory;gap:0;
-                    -ms-overflow-style:none;scrollbar-width:none;
-                    padding:0;
-                " onscroll="handleCarouselScroll(this)">
+            <!-- WIDGETS COLUMN: Stacked vertically with uniform width -->
+            <div class="flex flex-col gap-4 w-full px-4" style="margin-bottom: 24px;">
 
-                    <!-- Widget 1: Media Generale — sfondo bianco piatto -->
-                    <div style="min-width:100%;flex-shrink:0;scroll-snap-align:start;padding:0 24px;">
-                        <div style="
-                            background:white; border-radius:28px; padding:24px;
-                            border:1px solid #EEF0F3;
-                            box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
-                            display:flex;flex-direction:column;justify-content:space-between;height:220px;
-                        ">
-                            <div style="display:flex;justify-content:space-between;align-items:start;">
-                                <div>
-                                    <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
-                                    <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
-                                </div>
-                                <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
-                                    <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
-                                </div>
-                            </div>
-
-                            <div style="margin-top:8px;">
-                                <span style="font-size:3.2rem;font-weight:800;color:#0250C5;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
-                            </div>
-
-                            <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
-                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:40%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.12);border-radius:6px;height:60%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:45%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.16);border-radius:6px;height:70%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.24);border-radius:6px;height:85%;"></div>
-                                <div style="width:12%;background:#0250C5;border-radius:6px;height:95%;position:relative;display:flex;justify-content:center;">
-                                    <div style="position:absolute;top:-22px;background:#1F2937;color:white;font-size:7px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">NOW</div>
-                                </div>
-                            </div>
+                <!-- Widget 1: Media Generale -->
+                <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div>
+                            <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
+                            <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
+                        </div>
+                        <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
+                            <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
                         </div>
                     </div>
 
-                    <!-- Widget 2: Assenze — sfondo bianco piatto -->
-                    <div style="min-width:100%;flex-shrink:0;scroll-snap-align:start;padding:0 24px;">
-                        <div style="
-                            background:white; border-radius:28px; padding:24px;
-                            border:1px solid #EEF0F3;
-                            box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
-                            display:flex;flex-direction:column;justify-content:space-between;height:220px;
-                        ">
-                            <div style="display:flex;justify-content:space-between;align-items:start;">
-                                <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
-                                <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
-                                    <i data-lucide="user-x" style="width:20px;height:20px;"></i>
-                                </div>
-                            </div>
+                    <div style="margin-top:8px;">
+                        <span style="font-size:3.2rem;font-weight:800;color:#0250C5;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                    </div>
 
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
-                                <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
-                                    ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
-                                </div>
-
-                                <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
-                                    <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
-                                        <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                        <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
-                                    </svg>
-                                    <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
-                                </div>
-                            </div>
-
-                            <div style="display:flex;justify-content:space-between;gap:10px;">
-                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                    <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
-                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
-                                </div>
-                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
-                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
-                                </div>
-                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
-                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
-                                </div>
-                            </div>
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
+                        <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:40%;"></div>
+                        <div style="width:12%;background:rgba(37,99,235,0.12);border-radius:6px;height:60%;"></div>
+                        <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:45%;"></div>
+                        <div style="width:12%;background:rgba(37,99,235,0.16);border-radius:6px;height:70%;"></div>
+                        <div style="width:12%;background:rgba(37,99,235,0.24);border-radius:6px;height:85%;"></div>
+                        <div style="width:12%;background:#0250C5;border-radius:6px;height:95%;position:relative;display:flex;justify-content:center;">
+                            <div style="position:absolute;top:-22px;background:#1F2937;color:white;font-size:7px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">NOW</div>
                         </div>
                     </div>
-
-                    <!-- Widget 3: Prossime Verifiche — sfondo bianco piatto -->
-                    <div style="min-width:100%;flex-shrink:0;scroll-snap-align:start;padding:0 24px;">
-                        ${nextVerifica ? `
-                            <div style="
-                                background:white; border-radius:28px; padding:24px;
-                                border:1px solid #EEF0F3;
-                                box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
-                                display:flex;flex-direction:column;justify-content:space-between;height:220px;
-                            ">
-                                <div style="display:flex;justify-content:space-between;align-items:start;">
-                                    <div style="display:flex;flex-direction:column;">
-                                        <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
-                                        <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
-                                    </div>
-                                    <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
-                                        <i data-lucide="calendar" style="width:20px;height:20px;"></i>
-                                    </div>
-                                </div>
-
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
-                                    <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
-                                        <span style="font-size:1.1rem;font-weight:700;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
-                                        <span style="font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
-                                        <span style="font-size:1.8rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">${countdownText}</span>
-                                        <span style="
-                                            display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
-                                            font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-                                            margin-top:3px;${urgencyColor}
-                                        ">${urgencyLabel}</span>
-                                    </div>
-                                </div>
-
-                                <div style="width:100%;">
-                                    <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:#9CA3AF;margin-bottom:4px;padding:0 2px;">
-                                        <span>STATO STUDIO</span>
-                                        <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
-                                    </div>
-                                    <div style="width:100%;background:#E5E7EB;border-radius:999px;height:6px;overflow:hidden;">
-                                        <div style="height:100%;border-radius:999px;transition:width 0.5s ease-out;width:${progressWidth}%;background:#059669;"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        ` : `
-                            <div style="
-                                background:white; border-radius:28px; padding:24px;
-                                border:1px solid #EEF0F3;
-                                box-shadow:0 4px 20px -4px rgba(0,0,0,0.06);
-                                display:flex;flex-direction:column;justify-content:space-between;height:220px;
-                            ">
-                                <div style="display:flex;justify-content:space-between;align-items:start;">
-                                    <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
-                                    <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
-                                        <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
-                                    </div>
-                                </div>
-                                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
-                                    <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
-                                    <p style="font-size:13px;font-weight:600;color:#065F46;">Nessuna verifica</p>
-                                    <p style="font-size:11px;color:#9CA3AF;margin-top:2px;">Niente da studiare per ora!</p>
-                                </div>
-                            </div>
-                        `}
-                    </div>
-
                 </div>
-            </div>
 
-            <!-- Indicatori di paginazione (Dots) -->
-            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:24px;">
-                <div class="carousel-dot" style="width:20px;height:6px;border-radius:999px;background:#0250C5;transition:all 0.3s ease;"></div>
-                <div class="carousel-dot" style="width:6px;height:6px;border-radius:999px;background:#CBD5E1;transition:all 0.3s ease;"></div>
-                <div class="carousel-dot" style="width:6px;height:6px;border-radius:999px;background:#CBD5E1;transition:all 0.3s ease;"></div>
+                <!-- Widget 2: Assenze -->
+                <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
+                        <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
+                            <i data-lucide="user-x" style="width:20px;height:20px;"></i>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
+                        <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
+                            ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
+                        </div>
+
+                        <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+                            <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
+                                <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
+                            </svg>
+                            <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;gap:10px;">
+                        <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                            <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
+                            <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
+                        </div>
+                        <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                            <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
+                            <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
+                        </div>
+                        <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                            <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
+                            <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Widget 3: Prossime Verifiche -->
+                <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
+                    ${nextVerifica ? `
+                        <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
+                            <div style="display:flex;justify-content:space-between;align-items:start;">
+                                <div style="display:flex;flex-direction:column;">
+                                    <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                    <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
+                                </div>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                    <i data-lucide="calendar" style="width:20px;height:20px;"></i>
+                                </div>
+                            </div>
+
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
+                                <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
+                                    <span style="font-size:1.1rem;font-weight:700;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
+                                    <span style="font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
+                                </div>
+                                <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
+                                    <span style="font-size:1.8rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">${countdownText}</span>
+                                    <span style="
+                                        display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
+                                        font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+                                        margin-top:3px;${urgencyColor}
+                                    ">${urgencyLabel}</span>
+                                </div>
+                            </div>
+
+                            <div style="width:100%;">
+                                <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:#9CA3AF;margin-bottom:4px;padding:0 2px;">
+                                    <span>STATO STUDIO</span>
+                                    <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
+                                </div>
+                                <div style="width:100%;background:#E5E7EB;border-radius:999px;height:6px;overflow:hidden;">
+                                    <div style="height:100%;border-radius:999px;transition:width 0.5s ease-out;width:${progressWidth}%;background:#059669;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
+                            <div style="display:flex;justify-content:space-between;align-items:start;">
+                                <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                    <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
+                                <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
+                                <p style="font-size:13px;font-weight:600;color:#065F46;">Nessuna verifica</p>
+                                <p style="font-size:11px;color:#9CA3AF;margin-top:2px;">Niente da studiare per ora!</p>
+                            </div>
+                        </div>
+                    `}
+                </div>
+
             </div>
 
             <!-- Sezione Domani — compatta -->
