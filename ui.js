@@ -966,16 +966,17 @@ function renderNav() {
         const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
         const glowHtml = isActive ? '<div class="active-glow"></div>' : '';
 
+        // Sostituito <a> con <button> per evitare problemi di reload
         return `
-        <a href="#" onclick="navigate('${view}')" 
-           class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-colors"
-           style="color: ${color}; text-decoration: none; -webkit-tap-highlight-color: transparent;"
+        <button onclick="navigate('${view}')" 
+           class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-colors bg-transparent border-none outline-none cursor-pointer p-0"
+           style="color: ${color}; -webkit-tap-highlight-color: transparent;"
            onmouseenter="if(!${isActive}) this.style.color='#475569'"
            onmouseleave="if(!${isActive}) this.style.color='#8B95A5'">
             ${glowHtml}
             <i class="${iconClass} text-[28px]"></i>
             <span class="text-[13px] ${fontStyle} tracking-wide">${label}</span>
-        </a>
+        </button>
         `;
     };
 
@@ -1781,132 +1782,141 @@ function renderHome() {
                 ${avatarHtml}
             </div>
 
-            <!-- WIDGETS COLUMN: Stacked vertically with uniform width -->
-            <div class="flex flex-col gap-4 w-full px-4" style="margin-bottom: 24px;">
+            <div style="position: relative; margin-bottom: 24px;">
+                <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
-                <!-- Widget 1: Media Generale -->
-                <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
-                    <div style="display:flex;justify-content:space-between;align-items:start;">
-                        <div>
-                            <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
-                            <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
-                        </div>
-                        <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
-                            <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
-                        </div>
-                    </div>
-
-                    <div style="margin-top:8px;">
-                        <span style="font-size:3.2rem;font-weight:800;color:#0250C5;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
-                    </div>
-
-                    <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
-                        <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:40%;"></div>
-                        <div style="width:12%;background:rgba(37,99,235,0.12);border-radius:6px;height:60%;"></div>
-                        <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:45%;"></div>
-                        <div style="width:12%;background:rgba(37,99,235,0.16);border-radius:6px;height:70%;"></div>
-                        <div style="width:12%;background:rgba(37,99,235,0.24);border-radius:6px;height:85%;"></div>
-                        <div style="width:12%;background:#0250C5;border-radius:6px;height:95%;position:relative;display:flex;justify-content:center;">
-                            <div style="position:absolute;top:-22px;background:#1F2937;color:white;font-size:7px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">NOW</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Widget 2: Assenze -->
-                <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
-                    <div style="display:flex;justify-content:space-between;align-items:start;">
-                        <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
-                        <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
-                            <i data-lucide="user-x" style="width:20px;height:20px;"></i>
-                        </div>
-                    </div>
-
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
-                        <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
-                            ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
-                        </div>
-
-                        <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
-                            <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
-                                <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
-                            </svg>
-                            <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
-                        </div>
-                    </div>
-
-                    <div style="display:flex;justify-content:space-between;gap:10px;">
-                        <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                            <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
-                            <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
-                        </div>
-                        <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                            <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
-                            <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
-                        </div>
-                        <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                            <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
-                            <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Widget 3: Prossime Verifiche -->
-                <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
-                    ${nextVerifica ? `
-                        <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
+                    <div class="widget-card">
+                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between mx-auto" style="height:220px; max-width: calc(100% - 32px);">
                             <div style="display:flex;justify-content:space-between;align-items:start;">
-                                <div style="display:flex;flex-direction:column;">
-                                    <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
-                                    <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
+                                <div>
+                                    <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
+                                    <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
                                 </div>
-                                <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
-                                    <i data-lucide="calendar" style="width:20px;height:20px;"></i>
-                                </div>
-                            </div>
-
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
-                                <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
-                                    <span style="font-size:1.1rem;font-weight:700;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
-                                    <span style="font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
-                                </div>
-                                <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
-                                    <span style="font-size:1.8rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">${countdownText}</span>
-                                    <span style="
-                                        display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
-                                        font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-                                        margin-top:3px;${urgencyColor}
-                                    ">${urgencyLabel}</span>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
+                                    <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
                                 </div>
                             </div>
 
-                            <div style="width:100%;">
-                                <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:#9CA3AF;margin-bottom:4px;padding:0 2px;">
-                                    <span>STATO STUDIO</span>
-                                    <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
-                                </div>
-                                <div style="width:100%;background:#E5E7EB;border-radius:999px;height:6px;overflow:hidden;">
-                                    <div style="height:100%;border-radius:999px;transition:width 0.5s ease-out;width:${progressWidth}%;background:#059669;"></div>
+                            <div style="margin-top:8px;">
+                                <span style="font-size:3.2rem;font-weight:800;color:#0250C5;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                            </div>
+
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
+                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:40%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.12);border-radius:6px;height:60%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:45%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.16);border-radius:6px;height:70%;"></div>
+                                <div style="width:12%;background:rgba(37,99,235,0.24);border-radius:6px;height:85%;"></div>
+                                <div style="width:12%;background:#0250C5;border-radius:6px;height:95%;position:relative;display:flex;justify-content:center;">
+                                    <div style="position:absolute;top:-22px;background:#1F2937;color:white;font-size:7px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">NOW</div>
                                 </div>
                             </div>
                         </div>
-                    ` : `
-                        <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
+                    </div>
+
+                    <div class="widget-card">
+                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between mx-auto" style="height:220px; max-width: calc(100% - 32px);">
                             <div style="display:flex;justify-content:space-between;align-items:start;">
-                                <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
-                                <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
-                                    <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
+                                <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
+                                    <i data-lucide="user-x" style="width:20px;height:20px;"></i>
                                 </div>
                             </div>
-                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
-                                <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
-                                <p style="font-size:13px;font-weight:600;color:#065F46;">Nessuna verifica</p>
-                                <p style="font-size:11px;color:#9CA3AF;margin-top:2px;">Niente da studiare per ora!</p>
+
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
+                                <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
+                                    ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
+                                </div>
+
+                                <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+                                    <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
+                                        <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                        <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
+                                    </svg>
+                                    <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
+                                </div>
+                            </div>
+
+                            <div style="display:flex;justify-content:space-between;gap:10px;">
+                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                    <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
+                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
+                                </div>
+                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
+                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
+                                </div>
+                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
+                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
+                                </div>
                             </div>
                         </div>
-                    `}
+                    </div>
+
+                    <div class="widget-card">
+                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between mx-auto" style="height:220px; max-width: calc(100% - 32px);">
+                            ${nextVerifica ? `
+                                <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
+                                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                                        <div style="display:flex;flex-direction:column;">
+                                            <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                            <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
+                                        </div>
+                                        <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                            <i data-lucide="calendar" style="width:20px;height:20px;"></i>
+                                        </div>
+                                    </div>
+
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
+                                        <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
+                                            <span style="font-size:1.1rem;font-weight:700;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
+                                            <span style="font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
+                                            <span style="font-size:1.8rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">${countdownText}</span>
+                                            <span style="
+                                                display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
+                                                font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+                                                margin-top:3px;${urgencyColor}
+                                            ">${urgencyLabel}</span>
+                                        </div>
+                                    </div>
+
+                                    <div style="width:100%;">
+                                        <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:#9CA3AF;margin-bottom:4px;padding:0 2px;">
+                                            <span>STATO STUDIO</span>
+                                            <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
+                                        </div>
+                                        <div style="width:100%;background:#E5E7EB;border-radius:999px;height:6px;overflow:hidden;">
+                                            <div style="height:100%;border-radius:999px;transition:width 0.5s ease-out;width:${progressWidth}%;background:#059669;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
+                                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                                        <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                        <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                            <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
+                                        <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
+                                        <p style="font-size:13px;font-weight:600;color:#065F46;">Nessuna verifica</p>
+                                        <p style="font-size:11px;color:#9CA3AF;margin-top:2px;">Niente da studiare per ora!</p>
+                                    </div>
+                                </div>
+                            `}
+                        </div>
+                    </div>
                 </div>
 
+                <div class="widget-indicators" style="position: absolute; bottom: -10px; left: 0; right: 0;">
+                    <div class="widget-indicator active carousel-dot" style="width: 20px; height: 6px; border-radius: 4px; background: #0250C5; transition: all 0.3s;"></div>
+                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background: #CBD5E1; transition: all 0.3s;"></div>
+                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background: #CBD5E1; transition: all 0.3s;"></div>
+                </div>
             </div>
 
             <!-- Sezione Domani — compatta -->
@@ -5905,60 +5915,132 @@ function formatFullDate(dateInput) {
 
 function renderProfile() {
     const isGoogleConnected = state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1';
+    
+    // Funzioni helper integrate direttamente per il toggle della UI
+    window.toggleConnectionLocal = function(type) {
+        if(type === 'didup') {
+            showToast('Il sync DidUP viene gestito in automatico dal background.', 'info');
+            return;
+        }
+        if(type === 'calendar') {
+            isGoogleConnected ? window.syncGoogleCalendar() : window.connectGoogle();
+        }
+    };
 
     return `
-        <div class="view profile-view pb-32">
-            <header class="flex items-center gap-4 mb-8 pt-4">
-                <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </button>
-                <div>
-                    <h1 class="headline-lg text-primary">Profilo</h1>
-                    <p class="body-md text-on-surface-variant/60">Gestione account e impostazioni</p>
-                </div>
-            </header>
+    <div class="view profile-view pb-32 pt-6 px-4">
+        
+        <header class="flex items-center gap-4 mb-8">
+            <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Profilo</h1>
+                <p class="text-sm text-slate-500 font-medium">Gestione account e impostazioni</p>
+            </div>
+        </header>
 
-            <section class="liquid-glass rounded-[40px] p-8 mb-6 flex flex-col items-center text-center liquid-shadow">
-                <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold mb-4">
-                    ${(state.user.name || 'S')[0].toUpperCase()}
-                </div>
-                <h2 class="title-md text-on-surface mb-1">${escapeHtml(state.user.name || 'Utente')}</h2>
-                <div class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest">
-                    CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
-                </div>
-            </section>
+        <div class="w-full bg-slate-50/20 rounded-[48px] p-6 shadow-xl relative overflow-hidden border border-white/50 flex flex-col gap-8 mx-auto" style="max-width: 420px;">
+            
+            <div class="absolute w-72 h-72 bg-blue-300/10 rounded-full blur-3xl -top-20 -left-10 -z-10"></div>
+            <div class="absolute w-72 h-72 bg-red-200/10 rounded-full blur-3xl -bottom-20 -right-10 -z-10"></div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <!-- DidUP Status -->
-                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-green/10 flex items-center justify-center text-green">
-                        <span class="material-symbols-outlined text-[28px]">sync_saved_locally</span>
-                    </div>
-                    <div>
-                        <div class="label-sm text-on-surface-variant/40 mb-1">Status DidUP</div>
-                        <div class="font-bold text-green">COLLEGATO</div>
-                    </div>
+            <div class="flex flex-col items-center text-center">
+                <div class="w-20 h-20 rounded-full bg-slate-800/10 flex items-center justify-center text-slate-800 text-3xl font-bold mb-3 border border-white/60 shadow-sm">
+                    ${(state.user.name || 'A')[0].toUpperCase()}
                 </div>
-
-                <!-- Google Calendar -->
-                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center text-error">
-                        <span class="material-symbols-outlined text-[28px]">calendar_month</span>
-                    </div>
-                    <div>
-                        <div class="label-sm text-on-surface-variant/40 mb-1">Google Calendar</div>
-                        <div class="font-bold text-on-surface">${isGoogleConnected ? 'Collegato ✓' : 'Non collegato'}</div>
-                    </div>
-                    <button class="w-full py-3 rounded-2xl bg-primary text-on-primary font-bold text-[13px] hover:opacity-90 transition-all" onclick="${isGoogleConnected ? 'window.syncGoogleCalendar()' : 'window.connectGoogle()'}">
-                        ${isGoogleConnected ? 'Sincronizza ora' : 'Collega Google'}
-                    </button>
+                <h2 class="text-xl font-bold text-slate-800">${escapeHtml(state.user.name || 'Andrea')}</h2>
+                <div class="mt-2 bg-slate-800/10 text-slate-800 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/40">
+                    CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '4D') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
                 </div>
             </div>
 
-            <button onclick="logout()" class="w-full h-14 rounded-3xl bg-error/10 text-error font-bold text-[16px] flex items-center justify-center gap-3 hover:bg-error/20 transition-all">
-                <span class="material-symbols-outlined">logout</span> Esci dall'Account
+            <div class="flex flex-col gap-4">
+                <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500">
+                            <span class="material-symbols-outlined text-[24px] font-light">power</span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
+                            <span class="text-[13px] font-extrabold text-[#10b981] tracking-wide">COLLEGATO</span>
+                        </div>
+                    </div>
+
+                    <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95">
+                        <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'} flex items-center justify-center transition-colors duration-300">
+                            <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
+                            <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-[#10b981]' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
+                
+                <div class="liquid-glass rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5">
+                    <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/30" onclick="showEditProfileModal()">
+                        <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
+                        <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                    </div>
+                    
+                    <div class="h-[1px] bg-slate-200/40 mx-4"></div>
+
+                    <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/30" onclick="performArgoSync()">
+                        <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
+                        <span class="material-symbols-outlined text-slate-400 text-[18px]">sync</span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="mostraConfermaEsciUI()" class="mt-2 w-full h-14 rounded-full border border-red-200/60 bg-red-500/[0.04] backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/[0.08] active:scale-[0.97]">
+                <span class="material-symbols-outlined text-[20px]">logout</span>
+                <span>Esci dall'Account</span>
             </button>
-        </div>`;
+        </div>
+
+        <div id="logout-modal" class="fixed inset-0 bg-slate-900/20 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]">
+            <div class="liquid-glass rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300" id="modal-box">
+                <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center mx-auto">
+                    <span class="material-symbols-outlined text-[24px]">logout</span>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold text-slate-800">Sei sicuro di voler uscire?</h4>
+                    <p class="text-sm text-slate-500 mt-2">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
+                </div>
+                <div class="flex gap-3 mt-2">
+                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3 rounded-full bg-white/50 border border-white/60 text-slate-600 font-semibold text-sm hover:bg-white/80 transition-colors">Annulla</button>
+                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3 rounded-full bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">Esci</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        window.mostraConfermaEsciUI = function() {
+            const modal = document.getElementById('logout-modal');
+            const box = document.getElementById('modal-box');
+            if(modal && box) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                box.classList.remove('scale-90');
+            }
+        }
+        window.nascondiConfermaEsciUI = function() {
+            const modal = document.getElementById('logout-modal');
+            const box = document.getElementById('modal-box');
+            if(modal && box) {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                box.classList.add('scale-90');
+            }
+        }
+    </script>
+    `;
 }
 
 function renderGradesView() {
