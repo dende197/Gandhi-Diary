@@ -507,3 +507,16 @@ h1, h2, h3, h4, h5, h6 {
     z-index: 10;
 }
 
+/* --- PROFILE PREMIUM GLASS --- */
+.profile-view {
+    min-height: 100vh;
+    background: linear-gradient(145deg, #f8fafc, #eef2f6);
+}
+
+.interactive-row {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.interactive-row:active {
+    transform: scale(0.97);
+    background: rgba(255,255,255,0.4);
+}
