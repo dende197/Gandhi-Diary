@@ -425,6 +425,13 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 12px 35px -8px rgba(189, 17, 24, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
+/* Widget 3: Prossime Verifiche (Look Premium coordinato) */
+.card-verifiche-premium {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 60%, #ffffff 100%);
+    box-shadow: 0 12px 35px -8px rgba(16, 185, 129, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(80px);
+}
+
 /* SVG Progress Ring delle Assenze */
 .progress-ring__circle {
     transition: stroke-dashoffset 0.4s ease;

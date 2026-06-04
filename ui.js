@@ -1582,7 +1582,7 @@ function renderHome() {
         const dots = document.querySelectorAll('.carousel-dot');
         dots.forEach((dot, idx) => {
             if (idx === index) {
-                dot.className = 'w-2 h-2 rounded-full bg-[#1D4ED8] carousel-dot transition-all duration-300';
+                dot.className = 'w-6 h-2 rounded-full bg-[#1D4ED8] carousel-dot transition-all duration-300';
             } else {
                 dot.className = 'w-2 h-2 rounded-full bg-gray-300 carousel-dot transition-all duration-300';
             }
@@ -1613,19 +1613,78 @@ function renderHome() {
     const tomorrowISO = getLocalDateString(tomorrow);
 
     // Filtriamo i dati reali per Oggi e Domani da compiti e verifiche
-    const todayVerifiche = verifiche.filter(v => v.date === todayISO);
+    const todayVerifiche = (state.verifiche || []).filter(v => v.data === todayISO);
     const todayHomework = (state.tasks || []).filter(t => t.due_date === todayISO);
     const allTodayItems = [
-        ...todayVerifiche.map(v => ({ id: v.id, isExam: true, title: v.subject, desc: v.args, done: false })),
+        ...todayVerifiche.map(v => ({ id: v.id, isExam: true, title: v.materia || v.subject, desc: v.text || v.descrizione, done: false })),
         ...todayHomework.map(h => ({ id: h.id, isExam: false, title: h.subject, desc: h.text, done: h.done }))
     ];
 
-    const tomorrowVerifiche = verifiche.filter(v => v.date === tomorrowISO);
+    const tomorrowVerifiche = (state.verifiche || []).filter(v => v.data === tomorrowISO);
     const tomorrowHomework = (state.tasks || []).filter(t => t.due_date === tomorrowISO);
     const allTomorrowItems = [
-        ...tomorrowVerifiche.map(v => ({ id: v.id, isExam: true, title: v.subject, desc: v.args, done: false })),
+        ...tomorrowVerifiche.map(v => ({ id: v.id, isExam: true, title: v.materia || v.subject, desc: v.text || v.descrizione, done: false })),
         ...tomorrowHomework.map(h => ({ id: h.id, isExam: false, title: h.subject, desc: h.text, done: h.done }))
     ];
+
+    // 4. Prossima Verifica Imminente (per il 3° Widget del carosello)
+    const argoUpcoming = (state.verifiche || [])
+        .filter(v => v.data && v.data >= todayISO)
+        .map(v => ({ materia: v.materia || v.subject || '', data: v.data, text: v.text || v.descrizione || '', tipo: v.tipo || '', source: 'argo' }));
+    const manualUpcoming = (state.manualVerifiche || [])
+        .filter(v => !v.done && v.date && v.date >= todayISO)
+        .map(v => ({ materia: v.subject || '', data: v.date, text: v.args || '', tipo: v.type || '', source: 'manual', id: v.id }));
+    
+    const seenVerifiche = new Set();
+    const upcomingVerifiche = [...argoUpcoming, ...manualUpcoming]
+        .filter(v => {
+            const key = `${v.data}||${v.materia.toLowerCase()}`;
+            if (seenVerifiche.has(key)) return false;
+            seenVerifiche.add(key);
+            return true;
+        })
+        .sort((a, b) => a.data.localeCompare(b.data));
+
+    const nextVerifica = upcomingVerifiche[0]; // La prima in ordine cronologico
+
+    let daysDiff = 0;
+    let countdownText = '';
+    let urgencyLabel = ''; // HARD, MEDIUM, EASY
+    let urgencyColor = ''; // Red, Amber, Green
+    let progressWidth = 100;
+
+    if (nextVerifica) {
+        const examDate = parseLocalDate(nextVerifica.data);
+        const todayZero = new Date(today);
+        todayZero.setHours(0, 0, 0, 0);
+        const timeDiff = examDate.getTime() - todayZero.getTime();
+        daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+        if (daysDiff < 0) {
+            countdownText = 'Superata';
+        } else if (daysDiff === 0) {
+            countdownText = 'Oggi';
+        } else if (daysDiff === 1) {
+            countdownText = 'Domani';
+        } else {
+            countdownText = `${daysDiff} gg`;
+        }
+
+        // Urgency Badge
+        if (daysDiff <= 2) {
+            urgencyLabel = 'HARD';
+            urgencyColor = 'text-red-600 bg-red-100 border border-red-200';
+        } else if (daysDiff <= 5) {
+            urgencyLabel = 'MEDIUM';
+            urgencyColor = 'text-amber-600 bg-amber-100 border border-amber-200';
+        } else {
+            urgencyLabel = 'EASY';
+            urgencyColor = 'text-emerald-600 bg-emerald-100 border border-emerald-200';
+        }
+
+        // Progress bar: window of 10 days
+        progressWidth = Math.max(0, Math.min(100, ((10 - daysDiff) / 10) * 100));
+    }
 
     // Helper per icone Lucide delle materie
     const getSubjectLucideIcon = (subject) => {
@@ -1674,45 +1733,6 @@ function renderHome() {
         };
     };
 
-    // 4. Generatore Dinamico delle Card per la sezione "Oggi"
-    const htmlOggi = allTodayItems.length > 0
-        ? allTodayItems.map(item => {
-            const icon = getSubjectLucideIcon(item.title);
-            const colors = getSubjectColorClasses(item.title, item.isExam);
-            return `
-            <div class="home-card-item mb-4 cursor-pointer hover:scale-[1.01] transition-all duration-200" onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center ${colors.text}">
-                        <i data-lucide="${icon}" class="w-6 h-6 stroke-[1.5]"></i>
-                    </div>
-                    <div class="text-xs font-semibold text-[#6B7280] bg-[#F3F6F8] px-3 py-1 rounded-full uppercase tracking-wider">
-                        ${item.isExam ? 'Verifica' : 'Compito'}
-                    </div>
-                </div>
-                
-                <h4 class="text-xl font-bold text-[#1F2937] mb-2">${escapeHtml(item.title || 'Generico')}</h4>
-                
-                <p class="text-sm text-[#6B7280] mb-4">${escapeHtml(item.desc || 'Nessun dettaglio')}</p>
-                
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                    <div class="flex items-center">
-                        <div class="flex avatar-group">
-                            <img src="https://i.pravatar.cc/100?img=47" alt="User" class="w-8 h-8 rounded-full object-cover">
-                            <img src="https://i.pravatar.cc/100?img=11" alt="User" class="w-8 h-8 rounded-full object-cover">
-                            <img src="https://i.pravatar.cc/100?img=41" alt="User" class="w-8 h-8 rounded-full object-cover">
-                        </div>
-                        <div class="ml-2 text-xs font-bold text-[#6B7280] bg-[#F3F6F8] rounded-full px-2 py-1">
-                            +12
-                        </div>
-                    </div>
-                    ${item.isExam ? '' : `
-                    <button class="text-xs font-bold text-[#1D4ED8] hover:underline">${item.done ? 'Riapri' : 'Completa'}</button>
-                    `}
-                </div>
-            </div>`;
-        }).join('')
-        : `<div class="text-center p-8 home-card-item text-[#6B7280] italic mb-4">Nessun impegno programmato per oggi.</div>`;
-
     // 5. Generatore Dinamico delle Card per la sezione "Domani" (con accento rosso a sinistra)
     const htmlDomani = allTomorrowItems.length > 0
         ? allTomorrowItems.map(item => {
@@ -1754,14 +1774,13 @@ function renderHome() {
 
         <div class="px-0">
 
-            <!-- CAROUSEL: gap-4, min-w-[calc(100%-48px)] per visualizzare una singola card con scroll-padding -->
+            <!-- CAROUSEL: gap-0, w-full slides con internal padding per edge-to-edge layout perfetto -->
             <div class="w-full overflow-hidden mb-5">
-                <div id="home-carousel" class="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 hide-scrollbar pb-3 px-6"
-                     style="scroll-padding-left: 24px;"
+                <div id="home-carousel" class="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-0 hide-scrollbar pb-3 px-0"
                      onscroll="handleCarouselScroll(this)">
 
                     <!-- Widget 1: Media Generale (Look Premium) -->
-                    <div class="snap-start shrink-0 w-[calc(100%-48px)]">
+                    <div class="w-full shrink-0 px-6 snap-start">
                         <div class="card-media-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
                             <div class="flex justify-between items-start">
                                 <div>
@@ -1791,7 +1810,7 @@ function renderHome() {
                     </div>
 
                     <!-- Widget 2: Assenze (Preso letteralmente da mockup) -->
-                    <div class="snap-start shrink-0 w-[calc(100%-48px)]">
+                    <div class="w-full shrink-0 px-6 snap-start">
                         <div class="card-assenze-bg rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
                             <div class="flex justify-between items-start">
                                 <h2 class="font-semibold text-xl" style="color: #BD1118;">Assenze</h2>
@@ -1831,27 +1850,77 @@ function renderHome() {
                         </div>
                     </div>
 
+                    <!-- Widget 3: Prossime Verifiche (Look Premium con countdown) -->
+                    <div class="w-full shrink-0 px-6 snap-start">
+                        ${nextVerifica ? `
+                            <div class="card-verifiche-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex flex-col">
+                                        <h2 class="font-semibold text-xl" style="color: #059669;">Prossime Verifiche</h2>
+                                        <p class="text-emerald-600/70 text-xs font-medium mt-0.5">${upcomingVerifiche.length} verifiche in programma</p>
+                                    </div>
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100/50 flex items-center justify-center text-[#059669]">
+                                        <i data-lucide="calendar" class="w-5 h-5"></i>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-between items-center my-1">
+                                    <div class="flex flex-col min-w-0 pr-2">
+                                        <span class="text-xl font-bold tracking-tight text-[#1F2937] truncate">${escapeHtml(nextVerifica.materia)}</span>
+                                        <span class="text-xs text-[#6B7280] truncate mt-0.5">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
+                                    </div>
+                                    <div class="flex flex-col items-end shrink-0">
+                                        <span class="text-3xl font-extrabold text-emerald-600 tracking-tight">${countdownText}</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase mt-1 ${urgencyColor}">
+                                            ${urgencyLabel}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="w-full">
+                                    <div class="flex justify-between text-[9px] font-bold text-[#6B7280] mb-1 px-0.5">
+                                        <span>STATO STUDIO</span>
+                                        <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
+                                    </div>
+                                    <div class="w-full bg-emerald-100/40 rounded-full h-2 overflow-hidden">
+                                        <div class="h-full rounded-full transition-all duration-500 ease-out" style="width: ${progressWidth}%; background-color: #059669;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="card-verifiche-premium rounded-[32px] p-6 border border-white flex flex-col justify-between h-[230px]">
+                                <div class="flex justify-between items-start">
+                                    <h2 class="font-semibold text-xl" style="color: #059669;">Prossime Verifiche</h2>
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100/50 flex items-center justify-center text-[#059669]">
+                                        <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-center justify-center my-auto text-center">
+                                    <span class="material-symbols-outlined text-3xl text-emerald-600/40 mb-1">event_available</span>
+                                    <p class="text-sm font-semibold text-emerald-800">Nessuna verifica</p>
+                                    <p class="text-[11px] text-[#6B7280] mt-0.5">Niente da studiare per ora!</p>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+
                 </div>
             </div>
 
             <!-- Indicatori di paginazione (Dots) -->
             <div class="flex justify-center gap-2 mb-8">
-                <div class="w-2 h-2 rounded-full bg-[#1D4ED8] carousel-dot transition-all duration-300"></div>
+                <div class="w-6 h-2 rounded-full bg-[#1D4ED8] carousel-dot transition-all duration-300"></div>
+                <div class="w-2 h-2 rounded-full bg-gray-300 carousel-dot transition-all duration-300"></div>
                 <div class="w-2 h-2 rounded-full bg-gray-300 carousel-dot transition-all duration-300"></div>
             </div>
 
-            <!-- Sezioni Oggi e Domani con padding esplicito px-6 -->
+            <!-- Sezione Domani promossa con padding esplicito px-6 -->
             <div class="px-6">
                 <div class="mb-8">
                     <div class="flex justify-between items-end mb-4 px-1">
-                        <h3 class="text-2xl font-bold text-[#1F2937]">Oggi</h3>
+                        <h3 class="text-2xl font-bold text-[#1F2937]">Domani</h3>
                         <a href="#" class="text-[#1D4ED8] font-medium text-sm hover:underline" onclick="navigate('planner')">See all</a>
                     </div>
-                    ${htmlOggi}
-                </div>
-
-                <div class="mb-8">
-                    <h3 class="text-2xl font-bold text-[#1F2937] mb-4 px-1">Domani</h3>
                     ${htmlDomani}
                 </div>
             </div>
@@ -5708,5 +5777,274 @@ function renderCircolariView() {
                 `}
             </div>
         </section>
+    </div>`;
+}
+
+function getSubjectIcon(subject) {
+    const s = normalizeSubjectName(subject);
+    if (s.includes('matem')) return 'functions';
+    if (s.includes('fisic')) return 'science';
+    if (s.includes('storia')) return 'history_edu';
+    if (s.includes('arte') || s.includes('disegno')) return 'palette';
+    if (s.includes('lingua') || s.includes('inglese') || s.includes('italiano')) return 'menu_book';
+    return 'school';
+}
+
+function renderPlanner() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = getLocalDateString(today);
+
+    // Week Scroller Data
+    const weekDays = [];
+    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    const startOfWeek = new Date(today);
+    const day = today.getDay();
+    const diff = today.getDate() - day; // Sunday is 0
+    startOfWeek.setDate(diff);
+
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
+        const iso = getLocalDateString(d);
+        weekDays.push({
+            label: dayLabels[d.getDay()],
+            dayNum: d.getDate(),
+            iso: iso,
+            isToday: iso === todayISO
+        });
+    }
+
+    // Tasks for the smart timeline (using today as default if none selected)
+    const selectedDate = state.selectedDate || todayISO;
+    const dayTasks = (state.tasks || []).filter(t => t.due_date === selectedDate);
+
+    return `
+    <div class="view planner-view pb-32">
+        <header class="flex justify-between items-center mb-6 pt-4">
+            <h1 class="text-primary font-bold text-xl">Agenda</h1>
+            <button class="text-primary font-bold text-[12px] uppercase tracking-widest hover:opacity-80 transition-opacity" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
+        </header>
+
+        <!-- Week Scroller -->
+        <section class="mb-8">
+            <div class="flex overflow-x-auto no-scrollbar gap-3 py-2">
+                ${weekDays.map(d => `
+                    <div class="flex-none w-14 h-20 flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-all duration-300 ${d.iso === selectedDate ? 'bg-primary text-on-primary active-liquid-shadow scale-105' : 'liquid-glass liquid-shadow hover:translate-y-[-2px]'}"
+                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
+                        <span class="text-[10px] uppercase mb-1 font-bold ${d.iso === selectedDate ? 'opacity-80' : 'text-on-surface-variant/60'}">${d.label}</span>
+                        <span class="text-[18px] font-bold">${d.dayNum}</span>
+                        ${d.isToday && d.iso !== selectedDate ? '<div class="h-1 w-1 bg-primary rounded-full mt-1"></div>' : ''}
+                        ${d.iso === selectedDate ? '<div class="h-1 w-1 bg-white rounded-full mt-1"></div>' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+
+        <!-- Smart Agenda Timeline -->
+        <section class="flex flex-col gap-6">
+            ${dayTasks.length ? dayTasks.map(t => {
+                const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
+                const colorClass = isExam ? 'error' : 'primary';
+                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+                const timeStr = timeMatch ? timeMatch[1] : '08:30';
+
+                return `
+                <div class="flex gap-4">
+                    <div class="w-12 flex flex-col items-end pt-3 shrink-0">
+                        <span class="text-[12px] text-on-surface-variant font-bold">${timeStr}</span>
+                        <span class="text-[10px] text-on-surface-variant/40 mt-0.5">09:30</span>
+                    </div>
+                    <div class="flex-1 liquid-glass rounded-[28px] p-5 relative group hover:shadow-xl transition-all duration-300 liquid-shadow overflow-visible ${isExam ? 'bg-error-container/5 border-error/10' : ''}">
+                        <div class="absolute left-0 top-4 bottom-4 w-1 bg-${colorClass} rounded-full"></div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex flex-col pl-3">
+                                <span class="text-[10px] text-${colorClass} uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
+                                    ${isExam ? '<span class="material-symbols-outlined text-[12px]">warning</span> SIMULAZIONE' : 'LEZIONE'}
+                                </span>
+                                <h3 class="title-md text-on-surface">${t.subject}</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-${colorClass}/10 flex items-center justify-center text-${colorClass} border border-white/40 shadow-sm shrink-0">
+                                <span class="material-symbols-outlined text-[22px]">${getSubjectIcon(t.subject)}</span>
+                            </div>
+                        </div>
+                        <p class="body-md text-on-surface-variant/70 mb-3 pl-3">${t.text}</p>
+                        <div class="flex items-center gap-2 pl-3">
+                            <span class="material-symbols-outlined text-[16px] text-${colorClass}/60">location_on</span>
+                            <span class="body-md text-[13px] text-on-surface-variant">Aula 3B</span>
+                        </div>
+                        ${!t.done && !isExam ? `
+                            <button class="w-full liquid-pill py-3 px-4 mt-4 flex items-center justify-center gap-2 hover:bg-white/80 transition-all text-primary font-bold text-[14px]" onclick="toggleTask('${t.id}')">
+                                <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                                <span>Segna completato</span>
+                            </button>
+                        ` : t.done ? `
+                             <div class="w-full py-3 px-4 mt-4 flex items-center justify-center gap-2 text-green font-bold text-[14px]">
+                                <span class="material-symbols-outlined text-[20px]">task_alt</span>
+                                <span>Completato</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>`;
+            }).join('') : `
+                <div class="liquid-glass rounded-[40px] p-12 text-center flex flex-col items-center gap-4">
+                    <span class="material-symbols-outlined text-[48px] text-on-surface-variant/20">event_busy</span>
+                    <p class="body-lg text-on-surface-variant/40 font-medium">Nessuna attività programmata</p>
+                </div>
+            `}
+        </section>
+    </div>`;
+}
+
+function formatFullDate(dateInput) {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '';
+    const months = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    return `${day} ${month} ${year} • ${time} `;
+}
+
+function renderProfile() {
+    const isGoogleConnected = state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1';
+
+    return `
+        <div class="view profile-view pb-32">
+            <header class="flex items-center gap-4 mb-8 pt-4">
+                <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                    <h1 class="headline-lg text-primary">Profilo</h1>
+                    <p class="body-md text-on-surface-variant/60">Gestione account e impostazioni</p>
+                </div>
+            </header>
+
+            <section class="liquid-glass rounded-[40px] p-8 mb-6 flex flex-col items-center text-center liquid-shadow">
+                <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold mb-4">
+                    ${(state.user.name || 'S')[0].toUpperCase()}
+                </div>
+                <h2 class="title-md text-on-surface mb-1">${escapeHtml(state.user.name || 'Utente')}</h2>
+                <div class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest">
+                    CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '-') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <!-- DidUP Status -->
+                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-green/10 flex items-center justify-center text-green">
+                        <span class="material-symbols-outlined text-[28px]">sync_saved_locally</span>
+                    </div>
+                    <div>
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Status DidUP</div>
+                        <div class="font-bold text-green">COLLEGATO</div>
+                    </div>
+                </div>
+
+                <!-- Google Calendar -->
+                <div class="liquid-glass rounded-[32px] p-6 liquid-shadow flex flex-col items-center text-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center text-error">
+                        <span class="material-symbols-outlined text-[28px]">calendar_month</span>
+                    </div>
+                    <div>
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Google Calendar</div>
+                        <div class="font-bold text-on-surface">${isGoogleConnected ? 'Collegato ✓' : 'Non collegato'}</div>
+                    </div>
+                    <button class="w-full py-3 rounded-2xl bg-primary text-on-primary font-bold text-[13px] hover:opacity-90 transition-all" onclick="${isGoogleConnected ? 'window.syncGoogleCalendar()' : 'window.connectGoogle()'}">
+                        ${isGoogleConnected ? 'Sincronizza ora' : 'Collega Google'}
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="logout()" class="w-full h-14 rounded-3xl bg-error/10 text-error font-bold text-[16px] flex items-center justify-center gap-3 hover:bg-error/20 transition-all">
+                <span class="material-symbols-outlined">logout</span> Esci dall'Account
+            </button>
+        </div>`;
+}
+
+function renderGradesView() {
+    if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
+
+    const votiData = getVotiData();
+    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const media = averageFromNumeric(numericVotes) || 0;
+
+    const subjectsMap = {};
+    votiData.forEach(v => {
+        const sub = v.materia || v.subject || 'Altro';
+        const subjectKey = getSubjectGroupKey(sub);
+        if (!subjectsMap[subjectKey]) subjectsMap[subjectKey] = { name: sub, list: [] };
+        subjectsMap[subjectKey].list.push(v);
+    });
+
+    const subjects = Object.values(subjectsMap).map(({ name, list }) => {
+        const subMedia = averageFromNumeric(list.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
+        const lastVote = list.sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))[0];
+        const lastVal = getNumericGradeValue(lastVote);
+        return { name, media: subMedia, lastVote: lastVal };
+    }).sort((a, b) => b.media - a.media);
+
+    return `
+    <div class="view grades-view pb-32">
+        <header class="flex justify-between items-center mb-6 pt-4">
+            <h1 class="text-primary font-bold text-xl">Voti & Rendimento</h1>
+        </header>
+
+        <!-- Main Media Card -->
+        <section class="liquid-glass rounded-[40px] p-8 mb-10 relative overflow-hidden">
+            <h2 class="body-md text-on-surface-variant/60 mb-2">Media Generale</h2>
+            <div class="flex items-center gap-4 mb-4">
+                <span class="text-[56px] font-bold text-primary leading-none">${media.toFixed(1)}</span>
+                <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">trending_up</span> +0.2
+                </span>
+            </div>
+            <p class="text-on-surface-variant/40 text-[11px] mb-8">Ultimo aggiornamento: Oggi</p>
+
+            <!-- Media Graph Placeholder -->
+            <div class="flex items-end gap-2 h-24">
+                <div class="flex-1 bg-primary/5 rounded-t-lg h-[20%]"></div>
+                <div class="flex-1 bg-primary/10 rounded-t-lg h-[40%]"></div>
+                <div class="flex-1 bg-primary/20 rounded-t-lg h-[30%]"></div>
+                <div class="flex-1 bg-primary/30 rounded-t-lg h-[60%]"></div>
+                <div class="flex-1 bg-primary/40 rounded-t-lg h-[50%]"></div>
+                <div class="flex-1 bg-primary/50 rounded-t-lg h-[70%]"></div>
+                <div class="flex-1 bg-primary rounded-t-lg h-[90%] relative">
+                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-on-surface-variant/60 text-[9px] font-bold">Feb</div>
+                </div>
+            </div>
+        </section>
+
+        <h2 class="title-md mb-6">Materie</h2>
+
+        <!-- Subjects Grid -->
+        <div class="flex flex-col gap-4">
+            ${subjects.map(s => {
+                const status = s.media >= 8 ? 'Ottimo' : s.media >= 7 ? 'Buono' : s.media >= 6 ? 'Discreto' : 'Insufficiente';
+                const statusColor = s.media >= 8 ? 'green' : s.media >= 7 ? 'primary' : s.media >= 6 ? 'orange' : 'error';
+
+                return `
+                <div class="liquid-glass rounded-[28px] p-6 liquid-shadow cursor-pointer transition-all hover:scale-[1.02]" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined">${getSubjectIcon(s.name)}</span>
+                        </div>
+                        <span class="bg-${statusColor}/10 text-${statusColor} px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">${status}</span>
+                    </div>
+                    <h3 class="title-md text-on-surface mb-1">${s.name}</h3>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-[32px] font-bold text-primary">${s.media.toFixed(1)}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-on-surface-variant/40 text-[12px] font-medium">Ultimo: ${s.lastVote || '—'}</span>
+                            ${s.lastVote ? `<span class="material-symbols-outlined text-[14px] ${s.lastVote >= s.media ? 'text-green' : 'text-error'}">${s.lastVote >= s.media ? 'trending_up' : 'trending_down'}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
     </div>`;
 }
