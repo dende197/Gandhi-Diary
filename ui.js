@@ -1782,7 +1782,7 @@ function renderHome() {
                 ${avatarHtml}
             </div>
 
-            <div style="position: relative; margin-bottom: 24px;">
+            <div style="margin-bottom: 16px;">
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
                     <div class="widget-card">
@@ -1912,7 +1912,7 @@ function renderHome() {
                     </div>
                 </div>
 
-                <div class="widget-indicators" style="position: absolute; bottom: -10px; left: 0; right: 0;">
+                <div class="widget-indicators">
                     <div class="widget-indicator active carousel-dot" style="width: 20px; height: 6px; border-radius: 4px; background: #0250C5; transition: all 0.3s;"></div>
                     <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background: #CBD5E1; transition: all 0.3s;"></div>
                     <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background: #CBD5E1; transition: all 0.3s;"></div>

@@ -342,7 +342,7 @@ h1, h2, h3, h4, h5, h6 {
     -ms-overflow-style: none;
     gap: 0;
     margin: 0 calc(-1 * var(--margin-mobile));
-    padding: 0 var(--margin-mobile);
+    padding: 8px var(--margin-mobile);
 }
 
 .widgets-container::-webkit-scrollbar {
@@ -354,16 +354,18 @@ h1, h2, h3, h4, h5, h6 {
     scroll-snap-align: start;
     scroll-snap-stop: always;
     width: 100%;
-    min-height: calc(100vh - 160px);
-    padding-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
 .widget-indicators {
     display: flex;
     justify-content: center;
     gap: 8px;
-    margin-top: 16px;
-    padding-bottom: 80px;
+    margin-top: 8px;
+    padding-bottom: 0;
 }
 
 .widget-indicator {
