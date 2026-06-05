@@ -1786,7 +1786,7 @@ function renderHome() {
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
                     <div class="widget-card">
-                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between mx-auto" style="height:220px; max-width: calc(100% - 32px);">
+                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
                             <div style="display:flex;justify-content:space-between;align-items:start;">
                                 <div>
                                     <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
@@ -1815,7 +1815,7 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between mx-auto" style="height:220px; max-width: calc(100% - 32px);">
+                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
                             <div style="display:flex;justify-content:space-between;align-items:start;">
                                 <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
                                 <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
@@ -1855,7 +1855,7 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between mx-auto" style="height:220px; max-width: calc(100% - 32px);">
+                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
                             ${nextVerifica ? `
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
                                     <div style="display:flex;justify-content:space-between;align-items:start;">
@@ -5928,9 +5928,9 @@ function renderProfile() {
     };
 
     return `
-    <div class="view profile-view pb-32 pt-6 px-4">
+    <div class="view profile-view pb-32 pt-6 px-5 flex flex-col gap-6">
         
-        <header class="flex items-center gap-4 mb-8">
+        <header class="flex items-center gap-4 mb-4">
             <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm border border-white/60">
                 <span class="material-symbols-outlined">arrow_back</span>
             </button>
@@ -5940,108 +5940,92 @@ function renderProfile() {
             </div>
         </header>
 
-        <div class="w-full bg-white/40 backdrop-blur-[35px] rounded-[40px] p-6 shadow-xl relative overflow-hidden border border-white flex flex-col gap-8 mx-auto" style="max-width: 420px;">
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
             
-            <div class="absolute w-72 h-72 bg-blue-300/20 rounded-full blur-3xl -top-20 -left-10 -z-10"></div>
-            <div class="absolute w-72 h-72 bg-indigo-200/20 rounded-full blur-3xl -bottom-20 -right-10 -z-10"></div>
-
-            <div class="flex flex-col items-center text-center">
-                <div class="w-20 h-20 rounded-full bg-slate-300/40 backdrop-blur-md flex items-center justify-center text-slate-800 text-3xl font-bold mb-3 border border-white shadow-sm">
-                    ${(state.user.name || 'A')[0].toUpperCase()}
-                </div>
-                <h2 class="text-xl font-bold text-slate-800">${escapeHtml(state.user.name || 'Studente')}</h2>
-                <div class="mt-2 bg-white/40 backdrop-blur-md text-slate-700 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/60">
-                    CLASSE ${escapeHtml((normalizeClassUi(state.user.class) || '') + (state.user.specialization ? ' ' + state.user.specialization : ''))}
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-4">
-                <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
-                            <span class="material-symbols-outlined text-[24px] font-light">power</span>
-                        </div>
-                        <div class="flex flex-col gap-0.5">
-                            <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
-                            <span class="text-[13px] font-extrabold text-emerald-600 tracking-wide">COLLEGATO</span>
-                        </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                        <span class="material-symbols-outlined text-[24px] font-light">power</span>
                     </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
+                        <span class="text-[13px] font-extrabold text-emerald-600 tracking-wide">COLLEGATO</span>
+                    </div>
+                </div>
 
-                    <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
-                        <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'} flex items-center justify-center transition-colors duration-300">
-                            <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
-                        </div>
-                        <div class="flex flex-col gap-0.5">
-                            <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
-                            <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-emerald-600' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
-                        </div>
+                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
+                    <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'} flex items-center justify-center transition-colors duration-300">
+                        <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
+                        <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-emerald-600' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
                     </div>
                 </div>
             </div>
-
-            <div class="flex flex-col gap-4">
-                <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
-                
-                <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
-                    <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showEditProfileModal()">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-[18px]">edit</span>
-                            </div>
-                            <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
-                        </div>
-                        <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                    </div>
-                    
-                    <div class="h-[1px] bg-slate-400/15 mx-4"></div>
-
-                    <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="performArgoSync()">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-[18px]">sync</span>
-                            </div>
-                            <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
-                        </div>
-                        <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-4">
-                <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Altro</h3>
-                
-                <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
-                    <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Notifiche in arrivo', 'info')">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-[18px]">notifications</span>
-                            </div>
-                            <span class="text-[15px] font-semibold text-slate-800">Notifiche</span>
-                        </div>
-                        <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                    </div>
-                    
-                    <div class="h-[1px] bg-slate-400/15 mx-4"></div>
-
-                    <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Impostazioni privacy', 'info')">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-[18px]">lock</span>
-                            </div>
-                            <span class="text-[15px] font-semibold text-slate-800">Privacy & Security</span>
-                        </div>
-                        <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="mostraConfermaEsciUI()" class="mt-4 w-full h-14 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97] shadow-sm">
-                <span class="material-symbols-outlined text-[20px]">logout</span>
-                <span>Esci dall'Account</span>
-            </button>
         </div>
+
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
+            
+            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showEditProfileModal()">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                        </div>
+                        <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                </div>
+                
+                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="performArgoSync()">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[18px]">sync</span>
+                        </div>
+                        <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Altro</h3>
+            
+            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Notifiche in arrivo', 'info')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[18px]">notifications</span>
+                        </div>
+                        <span class="text-[15px] font-semibold text-slate-800">Notifiche</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                </div>
+                
+                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Impostazioni privacy', 'info')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[18px]">lock</span>
+                        </div>
+                        <span class="text-[15px] font-semibold text-slate-800">Privacy & Security</span>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="mostraConfermaEsciUI()" class="mt-4 w-full h-14 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97] shadow-sm">
+            <span class="material-symbols-outlined text-[20px]">logout</span>
+            <span>Esci dall'Account</span>
+        </button>
 
         <div id="logout-modal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]">
             <div class="bg-white/70 backdrop-blur-xl border border-white rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 shadow-2xl" id="modal-box">
