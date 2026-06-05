@@ -4208,24 +4208,149 @@ function toggleTask(id) {
     }
 }
 function showQuickAddTaskModal() {
+    const preselectedDate = state.selectedDate || getLocalDateString();
+    const subjects = [...new Set((state.tasks||[]).map(t => t.subject||t.materia||'').filter(Boolean))].sort();
+    const subjectOptions = subjects.length > 0
+        ? subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
+        : '<option value="Generale">Generale</option>';
+
+    const sharedInputStyle = `width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#1e293b;font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;`;
+    const labelStyle = `font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:block;`;
+
     showModal(`
-                <div style="padding: 28px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Task Manuali Disattivate</h2>
-                        <button onclick="closeModal()" style="width: 32px; height: 32px; border-radius: 10px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-x" style="font-size: 14px;"></i></button>
-                    </div>
-                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// SOLO_COMPITI_ASSEGNATI</p>
-                    <div style="border:1px solid #E0DDD8; border-radius:14px; background:#F6F5F3; padding:14px; font-size:14px; color:#141414; line-height:1.45;">
-                        Per mantenere l'agenda pulita usiamo solo i compiti assegnati dal registro.
-                        <br><br>
-                        Se avevi task manuali/AI, sono stati rimossi automaticamente.
-                    </div>
-                    <button id="submit-quick-task-btn" onclick="submitQuickTask()" style="width: 100%; margin-top: 24px; padding: 16px; border-radius: 16px; border: none; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);">
-                        <i class="ph-bold ph-check-circle" style="margin-right: 8px;"></i> Ho capito
-                    </button>
-                    <style>#submit-quick-task-btn:active { transform: scale(0.96); opacity: 0.8; }</style>
+        <div style="padding:24px 24px 28px;background:linear-gradient(145deg,#f8fafc,#eef2f6);border-radius:32px;font-family:'Hanken Grotesk',sans-serif;">
+
+            <!-- Header -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <div>
+                    <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Aggiungi</h2>
+                    <p style="margin:0;font-size:12px;color:#94a3b8;font-weight:500;margin-top:2px;">Compito o verifica</p>
                 </div>
-        `);
+                <button onclick="closeModal()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.8);border:1px solid rgba(226,232,240,0.6);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+                </button>
+            </div>
+
+            <!-- Tipo tab -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;" id="tipo-tabs">
+                <button id="tab-compito" onclick="selectTipoTab('compito')" style="padding:12px;border-radius:14px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;transition:all 0.2s;">
+                    📚 Compito
+                </button>
+                <button id="tab-verifica" onclick="selectTipoTab('verifica')" style="padding:12px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;transition:all 0.2s;">
+                    ✏️ Verifica
+                </button>
+            </div>
+
+            <!-- Form -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+
+                <!-- Materia -->
+                <div>
+                    <label style="${labelStyle}">Materia</label>
+                    <select id="qs-subject" style="${sharedInputStyle}-webkit-appearance:none;">
+                        ${subjectOptions}
+                    </select>
+                </div>
+
+                <!-- Descrizione -->
+                <div>
+                    <label style="${labelStyle}" id="qs-desc-label">Descrizione compito</label>
+                    <textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49, capitoli 3-5..." rows="2"
+                        style="${sharedInputStyle}resize:none;line-height:1.5;"></textarea>
+                </div>
+
+                <!-- Data -->
+                <div>
+                    <label style="${labelStyle}">Data di consegna</label>
+                    <input id="qs-date" type="date" value="${preselectedDate}"
+                        style="${sharedInputStyle}" />
+                </div>
+
+                <!-- Tipo verifica (visibile solo in modalità verifica) -->
+                <div id="qs-tipo-row" style="display:none;">
+                    <label style="${labelStyle}">Tipo</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                        <button id="qs-tipo-scritta" onclick="selectQsTipo('scritta')" style="padding:10px 6px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Scritta</button>
+                        <button id="qs-tipo-orale" onclick="selectQsTipo('orale')" style="padding:10px 6px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Orale</button>
+                        <button id="qs-tipo-pratica" onclick="selectQsTipo('pratica')" style="padding:10px 6px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Pratica</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button onclick="submitQuickAddTask()" style="width:100%;margin-top:20px;height:52px;border-radius:16px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 8px 20px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" id="qs-submit-btn">
+                <span class="material-symbols-outlined" style="font-size:20px;">add_task</span>
+                Aggiungi alla Agenda
+            </button>
+        </div>
+    `);
+
+    // State per il modal
+    window._qsTipo = 'compito';
+    window._qsVerificaTipo = 'scritta';
+
+    window.selectTipoTab = function(tipo) {
+        window._qsTipo = tipo;
+        const isVerifica = tipo === 'verifica';
+        const tabC = document.getElementById('tab-compito');
+        const tabV = document.getElementById('tab-verifica');
+        const tipoRow = document.getElementById('qs-tipo-row');
+        const descLabel = document.getElementById('qs-desc-label');
+        const textarea = document.getElementById('qs-text');
+        if (tabC && tabV) {
+            const activeStyle = 'padding:12px;border-radius:14px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+            const inactiveStyle = 'padding:12px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+            tabC.style.cssText = isVerifica ? inactiveStyle : activeStyle;
+            tabV.style.cssText = isVerifica ? activeStyle : inactiveStyle;
+        }
+        if (tipoRow) tipoRow.style.display = isVerifica ? 'block' : 'none';
+        if (descLabel) descLabel.textContent = isVerifica ? 'Argomenti da studiare' : 'Descrizione compito';
+        if (textarea) textarea.placeholder = isVerifica ? 'Es. Capitoli 3-5, derivate...' : 'Es. Esercizi pag. 47-49...';
+    };
+
+    window.selectQsTipo = function(tipo) {
+        window._qsVerificaTipo = tipo;
+        ['scritta','orale','pratica'].forEach(t => {
+            const btn = document.getElementById(`qs-tipo-${t}`);
+            if (!btn) return;
+            btn.style.cssText = t === tipo
+                ? 'padding:10px 6px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;'
+                : 'padding:10px 6px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        });
+    };
+
+    window.submitQuickAddTask = function() {
+        const subject = document.getElementById('qs-subject')?.value?.trim() || 'Generale';
+        const text    = document.getElementById('qs-text')?.value?.trim() || '';
+        const date    = document.getElementById('qs-date')?.value || getLocalDateString();
+        const isVerifica = window._qsTipo === 'verifica';
+
+        if (!text) {
+            const el = document.getElementById('qs-text');
+            if (el) { el.style.border = '2px solid #ef4444'; el.focus(); }
+            return;
+        }
+        if (!date) { showToast('Seleziona una data', 'warning'); return; }
+
+        const fullText = isVerifica
+            ? `${window._qsVerificaTipo.charAt(0).toUpperCase() + window._qsVerificaTipo.slice(1)} · ${text}`
+            : text;
+
+        const result = applyImmediateCalendarAction({
+            type: 'add', missing: [],
+            subject, text: fullText, date,
+            time: '', isExam: isVerifica
+        });
+
+        if (result.ok) {
+            closeModal();
+            state.selectedDate = date;
+            showToast(`${isVerifica ? 'Verifica' : 'Compito'} aggiunto!`, 'success');
+            scheduleRender(0);
+        } else {
+            showToast('Errore nell\'aggiunta del compito', 'error');
+        }
+    };
 }
 function showAddRegistroTaskModal() {
     const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
@@ -5800,203 +5925,273 @@ function renderPlanner() {
     today.setHours(0, 0, 0, 0);
     const todayISO = getLocalDateString(today);
 
-    // Week Scroller Data — starts on Monday, today centered
-    const weekDays = [];
-    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    const startOfWeek = new Date(today);
-    const day = today.getDay();
-    // Monday-based: getDay() returns 0=Sun,1=Mon...6=Sat; we want Mon=0
-    const diffToMonday = day === 0 ? -6 : 1 - day;
-    startOfWeek.setDate(today.getDate() + diffToMonday);
+    // ── Week offset (arrows) ─────────────────────────────────────
+    if (state.plannerWeekOffset === undefined) state.plannerWeekOffset = 0;
+    const weekOffset = state.plannerWeekOffset;
 
+    // Build 7 days centered on TODAY's week + offset
+    const weekDays = [];
+    const dayLabels = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + weekOffset * 7);
     for (let i = 0; i < 7; i++) {
         const d = new Date(startOfWeek);
         d.setDate(startOfWeek.getDate() + i);
         const iso = getLocalDateString(d);
-        weekDays.push({
-            label: dayLabels[d.getDay()],
-            dayNum: d.getDate(),
-            iso: iso,
-            isToday: iso === todayISO
-        });
+        weekDays.push({ label: dayLabels[d.getDay()], dayNum: d.getDate(), iso, isToday: iso === todayISO });
     }
 
+    // ── Selected date ────────────────────────────────────────────
     const selectedDate = state.selectedDate || todayISO;
+
+    // ── Month label ──────────────────────────────────────────────
+    const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const selDateObj = new Date(selectedDate + 'T00:00:00');
+    const headerMonthLabel = monthNames[selDateObj.getMonth()];
+
+    // ── Search + filter state ────────────────────────────────────
     const query = (state.agendaSearchQuery || '').toLowerCase().trim();
+    const filterSubject = state.agendaSearchSubject || 'all';
+    const showSearchPanel = !!(query || state.plannerSearchOpen);
+    const allTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST');
+    const subjects = [...new Set(allTasks.map(t => t.subject||t.materia||'').filter(Boolean))].sort();
 
-    // Filter day tasks with query
-    const dayTasks = (state.tasks || []).filter(t => {
-        if (t.due_date !== selectedDate) return false;
-        if (t.subject === 'QUEST') return false; // Hide system quest tasks if any
+    // ── Month view ────────────────────────────────────────────────
+    const showMonthView = !!state.plannerMonthView;
+    const mvYear  = state.plannerMonthViewYear  ?? selDateObj.getFullYear();
+    const mvMonth = state.plannerMonthViewMonth ?? selDateObj.getMonth();
+    const mvDays  = new Date(mvYear, mvMonth + 1, 0).getDate();
+    const mvStartDow = new Date(mvYear, mvMonth, 1).getDay();
+    const mvTaskMap = {};
+    if (showMonthView) {
+        allTasks.filter(t => {
+            if (!t.due_date) return false;
+            const d = new Date(t.due_date + 'T00:00:00');
+            return d.getFullYear() === mvYear && d.getMonth() === mvMonth;
+        }).forEach(t => { if (!mvTaskMap[t.due_date]) mvTaskMap[t.due_date] = []; mvTaskMap[t.due_date].push(t); });
+    }
+    const mvMonthTasks = Object.values(mvTaskMap).flat().sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||''));
+
+    // ── Day tasks ────────────────────────────────────────────────
+    const dayTasks = allTasks.filter(t => t.due_date === selectedDate);
+
+    // ── Search results (all year) ─────────────────────────────────
+    const searchResults = showSearchPanel ? allTasks.filter(t => {
+        if (filterSubject !== 'all' && (t.subject||t.materia||'') !== filterSubject) return false;
         if (!query) return true;
-        return (t.subject || '').toLowerCase().includes(query) || (t.text || '').toLowerCase().includes(query);
-    });
+        return (t.subject||'').toLowerCase().includes(query) || (t.materia||'').toLowerCase().includes(query) || (t.text||'').toLowerCase().includes(query);
+    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
 
-    // Upcoming tasks for the next 7 days (not completed)
-    const upcomingTasksCount = (state.tasks || []).filter(t => {
+    // ── Upcoming count ────────────────────────────────────────────
+    const upcomingCount = allTasks.filter(t => {
         if (t.done) return false;
         const d = parseLocalDate(t.due_date);
         if (isNaN(d.getTime())) return false;
-        const diffTime = d - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays > 0 && diffDays <= 7;
+        return (d - today) / 86400000 > 0 && (d - today) / 86400000 <= 7;
     }).length;
 
-    // Auto-select today if nothing is selected or selected is out of current week
-    if (!state.selectedDate) state.selectedDate = todayISO;
+    // ── Task card ─────────────────────────────────────────────────
+    function taskCard(t, showDate) {
+        const isExam = t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text);
+        const subj = escapeHtml(t.subject || t.materia || '');
+        const txt  = escapeHtml(t.text || '');
+        const tid  = escapeJsSingleQuote(t.id);
+        const icon = (typeof getSubjectIcon === 'function') ? getSubjectIcon(t.subject || t.materia || '') : 'book';
+        const dateLabel = showDate && t.due_date ? (() => {
+            const d = new Date(t.due_date + 'T00:00:00');
+            return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.06em;">${d.getDate()} ${monthNames[d.getMonth()]}</span>`;
+        })() : '';
+
+        if (isExam) return `
+        <div onclick="toggleTask('${tid}')" style="background:rgba(254,242,242,0.75);border:1px solid rgba(254,202,202,0.5);border-radius:24px;padding:16px 18px;box-shadow:0 6px 16px -8px rgba(239,68,68,0.15);position:relative;overflow:hidden;cursor:pointer;">
+            <div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;background:rgba(254,202,202,0.25);border-radius:50%;filter:blur(18px);pointer-events:none;"></div>
+            ${dateLabel}
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;gap:8px;">
+                <div style="flex:1;min-width:0;">
+                    <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
+                    <p style="font-size:12px;color:#64748b;font-weight:500;margin:0 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${txt}</p>
+                </div>
+                <span class="material-symbols-outlined" style="font-size:20px;color:#dc2626;flex-shrink:0;">warning</span>
+            </div>
+            <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(254,226,226,0.9);color:#b91c1c;font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:0.06em;">VERIFICA ${t.done ? '· FATTO ✓' : ''}</div>
+        </div>`;
+
+        if (t.done) return `
+        <div onclick="toggleTask('${tid}')" style="background:white;border-radius:24px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px -4px rgba(0,0,0,0.04);border:1px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
+            <div style="width:42px;height:42px;flex-shrink:0;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#10b981;">
+                <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span>
+            </div>
+            <div style="flex:1;min-width:0;">${dateLabel}
+                <h3 style="font-size:13px;font-weight:700;color:#64748b;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
+                <p style="font-size:11px;color:#94a3b8;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
+            </div>
+        </div>`;
+
+        return `
+        <div onclick="toggleTask('${tid}')" style="background:white;border-radius:24px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px -8px rgba(0,0,0,0.06);border:1px solid rgba(241,245,249,0.9);cursor:pointer;">
+            <div style="width:42px;height:42px;flex-shrink:0;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#1e40af;">
+                <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span>
+            </div>
+            <div style="flex:1;min-width:0;">${dateLabel}
+                <h3 style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
+                <p style="font-size:11px;color:#64748b;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
+            </div>
+        </div>`;
+    }
+
+    const sharedChipBase = 'flex-shrink:0;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:1px solid ';
 
     return `
-    <div class="view planner-view pb-32 pt-6 flex flex-col">
-        
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-[28px] font-extrabold tracking-tight text-on-surface">Agenda</h1>
-                <p class="text-sm text-on-surface-variant/50 font-medium mt-0.5">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-            </div>
-            <button class="liquid-glass rounded-full px-4 py-2 text-primary text-[12px] font-bold tracking-wider uppercase cursor-pointer border-none deep-shadow" 
-                    onclick="state.selectedDate='${todayISO}'; window.scheduleRender(0);">Oggi</button>
+    <div class="view planner-view pb-32" style="
+        background-color:#f8fafc;
+        background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.5) 0%,transparent 40%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.5) 0%,transparent 40%);
+        background-attachment:fixed;min-height:100vh;padding:0 20px;
+    ">
+
+        <!-- HEADER -->
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:32px 0 16px;">
+            <h1 style="font-size:28px;font-weight:800;color:#1e40af;letter-spacing:-0.02em;margin:0;">Agenda</h1>
+            <button onclick="
+                state.plannerMonthView=!state.plannerMonthView;
+                if(state.plannerMonthView){const d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}
+                scheduleRender(0);" style="font-size:13px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.5);padding:6px 14px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">
+                ${headerMonthLabel} ${selDateObj.getFullYear()} ${showMonthView ? '↑' : '↓'}
+            </button>
         </header>
 
-        <!-- Search Bar — filtri compaiono solo quando la barra è attiva -->
-        <div class="mb-6">
-            <div class="relative">
-                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-lg pointer-events-none">search</span>
-                <input type="text" placeholder="Cerca compiti, materie…" 
-                       id="planner-search-input"
-                       class="w-full h-[52px] pl-12 pr-10 rounded-full bg-white/70 backdrop-blur-md shadow-[0_4px_20px_-8px_rgba(0,0,0,0.06)] text-[14px] font-medium text-on-surface outline-none transition-all placeholder:text-on-surface-variant/30 agenda-search-input"
-                       style="border: 1px solid rgba(255,255,255,0.6);"
-                       value="${state.agendaSearchQuery || ''}"
-                       oninput="handleAgendaSearch(event)"
-                       onfocus="document.getElementById('planner-filter-chips')?.classList.remove('hidden')"
-                       onblur="setTimeout(()=>{ if(!document.activeElement?.closest('#planner-filter-chips')) document.getElementById('planner-filter-chips')?.classList.add('hidden'); },200)">
-                ${state.agendaSearchQuery ? `<button onclick="state.agendaSearchQuery=''; window.refreshAgenda && refreshAgenda(); document.getElementById('planner-search-input').value=''; document.getElementById('planner-filter-chips')?.classList.add('hidden');" class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 cursor-pointer border-none bg-transparent"><span class="material-symbols-outlined text-[18px]">close</span></button>` : ''}
+        <!-- MONTH VIEW -->
+        ${showMonthView ? `
+        <div style="background:white;border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px -6px rgba(0,0,0,0.07);border:1px solid rgba(241,245,249,0.9);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <button onclick="let m=state.plannerMonthViewMonth-1,y=state.plannerMonthViewYear;if(m<0){m=11;y--;}state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;scheduleRender(0);"
+                    style="width:34px;height:34px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
+                </button>
+                <span style="font-size:15px;font-weight:700;color:#1e293b;">${monthNames[mvMonth]} ${mvYear}</span>
+                <button onclick="let m=state.plannerMonthViewMonth+1,y=state.plannerMonthViewYear;if(m>11){m=0;y++;}state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;scheduleRender(0);"
+                    style="width:34px;height:34px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
+                </button>
             </div>
-            <!-- Filtri materia — nascosti finché non si clicca la barra -->
-            <div id="planner-filter-chips" class="hidden mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                ${['Tutte', ...window.getAllSubjects?.() ?? []].slice(0, 8).map((s, i) => {
-                    const isAll = i === 0;
-                    const isActive = isAll ? (!state.agendaSearchSubject || state.agendaSearchSubject === 'all') : state.agendaSearchSubject === s;
-                    return `<button onclick="window.setAgendaFilter('${isAll ? 'all' : escapeJsSingleQuote(s)}')" 
-                        class="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border-none transition-all"
-                        style="background:${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.7)'}; color:${isActive ? '#fff' : 'var(--on-surface-variant)'}; backdrop-filter:blur(8px);">${s}</button>`;
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;">
+                ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:4px 0;">${d}</div>`).join('')}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">
+                ${Array.from({length:mvStartDow},()=>'<div></div>').join('')}
+                ${Array.from({length:mvDays},(_,i)=>{
+                    const dayN=i+1;
+                    const iso=`${mvYear}-${String(mvMonth+1).padStart(2,'0')}-${String(dayN).padStart(2,'0')}`;
+                    const isTd=iso===todayISO, isSel=iso===selectedDate;
+                    const hasTasks=!!mvTaskMap[iso];
+                    const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
+                    return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;scheduleRender(0);" style="
+                        aspect-ratio:1;border-radius:10px;border:none;cursor:pointer;
+                        background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};
+                        color:${isSel?'white':isTd?'#1e40af':'#1e293b'};
+                        font-size:12px;font-weight:${isTd||isSel?'700':'400'};
+                        position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+                        box-shadow:${isSel?'0 3px 10px rgba(37,99,235,0.3)':'none'};
+                    ">${dayN}${hasTasks?`<div style="width:3px;height:3px;border-radius:50%;background:${isSel?'rgba(255,255,255,0.8)':hasExam?'#ef4444':'#2563eb'};"></div>`:'<div style="width:3px;height:3px;"></div>'}</button>`;
                 }).join('')}
             </div>
-        </div>
+            ${mvMonthTasks.length>0?`
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(241,245,249,0.9);display:flex;flex-direction:column;gap:8px;">
+                <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">${mvMonthTasks.length} compiti in ${monthNames[mvMonth]}</p>
+                ${mvMonthTasks.map(t=>taskCard(t,true)).join('')}
+            </div>`:`<p style="text-align:center;color:#94a3b8;font-size:13px;font-weight:500;margin-top:14px;padding-bottom:4px;">Nessun compito in ${monthNames[mvMonth]}</p>`}
+        </div>` : ''}
 
-        <!-- Date Selector — centrato su oggi, scorrimento orizzontale -->
-        <div class="flex overflow-x-auto no-scrollbar gap-2.5 mb-8 pb-1" id="planner-day-scroller">
-            ${weekDays.map(d => {
-                const isActive = d.iso === selectedDate;
-                const isToday = d.iso === todayISO;
-                return `
-                <div class="shrink-0 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 rounded-[22px]"
-                     style="width:64px; height:88px; 
-                            background:${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.65)'};
-                            backdrop-filter:blur(12px);
-                            box-shadow:${isActive ? '0 10px 25px -5px rgba(0,88,188,0.35)' : '0 2px 12px -4px rgba(0,0,0,0.05)'};
-                            border:${isActive ? 'none' : '1px solid rgba(255,255,255,0.7)'};
-                            transform:${isActive ? 'scale(1.04)' : 'scale(1)'};"
-                     onclick="state.selectedDate='${d.iso}'; window.scheduleRender(0);">
-                    <span style="font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:${isActive ? 'rgba(255,255,255,0.7)' : 'var(--on-surface-variant)'}; opacity:${isActive ? 1 : 0.6};">${d.label}</span>
-                    <span style="font-size:22px; font-weight:800; letter-spacing:-0.02em; color:${isActive ? '#fff' : 'var(--on-surface)'};">${d.dayNum}</span>
-                    <div style="width:5px; height:5px; border-radius:50%; background:${isActive ? 'rgba(255,255,255,0.8)' : (isToday ? 'var(--primary)' : 'transparent')};"></div>
-                </div>`;
-            }).join('')}
-        </div>
-        <script>
-            // Scrolla il giorno selezionato al centro del contenitore
-            (function() {
-                const scroller = document.getElementById('planner-day-scroller');
-                if (!scroller) return;
-                const active = scroller.children[${weekDays.findIndex(d => d.iso === selectedDate)}];
-                if (active) {
-                    const offset = active.offsetLeft - (scroller.clientWidth / 2) + (active.offsetWidth / 2);
-                    scroller.scrollLeft = Math.max(0, offset);
-                }
-            })();
-        </script>
-
-        <!-- Smart Planner suggerimento -->
-        ${upcomingTasksCount > 0 ? `
-        <div class="liquid-glass rounded-[28px] p-5 mb-6 liquid-shadow flex items-center gap-4">
-            <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <span class="material-symbols-outlined text-[20px]">lightbulb</span>
+        <!-- SEARCH BAR -->
+        <div style="margin-bottom:16px;">
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
+                <input type="text" placeholder="Cerca tra tutti i compiti..."
+                       class="agenda-search-input"
+                       value="${escapeHtml(state.agendaSearchQuery || '')}"
+                       oninput="handleAgendaSearch(event); state.plannerSearchOpen=!!(event.target.value); scheduleRender(0);"
+                       onfocus="state.plannerSearchOpen=true; scheduleRender(0);"
+                       style="width:100%;height:50px;padding:0 ${(query||showSearchPanel)?'44px':'16px'} 0 48px;border-radius:${showSearchPanel?'18px 18px 0 0':'999px'};background:white;box-shadow:0 6px 24px -10px rgba(0,0,0,0.05);border:1px solid ${showSearchPanel?'rgba(241,245,249,1)':'rgba(241,245,249,1)'};font-size:14px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;" />
+                ${(query||showSearchPanel)?`<button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;refreshAgenda();" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:rgba(241,245,249,0.9);border:none;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;"><span class="material-symbols-outlined" style="font-size:14px;">close</span></button>`:''}
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-[14px] font-semibold text-on-surface">
-                    Hai <strong class="text-primary">${upcomingTasksCount}</strong> compit${upcomingTasksCount === 1 ? 'o' : 'i'} nei prossimi 7 giorni
-                </p>
-            </div>
-        </div>
-        ` : ''}
-
-        <!-- Task List -->
-        <div class="flex flex-col gap-4 relative">
-            ${dayTasks.length ? dayTasks.map(t => {
-                const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-                const timeStr = timeMatch ? timeMatch[1] : '08:30';
-
-                if (t.done) {
-                    return `
-                    <div class="liquid-glass rounded-[28px] p-4 flex items-center gap-4 opacity-50 cursor-pointer transition-all" 
-                         style="border:1px solid rgba(255,255,255,0.5);"
-                         onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="w-[48px] h-[48px] shrink-0 rounded-2xl flex items-center justify-center" style="background:rgba(0,0,0,0.04);">
-                            <span class="material-symbols-outlined text-on-surface-variant/40 text-[22px]">task_alt</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="text-on-surface/50 text-[15px] font-bold truncate line-through">${escapeHtml(t.subject)}</h3>
-                            <p class="text-on-surface-variant/40 text-[13px] truncate mt-0.5 line-through">${escapeHtml(t.text)}</p>
-                        </div>
-                        <span class="text-on-surface-variant/30 text-[11px] font-bold px-2">Fatto</span>
-                    </div>`;
-                } else if (isExam) {
-                    return `
-                    <div class="rounded-[28px] p-5 relative overflow-hidden cursor-pointer transition-all hover:scale-[1.01]" 
-                         style="background:rgba(254,242,242,0.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);"
-                         onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-red-500 text-[11px] font-bold">${timeStr}</span>
-                            <span class="material-symbols-outlined text-red-500 text-xl">${getSubjectIcon(t.subject)}</span>
-                        </div>
-                        <h3 class="text-on-surface text-[17px] font-bold mb-1">${escapeHtml(t.subject)}</h3>
-                        <p class="text-on-surface-variant/60 text-sm mb-4">${escapeHtml(t.text)}</p>
-                        <span class="inline-block text-red-600 text-[11px] font-bold px-3 py-1 rounded-full" style="background:rgba(220,38,38,0.1);">Urgente</span>
-                    </div>`;
-                } else {
-                    return `
-                    <div class="liquid-glass rounded-[28px] p-4 flex items-center gap-4 liquid-shadow cursor-pointer transition-all hover:scale-[1.01]"
-                         onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="w-[48px] h-[48px] shrink-0 rounded-2xl flex items-center justify-center text-primary" style="background:rgba(0,88,188,0.08);">
-                            <span class="material-symbols-outlined text-[22px]">${getSubjectIcon(t.subject)}</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="text-on-surface text-[15px] font-bold truncate">${escapeHtml(t.subject)}</h3>
-                            <p class="text-on-surface-variant/60 text-[13px] truncate mt-0.5">${escapeHtml(t.text)}</p>
-                        </div>
-                        <span class="text-primary text-[11px] font-bold px-2 shrink-0">${timeStr}</span>
-                    </div>`;
-                }
-            }).join('') : `
-                <div class="liquid-glass rounded-[28px] p-12 text-center flex flex-col items-center gap-4 liquid-shadow">
-                    <span class="material-symbols-outlined text-[48px] text-on-surface-variant/30">event_note</span>
-                    <p class="text-on-surface-variant/40 font-medium text-[15px]">Nessuna attività per questo giorno</p>
+            ${showSearchPanel?`
+            <div style="background:white;border-radius:0 0 18px 18px;border:1px solid rgba(241,245,249,1);border-top:none;padding:10px 14px 14px;box-shadow:0 10px 24px -8px rgba(0,0,0,0.06);">
+                <div style="display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;scrollbar-width:none;-ms-overflow-style:none;">
+                    <button onclick="state.agendaSearchSubject='all';state._filterJustTriggered=true;refreshAgenda();" style="${sharedChipBase}${filterSubject==='all'?'#2563eb;background:#2563eb;color:white;':'rgba(226,232,240,0.8);background:white;color:#64748b;'}"">Tutte</button>
+                    ${subjects.map(s=>{const esc=escapeJsSingleQuote(s);const act=filterSubject===s;return `<button onclick="state.agendaSearchSubject='${esc}';state._filterJustTriggered=true;refreshAgenda();" style="${sharedChipBase}${act?'#2563eb;background:#2563eb;color:white;':'rgba(226,232,240,0.8);background:white;color:#64748b;'}">${escapeHtml(s)}</button>`;}).join('')}
                 </div>
-            `}
+                <div style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;">
+                    ${searchResults.length>0?searchResults.map(t=>taskCard(t,true)).join(''):`<p style="text-align:center;color:#94a3b8;font-size:13px;font-weight:500;padding:20px 0;">Nessun risultato</p>`}
+                </div>
+            </div>`:'' }
         </div>
 
-        <!-- FABs — z-index corretto sopra tutto -->
-        <div class="fixed bottom-28 right-5 flex flex-col gap-3 z-50">
-            <button onclick="showAddRegistroTaskModal()" 
-                    class="w-14 h-14 rounded-full text-white flex items-center justify-center cursor-pointer border-none transition-all hover:scale-105 active:scale-95"
-                    style="background:var(--primary); box-shadow:0 10px 25px -5px rgba(0,88,188,0.4);">
-                <span class="material-symbols-outlined text-[24px]">add</span>
+        <!-- WEEK NAVIGATOR (hidden during search/month view) -->
+        ${!showSearchPanel && !showMonthView ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;scheduleRender(0);"
+                style="width:38px;height:38px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -2px rgba(0,0,0,0.05);">
+                <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
+            </button>
+            <div style="flex:1;display:flex;gap:6px;overflow:hidden;">
+                ${weekDays.map(d => {
+                    const isSel = d.iso === selectedDate;
+                    return `
+                    <div onclick="state.selectedDate='${d.iso}';scheduleRender(0);" style="
+                        flex:1;height:82px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;
+                        ${isSel
+                            ? 'background:#2563eb;box-shadow:0 6px 16px -4px rgba(37,99,235,0.35);transform:scale(1.04);'
+                            : 'background:white;border:1px solid rgba(241,245,249,0.9);box-shadow:0 3px 12px -6px rgba(0,0,0,0.05);'}
+                        transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);
+                    ">
+                        <span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.8)':'#94a3b8'};">${d.label}</span>
+                        <span style="font-size:18px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
+                        <div style="width:4px;height:4px;border-radius:50%;background:${d.isToday?(isSel?'rgba(255,255,255,0.9)':'#2563eb'):'transparent'};"></div>
+                    </div>`;
+                }).join('')}
+            </div>
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;scheduleRender(0);"
+                style="width:38px;height:38px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -2px rgba(0,0,0,0.05);">
+                <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
+            </button>
+        </div>
+
+        <!-- Smart Planner banner -->
+        ${upcomingCount>0?`
+        <div style="background:#f4f7ff;border:1px solid rgba(191,219,254,0.5);border-radius:24px;padding:16px 18px;margin-bottom:16px;box-shadow:0 6px 20px -10px rgba(37,99,235,0.10);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:16px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;color:#1e40af;">Smart Planner</span>
+            </div>
+            <p style="font-size:13px;font-weight:500;color:#475569;line-height:1.5;margin:0 0 8px;">Hai <b>${upcomingCount}</b> compiti nei prossimi 7 giorni.</p>
+            <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">
+                Vedi tutti <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span>
+            </button>
+        </div>`:''}
+
+        <!-- Day task list -->
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            ${dayTasks.length>0
+                ? dayTasks.map(t=>taskCard(t,false)).join('')
+                : `<div style="background:white;border-radius:24px;padding:36px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1px solid rgba(241,245,249,0.9);box-shadow:0 3px 16px -6px rgba(0,0,0,0.04);">
+                    <span class="material-symbols-outlined" style="font-size:40px;color:#cbd5e1;">event_busy</span>
+                    <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività</p>
+                </div>`}
+        </div>` : ''}
+
+        <!-- FABs -->
+        <div style="position:fixed;bottom:92px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:40;">
+            <button onclick="showToast('Storico in arrivo','info')" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.28);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:20px;">history</span>
+            </button>
+            <button onclick="showQuickAddTaskModal()" style="width:54px;height:54px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,99,235,0.32);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:24px;">add</span>
             </button>
         </div>
     </div>`;
 }
+
 
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
@@ -6025,119 +6220,117 @@ function renderProfile() {
     };
 
     return `
-    <div class="view profile-view pb-32 pt-6 flex flex-col gap-6">
+    <div class="view profile-view pb-32 flex flex-col gap-6" style="padding: 0 20px;">
         
-        <header class="flex items-center gap-4 mb-2">
-            <button onclick="navigate('home')" class="w-11 h-11 rounded-2xl liquid-glass flex items-center justify-center text-on-surface cursor-pointer deep-shadow transition-all hover:scale-105 border-none">
-                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        <header class="flex items-center gap-4 mb-4">
+            <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm border border-white/60">
+                <span class="material-symbols-outlined">arrow_back</span>
             </button>
             <div>
-                <h1 class="text-[26px] font-bold text-on-surface tracking-tight">Profilo</h1>
-                <p class="text-sm text-on-surface-variant/50 font-medium">Account e impostazioni</p>
+                <h1 class="text-2xl font-bold text-slate-800">Profilo</h1>
+                <p class="text-sm text-slate-500 font-medium">Gestione account e impostazioni</p>
             </div>
         </header>
 
-        <div class="flex flex-col gap-3">
-            <p class="label-sm text-on-surface-variant/40 px-1">Connessioni</p>
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
             
-            <div class="grid grid-cols-2 gap-3">
-                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[28px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-95 liquid-shadow">
-                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:rgba(52,199,89,0.1); color:#34C759;">
-                        <span class="material-symbols-outlined text-[22px]">power</span>
+            <div class="grid grid-cols-2 gap-4">
+                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                        <span class="material-symbols-outlined text-[24px] font-light">power</span>
                     </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="label-sm text-on-surface-variant/40">DIDUP</span>
-                        <span class="text-[13px] font-extrabold tracking-wide" style="color:#34C759;">COLLEGATO</span>
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
+                        <span class="text-[13px] font-extrabold text-emerald-600 tracking-wide">COLLEGATO</span>
                     </div>
                 </div>
 
-                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[28px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-95 liquid-shadow">
-                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center transition-colors duration-300" style="background:${isGoogleConnected ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)'}; color:${isGoogleConnected ? '#34C759' : '#FF3B30'};">
-                        <span class="material-symbols-outlined text-[22px]">calendar_today</span>
+                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
+                    <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'} flex items-center justify-center transition-colors duration-300">
+                        <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
                     </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="label-sm text-on-surface-variant/40">CALENDAR</span>
-                        <span class="text-[13px] font-extrabold tracking-wide" style="color:${isGoogleConnected ? '#34C759' : '#FF3B30'};">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
+                        <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-emerald-600' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-3">
-            <p class="label-sm text-on-surface-variant/40 px-1">Impostazioni Account</p>
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
             
-            <div class="liquid-glass rounded-[28px] overflow-hidden flex flex-col liquid-shadow">
-                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="showEditProfileModal()">
+            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showEditProfileModal()">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(0,88,188,0.08); color:var(--primary);">
+                        <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Modifica Profilo</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
                 
-                <div class="h-px mx-5" style="background:rgba(0,0,0,0.05);"></div>
+                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
 
-                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="performArgoSync()">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="performArgoSync()">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(88,86,214,0.08); color:#5856D6;">
+                        <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">sync</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Forza Sync DidUp</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-3">
-            <p class="label-sm text-on-surface-variant/40 px-1">Altro</p>
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Altro</h3>
             
-            <div class="liquid-glass rounded-[28px] overflow-hidden flex flex-col liquid-shadow">
-                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="showToast('Notifiche in arrivo', 'info')">
+            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Notifiche in arrivo', 'info')">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,159,10,0.08); color:#FF9F0A;">
+                        <div class="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">notifications</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Notifiche</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Notifiche</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
                 
-                <div class="h-px mx-5" style="background:rgba(0,0,0,0.05);"></div>
+                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
 
-                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="showToast('Impostazioni privacy', 'info')">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Impostazioni privacy', 'info')">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(52,199,89,0.08); color:#34C759;">
+                        <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">lock</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Privacy & Security</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Privacy & Security</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <button onclick="mostraConfermaEsciUI()" 
-                class="w-full h-14 rounded-full flex items-center justify-center gap-2 font-bold text-base transition-all duration-200 hover:scale-[1.01] active:scale-[0.97] cursor-pointer border-none"
-                style="background:rgba(255,59,48,0.08); color:#FF3B30; border:1px solid rgba(255,59,48,0.15);">
+        <button onclick="mostraConfermaEsciUI()" class="mt-4 w-full h-14 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97] shadow-sm">
             <span class="material-symbols-outlined text-[20px]">logout</span>
             <span>Esci dall'Account</span>
         </button>
 
-        <div id="logout-modal" class="fixed inset-0 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]" style="background:rgba(0,0,0,0.25);">
-            <div class="liquid-glass border border-white/60 rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 deep-shadow" id="modal-box">
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto" style="background:rgba(255,59,48,0.1); color:#FF3B30; border:1px solid rgba(255,59,48,0.15);">
-                    <span class="material-symbols-outlined text-[26px]">logout</span>
+        <div id="logout-modal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]">
+            <div class="bg-white/70 backdrop-blur-xl border border-white rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 shadow-2xl" id="modal-box">
+                <div class="w-14 h-14 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center mx-auto border border-red-500/20">
+                    <span class="material-symbols-outlined text-[28px]">logout</span>
                 </div>
                 <div>
-                    <h4 class="text-xl font-bold text-on-surface">Sei sicuro di voler uscire?</h4>
-                    <p class="text-sm text-on-surface-variant/50 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
+                    <h4 class="text-xl font-bold text-slate-800">Sei sicuro di voler uscire?</h4>
+                    <p class="text-sm text-slate-500 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
                 </div>
-                <div class="flex gap-3">
-                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full font-bold text-sm cursor-pointer border-none transition-colors" style="background:rgba(0,0,0,0.05); color:var(--on-surface-variant);">Annulla</button>
-                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full font-bold text-sm cursor-pointer border-none" style="background:#FF3B30; color:white; box-shadow:0 4px 12px rgba(255,59,48,0.3);">Esci</button>
+                <div class="flex gap-3 mt-2">
+                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full bg-slate-100/80 border border-slate-200/50 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors shadow-sm">Annulla</button>
+                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 border border-red-400/50">Esci</button>
                 </div>
             </div>
         </div>
