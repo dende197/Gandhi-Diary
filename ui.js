@@ -5800,13 +5800,14 @@ function renderPlanner() {
     today.setHours(0, 0, 0, 0);
     const todayISO = getLocalDateString(today);
 
-    // Week Scroller Data
+    // Week Scroller Data — starts on Monday, today centered
     const weekDays = [];
     const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     const startOfWeek = new Date(today);
     const day = today.getDay();
-    const diff = today.getDate() - day; // Sunday is 0
-    startOfWeek.setDate(diff);
+    // Monday-based: getDay() returns 0=Sun,1=Mon...6=Sat; we want Mon=0
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    startOfWeek.setDate(today.getDate() + diffToMonday);
 
     for (let i = 0; i < 7; i++) {
         const d = new Date(startOfWeek);
@@ -5841,142 +5842,157 @@ function renderPlanner() {
         return diffDays > 0 && diffDays <= 7;
     }).length;
 
+    // Auto-select today if nothing is selected or selected is out of current week
+    if (!state.selectedDate) state.selectedDate = todayISO;
+
     return `
-    <div class="view planner-view pb-32 pt-8 px-5 flex flex-col">
+    <div class="view planner-view pb-32 pt-6 flex flex-col">
         
         <!-- Header -->
-        <header class="flex justify-between items-end mb-6">
-            <h1 class="text-[#1e40af] text-[28px] font-extrabold tracking-tight">Agenda</h1>
-            <button class="text-[#1e40af] text-[11px] font-bold tracking-widest uppercase mb-2 bg-transparent border-none cursor-pointer" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-[28px] font-extrabold tracking-tight text-on-surface">Agenda</h1>
+                <p class="text-sm text-on-surface-variant/50 font-medium mt-0.5">${new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            </div>
+            <button class="liquid-glass rounded-full px-4 py-2 text-primary text-[12px] font-bold tracking-wider uppercase cursor-pointer border-none deep-shadow" 
+                    onclick="state.selectedDate='${todayISO}'; window.scheduleRender(0);">Oggi</button>
         </header>
 
-        <!-- Search Bar -->
-        <div class="relative mb-8">
-            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-            <input type="text" placeholder="Cerca compiti..." 
-                   class="w-full h-[52px] pl-12 pr-4 rounded-full bg-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.05)] border border-slate-100 text-sm font-medium text-slate-700 outline-none focus:border-blue-200 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400 agenda-search-input"
-                   value="${state.agendaSearchQuery || ''}"
-                   oninput="handleAgendaSearch(event)">
+        <!-- Search Bar — filtri compaiono solo quando la barra è attiva -->
+        <div class="mb-6">
+            <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-lg pointer-events-none">search</span>
+                <input type="text" placeholder="Cerca compiti, materie…" 
+                       id="planner-search-input"
+                       class="w-full h-[52px] pl-12 pr-10 rounded-full bg-white/70 backdrop-blur-md shadow-[0_4px_20px_-8px_rgba(0,0,0,0.06)] text-[14px] font-medium text-on-surface outline-none transition-all placeholder:text-on-surface-variant/30 agenda-search-input"
+                       style="border: 1px solid rgba(255,255,255,0.6);"
+                       value="${state.agendaSearchQuery || ''}"
+                       oninput="handleAgendaSearch(event)"
+                       onfocus="document.getElementById('planner-filter-chips')?.classList.remove('hidden')"
+                       onblur="setTimeout(()=>{ if(!document.activeElement?.closest('#planner-filter-chips')) document.getElementById('planner-filter-chips')?.classList.add('hidden'); },200)">
+                ${state.agendaSearchQuery ? `<button onclick="state.agendaSearchQuery=''; window.refreshAgenda && refreshAgenda(); document.getElementById('planner-search-input').value=''; document.getElementById('planner-filter-chips')?.classList.add('hidden');" class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 cursor-pointer border-none bg-transparent"><span class="material-symbols-outlined text-[18px]">close</span></button>` : ''}
+            </div>
+            <!-- Filtri materia — nascosti finché non si clicca la barra -->
+            <div id="planner-filter-chips" class="hidden mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                ${['Tutte', ...window.getAllSubjects?.() ?? []].slice(0, 8).map((s, i) => {
+                    const isAll = i === 0;
+                    const isActive = isAll ? (!state.agendaSearchSubject || state.agendaSearchSubject === 'all') : state.agendaSearchSubject === s;
+                    return `<button onclick="window.setAgendaFilter('${isAll ? 'all' : escapeJsSingleQuote(s)}')" 
+                        class="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border-none transition-all"
+                        style="background:${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.7)'}; color:${isActive ? '#fff' : 'var(--on-surface-variant)'}; backdrop-filter:blur(8px);">${s}</button>`;
+                }).join('')}
+            </div>
         </div>
 
-        <!-- Date Selector (Scorrimento Orizzontale) -->
-        <div class="flex overflow-x-auto no-scrollbar gap-3 -mx-5 px-5 mb-8 pb-2">
+        <!-- Date Selector — centrato su oggi, scorrimento orizzontale -->
+        <div class="flex overflow-x-auto no-scrollbar gap-2.5 mb-8 pb-1" id="planner-day-scroller">
             ${weekDays.map(d => {
                 const isActive = d.iso === selectedDate;
-                if (isActive) {
-                    return `
-                    <div class="shrink-0 w-[72px] h-[96px] bg-[#2563eb] rounded-[24px] shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] flex flex-col items-center justify-center gap-1 cursor-pointer scale-[1.02]"
-                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
-                        <span class="text-[10px] font-bold text-white/80 uppercase tracking-wide">${d.label}</span>
-                        <span class="text-[22px] font-extrabold text-white">${d.dayNum}</span>
-                        <div class="w-1.5 h-1.5 rounded-full bg-white mt-1"></div>
-                    </div>
-                    `;
-                } else {
-                    return `
-                    <div class="shrink-0 w-[72px] h-[96px] bg-white rounded-[24px] shadow-[0_4px_20px_-8px_rgba(0,0,0,0.06)] border border-slate-100 flex flex-col items-center justify-center gap-1 cursor-pointer"
-                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">${d.label}</span>
-                        <span class="text-[22px] font-extrabold text-slate-800">${d.dayNum}</span>
-                        ${d.isToday ? '<div class="w-1.5 h-1.5 rounded-full bg-[#2563eb] mt-1"></div>' : ''}
-                    </div>
-                    `;
-                }
+                const isToday = d.iso === todayISO;
+                return `
+                <div class="shrink-0 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200 rounded-[22px]"
+                     style="width:64px; height:88px; 
+                            background:${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.65)'};
+                            backdrop-filter:blur(12px);
+                            box-shadow:${isActive ? '0 10px 25px -5px rgba(0,88,188,0.35)' : '0 2px 12px -4px rgba(0,0,0,0.05)'};
+                            border:${isActive ? 'none' : '1px solid rgba(255,255,255,0.7)'};
+                            transform:${isActive ? 'scale(1.04)' : 'scale(1)'};"
+                     onclick="state.selectedDate='${d.iso}'; window.scheduleRender(0);">
+                    <span style="font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:${isActive ? 'rgba(255,255,255,0.7)' : 'var(--on-surface-variant)'}; opacity:${isActive ? 1 : 0.6};">${d.label}</span>
+                    <span style="font-size:22px; font-weight:800; letter-spacing:-0.02em; color:${isActive ? '#fff' : 'var(--on-surface)'};">${d.dayNum}</span>
+                    <div style="width:5px; height:5px; border-radius:50%; background:${isActive ? 'rgba(255,255,255,0.8)' : (isToday ? 'var(--primary)' : 'transparent')};"></div>
+                </div>`;
             }).join('')}
         </div>
+        <script>
+            // Scrolla il giorno selezionato al centro del contenitore
+            (function() {
+                const scroller = document.getElementById('planner-day-scroller');
+                if (!scroller) return;
+                const active = scroller.children[${weekDays.findIndex(d => d.iso === selectedDate)}];
+                if (active) {
+                    const offset = active.offsetLeft - (scroller.clientWidth / 2) + (active.offsetWidth / 2);
+                    scroller.scrollLeft = Math.max(0, offset);
+                }
+            })();
+        </script>
 
-        <!-- Smart Planner Card -->
+        <!-- Smart Planner suggerimento -->
         ${upcomingTasksCount > 0 ? `
-        <div class="bg-[#f4f7ff] border border-blue-100/50 rounded-[32px] p-6 mb-8 shadow-[0_10px_30px_-15px_rgba(37,99,235,0.1)]">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-full bg-[#1e40af] text-white flex items-center justify-center shadow-md shadow-blue-900/20">
-                    <span class="material-symbols-outlined text-lg">lightbulb</span>
-                </div>
-                <span class="text-[#1e40af] font-bold text-[15px]">Smart Planner</span>
+        <div class="liquid-glass rounded-[28px] p-5 mb-6 liquid-shadow flex items-center gap-4">
+            <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[20px]">lightbulb</span>
             </div>
-            <p class="text-slate-600 text-[15px] font-medium leading-relaxed mb-4">
-                Hai ${upcomingTasksCount} compit${upcomingTasksCount === 1 ? 'o' : 'i'} per la prossima settimana. Vuoi anticiparne uno oggi?
-            </p>
-            <button class="text-[#1e40af] font-bold text-[13px] flex items-center gap-1 hover:gap-2 transition-all bg-transparent border-none cursor-pointer" onclick="navigate('planner')">
-                Vedi suggerimenti <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
-            </button>
+            <div class="flex-1 min-w-0">
+                <p class="text-[14px] font-semibold text-on-surface">
+                    Hai <strong class="text-primary">${upcomingTasksCount}</strong> compit${upcomingTasksCount === 1 ? 'o' : 'i'} nei prossimi 7 giorni
+                </p>
+            </div>
         </div>
         ` : ''}
 
         <!-- Task List -->
-        <div class="flex flex-col gap-6 relative z-10">
+        <div class="flex flex-col gap-4 relative">
             ${dayTasks.length ? dayTasks.map(t => {
                 const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
                 const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
                 const timeStr = timeMatch ? timeMatch[1] : '08:30';
 
                 if (t.done) {
-                    // Completata
                     return `
-                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-100 opacity-60 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="w-[52px] h-[52px] shrink-0 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
-                            <span class="material-symbols-outlined text-[24px]">task_alt</span>
+                    <div class="liquid-glass rounded-[28px] p-4 flex items-center gap-4 opacity-50 cursor-pointer transition-all" 
+                         style="border:1px solid rgba(255,255,255,0.5);"
+                         onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="w-[48px] h-[48px] shrink-0 rounded-2xl flex items-center justify-center" style="background:rgba(0,0,0,0.04);">
+                            <span class="material-symbols-outlined text-on-surface-variant/40 text-[22px]">task_alt</span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h3 class="text-slate-500 text-[15px] font-bold truncate line-through">${escapeHtml(t.subject)}</h3>
-                            <p class="text-slate-400 text-[13px] font-medium truncate mt-0.5 line-through">${escapeHtml(t.text)}</p>
+                            <h3 class="text-on-surface/50 text-[15px] font-bold truncate line-through">${escapeHtml(t.subject)}</h3>
+                            <p class="text-on-surface-variant/40 text-[13px] truncate mt-0.5 line-through">${escapeHtml(t.text)}</p>
                         </div>
-                        <div class="shrink-0 text-slate-400 text-[11px] font-bold px-2">
-                            Fatto
-                        </div>
-                    </div>
-                    `;
+                        <span class="text-on-surface-variant/30 text-[11px] font-bold px-2">Fatto</span>
+                    </div>`;
                 } else if (isExam) {
-                    // Urgente/Verifica
                     return `
-                    <div class="bg-red-50/50 border border-red-100 rounded-[32px] p-5 shadow-[0_8px_20px_-10px_rgba(239,68,68,0.15)] relative overflow-hidden cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-200/20 rounded-full blur-2xl"></div>
-                        <div class="flex justify-between items-center mb-1 relative z-10">
-                            <span class="text-red-600 text-[11px] font-bold">${timeStr}</span>
-                            <span class="material-symbols-outlined text-red-600 text-xl relative z-10">${getSubjectIcon(t.subject)}</span>
+                    <div class="rounded-[28px] p-5 relative overflow-hidden cursor-pointer transition-all hover:scale-[1.01]" 
+                         style="background:rgba(254,242,242,0.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);"
+                         onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-red-500 text-[11px] font-bold">${timeStr}</span>
+                            <span class="material-symbols-outlined text-red-500 text-xl">${getSubjectIcon(t.subject)}</span>
                         </div>
-                        <h3 class="text-slate-900 text-lg font-bold mb-1 relative z-10">${escapeHtml(t.subject)}</h3>
-                        <p class="text-slate-500 text-sm mb-5 font-medium relative z-10">${escapeHtml(t.text)}</p>
-                        <div class="inline-block bg-red-100/80 text-red-700 text-[11px] font-bold px-3 py-1.5 rounded-full relative z-10">
-                            Urgente
-                        </div>
-                    </div>
-                    `;
+                        <h3 class="text-on-surface text-[17px] font-bold mb-1">${escapeHtml(t.subject)}</h3>
+                        <p class="text-on-surface-variant/60 text-sm mb-4">${escapeHtml(t.text)}</p>
+                        <span class="inline-block text-red-600 text-[11px] font-bold px-3 py-1 rounded-full" style="background:rgba(220,38,38,0.1);">Urgente</span>
+                    </div>`;
                 } else {
-                    // Normale
                     return `
-                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.06)] border border-slate-100 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="w-[52px] h-[52px] shrink-0 bg-[#f4f7ff] rounded-2xl flex items-center justify-center text-[#1e40af]">
-                            <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(t.subject)}</span>
+                    <div class="liquid-glass rounded-[28px] p-4 flex items-center gap-4 liquid-shadow cursor-pointer transition-all hover:scale-[1.01]"
+                         onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="w-[48px] h-[48px] shrink-0 rounded-2xl flex items-center justify-center text-primary" style="background:rgba(0,88,188,0.08);">
+                            <span class="material-symbols-outlined text-[22px]">${getSubjectIcon(t.subject)}</span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h3 class="text-slate-900 text-[15px] font-bold truncate">${escapeHtml(t.subject)}</h3>
-                            <p class="text-slate-500 text-[13px] font-medium truncate mt-0.5">${escapeHtml(t.text)}</p>
+                            <h3 class="text-on-surface text-[15px] font-bold truncate">${escapeHtml(t.subject)}</h3>
+                            <p class="text-on-surface-variant/60 text-[13px] truncate mt-0.5">${escapeHtml(t.text)}</p>
                         </div>
-                        <div class="shrink-0 text-[#1e40af] text-[11px] font-bold px-2">
-                            ${timeStr}
-                        </div>
-                    </div>
-                    `;
+                        <span class="text-primary text-[11px] font-bold px-2 shrink-0">${timeStr}</span>
+                    </div>`;
                 }
             }).join('') : `
-                <div class="bg-white rounded-[32px] p-12 text-center flex flex-col items-center gap-4 border border-slate-100 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.04)]">
-                    <span class="material-symbols-outlined text-[48px] text-slate-300">event_busy</span>
-                    <p class="text-slate-400 font-medium text-[15px]">Nessuna attività programmata</p>
+                <div class="liquid-glass rounded-[28px] p-12 text-center flex flex-col items-center gap-4 liquid-shadow">
+                    <span class="material-symbols-outlined text-[48px] text-on-surface-variant/30">event_note</span>
+                    <p class="text-on-surface-variant/40 font-medium text-[15px]">Nessuna attività per questo giorno</p>
                 </div>
             `}
         </div>
 
-        <!-- Floating Action Buttons (FABs) -->
-        <div class="absolute bottom-28 right-5 flex flex-col gap-3 z-40">
-            <!-- Pulsante Storico/Undo (Viola) -->
-            <button onclick="showToast('Storico compiti in arrivo!', 'info')" class="w-[52px] h-[52px] rounded-full bg-[#4f46e5] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(79,70,229,0.3)] hover:scale-105 transition-transform active:scale-95 border-none cursor-pointer">
-                <span class="material-symbols-outlined text-[24px]">history</span>
-            </button>
-            
-            <!-- Pulsante Aggiungi (Blu) -->
-            <button onclick="showQuickAddTaskModal()" class="w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-[0_10px_25px_rgba(37,99,235,0.35)] hover:scale-105 transition-transform active:scale-95 border-none cursor-pointer">
-                <span class="material-symbols-outlined text-[26px]">add</span>
+        <!-- FABs — z-index corretto sopra tutto -->
+        <div class="fixed bottom-28 right-5 flex flex-col gap-3 z-50">
+            <button onclick="showAddRegistroTaskModal()" 
+                    class="w-14 h-14 rounded-full text-white flex items-center justify-center cursor-pointer border-none transition-all hover:scale-105 active:scale-95"
+                    style="background:var(--primary); box-shadow:0 10px 25px -5px rgba(0,88,188,0.4);">
+                <span class="material-symbols-outlined text-[24px]">add</span>
             </button>
         </div>
     </div>`;
@@ -6009,117 +6025,119 @@ function renderProfile() {
     };
 
     return `
-    <div class="view profile-view pb-32 flex flex-col gap-6" style="padding: 0 20px;">
+    <div class="view profile-view pb-32 pt-6 flex flex-col gap-6">
         
-        <header class="flex items-center gap-4 mb-4">
-            <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm border border-white/60">
-                <span class="material-symbols-outlined">arrow_back</span>
+        <header class="flex items-center gap-4 mb-2">
+            <button onclick="navigate('home')" class="w-11 h-11 rounded-2xl liquid-glass flex items-center justify-center text-on-surface cursor-pointer deep-shadow transition-all hover:scale-105 border-none">
+                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </button>
             <div>
-                <h1 class="text-2xl font-bold text-slate-800">Profilo</h1>
-                <p class="text-sm text-slate-500 font-medium">Gestione account e impostazioni</p>
+                <h1 class="text-[26px] font-bold text-on-surface tracking-tight">Profilo</h1>
+                <p class="text-sm text-on-surface-variant/50 font-medium">Account e impostazioni</p>
             </div>
         </header>
 
-        <div class="flex flex-col gap-4">
-            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
+        <div class="flex flex-col gap-3">
+            <p class="label-sm text-on-surface-variant/40 px-1">Connessioni</p>
             
-            <div class="grid grid-cols-2 gap-4">
-                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
-                        <span class="material-symbols-outlined text-[24px] font-light">power</span>
+            <div class="grid grid-cols-2 gap-3">
+                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[28px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-95 liquid-shadow">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background:rgba(52,199,89,0.1); color:#34C759;">
+                        <span class="material-symbols-outlined text-[22px]">power</span>
                     </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
-                        <span class="text-[13px] font-extrabold text-emerald-600 tracking-wide">COLLEGATO</span>
+                        <span class="label-sm text-on-surface-variant/40">DIDUP</span>
+                        <span class="text-[13px] font-extrabold tracking-wide" style="color:#34C759;">COLLEGATO</span>
                     </div>
                 </div>
 
-                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
-                    <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'} flex items-center justify-center transition-colors duration-300">
-                        <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
+                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[28px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-95 liquid-shadow">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center transition-colors duration-300" style="background:${isGoogleConnected ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)'}; color:${isGoogleConnected ? '#34C759' : '#FF3B30'};">
+                        <span class="material-symbols-outlined text-[22px]">calendar_today</span>
                     </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
-                        <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-emerald-600' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
+                        <span class="label-sm text-on-surface-variant/40">CALENDAR</span>
+                        <span class="text-[13px] font-extrabold tracking-wide" style="color:${isGoogleConnected ? '#34C759' : '#FF3B30'};">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
+        <div class="flex flex-col gap-3">
+            <p class="label-sm text-on-surface-variant/40 px-1">Impostazioni Account</p>
             
-            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showEditProfileModal()">
+            <div class="liquid-glass rounded-[28px] overflow-hidden flex flex-col liquid-shadow">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="showEditProfileModal()">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(0,88,188,0.08); color:var(--primary);">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
+                        <span class="text-[15px] font-semibold text-on-surface">Modifica Profilo</span>
                     </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
                 </div>
                 
-                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+                <div class="h-px mx-5" style="background:rgba(0,0,0,0.05);"></div>
 
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="performArgoSync()">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="performArgoSync()">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(88,86,214,0.08); color:#5856D6;">
                             <span class="material-symbols-outlined text-[18px]">sync</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
+                        <span class="text-[15px] font-semibold text-on-surface">Forza Sync DidUp</span>
                     </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Altro</h3>
+        <div class="flex flex-col gap-3">
+            <p class="label-sm text-on-surface-variant/40 px-1">Altro</p>
             
-            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Notifiche in arrivo', 'info')">
+            <div class="liquid-glass rounded-[28px] overflow-hidden flex flex-col liquid-shadow">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="showToast('Notifiche in arrivo', 'info')">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,159,10,0.08); color:#FF9F0A;">
                             <span class="material-symbols-outlined text-[18px]">notifications</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Notifiche</span>
+                        <span class="text-[15px] font-semibold text-on-surface">Notifiche</span>
                     </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
                 </div>
                 
-                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+                <div class="h-px mx-5" style="background:rgba(0,0,0,0.05);"></div>
 
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Impostazioni privacy', 'info')">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 cursor-pointer transition-all hover:bg-white/30" onclick="showToast('Impostazioni privacy', 'info')">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 flex items-center justify-center">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(52,199,89,0.08); color:#34C759;">
                             <span class="material-symbols-outlined text-[18px]">lock</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Privacy & Security</span>
+                        <span class="text-[15px] font-semibold text-on-surface">Privacy & Security</span>
                     </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <button onclick="mostraConfermaEsciUI()" class="mt-4 w-full h-14 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97] shadow-sm">
+        <button onclick="mostraConfermaEsciUI()" 
+                class="w-full h-14 rounded-full flex items-center justify-center gap-2 font-bold text-base transition-all duration-200 hover:scale-[1.01] active:scale-[0.97] cursor-pointer border-none"
+                style="background:rgba(255,59,48,0.08); color:#FF3B30; border:1px solid rgba(255,59,48,0.15);">
             <span class="material-symbols-outlined text-[20px]">logout</span>
             <span>Esci dall'Account</span>
         </button>
 
-        <div id="logout-modal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]">
-            <div class="bg-white/70 backdrop-blur-xl border border-white rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 shadow-2xl" id="modal-box">
-                <div class="w-14 h-14 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center mx-auto border border-red-500/20">
-                    <span class="material-symbols-outlined text-[28px]">logout</span>
+        <div id="logout-modal" class="fixed inset-0 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]" style="background:rgba(0,0,0,0.25);">
+            <div class="liquid-glass border border-white/60 rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 deep-shadow" id="modal-box">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto" style="background:rgba(255,59,48,0.1); color:#FF3B30; border:1px solid rgba(255,59,48,0.15);">
+                    <span class="material-symbols-outlined text-[26px]">logout</span>
                 </div>
                 <div>
-                    <h4 class="text-xl font-bold text-slate-800">Sei sicuro di voler uscire?</h4>
-                    <p class="text-sm text-slate-500 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
+                    <h4 class="text-xl font-bold text-on-surface">Sei sicuro di voler uscire?</h4>
+                    <p class="text-sm text-on-surface-variant/50 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
                 </div>
-                <div class="flex gap-3 mt-2">
-                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full bg-slate-100/80 border border-slate-200/50 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors shadow-sm">Annulla</button>
-                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 border border-red-400/50">Esci</button>
+                <div class="flex gap-3">
+                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full font-bold text-sm cursor-pointer border-none transition-colors" style="background:rgba(0,0,0,0.05); color:var(--on-surface-variant);">Annulla</button>
+                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full font-bold text-sm cursor-pointer border-none" style="background:#FF3B30; color:white; box-shadow:0 4px 12px rgba(255,59,48,0.3);">Esci</button>
                 </div>
             </div>
         </div>
