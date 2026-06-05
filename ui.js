@@ -62,6 +62,63 @@ window.setAgendaFilter = function (subject) {
     state.agendaSearchSubject = subject;
     refreshAgenda();
 };
+
+// ── Navigazione settimana/mese nel planner ────────────────────────────────
+window.plannerChangeWeek = function(delta) {
+    state.plannerWeekOffset = (state.plannerWeekOffset || 0) + delta;
+    // Aggiorna selectedDate alla prima data della nuova settimana se fuori range
+    const today = new Date(); today.setHours(0,0,0,0);
+    const weekStart = new Date(today);
+    const dayOfWeek = weekStart.getDay();
+    weekStart.setDate(weekStart.getDate() - dayOfWeek + (state.plannerWeekOffset || 0) * 7);
+    // Se selectedDate non è nella nuova settimana, seleziona lunedì (o domenica)
+    const selDate = state.selectedDate ? new Date(state.selectedDate + 'T00:00:00') : today;
+    const selOffset = Math.floor((selDate - weekStart) / 86400000);
+    if (selOffset < 0 || selOffset > 6) {
+        const monday = new Date(weekStart);
+        monday.setDate(weekStart.getDate() + 1); // lunedì
+        state.selectedDate = getLocalDateString(monday);
+    }
+    scheduleRender(0);
+};
+
+window.plannerResetToToday = function() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    state.selectedDate = getLocalDateString(today);
+    state.plannerWeekOffset = 0;
+    state.plannerViewMode = 'week';
+    state.plannerMonthBase = null;
+    scheduleRender(0);
+};
+
+window.plannerOpenMonthPicker = function() {
+    const base = state.plannerMonthBase
+        ? new Date(state.plannerMonthBase + '-01')
+        : new Date();
+    state.plannerMonthBase = base.toISOString().slice(0,7);
+    state.plannerViewMode = 'month';
+    scheduleRender(0);
+};
+
+window.plannerChangeMonth = function(delta) {
+    const base = state.plannerMonthBase
+        ? new Date(state.plannerMonthBase + '-01')
+        : new Date();
+    base.setDate(1);
+    base.setMonth(base.getMonth() + delta);
+    state.plannerMonthBase = base.toISOString().slice(0,7);
+    state.plannerViewMode = 'month';
+    scheduleRender(0);
+};
+
+window.plannerBackToWeek = function() {
+    state.plannerViewMode = 'week';
+    state.plannerWeekOffset = 0;
+    const today = new Date(); today.setHours(0,0,0,0);
+    state.selectedDate = getLocalDateString(today);
+    scheduleRender(0);
+};
+
 const PASSING_GRADE_THRESHOLD = 6;
 const CHART_INTERMEDIATE_TICK_RATIO = 0.8;
 const CHART_MIN_RANGE_EPSILON = 0.0001;
@@ -5800,187 +5857,348 @@ function renderPlanner() {
     today.setHours(0, 0, 0, 0);
     const todayISO = getLocalDateString(today);
 
-    // Week Scroller Data
-    const weekDays = [];
-    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    const startOfWeek = new Date(today);
-    const day = today.getDay();
-    const diff = today.getDate() - day; // Sunday is 0
-    startOfWeek.setDate(diff);
+    const weekOffset = state.plannerWeekOffset || 0;
+    const viewMode   = state.plannerViewMode || 'week'; // 'week' | 'month'
 
+    // ── Calcolo settimana visualizzata ────────────────────────────────────
+    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + weekOffset * 7); // domenica
+
+    const weekDays = [];
     for (let i = 0; i < 7; i++) {
-        const d = new Date(startOfWeek);
-        d.setDate(startOfWeek.getDate() + i);
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
         const iso = getLocalDateString(d);
-        weekDays.push({
-            label: dayLabels[d.getDay()],
-            dayNum: d.getDate(),
-            iso: iso,
-            isToday: iso === todayISO
-        });
+        weekDays.push({ label: dayLabels[d.getDay()], dayNum: d.getDate(), iso, isToday: iso === todayISO });
     }
 
+    // Label settimana es. "1 – 7 Giugno"
+    const mNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const wEnd = new Date(weekStart); wEnd.setDate(weekStart.getDate() + 6);
+    const weekLabel = weekStart.getMonth() === wEnd.getMonth()
+        ? `${weekStart.getDate()} – ${wEnd.getDate()} ${mNames[wEnd.getMonth()]}`
+        : `${weekStart.getDate()} ${mNames[weekStart.getMonth()]} – ${wEnd.getDate()} ${mNames[wEnd.getMonth()]}`;
+
+    // ── Data selezionata ──────────────────────────────────────────────────
     const selectedDate = state.selectedDate || todayISO;
-    const query = (state.agendaSearchQuery || '').toLowerCase().trim();
 
-    // Filter day tasks with query
-    const dayTasks = (state.tasks || []).filter(t => {
-        if (t.due_date !== selectedDate) return false;
-        if (t.subject === 'QUEST') return false; // Hide system quest tasks if any
-        if (!query) return true;
-        return (t.subject || '').toLowerCase().includes(query) || (t.text || '').toLowerCase().includes(query);
-    });
+    // ── Dati mese (per modalità month) ───────────────────────────────────
+    const monthBaseStr = state.plannerMonthBase || todayISO.slice(0,7);
+    const [mYear, mMonth] = monthBaseStr.split('-').map(Number);
+    const monthLabel = `${mNames[mMonth - 1]} ${mYear}`;
 
-    // Upcoming tasks for the next 7 days (not completed)
-    const upcomingTasksCount = (state.tasks || []).filter(t => {
-        if (t.done) return false;
-        const d = parseLocalDate(t.due_date);
-        if (isNaN(d.getTime())) return false;
-        const diffTime = d - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays > 0 && diffDays <= 7;
-    }).length;
+    // ── Search & filtri ───────────────────────────────────────────────────
+    const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
+    const filterSubject = state.agendaSearchSubject || 'all';
+    const isSearching   = query.length > 0 || filterSubject !== 'all';
+
+    // Tutte le materie disponibili (per i chip)
+    const allSubjects = [...new Set((state.tasks || [])
+        .map(t => t.subject).filter(Boolean))].sort();
+
+    // ── Filtro compiti ────────────────────────────────────────────────────
+    const filterTask = (t) => {
+        if (t.subject === 'QUEST') return false;
+        const matchSubject = filterSubject === 'all' || (t.subject || '').toLowerCase() === filterSubject.toLowerCase();
+        const matchQuery   = !query || (t.subject || '').toLowerCase().includes(query) || (t.text || '').toLowerCase().includes(query);
+        return matchSubject && matchQuery;
+    };
+
+    // Compiti del giorno selezionato
+    const dayTasks = (state.tasks || []).filter(t => t.due_date === selectedDate && filterTask(t));
+
+    // Compiti del mese per la vista month
+    const monthTasks = (state.tasks || []).filter(t => {
+        if (!t.due_date || !filterTask(t)) return false;
+        return t.due_date.startsWith(monthBaseStr);
+    }).sort((a,b) => a.due_date.localeCompare(b.due_date));
+
+    // Tutti i compiti (per la ricerca globale)
+    const searchTasks = isSearching
+        ? (state.tasks || []).filter(filterTask).sort((a,b) => (a.due_date || '').localeCompare(b.due_date || ''))
+        : [];
+
+    // Mappa "data → ha compiti" per puntini sul calendario
+    const datesWithTasks = new Set((state.tasks || []).map(t => t.due_date));
+
+    // ── Task item renderer ────────────────────────────────────────────────
+    const renderTaskItem = (t) => {
+        const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text || '');
+        const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
+        const timeStr = timeMatch ? timeMatch[1] : '08:30';
+        const icon = getSubjectIcon(t.subject);
+
+        if (t.done) return `
+            <div onclick="toggleTask('${escapeJsSingleQuote(t.id)}')"
+                 style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;
+                        gap:14px;border:1px solid #EEF0F3;opacity:0.55;cursor:pointer;margin-bottom:10px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#F1F5F9;display:flex;
+                            align-items:center;justify-content:center;flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:22px;color:#94A3B8;">task_alt</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:14px;font-weight:700;color:#94A3B8;text-decoration:line-through;
+                                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.subject)}</div>
+                    <div style="font-size:12px;color:#CBD5E1;text-decoration:line-through;margin-top:2px;
+                                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text)}</div>
+                </div>
+                <span style="font-size:10px;font-weight:700;color:#CBD5E1;">Fatto</span>
+            </div>`;
+
+        if (isExam) return `
+            <div onclick="toggleTask('${escapeJsSingleQuote(t.id)}')"
+                 style="background:#FFF5F5;border:1px solid #FECACA;border-radius:20px;padding:16px;
+                        position:relative;overflow:hidden;cursor:pointer;margin-bottom:10px;">
+                <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;
+                            background:rgba(239,68,68,0.08);border-radius:50%;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:10px;font-weight:700;color:#EF4444;">${t.due_date !== selectedDate ? t.due_date : timeStr}</span>
+                    <span class="material-symbols-outlined" style="font-size:20px;color:#EF4444;">${icon}</span>
+                </div>
+                <div style="font-size:15px;font-weight:700;color:#1F2937;margin-bottom:2px;">${escapeHtml(t.subject)}</div>
+                <div style="font-size:13px;color:#6B7280;margin-bottom:10px;">${escapeHtml(t.text)}</div>
+                <span style="background:#FEE2E2;color:#DC2626;font-size:10px;font-weight:700;
+                             padding:3px 10px;border-radius:999px;letter-spacing:0.04em;">VERIFICA</span>
+            </div>`;
+
+        return `
+            <div onclick="toggleTask('${escapeJsSingleQuote(t.id)}')"
+                 style="background:white;border-radius:20px;padding:14px 16px;display:flex;
+                        align-items:center;gap:14px;border:1px solid #EEF0F3;cursor:pointer;margin-bottom:10px;
+                        box-shadow:0 2px 10px -4px rgba(0,0,0,0.06);">
+                <div style="width:46px;height:46px;border-radius:14px;background:#EEF4FF;display:flex;
+                            align-items:center;justify-content:center;flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:22px;color:#2563EB;">${icon}</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:14px;font-weight:700;color:#0F172A;white-space:nowrap;
+                                overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.subject)}</div>
+                    <div style="font-size:12px;color:#6B7280;margin-top:2px;white-space:nowrap;
+                                overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text)}</div>
+                </div>
+                <div style="flex-shrink:0;font-size:11px;font-weight:700;color:#2563EB;">${timeStr}</div>
+            </div>`;
+    };
+
+    const emptyState = `
+        <div style="background:white;border-radius:24px;padding:40px 20px;text-align:center;
+                    border:1px solid #EEF0F3;box-shadow:0 2px 10px -4px rgba(0,0,0,0.04);">
+            <span class="material-symbols-outlined" style="font-size:44px;color:#CBD5E1;display:block;margin-bottom:10px;">event_busy</span>
+            <p style="color:#94A3B8;font-size:14px;font-weight:500;">Nessuna attività programmata</p>
+        </div>`;
+
+    // ── Header mese (pulsante in alto a destra) ───────────────────────────
+    const currentMonthLabel = mNames[today.getMonth()];
 
     return `
-    <div class="view planner-view pb-32 pt-8 px-5 flex flex-col">
-        
-        <!-- Header -->
-        <header class="flex justify-between items-end mb-6">
-            <h1 class="text-[#1e40af] text-[28px] font-extrabold tracking-tight">Agenda</h1>
-            <button class="text-[#1e40af] text-[11px] font-bold tracking-widest uppercase mb-2 bg-transparent border-none cursor-pointer" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
-        </header>
+    <div class="view planner-view" style="padding:0;background:#F3F6F8;min-height:100vh;padding-bottom:120px;">
 
-        <!-- Search Bar -->
-        <div class="relative mb-8">
-            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-            <input type="text" placeholder="Cerca compiti..." 
-                   class="w-full h-[52px] pl-12 pr-4 rounded-full bg-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.05)] border border-slate-100 text-sm font-medium text-slate-700 outline-none focus:border-blue-200 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400 agenda-search-input"
-                   value="${state.agendaSearchQuery || ''}"
-                   oninput="handleAgendaSearch(event)">
+        <!-- ══ HEADER ══ -->
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:20px 20px 12px;">
+            <h1 style="font-size:26px;font-weight:800;color:#1e3a8a;letter-spacing:-0.02em;">Agenda</h1>
+            <button onclick="plannerOpenMonthPicker()"
+                    style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#2563EB;
+                           background:none;border:none;cursor:pointer;text-transform:uppercase;
+                           padding:6px 12px;border-radius:20px;background:#EEF4FF;">
+                ${currentMonthLabel}
+            </button>
         </div>
 
-        <!-- Date Selector (Scorrimento Orizzontale) -->
-        <div class="flex overflow-x-auto no-scrollbar gap-3 -mx-5 px-5 mb-8 pb-2">
-            ${weekDays.map(d => {
-                const isActive = d.iso === selectedDate;
-                if (isActive) {
-                    return `
-                    <div class="shrink-0 w-[72px] h-[96px] bg-[#2563eb] rounded-[24px] shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] flex flex-col items-center justify-center gap-1 cursor-pointer scale-[1.02]"
-                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
-                        <span class="text-[10px] font-bold text-white/80 uppercase tracking-wide">${d.label}</span>
-                        <span class="text-[22px] font-extrabold text-white">${d.dayNum}</span>
-                        <div class="w-1.5 h-1.5 rounded-full bg-white mt-1"></div>
-                    </div>
-                    `;
-                } else {
-                    return `
-                    <div class="shrink-0 w-[72px] h-[96px] bg-white rounded-[24px] shadow-[0_4px_20px_-8px_rgba(0,0,0,0.06)] border border-slate-100 flex flex-col items-center justify-center gap-1 cursor-pointer"
-                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">${d.label}</span>
-                        <span class="text-[22px] font-extrabold text-slate-800">${d.dayNum}</span>
-                        ${d.isToday ? '<div class="w-1.5 h-1.5 rounded-full bg-[#2563eb] mt-1"></div>' : ''}
-                    </div>
-                    `;
-                }
+        <!-- ══ SEARCH BAR ══ -->
+        <div style="padding:0 20px;margin-bottom:14px;">
+            <div style="position:relative;background:white;border-radius:24px;
+                        border:1px solid #EEF0F3;box-shadow:0 2px 12px -4px rgba(0,0,0,0.06);
+                        overflow:hidden;">
+                <span class="material-symbols-outlined"
+                      style="position:absolute;left:16px;top:50%;transform:translateY(-50%);
+                             font-size:20px;color:#94A3B8;">search</span>
+                <input type="text" placeholder="Cerca compiti..."
+                       style="width:100%;height:50px;padding:0 16px 0 48px;border:none;outline:none;
+                              font-size:14px;font-weight:500;color:#1F2937;background:transparent;
+                              font-family:inherit;"
+                       value="${escapeHtml(state.agendaSearchQuery || '')}"
+                       oninput="handleAgendaSearch(event)">
+            </div>
+        </div>
+
+        <!-- ══ CHIP FILTRO MATERIA ══ -->
+        <div style="display:flex;overflow-x:auto;gap:8px;padding:0 20px 14px;
+                    scrollbar-width:none;-ms-overflow-style:none;">
+            <button onclick="state.agendaSearchSubject='all';state._filterJustTriggered=true;refreshAgenda();"
+                    style="flex-shrink:0;padding:6px 14px;border-radius:999px;border:none;cursor:pointer;
+                           font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+                           background:${filterSubject==='all'?'#2563EB':'white'};
+                           color:${filterSubject==='all'?'white':'#6B7280'};
+                           border:1px solid ${filterSubject==='all'?'#2563EB':'#EEF0F3'};">
+                Tutte
+            </button>
+            ${allSubjects.map(s => {
+                const active = filterSubject.toLowerCase() === s.toLowerCase();
+                const esc = s.replace(/'/g,"\\'");
+                return `<button onclick="state.agendaSearchSubject='${esc}';state._filterJustTriggered=true;refreshAgenda();"
+                               style="flex-shrink:0;padding:6px 14px;border-radius:999px;border:none;cursor:pointer;
+                                      font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;
+                                      white-space:nowrap;
+                                      background:${active?'#2563EB':'white'};
+                                      color:${active?'white':'#6B7280'};
+                                      border:1px solid ${active?'#2563EB':'#EEF0F3'};">
+                            ${escapeHtml(s)}
+                        </button>`;
             }).join('')}
         </div>
 
-        <!-- Smart Planner Card -->
-        ${upcomingTasksCount > 0 ? `
-        <div class="bg-[#f4f7ff] border border-blue-100/50 rounded-[32px] p-6 mb-8 shadow-[0_10px_30px_-15px_rgba(37,99,235,0.1)]">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-full bg-[#1e40af] text-white flex items-center justify-center shadow-md shadow-blue-900/20">
-                    <span class="material-symbols-outlined text-lg">lightbulb</span>
-                </div>
-                <span class="text-[#1e40af] font-bold text-[15px]">Smart Planner</span>
+        ${viewMode === 'month' ? `
+        <!-- ══ VISTA MESE ══ -->
+        <div style="padding:0 20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <button onclick="plannerChangeMonth(-1)"
+                        style="width:36px;height:36px;border-radius:12px;background:white;border:1px solid #EEF0F3;
+                               display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#374151;">chevron_left</span>
+                </button>
+                <span style="font-size:16px;font-weight:700;color:#1e3a8a;">${monthLabel}</span>
+                <button onclick="plannerChangeMonth(1)"
+                        style="width:36px;height:36px;border-radius:12px;background:white;border:1px solid #EEF0F3;
+                               display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#374151;">chevron_right</span>
+                </button>
             </div>
-            <p class="text-slate-600 text-[15px] font-medium leading-relaxed mb-4">
-                Hai ${upcomingTasksCount} compit${upcomingTasksCount === 1 ? 'o' : 'i'} per la prossima settimana. Vuoi anticiparne uno oggi?
-            </p>
-            <button class="text-[#1e40af] font-bold text-[13px] flex items-center gap-1 hover:gap-2 transition-all bg-transparent border-none cursor-pointer" onclick="navigate('planner')">
-                Vedi suggerimenti <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+            <button onclick="plannerBackToWeek()"
+                    style="width:100%;padding:10px;border-radius:16px;background:#EEF4FF;border:none;
+                           font-size:12px;font-weight:700;color:#2563EB;cursor:pointer;margin-bottom:16px;
+                           display:flex;align-items:center;justify-content:center;gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">view_week</span>
+                Torna alla vista settimana
             </button>
-        </div>
-        ` : ''}
-
-        <!-- Task List -->
-        <div class="flex flex-col gap-6 relative z-10">
-            ${dayTasks.length ? dayTasks.map(t => {
-                const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-                const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
-                const timeStr = timeMatch ? timeMatch[1] : '08:30';
-
-                if (t.done) {
-                    // Completata
-                    return `
-                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-100 opacity-60 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="w-[52px] h-[52px] shrink-0 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
-                            <span class="material-symbols-outlined text-[24px]">task_alt</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="text-slate-500 text-[15px] font-bold truncate line-through">${escapeHtml(t.subject)}</h3>
-                            <p class="text-slate-400 text-[13px] font-medium truncate mt-0.5 line-through">${escapeHtml(t.text)}</p>
-                        </div>
-                        <div class="shrink-0 text-slate-400 text-[11px] font-bold px-2">
-                            Fatto
-                        </div>
-                    </div>
-                    `;
-                } else if (isExam) {
-                    // Urgente/Verifica
-                    return `
-                    <div class="bg-red-50/50 border border-red-100 rounded-[32px] p-5 shadow-[0_8px_20px_-10px_rgba(239,68,68,0.15)] relative overflow-hidden cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-200/20 rounded-full blur-2xl"></div>
-                        <div class="flex justify-between items-center mb-1 relative z-10">
-                            <span class="text-red-600 text-[11px] font-bold">${timeStr}</span>
-                            <span class="material-symbols-outlined text-red-600 text-xl relative z-10">${getSubjectIcon(t.subject)}</span>
-                        </div>
-                        <h3 class="text-slate-900 text-lg font-bold mb-1 relative z-10">${escapeHtml(t.subject)}</h3>
-                        <p class="text-slate-500 text-sm mb-5 font-medium relative z-10">${escapeHtml(t.text)}</p>
-                        <div class="inline-block bg-red-100/80 text-red-700 text-[11px] font-bold px-3 py-1.5 rounded-full relative z-10">
-                            Urgente
-                        </div>
-                    </div>
-                    `;
-                } else {
-                    // Normale
-                    return `
-                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.06)] border border-slate-100 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                        <div class="w-[52px] h-[52px] shrink-0 bg-[#f4f7ff] rounded-2xl flex items-center justify-center text-[#1e40af]">
-                            <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(t.subject)}</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="text-slate-900 text-[15px] font-bold truncate">${escapeHtml(t.subject)}</h3>
-                            <p class="text-slate-500 text-[13px] font-medium truncate mt-0.5">${escapeHtml(t.text)}</p>
-                        </div>
-                        <div class="shrink-0 text-[#1e40af] text-[11px] font-bold px-2">
-                            ${timeStr}
-                        </div>
-                    </div>
-                    `;
-                }
-            }).join('') : `
-                <div class="bg-white rounded-[32px] p-12 text-center flex flex-col items-center gap-4 border border-slate-100 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.04)]">
-                    <span class="material-symbols-outlined text-[48px] text-slate-300">event_busy</span>
-                    <p class="text-slate-400 font-medium text-[15px]">Nessuna attività programmata</p>
+            ${monthTasks.length > 0 ? `
+                <div style="background:white;border-radius:24px;border:1px solid #EEF0F3;overflow:hidden;">
+                    ${monthTasks.map((t,i) => {
+                        const dateObj = new Date(t.due_date + 'T00:00:00');
+                        const dayN = dateObj.getDate();
+                        const dayW = dayLabels[dateObj.getDay()];
+                        const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text||'');
+                        return `
+                        <div onclick="state.selectedDate='${t.due_date}';state.plannerViewMode='week';state.plannerWeekOffset=Math.round((new Date('${t.due_date}T00:00:00')-new Date('${todayISO}T00:00:00'))/(7*86400000));scheduleRender(0);"
+                             style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;
+                                    border-bottom:${i<monthTasks.length-1?'1px solid #F1F5F9':'none'};
+                                    background:${t.due_date===todayISO?'#F0F7FF':'white'};">
+                            <div style="width:44px;flex-shrink:0;text-align:center;">
+                                <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;">${dayW}</div>
+                                <div style="font-size:18px;font-weight:800;color:${t.due_date===todayISO?'#2563EB':'#1F2937'};">${dayN}</div>
+                            </div>
+                            <div style="width:3px;height:40px;border-radius:2px;flex-shrink:0;
+                                        background:${isExam?'#EF4444':'#2563EB'};"></div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:13px;font-weight:700;color:#0F172A;white-space:nowrap;
+                                            overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.subject)}</div>
+                                <div style="font-size:11px;color:#6B7280;margin-top:1px;white-space:nowrap;
+                                            overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text)}</div>
+                            </div>
+                            ${isExam?`<span style="font-size:9px;font-weight:700;background:#FEE2E2;color:#DC2626;
+                                                  padding:3px 8px;border-radius:999px;flex-shrink:0;">VERIFICA</span>`:''}
+                        </div>`;
+                    }).join('')}
                 </div>
-            `}
+            ` : emptyState}
         </div>
 
-        <!-- Floating Action Buttons (FABs) -->
-        <div class="absolute bottom-28 right-5 flex flex-col gap-3 z-40">
-            <!-- Pulsante Storico/Undo (Viola) -->
-            <button onclick="showToast('Storico compiti in arrivo!', 'info')" class="w-[52px] h-[52px] rounded-full bg-[#4f46e5] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(79,70,229,0.3)] hover:scale-105 transition-transform active:scale-95 border-none cursor-pointer">
-                <span class="material-symbols-outlined text-[24px]">history</span>
+        ` : isSearching ? `
+        <!-- ══ RISULTATI RICERCA GLOBALE ══ -->
+        <div style="padding:0 20px;">
+            <div style="font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:0.08em;
+                        text-transform:uppercase;margin-bottom:12px;">
+                ${searchTasks.length} risultat${searchTasks.length===1?'o':'i'}
+            </div>
+            ${searchTasks.length > 0 ? searchTasks.map(renderTaskItem).join('') : emptyState}
+        </div>
+
+        ` : `
+        <!-- ══ VISTA SETTIMANA ══ -->
+
+        <!-- Navigazione settimana con frecce -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px;margin-bottom:10px;">
+            <button onclick="plannerChangeWeek(-1)"
+                    style="width:36px;height:36px;border-radius:12px;background:white;border:1px solid #EEF0F3;
+                           display:flex;align-items:center;justify-content:center;cursor:pointer;
+                           box-shadow:0 1px 4px -2px rgba(0,0,0,0.08);">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#374151;">chevron_left</span>
             </button>
-            
-            <!-- Pulsante Aggiungi (Blu) -->
-            <button onclick="showQuickAddTaskModal()" class="w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-[0_10px_25px_rgba(37,99,235,0.35)] hover:scale-105 transition-transform active:scale-95 border-none cursor-pointer">
-                <span class="material-symbols-outlined text-[26px]">add</span>
+            <span style="font-size:12px;font-weight:600;color:#6B7280;">${weekLabel}</span>
+            <button onclick="plannerChangeWeek(1)"
+                    style="width:36px;height:36px;border-radius:12px;background:white;border:1px solid #EEF0F3;
+                           display:flex;align-items:center;justify-content:center;cursor:pointer;
+                           box-shadow:0 1px 4px -2px rgba(0,0,0,0.08);">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#374151;">chevron_right</span>
             </button>
         </div>
-    </div>`;
+
+        <!-- Giorni della settimana — scroll orizzontale con oggi centrato -->
+        <div id="week-scroller"
+             style="display:flex;overflow-x:auto;gap:10px;padding:4px 20px 8px;
+                    scrollbar-width:none;-ms-overflow-style:none;margin-bottom:16px;">
+            ${weekDays.map(d => {
+                const isActive = d.iso === selectedDate;
+                const hasTasks = datesWithTasks.has(d.iso);
+                return `
+                <div onclick="state.selectedDate='${d.iso}';scheduleRender(0);"
+                     style="flex-shrink:0;width:64px;height:84px;border-radius:22px;cursor:pointer;
+                            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+                            transition:transform 0.15s ease;
+                            background:${isActive?'#2563EB':'white'};
+                            border:1px solid ${isActive?'#2563EB':'#EEF0F3'};
+                            box-shadow:${isActive?'0 8px 20px -4px rgba(37,99,235,0.35)':'0 2px 8px -4px rgba(0,0,0,0.06)'};
+                            transform:${isActive?'scale(1.04)':'scale(1)'};">
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+                                 color:${isActive?'rgba(255,255,255,0.75)':'#94A3B8'};">${d.label}</span>
+                    <span style="font-size:20px;font-weight:800;
+                                 color:${isActive?'white':'#1F2937'};">${d.dayNum}</span>
+                    <div style="width:5px;height:5px;border-radius:50%;margin-top:2px;
+                                background:${isActive?'rgba(255,255,255,0.7)':(hasTasks?'#2563EB':'transparent')};"></div>
+                </div>`;
+            }).join('')}
+        </div>
+
+        <!-- Lista compiti del giorno -->
+        <div style="padding:0 20px;">
+            ${dayTasks.length > 0 ? dayTasks.map(renderTaskItem).join('') : emptyState}
+        </div>
+        `}
+
+        <!-- ══ FAB ══ -->
+        <div style="position:fixed;bottom:100px;right:20px;display:flex;flex-direction:column;gap:12px;z-index:40;">
+            <button onclick="showToast('Storico compiti in arrivo!','info')"
+                    style="width:50px;height:50px;border-radius:50%;background:#4F46E5;color:white;border:none;
+                           display:flex;align-items:center;justify-content:center;cursor:pointer;
+                           box-shadow:0 8px 20px rgba(79,70,229,0.3);">
+                <span class="material-symbols-outlined" style="font-size:22px;">history</span>
+            </button>
+            <button onclick="showQuickAddTaskModal()"
+                    style="width:56px;height:56px;border-radius:50%;background:#2563EB;color:white;border:none;
+                           display:flex;align-items:center;justify-content:center;cursor:pointer;
+                           box-shadow:0 10px 25px rgba(37,99,235,0.35);">
+                <span class="material-symbols-outlined" style="font-size:26px;">add</span>
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Centra il giorno attivo nel week scroller dopo il render
+        (function centerActiveDay() {
+            const scroller = document.getElementById('week-scroller');
+            if (!scroller) return;
+            const active = scroller.querySelector('[style*="scale(1.04)"]');
+            if (!active) return;
+            const scrollerRect = scroller.getBoundingClientRect();
+            const activeRect = active.getBoundingClientRect();
+            const offset = activeRect.left - scrollerRect.left - (scrollerRect.width / 2) + (activeRect.width / 2);
+            scroller.scrollBy({ left: offset, behavior: 'smooth' });
+        })();
+    </script>`;
 }
+
 
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
