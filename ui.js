@@ -1408,8 +1408,7 @@ function renderCustomCalendar() {
 
         html += `
                     <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
-                         style="cursor:${isPast ? 'default' : 'pointer'};"
-                         ${isPast ? '' : `onclick="handleDayClick('${dateStr}')"`}>
+                         onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
                             <div class="day-number">${tempDate.getDate()}</div>
                             ${isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : ''}
@@ -1438,14 +1437,6 @@ function renderCustomCalendar() {
     const listHtml = renderCalendarWeekList(startDate);
     calendarEl.innerHTML = html + listHtml;
     if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
-
-    // Scroll today's cell into view (center it horizontally within the calendar)
-    requestAnimationFrame(() => {
-        const todayCell = calendarEl.querySelector('.calendar-day.today');
-        if (todayCell) {
-            todayCell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        }
-    });
 }
 
 function renderCalendarWeekList(weekStart) {
@@ -3003,11 +2994,9 @@ function renderWeeklyAgenda() {
                                class="agenda-search-input" 
                                placeholder="Cerca tra i tuoi compiti..." 
                                value="${state.agendaSearchQuery || ''}"
-                               oninput="handleAgendaSearch(event)"
-                               onfocus="document.getElementById('agenda-filters-row').style.maxHeight='60px'; document.getElementById('agenda-filters-row').style.opacity='1'; document.getElementById('agenda-filters-row').style.marginTop='10px';"
-                               onblur="if(!state.agendaSearchQuery){ setTimeout(()=>{ document.getElementById('agenda-filters-row').style.maxHeight='0'; document.getElementById('agenda-filters-row').style.opacity='0'; document.getElementById('agenda-filters-row').style.marginTop='0'; }, 200); }">
+                               oninput="handleAgendaSearch(event)">
                     </div>
-                    <div id="agenda-filters-row" class="agenda-filters-scroll" style="max-height:${state.agendaSearchQuery || state.agendaSearchSubject !== 'all' ? '60px' : '0'}; opacity:${state.agendaSearchQuery || state.agendaSearchSubject !== 'all' ? '1' : '0'}; margin-top:${state.agendaSearchQuery || state.agendaSearchSubject !== 'all' ? '10px' : '0'}; overflow:hidden; transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;">
+                    <div class="agenda-filters-scroll">
                         <div class="filter-chip ${filterSubject === 'all' ? 'active' : ''}" onclick="state.agendaSearchSubject='all'; state._filterJustTriggered=true; refreshAgenda();">
                             <i class="ph ph-rows"></i> Tutti
                         </div>
@@ -3026,9 +3015,9 @@ function renderWeeklyAgenda() {
     if (!filteredList.length) {
         return `
                 ${searchHeader}
-                <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px; font-family: 'Hanken Grotesk', sans-serif; background: rgba(0,0,0,0.02); border-radius: 14px;">
+                <div class="card" style="text-align: center; color: var(--text-dim); padding: 50px 20px; font-family: 'Inter', sans-serif; background: rgba(0,0,0,0.02); border: 1px dashed rgba(0,0,0,0.05);">
                     <i class="ph ph-magnifying-glass" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px; display: block;"></i>
-                    <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Nessun risultato</div>
+                    <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">// NESSUN RISULTATO</div>
                     <p style="font-size: 12px; margin-top: 4px; opacity: 0.6;">Prova a cambiare i filtri o la ricerca</p>
                 </div> `;
     }
@@ -3086,8 +3075,8 @@ function renderWeeklyAgenda() {
                 .trim();
 
             return `
-                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: background 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);">
-                        <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0; border-radius:4px 0 0 4px;"></div>
+                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: background 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);">
+                        <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
                         
                         <div class="agenda-task-main" style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
@@ -4728,20 +4717,6 @@ window._renderCore = function () {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
-
-        // Auto-scroll today's day card into center after planner renders
-        if (state.view === 'planner') {
-            requestAnimationFrame(() => {
-                const scroller = document.getElementById('planner-day-scroller');
-                const activeDay = scroller && scroller.querySelector('[data-today="true"], .bg-\[\#2563eb\]');
-                if (scroller && activeDay) {
-                    const scrollerRect = scroller.getBoundingClientRect();
-                    const activeRect = activeDay.getBoundingClientRect();
-                    const offset = activeRect.left - scrollerRect.left - (scrollerRect.width / 2) + (activeRect.width / 2);
-                    scroller.scrollLeft += offset;
-                }
-            });
-        }
     });
 };
 
@@ -5828,11 +5803,14 @@ function renderPlanner() {
     // Week Scroller Data
     const weekDays = [];
     const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    const startOfWeek = new Date(today);
+    const day = today.getDay();
+    const diff = today.getDate() - day; // Sunday is 0
+    startOfWeek.setDate(diff);
 
-    // Show 14 days: 3 days before today through 10 days after, so today is always visually centered
-    for (let i = -3; i <= 10; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() + i);
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
         const iso = getLocalDateString(d);
         weekDays.push({
             label: dayLabels[d.getDay()],
@@ -5882,13 +5860,12 @@ function renderPlanner() {
         </div>
 
         <!-- Date Selector (Scorrimento Orizzontale) -->
-        <div id="planner-day-scroller" class="flex overflow-x-auto no-scrollbar gap-3 -mx-5 px-5 mb-8 pb-2">
+        <div class="flex overflow-x-auto no-scrollbar gap-3 -mx-5 px-5 mb-8 pb-2">
             ${weekDays.map(d => {
                 const isActive = d.iso === selectedDate;
                 if (isActive) {
                     return `
                     <div class="shrink-0 w-[72px] h-[96px] bg-[#2563eb] rounded-[24px] shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] flex flex-col items-center justify-center gap-1 cursor-pointer scale-[1.02]"
-                         data-today="${d.isToday ? 'true' : 'false'}"
                          onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
                         <span class="text-[10px] font-bold text-white/80 uppercase tracking-wide">${d.label}</span>
                         <span class="text-[22px] font-extrabold text-white">${d.dayNum}</span>
@@ -5936,7 +5913,7 @@ function renderPlanner() {
                 if (t.done) {
                     // Completata
                     return `
-                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] opacity-60 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-100 opacity-60 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
                         <div class="w-[52px] h-[52px] shrink-0 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
                             <span class="material-symbols-outlined text-[24px]">task_alt</span>
                         </div>
@@ -5952,7 +5929,7 @@ function renderPlanner() {
                 } else if (isExam) {
                     // Urgente/Verifica
                     return `
-                    <div class="bg-red-50/50 rounded-[32px] p-5 shadow-[0_8px_20px_-10px_rgba(239,68,68,0.15)] relative overflow-hidden cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                    <div class="bg-red-50/50 border border-red-100 rounded-[32px] p-5 shadow-[0_8px_20px_-10px_rgba(239,68,68,0.15)] relative overflow-hidden cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
                         <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-200/20 rounded-full blur-2xl"></div>
                         <div class="flex justify-between items-center mb-1 relative z-10">
                             <span class="text-red-600 text-[11px] font-bold">${timeStr}</span>
@@ -5968,7 +5945,7 @@ function renderPlanner() {
                 } else {
                     // Normale
                     return `
-                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.06)] cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.06)] border border-slate-100 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
                         <div class="w-[52px] h-[52px] shrink-0 bg-[#f4f7ff] rounded-2xl flex items-center justify-center text-[#1e40af]">
                             <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(t.subject)}</span>
                         </div>
@@ -5983,7 +5960,7 @@ function renderPlanner() {
                     `;
                 }
             }).join('') : `
-                <div class="bg-white rounded-[32px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.04)]">
+                <div class="bg-white rounded-[32px] p-12 text-center flex flex-col items-center gap-4 border border-slate-100 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.04)]">
                     <span class="material-symbols-outlined text-[48px] text-slate-300">event_busy</span>
                     <p class="text-slate-400 font-medium text-[15px]">Nessuna attività programmata</p>
                 </div>
@@ -6032,113 +6009,117 @@ function renderProfile() {
     };
 
     return `
-    <div class="view profile-view pb-32 flex flex-col gap-6">
+    <div class="view profile-view pb-32 flex flex-col gap-6" style="padding: 0 20px;">
         
-        <header class="flex items-center gap-4 mb-4 pt-4">
-            <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-on-surface cursor-pointer hover:scale-105 transition-all liquid-shadow">
+        <header class="flex items-center gap-4 mb-4">
+            <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm border border-white/60">
                 <span class="material-symbols-outlined">arrow_back</span>
             </button>
             <div>
-                <h1 class="headline-lg text-on-surface" style="font-size:28px;">Profilo</h1>
-                <p class="body-md text-on-surface-variant/60 font-medium">Gestione account e impostazioni</p>
+                <h1 class="text-2xl font-bold text-slate-800">Profilo</h1>
+                <p class="text-sm text-slate-500 font-medium">Gestione account e impostazioni</p>
             </div>
         </header>
 
-        <div class="flex flex-col gap-3">
-            <h3 class="label-sm text-on-surface-variant/40 px-1">Connessioni</h3>
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
             
             <div class="grid grid-cols-2 gap-4">
-                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[28px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 liquid-shadow">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:rgba(16,185,129,0.1); color:#059669;">
-                        <span class="material-symbols-outlined text-[24px]">power</span>
+                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                        <span class="material-symbols-outlined text-[24px] font-light">power</span>
                     </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="label-sm text-on-surface-variant/40">DIDUP</span>
-                        <span class="text-[13px] font-extrabold tracking-wide" style="color:#059669;">COLLEGATO</span>
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
+                        <span class="text-[13px] font-extrabold text-emerald-600 tracking-wide">COLLEGATO</span>
                     </div>
                 </div>
 
-                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[28px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 liquid-shadow">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-300" style="background:${isGoogleConnected ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; color:${isGoogleConnected ? '#059669' : '#ef4444'};">
-                        <span class="material-symbols-outlined text-[24px]">calendar_today</span>
+                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
+                    <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'} flex items-center justify-center transition-colors duration-300">
+                        <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
                     </div>
                     <div class="flex flex-col gap-0.5">
-                        <span class="label-sm text-on-surface-variant/40">CALENDAR</span>
-                        <span class="text-[13px] font-extrabold tracking-wide" style="color:${isGoogleConnected ? '#059669' : '#ef4444'};">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
+                        <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-emerald-600' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-3">
-            <h3 class="label-sm text-on-surface-variant/40 px-1">Impostazioni Account</h3>
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
             
-            <div class="liquid-glass rounded-[28px] overflow-hidden flex flex-col liquid-shadow">
-                <div class="interactive-row flex items-center justify-between p-5 cursor-pointer hover:bg-white/60 transition-colors" onclick="showEditProfileModal()">
+            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showEditProfileModal()">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-2xl flex items-center justify-center" style="background:rgba(59,130,246,0.1); color:#2563eb;">
+                        <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Modifica Profilo</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
                 
-                <div class="interactive-row flex items-center justify-between p-5 cursor-pointer hover:bg-white/60 transition-colors" onclick="performArgoSync()">
+                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="performArgoSync()">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-2xl flex items-center justify-center" style="background:rgba(99,102,241,0.1); color:#6366f1;">
+                        <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">sync</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Forza Sync DidUp</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-3">
-            <h3 class="label-sm text-on-surface-variant/40 px-1">Altro</h3>
+        <div class="flex flex-col gap-4">
+            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Altro</h3>
             
-            <div class="liquid-glass rounded-[28px] overflow-hidden flex flex-col liquid-shadow">
-                <div class="interactive-row flex items-center justify-between p-5 cursor-pointer hover:bg-white/60 transition-colors" onclick="showToast('Notifiche in arrivo', 'info')">
+            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Notifiche in arrivo', 'info')">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-2xl flex items-center justify-center" style="background:rgba(249,115,22,0.1); color:#f97316;">
+                        <div class="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">notifications</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Notifiche</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Notifiche</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
                 
-                <div class="interactive-row flex items-center justify-between p-5 cursor-pointer hover:bg-white/60 transition-colors" onclick="showToast('Impostazioni privacy', 'info')">
+                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+
+                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Impostazioni privacy', 'info')">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-2xl flex items-center justify-center" style="background:rgba(20,184,166,0.1); color:#14b8a6;">
+                        <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 flex items-center justify-center">
                             <span class="material-symbols-outlined text-[18px]">lock</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-on-surface">Privacy & Security</span>
+                        <span class="text-[15px] font-semibold text-slate-800">Privacy & Security</span>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/30 text-[18px]">chevron_right</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <button onclick="mostraConfermaEsciUI()" class="w-full h-14 rounded-full liquid-glass flex items-center justify-center gap-2 font-bold text-base transition-all duration-200 hover:bg-red-500/10 active:scale-[0.97] liquid-shadow" style="color:#ef4444; border:1px solid rgba(239,68,68,0.2);">
+        <button onclick="mostraConfermaEsciUI()" class="mt-4 w-full h-14 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97] shadow-sm">
             <span class="material-symbols-outlined text-[20px]">logout</span>
             <span>Esci dall'Account</span>
         </button>
 
-        <div id="logout-modal" class="fixed inset-0 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]" style="background:rgba(15,23,42,0.3);">
-            <div class="liquid-glass border border-white/60 rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 deep-shadow" id="modal-box">
-                <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2);">
+        <div id="logout-modal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]">
+            <div class="bg-white/70 backdrop-blur-xl border border-white rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 shadow-2xl" id="modal-box">
+                <div class="w-14 h-14 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center mx-auto border border-red-500/20">
                     <span class="material-symbols-outlined text-[28px]">logout</span>
                 </div>
                 <div>
-                    <h4 class="text-xl font-bold text-on-surface">Sei sicuro di voler uscire?</h4>
-                    <p class="body-md text-on-surface-variant/60 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
+                    <h4 class="text-xl font-bold text-slate-800">Sei sicuro di voler uscire?</h4>
+                    <p class="text-sm text-slate-500 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
                 </div>
                 <div class="flex gap-3 mt-2">
-                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full font-bold text-sm transition-colors liquid-glass liquid-shadow text-on-surface">Annulla</button>
-                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full font-bold text-sm transition-colors" style="background:#ef4444; color:#fff; border:none;">Esci</button>
+                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full bg-slate-100/80 border border-slate-200/50 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors shadow-sm">Annulla</button>
+                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 border border-red-400/50">Esci</button>
                 </div>
             </div>
         </div>
