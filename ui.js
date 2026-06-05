@@ -5820,84 +5820,165 @@ function renderPlanner() {
         });
     }
 
-    // Tasks for the smart timeline (using today as default if none selected)
     const selectedDate = state.selectedDate || todayISO;
-    const dayTasks = (state.tasks || []).filter(t => t.due_date === selectedDate);
+    const query = (state.agendaSearchQuery || '').toLowerCase().trim();
+
+    // Filter day tasks with query
+    const dayTasks = (state.tasks || []).filter(t => {
+        if (t.due_date !== selectedDate) return false;
+        if (t.subject === 'QUEST') return false; // Hide system quest tasks if any
+        if (!query) return true;
+        return (t.subject || '').toLowerCase().includes(query) || (t.text || '').toLowerCase().includes(query);
+    });
+
+    // Upcoming tasks for the next 7 days (not completed)
+    const upcomingTasksCount = (state.tasks || []).filter(t => {
+        if (t.done) return false;
+        const d = parseLocalDate(t.due_date);
+        if (isNaN(d.getTime())) return false;
+        const diffTime = d - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 && diffDays <= 7;
+    }).length;
 
     return `
-    <div class="view planner-view pb-32">
-        <header class="flex justify-between items-center mb-6 pt-4">
-            <h1 class="text-primary font-bold text-xl">Agenda</h1>
-            <button class="text-primary font-bold text-[12px] uppercase tracking-widest hover:opacity-80 transition-opacity" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
+    <div class="view planner-view pb-32 pt-8 px-5 flex flex-col">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-end mb-6">
+            <h1 class="text-[#1e40af] text-[28px] font-extrabold tracking-tight">Agenda</h1>
+            <button class="text-[#1e40af] text-[11px] font-bold tracking-widest uppercase mb-2 bg-transparent border-none cursor-pointer" onclick="state.selectedDate='${todayISO}'; scheduleRender(0);">Oggi</button>
         </header>
 
-        <!-- Week Scroller -->
-        <section class="mb-8">
-            <div class="flex overflow-x-auto no-scrollbar gap-3 py-2">
-                ${weekDays.map(d => `
-                    <div class="flex-none w-14 h-20 flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-all duration-300 ${d.iso === selectedDate ? 'bg-primary text-on-primary active-liquid-shadow scale-105' : 'liquid-glass liquid-shadow hover:translate-y-[-2px]'}"
-                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
-                        <span class="text-[10px] uppercase mb-1 font-bold ${d.iso === selectedDate ? 'opacity-80' : 'text-on-surface-variant/60'}">${d.label}</span>
-                        <span class="text-[18px] font-bold">${d.dayNum}</span>
-                        ${d.isToday && d.iso !== selectedDate ? '<div class="h-1 w-1 bg-primary rounded-full mt-1"></div>' : ''}
-                        ${d.iso === selectedDate ? '<div class="h-1 w-1 bg-white rounded-full mt-1"></div>' : ''}
-                    </div>
-                `).join('')}
-            </div>
-        </section>
+        <!-- Search Bar -->
+        <div class="relative mb-8">
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+            <input type="text" placeholder="Cerca compiti..." 
+                   class="w-full h-[52px] pl-12 pr-4 rounded-full bg-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.05)] border border-slate-100 text-sm font-medium text-slate-700 outline-none focus:border-blue-200 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400 agenda-search-input"
+                   value="${state.agendaSearchQuery || ''}"
+                   oninput="handleAgendaSearch(event)">
+        </div>
 
-        <!-- Smart Agenda Timeline -->
-        <section class="flex flex-col gap-6">
+        <!-- Date Selector (Scorrimento Orizzontale) -->
+        <div class="flex overflow-x-auto no-scrollbar gap-3 -mx-5 px-5 mb-8 pb-2">
+            ${weekDays.map(d => {
+                const isActive = d.iso === selectedDate;
+                if (isActive) {
+                    return `
+                    <div class="shrink-0 w-[72px] h-[96px] bg-[#2563eb] rounded-[24px] shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] flex flex-col items-center justify-center gap-1 cursor-pointer scale-[1.02]"
+                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
+                        <span class="text-[10px] font-bold text-white/80 uppercase tracking-wide">${d.label}</span>
+                        <span class="text-[22px] font-extrabold text-white">${d.dayNum}</span>
+                        <div class="w-1.5 h-1.5 rounded-full bg-white mt-1"></div>
+                    </div>
+                    `;
+                } else {
+                    return `
+                    <div class="shrink-0 w-[72px] h-[96px] bg-white rounded-[24px] shadow-[0_4px_20px_-8px_rgba(0,0,0,0.06)] border border-slate-100 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                         onclick="state.selectedDate='${d.iso}'; scheduleRender(0);">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">${d.label}</span>
+                        <span class="text-[22px] font-extrabold text-slate-800">${d.dayNum}</span>
+                        ${d.isToday ? '<div class="w-1.5 h-1.5 rounded-full bg-[#2563eb] mt-1"></div>' : ''}
+                    </div>
+                    `;
+                }
+            }).join('')}
+        </div>
+
+        <!-- Smart Planner Card -->
+        ${upcomingTasksCount > 0 ? `
+        <div class="bg-[#f4f7ff] border border-blue-100/50 rounded-[32px] p-6 mb-8 shadow-[0_10px_30px_-15px_rgba(37,99,235,0.1)]">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-[#1e40af] text-white flex items-center justify-center shadow-md shadow-blue-900/20">
+                    <span class="material-symbols-outlined text-lg">lightbulb</span>
+                </div>
+                <span class="text-[#1e40af] font-bold text-[15px]">Smart Planner</span>
+            </div>
+            <p class="text-slate-600 text-[15px] font-medium leading-relaxed mb-4">
+                Hai ${upcomingTasksCount} compit${upcomingTasksCount === 1 ? 'o' : 'i'} per la prossima settimana. Vuoi anticiparne uno oggi?
+            </p>
+            <button class="text-[#1e40af] font-bold text-[13px] flex items-center gap-1 hover:gap-2 transition-all bg-transparent border-none cursor-pointer" onclick="navigate('planner')">
+                Vedi suggerimenti <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </button>
+        </div>
+        ` : ''}
+
+        <!-- Task List -->
+        <div class="flex flex-col gap-6 relative z-10">
             ${dayTasks.length ? dayTasks.map(t => {
                 const isExam = t.isExam || /verifica|interrogazione|test|esame/i.test(t.text);
-                const colorClass = isExam ? 'error' : 'primary';
                 const timeMatch = (t.text || '').match(/(\d{1,2}:\d{2})/);
                 const timeStr = timeMatch ? timeMatch[1] : '08:30';
 
-                return `
-                <div class="flex gap-4">
-                    <div class="w-12 flex flex-col items-end pt-3 shrink-0">
-                        <span class="text-[12px] text-on-surface-variant font-bold">${timeStr}</span>
-                        <span class="text-[10px] text-on-surface-variant/40 mt-0.5">09:30</span>
-                    </div>
-                    <div class="flex-1 liquid-glass rounded-[28px] p-5 relative group hover:shadow-xl transition-all duration-300 liquid-shadow overflow-visible ${isExam ? 'bg-error-container/5 border-error/10' : ''}">
-                        <div class="absolute left-0 top-4 bottom-4 w-1 bg-${colorClass} rounded-full"></div>
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex flex-col pl-3">
-                                <span class="text-[10px] text-${colorClass} uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
-                                    ${isExam ? '<span class="material-symbols-outlined text-[12px]">warning</span> SIMULAZIONE' : 'LEZIONE'}
-                                </span>
-                                <h3 class="title-md text-on-surface">${t.subject}</h3>
-                            </div>
-                            <div class="w-10 h-10 rounded-2xl bg-${colorClass}/10 flex items-center justify-center text-${colorClass} border border-white/40 shadow-sm shrink-0">
-                                <span class="material-symbols-outlined text-[22px]">${getSubjectIcon(t.subject)}</span>
-                            </div>
+                if (t.done) {
+                    // Completata
+                    return `
+                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-100 opacity-60 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="w-[52px] h-[52px] shrink-0 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
+                            <span class="material-symbols-outlined text-[24px]">task_alt</span>
                         </div>
-                        <p class="body-md text-on-surface-variant/70 mb-3 pl-3">${t.text}</p>
-                        <div class="flex items-center gap-2 pl-3">
-                            <span class="material-symbols-outlined text-[16px] text-${colorClass}/60">location_on</span>
-                            <span class="body-md text-[13px] text-on-surface-variant">Aula 3B</span>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-slate-500 text-[15px] font-bold truncate line-through">${escapeHtml(t.subject)}</h3>
+                            <p class="text-slate-400 text-[13px] font-medium truncate mt-0.5 line-through">${escapeHtml(t.text)}</p>
                         </div>
-                        ${!t.done && !isExam ? `
-                            <button class="w-full liquid-pill py-3 px-4 mt-4 flex items-center justify-center gap-2 hover:bg-white/80 transition-all text-primary font-bold text-[14px]" onclick="toggleTask('${t.id}')">
-                                <span class="material-symbols-outlined text-[20px]">check_circle</span>
-                                <span>Segna completato</span>
-                            </button>
-                        ` : t.done ? `
-                             <div class="w-full py-3 px-4 mt-4 flex items-center justify-center gap-2 text-green font-bold text-[14px]">
-                                <span class="material-symbols-outlined text-[20px]">task_alt</span>
-                                <span>Completato</span>
-                            </div>
-                        ` : ''}
+                        <div class="shrink-0 text-slate-400 text-[11px] font-bold px-2">
+                            Fatto
+                        </div>
                     </div>
-                </div>`;
+                    `;
+                } else if (isExam) {
+                    // Urgente/Verifica
+                    return `
+                    <div class="bg-red-50/50 border border-red-100 rounded-[32px] p-5 shadow-[0_8px_20px_-10px_rgba(239,68,68,0.15)] relative overflow-hidden cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-200/20 rounded-full blur-2xl"></div>
+                        <div class="flex justify-between items-center mb-1 relative z-10">
+                            <span class="text-red-600 text-[11px] font-bold">${timeStr}</span>
+                            <span class="material-symbols-outlined text-red-600 text-xl relative z-10">${getSubjectIcon(t.subject)}</span>
+                        </div>
+                        <h3 class="text-slate-900 text-lg font-bold mb-1 relative z-10">${escapeHtml(t.subject)}</h3>
+                        <p class="text-slate-500 text-sm mb-5 font-medium relative z-10">${escapeHtml(t.text)}</p>
+                        <div class="inline-block bg-red-100/80 text-red-700 text-[11px] font-bold px-3 py-1.5 rounded-full relative z-10">
+                            Urgente
+                        </div>
+                    </div>
+                    `;
+                } else {
+                    // Normale
+                    return `
+                    <div class="bg-white rounded-[32px] p-4 flex items-center gap-4 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.06)] border border-slate-100 cursor-pointer" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="w-[52px] h-[52px] shrink-0 bg-[#f4f7ff] rounded-2xl flex items-center justify-center text-[#1e40af]">
+                            <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(t.subject)}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-slate-900 text-[15px] font-bold truncate">${escapeHtml(t.subject)}</h3>
+                            <p class="text-slate-500 text-[13px] font-medium truncate mt-0.5">${escapeHtml(t.text)}</p>
+                        </div>
+                        <div class="shrink-0 text-[#1e40af] text-[11px] font-bold px-2">
+                            ${timeStr}
+                        </div>
+                    </div>
+                    `;
+                }
             }).join('') : `
-                <div class="liquid-glass rounded-[40px] p-12 text-center flex flex-col items-center gap-4">
-                    <span class="material-symbols-outlined text-[48px] text-on-surface-variant/20">event_busy</span>
-                    <p class="body-lg text-on-surface-variant/40 font-medium">Nessuna attività programmata</p>
+                <div class="bg-white rounded-[32px] p-12 text-center flex flex-col items-center gap-4 border border-slate-100 shadow-[0_4px_25px_-10px_rgba(0,0,0,0.04)]">
+                    <span class="material-symbols-outlined text-[48px] text-slate-300">event_busy</span>
+                    <p class="text-slate-400 font-medium text-[15px]">Nessuna attività programmata</p>
                 </div>
             `}
-        </section>
+        </div>
+
+        <!-- Floating Action Buttons (FABs) -->
+        <div class="absolute bottom-28 right-5 flex flex-col gap-3 z-40">
+            <!-- Pulsante Storico/Undo (Viola) -->
+            <button onclick="showToast('Storico compiti in arrivo!', 'info')" class="w-[52px] h-[52px] rounded-full bg-[#4f46e5] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(79,70,229,0.3)] hover:scale-105 transition-transform active:scale-95 border-none cursor-pointer">
+                <span class="material-symbols-outlined text-[24px]">history</span>
+            </button>
+            
+            <!-- Pulsante Aggiungi (Blu) -->
+            <button onclick="showQuickAddTaskModal()" class="w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-[0_10px_25px_rgba(37,99,235,0.35)] hover:scale-105 transition-transform active:scale-95 border-none cursor-pointer">
+                <span class="material-symbols-outlined text-[26px]">add</span>
+            </button>
+        </div>
     </div>`;
 }
 
@@ -5928,7 +6009,7 @@ function renderProfile() {
     };
 
     return `
-    <div class="view profile-view pb-32 pt-6 px-5 flex flex-col gap-6">
+    <div class="view profile-view pb-32 flex flex-col gap-6" style="padding: 0 20px;">
         
         <header class="flex items-center gap-4 mb-4">
             <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm border border-white/60">
