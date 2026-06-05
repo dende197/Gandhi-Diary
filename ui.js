@@ -6042,22 +6042,22 @@ function renderPlanner() {
     const sharedChipBase = 'flex-shrink:0;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:1px solid ';
 
     return `
-    <div class="view planner-view pb-32" style="
-        background-color:#f8fafc;
-        background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.5) 0%,transparent 40%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.5) 0%,transparent 40%);
-        background-attachment:fixed;min-height:100vh;padding:0 20px;
-    ">
+    <main class="view planner-view pb-32 pt-6 view-fullbleed font-sans text-[#1F2937] antialiased" style="min-height:100vh;">
+        <div style="padding: 0 24px;">
 
-        <!-- HEADER -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:32px 0 16px;">
-            <h1 style="font-size:28px;font-weight:800;color:#1e40af;letter-spacing:-0.02em;margin:0;">Agenda</h1>
-            <button onclick="
-                state.plannerMonthView=!state.plannerMonthView;
-                if(state.plannerMonthView){const d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}
-                scheduleRender(0);" style="font-size:13px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.5);padding:6px 14px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">
-                ${headerMonthLabel} ${selDateObj.getFullYear()} ${showMonthView ? '↑' : '↓'}
-            </button>
-        </header>
+            <!-- HEADER -->
+            <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:16px 0 16px;">
+                <div style="display:flex;align-items:flex-end;gap:12px;">
+                    <h1 style="font-size:28px;font-weight:800;color:#1e40af;letter-spacing:-0.02em;margin:0;">Agenda</h1>
+                    <button onclick="state.selectedDate='${todayISO}';state.plannerWeekOffset=0;state.plannerMonthView=false;scheduleRender(0);" style="font-size:11px;font-weight:800;color:#1e40af;background:none;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:0.1em;padding:0 0 4px;font-family:'Hanken Grotesk',sans-serif;">Oggi</button>
+                </div>
+                <button onclick="
+                    state.plannerMonthView=!state.plannerMonthView;
+                    if(state.plannerMonthView){const d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}
+                    scheduleRender(0);" style="font-size:13px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.5);padding:6px 14px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">
+                    ${headerMonthLabel} ${selDateObj.getFullYear()} ${showMonthView ? '↑' : '↓'}
+                </button>
+            </header>
 
         <!-- MONTH VIEW -->
         ${showMonthView ? `
@@ -6180,6 +6180,8 @@ function renderPlanner() {
                 </div>`}
         </div>` : ''}
 
+        </div>
+
         <!-- FABs -->
         <div style="position:fixed;bottom:92px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:40;">
             <button onclick="showToast('Storico in arrivo','info')" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.28);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
@@ -6189,7 +6191,7 @@ function renderPlanner() {
                 <span class="material-symbols-outlined" style="font-size:24px;">add</span>
             </button>
         </div>
-    </div>`;
+    </main>`;
 }
 
 
