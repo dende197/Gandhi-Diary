@@ -4209,149 +4209,177 @@ function toggleTask(id) {
 }
 function showQuickAddTaskModal() {
     const preselectedDate = state.selectedDate || getLocalDateString();
-    const subjects = [...new Set((state.tasks||[]).map(t => t.subject||t.materia||'').filter(Boolean))].sort();
+    const allTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST' && !t.isExam);
+    const examTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST' && t.isExam);
+    const subjects = [...new Set((state.tasks||[]).map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
     const subjectOptions = subjects.length > 0
-        ? subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
+        ? subjects.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
         : '<option value="Generale">Generale</option>';
 
-    const sharedInputStyle = `width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#1e293b;font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;`;
-    const labelStyle = `font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:block;`;
+    // Build list of existing pending tasks grouped by subject for quick-pick
+    const pendingBySubj = {};
+    allTasks.filter(t=>!t.done && t.due_date >= getLocalDateString()).forEach(t=>{
+        const s = t.subject||t.materia||'Generale';
+        if (!pendingBySubj[s]) pendingBySubj[s] = [];
+        pendingBySubj[s].push(t);
+    });
+    const pendingSubjs = Object.keys(pendingBySubj).sort();
+
+    const inp = `width:100%;padding:13px 16px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#1e293b;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;`;
+    const lbl = `font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;`;
 
     showModal(`
-        <div style="padding:24px 24px 28px;background:linear-gradient(145deg,#f8fafc,#eef2f6);border-radius:32px;font-family:'Hanken Grotesk',sans-serif;">
-
-            <!-- Header -->
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="padding:20px 20px 24px;background:linear-gradient(145deg,#f8fafc,#eef2f6);border-radius:28px;font-family:'Hanken Grotesk',sans-serif;max-height:85vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
-                    <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Aggiungi</h2>
-                    <p style="margin:0;font-size:12px;color:#94a3b8;font-weight:500;margin-top:2px;">Compito o verifica</p>
+                    <h2 style="margin:0;font-size:19px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Aggiungi</h2>
+                    <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Compito, verifica o impegno</p>
                 </div>
-                <button onclick="closeModal()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.8);border:1px solid rgba(226,232,240,0.6);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+                <button onclick="closeModal()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.8);border:1px solid rgba(226,232,240,0.6);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:17px;">close</span>
                 </button>
             </div>
 
-            <!-- Tipo tab -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;" id="tipo-tabs">
-                <button id="tab-compito" onclick="selectTipoTab('compito')" style="padding:12px;border-radius:14px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;transition:all 0.2s;">
-                    📚 Compito
-                </button>
-                <button id="tab-verifica" onclick="selectTipoTab('verifica')" style="padding:12px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;transition:all 0.2s;">
-                    ✏️ Verifica
+            <!-- Tab: Nuovo / Da assegnati -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:16px;">
+                <button id="qs-tab-new" onclick="qsSelectTab('new')" style="padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">✏️ Nuovo</button>
+                <button id="qs-tab-existing" onclick="qsSelectTab('existing')" style="padding:10px 4px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">📋 Assegnati</button>
+                <button id="qs-tab-verifica" onclick="qsSelectTab('verifica')" style="padding:10px 4px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">✏️ Verifica</button>
+            </div>
+
+            <!-- PANEL: Nuovo compito -->
+            <div id="qs-panel-new" style="display:flex;flex-direction:column;gap:13px;">
+                <div><label style="${lbl}">Materia</label>
+                    <select id="qs-subject" style="${inp}-webkit-appearance:none;">${subjectOptions}</select></div>
+                <div><label style="${lbl}">Descrizione</label>
+                    <textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="2"
+                        style="${inp}resize:none;line-height:1.5;"></textarea></div>
+                <div><label style="${lbl}">Data</label>
+                    <input id="qs-date" type="date" value="${preselectedDate}" style="${inp}" /></div>
+                <button onclick="qsSubmitNew()" style="width:100%;height:50px;border-radius:14px;border:none;background:#2563eb;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">add_task</span>Aggiungi compito
                 </button>
             </div>
 
-            <!-- Form -->
-            <div style="display:flex;flex-direction:column;gap:16px;">
-
-                <!-- Materia -->
-                <div>
-                    <label style="${labelStyle}">Materia</label>
-                    <select id="qs-subject" style="${sharedInputStyle}-webkit-appearance:none;">
-                        ${subjectOptions}
-                    </select>
+            <!-- PANEL: Compiti assegnati (clona un compito esistente su nuova data) -->
+            <div id="qs-panel-existing" style="display:none;flex-direction:column;gap:10px;">
+                <p style="font-size:12px;color:#64748b;font-weight:500;margin:0 0 4px;">Seleziona un compito già assegnato e scegli quando studiarlo.</p>
+                ${pendingSubjs.length > 0 ? pendingSubjs.map(s => `
+                    <div style="margin-bottom:4px;">
+                        <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 5px;">${escapeHtml(s)}</p>
+                        ${pendingBySubj[s].map(t => `
+                        <div onclick="qsPickExisting('${escapeJsSingleQuote(t.id)}')" id="qs-ex-${escapeHtml(t.id)}" style="background:white;border-radius:14px;padding:11px 14px;margin-bottom:6px;border:1px solid rgba(226,232,240,0.8);cursor:pointer;display:flex;flex-direction:column;gap:2px;">
+                            <span style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
+                            <span style="font-size:11px;color:#94a3b8;">Scadenza: ${t.due_date||'—'}</span>
+                        </div>`).join('')}
+                    </div>`).join('') : '<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
+                <!-- Date picker for existing task -->
+                <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid rgba(226,232,240,0.6);">
+                    <label style="${lbl}">Quando lo studi?</label>
+                    <input id="qs-existing-date" type="date" value="${preselectedDate}" style="${inp}" />
+                    <button onclick="qsSubmitExisting()" style="width:100%;height:48px;border-radius:14px;border:none;background:#2563eb;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
                 </div>
+            </div>
 
-                <!-- Descrizione -->
-                <div>
-                    <label style="${labelStyle}" id="qs-desc-label">Descrizione compito</label>
-                    <textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49, capitoli 3-5..." rows="2"
-                        style="${sharedInputStyle}resize:none;line-height:1.5;"></textarea>
-                </div>
-
-                <!-- Data -->
-                <div>
-                    <label style="${labelStyle}">Data di consegna</label>
-                    <input id="qs-date" type="date" value="${preselectedDate}"
-                        style="${sharedInputStyle}" />
-                </div>
-
-                <!-- Tipo verifica (visibile solo in modalità verifica) -->
-                <div id="qs-tipo-row" style="display:none;">
-                    <label style="${labelStyle}">Tipo</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-                        <button id="qs-tipo-scritta" onclick="selectQsTipo('scritta')" style="padding:10px 6px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Scritta</button>
-                        <button id="qs-tipo-orale" onclick="selectQsTipo('orale')" style="padding:10px 6px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Orale</button>
-                        <button id="qs-tipo-pratica" onclick="selectQsTipo('pratica')" style="padding:10px 6px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Pratica</button>
+            <!-- PANEL: Verifica -->
+            <div id="qs-panel-verifica" style="display:none;flex-direction:column;gap:13px;">
+                <div><label style="${lbl}">Materia</label>
+                    <select id="qs-v-subject" style="${inp}-webkit-appearance:none;">${subjectOptions}</select></div>
+                <div><label style="${lbl}">Argomenti</label>
+                    <textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2"
+                        style="${inp}resize:none;line-height:1.5;"></textarea></div>
+                <div><label style="${lbl}">Tipo</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                        <button id="qs-vt-scritta" onclick="qsSelectVTipo('scritta')" style="padding:9px 4px;border-radius:11px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Scritta</button>
+                        <button id="qs-vt-orale" onclick="qsSelectVTipo('orale')" style="padding:9px 4px;border-radius:11px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Orale</button>
+                        <button id="qs-vt-pratica" onclick="qsSelectVTipo('pratica')" style="padding:9px 4px;border-radius:11px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Pratica</button>
                     </div>
                 </div>
+                <div><label style="${lbl}">Data</label>
+                    <input id="qs-v-date" type="date" value="${preselectedDate}" style="${inp}" /></div>
+                <button onclick="qsSubmitVerifica()" style="width:100%;height:50px;border-radius:14px;border:none;background:#dc2626;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:18px;">warning</span>Aggiungi verifica
+                </button>
             </div>
-
-            <!-- Submit -->
-            <button onclick="submitQuickAddTask()" style="width:100%;margin-top:20px;height:52px;border-radius:16px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 8px 20px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" id="qs-submit-btn">
-                <span class="material-symbols-outlined" style="font-size:20px;">add_task</span>
-                Aggiungi alla Agenda
-            </button>
         </div>
     `);
 
-    // State per il modal
-    window._qsTipo = 'compito';
-    window._qsVerificaTipo = 'scritta';
+    // ── Modal state ──────────────────────────────────────────────
+    window._qsCurrentTab = 'new';
+    window._qsPickedTaskId = null;
+    window._qsVTipo = 'scritta';
 
-    window.selectTipoTab = function(tipo) {
-        window._qsTipo = tipo;
-        const isVerifica = tipo === 'verifica';
-        const tabC = document.getElementById('tab-compito');
-        const tabV = document.getElementById('tab-verifica');
-        const tipoRow = document.getElementById('qs-tipo-row');
-        const descLabel = document.getElementById('qs-desc-label');
-        const textarea = document.getElementById('qs-text');
-        if (tabC && tabV) {
-            const activeStyle = 'padding:12px;border-radius:14px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-            const inactiveStyle = 'padding:12px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-            tabC.style.cssText = isVerifica ? inactiveStyle : activeStyle;
-            tabV.style.cssText = isVerifica ? activeStyle : inactiveStyle;
-        }
-        if (tipoRow) tipoRow.style.display = isVerifica ? 'block' : 'none';
-        if (descLabel) descLabel.textContent = isVerifica ? 'Argomenti da studiare' : 'Descrizione compito';
-        if (textarea) textarea.placeholder = isVerifica ? 'Es. Capitoli 3-5, derivate...' : 'Es. Esercizi pag. 47-49...';
-    };
+    const inactiveTab = 'padding:10px 4px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+    const activeTab   = 'padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+    const activeTabRed= 'padding:10px 4px;border-radius:12px;border:2px solid #dc2626;background:#dc2626;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
 
-    window.selectQsTipo = function(tipo) {
-        window._qsVerificaTipo = tipo;
-        ['scritta','orale','pratica'].forEach(t => {
-            const btn = document.getElementById(`qs-tipo-${t}`);
-            if (!btn) return;
-            btn.style.cssText = t === tipo
-                ? 'padding:10px 6px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;'
-                : 'padding:10px 6px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+    window.qsSelectTab = function(tab) {
+        window._qsCurrentTab = tab;
+        ['new','existing','verifica'].forEach(t => {
+            const btn = document.getElementById('qs-tab-'+t);
+            const panel = document.getElementById('qs-panel-'+t);
+            if (!btn || !panel) return;
+            btn.style.cssText = t === tab ? (t==='verifica' ? activeTabRed : activeTab) : inactiveTab;
+            panel.style.display = t === tab ? 'flex' : 'none';
         });
     };
 
-    window.submitQuickAddTask = function() {
+    window.qsPickExisting = function(taskId) {
+        window._qsPickedTaskId = taskId;
+        // Highlight selection
+        document.querySelectorAll('[id^="qs-ex-"]').forEach(el => {
+            el.style.border = '1px solid rgba(226,232,240,0.8)';
+            el.style.background = 'white';
+        });
+        const el = document.getElementById('qs-ex-'+taskId);
+        if (el) { el.style.border = '2px solid #2563eb'; el.style.background = 'rgba(239,246,255,0.6)'; }
+        const row = document.getElementById('qs-existing-date-row');
+        if (row) row.style.display = 'flex';
+    };
+
+    window.qsSelectVTipo = function(tipo) {
+        window._qsVTipo = tipo;
+        ['scritta','orale','pratica'].forEach(t => {
+            const btn = document.getElementById('qs-vt-'+t);
+            if (!btn) return;
+            btn.style.cssText = t === tipo
+                ? 'padding:9px 4px;border-radius:11px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;'
+                : 'padding:9px 4px;border-radius:11px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        });
+    };
+
+    window.qsSubmitNew = function() {
         const subject = document.getElementById('qs-subject')?.value?.trim() || 'Generale';
         const text    = document.getElementById('qs-text')?.value?.trim() || '';
         const date    = document.getElementById('qs-date')?.value || getLocalDateString();
-        const isVerifica = window._qsTipo === 'verifica';
+        if (!text) { const el = document.getElementById('qs-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
+        const r = applyImmediateCalendarAction({type:'add',missing:[],subject,text,date,time:'',isExam:false});
+        if (r.ok) { closeModal(); state.selectedDate=date; state._forceRender=true; showToast('Compito aggiunto!','success'); scheduleRender(0); }
+        else showToast('Errore aggiunta','error');
+    };
 
-        if (!text) {
-            const el = document.getElementById('qs-text');
-            if (el) { el.style.border = '2px solid #ef4444'; el.focus(); }
-            return;
-        }
-        if (!date) { showToast('Seleziona una data', 'warning'); return; }
+    window.qsSubmitExisting = function() {
+        if (!window._qsPickedTaskId) { showToast('Seleziona un compito','warning'); return; }
+        const date = document.getElementById('qs-existing-date')?.value || getLocalDateString();
+        const orig = (state.tasks||[]).find(t=>t.id===window._qsPickedTaskId);
+        if (!orig) { showToast('Compito non trovato','error'); return; }
+        const r = applyImmediateCalendarAction({type:'add',missing:[],subject:orig.subject||'Generale',text:orig.text||'',date,time:'',isExam:false});
+        if (r.ok) { closeModal(); state.selectedDate=date; state._forceRender=true; showToast('Compito aggiunto!','success'); scheduleRender(0); }
+        else showToast('Errore aggiunta','error');
+    };
 
-        const fullText = isVerifica
-            ? `${window._qsVerificaTipo.charAt(0).toUpperCase() + window._qsVerificaTipo.slice(1)} · ${text}`
-            : text;
-
-        const result = applyImmediateCalendarAction({
-            type: 'add', missing: [],
-            subject, text: fullText, date,
-            time: '', isExam: isVerifica
-        });
-
-        if (result.ok) {
-            closeModal();
-            state.selectedDate = date;
-            showToast(`${isVerifica ? 'Verifica' : 'Compito'} aggiunto!`, 'success');
-            scheduleRender(0);
-        } else {
-            showToast('Errore nell\'aggiunta del compito', 'error');
-        }
+    window.qsSubmitVerifica = function() {
+        const subject = document.getElementById('qs-v-subject')?.value?.trim() || 'Generale';
+        const text    = document.getElementById('qs-v-text')?.value?.trim() || '';
+        const date    = document.getElementById('qs-v-date')?.value || getLocalDateString();
+        if (!text) { const el = document.getElementById('qs-v-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
+        const fullText = `${window._qsVTipo.charAt(0).toUpperCase()+window._qsVTipo.slice(1)} · ${text}`;
+        const r = applyImmediateCalendarAction({type:'add',missing:[],subject,text:fullText,date,time:'',isExam:true});
+        if (r.ok) { closeModal(); state.selectedDate=date; state._forceRender=true; showToast('Verifica aggiunta!','success'); scheduleRender(0); }
+        else showToast('Errore aggiunta','error');
     };
 }
+
 function showAddRegistroTaskModal() {
     const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
     const subjectOptions = subjects.length > 0
@@ -4777,13 +4805,18 @@ window._renderCore = function () {
     // Deduplicate: skip full re-render if same view + same data counts + same AI state
     const taskCount = (state.tasks || []).length;
     const votiCount = (state.voti || []).length;
+    const plannerKey = state.view === 'planner'
+        ? (state.selectedDate||'')+(state.plannerWeekOffset||0)+(state.plannerMonthView||false)+(state.plannerMonthViewYear||0)+(state.plannerMonthViewMonth||0)+(state.plannerSearchOpen||false)+(state.agendaSearchQuery||'')+(state.agendaSearchSubject||'')
+        : '';
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
         _lastRenderedTaskCount === taskCount &&
         _lastRenderedVotiCount === votiCount &&
+        (window._lastPlannerKey||'') === plannerKey &&
         !state._forceRender) {
         return;
     }
+    window._lastPlannerKey = plannerKey;
     _lastRenderedLoggedIn = true;
     _lastRenderedView = state.view;
     _lastRenderedTaskCount = taskCount;
@@ -5922,278 +5955,249 @@ function getSubjectIcon(subject) {
 
 function renderPlanner() {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(0,0,0,0);
     const todayISO = getLocalDateString(today);
 
-    // ── Week offset (arrows) ─────────────────────────────────────
+    // ── Init state ───────────────────────────────────────────────
     if (state.plannerWeekOffset === undefined) state.plannerWeekOffset = 0;
     const weekOffset = state.plannerWeekOffset;
+    const selectedDate = state.selectedDate || todayISO;
+    const showMonthView = !!state.plannerMonthView;
+    const showSearchPanel = !!(state.plannerSearchOpen || (state.agendaSearchQuery||'').trim());
+    const query = (state.agendaSearchQuery||'').toLowerCase().trim();
+    const filterSubject = state.agendaSearchSubject || 'all';
 
-    // Build 7 days centered on TODAY's week + offset
-    const weekDays = [];
+    // ── Month constants ───────────────────────────────────────────
+    const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const selDateObj  = new Date(selectedDate+'T00:00:00');
+    const mvYear  = (state.plannerMonthViewYear  !== undefined) ? state.plannerMonthViewYear  : selDateObj.getFullYear();
+    const mvMonth = (state.plannerMonthViewMonth !== undefined) ? state.plannerMonthViewMonth : selDateObj.getMonth();
+    const mvStartDow = new Date(mvYear,mvMonth,1).getDay();
+    const mvDays = new Date(mvYear,mvMonth+1,0).getDate();
+
+    // ── Build week ────────────────────────────────────────────────
     const dayLabels = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + weekOffset * 7);
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(startOfWeek);
-        d.setDate(startOfWeek.getDate() + i);
-        const iso = getLocalDateString(d);
-        weekDays.push({ label: dayLabels[d.getDay()], dayNum: d.getDate(), iso, isToday: iso === todayISO });
+    startOfWeek.setDate(today.getDate() - today.getDay() + weekOffset*7);
+    const weekDays = [];
+    for (let i=0;i<7;i++){
+        const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
+        const iso=getLocalDateString(d);
+        weekDays.push({label:dayLabels[d.getDay()],dayNum:d.getDate(),iso,isToday:iso===todayISO});
     }
 
-    // ── Selected date ────────────────────────────────────────────
-    const selectedDate = state.selectedDate || todayISO;
+    // ── Tasks ─────────────────────────────────────────────────────
+    const allTasks = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
+    const subjects = [...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
 
-    // ── Month label ──────────────────────────────────────────────
-    const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    const selDateObj = new Date(selectedDate + 'T00:00:00');
-    const headerMonthLabel = monthNames[selDateObj.getMonth()];
-
-    // ── Search + filter state ────────────────────────────────────
-    const query = (state.agendaSearchQuery || '').toLowerCase().trim();
-    const filterSubject = state.agendaSearchSubject || 'all';
-    const showSearchPanel = !!(query || state.plannerSearchOpen);
-    const allTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST');
-    const subjects = [...new Set(allTasks.map(t => t.subject||t.materia||'').filter(Boolean))].sort();
-
-    // ── Month view ────────────────────────────────────────────────
-    const showMonthView = !!state.plannerMonthView;
-    const mvYear  = state.plannerMonthViewYear  ?? selDateObj.getFullYear();
-    const mvMonth = state.plannerMonthViewMonth ?? selDateObj.getMonth();
-    const mvDays  = new Date(mvYear, mvMonth + 1, 0).getDate();
-    const mvStartDow = new Date(mvYear, mvMonth, 1).getDay();
+    // Month tasks map
     const mvTaskMap = {};
     if (showMonthView) {
-        allTasks.filter(t => {
-            if (!t.due_date) return false;
-            const d = new Date(t.due_date + 'T00:00:00');
-            return d.getFullYear() === mvYear && d.getMonth() === mvMonth;
-        }).forEach(t => { if (!mvTaskMap[t.due_date]) mvTaskMap[t.due_date] = []; mvTaskMap[t.due_date].push(t); });
+        allTasks.filter(t=>{
+            if(!t.due_date) return false;
+            const d=new Date(t.due_date+'T00:00:00');
+            return d.getFullYear()===mvYear && d.getMonth()===mvMonth;
+        }).forEach(t=>{if(!mvTaskMap[t.due_date])mvTaskMap[t.due_date]=[];mvTaskMap[t.due_date].push(t);});
     }
-    const mvMonthTasks = Object.values(mvTaskMap).flat().sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||''));
+    const mvMonthTasks=Object.values(mvTaskMap).flat().sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||''));
 
-    // ── Day tasks ────────────────────────────────────────────────
-    const dayTasks = allTasks.filter(t => t.due_date === selectedDate);
+    // Day tasks
+    const dayTasks = !showSearchPanel ? allTasks.filter(t=>t.due_date===selectedDate) : [];
 
-    // ── Search results (all year) ─────────────────────────────────
-    const searchResults = showSearchPanel ? allTasks.filter(t => {
-        if (filterSubject !== 'all' && (t.subject||t.materia||'') !== filterSubject) return false;
-        if (!query) return true;
-        return (t.subject||'').toLowerCase().includes(query) || (t.materia||'').toLowerCase().includes(query) || (t.text||'').toLowerCase().includes(query);
+    // Search results
+    const searchResults = showSearchPanel ? allTasks.filter(t=>{
+        if(filterSubject!=='all'&&(t.subject||t.materia||'')!==filterSubject) return false;
+        if(!query) return true;
+        return (t.subject||'').toLowerCase().includes(query)||(t.materia||'').toLowerCase().includes(query)||(t.text||'').toLowerCase().includes(query);
     }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
 
-    // ── Upcoming count ────────────────────────────────────────────
-    const upcomingCount = allTasks.filter(t => {
-        if (t.done) return false;
-        const d = parseLocalDate(t.due_date);
-        if (isNaN(d.getTime())) return false;
-        return (d - today) / 86400000 > 0 && (d - today) / 86400000 <= 7;
+    // Upcoming
+    const upcomingCount = allTasks.filter(t=>{
+        if(t.done) return false;
+        const d=parseLocalDate(t.due_date);
+        if(isNaN(d.getTime())) return false;
+        return (d-today)/86400000>0 && (d-today)/86400000<=7;
     }).length;
 
     // ── Task card ─────────────────────────────────────────────────
-    function taskCard(t, showDate) {
-        const isExam = t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text);
-        const subj = escapeHtml(t.subject || t.materia || '');
-        const txt  = escapeHtml(t.text || '');
-        const tid  = escapeJsSingleQuote(t.id);
-        const icon = (typeof getSubjectIcon === 'function') ? getSubjectIcon(t.subject || t.materia || '') : 'book';
-        const dateLabel = showDate && t.due_date ? (() => {
-            const d = new Date(t.due_date + 'T00:00:00');
-            return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.06em;">${d.getDate()} ${monthNames[d.getMonth()]}</span>`;
-        })() : '';
+    function taskCard(t,showDate){
+        const isExam=t.isExam||t.type==='verifica'||/verifica|interrogazione|test|esame|simulazione/i.test(t.text);
+        const subj=escapeHtml(t.subject||t.materia||'');
+        const txt=escapeHtml(t.text||'');
+        const tid=escapeJsSingleQuote(t.id);
+        const icon=(typeof getSubjectIcon==='function')?getSubjectIcon(t.subject||t.materia||''):'book';
+        const canDelete=typeof isUserGeneratedTaskId==='function'?isUserGeneratedTaskId(t.id):false;
+        const dateLabel=showDate&&t.due_date?(()=>{
+            const d=new Date(t.due_date+'T00:00:00');
+            return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${monthNames[d.getMonth()]}</span>`;
+        })():'';
+        const deleteBtn=canDelete?`<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:28px;height:28px;border-radius:50%;background:#fff0ee;border:1px solid rgba(255,59,48,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;">delete</span></button>`:'';
 
-        if (isExam) return `
-        <div onclick="toggleTask('${tid}')" style="background:rgba(254,242,242,0.75);border:1px solid rgba(254,202,202,0.5);border-radius:24px;padding:16px 18px;box-shadow:0 6px 16px -8px rgba(239,68,68,0.15);position:relative;overflow:hidden;cursor:pointer;">
-            <div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;background:rgba(254,202,202,0.25);border-radius:50%;filter:blur(18px);pointer-events:none;"></div>
+        if(isExam) return `
+        <div onclick="toggleTask('${tid}');state._forceRender=true;scheduleRender(0);" style="background:rgba(254,242,242,0.8);border:1px solid rgba(254,202,202,0.5);border-radius:20px;padding:14px 16px;box-shadow:0 4px 14px -6px rgba(239,68,68,0.15);position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.55;':''}">
+            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(254,202,202,0.2);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
             ${dateLabel}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;gap:8px;">
                 <div style="flex:1;min-width:0;">
-                    <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
-                    <p style="font-size:12px;color:#64748b;font-weight:500;margin:0 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${txt}</p>
+                    <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
+                    <p style="font-size:12px;color:#64748b;margin:0 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${txt}</p>
                 </div>
-                <span class="material-symbols-outlined" style="font-size:20px;color:#dc2626;flex-shrink:0;">warning</span>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${deleteBtn}
+                    <span class="material-symbols-outlined" style="font-size:20px;color:#dc2626;">warning</span>
+                </div>
             </div>
-            <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(254,226,226,0.9);color:#b91c1c;font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:0.06em;">VERIFICA ${t.done ? '· FATTO ✓' : ''}</div>
+            <div style="display:inline-flex;background:rgba(254,226,226,0.9);color:#b91c1c;font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;">VERIFICA${t.done?' · ✓':''}</div>
         </div>`;
 
-        if (t.done) return `
-        <div onclick="toggleTask('${tid}')" style="background:white;border-radius:24px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px -4px rgba(0,0,0,0.04);border:1px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
-            <div style="width:42px;height:42px;flex-shrink:0;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#10b981;">
-                <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span>
-            </div>
+        if(t.done) return `
+        <div onclick="toggleTask('${tid}');state._forceRender=true;scheduleRender(0);" style="background:white;border-radius:20px;padding:10px 13px;display:flex;align-items:center;gap:11px;border:1px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
+            <div style="width:38px;height:38px;flex-shrink:0;background:#f0fdf4;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#10b981;"><span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">task_alt</span></div>
             <div style="flex:1;min-width:0;">${dateLabel}
                 <h3 style="font-size:13px;font-weight:700;color:#64748b;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
                 <p style="font-size:11px;color:#94a3b8;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
             </div>
+            ${deleteBtn}
         </div>`;
 
         return `
-        <div onclick="toggleTask('${tid}')" style="background:white;border-radius:24px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px -8px rgba(0,0,0,0.06);border:1px solid rgba(241,245,249,0.9);cursor:pointer;">
-            <div style="width:42px;height:42px;flex-shrink:0;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#1e40af;">
-                <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span>
-            </div>
+        <div onclick="toggleTask('${tid}');state._forceRender=true;scheduleRender(0);" style="background:white;border-radius:20px;padding:10px 13px;display:flex;align-items:center;gap:11px;box-shadow:0 3px 14px -7px rgba(0,0,0,0.07);border:1px solid rgba(241,245,249,0.9);cursor:pointer;">
+            <div style="width:38px;height:38px;flex-shrink:0;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:18px;">${icon}</span></div>
             <div style="flex:1;min-width:0;">${dateLabel}
                 <h3 style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
-                <p style="font-size:11px;color:#64748b;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
+                <p style="font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
             </div>
+            ${deleteBtn}
         </div>`;
     }
 
-    const sharedChipBase = 'flex-shrink:0;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:1px solid ';
+    // ── Month grid cell ───────────────────────────────────────────
+    function mvCell(dayN){
+        const iso=`${mvYear}-${String(mvMonth+1).padStart(2,'0')}-${String(dayN).padStart(2,'0')}`;
+        const isTd=iso===todayISO,isSel=iso===selectedDate;
+        const hasTasks=!!mvTaskMap[iso];
+        const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
+        return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;state._forceRender=true;scheduleRender(0);" style="
+            aspect-ratio:1;border-radius:10px;border:none;cursor:pointer;
+            background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};
+            color:${isSel?'white':isTd?'#1e40af':'#1e293b'};
+            font-size:12px;font-weight:${isTd||isSel?'700':'400'};
+            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+            box-shadow:${isSel?'0 3px 10px rgba(37,99,235,0.28)':'none'};
+        ">${dayN}<div style="width:3px;height:3px;border-radius:50%;background:${hasTasks?(isSel?'rgba(255,255,255,0.85)':hasExam?'#ef4444':'#2563eb'):'transparent'};"></div></button>`;
+    }
+
+    // ── Chip style helper ─────────────────────────────────────────
+    function chip(label,onclickStr,active,color='blue'){
+        const ac=color==='blue'?'#2563eb':'#dc2626';
+        return `<button onclick="${onclickStr}" style="flex-shrink:0;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${active?`2px solid ${ac}`:'1px solid rgba(226,232,240,0.8)'};background:${active?ac:'white'};color:${active?'white':'#64748b'};">${label}</button>`;
+    }
 
     return `
-    <main class="view planner-view pb-32 pt-6 view-fullbleed font-sans text-[#1F2937] antialiased" style="min-height:100vh;">
-        <div style="padding: 0 24px;">
+    <div class="view planner-view pb-32" style="background-color:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.5) 0%,transparent 40%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.5) 0%,transparent 40%);background-attachment:fixed;min-height:100vh;padding:0 20px;">
 
-            <!-- HEADER -->
-            <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:16px 0 16px;">
-                <div style="display:flex;align-items:flex-end;gap:12px;">
-                    <h1 style="font-size:28px;font-weight:800;color:#1e40af;letter-spacing:-0.02em;margin:0;">Agenda</h1>
-                    <button onclick="state.selectedDate='${todayISO}';state.plannerWeekOffset=0;state.plannerMonthView=false;scheduleRender(0);" style="font-size:11px;font-weight:800;color:#1e40af;background:none;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:0.1em;padding:0 0 4px;font-family:'Hanken Grotesk',sans-serif;">Oggi</button>
-                </div>
-                <button onclick="
-                    state.plannerMonthView=!state.plannerMonthView;
-                    if(state.plannerMonthView){const d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}
-                    scheduleRender(0);" style="font-size:13px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.5);padding:6px 14px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">
-                    ${headerMonthLabel} ${selDateObj.getFullYear()} ${showMonthView ? '↑' : '↓'}
-                </button>
-            </header>
+        <!-- HEADER -->
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:32px 0 14px;">
+            <h1 style="font-size:26px;font-weight:800;color:#1e40af;letter-spacing:-0.02em;margin:0;">Agenda</h1>
+            <button onclick="state.plannerMonthView=!state.plannerMonthView;if(state.plannerMonthView){var d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}state._forceRender=true;scheduleRender(0);" style="font-size:13px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.5);padding:6px 13px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">
+                ${monthNames[selDateObj.getMonth()]} ${selDateObj.getFullYear()} ${showMonthView?'↑':'↓'}
+            </button>
+        </header>
 
         <!-- MONTH VIEW -->
-        ${showMonthView ? `
-        <div style="background:white;border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px -6px rgba(0,0,0,0.07);border:1px solid rgba(241,245,249,0.9);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <button onclick="let m=state.plannerMonthViewMonth-1,y=state.plannerMonthViewYear;if(m<0){m=11;y--;}state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;scheduleRender(0);"
-                    style="width:34px;height:34px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
-                </button>
-                <span style="font-size:15px;font-weight:700;color:#1e293b;">${monthNames[mvMonth]} ${mvYear}</span>
-                <button onclick="let m=state.plannerMonthViewMonth+1,y=state.plannerMonthViewYear;if(m>11){m=0;y++;}state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;scheduleRender(0);"
-                    style="width:34px;height:34px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
-                </button>
+        ${showMonthView?`
+        <div style="background:white;border-radius:22px;padding:16px;margin-bottom:14px;box-shadow:0 4px 20px -6px rgba(0,0,0,0.07);border:1px solid rgba(241,245,249,0.9);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <button onclick="var m=((state.plannerMonthViewMonth||0)-1+12)%12,y=(state.plannerMonthViewYear||${selDateObj.getFullYear()});if((state.plannerMonthViewMonth||0)===0)y--;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:32px;height:32px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span></button>
+                <span style="font-size:14px;font-weight:700;color:#1e293b;">${monthNames[mvMonth]} ${mvYear}</span>
+                <button onclick="var m=((state.plannerMonthViewMonth||0)+1)%12,y=(state.plannerMonthViewYear||${selDateObj.getFullYear()});if((state.plannerMonthViewMonth||0)===11)y++;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:32px;height:32px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span></button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;">
-                ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:4px 0;">${d}</div>`).join('')}
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
+                ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:3px 0;">${d}</div>`).join('')}
             </div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">
                 ${Array.from({length:mvStartDow},()=>'<div></div>').join('')}
-                ${Array.from({length:mvDays},(_,i)=>{
-                    const dayN=i+1;
-                    const iso=`${mvYear}-${String(mvMonth+1).padStart(2,'0')}-${String(dayN).padStart(2,'0')}`;
-                    const isTd=iso===todayISO, isSel=iso===selectedDate;
-                    const hasTasks=!!mvTaskMap[iso];
-                    const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
-                    return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;scheduleRender(0);" style="
-                        aspect-ratio:1;border-radius:10px;border:none;cursor:pointer;
-                        background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};
-                        color:${isSel?'white':isTd?'#1e40af':'#1e293b'};
-                        font-size:12px;font-weight:${isTd||isSel?'700':'400'};
-                        position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-                        box-shadow:${isSel?'0 3px 10px rgba(37,99,235,0.3)':'none'};
-                    ">${dayN}${hasTasks?`<div style="width:3px;height:3px;border-radius:50%;background:${isSel?'rgba(255,255,255,0.8)':hasExam?'#ef4444':'#2563eb'};"></div>`:'<div style="width:3px;height:3px;"></div>'}</button>`;
-                }).join('')}
+                ${Array.from({length:mvDays},(_,i)=>mvCell(i+1)).join('')}
             </div>
             ${mvMonthTasks.length>0?`
-            <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(241,245,249,0.9);display:flex;flex-direction:column;gap:8px;">
-                <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">${mvMonthTasks.length} compiti in ${monthNames[mvMonth]}</p>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(241,245,249,0.9);display:flex;flex-direction:column;gap:7px;">
+                <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">${mvMonthTasks.length} compiti · ${monthNames[mvMonth]}</p>
                 ${mvMonthTasks.map(t=>taskCard(t,true)).join('')}
-            </div>`:`<p style="text-align:center;color:#94a3b8;font-size:13px;font-weight:500;margin-top:14px;padding-bottom:4px;">Nessun compito in ${monthNames[mvMonth]}</p>`}
-        </div>` : ''}
+            </div>`:`<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:12px;padding-bottom:2px;">Nessun compito in ${monthNames[mvMonth]}</p>`}
+        </div>`:''}
 
         <!-- SEARCH BAR -->
-        <div style="margin-bottom:16px;">
+        <div style="margin-bottom:14px;">
             <div style="position:relative;">
-                <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
-                <input type="text" placeholder="Cerca tra tutti i compiti..."
-                       class="agenda-search-input"
-                       value="${escapeHtml(state.agendaSearchQuery || '')}"
-                       oninput="handleAgendaSearch(event); state.plannerSearchOpen=!!(event.target.value); scheduleRender(0);"
-                       onfocus="state.plannerSearchOpen=true; scheduleRender(0);"
-                       style="width:100%;height:50px;padding:0 ${(query||showSearchPanel)?'44px':'16px'} 0 48px;border-radius:${showSearchPanel?'18px 18px 0 0':'999px'};background:white;box-shadow:0 6px 24px -10px rgba(0,0,0,0.05);border:1px solid ${showSearchPanel?'rgba(241,245,249,1)':'rgba(241,245,249,1)'};font-size:14px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;" />
-                ${(query||showSearchPanel)?`<button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;refreshAgenda();" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:rgba(241,245,249,0.9);border:none;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;"><span class="material-symbols-outlined" style="font-size:14px;">close</span></button>`:''}
+                <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:19px;pointer-events:none;">search</span>
+                <input type="text" placeholder="Cerca compiti..." class="agenda-search-input"
+                       value="${escapeHtml(query)}"
+                       oninput="handleAgendaSearch(event);state.plannerSearchOpen=!!(this.value.trim());state._forceRender=true;scheduleRender(0);"
+                       onfocus="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
+                       style="width:100%;height:48px;padding:0 ${(query||showSearchPanel)?'40px':'14px'} 0 44px;border-radius:${showSearchPanel?'16px 16px 0 0':'999px'};background:white;box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border:1px solid rgba(241,245,249,1);font-size:13px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;" />
+                ${(query||showSearchPanel)?`<button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(241,245,249,0.9);border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;"><span class="material-symbols-outlined" style="font-size:13px;">close</span></button>`:''}
             </div>
             ${showSearchPanel?`
-            <div style="background:white;border-radius:0 0 18px 18px;border:1px solid rgba(241,245,249,1);border-top:none;padding:10px 14px 14px;box-shadow:0 10px 24px -8px rgba(0,0,0,0.06);">
-                <div style="display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;scrollbar-width:none;-ms-overflow-style:none;">
-                    <button onclick="state.agendaSearchSubject='all';state._filterJustTriggered=true;refreshAgenda();" style="${sharedChipBase}${filterSubject==='all'?'#2563eb;background:#2563eb;color:white;':'rgba(226,232,240,0.8);background:white;color:#64748b;'}"">Tutte</button>
-                    ${subjects.map(s=>{const esc=escapeJsSingleQuote(s);const act=filterSubject===s;return `<button onclick="state.agendaSearchSubject='${esc}';state._filterJustTriggered=true;refreshAgenda();" style="${sharedChipBase}${act?'#2563eb;background:#2563eb;color:white;':'rgba(226,232,240,0.8);background:white;color:#64748b;'}">${escapeHtml(s)}</button>`;}).join('')}
+            <div style="background:white;border-radius:0 0 16px 16px;border:1px solid rgba(241,245,249,1);border-top:none;padding:10px 12px 12px;box-shadow:0 8px 20px -6px rgba(0,0,0,0.06);">
+                <div style="display:flex;overflow-x:auto;gap:6px;padding-bottom:8px;scrollbar-width:none;-ms-overflow-style:none;">
+                    ${chip('Tutte',"state.agendaSearchSubject='all';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();",filterSubject==='all')}
+                    ${subjects.map(s=>chip(escapeHtml(s),`state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();`,filterSubject===s)).join('')}
                 </div>
-                <div style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;">
-                    ${searchResults.length>0?searchResults.map(t=>taskCard(t,true)).join(''):`<p style="text-align:center;color:#94a3b8;font-size:13px;font-weight:500;padding:20px 0;">Nessun risultato</p>`}
+                <div style="display:flex;flex-direction:column;gap:7px;max-height:48vh;overflow-y:auto;">
+                    ${searchResults.length>0?searchResults.map(t=>taskCard(t,true)).join(''):`<p style="text-align:center;color:#94a3b8;font-size:13px;padding:16px 0;">Nessun risultato</p>`}
                 </div>
-            </div>`:'' }
+            </div>`:''}
         </div>
 
-        <!-- WEEK NAVIGATOR (hidden during search/month view) -->
-        ${!showSearchPanel && !showMonthView ? `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;scheduleRender(0);"
-                style="width:38px;height:38px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -2px rgba(0,0,0,0.05);">
+        <!-- WEEK NAVIGATOR -->
+        ${!showSearchPanel&&!showMonthView?`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.06);">
                 <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
             </button>
-            <div style="flex:1;display:flex;gap:6px;overflow:hidden;">
-                ${weekDays.map(d => {
-                    const isSel = d.iso === selectedDate;
-                    return `
-                    <div onclick="state.selectedDate='${d.iso}';scheduleRender(0);" style="
-                        flex:1;height:82px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;
-                        ${isSel
-                            ? 'background:#2563eb;box-shadow:0 6px 16px -4px rgba(37,99,235,0.35);transform:scale(1.04);'
-                            : 'background:white;border:1px solid rgba(241,245,249,0.9);box-shadow:0 3px 12px -6px rgba(0,0,0,0.05);'}
-                        transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);
-                    ">
+            <div style="flex:1;display:flex;overflow-x:auto;gap:5px;scrollbar-width:none;-ms-overflow-style:none;padding:4px 0;">
+                ${weekDays.map(d=>{
+                    const isSel=d.iso===selectedDate;
+                    return `<div onclick="state.selectedDate='${d.iso}';state._forceRender=true;scheduleRender(0);" style="flex-shrink:0;width:calc((100% - 30px)/7);min-width:40px;height:78px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;${isSel?'background:#2563eb;box-shadow:0 5px 14px -4px rgba(37,99,235,0.32);':'background:white;border:1px solid rgba(241,245,249,0.9);box-shadow:0 2px 10px -5px rgba(0,0,0,0.05);'}transition:all 0.15s ease;">
                         <span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.8)':'#94a3b8'};">${d.label}</span>
-                        <span style="font-size:18px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
+                        <span style="font-size:17px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
                         <div style="width:4px;height:4px;border-radius:50%;background:${d.isToday?(isSel?'rgba(255,255,255,0.9)':'#2563eb'):'transparent'};"></div>
                     </div>`;
                 }).join('')}
             </div>
-            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;scheduleRender(0);"
-                style="width:38px;height:38px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -2px rgba(0,0,0,0.05);">
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.06);">
                 <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
             </button>
         </div>
 
-        <!-- Smart Planner banner -->
         ${upcomingCount>0?`
-        <div style="background:#f4f7ff;border:1px solid rgba(191,219,254,0.5);border-radius:24px;padding:16px 18px;margin-bottom:16px;box-shadow:0 6px 20px -10px rgba(37,99,235,0.10);">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <span class="material-symbols-outlined" style="font-size:16px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span>
-                </div>
-                <span style="font-size:14px;font-weight:700;color:#1e40af;">Smart Planner</span>
+        <div style="background:#f4f7ff;border:1px solid rgba(191,219,254,0.5);border-radius:20px;padding:14px 16px;margin-bottom:14px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.10);">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
+                <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
+                <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
             </div>
-            <p style="font-size:13px;font-weight:500;color:#475569;line-height:1.5;margin:0 0 8px;">Hai <b>${upcomingCount}</b> compiti nei prossimi 7 giorni.</p>
-            <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">
-                Vedi tutti <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span>
-            </button>
+            <p style="font-size:12px;font-weight:500;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <b>${upcomingCount}</b> compiti nei prossimi 7 giorni.</p>
+            <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Vedi tutti <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span></button>
         </div>`:''}
 
-        <!-- Day task list -->
-        <div style="display:flex;flex-direction:column;gap:10px;">
-            ${dayTasks.length>0
-                ? dayTasks.map(t=>taskCard(t,false)).join('')
-                : `<div style="background:white;border-radius:24px;padding:36px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1px solid rgba(241,245,249,0.9);box-shadow:0 3px 16px -6px rgba(0,0,0,0.04);">
-                    <span class="material-symbols-outlined" style="font-size:40px;color:#cbd5e1;">event_busy</span>
-                    <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività</p>
-                </div>`}
-        </div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:9px;">
+            ${dayTasks.length>0?dayTasks.map(t=>taskCard(t,false)).join(''):`
+            <div style="background:white;border-radius:20px;padding:32px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;border:1px solid rgba(241,245,249,0.9);box-shadow:0 2px 12px -5px rgba(0,0,0,0.04);">
+                <span class="material-symbols-outlined" style="font-size:36px;color:#cbd5e1;">event_busy</span>
+                <p style="font-size:13px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività</p>
+            </div>`}
+        </div>`:''}
 
-        </div>
-
-        <!-- FABs -->
-        <div style="position:fixed;bottom:92px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:40;">
-            <button onclick="showToast('Storico in arrivo','info')" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.28);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+        <!-- FABs — raised above navbar -->
+        <div style="position:fixed;bottom:108px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:40;">
+            <button onclick="showToast('Storico in arrivo','info')" style="width:46px;height:46px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(79,70,229,0.28);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:20px;">history</span>
             </button>
-            <button onclick="showQuickAddTaskModal()" style="width:54px;height:54px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,99,235,0.32);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+            <button onclick="showQuickAddTaskModal()" style="width:52px;height:52px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(37,99,235,0.32);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:24px;">add</span>
             </button>
         </div>
-    </main>`;
+    </div>`;
 }
-
 
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
