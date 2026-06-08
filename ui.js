@@ -1336,108 +1336,209 @@ function initPlannerCalendar() {
 function syncCalendarEvents() {
     renderCustomCalendar();
 }
+// ── 6.9  RENDER CALENDARIO CUSTOM (SWIPEABLE CAROUSEL) ──────────────────────
+// Il calendario è ora un carosello orizzontale con scroll-snap, identico ai widget
+// della dashboard. Ogni "slide" è una settimana (7 giorni + agenda testuale).
+// La navigazione prev/next è mantenuta per compatibilità ma lo scroll è il metodo principale.
 function renderCustomCalendar() {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayISO = getLocalDateString(today);
 
-    // Calcola il lunedì della settimana corrente
+    // Lunedì della settimana corrente
     const d = today.getDay();
     const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
     const startOfCurrentWeek = new Date(new Date(today).setDate(diffToMonday));
     startOfCurrentWeek.setHours(0, 0, 0, 0);
 
-    // Data di inizio basata sull'offset (settimane)
-    const startDate = new Date(startOfCurrentWeek);
-    startDate.setDate(startOfCurrentWeek.getDate() + (calendarState.weekOffset * 7));
-
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 13);
-
     const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
-    const weekLabel = `Settimana ${startDate.getDate()} ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} ${monthNames[endDate.getMonth()]}`;
+    const dayNamesShort = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
-    // Prepare verifiche by date for quick lookup
-    const todayISO = getLocalDateString(today);
+    // Verifiche by date per lookup rapido
     const verificheByDate = {};
     (state.verifiche || []).forEach(v => {
-        const dateKey = v.data || '';
-        if (!dateKey) return;
-        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
-        verificheByDate[dateKey].push({ subject: v.materia || v.subject || '', text: v.text || '', tipo: v.tipo || '' });
+        const k = v.data || ''; if (!k) return;
+        if (!verificheByDate[k]) verificheByDate[k] = [];
+        verificheByDate[k].push({ subject: v.materia || v.subject || '', text: v.text || '', tipo: v.tipo || '' });
     });
     (state.manualVerifiche || []).forEach(v => {
-        const dateKey = v.date || '';
-        if (!dateKey) return;
-        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
-        verificheByDate[dateKey].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '' });
+        const k = v.date || ''; if (!k) return;
+        if (!verificheByDate[k]) verificheByDate[k] = [];
+        verificheByDate[k].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '' });
     });
 
-    let html = `
-                <div class="custom-calendar">
-                    <div class="calendar-header">
+    // Costruiamo N settimane intorno a quella corrente (-4 … +8)
+    const WEEKS_BEFORE = 4;
+    const WEEKS_AFTER = 8;
+    const totalWeeks = WEEKS_BEFORE + 1 + WEEKS_AFTER;
+    // La settimana "centrale" corrisponde all'offset attuale
+    const centerSlide = WEEKS_BEFORE + calendarState.weekOffset;
+
+    function buildWeekSlide(weekOffset) {
+        const weekStart = new Date(startOfCurrentWeek);
+        weekStart.setDate(startOfCurrentWeek.getDate() + weekOffset * 7);
+
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        const weekLabel = `${weekStart.getDate()} ${monthNames[weekStart.getMonth()]} – ${weekEnd.getDate()} ${monthNames[weekEnd.getMonth()]}`;
+
+        // Griglia 7 celle
+        let gridCells = '';
+        for (let i = 0; i < 7; i++) {
+            const cellDate = new Date(weekStart);
+            cellDate.setDate(weekStart.getDate() + i);
+            const dateStr = getLocalDateString(cellDate);
+            const isToday = dateStr === todayISO;
+            const isPast = cellDate < today && !isToday;
+            const dayTasks = getCalendarTasksForDate(dateStr);
+            const dayVerifiche = verificheByDate[dateStr] || [];
+
+            const badges = [
+                ...dayVerifiche.slice(0, 2).map(v => {
+                    const color = getSubjectColor(v.subject);
+                    const abbrev = getSubjectAbbrev(v.subject);
+                    return `<div class="event-badge" style="background:${color};outline:2px solid rgba(255,159,10,0.6);outline-offset:-1px;" title="${escapeHtml(v.tipo + (v.text ? ': ' + v.text : ''))}">${abbrev}✏</div>`;
+                }),
+                ...dayTasks.slice(0, Math.max(0, 3 - dayVerifiche.length)).map(t => {
+                    const color = getSubjectColor(t.subject);
+                    const abbrev = getSubjectAbbrev(t.subject);
+                    return `<div class="event-badge ${t.done ? 'done' : ''}" style="background:${color}">${abbrev}</div>`;
+                })
+            ];
+            const overflow = dayVerifiche.length + dayTasks.length - 3;
+
+            gridCells += `
+                <div class="calendar-day${isToday ? ' today' : ''}${isPast ? ' past' : ''}"
+                     onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}" style="cursor:${isPast ? 'default' : 'pointer'};">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                        <div class="day-number">${cellDate.getDate()}</div>
+                        ${isToday ? `<div style="width:5px;height:5px;border-radius:50%;background:#007AFF;margin-top:4px;"></div>` : ''}
+                    </div>
+                    <div class="day-events">
+                        ${badges.join('')}
+                        ${overflow > 0 ? `<div class="more-events">+${overflow}</div>` : ''}
+                    </div>
+                </div>`;
+        }
+
+        // Agenda testuale sotto la griglia
+        const listHtml = renderCalendarWeekList(weekStart);
+
+        return `
+            <div class="cal-week-slide">
+                <div class="custom-calendar" style="margin:0;">
+                    <div class="calendar-header" style="padding-bottom:10px;">
                         <div class="calendar-title">${weekLabel}</div>
-                        <div class="calendar-nav">
-                            <button onclick="navigateCalendar(-1)" title="Settimana precedente"><i class="ph ph-caret-left"></i></button>
-                            <button onclick="navigateCalendar(1)" title="Settimana successiva"><i class="ph ph-caret-right"></i></button>
-                       </div>
-                   </div>
+                    </div>
                     <div class="weekday-headers">
-                        <div class="weekday-header">Lun</div>
-                        <div class="weekday-header">Mar</div>
-                        <div class="weekday-header">Mer</div>
-                        <div class="weekday-header">Gio</div>
-                        <div class="weekday-header">Ven</div>
-                        <div class="weekday-header">Sab</div>
-                        <div class="weekday-header">Dom</div>
-                   </div>
-                    <div class="calendar-days">
-            `;
-
-    const tempDate = new Date(startDate);
-    for (let i = 0; i < 14; i++) {
-        const dateStr = getLocalDateString(tempDate);
-        const isToday = dateStr === todayISO;
-        const isPast = tempDate < today && !isToday;
-
-        const dayTasks = getCalendarTasksForDate(dateStr);
-
-        const dayVerifiche = verificheByDate[dateStr] || [];
-
-        html += `
-                    <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
-                         onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                            <div class="day-number">${tempDate.getDate()}</div>
-                            ${isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : ''}
-                        </div>
-                        <div class="day-events">
-                            ${dayVerifiche.slice(0, 2).map(v => {
-            const color = getSubjectColor(v.subject);
-            const abbrev = getSubjectAbbrev(v.subject);
-            return `<div class="event-badge" aria-label="Verifica ${escapeHtml(v.subject || '')}" style="background:${color}; outline:2px solid rgba(255,159,10,0.6); outline-offset:-1px;" title="${escapeHtml(v.tipo + (v.text ? ': ' + v.text : ''))}">${abbrev}✏</div>`;
-        }).join('')}
-                            ${dayTasks.slice(0, Math.max(0, 3 - dayVerifiche.length)).map(t => {
-            const color = getSubjectColor(t.subject);
-            const abbrev = getSubjectAbbrev(t.subject);
-            return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
-        }).join('')}
-                            ${(dayVerifiche.length + dayTasks.length) > 3 ? `<div class="more-events">+${dayVerifiche.length + dayTasks.length - 3}</div>` : ''}
-                       </div>
-                   </div>
-                `;
-        tempDate.setDate(tempDate.getDate() + 1);
+                        ${dayNamesShort.map(n => `<div class="weekday-header">${n}</div>`).join('')}
+                    </div>
+                    <div class="calendar-days">${gridCells}</div>
+                </div>
+                ${listHtml}
+            </div>`;
     }
 
-    html += `</div></div>`;
+    // Genera tutte le slide
+    let slidesHtml = '';
+    for (let w = -WEEKS_BEFORE; w <= WEEKS_AFTER; w++) {
+        slidesHtml += buildWeekSlide(w);
+    }
 
-    // Build 7-day task list below calendar (Mon-Sun of displayed first week)
-    const listHtml = renderCalendarWeekList(startDate);
-    calendarEl.innerHTML = html + listHtml;
+    // Dot indicators: una per ogni settimana visibile (mostriamo 5 attorno a quella corrente)
+    const DOT_RANGE = 2; // 2 prima + corrente + 2 dopo = 5 dot
+    let dotsHtml = '';
+    for (let i = -DOT_RANGE; i <= DOT_RANGE; i++) {
+        const isCurrent = i === 0;
+        dotsHtml += `<div class="cal-dot${isCurrent ? ' active' : ''}"
+            style="width:${isCurrent ? '20px' : '6px'};height:6px;border-radius:4px;
+                   background:${isCurrent ? '#0250C5' : '#CBD5E1'};transition:all 0.3s;"></div>`;
+    }
+
+    calendarEl.innerHTML = `
+        <div class="cal-carousel-wrapper">
+            <div class="cal-carousel" id="cal-carousel-inner"
+                 onscroll="handleCalCarouselScroll(this)">
+                ${slidesHtml}
+            </div>
+            <div class="cal-dot-row">${dotsHtml}</div>
+        </div>`;
+
+    // Inietta gli stili del carosello (solo una volta)
+    if (!document.getElementById('cal-carousel-style')) {
+        const style = document.createElement('style');
+        style.id = 'cal-carousel-style';
+        style.textContent = `
+            .cal-carousel-wrapper { width: 100%; }
+            .cal-carousel {
+                display: flex;
+                overflow-x: scroll;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+                gap: 0;
+            }
+            .cal-carousel::-webkit-scrollbar { display: none; }
+            .cal-week-slide {
+                flex: 0 0 100%;
+                width: 100%;
+                scroll-snap-align: start;
+                box-sizing: border-box;
+            }
+            .cal-dot-row {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+                margin-top: 12px;
+                padding-bottom: 4px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Scroll immediato (senza animazione) alla slide corrente
+    requestAnimationFrame(() => {
+        const carousel = document.getElementById('cal-carousel-inner');
+        if (!carousel) return;
+        const slideWidth = carousel.clientWidth;
+        // La slide corrente è l'indice WEEKS_BEFORE (offset 0 = settimana attuale)
+        // ma considerando che l'utente potrebbe avere weekOffset != 0
+        carousel.scrollLeft = WEEKS_BEFORE * slideWidth;
+        // Gestione scroll → aggiorna weekOffset e dot
+        carousel._calWeeksBefore = WEEKS_BEFORE;
+        carousel._calSlideWidth = slideWidth;
+    });
+
     if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
 }
+
+// Handler scroll carosello calendario
+window.handleCalCarouselScroll = function(el) {
+    const slideWidth = el.clientWidth || el._calSlideWidth || 1;
+    const slideIndex = Math.round(el.scrollLeft / slideWidth);
+    const weeksBefore = el._calWeeksBefore !== undefined ? el._calWeeksBefore : 4;
+
+    // Aggiorna calendarState.weekOffset in base alla slide visibile
+    const newOffset = slideIndex - weeksBefore;
+    if (calendarState.weekOffset !== newOffset) {
+        calendarState.weekOffset = newOffset;
+    }
+
+    // Aggiorna i dot
+    const dots = document.querySelectorAll('.cal-dot');
+    const DOT_RANGE = 2;
+    // Il dot "centrale" è sempre quello di mezzo (indice DOT_RANGE)
+    dots.forEach((dot, idx) => {
+        const isActive = idx === DOT_RANGE;
+        dot.style.width = isActive ? '20px' : '6px';
+        dot.style.background = isActive ? '#0250C5' : '#CBD5E1';
+    });
+};
 
 function renderCalendarWeekList(weekStart) {
     const today = new Date();
@@ -5980,86 +6081,69 @@ function renderPlanner() {
     today.setHours(0,0,0,0);
     const todayISO = getLocalDateString(today);
 
+    if (state.plannerWeekOffset===undefined) state.plannerWeekOffset=0;
+    const weekOffset = state.plannerWeekOffset;
     const selectedDate = state.selectedDate || todayISO;
+    const showMonthView = !!state.plannerMonthView;
     const showSearchPanel = !!(state.plannerSearchOpen||(state.agendaSearchQuery||'').trim());
     const query = (state.agendaSearchQuery||'').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject||'all';
 
-    const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
-                'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const selDate = new Date(selectedDate+'T00:00:00');
-    const dayLabels = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    const mvY = (state.plannerMonthViewYear!==undefined) ? state.plannerMonthViewYear : selDate.getFullYear();
+    const mvM = (state.plannerMonthViewMonth!==undefined) ? state.plannerMonthViewMonth : selDate.getMonth();
+    const mvStartDow = new Date(mvY,mvM,1).getDay();
+    const mvDays = new Date(mvY,mvM+1,0).getDate();
 
-    // Build 5 weeks: prev, current-2, current-1, current, next (centred on today)
-    // We render 5 week slides; on mount we scroll to index 2 (today's week)
-    const TOTAL_WEEKS = 5;      // slides total
-    const CENTER_IDX  = 2;      // today's week is slide index 2
-
-    // Build all 5 weeks
-    const weeks = [];
-    for (let w = -CENTER_IDX; w <= TOTAL_WEEKS - CENTER_IDX - 1; w++) {
-        const wStart = new Date(today);
-        wStart.setDate(today.getDate() - today.getDay() + w * 7); // Sun-start
-        const days = [];
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(wStart);
-            d.setDate(wStart.getDate() + i);
-            const iso = getLocalDateString(d);
-            days.push({
-                label: dayLabels[d.getDay()],
-                dayNum: d.getDate(),
-                iso,
-                isToday: iso === todayISO,
-                hasTask: (state.tasks||[]).some(t=>t.due_date===iso&&t.subject!=='QUEST')
-            });
-        }
-        weeks.push(days);
+    const dayLabels=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate()-today.getDay()+weekOffset*7);
+    const weekDays=[];
+    for(let i=0;i<7;i++){
+        const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+        const iso=getLocalDateString(d);
+        weekDays.push({label:dayLabels[d.getDay()],dayNum:d.getDate(),iso,isToday:iso===todayISO,hasTask:(state.tasks||[]).some(t=>t.due_date===iso&&t.subject!=='QUEST')});
     }
 
-    // Which slide contains selectedDate?
-    let activeSlide = CENTER_IDX;
-    weeks.forEach((wk, idx) => {
-        if (wk.some(d => d.iso === selectedDate)) activeSlide = idx;
-    });
+    const allTasks=(state.tasks||[]).filter(t=>t.subject!=='QUEST');
+    const subjects=[...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
+    const dayTasks=allTasks.filter(t=>t.due_date===selectedDate);
 
-    const allTasks   = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
-    const subjects   = [...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
-    const dayTasks   = allTasks.filter(t=>t.due_date===selectedDate);
-    const upcomingCount = allTasks.filter(t=>{
-        if(t.done) return false;
-        const d = parseLocalDate(t.due_date);
-        if(isNaN(d.getTime())) return false;
-        return (d-today)/86400000>0 && (d-today)/86400000<=7;
-    }).length;
+    const mvTaskMap={};
+    if(showMonthView) allTasks.filter(t=>{
+        if(!t.due_date) return false;
+        const d=new Date(t.due_date+'T00:00:00');
+        return d.getFullYear()===mvY&&d.getMonth()===mvM;
+    }).forEach(t=>{if(!mvTaskMap[t.due_date])mvTaskMap[t.due_date]=[];mvTaskMap[t.due_date].push(t);});
 
-    const searchResults = showSearchPanel ? allTasks.filter(t=>{
+    const searchResults=showSearchPanel?allTasks.filter(t=>{
         if(filterSubject!=='all'&&(t.subject||t.materia||'')!==filterSubject) return false;
         if(!query) return true;
-        return (t.subject||'').toLowerCase().includes(query)
-            || (t.materia||'').toLowerCase().includes(query)
-            || (t.text||'').toLowerCase().includes(query);
-    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
+        return (t.subject||'').toLowerCase().includes(query)||(t.materia||'').toLowerCase().includes(query)||(t.text||'').toLowerCase().includes(query);
+    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')):[];
 
-    // ── Month label derived from selected date ───────────────────
-    const monthLabel = `${MN[selDate.getMonth()]} ${selDate.getFullYear()}`;
+    const upcomingCount=allTasks.filter(t=>{
+        if(t.done) return false;
+        const d=parseLocalDate(t.due_date);
+        if(isNaN(d.getTime())) return false;
+        return (d-today)/86400000>0&&(d-today)/86400000<=7;
+    }).length;
 
-    // ── Task card renderer ───────────────────────────────────────
-    function TC(t, showDate) {
-        const isExam = t.isExam||t.type==='verifica'||/verifica|interrogazione|test|esame|simulazione/i.test(t.text);
-        const subj = escapeHtml(t.subject||t.materia||'');
-        const txt  = escapeHtml(t.text||'');
-        const tid  = escapeJsSingleQuote(t.id);
-        const icon = (typeof getSubjectIcon==='function') ? getSubjectIcon(t.subject||t.materia||'') : 'book';
-        const canDel = typeof isUserGeneratedTaskId==='function' ? isUserGeneratedTaskId(t.id) : false;
-        const dLabel = showDate&&t.due_date ? (()=>{
-            const d=new Date(t.due_date+'T00:00:00');
-            return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
-        })() : '';
-        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#fff0ee;border:1px solid rgba(255,59,48,0.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;">delete</span></button>` : '';
-        const rerender = "state._forceRender=true;scheduleRender(0);";
+    // ── Task card ─────────────────────────────────────────────────
+    function TC(t,showDate){
+        const isExam=t.isExam||t.type==='verifica'||/verifica|interrogazione|test|esame|simulazione/i.test(t.text);
+        const subj=escapeHtml(t.subject||t.materia||'');
+        const txt=escapeHtml(t.text||'');
+        const tid=escapeJsSingleQuote(t.id);
+        const icon=(typeof getSubjectIcon==='function')?getSubjectIcon(t.subject||t.materia||''):'book';
+        const canDel=typeof isUserGeneratedTaskId==='function'?isUserGeneratedTaskId(t.id):false;
+        const dLabel=showDate&&t.due_date?(()=>{const d=new Date(t.due_date+'T00:00:00');return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${MN[d.getMonth()]}</span>`;})():'';
+        const delBtn=canDel?`<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#fff0ee;border:1px solid rgba(255,59,48,0.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;">delete</span></button>`:'';
+        const toggleOpts="state._forceRender=true;scheduleRender(0);";
 
-        if (isExam) return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:rgba(254,242,242,0.85);border:1.5px solid rgba(254,202,202,0.6);border-radius:22px;padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 4px 16px -6px rgba(239,68,68,0.18);">
+        if(isExam) return `
+        <div onclick="toggleTask('${tid}');${toggleOpts}" style="background:rgba(254,242,242,0.85);border:1.5px solid rgba(254,202,202,0.6);border-radius:22px;padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 4px 16px -6px rgba(239,68,68,0.18);">
             <div style="position:absolute;top:-24px;right:-24px;width:80px;height:80px;background:rgba(254,202,202,0.25);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
             ${dLabel}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1;">
@@ -6072,156 +6156,117 @@ function renderPlanner() {
             <div style="display:inline-flex;background:rgba(254,226,226,0.95);color:#b91c1c;font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;">VERIFICA${t.done?' · ✓':''}</div>
         </div>`;
 
-        if (t.done) return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
+        if(t.done) return `
+        <div onclick="toggleTask('${tid}');${toggleOpts}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#10b981;"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#64748b;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:#94a3b8;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);cursor:pointer;">
+        <div onclick="toggleTask('${tid}');${toggleOpts}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
     }
 
-    // ── Week slide HTML (one slide = one week of 7 day pills) ────
-    function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 18px;box-sizing:border-box;scroll-snap-align:start;">
-            ${days.map(d => {
-                const isSel = d.iso === selectedDate;
-                return `<div onclick="plannerSelectDay('${d.iso}')" style="
-                    flex:1;height:88px;border-radius:20px;
-                    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-                    cursor:pointer;
-                    background:${isSel ? '#2563eb' : 'white'};
-                    border:1.5px solid ${isSel ? '#2563eb' : 'rgba(241,245,249,0.9)'};
-                    box-shadow:${isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)'};
-                    transform:${isSel ? 'scale(1.04)' : 'scale(1)'};
-                    transition:all 0.15s cubic-bezier(0.2,0.8,0.2,1);
-                    -webkit-tap-highlight-color:transparent;
-                ">
-                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.75)':'#94a3b8'};">${d.label}</span>
-                    <span style="font-size:20px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
-                    <div style="width:5px;height:5px;border-radius:50%;background:${
-                        d.isToday
-                            ? (isSel ? 'rgba(255,255,255,0.9)' : '#2563eb')
-                            : d.hasTask
-                                ? (isSel ? 'rgba(255,255,255,0.45)' : 'rgba(37,99,235,0.28)')
-                                : 'transparent'
-                    };"></div>
-                </div>`;
-            }).join('')}
-        </div>`;
-    }
-
-    // Dot indicators (5 dots, one per week)
-    const dotsHtml = weeks.map((_, i) => `
-        <div class="planner-week-dot" data-idx="${i}" style="
-            width:${i===activeSlide?'20px':'6px'};height:6px;border-radius:4px;
-            background:${i===activeSlide?'#2563eb':'#CBD5E1'};
-            transition:all 0.3s ease;cursor:pointer;
-        " onclick="plannerJumpToWeek(${i})"></div>
-    `).join('');
-
     return `
-    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0;">
+    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0 18px;position:relative;">
 
         <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 18px 16px;">
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:env(safe-area-inset-top,24px) 0 18px;padding-top:max(env(safe-area-inset-top,0px),28px);">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <div style="display:flex;align-items:center;gap:6px;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:5px 6px 5px 14px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(37,99,235,0.10);">
-                <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
-                <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#2563eb;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                    <span class="material-symbols-outlined" style="font-size:16px;color:white;">search</span>
-                </button>
-            </div>
+            <button onclick="state.plannerMonthView=!state.plannerMonthView;if(state.plannerMonthView){var d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}state._forceRender=true;scheduleRender(0);" style="font-size:14px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:7px 15px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 2px 8px -2px rgba(37,99,235,0.12);">
+                ${MN[selDate.getMonth()]} ${selDate.getFullYear()} <span style="opacity:0.6;font-size:11px;">${showMonthView?'↑':'↓'}</span>
+            </button>
         </header>
 
-        <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
-        ${!showSearchPanel ? `
-        <div id="planner-week-carousel" style="
-            display:flex;
-            overflow-x:auto;
-            scroll-snap-type:x mandatory;
-            scroll-behavior:smooth;
-            -webkit-overflow-scrolling:touch;
-            scrollbar-width:none;
-            -ms-overflow-style:none;
-            gap:0;
-            margin:0;
-            padding:0;
-        " onscroll="handlePlannerCarouselScroll(this)">
-            ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
+        <!-- ══ MONTH VIEW ══ -->
+        ${showMonthView?`
+        <div style="background:white;border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+11)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===0)y--;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
+                <span style="font-size:16px;font-weight:700;color:#1e293b;">${MN[mvM]} ${mvY}</span>
+                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+1)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===11)y++;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;">
+                ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:4px 0;">${d}</div>`).join('')}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">
+                ${Array.from({length:mvStartDow},()=>'<div></div>').join('')}
+                ${Array.from({length:mvDays},(_,i)=>{
+                    const dn=i+1;
+                    const iso=`${mvY}-${String(mvM+1).padStart(2,'0')}-${String(dn).padStart(2,'0')}`;
+                    const isTd=iso===todayISO,isSel=iso===selectedDate;
+                    const hasTasks=!!mvTaskMap[iso];
+                    const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
+                    return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;state._forceRender=true;scheduleRender(0);" style="aspect-ratio:1;border-radius:12px;border:none;cursor:pointer;background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};color:${isSel?'white':isTd?'#1e40af':'#1e293b'};font-size:13px;font-weight:${isTd||isSel?'700':'400'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:${isSel?'0 4px 12px rgba(37,99,235,0.3)':'none'};transition:all 0.15s ease;">
+                        ${dn}
+                        <div style="width:4px;height:4px;border-radius:50%;background:${hasTasks?(isSel?'rgba(255,255,255,0.9)':hasExam?'#ef4444':'#2563eb'):'transparent'};"></div>
+                    </button>`;
+                }).join('')}
+            </div>
+        </div>`:''}
+
+        <!-- ══ SEARCH (inline, expands on focus) ══ -->
+        <div style="margin-bottom:16px;">
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
+                <input type="text" placeholder="Cerca tra tutti i compiti..." class="agenda-search-input"
+                    value="${escapeHtml(query)}"
+                    oninput="handleAgendaSearch(event);state.plannerSearchOpen=!!(this.value.trim());state._forceRender=true;scheduleRender(0);"
+                    onfocus="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
+                    style="width:100%;height:52px;padding:0 ${(query||showSearchPanel)?'44px':'18px'} 0 48px;border-radius:${showSearchPanel?'18px 18px 0 0':'999px'};background:white;box-shadow:0 4px 20px -8px rgba(0,0,0,0.06);border:1.5px solid rgba(241,245,249,1);font-size:14px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;transition:border-radius 0.2s ease;" />
+                ${(query||showSearchPanel)?`<button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;state._forceRender=true;scheduleRender(0);" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>`:''}
+            </div>
+            ${showSearchPanel?`
+            <div style="background:white;border-radius:0 0 18px 18px;border:1.5px solid rgba(241,245,249,1);border-top:none;padding:12px 14px 16px;box-shadow:0 10px 28px -8px rgba(0,0,0,0.07);">
+                <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:10px;scrollbar-width:none;">
+                    ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`<button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();" style="flex-shrink:0;padding:6px 13px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
+                </div>
+                <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:8px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${searchResults.length?searchResults.map(t=>TC(t,true)).join(''):`<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;">Nessun risultato</p>`}
+                </div>
+            </div>`:''}
         </div>
 
-        <!-- Dot indicators -->
-        <div style="display:flex;justify-content:center;align-items:center;gap:7px;margin:10px 0 16px;">
-            ${dotsHtml}
-        </div>` : ''}
-
-        <!-- ══ SEARCH PANEL (full screen feel) ══ -->
-        ${showSearchPanel ? `
-        <div style="padding:0 18px;">
-            <div style="position:relative;margin-bottom:12px;">
-                <span class="material-symbols-outlined" style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
-                <input id="planner-search-input" type="text" placeholder="Cerca tra tutti i compiti..." autofocus
-                    value="${escapeHtml(query)}"
-                    oninput="handleAgendaSearch(event);state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
-                    style="width:100%;height:52px;padding:0 48px;border-radius:999px;background:white;box-shadow:0 4px 20px -8px rgba(0,0,0,0.06);border:1.5px solid rgba(241,245,249,1);font-size:14px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;box-sizing:border-box;" />
-                <button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;state._forceRender=true;scheduleRender(0);" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;">
-                    <span class="material-symbols-outlined" style="font-size:16px;">close</span>
-                </button>
+        <!-- ══ WEEK NAVIGATOR ══ -->
+        ${!showSearchPanel&&!showMonthView?`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;state._forceRender=true;scheduleRender(0);" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;background:white;border:1.5px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.07);"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
+            <div style="flex:1;display:flex;overflow-x:auto;gap:6px;scrollbar-width:none;-ms-overflow-style:none;padding:4px 1px;">
+                ${weekDays.map(d=>{
+                    const isSel=d.iso===selectedDate;
+                    return `<div onclick="state.selectedDate='${d.iso}';state._forceRender=true;scheduleRender(0);" style="flex-shrink:0;width:calc((100% - 36px)/7);min-width:44px;height:92px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;${isSel?'background:#2563eb;box-shadow:0 6px 18px -4px rgba(37,99,235,0.38);transform:scale(1.04);':'background:white;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 12px -5px rgba(0,0,0,0.06);'}transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);">
+                        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.75)':'#94a3b8'};">${d.label}</span>
+                        <span style="font-size:20px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
+                        <div style="width:5px;height:5px;border-radius:50%;background:${d.isToday?(isSel?'rgba(255,255,255,0.9)':'#2563eb'):d.hasTask?(isSel?'rgba(255,255,255,0.5)':'rgba(37,99,235,0.25)'):'transparent'};"></div>
+                    </div>`;
+                }).join('')}
             </div>
-            <!-- Subject chips -->
-            <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;">
-                ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;state._forceRender=true;scheduleRender(0);" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;background:white;border:1.5px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.07);"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
+        </div>
+
+        ${upcomingCount>0?`
+        <div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:22px;padding:16px 18px;margin-bottom:16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <div style="width:34px;height:34px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="font-size:17px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
+                <span style="font-size:14px;font-weight:700;color:#1e40af;">Smart Planner</span>
             </div>
-            <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:10px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
-            <div style="display:flex;flex-direction:column;gap:9px;">
-                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div style="text-align:center;padding:40px 0;"><span class="material-symbols-outlined" style="font-size:40px;color:#cbd5e1;">search_off</span><p style="color:#94a3b8;font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p></div>`}
-            </div>
-        </div>` : `
+            <p style="font-size:13px;font-weight:500;color:#475569;line-height:1.5;margin:0 0 8px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+            <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Vedi tutti <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>
+        </div>`:''}
 
-        <!-- ══ DAY CONTENT ══ -->
-        <div style="padding:0 18px;display:flex;flex-direction:column;gap:10px;">
-
-            <!-- Selected day label -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                <h2 style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">
-                    ${(()=>{
-                        const d=new Date(selectedDate+'T00:00:00');
-                        const diff=Math.round((d-today)/86400000);
-                        const base=`${dayLabels[d.getDay()]} ${d.getDate()} ${MN[d.getMonth()]}`;
-                        if(diff===0) return `Oggi · ${base}`;
-                        if(diff===1) return `Domani · ${base}`;
-                        if(diff===-1) return `Ieri · ${base}`;
-                        return base;
-                    })()}
-                </h2>
-                <span style="font-size:11px;font-weight:700;color:#94a3b8;">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
-            </div>
-
-            ${upcomingCount>0 && selectedDate===todayISO ? `
-            <div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
-                <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
-                    <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
-                    <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
-                </div>
-                <p style="font-size:12px;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-                <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Vedi tutti <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
-            </div>` : ''}
-
-            ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
-            <div style="background:white;border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
-                <span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">event_busy</span>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            ${dayTasks.length?dayTasks.map(t=>TC(t,false)).join(''):`
+            <div style="background:white;border-radius:22px;padding:40px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+                <span class="material-symbols-outlined" style="font-size:42px;color:#cbd5e1;">event_busy</span>
                 <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività per questo giorno</p>
             </div>`}
-        </div>`}
+        </div>`:''}
 
-        <!-- ══ FABs ══ -->
-        <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:10px;z-index:40;">
+        <!-- ══ FABs — above navbar ══ -->
+        <div style="position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:11px;z-index:40;">
             <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:21px;">history</span>
             </button>
@@ -6229,56 +6274,6 @@ function renderPlanner() {
                 <span class="material-symbols-outlined" style="font-size:26px;">add</span>
             </button>
         </div>
-
-        <!-- ══ Carousel JS (inline, fires after DOM insert) ══ -->
-        <script>
-        (function() {
-            // Wire up plannerSelectDay — no full re-render, just update state + DOM in-place
-            window.plannerSelectDay = function(iso) {
-                state.selectedDate = iso;
-                // Update day pills appearance without full re-render
-                document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(el => {
-                    const elIso = el.getAttribute('onclick').match(/'([^']+)'/)?.[1];
-                    if (!elIso) return;
-                    const isSel = elIso === iso;
-                    el.style.background    = isSel ? '#2563eb' : 'white';
-                    el.style.border        = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
-                    el.style.boxShadow     = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
-                    el.style.transform     = isSel ? 'scale(1.04)' : 'scale(1)';
-                    // Update label + number colors
-                    const spans = el.querySelectorAll('span');
-                    if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
-                    if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
-                });
-                // Update day content section
-                state._forceRender = true;
-                scheduleRender(0);
-            };
-
-            // Scroll handler: update dots + state.plannerWeekOffset
-            window.handlePlannerCarouselScroll = function(el) {
-                const idx = Math.round(el.scrollLeft / el.clientWidth);
-                document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
-                    dot.style.width      = i===idx ? '20px' : '6px';
-                    dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
-                });
-            };
-
-            // Jump to specific week slide
-            window.plannerJumpToWeek = function(idx) {
-                const el = document.getElementById('planner-week-carousel');
-                if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
-            };
-
-            // On mount: scroll carousel to the slide containing selectedDate (no animation, instant)
-            requestAnimationFrame(() => {
-                const el = document.getElementById('planner-week-carousel');
-                if (el) {
-                    el.scrollTo({ left: ${activeSlide} * el.clientWidth, behavior: 'instant' });
-                }
-            });
-        })();
-        <\/script>
     </div>`;
 }
 
