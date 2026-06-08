@@ -1,3 +1,12 @@
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 0 — UTILITÀ GLOBALI & SICUREZZA                         ║
+// ║  Funzioni di supporto usate da tutto il file: sanitizzazione HTML,      ║
+// ║  costanti di design, helpers date/string, badge offline, modal/toast.   ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 0.1  SICUREZZA — XSS Protection ────────────────────────────────────────
+// escapeHtml()          → sanifica stringhe prima di inserirle nel DOM (innerHTML)
+// escapeJsSingleQuote() → sanifica stringhe usate dentro handler onclick="" inline
 // --- XSS PROTECTION ---
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -21,6 +30,9 @@ function escapeJsSingleQuote(str) {
 }
 
 // --- AGENDA SEARCH & FILTER HELPERS ---
+
+// ── 0.2  OROLOGIO TOPBAR ────────────────────────────────────────────────────
+// setInterval ogni 500ms: aggiorna l'elemento #topbar-clock con l'ora italiana.
 setInterval(() => {
     const clock = document.getElementById('topbar-clock');
     if (clock) {
@@ -28,6 +40,11 @@ setInterval(() => {
     }
 }, 500);
 
+
+// ── 0.3  AGENDA — Helpers ricerca & filtro (usati dalla Sezione Agenda) ────
+// scrollToSearch()      → scrolla e mette il focus sul campo di ricerca agenda
+// handleAgendaSearch()  → debounce 120ms sull'input ricerca, poi chiama refreshAgenda()
+// setAgendaFilter()     → imposta filtro per materia e ricarica l'agenda
 window.scrollToSearch = function () {
     // If we're not in the agenda view, go there first
     if (state.view !== 'planner' && state.view !== 'home_diary') {
@@ -62,6 +79,20 @@ window.setAgendaFilter = function (subject) {
     state.agendaSearchSubject = subject;
     refreshAgenda();
 };
+
+// ── 0.4  COSTANTI DI CONFIGURAZIONE ─────────────────────────────────────────
+// Soglie voti, parametri grafici, breakpoint mobile, tempi animazione.
+// Modifica queste costanti per cambiare comportamento globale senza toccare la logica.
+//   PASSING_GRADE_THRESHOLD          → soglia sufficienza (6)
+//   CHART_*                          → colori/font del grafico trend voti
+//   GOAL_GRADE_SCALE_DESC            → scala obiettivi voto (10→6)
+//   MAX_GOAL_SCENARIOS               → numero massimo scenari proiezione obiettivo
+//   BRAND_GRADIENT                   → gradiente brand usato nei widget premium
+//   PRINT_DIALOG_DELAY_MS            → ritardo apertura dialog stampa PDF
+//   SUBJECT_TREND_*                  → parametri animazione grafico trend materia
+//   CLASS_ACTIVITIES_*               → finestra lookback/lookahead settimane agenda classe
+//   MOBILE_WEEK_LABEL_BREAKPOINT     → breakpoint px label settimana compatta
+//   PLANNER_MOBILE_DROPDOWN_*        → geometria dropdown mobile del planner
 const PASSING_GRADE_THRESHOLD = 6;
 const CHART_INTERMEDIATE_TICK_RATIO = 0.8;
 const CHART_MIN_RANGE_EPSILON = 0.0001;
@@ -95,6 +126,12 @@ const SUBJECT_TREND_ANIMATION_STEP = 0.06;
 // Start slightly above 0 to avoid an all-zero first frame and reduce perceived flicker.
 const SUBJECT_TREND_ANIMATION_INITIAL_PROGRESS = 0.04;
 
+
+// ── 0.5  NORMALIZZAZIONE MATERIE ────────────────────────────────────────────
+// normalizeSubjectName()        → rimuove accenti, apostrofi, spazi extra → confronto stabile
+// isArtDrawingSubjectNormalized() → riconosce varianti di "Disegno / Storia dell'Arte"
+// areSubjectsEquivalent()        → confronta due nomi materia ignorando varianti tipografiche
+// getSubjectGroupKey()           → chiave raggruppamento per materia (usata nei grafici)
 function normalizeSubjectName(name) {
     // Unify subject labels coming from different DidUP payloads/UI variants
     // (e.g. trailing asterisks, extra spaces, accents and apostrophe variants) before grouping/filtering.
@@ -142,6 +179,11 @@ function getSubjectGroupKey(subject) {
     return normalized;
 }
 
+
+// ── 0.6  HELPERS TASK & PLANNED ─────────────────────────────────────────────
+// isUserGeneratedTaskId()  → true se l'ID è generato dall'utente (manual_* o quest-*)
+// hasPlannedTasks()        → true se esistono task pianificati nell'oggetto plannedTasks
+// truncateWithEllipsis()   → tronca testo a N caratteri aggiungendo "…"
 function isUserGeneratedTaskId(id) {
     if (typeof id !== 'string') return false;
     return id.startsWith('manual_') || id.startsWith('quest-');
@@ -159,6 +201,13 @@ window._truncateWithEllipsis = function truncateWithEllipsis(value, max = 180) {
 };
 const truncateWithEllipsis = window._truncateWithEllipsis;
 
+
+// ── 0.7  CACHE AGENDA SETTIMANALE ───────────────────────────────────────────
+// getAgendaCacheKey()         → genera chiave localStorage basata su stato filtri attuali
+// getCachedWeeklyAgendaHtml() → restituisce HTML agenda dalla cache (RAM o localStorage)
+// saveWeeklyAgendaCache()     → salva HTML agenda in RAM e localStorage
+// warmWeeklyAgendaCache()     → pre-compila la cache agenda (chiamata a login/sync)
+//                               ⚠ NON rimuovere: chiamata anche in switchPlannerView()
 function getAgendaCacheKey() {
     try {
         return `${lsKey('weekly_agenda_cache')}:${state.plannerMode || 'registro'}:${state.agendaSortOrder || 'due_desc'}:${state.agendaSearchSubject || 'all'}:${state.agendaSearchQuery || ''}`;
@@ -211,6 +260,10 @@ window.warmWeeklyAgendaCache = function (force = false) {
     }
 };
 
+
+// ── 0.8  REFRESH AGENDA IN-PLACE ────────────────────────────────────────────
+// refreshAgenda() → ricostruisce solo il nodo #weekly-agenda-list senza full re-render.
+//                   Gestisce animazione leggera (fade) se il trigger è un filtro.
 window.refreshAgenda = function () {
     const list = document.getElementById('weekly-agenda-list');
     if (list) {
@@ -246,6 +299,9 @@ window.refreshAgenda = function () {
     }
 };
 
+
+// ── 0.9  SWITCH BOTTONI VISTA PLANNER ───────────────────────────────────────
+// refreshPlannerSwitchButtons() → aggiorna stile attivo/inattivo dei bottoni Lista/Calendario
 function refreshPlannerSwitchButtons() {
     const buttons = Array.from(document.querySelectorAll('.view-switch .switch-btn'));
     buttons.forEach((btn) => {
@@ -257,6 +313,11 @@ function refreshPlannerSwitchButtons() {
     });
 }
 
+
+// ── 0.10 ANIMAZIONE SUPERFICIE PLANNER (GSAP) ───────────────────────────────
+// animatePlannerSurface('calendar'|'list') → stagger entrance per celle/badge calendario
+//                                           o stagger entrance per card/badge lista agenda.
+//                                           Dipende da GSAP (graceful fallback se assente).
 function animatePlannerSurface(view) {
     if (typeof gsap === 'undefined') return;
     if (view === 'calendar') {
@@ -309,7 +370,17 @@ function animatePlannerSurface(view) {
     });
 }
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 1 — NAVIGAZIONE & TRANSIZIONI UI                        ║
+// ║  Cambio modalità planner (registro/pianificato), cambio vista           ║
+// ║  calendario/lista, navigazione materie voti, switch viste principali.   ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
 // --- UI TRANSITION HELPERS (Added by Phase 25 Mega Patch) ---
+
+// ── 1.1  SWITCH MODALITÀ PLANNER (registro ↔ pianificato) ──────────────────
+// switchPlannerMode('registro'|'pianificato') → aggiorna bottoni UI e ricarica la lista
+//   agenda con animazione GSAP. Salva in state.plannerMode.
 window.switchPlannerMode = function (mode) {
     state.plannerMode = mode;
     document.querySelectorAll('[data-planner-mode]').forEach(btn => {
@@ -339,6 +410,11 @@ window.switchPlannerMode = function (mode) {
     }
 };
 
+
+// ── 1.2  SWITCH VISTA PLANNER (calendar ↔ list) ─────────────────────────────
+// switchPlannerView('calendar'|'list') → salva preferenza in localStorage,
+//   sostituisce il contenuto di #planner-main-content con calendario o lista,
+//   usa cache agenda se disponibile. Animazione GSAP fade in/out.
 window.switchPlannerView = function (view) {
     if (view !== 'calendar' && view !== 'list') return;
     if (state.uiMode === view) return;
@@ -393,6 +469,12 @@ window.switchPlannerView = function (view) {
     runSwap();
 };
 
+
+// ── 1.3  NAVIGAZIONE MATERIE VOTI ───────────────────────────────────────────
+// navigateSubject()                   → salva scroll Y e imposta state.activeSubject
+// handleGradeSubjectClick()           → naviga alla vista voti + apre dettaglio materia
+// handleGradeSubjectClickFromEncoded()→ come sopra ma decodifica URI (doppio decode safe)
+// closeSubject()                      → torna alla lista materie e ripristina scrollY
 window.navigateSubject = function (subjName) {
     if (!subjName) return;
     state._gradeSubjectsScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
@@ -436,7 +518,19 @@ window.closeSubject = function () {
         });
     }
 };
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 2 — AUTENTICAZIONE & SESSIONE                           ║
+// ║  Refresh sessione Argo/DidUP, integrazione Google Calendar OAuth2,      ║
+// ║  salvataggio credenziali su Supabase.                                   ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
 // --- Google Calendar OAuth2 (Universal) ---
+
+// ── 2.1  REFRESH TOKEN SESSIONE ARGO ────────────────────────────────────────
+// refreshSessionToken() → 2 strategie in cascata:
+//   Strategy 1: usa password in RAM (_argoPasswordRuntime) per ri-login diretto
+//   Strategy 2: chiama /api/auth?action=refresh-session con userId (credenziali Supabase)
+//   Restituisce true se refresh riuscito, false altrimenti.
 window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
     if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
@@ -526,6 +620,10 @@ window.refreshSessionToken = async function () {
     return false;
 };
 
+
+// ── 2.2  FETCH CON RETRY AUTH GOOGLE ────────────────────────────────────────
+// googleFetchWithAuthRetry() → wrapper fetch: se risposta 401/403 tenta un refresh
+//   sessione e riprova la chiamata con headers aggiornati.
 window.googleFetchWithAuthRetry = async function (url, options = {}) {
     let res = await fetch(url, options);
     if (res.status !== 401 && res.status !== 403) return res;
@@ -537,6 +635,14 @@ window.googleFetchWithAuthRetry = async function (url, options = {}) {
     return fetch(url, retryOpts);
 };
 
+
+// ── 2.3  GOOGLE CALENDAR — Connetti / Sincronizza / Disconnetti ─────────────
+// connectGoogle()       → ottiene URL OAuth da /api/google?action=auth-url e redirecta
+// syncGoogleCalendar()  → invia sessione Argo a /api/google?action=sync
+//                         ⚠ NON invia state.tasks: il server scarica i compiti da Argo
+// disconnectGoogle()    → chiama /api/google?action=disconnect
+// checkGoogleStatus()   → polling stato connessione Google; aggiorna state.googleConnected
+//                         e re-renderizza solo se vista 'profile' e stato cambiato
 window.connectGoogle = async function () {
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'error', 'var(--red)'); return; }
@@ -645,6 +751,11 @@ window.checkGoogleStatus = async function () {
     }
 };
 
+
+// ── 2.4  SALVATAGGIO CREDENZIALI SU SUPABASE ────────────────────────────────
+// saveArgoToSupabase() → invia schoolCode/username/password (cifrata lato server)
+//   a /api/google?action=save-argo per persistere le credenziali cloud.
+//   Chiamata dopo il login riuscito.
 window.saveArgoToSupabase = async function () {
     try {
         const session = JSON.parse(localStorage.getItem('argo_session') || '{}');
@@ -671,6 +782,18 @@ window.saveArgoToSupabase = async function () {
 };
 // ------------------------------------------------------------
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 3 — LOGICA VOTI & CALCOLI                               ║
+// ║  Calcolo medie, filtri per quadrimestre, proiezione obiettivi,          ║
+// ║  simulatore prossimo voto, labels scenari.                              ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 3.1  CALCOLO MEDIA ──────────────────────────────────────────────────────
+// calcolaMedia()   → media aritmetica di un array di voti (ignora non numerici)
+// isGiustifica()   → true se il valore voto è una giustifica (stringa non numerica)
+// getNumericGradeValue() → estrae il float da un oggetto voto (null se giustifica)
+// getVoteDate()    → estrae e parsa la data da un oggetto voto
 function calcolaMedia(voti) {
     if (!voti || voti.length === 0) return null;
     const validi = voti.map(v => {
@@ -707,6 +830,10 @@ function getVoteDate(vote) {
  * @param {boolean} lowercase Se true, restituisce testo in minuscolo per card scure.
  * @returns {string} Etichetta human-readable da mostrare nella proiezione.
  */
+
+// ── 3.2  PROIEZIONE OBIETTIVO — Labels scenari ──────────────────────────────
+// getProjectionScenarioLabel()     → label human-readable per uno scenario (es. "Prossimi 3 voti")
+// getProjectionComboDetailLabel()  → dettaglio scenario combo (es. "1 voto 7.50 + 2 voti da 10")
 function getProjectionScenarioLabel(scenario, lowercase = false) {
     if (scenario?.combo) return lowercase ? 'combinazione utile' : 'Combinazione utile';
     if (scenario?.exact) return lowercase ? 'prossimo voto esatto' : 'Prossimo voto esatto';
@@ -717,6 +844,12 @@ function getProjectionComboDetailLabel(grade, extraTopGrades, maxGradeValue) {
     return `1 voto ${grade.toFixed(2)} + ${extraTopGrades} vot${extraTopGrades === 1 ? 'o' : 'i'} da ${maxGradeValue.toFixed(2)}`;
 }
 
+
+// ── 3.3  ANNO SCOLASTICO & QUADRIMESTRI ─────────────────────────────────────
+// getSchoolYearRanges()    → calcola date inizio/fine 1° e 2° quadrimestre per anno scolastico
+// getCurrentSchoolTerm()   → restituisce 'first'|'second'|null in base alla data corrente
+// getVotesBySchoolTerm()   → filtra array voti per quadrimestre
+// averageFromNumeric()     → media su array di numeri (null se vuoto)
 function getSchoolYearRanges(refDate = new Date()) {
     const year = refDate.getFullYear();
     const month = refDate.getMonth();
@@ -758,6 +891,10 @@ function averageFromNumeric(values) {
     return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
 
+
+// ── 3.4  SIMULATORE PROSSIMO VOTO ───────────────────────────────────────────
+// getNextGradeSimulatorValue() → legge valore simulatore da state o localStorage (default 7)
+// setNextGradeSimulatorValue() → salva valore simulatore in state e localStorage
 function getNextGradeSimulatorValue() {
     const inState = Number(state.nextGradeSimulator);
     if (Number.isFinite(inState)) return Math.max(1, Math.min(10, Math.round(inState)));
@@ -776,6 +913,18 @@ function setNextGradeSimulatorValue(value) {
     } catch (_) { }
     return next;
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 4 — HELPERS UI GENERICI                                 ║
+// ║  Frasi motivazionali, nome utente, gauge media, classi/specializzazioni ║
+// ║  date locali, badge offline, modal container, toast, boot overlay.      ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 4.1  CONTENUTO MOTIVAZIONALE & UTENTE ───────────────────────────────────
+// getMotivationalFallback() → frase motivazionale del giorno (10 frasi, indice = giorno)
+// getSafeUserName()         → restituisce solo il cognome (o nome se unico)
+// gaugeClassForMedia()      → 'gauge-good'|'gauge-warn'|'gauge-bad' in base alla media
+//   ⚠ FUNZIONE POTENZIALMENTE NON USATA: renderMediaGauge() è marcata come redundant
 function getMotivationalFallback() {
     const quotes = [
         "Un piccolo passo oggi vale più di dieci domani.",
@@ -804,6 +953,12 @@ function gaugeClassForMedia(m) {
     if (m >= 6.0) return 'gauge-warn';
     return 'gauge-bad';
 }
+
+// ── 4.2  CLASSI & SPECIALIZZAZIONI ──────────────────────────────────────────
+// getSpecializationFullName() → mappa codice indirizzo (SA, LC, ecc.) → nome esteso
+// normalizeClassUi()          → normalizza stringa classe (es. "5ESA" → "5E SA")
+// isValidClass()              → validazione input classe
+// isValidName()               → validazione input nome (lettere/numeri/spazi)
 function getSpecializationFullName(spec, rawClass = '') {
     // 🔥 HEURISTIC & PRIORITY: Estrai codici dalla classe
     const classMatch = String(rawClass).toUpperCase().match(/\b(SA|SU|LS|LC|LL|EC|CAT|AFM|ITI)\b/);
@@ -826,6 +981,11 @@ function getSpecializationFullName(spec, rawClass = '') {
     };
     return maps[code] || code || 'Indirizzo N/D';
 }
+
+// ── 4.3  DATE & TIMEZONE HELPERS ────────────────────────────────────────────
+// getLocalDateString()  → formato YYYY-MM-DD dal fuso locale (no UTC shift)
+// parseLocalDate()      → parsing YYYY-MM-DD → Date (no UTC shift)
+// getSchoolDate()       → Date normalizzata al fuso Europe/Rome
 function getLocalDateString(date = new Date()) {
     const d = new Date(date);
     const year = d.getFullYear();
@@ -844,6 +1004,9 @@ function getSchoolDate() {
     const italyStr = now.toLocaleString("en-US", { timeZone: "Europe/Rome" });
     return new Date(italyStr);
 }
+
+// ── 4.4  BADGE OFFLINE ──────────────────────────────────────────────────────
+// updateOfflineBadge() → mostra/nasconde il badge offline in base a state.isOffline
 function updateOfflineBadge() {
     if (!offlineBadge) return;
     if (state.isOffline) {
@@ -853,6 +1016,11 @@ function updateOfflineBadge() {
         offlineBadge.classList.remove('show');
     }
 }
+
+// ── 4.5  MODAL SYSTEM ───────────────────────────────────────────────────────
+// getModalContainer()  → crea o recupera il div #modal-container nel body
+// showModal(html)      → inietta HTML nel modal container con overlay blur
+// closeModal()         → deve esistere altrove (non definita in questo file)
 function getModalContainer() {
     let el = document.getElementById('modal-container');
     if (!el) {
@@ -879,6 +1047,10 @@ function showModal(html, className = '') {
         `;
 }
 
+
+// ── 4.6  TOAST NOTIFICATIONS ────────────────────────────────────────────────
+// showToast(message, type, bg) → mostra una notifica temporanea (2.5s) in basso
+//   type: 'success'|'warning'|'error' → colore diverso
 function showToast(message, type = 'success', customBackground = '') {
     const existing = document.getElementById('g-toast');
     if (existing) existing.remove();
@@ -905,6 +1077,10 @@ function showToast(message, type = 'success', customBackground = '') {
         setTimeout(() => toast.remove(), 400);
     }, 2500);
 }
+
+// ── 4.7  BOOT OVERLAY ───────────────────────────────────────────────────────
+// showBoot(text) → mostra il full-screen boot overlay (#boot-overlay)
+// hideBoot()     → nasconde boot overlay e rimuove #app-loader
 function showBoot(text) {
     const el = document.getElementById('boot-overlay');
     if (!el) return;
@@ -955,6 +1131,17 @@ function isValidName(name) {
     if (trimmed.length < 2) return false;
     return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 5 — NAVIGATION BAR                                      ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 5.1  RENDER NAVIGATION BAR ──────────────────────────────────────────────
+// renderNav() → genera l'HTML della bottom nav bar con 4 tab:
+//   Overview (home) | Planner | Grades (voti) | Circulars (circolari)
+//   Stile Liquid Glass. Include anche Drawer e Dialog overlay (HTML statico inattivo).
+//   ⚠ Il <script> lucide.createIcons() alla fine potrebbe causare re-esecuzioni multiple
+//      se renderNav() viene chiamato spesso — considerare di spostarlo fuori.
 function renderNav() {
     const currentView = state.view;
 
@@ -971,7 +1158,9 @@ function renderNav() {
         <button onclick="navigate('${view}')" 
            class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-colors bg-transparent border-none outline-none cursor-pointer p-0"
            style="color: ${color}; -webkit-tap-highlight-color: transparent;"
-           onmouseenter="if(!${isActive}) this.style.color='#475569'"
+           ontouchstart="if(window._prewarmViews)window._prewarmViews();if(!${isActive})this.style.opacity='0.7'"
+           ontouchend="this.style.opacity='1'"
+           onmouseenter="if(window._prewarmViews)window._prewarmViews();if(!${isActive}) this.style.color='#475569'"
            onmouseleave="if(!${isActive}) this.style.color='#8B95A5'">
             ${glowHtml}
             <i class="${iconClass} text-[28px]"></i>
@@ -1032,6 +1221,16 @@ function renderNav() {
         </script>
     `;
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 6 — PLANNER / AGENDA                                    ║
+// ║  Task management, calendario custom a 2 settimane, agenda settimanale, ║
+// ║  modali pianificazione, helpers settimane ISO.                          ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 6.1  AGGIORNAMENTO UI TASK (SURGICAL DOM UPDATE) ────────────────────────
+// updatePlanTaskUI(taskId, isPlanned) → aggiorna checkbox e sfondo card senza
+//   re-render. Usato dopo togglePlanTask() e toggleTask().
 function updatePlanTaskUI(taskId, isPlanned) {
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
     if (!taskElement) return;
@@ -1064,15 +1263,33 @@ function updatePlanTaskUI(taskId, isPlanned) {
         container.style.background = isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)';
     }
 }
+
+// ── 6.2  COUNTER PLANNER ────────────────────────────────────────────────────
+// updatePlannerCounter() → ⚠ FUNZIONE RITIRATA (empty body)
+//   Era usata per aggiornare un badge numerico sul bottone pianificazione.
+//   Sostituita da un "+" verde statico. Mantenuta per evitare errori di chiamata.
 function updatePlannerCounter() {
     // Function retired: replaced numeric badge with static green '+'
 }
+
+// ── 6.3  NORMALIZZAZIONE TIPO VERIFICA ──────────────────────────────────────
+// normalizeTipoVerifica() → 'scritta'→'SCRITTA', 'orale'→'ORALE', altro→'VERIFICA'
 function normalizeTipoVerifica(tipo, upperCase = true) {
     const t = (tipo || '').toString().toLowerCase().trim();
     if (t === 'scritta') return upperCase ? 'SCRITTA' : 'Scritta';
     if (t === 'orale') return upperCase ? 'ORALE' : 'Orale';
     return upperCase ? 'VERIFICA' : 'Valutazione';
 }
+
+// ── 6.4  HOME TASK WIDGET — Dati & Render ────────────────────────────────────
+// getHomeTaskWidgetData()         → calcola lista task per il widget "Oggi/Domani" nella home
+// renderHomeTaskListHtml()        → genera HTML righe task per il widget focus home
+// updateHomeTaskFocusWidget()     → aggiorna DOM widget focus senza full re-render
+// setHomeTaskFocus('today'|'tomorrow') → cambia tab widget e aggiorna DOM
+// updateHomeView()                → aggiornamento chirurgico della Home:
+//   - rimuove/anima righe task non più presenti
+//   - aggiorna stati done/undone delle righe esistenti
+//   - mostra messaggio vuoto se non rimangono task
 function getHomeTaskWidgetData() {
     const mode = state.homeTaskFocus === 'today' ? 'today' : 'tomorrow';
     const today = new Date();
@@ -1153,6 +1370,11 @@ function updateHomeTaskFocusWidget() {
     applyBtnState(btnTomorrow, homeTaskData.mode === 'tomorrow');
     return true;
 }
+
+// ── 6.5  SIMULATORE VOTO — Widget DOM Update ────────────────────────────────
+// updateNextGradeSimulatorWidget() → aggiorna in-place i valori del simulatore
+//   nella vista Voti senza full re-render. Calcola media attuale vs simulata.
+//   Restituisce false se gli elementi DOM non esistono ancora.
 function updateNextGradeSimulatorWidget() {
     if (state.view !== 'voti') return false;
     const simValueEl = document.getElementById('next-grade-sim-value');
@@ -1246,6 +1468,12 @@ function updateHomeView() {
 
     updatePlannerCounter();
 }
+
+// ── 6.6  CALENDAR EVENTS BUILDER ────────────────────────────────────────────
+// buildCalendarEventsFromState() → ⚠ FUNZIONE NON USATA ATTIVAMENTE
+//   Costruiva eventi per la libreria FullCalendar (ora sostituita da renderCustomCalendar).
+//   Mantenuta per compatibilità con eventuale riferimento a calendarEl._fullCalendar.
+// getCalendarTasksForDate()      → restituisce task pianificati o con scadenza per una data
 function buildCalendarEventsFromState() {
     return (state.tasks || [])
         .filter(t => t.due_date && t.hasValidDate)
@@ -1274,6 +1502,11 @@ function getCalendarTasksForDate(dateStr) {
     });
     return [...merged.values()];
 }
+
+// ── 6.7  ABBREVIAZIONI MATERIE ──────────────────────────────────────────────
+// getSubjectAbbrev() → converte nome materia → sigla 3 lettere (ITA, MAT, FIS…)
+//   Logica: lookup esatto → partial match → fallback keyword → primi 3 chars
+//   ⚠ Contiene console.log debug — da rimuovere in produzione
 function getSubjectAbbrev(subject) {
     if (!subject) return 'GEN';
     let cleanSubj = subject.replace(/[*_\[\]]/g, '').trim();
@@ -1330,12 +1563,26 @@ function getSubjectAbbrev(subject) {
     console.warn(`[Debug] No match for: "${key}", using fallback.`);
     return key.substring(0, 3).toUpperCase();
 }
+
+// ── 6.8  CALENDARIO CUSTOM A 2 SETTIMANE ────────────────────────────────────
+// initPlannerCalendar()   → ⚠ FUNZIONE NON USATA ATTIVAMENTE (chiama solo renderCustomCalendar)
+// syncCalendarEvents()    → ⚠ FUNZIONE NON USATA ATTIVAMENTE (chiama solo renderCustomCalendar)
+//   Erano entry-point per FullCalendar, ora il calendario è completamente custom.
 function initPlannerCalendar() {
     renderCustomCalendar();
 }
 function syncCalendarEvents() {
     renderCustomCalendar();
 }
+
+// ── 6.9  RENDER CALENDARIO CUSTOM ───────────────────────────────────────────
+// renderCustomCalendar() → disegna il calendario a 2 settimane nell'#calendar.
+//   Struttura HTML:
+//   - Header con titolo settimana e bottoni navigazione
+//   - Griglia 7 colonne con intestazioni giorno
+//   - 14 celle giorno con event-badge (verifiche + task, max 3 per giorno)
+//   - Lista settimanale (renderCalendarWeekList) sotto la griglia
+//   Usa calendarState.weekOffset per navigare avanti/indietro.
 function renderCustomCalendar() {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
@@ -1439,6 +1686,12 @@ function renderCustomCalendar() {
     if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
 }
 
+
+// ── 6.10 AGENDA SETTIMANALE SOTTO IL CALENDARIO ─────────────────────────────
+// renderCalendarWeekList() → genera l'HTML della lista testuale dei 7 giorni
+//   sotto la griglia calendario. Stile "asw-*" (Agenda Settimanale Weekly).
+//   Mostra verifiche (badge arancione ✏) e task (card con stripe colorata).
+//   OGGI/DOMANI → label colorata verde/arancione.
 function renderCalendarWeekList(weekStart) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1550,6 +1803,10 @@ function renderCalendarWeekList(weekStart) {
     </div>`;
 }
 
+
+// ── 6.11 NAVIGAZIONE CALENDARIO ─────────────────────────────────────────────
+// navigateCalendar(dir)  → sposta calendarState.weekOffset e ricarica il calendario
+// handleDayClick(date)   → apre renderDayDetailModal per il giorno cliccato
 function navigateCalendar(dir) {
     calendarState.weekOffset += dir;
     renderCustomCalendar();
@@ -1559,6 +1816,14 @@ function handleDayClick(dateStr) {
         renderDayDetailModal(dateStr);
     }
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 7 — LOGIN                                               ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 7.1  RENDER LOGIN VIEW ──────────────────────────────────────────────────
+// renderLogin() → pagina di login con bottone "Accedi con DidUP".
+//   Se esiste una sessione salvata, mostra il nome utente e il bottone logout.
 function renderLogin() {
     const savedSession = sessionManager.load();
     const hasSession = savedSession && sessionManager.isLoggedIn();
@@ -1589,11 +1854,26 @@ function renderLogin() {
             </div>
         </div>`;
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 8 — DASHBOARD (HOME)                                    ║
+// ║  Carosello 3 widget (Media, Assenze, Prossime Verifiche),               ║
+// ║  sezione "Domani" con card compatte, header con avatar.                 ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
 // ================================================================
 // G-CONNECT — renderHome() PATCH v7
 // ================================================================
 // Multi-widget dashboard with swipeable interface
 
+
+// ── 8.1  RENDER HOME / DASHBOARD ────────────────────────────────────────────
+// renderHome() → struttura completa della dashboard.
+//   Widget 1 (card-media-premium):    media generale + mini bar chart decorativo
+//   Widget 2 (card-assenze-premium):  ore assenza + anello SVG + contatori g/rit/usc
+//   Widget 3 (card-verifiche-premium): prossima verifica con countdown e urgency label
+//   Sezione "Domani":                 card compatte compiti/verifiche di domani
+//   Header:                           logo + avatar cliccabile → navigate('profile')
+//   ⚠ handleCarouselScroll() è registrato su window ad ogni render — non duplicare
 function renderHome() {
     // Register the carousel scroll handler
     window.handleCarouselScroll = function(el) {
@@ -1935,6 +2215,17 @@ function renderHome() {
     `;
 }
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 9 — PROFILO ACCADEMICO                                  ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 9.1  RENDER PROFILO ACCADEMICO ──────────────────────────────────────────
+// renderAcademicProfile() → vista con:
+//   - Disponibilità studio (input time start/end)
+//   - Materie critiche (pill selezionabili → state.difficulty)
+//   ⚠ saveAvailability() e toggleDifficulty() NON sono definiti in questo file.
+//      Devono essere presenti in index.html o altro file JS.
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
@@ -1989,12 +2280,25 @@ function renderAcademicProfile() {
                </section>
            </div>`;
 }
+
+// ── 9.2  GAUGE MEDIA ────────────────────────────────────────────────────────
+// renderMediaGauge() → ⚠ FUNZIONE NON USATA (empty body con commento "Redundant")
+//   Era il gauge circolare della media nella dashboard originale.
+//   Sostituita dai widget premium nella renderHome().
+//   updateMediaWidget() e initHomeWidgets() la chiamano ancora — chain di funzioni morte.
 function renderMediaGauge(target = 0) {
     // Redundant in Liquid Glass design - replaced by bar charts in renderHome/renderGradesView
     return;
 }
 
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 10 — HELPERS GENERICI RESTANTI                          ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 10.1 DATE HELPERS ────────────────────────────────────────────────────────
+// isFutureOrToday() → true se la data ISO è oggi o futura
 /* Remaining UI Functions */
 function isFutureOrToday(dateStr) {
     if (!dateStr) return false;
@@ -2002,6 +2306,11 @@ function isFutureOrToday(dateStr) {
     return dateStr >= todayStr;
 }
 window.isFutureOrToday = isFutureOrToday;
+
+// ── 10.2 UPDATE AGENDA SETTIMANALE (FADE) ───────────────────────────────────
+// updateWeeklyAgendaView() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Esegue un fade-out/in per aggiornare l'agenda. Logica duplicata da refreshAgenda().
+//   Verificare se viene ancora chiamata — se no, candidata alla rimozione.
 function updateWeeklyAgendaView() {
     if (state.view !== 'planner') return;
     const el = document.getElementById('weekly-agenda-list');
@@ -2024,6 +2333,14 @@ function updateWeeklyAgendaView() {
         el.style.opacity = '1';
     }, 100);
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 11 — GRAFICI CANVAS (Trend Voti)                        ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 11.1 SETUP CANVAS HiDPI ──────────────────────────────────────────────────
+// setupCanvas()      → configura canvas con devicePixelRatio per display Retina
+// colorWithAlpha()   → converte qualsiasi formato colore CSS in rgba(…, alpha)
 function setupCanvas(canvas) {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -2073,6 +2390,18 @@ function colorWithAlpha(color, alpha) {
 
     return source;
 }
+
+// ── 11.2 GRAFICO TREND MATERIA (Canvas 2D, Animato) ─────────────────────────
+// drawSubjectTrendFrame()           → disegna un frame del grafico trend per una materia:
+//   - Linee griglia (0, 6, 8, 10)
+//   - Area gradient (colore materia con alpha decrescente)
+//   - Linea andamento (stroke 3px)
+//   - Punti (verde se ≥6, rosso se <6)
+//   - Etichette date primo/ultimo voto
+// initSubjectTrendChart()           → avvia animazione del grafico (progress 0→1)
+// scheduleSubjectTrendChartInit()   → entry-point esposto su window, pianifica init
+// mountSubjectTrendChartFromDom()   → legge data-points da canvas nel DOM e avvia chart
+//   Chiamata nel ciclo di render post-montaggio (requestAnimationFrame in _renderCore)
 function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
     if (!Array.isArray(trendItems) || trendItems.length === 0) return;
     const p = { left: 44, right: 18, top: 16, bottom: 34 };
@@ -2214,6 +2543,12 @@ function mountSubjectTrendChartFromDom() {
         console.warn('Unable to mount subject trend chart:', e?.message || e);
     }
 }
+
+// ── 11.3 SCROLLBAR CUSTOM ────────────────────────────────────────────────────
+// initCustomScrollbar() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Implementa una scrollbar personalizzata con fade-out automatico.
+//   Verifica se #custom-scrollbar e #scroll-thumb esistono nel DOM.
+//   Se il design Liquid Glass non usa questi elementi, è codice morto.
 function initCustomScrollbar() {
     const scroller = document.getElementById('custom-scrollbar');
     const thumb = document.getElementById('scroll-thumb');
@@ -2261,6 +2596,12 @@ function initCustomScrollbar() {
 }
 
 
+
+// ── 11.4 GRAFICO TREND GENERALE VOTI (Canvas 2D, Media Mobile) ───────────────
+// initGradesCharts() → disegna grafico andamento media mobile su #gradesTrendCanvas.
+//   - Moving average progressiva su tutti i voti ordinati per data
+//   - Area gradient blu + linea + punti bianchi + etichette date
+//   Chiamata da _renderCore dopo render della vista 'voti'.
 /* Chart Functions */
 function initGradesCharts() {
     const canvas = document.getElementById('gradesTrendCanvas');
@@ -2359,6 +2700,17 @@ function initGradesCharts() {
         ctx.fillText(labels[i], x, H - 5);
     });
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 12 — VISTA VOTI & DETTAGLIO MATERIA                     ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 12.1 DETTAGLIO MATERIA ───────────────────────────────────────────────────
+// renderSubjectDetailView(subjectName) → vista dettaglio voti per una singola materia:
+//   - Media + barra progresso verso obiettivo
+//   - Lista tutti i voti (card verde/rosso)
+//   - Bottone modifica obiettivo (promptSetGoal)
+//   - Bottone back → closeSubject()
 function renderSubjectDetailView(subjectName) {
     const normalizedSubject = normalizeSubjectName(subjectName);
     const votiData = getVotiData()
@@ -2417,6 +2769,13 @@ function renderSubjectDetailView(subjectName) {
             </div>
         </div> `;
 }
+
+// ── 12.2 MODALI RIEPILOGO ────────────────────────────────────────────────────
+// mostraAssenzeModal()  → modal con elenco assenze/ritardi/uscite ordinate per data
+// mostraVerificheModal() → modal con lista verifiche future (Argo + manuali, dedup)
+// window._navVerifica() → navigazione carousel verifiche nel widget home (prev/next)
+//   ⚠ _navVerifica() aggiorna direttamente DOM elementi con ID specifici (vw-*).
+//      Se quegli elementi vengono rinominati nel template renderHome(), questa funzione smette di funzionare.
 function mostraAssenzeModal() {
     const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0 };
     const all = [...ad.assenze.map(x => ({ ...x, icon: 'event_busy', color: 'error' })),
@@ -2555,6 +2914,15 @@ window._navVerifica = function (dir) {
 
 
 /* Remaining UI/Modal/Logic Functions */
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 13 — CIRCOLARI                                          ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 13.1 MODAL CIRCOLARE ─────────────────────────────────────────────────────
+// mostraCircolare(id) → modal con titolo, data, sintesi AI (se disponibile).
+//   Bottone "Elabora Sintesi" → requestCircularSynthesis().
+//   Bottone "Apri Documento" → apre PDF in nuova tab.
 function mostraCircolare(id) {
     const c = state.circolari.find(x => x.id === id);
     if (!c) return;
@@ -2595,6 +2963,11 @@ function mostraCircolare(id) {
         </div>
     `);
 }
+
+// ── 13.2 MODAL DETTAGLIO GIORNO ──────────────────────────────────────────────
+// renderDayDetailModal(dateStr) → modal con task e verifiche del giorno.
+//   Permette toggle done/undone e cancellazione task manuali.
+//   Chiamata da handleDayClick() nel calendario.
 function renderDayDetailModal(dateStr) {
     const container = getModalContainer();
     if (!container) return;
@@ -2662,6 +3035,14 @@ function renderDayDetailModal(dateStr) {
         </div>
     `);
 }
+
+// ── 13.3 TOGGLE PIANIFICAZIONE DA MODAL ──────────────────────────────────────
+// togglePlanInModal()   → aggiunge/rimuove task da plannedTasks, salva, aggiorna calendario e modal
+// deleteCalendarTask()  → elimina task manuale da state.tasks e plannedTasks, aggiorna tutto
+// clearPlannedCalendarTasks() → svuota tutti i plannedTasks con conferma utente
+// notifyPlannerChanged()      → FUNZIONE CENTRALE di sincronizzazione:
+//   invalida cache agenda, aggiorna badge, Home, lista agenda in-place, calendario custom, FullCalendar
+// getPlannedTasksTotalCount() → conteggio totale task pianificati (somma di tutti i giorni)
 function togglePlanInModal(dateStr, taskId) {
     // Utilizziamo la logica esistente ma aggiorniamo il modale
     if (!state.plannedTasks[dateStr]) state.plannedTasks[dateStr] = [];
@@ -2774,6 +3155,10 @@ function getPlannedTasksTotalCount() {
         return sum + list.length;
     }, 0);
 }
+
+// ── 13.4 COLORI MATERIE ──────────────────────────────────────────────────────
+// getSubjectColor(subject) → restituisce colore HEX/HSL stabile per una materia.
+//   Logica: lookup per abbreviazione → lookup per nome normalizzato → hash HSL fallback.
 function getSubjectColor(subject) {
     let s = (subject || '').trim();
     s = s.replace(/[*_\[\]]/g, '').trim();
@@ -2824,6 +3209,13 @@ function getSubjectColor(subject) {
     const h = Math.abs(hash % 360);
     return `hsl(${h}, 80%, 52%)`;
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 14 — PROFILO UTENTE & IMPOSTAZIONI                      ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 14.1 AVATAR ──────────────────────────────────────────────────────────────
+// renderAvatar(displayName, size) → div circolare con iniziali e colore pastel stabile
 function renderAvatar(displayName, size = 44) {
     const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
@@ -2837,6 +3229,10 @@ function renderAvatar(displayName, size = 44) {
                 ${initials}
             </div>`;
 }
+
+// ── 14.2 MODALI PROFILO ──────────────────────────────────────────────────────
+// showEditProfileModal()  → modal modifica nome (classe e specializzazione sono auto da DidUP)
+// showProfileActions()    → bottom-sheet con opzioni: Configurazione | Esci dall'Account
 function showEditProfileModal() {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
@@ -2900,6 +3296,12 @@ function showProfileActions() {
         </div>`;
 }
 window.showProfileActions = showProfileActions;
+
+// ── 14.3 RENDER SETTINGS ─────────────────────────────────────────────────────
+// renderSettings() → ⚠ FUNZIONE NON USATA ATTIVAMENTE
+//   Vista impostazioni legacy (dark background, avatar, solo bottone Esci).
+//   La nuova UI usa renderProfile() (definita altrove) e showProfileActions().
+//   Candidata alla rimozione se renderProfile() è completa.
 function renderSettings() {
     return `
             <div class="view">
@@ -2937,6 +3339,15 @@ function renderSettings() {
            </div>
             `;
 }
+
+// ── 14.4 RENDER AGENDA SETTIMANALE (Lista) ──────────────────────────────────
+// renderWeeklyAgenda() → genera HTML completo della lista agenda:
+//   - Header ricerca (input + chip filtri materia)
+//   - Gruppi per data (section con header data + card task)
+//   - Filtraggio per query testuale e per materia
+//   - Stile "agenda-*" (diverso da "asw-*" usato nel calendario)
+//   ⚠ Contiene escape manuale per i click handler inline — attenzione a modifiche
+//   ⚠ Filtra task con testo "check-list|checklist" — da rivedere se il pattern è ancora valido
 function renderWeeklyAgenda() {
     const list = [];
     const today = new Date();
@@ -3103,6 +3514,16 @@ function renderWeeklyAgenda() {
         </div>`;
 }
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 15 — HELPERS AVANZATI DATE / SETTIMANE ISO              ║
+// ║  Export PDF attività svolte, navigazione settimane, dropdown planner.   ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 15.1 HELPERS DATE ATTIVITÀ ───────────────────────────────────────────────
+// getActivityDateObject()         → parsa la data di un'attività (data|datGiorno)
+// getCurrentSchoolYearLabel()     → "2024-2025" in base al mese corrente
+// getSchoolYearLabelForDate(date) → come sopra ma per una data specifica
 function getActivityDateObject(activity) {
     const rawDate = activity?.date || activity?.datGiorno || '';
     const parsed = parseArgoDate(rawDate);
@@ -3123,6 +3544,14 @@ function getSchoolYearLabelForDate(date) {
     return `${startYear}-${startYear + 1}`;
 }
 
+
+// ── 15.2 SETTIMANE ISO (ISO 8601) ────────────────────────────────────────────
+// getIsoWeekInputValue(date)       → data → "2025-W12" (ISO week year)
+// parseIsoWeekRange(weekValue)     → "2025-W12" → {start, end} (Date objects)
+// getViewportWidth()               → larghezza viewport (con fallback)
+// getWeekSelectionDetailLabel()    → label dettagliata settimana ("Settimana 12 del 2025 · da … a …")
+// getWeekSelectionOptionLabel()    → label opzione dropdown settimana
+// shiftIsoWeekValue()              → sposta di N settimane un valore ISO week
 function getIsoWeekInputValue(date) {
     const target = new Date(date.getTime());
     target.setHours(0, 0, 0, 0);
@@ -3188,6 +3617,14 @@ function shiftIsoWeekValue(weekValue, deltaWeeks) {
     return getIsoWeekInputValue(target);
 }
 
+
+// ── 15.3 OPZIONI SETTIMANE EXPORT ────────────────────────────────────────────
+// getClassActivitiesWeekOptions()       → genera lista settimane ISO per dropdown export
+//   Finestra: 16 settimane indietro + 8 in avanti + settimane da attività storiche
+//   Limitata a CLASS_ACTIVITIES_MAX_WEEK_OPTIONS per compattezza.
+// getSortedCompletedClassActivities()   → attività di classe ordinate per data (desc)
+// getClassActivitiesExportSelection()   → filtra attività per periodo selezionato (mese/settimana/anno scolastico)
+// renderClassActivitiesExportModalContent() → re-renderizza il contenuto del modal export PDF
 function getClassActivitiesWeekOptions(selectedWeekValue) {
     const weeks = new Set();
     const today = new Date();
@@ -3347,6 +3784,17 @@ function renderClassActivitiesExportModalContent() {
     `;
 }
 
+
+// ── 15.4 MODAL EXPORT PDF ATTIVITÀ ───────────────────────────────────────────
+// openClassActivitiesExportModal() → apre il modal di export PDF attività svolte
+// setClassActivitiesExportPeriod() → cambia periodo (week/month/school_year) e re-renderizza
+// togglePlannerMobileDropdown()    → apre/chiude dropdown mobile planner (posizionato con JS)
+// closePlannerMobileDropdown()     → chiude dropdown e rimuove listener resize/scroll
+// repositionPlannerMobileDropdown() → calcola posizione assoluta del dropdown evitando bordi schermo
+// handlePlannerMobileMenuAction()  → dispatcher azioni dropdown: plan | pdf | clear
+// updateClassActivitiesExportPeriodValue() → aggiorna valore periodo selezionato
+// shiftClassActivitiesExportWeek()          → sposta settimana nel modal export
+// downloadClassActivitiesPdf()              → genera HTML stampabile e apre popup stampa
 window.openClassActivitiesExportModal = function () {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
@@ -3552,6 +4000,12 @@ window.downloadClassActivitiesPdf = function () {
     popup.document.close();
 };
 
+
+// ── 15.5 MODAL PIANIFICA SETTIMANA ───────────────────────────────────────────
+// showPlanWeekModal()          → apre il modal con griglia 7 giorni × N task
+// refreshPlanWeekModalContent() → (ri)costruisce il contenuto del modal
+// togglePlanDay(taskId, date)   → toggle pianificazione task per un giorno specifico
+//   Surgical DOM update immediato (no re-render) + notifyPlannerChanged()
 window.showPlanWeekModal = function () {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
@@ -3596,6 +4050,12 @@ function togglePlanDay(taskId, dateStr) {
 
     notifyPlannerChanged();
 }
+
+// ── 15.6 SHOW VOTI VIEW (LEGACY MODAL) ──────────────────────────────────────
+// showVotiView() → ⚠ FUNZIONE NON USATA ATTIVAMENTE
+//   Mostrava i voti in una modal. Ora la vista voti è una view principale.
+//   Usa modalContainer direttamente (senza getModalContainer()) — bug potenziale.
+//   Candidata alla rimozione.
 function showVotiView() {
     modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
@@ -3610,6 +4070,14 @@ function showVotiView() {
             </div>
             </div> `;
 }
+
+// ── 15.7 PROIEZIONE OBIETTIVO (Algoritmo) ────────────────────────────────────
+// getGoalProjection(media, goal, count) → calcola scenari di voti necessari per raggiungere
+//   l'obiettivo a partire dalla media attuale:
+//   - Scenari singoli: N voti uguali per recuperare
+//   - Scenari combo: 1 voto basso + K voti 10 (percorsi realistici)
+//   - Scenario esatto: voto preciso da prendere (se nessun altro scenario trovato)
+//   Restituisce { done, gap, scenarios[] }
 function getGoalProjection(media, goal, count) {
     const safeMedia = Number.isFinite(media) ? media : 0;
     const safeGoal = Number.isFinite(goal) ? goal : 8.0;
@@ -3696,6 +4164,11 @@ function getGoalProjection(media, goal, count) {
         scenarios: uniqueScenarios
     };
 }
+
+// ── 15.8 RENDER LISTA VOTI ───────────────────────────────────────────────────
+// renderVoti() → lista card voti (verde/rosso/grigio per giustifica).
+//   Click su card → handleGradeSubjectClickFromEncoded() (dettaglio materia)
+//   Usato sia come view standalone che in showVotiView() (legacy).
 function renderVoti() {
     const votiData = (state.voti && state.voti.length > 0) ? state.voti :
         ((state.grades && state.grades.length > 0) ? state.grades : []);
@@ -3738,6 +4211,13 @@ function renderVoti() {
             }).join('')}
         </div> `;
 }
+
+// ── 15.9 MODAL BACHECA / AVVISI ──────────────────────────────────────────────
+// showBachecaModal() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Mostra avvisi da state.promemoria o state.announcements in una modal.
+//   Usa modalContainer direttamente (senza getModalContainer()) — bug potenziale.
+//   La sezione Circolari (renderCircolariView) ha sostituito questa funzionalità.
+//   Candidata alla rimozione o integrazione.
 function showBachecaModal() {
     // ⭐ Prova prima promemoria, poi announcements
     const dataBacheca = state.promemoria && state.promemoria.length > 0 ? state.promemoria :
@@ -3793,6 +4273,11 @@ function showBachecaModal() {
             </div>
            </div> `;
 }
+
+// ── 15.10 IMPOSTA OBIETTIVO VOTO ─────────────────────────────────────────────
+// promptSetGoal(type) → dialog nativo per inserire un obiettivo voto per materia.
+//   Salva in state.goals e localStorage. Poi chiama render().
+//   ⚠ Usa prompt() nativo — considerare un modal custom per coerenza UI.
 function promptSetGoal(type) {
     const currentGoal = state.goals?.[type] || 8.0;
     const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
@@ -3809,6 +4294,17 @@ function promptSetGoal(type) {
         }
     }
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 16 — TIMER POMODORO                                     ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 16.1 RENDER & LOGICA TIMER POMODORO ──────────────────────────────────────
+// renderFocusTimer() → HTML del timer con display MM:SS, bottoni Avvia/Pausa e Reset
+// togglePomodoro()   → avvia/pausa il timer, gestisce transizione focus→pausa e viceversa
+//   Aggiorna il #pomodoroContainer ogni secondo senza full re-render.
+//   ⚠ Dipende da pomodoroState (definito altrove, probabilmente in index.html)
+//   ⚠ Se #pomodoroContainer non esiste nel DOM, clearInterval ma nessun errore visibile
 function renderFocusTimer() {
     const mins = Math.floor(pomodoroState.timeLeft / 60);
     const secs = pomodoroState.timeLeft % 60;
@@ -3862,10 +4358,32 @@ function togglePomodoro() {
     const container = document.getElementById('pomodoroContainer');
     if (container) container.innerHTML = renderFocusTimer();
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 17 — FUNZIONI AI/VOICE DISABILITATE (STUB)              ║
+// ║  Tutte le funzioni seguenti hanno body vuoto con commento                ║
+// ║  "AI chat functionality has been disabled". NON RIMUOVERE:              ║
+// ║  vengono ancora chiamate da handler inline nel HTML.                    ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 17.1 STUB FUNZIONI DISABILITATE ──────────────────────────────────────────
+// toggleVoiceInput()          → ⚠ DISABILITATA - era input vocale
+// promptAddBacklog()          → chiama showAddBacklogModal() (questa è ancora attiva)
+// sendAIChatQuick()           → ⚠ DISABILITATA - chat AI
+// sendAIChatQuickAt()         → ⚠ DISABILITATA - chat AI
+// handleAIChatInputKeypress() → ⚠ DISABILITATA - chat AI
+// startNewAIChat()            → ⚠ DISABILITATA - chat AI
+// clearAIChat()               → ⚠ DISABILITATA - chat AI
+// deleteAIChatMessage()       → ⚠ DISABILITATA - chat AI
+// stopVoiceInput()            → ⚠ DISABILITATA - input vocale
 function toggleVoiceInput() {
     // Voice input removed - AI chat functionality has been disabled
 }
 function promptAddBacklog() { showAddBacklogModal(); }
+
+// ── 17.2 MODAL AGGIUNGI ARRETRATO ────────────────────────────────────────────
+// showAddBacklogModal() → modal con select materia + input argomento da recuperare
+//   Bottone "Aggiungi Arretrato" → submitBacklogForm()
 function showAddBacklogModal() {
     const container = getModalContainer();
     if (!container) return;
@@ -3899,6 +4417,16 @@ function showAddBacklogModal() {
                </div>
            </div>`;
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 18 — VISTE LEGACY (probabilmente non usate)             ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 18.1 RENDER VERIFICHE (VISTA LEGACY) ─────────────────────────────────────
+// renderVerifiche() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Vista elenco verifiche (state.exams). La gestione verifiche è ora in mostraVerificheModal()
+//   e nel calendario. Usa stile dark (var(--text-primary) ecc.) non Liquid Glass.
+//   Candidata alla rimozione.
 function renderVerifiche() {
     const exams = state.exams || [];
     // Sort by date
@@ -3968,6 +4496,10 @@ function renderVerifiche() {
                    </div>
                </div>`;
 }
+
+// ── 18.2 RENDER ARRETRATI (VISTA LEGACY) ─────────────────────────────────────
+// renderRecoveries() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Vista elenco arretrati (state.backlog). Stile dark legacy. Candidata alla rimozione.
 function renderRecoveries() {
     const backlog = state.backlog || [];
 
@@ -4015,6 +4547,15 @@ function renderRecoveries() {
                    </div>
                </div>`;
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 19 — MODAL LOGIN & SELEZIONE PROFILO                    ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 19.1 MODAL LOGIN ARGO/DIDUP ──────────────────────────────────────────────
+// openArgoLogin() → apre il form di login con input schoolCode/username/password.
+//   Chiama checkServerHealth() per mostrare lo stato del server.
+//   Bottone "Accedi e Sincronizza" → performArgoSync() (definita altrove).
 function openArgoLogin() {
     const modalContainer = getModalContainer();
     if (!modalContainer) return;
@@ -4042,6 +4583,12 @@ function openArgoLogin() {
         </div>`;
     checkServerHealth();
 }
+
+// ── 19.2 MODAL SELEZIONE PROFILO ─────────────────────────────────────────────
+// showProfileSelectionModal() → modal per scegliere tra più profili DidUP.
+//   Al click su un profilo mostra un loader animato e chiama selectProfile().
+//   resolveProfileNamesAsync() carica i nomi reali in background.
+//   ⚠ selectProfile() e resolveProfileNamesAsync() NON sono definiti in questo file.
 function showProfileSelectionModal(profiles, credentials) {
     console.log("👥 Mostro modale selezione profili:", profiles);
     const container = getModalContainer();
@@ -4117,6 +4664,9 @@ function showProfileSelectionModal(profiles, credentials) {
     // Risolvi i nomi veri in background
     resolveProfileNamesAsync(profiles, credentials, container);
 }
+
+// ── 19.3 HELPER LOGIN BUTTON ─────────────────────────────────────────────────
+// setLoginBtnText(txt) → aggiorna il testo del bottone login e lo disabilita durante il caricamento
 function setLoginBtnText(txt) {
     const btn = document.getElementById('login-btn') ||
         document.querySelector('.login-btn') ||
@@ -4129,6 +4679,21 @@ function setLoginBtnText(txt) {
     btn.innerText = txt;
     btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
 }
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 20 — TOGGLE TASK & QUICK ADD                            ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 20.1 TOGGLE COMPLETAMENTO TASK ───────────────────────────────────────────
+// toggleTask(id) → inverte stato done/undone di un task (anche reminder).
+//   Surgical DOM update multi-punto:
+//   - Tutti i checkbox [data-task-toggle]
+//   - Tutti i testi [data-task-text]
+//   - updatePlanTaskUI (Home widget)
+//   - Sync eventi calendario (FullCalendar se presente)
+//   - Refresh weekly-agenda-list in-place
+//   - Aggiorna badge completati
+//   - updateHomeView() se vista home
 function toggleTask(id) {
     if (event) event.stopPropagation();
 
@@ -4207,6 +4772,13 @@ function toggleTask(id) {
         if (state.view === 'home' && typeof updateHomeView === 'function') updateHomeView();
     }
 }
+
+// ── 20.2 MODAL QUICK ADD TASK/VERIFICA ──────────────────────────────────────
+// showQuickAddTaskModal() → modal bottom-sheet con 3 tab:
+//   Tab "Nuovo":     inserimento libero (materia, testo, data)
+//   Tab "Assegnati": selezione da task pendenti già in agenda, scelta data studio
+//   Tab "Verifica":  aggiunta verifica (materia, argomenti, tipo scritta/orale/pratica, data)
+//   Usa applyImmediateCalendarAction() per aggiungere. Tutta la logica è inline via requestAnimationFrame.
 function showQuickAddTaskModal() {
     const preselectedDate = state.selectedDate || getLocalDateString();
     const allTasks  = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
@@ -4400,6 +4972,12 @@ function showQuickAddTaskModal() {
     });
 }
 
+
+// ── 20.3 MODAL AGGIUNGI VERIFICA (REGISTRO) ──────────────────────────────────
+// showAddRegistroTaskModal() → modal dedicata all'aggiunta di una verifica al registro.
+//   Tipo (scritta/orale), materia, argomenti, data.
+//   selectRegistroTipo() → aggiorna stile bottoni tipo.
+//   submitRegistroTask() → ⚠ NON definita in questo file (è in index.html con integrazione Supabase)
 function showAddRegistroTaskModal() {
     const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
     const subjectOptions = subjects.length > 0
@@ -4465,6 +5043,12 @@ window.selectRegistroTipo = function (tipo) {
 };
 // --- Submit Registro Task (Handled in index.html) ---
 // (Moved to correct global scope with Supabase integration in index.html)
+
+// ── 20.4 MODAL COMPETENZE & PRIORITÀ ─────────────────────────────────────────
+// showCompetencyInputModal() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Modal per valutare la preparazione (slider 1-5) per ogni materia.
+//   Bottone "Chiedi un Piano all'AI" → submitCompetencyRequest() (funzione AI disabilitata).
+//   Candidata alla rimozione insieme alle funzionalità AI.
 function showCompetencyInputModal() {
     const votiData = getVotiData();
     const subjectsMap = {};
@@ -4530,6 +5114,12 @@ function showCompetencyInputModal() {
                 </div>
         `);
 }
+
+// ── 20.5 MODAL ORGANIZZA STUDIO OGGI (LEGACY) ────────────────────────────────
+// showOrganizeStudyModal() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Modal con checkbox task da pianificare per oggi. Sostituita da showPlanWeekModal().
+//   Usa modalContainer direttamente (senza getModalContainer()) — bug potenziale.
+//   Candidata alla rimozione.
 function showOrganizeStudyModal() {
     const todayStr = getLocalDateString(getSchoolDate());
     const plannedIds = state.plannedTasks[todayStr] || [];
@@ -4566,6 +5156,12 @@ function showOrganizeStudyModal() {
             </div>
         `;
 }
+
+// ── 20.6 DROPDOWN PLANNER (Desktop) ─────────────────────────────────────────
+// closePlannerDropdown() → chiude il dropdown #planner-cloud-menu
+// togglePlannerMenu()    → apre/chiude dropdown con click-outside listener automatico
+//   ⚠ Diverso da togglePlannerMobileDropdown() (Sezione 15.4) che usa posizionamento fisso.
+//      Questi due sistemi dropdown coesistono per desktop e mobile.
 function closePlannerDropdown() {
     const menu = document.getElementById('planner-cloud-menu');
     const btn = document.getElementById('planner-cloud-btn');
@@ -4606,6 +5202,11 @@ function togglePlannerMenu(event) {
         closePlannerDropdown();
     }
 }
+
+// ── 20.7 MODAL TASK PER MATERIA (LEGACY) ─────────────────────────────────────
+// showTasksBySubjectModal() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Modal con task raggruppati per materia. Usa modalContainer diretto.
+//   Candidata alla rimozione o sostituzione con la vista agenda filtrata.
 function showTasksBySubjectModal() {
     const subjects = [...new Set(state.tasks.map(t => t.subject))].sort();
     modalContainer.innerHTML = `
@@ -4647,6 +5248,11 @@ function showTasksBySubjectModal() {
             </div>
         `;
 }
+
+// ── 20.8 TOGGLE PIANIFICAZIONE TASK (PER OGGI) ───────────────────────────────
+// togglePlanTask(id) → aggiunge/rimuove task dai plannedTasks di oggi.
+//   Usato nel modal showOrganizeStudyModal() (legacy). Chiama notifyPlannerChanged().
+//   ⚠ Diverso da togglePlanDay() che opera su date arbitrarie.
 function togglePlanTask(id) {
     if (event) event.stopPropagation();
 
@@ -4666,6 +5272,12 @@ function togglePlanTask(id) {
     updatePlannerCounter();
     notifyPlannerChanged(); // ✅ aggiorna Planner e Home SUBITO
 }
+
+// ── 20.9 UPDATE UI TASK (LEGACY) ─────────────────────────────────────────────
+// updateTaskUI() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Versione precedente del surgical DOM update per checkbox.
+//   Sostituita da toggleTask() che gestisce tutti i selettori in un unico posto.
+//   Candidata alla rimozione.
 function updateTaskUI(taskId, isDone) {
     const checkbox = document.querySelector(`[data-task-toggle="${taskId}"]`);
     const taskText = document.querySelector(`[data-task-text="${taskId}"]`);
@@ -4702,10 +5314,20 @@ function updateTaskUI(taskId, isDone) {
         }
     }
 }
+
+// ── 20.10 WIDGET MEDIA & HOME (LEGACY) ───────────────────────────────────────
+// updateMediaWidget()   → ⚠ chiama renderMediaGauge() che è empty — dead code
+// initHomeWidgets()     → ⚠ chiama renderMediaGauge() che è empty — dead code
+//   Entrambe candidate alla rimozione.
 function updateMediaWidget(value) { renderMediaGauge(value); }
 function initHomeWidgets({ mediaValue = 7.64 } = {}) {
     renderMediaGauge(mediaValue);
 }
+
+// ── 20.11 TOGGLE POLL CREATOR UI ─────────────────────────────────────────────
+// togglePollCreatorUI() → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Mostra/nasconde il div #poll-creator-ui. Funzionalità sondaggi non implementata.
+//   Candidata alla rimozione.
 function togglePollCreatorUI() {
     const ui = document.getElementById('poll-creator-ui');
     if (ui) {
@@ -4714,6 +5336,14 @@ function togglePollCreatorUI() {
 }
 
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 21 — RENDER ENGINE & NAVIGAZIONE PRINCIPALE             ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 21.1 ANIMATIONEND LISTENER ────────────────────────────────────────────────
+// Aggiunge classe 'anim-done' alle view/hero dopo la loro animazione di ingresso.
+// Usato per disabilitare animazioni ripetute (CSS: .anim-done { animation: none })
 // ── 4. PATCH: animationend listener ──
 document.addEventListener('animationend', (e) => {
     if (e.target.classList.contains('view') ||
@@ -4723,6 +5353,12 @@ document.addEventListener('animationend', (e) => {
     }
 }, true);
 
+
+// ── 21.2 GLOBAL SAFETY EXPORTS (HOTFIX) ─────────────────────────────────────
+// Blocco IIFE che attacca su window funzioni fallback se non già definite:
+//   showProfileActions fallback → modal minimale se la versione principale fallisce
+//   isFutureOrToday fallback    → versione timezone-safe
+// ⚠ Non rimuovere: questi fallback prevengono crash in condizioni di caricamento parziale.
 /* ===== GLOBAL SAFETY EXPORTS (hotfix) ===== */
 (function attachGlobals() {
     const safeBind = (name, fn) => {
@@ -4760,6 +5396,20 @@ document.addEventListener('animationend', (e) => {
 })();
 
 
+
+// ── 21.3 RENDERING ENGINE ────────────────────────────────────────────────────
+// allowedViews            → whitelist viste navigabili
+// currentViewFromHash()   → legge la vista dall'hash URL (#home, #planner ecc.)
+// render()                → entry-point render con deduplicazione:
+//   - throttle a RENDER_MIN_GAP (50ms)
+//   - usa requestAnimationFrame per batching
+//   - condivide _gRenderRAF e _gRenderTimer con fluidity-engine-v3.js
+// scheduleRender(delay)   → pianifica render con delay (default 80ms)
+// _renderCore()           → ⚡ CUORE DEL RENDER:
+//   1. Guard post-logout
+//   2. Deduplicazione: salta se stessa vista + stessi dati
+//   3. Renderizza login o vista corrente (home/planner/voti/profile/circolari)
+//   4. Post-render: charts, GSAP, lucide icons, removeLoader
 // ── RENDERING HEART & NAVIGATION SETTINGS ──
 window.allowedViews = ['home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
 
@@ -4770,10 +5420,34 @@ window.currentViewFromHash = function () {
 
 // ── Rendering Deduplication Lock ──
 let _lastRenderTime = 0;
-const RENDER_MIN_GAP = 50; // ms
+const RENDER_MIN_GAP = 30; // ms — ridotto da 50 a 30 per risposta più immediata
 // Shared globals so fluidity-engine-v3.js can cancel/take over timers
 window._gRenderRAF = null;
 window._gRenderTimer = null;
+
+// ── PRE-RENDER CACHE: pre-compila le viste adiacenti in background ──────────
+// Quando l'utente è sull'agenda, il render della home è già pronto in cache.
+// Elimina il micro-delay percepibile al tap sui bottoni nav.
+window._viewCache = {};
+window._prewarmViews = function() {
+    if (!state.isLoggedIn || state.booting || state._loggedOut) return;
+    // Pre-renderizza silenziosamente le viste non attive
+    requestIdleCallback(function() {
+        try {
+            const views = ['home','planner','voti'];
+            views.forEach(v => {
+                if (v === state.view) return; // la vista attiva viene renderizzata normalmente
+                const key = v + ':' + (state.tasks||[]).length + ':' + (state.voti||[]).length;
+                if (window._viewCache[v] && window._viewCache[v].key === key) return; // già valida
+                let html = '';
+                if (v === 'home' && typeof renderHome === 'function') html = renderHome();
+                else if (v === 'planner' && typeof renderPlanner === 'function') html = renderPlanner();
+                else if (v === 'voti' && typeof renderGradesView === 'function') html = renderGradesView();
+                if (html) window._viewCache[v] = { html, key };
+            });
+        } catch(_) {}
+    }, { timeout: 800 });
+};
 
 window.render = function () {
     if (window._gRenderRAF || state.booting || state._loggedOut) return;
@@ -4787,6 +5461,8 @@ window.render = function () {
     window._gRenderRAF = requestAnimationFrame(() => {
         window._renderCore();
         window._gRenderRAF = null;
+        // Pre-riscalda le viste adiacenti dopo ogni render
+        setTimeout(window._prewarmViews, 400);
     });
 };
 
@@ -4910,6 +5586,17 @@ window.removeLoader = function () {
     }
 };
 
+
+// ── 21.4 LOGOUT ──────────────────────────────────────────────────────────────
+// logout() → sequenza di logout sicura:
+//   1. Imposta flag _loggedOut per bloccare render asincroni
+//   2. Kill tweens GSAP
+//   3. Salva plannedTasks su localStorage prima di pulire
+//   4. Cancella sessione (sessionManager.clear, RAM password, Supabase signOut)
+//   5. Reset completo state
+//   6. Scrivi login imperativo nel DOM (bypassa pipeline async)
+//   7. MutationObserver 1s per impedire sovrascritture post-logout
+//   8. Salva plannedTasks su server via PUT /api/planner (keepalive)
 window.logout = async function () {
     if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
@@ -5019,6 +5706,11 @@ window.logout = async function () {
     }
 };
 
+
+// ── 21.5 SALVATAGGIO PROFILO ──────────────────────────────────────────────────
+// saveProfileToServer()   → PUT /api/profile con nome/classe/specializzazione
+// saveProfileChanges()    → legge input #edit-user-name, chiama saveProfileToServer,
+//   aggiorna state.user.name e chiude il modal.
 window.saveProfileToServer = async function (profileData) {
     const userId = getUserId();
     const response = await fetch(`${API_BASE_URL}/api/profile`, {
@@ -5055,6 +5747,11 @@ window.saveProfileChanges = async function () {
     }
 };
 
+
+// ── 21.6 FRASI MOTIVAZIONALI (Quote Engine) ──────────────────────────────────
+// MOTIVATIONAL_QUOTES     → array di 50+ frasi motivazionali
+// getDailyQuote()         → 1 frase al giorno (cached in localStorage)
+// refreshDailyQuote()     → forza una nuova frase random e ri-renderizza
 // ── QUOTES ──
 const MOTIVATIONAL_QUOTES = [
     "Il successo è la somma di piccoli sforzi, ripetuti giorno dopo giorno.",
@@ -5143,6 +5840,12 @@ window.refreshDailyQuote = async function (btn) {
     window.scheduleRender(0);
 };
 
+
+// ── 21.7 HELPERS NAVIGAZIONE & CIRCOLARI ─────────────────────────────────────
+// handleManualOwaResyncClick() → conferma utente + chiama runManualOwaResync() (definita altrove)
+// refreshCircolari()           → mostra toast e chiama loadCircolari() (definita altrove)
+// requestCircularSynthesis()   → avvia animazione progress bar e chiama loadCircolareSintesi()
+// loadCircolareSintesi()       → POST /api/circolari/sintesi → aggiorna DOM con markdown
 window.handleManualOwaResyncClick = function (event) {
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
     if (!confirm('Eseguire un resync manuale completo dei dati OWA?')) return;
@@ -5227,6 +5930,20 @@ window.loadCircolareSintesi = async function (id, link) {
     }
 };
 
+
+// ── 21.8 PLANNER QUESTS & HELPERS ────────────────────────────────────────────
+// refreshPlanWeekModalContent() → vedi Sezione 15.5
+// finalizePlanWeekModal()       → chiude il modal pianificazione con animazione "Fatto ✓"
+// updateWeekDayButton()         → aggiorna stile bottone giorno nella griglia settimanale
+// addCustomQuestFromInput()     → ⚠ DISABILITATA — mostra toast "task manuali disattivate"
+// adjustNextGradeSimulator()    → incrementa/decrementa simulatore voto e aggiorna widget
+// selectDay()                   → imposta state.selectedDay e scheduleRender
+// getVotiData()                 → restituisce state.voti o state.grades (primo non vuoto)
+// getAllSubjects()               → unione materie da voti, task ed esami (con fallback hardcoded)
+// submitExamForm()              → aggiunge esame da modal, crea anche task corrispondente
+// removeExam()                  → rimuove esame per indice
+// submitBacklogForm()           → aggiunge arretrato
+// removeBacklog()               → rimuove arretrato per indice
 // ── PLANNER & QUESTS ──
 window.refreshPlanWeekModalContent = function () {
     const contentEl = document.getElementById('plan-week-modal-content');
@@ -5409,6 +6126,12 @@ window.removeBacklog = function (index) {
     window.scheduleRender();
 };
 
+
+// ── 21.9 AI ASSISTANT — STUB DISABILITATI ────────────────────────────────────
+// Tutte le funzioni seguenti sono empty stub con commento "AI chat functionality has been disabled":
+// sendAIChatQuick | sendAIChatQuickAt | handleAIChatInputKeypress
+// startNewAIChat | clearAIChat | deleteAIChatMessage | stopVoiceInput
+// ⚠ NON RIMUOVERE: potrebbero essere referenziate in handler HTML inline.
 // ── AI ASSISTANT HELPERS ──
 window.sendAIChatQuick = function (text) {
     // AI chat functionality has been disabled
@@ -5432,6 +6155,27 @@ window.stopVoiceInput = function () {
     // AI chat functionality has been disabled
 };
 
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  MACRO-SEZIONE 22 — AZIONI CALENDARIO IMMEDIATE (AI Parser)            ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── 22.1 PARSER AZIONI CALENDARIO DA TESTO LIBERO ────────────────────────────
+// extractImmediateCalendarAction(text) → ⚠ FUNZIONE PARZIALMENTE NON USATA
+//   Parsava testo libero (es. "Aggiungi matematica al calendario il 10/04")
+//   per estrarre: tipo (add/delete), data, orario, materia, testo attività.
+//   Era il parser NLP lato client per il chat AI (ora disabilitato).
+//   Ancora usata da applyImmediateCalendarAction() che è chiamata da showQuickAddTaskModal().
+//
+// applyImmediateCalendarAction(action) → applica un'azione add al calendario:
+//   - Crea task con ID "manual_*"
+//   - Aggiunge a state.tasks e state.plannedTasks
+//   - Chiama saveTasks() e debouncedSavePlannerRemote()
+//
+// normalizeAiResponseMarkdown(text) → ⚠ FUNZIONE PROBABILMENTE NON USATA ATTIVAMENTE
+//   Normalizzava la risposta AI convertendo tabelle Markdown in liste.
+//   Definita ma troncata nell'output — verificare se completa nel sorgente.
+//   Candidata alla rimozione insieme all'AI chat.
 function extractImmediateCalendarAction(text) {
     const raw = String(text || '');
     if (!raw) return null;
@@ -6069,13 +6813,13 @@ function renderPlanner() {
     }
 
     return `
-    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0 18px;position:relative;">
+    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0 24px;position:relative;">
 
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:env(safe-area-inset-top,24px) 0 18px;padding-top:max(env(safe-area-inset-top,0px),28px);">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <button onclick="state.plannerMonthView=!state.plannerMonthView;if(state.plannerMonthView){var d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}state._forceRender=true;scheduleRender(0);" style="font-size:14px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:7px 15px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 2px 8px -2px rgba(37,99,235,0.12);">
-                ${MN[selDate.getMonth()]} ${selDate.getFullYear()} <span style="opacity:0.6;font-size:11px;">${showMonthView?'↑':'↓'}</span>
+            <button onclick="state.plannerMonthView=!state.plannerMonthView;if(state.plannerMonthView){var d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}state._forceRender=true;scheduleRender(0);" style="font-size:14px;font-weight:700;color:#1e40af;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 15px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+                ${MN[selDate.getMonth()]} ${selDate.getFullYear()}
             </button>
         </header>
 
@@ -6083,9 +6827,9 @@ function renderPlanner() {
         ${showMonthView?`
         <div style="background:white;border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+11)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===0)y--;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform 0.12s ease,opacity 0.12s ease;" onpointerdown="this.style.transform='scale(0.88)';this.style.opacity='0.7';" onpointerup="this.style.transform='';this.style.opacity='';" onpointerleave="this.style.transform='';this.style.opacity='';"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
+                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+11)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===0)y--;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
                 <span style="font-size:16px;font-weight:700;color:#1e293b;">${MN[mvM]} ${mvY}</span>
-                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+1)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===11)y++;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform 0.12s ease,opacity 0.12s ease;" onpointerdown="this.style.transform='scale(0.88)';this.style.opacity='0.7';" onpointerup="this.style.transform='';this.style.opacity='';" onpointerleave="this.style.transform='';this.style.opacity='';"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
+                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+1)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===11)y++;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;">
                 ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:4px 0;">${d}</div>`).join('')}
@@ -6098,7 +6842,7 @@ function renderPlanner() {
                     const isTd=iso===todayISO,isSel=iso===selectedDate;
                     const hasTasks=!!mvTaskMap[iso];
                     const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
-                    return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;state._forceRender=true;scheduleRender(0);" style="aspect-ratio:1;border-radius:12px;border:none;cursor:pointer;background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};color:${isSel?'white':isTd?'#1e40af':'#1e293b'};font-size:13px;font-weight:${isTd||isSel?'700':'400'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:${isSel?'0 4px 12px rgba(37,99,235,0.3)':'none'};transition:transform 0.12s ease,background 0.15s ease,box-shadow 0.15s ease;-webkit-tap-highlight-color:transparent;touch-action:manipulation;" onpointerdown="this.style.transform='scale(0.87)';" onpointerup="this.style.transform='';" onpointerleave="this.style.transform='';">
+                    return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;state._forceRender=true;scheduleRender(0);" style="aspect-ratio:1;border-radius:12px;border:none;cursor:pointer;background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};color:${isSel?'white':isTd?'#1e40af':'#1e293b'};font-size:13px;font-weight:${isTd||isSel?'700':'400'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:${isSel?'0 4px 12px rgba(37,99,235,0.3)':'none'};transition:all 0.15s ease;">
                         ${dn}
                         <div style="width:4px;height:4px;border-radius:50%;background:${hasTasks?(isSel?'rgba(255,255,255,0.9)':hasExam?'#ef4444':'#2563eb'):'transparent'};"></div>
                     </button>`;
@@ -6131,19 +6875,24 @@ function renderPlanner() {
 
         <!-- ══ WEEK NAVIGATOR ══ -->
         ${!showSearchPanel&&!showMonthView?`
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
-            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;state._forceRender=true;scheduleRender(0);" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;background:white;border:1.5px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.07);-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform 0.12s ease,opacity 0.12s ease;" onpointerdown="this.style.transform='scale(0.88)';this.style.opacity='0.7';" onpointerup="this.style.transform='';this.style.opacity='';" onpointerleave="this.style.transform='';this.style.opacity='';"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
-            <div style="flex:1;display:flex;overflow-x:auto;gap:6px;scrollbar-width:none;-ms-overflow-style:none;padding:4px 1px;">
+        <div style="background:white;border-radius:26px;padding:14px 14px 12px;margin-bottom:18px;box-shadow:0 4px 20px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px;">
+                <span style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;">Settimana</span>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="if(!window._plannerNavLock){window._plannerNavLock=true;state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;state._forceRender=true;scheduleRender(0);setTimeout(()=>{window._plannerNavLock=false;},200);}" style="width:32px;height:32px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span></button>
+                    <button onclick="if(!window._plannerNavLock){window._plannerNavLock=true;state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;state._forceRender=true;scheduleRender(0);setTimeout(()=>{window._plannerNavLock=false;},200);}" style="width:32px;height:32px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span></button>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">
                 ${weekDays.map(d=>{
                     const isSel=d.iso===selectedDate;
-                    return `<div onclick="state.selectedDate='${d.iso}';state._forceRender=true;scheduleRender(0);" onpointerdown="this.style.transform=this.style.transform.includes('scale(1.04)')?'scale(1.04) scale(0.94)':'scale(0.94)';" onpointerup="this.style.transform=this.style.transform.includes('scale(1.04)')?'scale(1.04)':'';" onpointerleave="this.style.transform=this.style.transform.includes('scale(1.04)')?'scale(1.04)':'';" style="flex-shrink:0;width:calc((100% - 36px)/7);min-width:44px;height:92px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;${isSel?'background:#2563eb;box-shadow:0 6px 18px -4px rgba(37,99,235,0.38);transform:scale(1.04);':'background:white;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 12px -5px rgba(0,0,0,0.06);'}transition:transform 0.15s cubic-bezier(0.2,0.8,0.2,1),background 0.18s ease,box-shadow 0.18s ease;">
-                        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.75)':'#94a3b8'};">${d.label}</span>
-                        <span style="font-size:20px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
+                    return `<div onclick="if(!window._plannerDayLock){window._plannerDayLock=true;state.selectedDate='${d.iso}';state._forceRender=true;scheduleRender(0);setTimeout(()=>{window._plannerDayLock=false;},150);}" style="height:76px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;${isSel?'background:#2563eb;box-shadow:0 6px 18px -4px rgba(37,99,235,0.38);':'background:#f8fafc;'}transition:transform 0.12s ease,box-shadow 0.12s ease;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
+                        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:${isSel?'rgba(255,255,255,0.72)':'#94a3b8'};">${d.label}</span>
+                        <span style="font-size:22px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
                         <div style="width:5px;height:5px;border-radius:50%;background:${d.isToday?(isSel?'rgba(255,255,255,0.9)':'#2563eb'):d.hasTask?(isSel?'rgba(255,255,255,0.5)':'rgba(37,99,235,0.25)'):'transparent'};"></div>
                     </div>`;
                 }).join('')}
             </div>
-            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;state._forceRender=true;scheduleRender(0);" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;background:white;border:1.5px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.07);-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform 0.12s ease,opacity 0.12s ease;" onpointerdown="this.style.transform='scale(0.88)';this.style.opacity='0.7';" onpointerup="this.style.transform='';this.style.opacity='';" onpointerleave="this.style.transform='';this.style.opacity='';"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
         </div>
 
         ${upcomingCount>0?`
@@ -6165,7 +6914,7 @@ function renderPlanner() {
         </div>`:''}
 
         <!-- ══ FABs — above navbar ══ -->
-        <div style="position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:11px;z-index:40;">
+        <div style="position:fixed;bottom:calc(104px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:11px;z-index:40;">
             <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:21px;">history</span>
             </button>
