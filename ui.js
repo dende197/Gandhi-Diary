@@ -1583,31 +1583,15 @@ function syncCalendarEvents() {
 //   - 14 celle giorno con event-badge (verifiche + task, max 3 per giorno)
 //   - Lista settimanale (renderCalendarWeekList) sotto la griglia
 //   Usa calendarState.weekOffset per navigare avanti/indietro.
-function renderCustomCalendar() {
+window.renderCustomCalendar = function () {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Calcola il lunedì della settimana corrente
-    const d = today.getDay();
-    const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1);
-    const startOfCurrentWeek = new Date(new Date(today).setDate(diffToMonday));
-    startOfCurrentWeek.setHours(0, 0, 0, 0);
-
-    // Data di inizio basata sull'offset (settimane)
-    const startDate = new Date(startOfCurrentWeek);
-    startDate.setDate(startOfCurrentWeek.getDate() + (calendarState.weekOffset * 7));
-
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 13);
-
-    const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
-    const weekLabel = `Settimana ${startDate.getDate()} ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} ${monthNames[endDate.getMonth()]}`;
-
-    // Prepare verifiche by date for quick lookup
     const todayISO = getLocalDateString(today);
+
+    // Preparazione rapida delle verifiche per lookup
     const verificheByDate = {};
     (state.verifiche || []).forEach(v => {
         const dateKey = v.data || '';
@@ -1622,195 +1606,116 @@ function renderCustomCalendar() {
         verificheByDate[dateKey].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '' });
     });
 
-    let html = `
-                <div class="custom-calendar">
-                    <div class="calendar-header">
-                        <div class="calendar-title">${weekLabel}</div>
-                        <div class="calendar-nav">
-                            <button onclick="navigateCalendar(-1)" title="Settimana precedente"><i class="ph ph-caret-left"></i></button>
-                            <button onclick="navigateCalendar(1)" title="Settimana successiva"><i class="ph ph-caret-right"></i></button>
-                       </div>
-                   </div>
-                    <div class="weekday-headers">
-                        <div class="weekday-header">Lun</div>
-                        <div class="weekday-header">Mar</div>
-                        <div class="weekday-header">Mer</div>
-                        <div class="weekday-header">Gio</div>
-                        <div class="weekday-header">Ven</div>
-                        <div class="weekday-header">Sab</div>
-                        <div class="weekday-header">Dom</div>
-                   </div>
-                    <div class="calendar-days">
-            `;
+    const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 
-    const tempDate = new Date(startDate);
-    for (let i = 0; i < 14; i++) {
-        const dateStr = getLocalDateString(tempDate);
-        const isToday = dateStr === todayISO;
-        const isPast = tempDate < today && !isToday;
+    // Contenitore principale del carosello
+    let html = `<div id="calendar-carousel-track" class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full gap-4 pb-2" style="-webkit-overflow-scrolling: touch; scroll-behavior: smooth;">`;
 
-        const dayTasks = getCalendarTasksForDate(dateStr);
+    // Generiamo dinamicamente 12 settimane: da 2 settimane fa a 9 settimane nel futuro
+    // La settimana corrente sarà all'indice 2 (wOffset = 0)
+    for (let wOffset = -2; wOffset <= 9; wOffset++) {
 
-        const dayVerifiche = verificheByDate[dateStr] || [];
+        // Calcolo del Lunedì della settimana in ciclo
+        const startOfWeek = new Date(today);
+        const d = today.getDay();
+        const diffToMonday = today.getDate() - (d === 0 ? 6 : d - 1) + (wOffset * 7);
+        startOfWeek.setDate(diffToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
 
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+        const weekLabel = `Settimana ${startOfWeek.getDate()} ${monthNames[startOfWeek.getMonth()].substring(0,3)} - ${endOfWeek.getDate()} ${monthNames[endOfWeek.getMonth()].substring(0,3)}`;
+
+        // Costruzione del Widget Settimanale
         html += `
-                    <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
-                         onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                            <div class="day-number">${tempDate.getDate()}</div>
-                            ${isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : ''}
-                        </div>
-                        <div class="day-events">
-                            ${dayVerifiche.slice(0, 2).map(v => {
-            const color = getSubjectColor(v.subject);
-            const abbrev = getSubjectAbbrev(v.subject);
-            return `<div class="event-badge" aria-label="Verifica ${escapeHtml(v.subject || '')}" style="background:${color}; outline:2px solid rgba(255,159,10,0.6); outline-offset:-1px;" title="${escapeHtml(v.tipo + (v.text ? ': ' + v.text : ''))}">${abbrev}✏</div>`;
-        }).join('')}
-                            ${dayTasks.slice(0, Math.max(0, 3 - dayVerifiche.length)).map(t => {
-            const color = getSubjectColor(t.subject);
-            const abbrev = getSubjectAbbrev(t.subject);
-            return `<div class="event-badge ${t.done ? 'done' : ''}" style="background: ${color}">${abbrev}</div>`;
-        }).join('')}
-                            ${(dayVerifiche.length + dayTasks.length) > 3 ? `<div class="more-events">+${dayVerifiche.length + dayTasks.length - 3}</div>` : ''}
-                       </div>
-                   </div>
-                `;
-        tempDate.setDate(tempDate.getDate() + 1);
-    }
+        <div class="flex-none w-full snap-center liquid-glass rounded-[32px] p-5 shadow-sm border border-white/60">
 
-    html += `</div></div>`;
+            <div class="flex justify-between items-center mb-4">
+                <div class="text-[13px] font-extrabold text-[#0250C5] uppercase tracking-widest">${weekLabel}</div>
+                ${wOffset === 0 ? `<div class="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-1 rounded-full uppercase">Questa Sett.</div>` : ''}
+            </div>
 
-    // Build 7-day task list below calendar (Mon-Sun of displayed first week)
-    const listHtml = renderCalendarWeekList(startDate);
-    calendarEl.innerHTML = html + listHtml;
-    if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
-}
+            <div class="grid grid-cols-7 gap-1 mb-2">
+                <div class="text-center text-[10px] font-bold text-slate-400">LUN</div>
+                <div class="text-center text-[10px] font-bold text-slate-400">MAR</div>
+                <div class="text-center text-[10px] font-bold text-slate-400">MER</div>
+                <div class="text-center text-[10px] font-bold text-slate-400">GIO</div>
+                <div class="text-center text-[10px] font-bold text-slate-400">VEN</div>
+                <div class="text-center text-[10px] font-bold text-slate-400">SAB</div>
+                <div class="text-center text-[10px] font-bold text-slate-400">DOM</div>
+            </div>
 
+            <div class="grid grid-cols-7 gap-1">
+        `;
 
-// ── 6.10 AGENDA SETTIMANALE SOTTO IL CALENDARIO ─────────────────────────────
-// renderCalendarWeekList() → genera l'HTML della lista testuale dei 7 giorni
-//   sotto la griglia calendario. Stile "asw-*" (Agenda Settimanale Weekly).
-//   Mostra verifiche (badge arancione ✏) e task (card con stripe colorata).
-//   OGGI/DOMANI → label colorata verde/arancione.
-function renderCalendarWeekList(weekStart) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = getLocalDateString(today);
+        for (let i = 0; i < 7; i++) {
+            const tempDate = new Date(startOfWeek);
+            tempDate.setDate(startOfWeek.getDate() + i);
+            const dateStr = getLocalDateString(tempDate);
+            const isToday = dateStr === todayISO;
+            const isPast = tempDate < today && !isToday;
 
-    const dayNames = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
-    const monthNames = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"];
+            const dayTasks = getCalendarTasksForDate(dateStr);
+            const dayVerifiche = verificheByDate[dateStr] || [];
 
-    // Prepare verifiche by date
-    const verificheByDate = {};
-    (state.verifiche || []).forEach(v => {
-        const dateKey = v.data || '';
-        if (!dateKey) return;
-        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
-        verificheByDate[dateKey].push({ subject: v.materia || v.subject || '', text: v.text || v.descrizione || '', tipo: v.tipo || '', isVerifica: true });
-    });
-    (state.manualVerifiche || []).forEach(v => {
-        const dateKey = v.date || '';
-        if (!dateKey) return;
-        if (!verificheByDate[dateKey]) verificheByDate[dateKey] = [];
-        verificheByDate[dateKey].push({ subject: v.subject || '', text: v.args || '', tipo: v.type || '', isVerifica: true });
-    });
+            const dayBg = isToday ? 'bg-blue-50 border-blue-200' : 'bg-transparent border-transparent';
+            const numColor = isToday ? 'text-[#0250C5]' : (isPast ? 'text-slate-300' : 'text-slate-700');
 
-    let hasAny = false;
-    let daySections = '';
-    let totalItems = 0;
+            html += `
+                <div class="flex flex-col items-center rounded-2xl py-2 min-h-[72px] border ${dayBg} cursor-pointer active:scale-95 transition-all"
+                     onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}"
+                     style="-webkit-tap-highlight-color: transparent;">
 
-    for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(weekStart);
-        dayDate.setDate(weekStart.getDate() + i);
-        const dateStr = getLocalDateString(dayDate);
-        const isToday = dateStr === todayISO;
-        const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
-        const isPast = dayDate < today && !isToday;
+                    <span class="text-[15px] font-black ${numColor} mb-1.5">${tempDate.getDate()}</span>
 
-        const dayTasks = getCalendarTasksForDate(dateStr);
-        const dayVerifiche = verificheByDate[dateStr] || [];
+                    <div class="flex flex-col gap-0.5 w-full px-1 items-center">
+                        ${dayVerifiche.slice(0, 2).map(v => {
+                            const color = getSubjectColor(v.subject);
+                            const abbrev = getSubjectAbbrev(v.subject);
+                            return `<div style="background:${color};" class="w-full text-[8px] text-white rounded-md text-center font-bold py-0.5 shadow-sm border border-orange-400/50" title="${escapeHtml(v.tipo)}">${abbrev}</div>`;
+                        }).join('')}
 
-        if (dayTasks.length === 0 && dayVerifiche.length === 0) continue;
-        hasAny = true;
-        totalItems += dayTasks.length + dayVerifiche.length;
+                        ${dayTasks.slice(0, Math.max(0, 3 - dayVerifiche.length)).map(t => {
+                            const color = getSubjectColor(t.subject);
+                            const abbrev = getSubjectAbbrev(t.subject);
+                            return `<div style="background:${t.done ? '#CBD5E1' : color};" class="w-full text-[8px] text-white rounded-md text-center font-bold py-0.5 shadow-sm">${abbrev}</div>`;
+                        }).join('')}
 
-        const labelText = isToday ? 'OGGI' : isTomorrow ? 'DOMANI' : '';
-        const labelColor = isToday ? '#34C759' : '#FF9F0A';
-
-        daySections += `
-            <div class="asw-day-section">
-                <div class="asw-day-header">
-                    <div class="asw-date-block">
-                        <span class="asw-day-name" style="color:${isToday ? '#34C759' : isPast ? '#C0BBB4' : '#908C86'};">${dayNames[i]}</span>
-                        <span class="asw-day-num" style="color:${isToday ? '#34C759' : isPast ? '#C0BBB4' : '#141414'};">${dayDate.getDate()}</span>
-                        <span class="asw-month" style="color:${isPast ? '#C0BBB4' : '#908C86'};">${monthNames[dayDate.getMonth()]}</span>
+                        ${(dayVerifiche.length + dayTasks.length) > 3 ? `<div class="text-[8px] text-slate-400 font-bold mt-0.5">+${dayVerifiche.length + dayTasks.length - 3}</div>` : ''}
                     </div>
-                    <div class="asw-separator"></div>
-                    ${labelText ? `<span class="asw-label-tag" style="color:${labelColor}; border-color:${labelColor};">${labelText}</span>` : ''}
                 </div>
-                <div class="asw-tasks-list">
-                    ${dayVerifiche.map(v => {
-            const abbr = getSubjectAbbrev(v.subject);
-            const subjColor = getSubjectColor(v.subject);
-            return `
-                        <div class="asw-task-card asw-verifica-card">
-                            <div class="asw-task-stripe" style="background:#FF9F0A;"></div>
-                            <div class="asw-task-body">
-                                <div class="asw-task-meta">
-                                    <span class="asw-subject-badge" style="color:#D97706; background:rgba(255,159,10,0.1);">${escapeHtml(abbr)}</span>
-                                    <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml(normalizeTipoVerifica(v.tipo))}</span>
-                                </div>
-                                <div class="asw-task-text">${escapeHtml(v.text || v.subject)}</div>
-                            </div>
-                        </div>`;
-        }).join('')}
-                    ${dayTasks.map(t => {
-            const subjColor = getSubjectColor(t.subject);
-            const abbr = getSubjectAbbrev(t.subject);
-            const displayText = (t.text || '').replace(/\*/g, '').trim();
-            return `
-                        <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                            <div class="asw-task-stripe" style="background:${t.done ? '#C8C5C0' : subjColor};"></div>
-                            <div class="asw-task-body">
-                                <div class="asw-task-meta">
-                                    <span class="asw-subject-badge" style="color:${t.done ? '#908C86' : subjColor}; background:rgba(0,0,0,0.04);">${escapeHtml(abbr)}</span>
-                                </div>
-                                <div class="asw-task-text" data-task-text="${escapeHtml(t.id)}">${escapeHtml(displayText)}</div>
-                            </div>
-                            <div class="asw-task-actions">
-                                <div class="asw-toggle-btn" data-task-toggle="${t.id}" style="border-color:${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'};">
-                                    ${t.done ? '<i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i>' : ''}
-                                </div>
-                                ${isUserGeneratedTaskId(t.id) ? `
-                                <button class="asw-delete-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" aria-label="Elimina attività">
-                                    <i class="ph-bold ph-trash" style="font-size:11px;"></i>
-                                </button>` : ''}
-                            </div>
-                        </div>`;
-        }).join('')}
-                </div>
-            </div>`;
+            `;
+        }
+
+        html += `</div></div>`; // Chiude la griglia e il widget della settimana
     }
 
-    if (!hasAny) return '';
+    html += `</div>`; // Chiude il carosello track
 
-    return `<div class="asw-root">
-        <div class="asw-header">
-            <span class="asw-header-title">// AGENDA SETTIMANALE</span>
-            <span class="asw-header-count">${totalItems} ITEM${totalItems !== 1 ? 'S' : ''}</span>
-        </div>
-        <div class="asw-body">${daySections}</div>
-    </div>`;
-}
+    // Renderizza la lista di riepilogo in basso (usa la data di oggi come partenza logica)
+    const listHtml = renderCalendarWeekList(today);
+    calendarEl.innerHTML = html + '<div class="mt-6">' + listHtml + '</div>';
 
+    // Scorrimento automatico istantaneo alla "Settimana Corrente" (Indice 2)
+    setTimeout(() => {
+        const track = document.getElementById('calendar-carousel-track');
+        if (track) {
+            track.style.scrollBehavior = 'auto';
+            const widgetWidth = track.clientWidth;
+            track.scrollLeft = widgetWidth * 2;
+            setTimeout(() => { track.style.scrollBehavior = 'smooth'; }, 50);
+        }
+    }, 10);
 
-// ── 6.11 NAVIGAZIONE CALENDARIO ─────────────────────────────────────────────
-// navigateCalendar(dir)  → sposta calendarState.weekOffset e ricarica il calendario
-// handleDayClick(date)   → apre renderDayDetailModal per il giorno cliccato
-function navigateCalendar(dir) {
-    calendarState.weekOffset += dir;
-    renderCustomCalendar();
-}
+    if (typeof animatePlannerSurface === 'function') animatePlannerSurface('calendar');
+};
+
+// Funzione non più necessaria, lasciata vuota per evitare errori se richiamata da altre parti del codice
+window.navigateCalendar = function(dir) {
+    console.log("Navigazione a frecce disabilitata in favore dello swipe orizzontale.");
+};
+
 function handleDayClick(dateStr) {
     if (typeof renderDayDetailModal === 'function') {
         renderDayDetailModal(dateStr);
