@@ -6087,7 +6087,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 0;box-sizing:border-box;scroll-snap-align:start;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 18px;box-sizing:border-box;scroll-snap-align:start;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 return `<div onclick="plannerSelectDay('${d.iso}')" style="
@@ -6128,18 +6128,19 @@ function renderPlanner() {
     <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0;">
 
         <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 0 16px;">
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 18px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <div style="display:flex;align-items:center;gap:6px;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:5px 6px 5px 14px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(37,99,235,0.10);">
-                <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
-                <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#2563eb;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+            <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);" style="display:flex;align-items:center;gap:8px;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:7px 10px 7px 16px;border-radius:999px;box-shadow:0 2px 10px -2px rgba(37,99,235,0.12);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+                <span style="font-size:13px;font-weight:700;color:#1e40af;white-space:nowrap;">${monthLabel}</span>
+                <span style="width:30px;height:30px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <span class="material-symbols-outlined" style="font-size:16px;color:white;">search</span>
-                </button>
-            </div>
+                </span>
+            </button>
         </header>
 
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
         ${!showSearchPanel ? `
+        <div style="overflow:hidden;width:100%;margin:0;padding:0;">
         <div id="planner-week-carousel" style="
             display:flex;
             overflow-x:auto;
@@ -6154,6 +6155,7 @@ function renderPlanner() {
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
         </div>
+        </div>
 
         <!-- Dot indicators -->
         <div style="display:flex;justify-content:center;align-items:center;gap:7px;margin:10px 0 16px;">
@@ -6162,7 +6164,7 @@ function renderPlanner() {
 
         <!-- ══ SEARCH PANEL (full screen feel) ══ -->
         ${showSearchPanel ? `
-        <div style="padding:0;">
+        <div style="padding:0 18px;">
             <div style="position:relative;margin-bottom:12px;">
                 <span class="material-symbols-outlined" style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
                 <input id="planner-search-input" type="text" placeholder="Cerca tra tutti i compiti..." autofocus
@@ -6185,7 +6187,7 @@ function renderPlanner() {
         </div>` : `
 
         <!-- ══ DAY CONTENT ══ -->
-        <div style="padding:0;display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:0 18px;display:flex;flex-direction:column;gap:10px;">
 
             <!-- Selected day label -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -6258,11 +6260,22 @@ function renderPlanner() {
             // Scroll handler: update dots + state.plannerWeekOffset
             window.handlePlannerCarouselScroll = function(el) {
                 const idx = Math.round(el.scrollLeft / el.clientWidth);
+                if (window._lastPlannerDotIdx === idx) return; // debounce same index
+                window._lastPlannerDotIdx = idx;
                 document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
                     dot.style.width      = i===idx ? '20px' : '6px';
                     dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
                 });
             };
+
+            // Helper: sync dots to a given index
+            function _syncPlannerDots(idx) {
+                window._lastPlannerDotIdx = idx;
+                document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
+                    dot.style.width      = i===idx ? '20px' : '6px';
+                    dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
+                });
+            }
 
             // Jump to specific week slide
             window.plannerJumpToWeek = function(idx) {
@@ -6275,6 +6288,8 @@ function renderPlanner() {
                 const el = document.getElementById('planner-week-carousel');
                 if (el) {
                     el.scrollTo({ left: ${activeSlide} * el.clientWidth, behavior: 'instant' });
+                    // Sync dots to match the initial active slide
+                    _syncPlannerDots(${activeSlide});
                 }
             });
         })();
