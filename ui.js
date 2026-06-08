@@ -6813,7 +6813,7 @@ function renderPlanner() {
     }
 
     return `
-    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0 24px;position:relative;">
+    <div class="view planner-view min-h-screen pb-32 pt-6" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);padding:0 24px;position:relative;">
 
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:env(safe-area-inset-top,24px) 0 18px;padding-top:max(env(safe-area-inset-top,0px),28px);">
