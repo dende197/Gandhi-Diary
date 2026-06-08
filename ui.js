@@ -872,7 +872,7 @@ function showModal(html, className = '') {
     }
     container.innerHTML = `
             <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(20px);box-sizing:border-box;transition: opacity 0.3s ease;">
-                <div class="modal-content liquid-glass rounded-[40px] deep-shadow ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;padding:32px;animation: modalAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);">
+                <div class="modal-content liquid-glass rounded-[40px] deep-shadow ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;padding:0;animation: modalAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);">
                     ${html}
                 </div>
             </div>
@@ -4209,175 +4209,195 @@ function toggleTask(id) {
 }
 function showQuickAddTaskModal() {
     const preselectedDate = state.selectedDate || getLocalDateString();
-    const allTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST' && !t.isExam);
-    const examTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST' && t.isExam);
-    const subjects = [...new Set((state.tasks||[]).map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
-    const subjectOptions = subjects.length > 0
+    const allTasks  = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
+    const subjects  = [...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
+    const subjectOptions = subjects.length
         ? subjects.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
         : '<option value="Generale">Generale</option>';
+    const pendingTasks = allTasks.filter(t=>!t.done && (t.due_date||'')>=getLocalDateString());
+    const pendingSubjs = [...new Set(pendingTasks.map(t=>t.subject||t.materia||'Generale'))].sort();
 
-    // Build list of existing pending tasks grouped by subject for quick-pick
-    const pendingBySubj = {};
-    allTasks.filter(t=>!t.done && t.due_date >= getLocalDateString()).forEach(t=>{
-        const s = t.subject||t.materia||'Generale';
-        if (!pendingBySubj[s]) pendingBySubj[s] = [];
-        pendingBySubj[s].push(t);
-    });
-    const pendingSubjs = Object.keys(pendingBySubj).sort();
+    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);background:rgba(255,255,255,0.9);color:#1e293b;font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
+    const LBL = 'font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;';
 
-    const inp = `width:100%;padding:13px 16px;border-radius:14px;border:1px solid rgba(226,232,240,0.8);background:white;color:#1e293b;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;font-family:'Hanken Grotesk',sans-serif;`;
-    const lbl = `font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;`;
-
+    // Full-screen-style bottom sheet
     showModal(`
-        <div style="padding:20px 20px 24px;background:linear-gradient(145deg,#f8fafc,#eef2f6);border-radius:28px;font-family:'Hanken Grotesk',sans-serif;max-height:85vh;overflow-y:auto;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <div>
-                    <h2 style="margin:0;font-size:19px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Aggiungi</h2>
-                    <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Compito, verifica o impegno</p>
-                </div>
-                <button onclick="closeModal()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.8);border:1px solid rgba(226,232,240,0.6);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                    <span class="material-symbols-outlined" style="font-size:17px;">close</span>
-                </button>
-            </div>
+<div style="padding:24px 20px 32px;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:32px;font-family:'Hanken Grotesk',sans-serif;width:100%;box-sizing:border-box;">
 
-            <!-- Tab: Nuovo / Da assegnati -->
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:16px;">
-                <button id="qs-tab-new" onclick="qsSelectTab('new')" style="padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">✏️ Nuovo</button>
-                <button id="qs-tab-existing" onclick="qsSelectTab('existing')" style="padding:10px 4px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">📋 Assegnati</button>
-                <button id="qs-tab-verifica" onclick="qsSelectTab('verifica')" style="padding:10px 4px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">✏️ Verifica</button>
-            </div>
+    <!-- Header — X uses document.getElementById approach to avoid scope issues -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div>
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Aggiungi</h2>
+            <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Compito, verifica o impegno</p>
+        </div>
+        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.9);border:1.5px solid rgba(226,232,240,0.7);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
+        </button>
+    </div>
 
-            <!-- PANEL: Nuovo compito -->
-            <div id="qs-panel-new" style="display:flex;flex-direction:column;gap:13px;">
-                <div><label style="${lbl}">Materia</label>
-                    <select id="qs-subject" style="${inp}-webkit-appearance:none;">${subjectOptions}</select></div>
-                <div><label style="${lbl}">Descrizione</label>
-                    <textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="2"
-                        style="${inp}resize:none;line-height:1.5;"></textarea></div>
-                <div><label style="${lbl}">Data</label>
-                    <input id="qs-date" type="date" value="${preselectedDate}" style="${inp}" /></div>
-                <button onclick="qsSubmitNew()" style="width:100%;height:50px;border-radius:14px;border:none;background:#2563eb;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">add_task</span>Aggiungi compito
-                </button>
-            </div>
+    <!-- 3 tabs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:20px;">
+        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;" id="qs-tab-new">📚 Nuovo</button>
+        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">📋 Assegnati</button>
+        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">✏️ Verifica</button>
+    </div>
 
-            <!-- PANEL: Compiti assegnati (clona un compito esistente su nuova data) -->
-            <div id="qs-panel-existing" style="display:none;flex-direction:column;gap:10px;">
-                <p style="font-size:12px;color:#64748b;font-weight:500;margin:0 0 4px;">Seleziona un compito già assegnato e scegli quando studiarlo.</p>
-                ${pendingSubjs.length > 0 ? pendingSubjs.map(s => `
-                    <div style="margin-bottom:4px;">
-                        <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 5px;">${escapeHtml(s)}</p>
-                        ${pendingBySubj[s].map(t => `
-                        <div onclick="qsPickExisting('${escapeJsSingleQuote(t.id)}')" id="qs-ex-${escapeHtml(t.id)}" style="background:white;border-radius:14px;padding:11px 14px;margin-bottom:6px;border:1px solid rgba(226,232,240,0.8);cursor:pointer;display:flex;flex-direction:column;gap:2px;">
-                            <span style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
-                            <span style="font-size:11px;color:#94a3b8;">Scadenza: ${t.due_date||'—'}</span>
-                        </div>`).join('')}
-                    </div>`).join('') : '<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
-                <!-- Date picker for existing task -->
-                <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid rgba(226,232,240,0.6);">
-                    <label style="${lbl}">Quando lo studi?</label>
-                    <input id="qs-existing-date" type="date" value="${preselectedDate}" style="${inp}" />
-                    <button onclick="qsSubmitExisting()" style="width:100%;height:48px;border-radius:14px;border:none;background:#2563eb;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
-                </div>
-            </div>
+    <!-- PANEL: Nuovo compito -->
+    <div id="qs-panel-new" style="display:flex;flex-direction:column;gap:14px;">
+        <div><label style="${LBL}">Materia</label><select id="qs-subject" style="${INP}-webkit-appearance:none;">${subjectOptions}</select></div>
+        <div><label style="${LBL}">Descrizione</label><textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="3" style="${INP}resize:none;line-height:1.5;"></textarea></div>
+        <div><label style="${LBL}">Data di consegna</label><input id="qs-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
+        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
+            <span class="material-symbols-outlined" style="font-size:19px;">add_task</span>Aggiungi compito
+        </button>
+    </div>
 
-            <!-- PANEL: Verifica -->
-            <div id="qs-panel-verifica" style="display:none;flex-direction:column;gap:13px;">
-                <div><label style="${lbl}">Materia</label>
-                    <select id="qs-v-subject" style="${inp}-webkit-appearance:none;">${subjectOptions}</select></div>
-                <div><label style="${lbl}">Argomenti</label>
-                    <textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2"
-                        style="${inp}resize:none;line-height:1.5;"></textarea></div>
-                <div><label style="${lbl}">Tipo</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-                        <button id="qs-vt-scritta" onclick="qsSelectVTipo('scritta')" style="padding:9px 4px;border-radius:11px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Scritta</button>
-                        <button id="qs-vt-orale" onclick="qsSelectVTipo('orale')" style="padding:9px 4px;border-radius:11px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Orale</button>
-                        <button id="qs-vt-pratica" onclick="qsSelectVTipo('pratica')" style="padding:9px 4px;border-radius:11px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Pratica</button>
-                    </div>
-                </div>
-                <div><label style="${lbl}">Data</label>
-                    <input id="qs-v-date" type="date" value="${preselectedDate}" style="${inp}" /></div>
-                <button onclick="qsSubmitVerifica()" style="width:100%;height:50px;border-radius:14px;border:none;background:#dc2626;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.3);display:flex;align-items:center;justify-content:center;gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:18px;">warning</span>Aggiungi verifica
-                </button>
+    <!-- PANEL: Assegnati -->
+    <div id="qs-panel-existing" style="display:none;flex-direction:column;gap:10px;">
+        <p style="font-size:13px;color:#64748b;margin:0 0 6px;">Seleziona un compito già assegnato, poi scegli quando studiarlo.</p>
+        <div style="max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px;">
+        ${pendingSubjs.length>0 ? pendingSubjs.map(s=>`
+            <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:6px 0 3px;">${escapeHtml(s)}</p>
+            ${pendingTasks.filter(t=>(t.subject||t.materia||'Generale')===s).map(t=>`
+            <div id="qs-ex-${escapeHtml(t.id)}" style="background:white;border-radius:14px;padding:12px 14px;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color 0.15s;">
+                <span style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
+                <span style="font-size:11px;color:#94a3b8;">Scadenza: ${t.due_date||'—'}</span>
+            </div>`).join('')}`).join('') : '<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
+        </div>
+        <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid rgba(226,232,240,0.6);">
+            <label style="${LBL}">Quando lo studi?</label>
+            <input id="qs-existing-date" type="date" value="${preselectedDate}" style="${INP}" />
+            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
+        </div>
+    </div>
+
+    <!-- PANEL: Verifica -->
+    <div id="qs-panel-verifica" style="display:none;flex-direction:column;gap:14px;">
+        <div><label style="${LBL}">Materia</label><select id="qs-v-subject" style="${INP}-webkit-appearance:none;">${subjectOptions}</select></div>
+        <div><label style="${LBL}">Argomenti</label><textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2" style="${INP}resize:none;line-height:1.5;"></textarea></div>
+        <div><label style="${LBL}">Tipo</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
+                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Scritta</button>
+                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Orale</button>
+                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Pratica</button>
             </div>
         </div>
+        <div><label style="${LBL}">Data</label><input id="qs-v-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
+        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:15px;border:none;background:#dc2626;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.28);display:flex;align-items:center;justify-content:center;gap:7px;">
+            <span class="material-symbols-outlined" style="font-size:19px;">warning</span>Aggiungi verifica
+        </button>
+    </div>
+</div>
     `);
 
-    // ── Modal state ──────────────────────────────────────────────
-    window._qsCurrentTab = 'new';
-    window._qsPickedTaskId = null;
-    window._qsVTipo = 'scritta';
+    // ── Wire up all interactivity after DOM is ready ────────────────────────────
+    requestAnimationFrame(() => {
+        // Styles for tabs
+        const ACTIVE_BLUE = 'padding:11px 4px;border-radius:13px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const ACTIVE_RED  = 'padding:11px 4px;border-radius:13px;border:2px solid #dc2626;background:#dc2626;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const INACTIVE    = 'padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
 
-    const inactiveTab = 'padding:10px 4px;border-radius:12px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-    const activeTab   = 'padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-    const activeTabRed= 'padding:10px 4px;border-radius:12px;border:2px solid #dc2626;background:#dc2626;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        let currentTab = 'new';
+        let pickedTaskId = null;
+        let vTipo = 'scritta';
 
-    window.qsSelectTab = function(tab) {
-        window._qsCurrentTab = tab;
+        function switchTab(tab) {
+            currentTab = tab;
+            ['new','existing','verifica'].forEach(t => {
+                const btn = document.getElementById('qs-tab-'+t);
+                const panel = document.getElementById('qs-panel-'+t);
+                if (!btn || !panel) return;
+                btn.style.cssText = t===tab ? (t==='verifica' ? ACTIVE_RED : ACTIVE_BLUE) : INACTIVE;
+                panel.style.display = t===tab ? 'flex' : 'none';
+            });
+        }
+
+        // Close button
+        const closeBtn = document.getElementById('qs-close-btn');
+        if (closeBtn) closeBtn.onclick = () => { if(typeof closeModal==='function') closeModal(); };
+
+        // Tab buttons
         ['new','existing','verifica'].forEach(t => {
             const btn = document.getElementById('qs-tab-'+t);
-            const panel = document.getElementById('qs-panel-'+t);
-            if (!btn || !panel) return;
-            btn.style.cssText = t === tab ? (t==='verifica' ? activeTabRed : activeTab) : inactiveTab;
-            panel.style.display = t === tab ? 'flex' : 'none';
+            if (btn) btn.onclick = () => switchTab(t);
         });
-    };
 
-    window.qsPickExisting = function(taskId) {
-        window._qsPickedTaskId = taskId;
-        // Highlight selection
+        // Existing task cards
         document.querySelectorAll('[id^="qs-ex-"]').forEach(el => {
-            el.style.border = '1px solid rgba(226,232,240,0.8)';
-            el.style.background = 'white';
+            el.onclick = () => {
+                pickedTaskId = el.id.replace('qs-ex-','');
+                document.querySelectorAll('[id^="qs-ex-"]').forEach(e => {
+                    e.style.border = '1.5px solid rgba(226,232,240,0.9)';
+                    e.style.background = 'white';
+                });
+                el.style.border = '2px solid #2563eb';
+                el.style.background = 'rgba(239,246,255,0.6)';
+                const row = document.getElementById('qs-existing-date-row');
+                if (row) row.style.display = 'flex';
+            };
         });
-        const el = document.getElementById('qs-ex-'+taskId);
-        if (el) { el.style.border = '2px solid #2563eb'; el.style.background = 'rgba(239,246,255,0.6)'; }
-        const row = document.getElementById('qs-existing-date-row');
-        if (row) row.style.display = 'flex';
-    };
 
-    window.qsSelectVTipo = function(tipo) {
-        window._qsVTipo = tipo;
+        // Verifica tipo chips
         ['scritta','orale','pratica'].forEach(t => {
             const btn = document.getElementById('qs-vt-'+t);
             if (!btn) return;
-            btn.style.cssText = t === tipo
-                ? 'padding:9px 4px;border-radius:11px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;'
-                : 'padding:9px 4px;border-radius:11px;border:1px solid rgba(226,232,240,0.8);background:white;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+            btn.onclick = () => {
+                vTipo = t;
+                ['scritta','orale','pratica'].forEach(tt => {
+                    const b = document.getElementById('qs-vt-'+tt);
+                    if (b) b.style.cssText = tt===t ? CHIP_ACT : CHIP_IN;
+                });
+            };
         });
-    };
 
-    window.qsSubmitNew = function() {
-        const subject = document.getElementById('qs-subject')?.value?.trim() || 'Generale';
-        const text    = document.getElementById('qs-text')?.value?.trim() || '';
-        const date    = document.getElementById('qs-date')?.value || getLocalDateString();
-        if (!text) { const el = document.getElementById('qs-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
-        const r = applyImmediateCalendarAction({type:'add',missing:[],subject,text,date,time:'',isExam:false});
-        if (r.ok) { closeModal(); state.selectedDate=date; state._forceRender=true; showToast('Compito aggiunto!','success'); scheduleRender(0); }
-        else showToast('Errore aggiunta','error');
-    };
+        function doAdd(subject, text, date, isExam) {
+            if (!text.trim()) return false;
+            if (!date) return false;
+            const r = applyImmediateCalendarAction({type:'add',missing:[],subject,text,date,time:'',isExam});
+            if (r.ok) {
+                if(typeof closeModal==='function') closeModal();
+                state.selectedDate = date;
+                state._forceRender = true;
+                showToast((isExam?'Verifica':'Compito')+' aggiunto!','success');
+                scheduleRender(0);
+                return true;
+            }
+            showToast('Errore nell\'aggiunta','error');
+            return false;
+        }
 
-    window.qsSubmitExisting = function() {
-        if (!window._qsPickedTaskId) { showToast('Seleziona un compito','warning'); return; }
-        const date = document.getElementById('qs-existing-date')?.value || getLocalDateString();
-        const orig = (state.tasks||[]).find(t=>t.id===window._qsPickedTaskId);
-        if (!orig) { showToast('Compito non trovato','error'); return; }
-        const r = applyImmediateCalendarAction({type:'add',missing:[],subject:orig.subject||'Generale',text:orig.text||'',date,time:'',isExam:false});
-        if (r.ok) { closeModal(); state.selectedDate=date; state._forceRender=true; showToast('Compito aggiunto!','success'); scheduleRender(0); }
-        else showToast('Errore aggiunta','error');
-    };
+        // Submit new
+        const sbNew = document.getElementById('qs-submit-new');
+        if (sbNew) sbNew.onclick = () => {
+            const sub = document.getElementById('qs-subject')?.value?.trim()||'Generale';
+            const txt = document.getElementById('qs-text')?.value?.trim()||'';
+            const dt  = document.getElementById('qs-date')?.value||getLocalDateString();
+            if (!txt) { const el=document.getElementById('qs-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
+            doAdd(sub,txt,dt,false);
+        };
 
-    window.qsSubmitVerifica = function() {
-        const subject = document.getElementById('qs-v-subject')?.value?.trim() || 'Generale';
-        const text    = document.getElementById('qs-v-text')?.value?.trim() || '';
-        const date    = document.getElementById('qs-v-date')?.value || getLocalDateString();
-        if (!text) { const el = document.getElementById('qs-v-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
-        const fullText = `${window._qsVTipo.charAt(0).toUpperCase()+window._qsVTipo.slice(1)} · ${text}`;
-        const r = applyImmediateCalendarAction({type:'add',missing:[],subject,text:fullText,date,time:'',isExam:true});
-        if (r.ok) { closeModal(); state.selectedDate=date; state._forceRender=true; showToast('Verifica aggiunta!','success'); scheduleRender(0); }
-        else showToast('Errore aggiunta','error');
-    };
+        // Submit existing
+        const sbEx = document.getElementById('qs-submit-existing');
+        if (sbEx) sbEx.onclick = () => {
+            if (!pickedTaskId) { showToast('Seleziona un compito','warning'); return; }
+            const orig=(state.tasks||[]).find(t=>t.id===pickedTaskId);
+            if (!orig) { showToast('Compito non trovato','error'); return; }
+            const dt=document.getElementById('qs-existing-date')?.value||getLocalDateString();
+            doAdd(orig.subject||'Generale',orig.text||'',dt,false);
+        };
+
+        // Submit verifica
+        const sbVer = document.getElementById('qs-submit-verifica');
+        if (sbVer) sbVer.onclick = () => {
+            const sub = document.getElementById('qs-v-subject')?.value?.trim()||'Generale';
+            const txt = document.getElementById('qs-v-text')?.value?.trim()||'';
+            const dt  = document.getElementById('qs-v-date')?.value||getLocalDateString();
+            if (!txt) { const el=document.getElementById('qs-v-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
+            doAdd(sub,`${vTipo.charAt(0).toUpperCase()+vTipo.slice(1)} · ${txt}`,dt,true);
+        };
+    });
 }
 
 function showAddRegistroTaskModal() {
@@ -4805,18 +4825,20 @@ window._renderCore = function () {
     // Deduplicate: skip full re-render if same view + same data counts + same AI state
     const taskCount = (state.tasks || []).length;
     const votiCount = (state.voti || []).length;
-    const plannerKey = state.view === 'planner'
-        ? (state.selectedDate||'')+(state.plannerWeekOffset||0)+(state.plannerMonthView||false)+(state.plannerMonthViewYear||0)+(state.plannerMonthViewMonth||0)+(state.plannerSearchOpen||false)+(state.agendaSearchQuery||'')+(state.agendaSearchSubject||'')
+    const _plannerStateKey = state.view === 'planner'
+        ? [state.selectedDate||'',state.plannerWeekOffset||0,state.plannerMonthView||false,
+           state.plannerMonthViewYear||0,state.plannerMonthViewMonth||0,
+           state.plannerSearchOpen||false,state.agendaSearchQuery||'',state.agendaSearchSubject||''].join('|')
         : '';
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
         _lastRenderedTaskCount === taskCount &&
         _lastRenderedVotiCount === votiCount &&
-        (window._lastPlannerKey||'') === plannerKey &&
+        (window.__lastPlannerKey||'') === _plannerStateKey &&
         !state._forceRender) {
         return;
     }
-    window._lastPlannerKey = plannerKey;
+    window.__lastPlannerKey = _plannerStateKey;
     _lastRenderedLoggedIn = true;
     _lastRenderedView = state.view;
     _lastRenderedTaskCount = taskCount;
@@ -5958,242 +5980,197 @@ function renderPlanner() {
     today.setHours(0,0,0,0);
     const todayISO = getLocalDateString(today);
 
-    // ── Init state ───────────────────────────────────────────────
-    if (state.plannerWeekOffset === undefined) state.plannerWeekOffset = 0;
+    if (state.plannerWeekOffset===undefined) state.plannerWeekOffset=0;
     const weekOffset = state.plannerWeekOffset;
     const selectedDate = state.selectedDate || todayISO;
     const showMonthView = !!state.plannerMonthView;
-    const showSearchPanel = !!(state.plannerSearchOpen || (state.agendaSearchQuery||'').trim());
+    const showSearchPanel = !!(state.plannerSearchOpen||(state.agendaSearchQuery||'').trim());
     const query = (state.agendaSearchQuery||'').toLowerCase().trim();
-    const filterSubject = state.agendaSearchSubject || 'all';
+    const filterSubject = state.agendaSearchSubject||'all';
 
-    // ── Month constants ───────────────────────────────────────────
-    const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    const selDateObj  = new Date(selectedDate+'T00:00:00');
-    const mvYear  = (state.plannerMonthViewYear  !== undefined) ? state.plannerMonthViewYear  : selDateObj.getFullYear();
-    const mvMonth = (state.plannerMonthViewMonth !== undefined) ? state.plannerMonthViewMonth : selDateObj.getMonth();
-    const mvStartDow = new Date(mvYear,mvMonth,1).getDay();
-    const mvDays = new Date(mvYear,mvMonth+1,0).getDate();
+    const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const selDate = new Date(selectedDate+'T00:00:00');
+    const mvY = (state.plannerMonthViewYear!==undefined) ? state.plannerMonthViewYear : selDate.getFullYear();
+    const mvM = (state.plannerMonthViewMonth!==undefined) ? state.plannerMonthViewMonth : selDate.getMonth();
+    const mvStartDow = new Date(mvY,mvM,1).getDay();
+    const mvDays = new Date(mvY,mvM+1,0).getDate();
 
-    // ── Build week ────────────────────────────────────────────────
-    const dayLabels = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + weekOffset*7);
-    const weekDays = [];
-    for (let i=0;i<7;i++){
-        const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
+    const dayLabels=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate()-today.getDay()+weekOffset*7);
+    const weekDays=[];
+    for(let i=0;i<7;i++){
+        const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
         const iso=getLocalDateString(d);
-        weekDays.push({label:dayLabels[d.getDay()],dayNum:d.getDate(),iso,isToday:iso===todayISO});
+        weekDays.push({label:dayLabels[d.getDay()],dayNum:d.getDate(),iso,isToday:iso===todayISO,hasTask:(state.tasks||[]).some(t=>t.due_date===iso&&t.subject!=='QUEST')});
     }
 
-    // ── Tasks ─────────────────────────────────────────────────────
-    const allTasks = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
-    const subjects = [...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
+    const allTasks=(state.tasks||[]).filter(t=>t.subject!=='QUEST');
+    const subjects=[...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
+    const dayTasks=allTasks.filter(t=>t.due_date===selectedDate);
 
-    // Month tasks map
-    const mvTaskMap = {};
-    if (showMonthView) {
-        allTasks.filter(t=>{
-            if(!t.due_date) return false;
-            const d=new Date(t.due_date+'T00:00:00');
-            return d.getFullYear()===mvYear && d.getMonth()===mvMonth;
-        }).forEach(t=>{if(!mvTaskMap[t.due_date])mvTaskMap[t.due_date]=[];mvTaskMap[t.due_date].push(t);});
-    }
-    const mvMonthTasks=Object.values(mvTaskMap).flat().sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||''));
+    const mvTaskMap={};
+    if(showMonthView) allTasks.filter(t=>{
+        if(!t.due_date) return false;
+        const d=new Date(t.due_date+'T00:00:00');
+        return d.getFullYear()===mvY&&d.getMonth()===mvM;
+    }).forEach(t=>{if(!mvTaskMap[t.due_date])mvTaskMap[t.due_date]=[];mvTaskMap[t.due_date].push(t);});
 
-    // Day tasks
-    const dayTasks = !showSearchPanel ? allTasks.filter(t=>t.due_date===selectedDate) : [];
-
-    // Search results
-    const searchResults = showSearchPanel ? allTasks.filter(t=>{
+    const searchResults=showSearchPanel?allTasks.filter(t=>{
         if(filterSubject!=='all'&&(t.subject||t.materia||'')!==filterSubject) return false;
         if(!query) return true;
         return (t.subject||'').toLowerCase().includes(query)||(t.materia||'').toLowerCase().includes(query)||(t.text||'').toLowerCase().includes(query);
-    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
+    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')):[];
 
-    // Upcoming
-    const upcomingCount = allTasks.filter(t=>{
+    const upcomingCount=allTasks.filter(t=>{
         if(t.done) return false;
         const d=parseLocalDate(t.due_date);
         if(isNaN(d.getTime())) return false;
-        return (d-today)/86400000>0 && (d-today)/86400000<=7;
+        return (d-today)/86400000>0&&(d-today)/86400000<=7;
     }).length;
 
     // ── Task card ─────────────────────────────────────────────────
-    function taskCard(t,showDate){
+    function TC(t,showDate){
         const isExam=t.isExam||t.type==='verifica'||/verifica|interrogazione|test|esame|simulazione/i.test(t.text);
         const subj=escapeHtml(t.subject||t.materia||'');
         const txt=escapeHtml(t.text||'');
         const tid=escapeJsSingleQuote(t.id);
         const icon=(typeof getSubjectIcon==='function')?getSubjectIcon(t.subject||t.materia||''):'book';
-        const canDelete=typeof isUserGeneratedTaskId==='function'?isUserGeneratedTaskId(t.id):false;
-        const dateLabel=showDate&&t.due_date?(()=>{
-            const d=new Date(t.due_date+'T00:00:00');
-            return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${monthNames[d.getMonth()]}</span>`;
-        })():'';
-        const deleteBtn=canDelete?`<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:28px;height:28px;border-radius:50%;background:#fff0ee;border:1px solid rgba(255,59,48,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;">delete</span></button>`:'';
+        const canDel=typeof isUserGeneratedTaskId==='function'?isUserGeneratedTaskId(t.id):false;
+        const dLabel=showDate&&t.due_date?(()=>{const d=new Date(t.due_date+'T00:00:00');return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${MN[d.getMonth()]}</span>`;})():'';
+        const delBtn=canDel?`<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#fff0ee;border:1px solid rgba(255,59,48,0.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;">delete</span></button>`:'';
+        const toggleOpts="state._forceRender=true;scheduleRender(0);";
 
         if(isExam) return `
-        <div onclick="toggleTask('${tid}');state._forceRender=true;scheduleRender(0);" style="background:rgba(254,242,242,0.8);border:1px solid rgba(254,202,202,0.5);border-radius:20px;padding:14px 16px;box-shadow:0 4px 14px -6px rgba(239,68,68,0.15);position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.55;':''}">
-            <div style="position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:rgba(254,202,202,0.2);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
-            ${dateLabel}
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;gap:8px;">
+        <div onclick="toggleTask('${tid}');${toggleOpts}" style="background:rgba(254,242,242,0.85);border:1.5px solid rgba(254,202,202,0.6);border-radius:22px;padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 4px 16px -6px rgba(239,68,68,0.18);">
+            <div style="position:absolute;top:-24px;right:-24px;width:80px;height:80px;background:rgba(254,202,202,0.25);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
+            ${dLabel}
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1;">
                 <div style="flex:1;min-width:0;">
-                    <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
-                    <p style="font-size:12px;color:#64748b;margin:0 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${txt}</p>
+                    <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
+                    <p style="font-size:13px;color:#64748b;margin:0 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</p>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${deleteBtn}
-                    <span class="material-symbols-outlined" style="font-size:20px;color:#dc2626;">warning</span>
-                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${delBtn}<span class="material-symbols-outlined" style="font-size:22px;color:#dc2626;">warning</span></div>
             </div>
-            <div style="display:inline-flex;background:rgba(254,226,226,0.9);color:#b91c1c;font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;">VERIFICA${t.done?' · ✓':''}</div>
+            <div style="display:inline-flex;background:rgba(254,226,226,0.95);color:#b91c1c;font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;">VERIFICA${t.done?' · ✓':''}</div>
         </div>`;
 
         if(t.done) return `
-        <div onclick="toggleTask('${tid}');state._forceRender=true;scheduleRender(0);" style="background:white;border-radius:20px;padding:10px 13px;display:flex;align-items:center;gap:11px;border:1px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
-            <div style="width:38px;height:38px;flex-shrink:0;background:#f0fdf4;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#10b981;"><span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">task_alt</span></div>
-            <div style="flex:1;min-width:0;">${dateLabel}
-                <h3 style="font-size:13px;font-weight:700;color:#64748b;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
-                <p style="font-size:11px;color:#94a3b8;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
-            </div>
-            ${deleteBtn}
+        <div onclick="toggleTask('${tid}');${toggleOpts}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
+            <div style="width:44px;height:44px;flex-shrink:0;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#10b981;"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
+            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#64748b;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:#94a3b8;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div onclick="toggleTask('${tid}');state._forceRender=true;scheduleRender(0);" style="background:white;border-radius:20px;padding:10px 13px;display:flex;align-items:center;gap:11px;box-shadow:0 3px 14px -7px rgba(0,0,0,0.07);border:1px solid rgba(241,245,249,0.9);cursor:pointer;">
-            <div style="width:38px;height:38px;flex-shrink:0;background:#eff6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:18px;">${icon}</span></div>
-            <div style="flex:1;min-width:0;">${dateLabel}
-                <h3 style="font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</h3>
-                <p style="font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">${txt}</p>
-            </div>
-            ${deleteBtn}
+        <div onclick="toggleTask('${tid}');${toggleOpts}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);cursor:pointer;">
+            <div style="width:44px;height:44px;flex-shrink:0;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
+            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
     }
 
-    // ── Month grid cell ───────────────────────────────────────────
-    function mvCell(dayN){
-        const iso=`${mvYear}-${String(mvMonth+1).padStart(2,'0')}-${String(dayN).padStart(2,'0')}`;
-        const isTd=iso===todayISO,isSel=iso===selectedDate;
-        const hasTasks=!!mvTaskMap[iso];
-        const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
-        return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;state._forceRender=true;scheduleRender(0);" style="
-            aspect-ratio:1;border-radius:10px;border:none;cursor:pointer;
-            background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};
-            color:${isSel?'white':isTd?'#1e40af':'#1e293b'};
-            font-size:12px;font-weight:${isTd||isSel?'700':'400'};
-            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-            box-shadow:${isSel?'0 3px 10px rgba(37,99,235,0.28)':'none'};
-        ">${dayN}<div style="width:3px;height:3px;border-radius:50%;background:${hasTasks?(isSel?'rgba(255,255,255,0.85)':hasExam?'#ef4444':'#2563eb'):'transparent'};"></div></button>`;
-    }
-
-    // ── Chip style helper ─────────────────────────────────────────
-    function chip(label,onclickStr,active,color='blue'){
-        const ac=color==='blue'?'#2563eb':'#dc2626';
-        return `<button onclick="${onclickStr}" style="flex-shrink:0;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${active?`2px solid ${ac}`:'1px solid rgba(226,232,240,0.8)'};background:${active?ac:'white'};color:${active?'white':'#64748b'};">${label}</button>`;
-    }
-
     return `
-    <div class="view planner-view pb-32" style="background-color:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.5) 0%,transparent 40%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.5) 0%,transparent 40%);background-attachment:fixed;min-height:100vh;padding:0 20px;">
+    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0 18px;position:relative;">
 
-        <!-- HEADER -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:32px 0 14px;">
-            <h1 style="font-size:26px;font-weight:800;color:#1e40af;letter-spacing:-0.02em;margin:0;">Agenda</h1>
-            <button onclick="state.plannerMonthView=!state.plannerMonthView;if(state.plannerMonthView){var d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}state._forceRender=true;scheduleRender(0);" style="font-size:13px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.5);padding:6px 13px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">
-                ${monthNames[selDateObj.getMonth()]} ${selDateObj.getFullYear()} ${showMonthView?'↑':'↓'}
+        <!-- ══ HEADER ══ -->
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:env(safe-area-inset-top,24px) 0 18px;padding-top:max(env(safe-area-inset-top,0px),28px);">
+            <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
+            <button onclick="state.plannerMonthView=!state.plannerMonthView;if(state.plannerMonthView){var d=new Date('${selectedDate}T00:00:00');state.plannerMonthViewYear=d.getFullYear();state.plannerMonthViewMonth=d.getMonth();}state._forceRender=true;scheduleRender(0);" style="font-size:14px;font-weight:700;color:#1e40af;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:7px 15px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 2px 8px -2px rgba(37,99,235,0.12);">
+                ${MN[selDate.getMonth()]} ${selDate.getFullYear()} <span style="opacity:0.6;font-size:11px;">${showMonthView?'↑':'↓'}</span>
             </button>
         </header>
 
-        <!-- MONTH VIEW -->
+        <!-- ══ MONTH VIEW ══ -->
         ${showMonthView?`
-        <div style="background:white;border-radius:22px;padding:16px;margin-bottom:14px;box-shadow:0 4px 20px -6px rgba(0,0,0,0.07);border:1px solid rgba(241,245,249,0.9);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <button onclick="var m=((state.plannerMonthViewMonth||0)-1+12)%12,y=(state.plannerMonthViewYear||${selDateObj.getFullYear()});if((state.plannerMonthViewMonth||0)===0)y--;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:32px;height:32px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span></button>
-                <span style="font-size:14px;font-weight:700;color:#1e293b;">${monthNames[mvMonth]} ${mvYear}</span>
-                <button onclick="var m=((state.plannerMonthViewMonth||0)+1)%12,y=(state.plannerMonthViewYear||${selDateObj.getFullYear()});if((state.plannerMonthViewMonth||0)===11)y++;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:32px;height:32px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span></button>
+        <div style="background:white;border-radius:24px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+11)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===0)y--;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
+                <span style="font-size:16px;font-weight:700;color:#1e293b;">${MN[mvM]} ${mvY}</span>
+                <button onclick="var m=((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth)+1)%12,y=(state.plannerMonthViewYear===undefined?${selDate.getFullYear()}:state.plannerMonthViewYear);if(((state.plannerMonthViewMonth===undefined?${selDate.getMonth()}:state.plannerMonthViewMonth))===11)y++;state.plannerMonthViewMonth=m;state.plannerMonthViewYear=y;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;border-radius:50%;background:#eff6ff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1e40af;font-size:0;"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
-                ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:3px 0;">${d}</div>`).join('')}
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px;">
+                ${['D','L','M','M','G','V','S'].map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:4px 0;">${d}</div>`).join('')}
             </div>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">
                 ${Array.from({length:mvStartDow},()=>'<div></div>').join('')}
-                ${Array.from({length:mvDays},(_,i)=>mvCell(i+1)).join('')}
+                ${Array.from({length:mvDays},(_,i)=>{
+                    const dn=i+1;
+                    const iso=`${mvY}-${String(mvM+1).padStart(2,'0')}-${String(dn).padStart(2,'0')}`;
+                    const isTd=iso===todayISO,isSel=iso===selectedDate;
+                    const hasTasks=!!mvTaskMap[iso];
+                    const hasExam=hasTasks&&mvTaskMap[iso].some(t=>/verifica|interrogazione|test|esame/i.test(t.text)||t.isExam);
+                    return `<button onclick="state.selectedDate='${iso}';state.plannerMonthView=false;state._forceRender=true;scheduleRender(0);" style="aspect-ratio:1;border-radius:12px;border:none;cursor:pointer;background:${isSel?'#2563eb':isTd?'#eff6ff':'transparent'};color:${isSel?'white':isTd?'#1e40af':'#1e293b'};font-size:13px;font-weight:${isTd||isSel?'700':'400'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:${isSel?'0 4px 12px rgba(37,99,235,0.3)':'none'};transition:all 0.15s ease;">
+                        ${dn}
+                        <div style="width:4px;height:4px;border-radius:50%;background:${hasTasks?(isSel?'rgba(255,255,255,0.9)':hasExam?'#ef4444':'#2563eb'):'transparent'};"></div>
+                    </button>`;
+                }).join('')}
             </div>
-            ${mvMonthTasks.length>0?`
-            <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(241,245,249,0.9);display:flex;flex-direction:column;gap:7px;">
-                <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">${mvMonthTasks.length} compiti · ${monthNames[mvMonth]}</p>
-                ${mvMonthTasks.map(t=>taskCard(t,true)).join('')}
-            </div>`:`<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:12px;padding-bottom:2px;">Nessun compito in ${monthNames[mvMonth]}</p>`}
         </div>`:''}
 
-        <!-- SEARCH BAR -->
-        <div style="margin-bottom:14px;">
+        <!-- ══ SEARCH (inline, expands on focus) ══ -->
+        <div style="margin-bottom:16px;">
             <div style="position:relative;">
-                <span class="material-symbols-outlined" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:19px;pointer-events:none;">search</span>
-                <input type="text" placeholder="Cerca compiti..." class="agenda-search-input"
-                       value="${escapeHtml(query)}"
-                       oninput="handleAgendaSearch(event);state.plannerSearchOpen=!!(this.value.trim());state._forceRender=true;scheduleRender(0);"
-                       onfocus="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
-                       style="width:100%;height:48px;padding:0 ${(query||showSearchPanel)?'40px':'14px'} 0 44px;border-radius:${showSearchPanel?'16px 16px 0 0':'999px'};background:white;box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border:1px solid rgba(241,245,249,1);font-size:13px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;" />
-                ${(query||showSearchPanel)?`<button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(241,245,249,0.9);border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;"><span class="material-symbols-outlined" style="font-size:13px;">close</span></button>`:''}
+                <span class="material-symbols-outlined" style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
+                <input type="text" placeholder="Cerca tra tutti i compiti..." class="agenda-search-input"
+                    value="${escapeHtml(query)}"
+                    oninput="handleAgendaSearch(event);state.plannerSearchOpen=!!(this.value.trim());state._forceRender=true;scheduleRender(0);"
+                    onfocus="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
+                    style="width:100%;height:52px;padding:0 ${(query||showSearchPanel)?'44px':'18px'} 0 48px;border-radius:${showSearchPanel?'18px 18px 0 0':'999px'};background:white;box-shadow:0 4px 20px -8px rgba(0,0,0,0.06);border:1.5px solid rgba(241,245,249,1);font-size:14px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;transition:border-radius 0.2s ease;" />
+                ${(query||showSearchPanel)?`<button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;state._forceRender=true;scheduleRender(0);" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>`:''}
             </div>
             ${showSearchPanel?`
-            <div style="background:white;border-radius:0 0 16px 16px;border:1px solid rgba(241,245,249,1);border-top:none;padding:10px 12px 12px;box-shadow:0 8px 20px -6px rgba(0,0,0,0.06);">
-                <div style="display:flex;overflow-x:auto;gap:6px;padding-bottom:8px;scrollbar-width:none;-ms-overflow-style:none;">
-                    ${chip('Tutte',"state.agendaSearchSubject='all';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();",filterSubject==='all')}
-                    ${subjects.map(s=>chip(escapeHtml(s),`state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();`,filterSubject===s)).join('')}
+            <div style="background:white;border-radius:0 0 18px 18px;border:1.5px solid rgba(241,245,249,1);border-top:none;padding:12px 14px 16px;box-shadow:0 10px 28px -8px rgba(0,0,0,0.07);">
+                <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:10px;scrollbar-width:none;">
+                    ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`<button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();" style="flex-shrink:0;padding:6px 13px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
                 </div>
-                <div style="display:flex;flex-direction:column;gap:7px;max-height:48vh;overflow-y:auto;">
-                    ${searchResults.length>0?searchResults.map(t=>taskCard(t,true)).join(''):`<p style="text-align:center;color:#94a3b8;font-size:13px;padding:16px 0;">Nessun risultato</p>`}
+                <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:8px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${searchResults.length?searchResults.map(t=>TC(t,true)).join(''):`<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;">Nessun risultato</p>`}
                 </div>
             </div>`:''}
         </div>
 
-        <!-- WEEK NAVIGATOR -->
+        <!-- ══ WEEK NAVIGATOR ══ -->
         ${!showSearchPanel&&!showMonthView?`
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.06);">
-                <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
-            </button>
-            <div style="flex:1;display:flex;overflow-x:auto;gap:5px;scrollbar-width:none;-ms-overflow-style:none;padding:4px 0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)-1;state._forceRender=true;scheduleRender(0);" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;background:white;border:1.5px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.07);"><span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span></button>
+            <div style="flex:1;display:flex;overflow-x:auto;gap:6px;scrollbar-width:none;-ms-overflow-style:none;padding:4px 1px;">
                 ${weekDays.map(d=>{
                     const isSel=d.iso===selectedDate;
-                    return `<div onclick="state.selectedDate='${d.iso}';state._forceRender=true;scheduleRender(0);" style="flex-shrink:0;width:calc((100% - 30px)/7);min-width:40px;height:78px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;${isSel?'background:#2563eb;box-shadow:0 5px 14px -4px rgba(37,99,235,0.32);':'background:white;border:1px solid rgba(241,245,249,0.9);box-shadow:0 2px 10px -5px rgba(0,0,0,0.05);'}transition:all 0.15s ease;">
-                        <span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.8)':'#94a3b8'};">${d.label}</span>
-                        <span style="font-size:17px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
-                        <div style="width:4px;height:4px;border-radius:50%;background:${d.isToday?(isSel?'rgba(255,255,255,0.9)':'#2563eb'):'transparent'};"></div>
+                    return `<div onclick="state.selectedDate='${d.iso}';state._forceRender=true;scheduleRender(0);" style="flex-shrink:0;width:calc((100% - 36px)/7);min-width:44px;height:92px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;${isSel?'background:#2563eb;box-shadow:0 6px 18px -4px rgba(37,99,235,0.38);transform:scale(1.04);':'background:white;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 12px -5px rgba(0,0,0,0.06);'}transition:all 0.18s cubic-bezier(0.2,0.8,0.2,1);">
+                        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.75)':'#94a3b8'};">${d.label}</span>
+                        <span style="font-size:20px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
+                        <div style="width:5px;height:5px;border-radius:50%;background:${d.isToday?(isSel?'rgba(255,255,255,0.9)':'#2563eb'):d.hasTask?(isSel?'rgba(255,255,255,0.5)':'rgba(37,99,235,0.25)'):'transparent'};"></div>
                     </div>`;
                 }).join('')}
             </div>
-            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;state._forceRender=true;scheduleRender(0);" style="width:36px;height:36px;flex-shrink:0;border-radius:50%;background:white;border:1px solid rgba(226,232,240,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.06);">
-                <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
-            </button>
+            <button onclick="state.plannerWeekOffset=(state.plannerWeekOffset||0)+1;state._forceRender=true;scheduleRender(0);" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;background:white;border:1.5px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1e40af;box-shadow:0 2px 8px -3px rgba(0,0,0,0.07);"><span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span></button>
         </div>
 
         ${upcomingCount>0?`
-        <div style="background:#f4f7ff;border:1px solid rgba(191,219,254,0.5);border-radius:20px;padding:14px 16px;margin-bottom:14px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.10);">
-            <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
-                <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
-                <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
+        <div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:22px;padding:16px 18px;margin-bottom:16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <div style="width:34px;height:34px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="font-size:17px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
+                <span style="font-size:14px;font-weight:700;color:#1e40af;">Smart Planner</span>
             </div>
-            <p style="font-size:12px;font-weight:500;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <b>${upcomingCount}</b> compiti nei prossimi 7 giorni.</p>
-            <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Vedi tutti <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span></button>
+            <p style="font-size:13px;font-weight:500;color:#475569;line-height:1.5;margin:0 0 8px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+            <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Vedi tutti <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>
         </div>`:''}
 
-        <div style="display:flex;flex-direction:column;gap:9px;">
-            ${dayTasks.length>0?dayTasks.map(t=>taskCard(t,false)).join(''):`
-            <div style="background:white;border-radius:20px;padding:32px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;border:1px solid rgba(241,245,249,0.9);box-shadow:0 2px 12px -5px rgba(0,0,0,0.04);">
-                <span class="material-symbols-outlined" style="font-size:36px;color:#cbd5e1;">event_busy</span>
-                <p style="font-size:13px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            ${dayTasks.length?dayTasks.map(t=>TC(t,false)).join(''):`
+            <div style="background:white;border-radius:22px;padding:40px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+                <span class="material-symbols-outlined" style="font-size:42px;color:#cbd5e1;">event_busy</span>
+                <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività per questo giorno</p>
             </div>`}
         </div>`:''}
 
-        <!-- FABs — raised above navbar -->
-        <div style="position:fixed;bottom:108px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:40;">
-            <button onclick="showToast('Storico in arrivo','info')" style="width:46px;height:46px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(79,70,229,0.28);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:20px;">history</span>
+        <!-- ══ FABs — above navbar ══ -->
+        <div style="position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:11px;z-index:40;">
+            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:21px;">history</span>
             </button>
-            <button onclick="showQuickAddTaskModal()" style="width:52px;height:52px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(37,99,235,0.32);cursor:pointer;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:24px;">add</span>
+            <button onclick="showQuickAddTaskModal()" style="width:56px;height:56px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,99,235,0.35);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:26px;">add</span>
             </button>
         </div>
     </div>`;
