@@ -1920,7 +1920,7 @@ function renderHome() {
             </div>
 
             <!-- Sezione Domani — compatta -->
-            <div style="padding:0 16px;">
+            <div style="padding:0 24px;">
                 <div style="margin-bottom:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
                         <h3 style="font-size:1.35rem;font-weight:700;color:#1F2937;margin:0;">Domani</h3>
@@ -6087,7 +6087,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 16px;box-sizing:border-box;scroll-snap-align:start;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 20px;box-sizing:border-box;scroll-snap-align:start;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 return `<div onclick="plannerSelectDay('${d.iso}')" style="
@@ -6125,13 +6125,16 @@ function renderPlanner() {
     `).join('');
 
     return `
-    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0;">
+    <div class="view-fullbleed planner-view min-h-screen pb-32" style="padding:0;">
 
         <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 16px 16px;">
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <div style="display:inline-flex;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.08);padding:8px 18px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-                <span style="font-size:13px;font-weight:600;color:#1e293b;letter-spacing:-0.01em;font-family:-apple-system,'SF Pro Text','Hanken Grotesk',sans-serif;">${monthLabel}</span>
+            <div style="display:flex;align-items:center;gap:6px;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:5px 6px 5px 14px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(37,99,235,0.10);">
+                <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
+                <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#2563eb;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:16px;color:white;">search</span>
+                </button>
             </div>
         </header>
 
@@ -6181,19 +6184,8 @@ function renderPlanner() {
             </div>
         </div>` : `
 
-        <!-- ══ SEARCH PILL ══ -->
-        <div style="padding:0 16px;margin-bottom:10px;">
-            <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
-                style="width:100%;height:46px;border-radius:999px;background:white;border:1px solid rgba(0,0,0,0.08);
-                       box-shadow:0 1px 4px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;
-                       padding:0 18px;cursor:pointer;font-family:-apple-system,'SF Pro Text','Hanken Grotesk',sans-serif;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">search</span>
-                <span style="font-size:14px;color:#94a3b8;font-weight:500;">Cerca compiti, verifiche...</span>
-            </button>
-        </div>
-
         <!-- ══ DAY CONTENT ══ -->
-        <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:0 24px;display:flex;flex-direction:column;gap:10px;">
 
             <!-- Selected day label -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -6229,7 +6221,7 @@ function renderPlanner() {
         </div>`}
 
         <!-- ══ FABs ══ -->
-        <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:16px;display:flex;flex-direction:column;gap:10px;z-index:40;">
+        <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:10px;z-index:40;">
             <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:21px;">history</span>
             </button>
