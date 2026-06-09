@@ -4828,7 +4828,7 @@ window._renderCore = function () {
     const _plannerStateKey = state.view === 'planner'
         ? [state.selectedDate||'',state.plannerWeekOffset||0,state.plannerMonthView||false,
            state.plannerMonthViewYear||0,state.plannerMonthViewMonth||0,
-           state.plannerSearchOpen||false,state.agendaSearchQuery||'',state.agendaSearchSubject||''].join('|')
+           state.agendaSearchQuery||'',state.agendaSearchSubject||''].join('|')
         : '';
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
@@ -4880,6 +4880,20 @@ window._renderCore = function () {
         }
         if (state.view === 'planner') {
             if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+            // Auto-scroll week carousel to the active slide (instant, no animation)
+            const _pc = document.getElementById('planner-week-carousel');
+            if (_pc && window._plannerInitialSlide !== undefined) {
+                _pc.scrollTo({ left: window._plannerInitialSlide * _pc.clientWidth, behavior: 'instant' });
+            }
+            // Restore search bar focus + cursor if user was typing
+            if (window._psfocused) {
+                const _si = document.getElementById('planner-search-input');
+                if (_si) {
+                    _si.focus();
+                    const _pos = window._pscursor !== undefined ? window._pscursor : _si.value.length;
+                    try { _si.setSelectionRange(_pos, _pos); } catch(e) {}
+                }
+            }
         }
         if (state.view === 'voti' && typeof initGradesCharts === 'function') {
             initGradesCharts();
@@ -6124,6 +6138,7 @@ function renderPlanner() {
         " onclick="plannerJumpToWeek(${i})"></div>
     `).join('');
 
+    window._plannerInitialSlide = activeSlide; // per post-render scroll
     return `
     <div class="view-fullbleed planner-view min-h-screen pb-32" style="padding:0;">
 
@@ -6142,9 +6157,11 @@ function renderPlanner() {
                 <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px;pointer-events:none;">search</span>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche..."
                     value="${escapeHtml(query)}"
-                    oninput="handleAgendaSearch(event);state._forceRender=true;scheduleRender(0);"
+                    oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;state._forceRender=true;scheduleRender(0);"
+                    onfocus="window._psfocused=true;"
+                    onblur="setTimeout(()=>{window._psfocused=false;},200);"
                     style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;box-sizing:border-box;" />
-                ${query ? `<button onclick="state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}
+                ${query ? `<button onclick="window._psfocused=false;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}
             </div>
         </div>
 
@@ -6229,57 +6246,57 @@ function renderPlanner() {
             </button>
         </div>
 
-        <!-- ══ Carousel JS (inline, fires after DOM insert) ══ -->
-        <script>
-        (function() {
-            // Wire up plannerSelectDay — no full re-render, just update state + DOM in-place
-            window.plannerSelectDay = function(iso) {
-                state.selectedDate = iso;
-                // Update day pills appearance without full re-render
-                document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(el => {
-                    const elIso = el.getAttribute('onclick').match(/'([^']+)'/)?.[1];
-                    if (!elIso) return;
-                    const isSel = elIso === iso;
-                    el.style.background    = isSel ? '#2563eb' : 'white';
-                    el.style.border        = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
-                    el.style.boxShadow     = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
-                    el.style.transform     = isSel ? 'scale(1.04)' : 'scale(1)';
-                    // Update label + number colors
-                    const spans = el.querySelectorAll('span');
-                    if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
-                    if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
-                });
-                // Update day content section
-                state._forceRender = true;
-                scheduleRender(0);
-            };
-
-            // Scroll handler: update dots + state.plannerWeekOffset
-            window.handlePlannerCarouselScroll = function(el) {
-                const idx = Math.round(el.scrollLeft / el.clientWidth);
-                document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
-                    dot.style.width      = i===idx ? '20px' : '6px';
-                    dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
-                });
-            };
-
-            // Jump to specific week slide
-            window.plannerJumpToWeek = function(idx) {
-                const el = document.getElementById('planner-week-carousel');
-                if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
-            };
-
-            // On mount: scroll carousel to the slide containing selectedDate (no animation, instant)
-            requestAnimationFrame(() => {
-                const el = document.getElementById('planner-week-carousel');
-                if (el) {
-                    el.scrollTo({ left: ${activeSlide} * el.clientWidth, behavior: 'instant' });
-                }
-            });
-        })();
-        <\/script>
+        <!-- carousel JS moved to module level -->
     </div>`;
 }
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PLANNER CAROUSEL FUNCTIONS — definite a livello modulo (non in innerHTML)
+// Gli script dentro innerHTML non vengono eseguiti dai browser per sicurezza.
+// ══════════════════════════════════════════════════════════════════════════════
+
+window.plannerSelectDay = function(iso) {
+    state.selectedDate = iso;
+    // Aggiornamento chirurgico pillole senza full re-render
+    document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(function(el) {
+        const m = el.getAttribute('onclick').match(/'([^']+)'/);
+        const elIso = m ? m[1] : null;
+        if (!elIso) return;
+        const isSel = elIso === iso;
+        el.style.background = isSel ? '#2563eb' : 'white';
+        el.style.border     = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
+        el.style.boxShadow  = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
+        el.style.transform  = isSel ? 'scale(1.04)' : 'scale(1)';
+        const spans = el.querySelectorAll('span');
+        if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
+        if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
+    });
+    // Aggiorna il contenuto del giorno selezionato
+    state._forceRender = true;
+    scheduleRender(0);
+};
+
+window.handlePlannerCarouselScroll = function(el) {
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (window._lastPlannerScrollIdx === idx) return; // evita aggiornamenti inutili
+    window._lastPlannerScrollIdx = idx;
+    document.querySelectorAll('.planner-week-dot').forEach(function(dot, i) {
+        dot.style.width      = i === idx ? '20px' : '6px';
+        dot.style.background = i === idx ? '#2563eb' : '#CBD5E1';
+        dot.style.borderRadius = '4px';
+    });
+    // Aggiorna lo stato settimana senza re-render immediato
+    if (typeof state !== 'undefined') {
+        state.plannerWeekOffset = (state.plannerWeekOffset || 0) + (idx - (window._plannerInitialSlide || 0));
+        window._plannerInitialSlide = idx;
+    }
+};
+
+window.plannerJumpToWeek = function(idx) {
+    const el = document.getElementById('planner-week-carousel');
+    if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
+};
 
 function formatFullDate(dateInput) {
     if (!dateInput) return '';
