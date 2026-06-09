@@ -4866,6 +4866,9 @@ window._renderCore = function () {
     }
 
     root.innerHTML = html;
+    if (state.view === 'planner') {
+        requestAnimationFrame(() => window._initPlannerCarousel && window._initPlannerCarousel());
+    }
     if (state._scrollTopAfterRender) {
         window.scrollTo({ top: 0, behavior: 'auto' });
         state._scrollTopAfterRender = false;
@@ -5975,6 +5978,52 @@ function getSubjectIcon(subject) {
     return 'school';
 }
 
+// ── Planner carousel functions — defined once globally (not via innerHTML script) ──
+window.plannerSelectDay = function(iso) {
+    state.selectedDate = iso;
+    document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(el => {
+        const elIso = el.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+        if (!elIso) return;
+        const isSel = elIso === iso;
+        el.style.background = isSel ? '#2563eb' : 'white';
+        el.style.border     = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
+        el.style.boxShadow  = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
+        el.style.transform  = isSel ? 'scale(1.04)' : 'scale(1)';
+        const spans = el.querySelectorAll('span');
+        if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
+        if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
+    });
+    state._forceRender = true;
+    scheduleRender(0);
+};
+
+window.handlePlannerCarouselScroll = function(el) {
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (window._lastPlannerDotIdx === idx) return;
+    window._lastPlannerDotIdx = idx;
+    document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
+        dot.style.width      = i===idx ? '20px' : '6px';
+        dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
+    });
+};
+
+window.plannerJumpToWeek = function(idx) {
+    const el = document.getElementById('planner-week-carousel');
+    if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
+};
+
+window._initPlannerCarousel = function() {
+    const el = document.getElementById('planner-week-carousel');
+    if (!el) return;
+    const activeSlide = parseInt(el.getAttribute('data-active-slide') || '2', 10);
+    el.scrollLeft = activeSlide * el.clientWidth;
+    window._lastPlannerDotIdx = activeSlide;
+    document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
+        dot.style.width      = i===activeSlide ? '20px' : '6px';
+        dot.style.background = i===activeSlide ? '#2563eb' : '#CBD5E1';
+    });
+};
+
 function renderPlanner() {
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -6125,7 +6174,7 @@ function renderPlanner() {
     `).join('');
 
     return `
-    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0;">
+    <div class="view planner-view pb-32" style="background:transparent;min-height:100vh;padding:0;">
 
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 18px 16px;">
@@ -6141,7 +6190,7 @@ function renderPlanner() {
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
         ${!showSearchPanel ? `
         <div style="overflow:hidden;width:100%;margin:0;padding:0;">
-        <div id="planner-week-carousel" style="
+        <div id="planner-week-carousel" data-active-slide="${activeSlide}" style="
             display:flex;
             overflow-x:auto;
             scroll-snap-type:x mandatory;
@@ -6232,68 +6281,7 @@ function renderPlanner() {
             </button>
         </div>
 
-        <!-- ══ Carousel JS (inline, fires after DOM insert) ══ -->
-        <script>
-        (function() {
-            // Wire up plannerSelectDay — no full re-render, just update state + DOM in-place
-            window.plannerSelectDay = function(iso) {
-                state.selectedDate = iso;
-                // Update day pills appearance without full re-render
-                document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(el => {
-                    const elIso = el.getAttribute('onclick').match(/'([^']+)'/)?.[1];
-                    if (!elIso) return;
-                    const isSel = elIso === iso;
-                    el.style.background    = isSel ? '#2563eb' : 'white';
-                    el.style.border        = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
-                    el.style.boxShadow     = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
-                    el.style.transform     = isSel ? 'scale(1.04)' : 'scale(1)';
-                    // Update label + number colors
-                    const spans = el.querySelectorAll('span');
-                    if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
-                    if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
-                });
-                // Update day content section
-                state._forceRender = true;
-                scheduleRender(0);
-            };
-
-            // Scroll handler: update dots + state.plannerWeekOffset
-            window.handlePlannerCarouselScroll = function(el) {
-                const idx = Math.round(el.scrollLeft / el.clientWidth);
-                if (window._lastPlannerDotIdx === idx) return; // debounce same index
-                window._lastPlannerDotIdx = idx;
-                document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
-                    dot.style.width      = i===idx ? '20px' : '6px';
-                    dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
-                });
-            };
-
-            // Helper: sync dots to a given index
-            function _syncPlannerDots(idx) {
-                window._lastPlannerDotIdx = idx;
-                document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
-                    dot.style.width      = i===idx ? '20px' : '6px';
-                    dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
-                });
-            }
-
-            // Jump to specific week slide
-            window.plannerJumpToWeek = function(idx) {
-                const el = document.getElementById('planner-week-carousel');
-                if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
-            };
-
-            // On mount: scroll carousel to the slide containing selectedDate (no animation, instant)
-            requestAnimationFrame(() => {
-                const el = document.getElementById('planner-week-carousel');
-                if (el) {
-                    el.scrollTo({ left: ${activeSlide} * el.clientWidth, behavior: 'instant' });
-                    // Sync dots to match the initial active slide
-                    _syncPlannerDots(${activeSlide});
-                }
-            });
-        })();
-        <\/script>
+        <!-- Carousel init handled by _renderCore after innerHTML set -->
     </div>`;
 }
 
