@@ -6130,16 +6130,25 @@ function renderPlanner() {
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <div style="display:flex;align-items:center;gap:6px;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:5px 6px 5px 14px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(37,99,235,0.10);">
+            <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+                <span class="material-symbols-outlined" style="font-size:16px;color:#1e40af;font-variation-settings:'FILL' 1;">calendar_month</span>
                 <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
-                <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#2563eb;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                    <span class="material-symbols-outlined" style="font-size:16px;color:white;">search</span>
-                </button>
             </div>
         </header>
 
+        <!-- ══ SEARCH BAR (Apple pill, sempre visibile) ══ -->
+        <div style="padding:0 24px 14px;">
+            <div style="position:relative;">
+                <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px;pointer-events:none;">search</span>
+                <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche..."
+                    value="${escapeHtml(query)}"
+                    oninput="handleAgendaSearch(event);state._forceRender=true;scheduleRender(0);"
+                    style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;box-sizing:border-box;" />
+                ${query ? `<button onclick="state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}
+            </div>
+        </div>
+
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
-        ${!showSearchPanel ? `
         <div id="planner-week-carousel" style="
             display:flex;
             overflow-x:auto;
@@ -6158,21 +6167,11 @@ function renderPlanner() {
         <!-- Dot indicators -->
         <div style="display:flex;justify-content:center;align-items:center;gap:7px;margin:10px 0 16px;">
             ${dotsHtml}
-        </div>` : ''}
+        </div>
 
-        <!-- ══ SEARCH PANEL (full screen feel) ══ -->
-        ${showSearchPanel ? `
+        <!-- ══ RISULTATI RICERCA / CONTENUTO GIORNO ══ -->
+        ${(query || filterSubject !== 'all') ? `
         <div style="padding:0 24px;">
-            <div style="position:relative;margin-bottom:12px;">
-                <span class="material-symbols-outlined" style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:20px;pointer-events:none;">search</span>
-                <input id="planner-search-input" type="text" placeholder="Cerca tra tutti i compiti..." autofocus
-                    value="${escapeHtml(query)}"
-                    oninput="handleAgendaSearch(event);state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
-                    style="width:100%;height:52px;padding:0 48px;border-radius:999px;background:white;box-shadow:0 4px 20px -8px rgba(0,0,0,0.06);border:1.5px solid rgba(241,245,249,1);font-size:14px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;box-sizing:border-box;" />
-                <button onclick="state.agendaSearchQuery='';state.plannerSearchOpen=false;state._forceRender=true;scheduleRender(0);" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;">
-                    <span class="material-symbols-outlined" style="font-size:16px;">close</span>
-                </button>
-            </div>
             <!-- Subject chips -->
             <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
@@ -6210,7 +6209,7 @@ function renderPlanner() {
                     <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
                 </div>
                 <p style="font-size:12px;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-                <button onclick="state.plannerSearchOpen=true;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Vedi tutti <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
+                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
             </div>` : ''}
 
             ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
