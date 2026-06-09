@@ -1920,7 +1920,7 @@ function renderHome() {
             </div>
 
             <!-- Sezione Domani — compatta -->
-            <div style="padding:0 24px;">
+            <div style="padding:0 16px;">
                 <div style="margin-bottom:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
                         <h3 style="font-size:1.35rem;font-weight:700;color:#1F2937;margin:0;">Domani</h3>
@@ -4866,9 +4866,6 @@ window._renderCore = function () {
     }
 
     root.innerHTML = html;
-    if (state.view === 'planner') {
-        requestAnimationFrame(() => window._initPlannerCarousel && window._initPlannerCarousel());
-    }
     if (state._scrollTopAfterRender) {
         window.scrollTo({ top: 0, behavior: 'auto' });
         state._scrollTopAfterRender = false;
@@ -5978,52 +5975,6 @@ function getSubjectIcon(subject) {
     return 'school';
 }
 
-// ── Planner carousel functions — defined once globally (not via innerHTML script) ──
-window.plannerSelectDay = function(iso) {
-    state.selectedDate = iso;
-    document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(el => {
-        const elIso = el.getAttribute('onclick').match(/'([^']+)'/)?.[1];
-        if (!elIso) return;
-        const isSel = elIso === iso;
-        el.style.background = isSel ? '#2563eb' : 'white';
-        el.style.border     = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
-        el.style.boxShadow  = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
-        el.style.transform  = isSel ? 'scale(1.04)' : 'scale(1)';
-        const spans = el.querySelectorAll('span');
-        if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
-        if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
-    });
-    state._forceRender = true;
-    scheduleRender(0);
-};
-
-window.handlePlannerCarouselScroll = function(el) {
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    if (window._lastPlannerDotIdx === idx) return;
-    window._lastPlannerDotIdx = idx;
-    document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
-        dot.style.width      = i===idx ? '20px' : '6px';
-        dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
-    });
-};
-
-window.plannerJumpToWeek = function(idx) {
-    const el = document.getElementById('planner-week-carousel');
-    if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
-};
-
-window._initPlannerCarousel = function() {
-    const el = document.getElementById('planner-week-carousel');
-    if (!el) return;
-    const activeSlide = parseInt(el.getAttribute('data-active-slide') || '2', 10);
-    el.scrollLeft = activeSlide * el.clientWidth;
-    window._lastPlannerDotIdx = activeSlide;
-    document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
-        dot.style.width      = i===activeSlide ? '20px' : '6px';
-        dot.style.background = i===activeSlide ? '#2563eb' : '#CBD5E1';
-    });
-};
-
 function renderPlanner() {
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -6136,7 +6087,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 24px;box-sizing:border-box;scroll-snap-align:start;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 16px;box-sizing:border-box;scroll-snap-align:start;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 return `<div onclick="plannerSelectDay('${d.iso}')" style="
@@ -6174,23 +6125,19 @@ function renderPlanner() {
     `).join('');
 
     return `
-    <div class="view planner-view pb-32" style="background:transparent;min-height:100vh;padding:0;">
+    <div class="view planner-view pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 0% 0%,rgba(224,231,255,0.55) 0%,transparent 45%),radial-gradient(circle at 100% 100%,rgba(238,230,255,0.55) 0%,transparent 45%);min-height:100vh;padding:0;">
 
         <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
+        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 16px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);" style="display:flex;align-items:center;gap:8px;background:rgba(239,246,255,0.95);border:1.5px solid rgba(191,219,254,0.6);padding:7px 10px 7px 16px;border-radius:999px;box-shadow:0 2px 10px -2px rgba(37,99,235,0.12);cursor:pointer;-webkit-tap-highlight-color:transparent;">
-                <span style="font-size:13px;font-weight:700;color:#1e40af;white-space:nowrap;">${monthLabel}</span>
-                <span style="width:30px;height:30px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <span class="material-symbols-outlined" style="font-size:16px;color:white;">search</span>
-                </span>
-            </button>
+            <div style="display:inline-flex;align-items:center;justify-content:center;background:white;border:1px solid rgba(0,0,0,0.08);padding:8px 18px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                <span style="font-size:13px;font-weight:600;color:#1e293b;letter-spacing:-0.01em;font-family:-apple-system,'SF Pro Text','Hanken Grotesk',sans-serif;">${monthLabel}</span>
+            </div>
         </header>
 
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
         ${!showSearchPanel ? `
-        <div style="overflow:hidden;width:100%;margin:0;padding:0;">
-        <div id="planner-week-carousel" data-active-slide="${activeSlide}" style="
+        <div id="planner-week-carousel" style="
             display:flex;
             overflow-x:auto;
             scroll-snap-type:x mandatory;
@@ -6203,7 +6150,6 @@ function renderPlanner() {
             padding:0;
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
-        </div>
         </div>
 
         <!-- Dot indicators -->
@@ -6235,8 +6181,19 @@ function renderPlanner() {
             </div>
         </div>` : `
 
+        <!-- ══ SEARCH PILL ══ -->
+        <div style="padding:0 16px;margin-bottom:10px;">
+            <button onclick="state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);"
+                style="width:100%;height:46px;border-radius:999px;background:white;border:1px solid rgba(0,0,0,0.08);
+                       box-shadow:0 1px 4px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;
+                       padding:0 18px;cursor:pointer;font-family:-apple-system,'SF Pro Text','Hanken Grotesk',sans-serif;">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">search</span>
+                <span style="font-size:14px;color:#94a3b8;font-weight:500;">Cerca compiti, verifiche...</span>
+            </button>
+        </div>
+
         <!-- ══ DAY CONTENT ══ -->
-        <div style="padding:0 24px;display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
 
             <!-- Selected day label -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -6272,7 +6229,7 @@ function renderPlanner() {
         </div>`}
 
         <!-- ══ FABs ══ -->
-        <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:24px;display:flex;flex-direction:column;gap:10px;z-index:40;">
+        <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:16px;display:flex;flex-direction:column;gap:10px;z-index:40;">
             <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:21px;">history</span>
             </button>
@@ -6281,7 +6238,55 @@ function renderPlanner() {
             </button>
         </div>
 
-        <!-- Carousel init handled by _renderCore after innerHTML set -->
+        <!-- ══ Carousel JS (inline, fires after DOM insert) ══ -->
+        <script>
+        (function() {
+            // Wire up plannerSelectDay — no full re-render, just update state + DOM in-place
+            window.plannerSelectDay = function(iso) {
+                state.selectedDate = iso;
+                // Update day pills appearance without full re-render
+                document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(el => {
+                    const elIso = el.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+                    if (!elIso) return;
+                    const isSel = elIso === iso;
+                    el.style.background    = isSel ? '#2563eb' : 'white';
+                    el.style.border        = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
+                    el.style.boxShadow     = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
+                    el.style.transform     = isSel ? 'scale(1.04)' : 'scale(1)';
+                    // Update label + number colors
+                    const spans = el.querySelectorAll('span');
+                    if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
+                    if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
+                });
+                // Update day content section
+                state._forceRender = true;
+                scheduleRender(0);
+            };
+
+            // Scroll handler: update dots + state.plannerWeekOffset
+            window.handlePlannerCarouselScroll = function(el) {
+                const idx = Math.round(el.scrollLeft / el.clientWidth);
+                document.querySelectorAll('.planner-week-dot').forEach((dot, i) => {
+                    dot.style.width      = i===idx ? '20px' : '6px';
+                    dot.style.background = i===idx ? '#2563eb' : '#CBD5E1';
+                });
+            };
+
+            // Jump to specific week slide
+            window.plannerJumpToWeek = function(idx) {
+                const el = document.getElementById('planner-week-carousel');
+                if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
+            };
+
+            // On mount: scroll carousel to the slide containing selectedDate (no animation, instant)
+            requestAnimationFrame(() => {
+                const el = document.getElementById('planner-week-carousel');
+                if (el) {
+                    el.scrollTo({ left: ${activeSlide} * el.clientWidth, behavior: 'instant' });
+                }
+            });
+        })();
+        <\/script>
     </div>`;
 }
 
