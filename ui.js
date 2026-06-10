@@ -6113,7 +6113,7 @@ function renderPlanner() {
                     cursor:pointer;
                     background:${isSel ? '#2563eb' : 'white'};
                     border:${isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)'};
-                    filter:${isSel ? 'drop-shadow(0 5px 12px rgba(37,99,235,0.42))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.04))'};
+                    box-shadow:${isSel ? '0 8px 16px -4px rgba(37,99,235,0.45)' : '0 2px 6px rgba(0,0,0,0.04)'};
                     transform:${isSel ? 'scale(1.04)' : 'scale(1)'};
                     transition:all 0.15s cubic-bezier(0.2,0.8,0.2,1);
                     -webkit-tap-highlight-color:transparent;
@@ -6547,8 +6547,8 @@ window.plannerSelectDay = function(iso) {
         const isSel = elIso === iso;
         el.style.background = isSel ? '#2563eb' : 'white';
         el.style.border     = isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)';
-        el.style.filter    = isSel ? 'drop-shadow(0 5px 12px rgba(37,99,235,0.40))' : 'drop-shadow(0 2px 8px rgba(0,0,0,0.05))';
-    el.style.boxShadow = 'none';
+        el.style.boxShadow  = isSel ? '0 8px 16px -4px rgba(37,99,235,0.45)' : '0 2px 6px rgba(0,0,0,0.04)';
+        el.style.filter     = 'none'; // Rimuoviamo il drop-shadow difettoso
         el.style.transform  = isSel ? 'scale(1.04)' : 'scale(1)';
         const spans = el.querySelectorAll('span');
         if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
