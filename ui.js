@@ -5988,6 +5988,65 @@ function getSubjectIcon(subject) {
     if (s.includes('lingua') || s.includes('inglese') || s.includes('italiano')) return 'menu_book';
     return 'school';
 }
+window._plannerGetDayContentHTML = function() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayISO = getLocalDateString(today);
+    const selectedDate = state.selectedDate || todayISO;
+    const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const dayLabels = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    
+    const allTasks = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
+    const dayTasks = allTasks.filter(t=>t.due_date===selectedDate);
+    const upcomingCount = allTasks.filter(t=>{
+        if(t.done) return false;
+        const d = parseLocalDate(t.due_date);
+        if(isNaN(d.getTime())) return false;
+        return (d-today)/86400000>0 && (d-today)/86400000<=7;
+    }).length;
+
+    const TC = window._plannerTC;
+    if(!TC) return '';
+
+    // Aggiunto padding-bottom: 120px per evitare l'accavallamento con la Navbar
+    let html = '<div style="padding:0 24px 120px 24px;display:flex;flex-direction:column;gap:10px;">';
+
+    const d = new Date(selectedDate+'T00:00:00');
+    const diff = Math.round((d-today)/86400000);
+    const base = `${dayLabels[d.getDay()]} ${d.getDate()} ${MN[d.getMonth()]}`;
+    let title = base;
+    if(diff===0) title = `Oggi · ${base}`;
+    else if(diff===1) title = `Domani · ${base}`;
+    else if(diff===-1) title = `Ieri · ${base}`;
+
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <h2 style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">${title}</h2>
+        <span style="font-size:11px;font-weight:700;color:#94a3b8;">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
+    </div>`;
+
+    if (upcomingCount>0 && selectedDate===todayISO) {
+        html += `<div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
+                <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
+                <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
+            </div>
+            <p style="font-size:12px;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+            <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
+        </div>`;
+    }
+
+    if (dayTasks.length) {
+        html += dayTasks.map(t=>TC(t,false)).join('');
+    } else {
+        html += `<div style="background:white;border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+            <span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">event_busy</span>
+            <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività per questo giorno</p>
+        </div>`;
+    }
+
+    html += `</div>`;
+    return html;
+};
 
 function renderPlanner() {
     const today = new Date();
@@ -6051,7 +6110,7 @@ function renderPlanner() {
         return (t.subject||'').toLowerCase().includes(query)
             || (t.materia||'').toLowerCase().includes(query)
             || (t.text||'').toLowerCase().includes(query);
-    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
+    }).sort((a,b)=>(b.due_date||'').localeCompare(a.due_date||'')) : [];
 
     // ── Month label derived from selected date ───────────────────
     const monthLabel = `${MN[selDate.getMonth()]} ${selDate.getFullYear()}`;
@@ -6164,8 +6223,7 @@ function renderPlanner() {
                     onfocus="window._psfocused=true;"
                     onblur="setTimeout(()=>{window._psfocused=false;},200);"
                     style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:Hanken Grotesk,sans-serif;box-sizing:border-box;" />
-                ${query ? `<button onclick="window._psfocused=false;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}
-            </div>
+${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElementById('planner-search-input');if(si)si.value='';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}            </div>
         </div>
 
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
@@ -6286,9 +6344,6 @@ window.closePlannerMonthPicker = function() {
 };
 
 window._renderMonthPicker = function() {
-    const existing = document.getElementById('month-picker-overlay');
-    if (existing) existing.remove();
-
     const MN_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const { year, month } = window._pk;
@@ -6297,9 +6352,8 @@ window._renderMonthPicker = function() {
 
     const firstDay = new Date(year, month, 1);
     const lastDay  = new Date(year, month + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // 0=Lun, 6=Dom
+    const startDow = (firstDay.getDay() + 6) % 7; 
 
-    // ── griglia celle ────────────────────────────────────────────
     const cells = [];
     for (let i = 0; i < startDow; i++) cells.push('<div></div>');
 
@@ -6311,14 +6365,12 @@ window._renderMonthPicker = function() {
         const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
         const dotColor  = hasVerif ? '#f97316' : '#3b82f6';
 
-        // selBg / todayBg / selRing come Liquid Glass
         let bg = 'transparent', color = '#1e293b', fw = '400', ring = 'none', shadow = 'none';
         if (isSel)   { bg = '#2563eb'; color = 'white'; fw = '800'; shadow = '0 4px 14px -3px rgba(37,99,235,0.45)'; }
         else if (isToday) { bg = 'rgba(37,99,235,0.09)'; color = '#2563eb'; fw = '700'; ring = '2px solid rgba(37,99,235,0.25)'; }
 
         const dot = (hasTask || hasVerif) && !isSel
-            ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);' +
-              'width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
+            ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
             : '';
 
         cells.push(
@@ -6335,6 +6387,58 @@ window._renderMonthPicker = function() {
         );
     }
 
+    const schoolYear = (month >= 8) ? year + '\u2013' + (year + 1) : (year - 1) + '\u2013' + year;
+
+    const innerHTML = 
+        '<div style="display:flex;justify-content:center;padding:12px 0 6px;">' +
+            '<div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.12);"></div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
+            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_left</span>' +
+            '</button>' +
+            '<div style="text-align:center;">' +
+                '<div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
+                '<div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
+            '</div>' +
+            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_right</span>' +
+            '</button>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:14px 16px 6px;">' +
+            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;">' + l + '</div>'; }).join('') +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' + cells.join('') + '</div>' +
+        '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
+            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" style="padding:10px 28px;border-radius:999px;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.6);cursor:pointer;font-size:13px;font-weight:700;color:#2563eb;font-family:Hanken Grotesk,sans-serif;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">Vai a Oggi</button>' +
+        '</div>';
+
+    // FIX SCATTO MESE: Aggiorniamo solo il contenuto senza rimuovere l'overlay!
+    const existing = document.getElementById('month-picker-overlay');
+    if (existing) {
+        const card = existing.querySelector('.month-picker-card');
+        if (card) card.innerHTML = innerHTML;
+        return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'month-picker-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.30);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.18s ease;';
+    overlay.onclick = function(e) { if (e.target === overlay) window.closePlannerMonthPicker(); };
+
+    const card = document.createElement('div');
+    card.className = 'month-picker-card';
+    card.style.cssText = 'width:100%;max-width:430px;background:rgba(255,255,255,0.72);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.8);overflow:hidden;transform:translateY(40px);transition:transform 0.22s cubic-bezier(0.2,0.8,0.2,1);';
+    card.innerHTML = innerHTML;
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function() {
+        overlay.style.opacity = '1';
+        card.style.transform  = 'translateY(0)';
+    });
+};
     // ── anno scolastico ──────────────────────────────────────────
     const schoolYear = (month >= 8)
         ? year + '\u2013' + (year + 1)
@@ -6459,7 +6563,6 @@ window._pkSelectDay = function(iso) {
 window.refreshPlannerSearch = function() {
     const area = document.getElementById('planner-content-area');
     if (!area) {
-        // Il div non esiste ancora (primo render) → full render normale
         state._forceRender = true;
         scheduleRender(60);
         return;
@@ -6468,18 +6571,19 @@ window.refreshPlannerSearch = function() {
     const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || 'all';
 
-    // Se non c'è né query né filtro, mostra il contenuto del giorno
-    // (serve un re-render completo per rigenerare il day content con TC)
+    // FIX SCATTO: Ricarica chirurgicamente il giorno senza distruggere la view
     if (!query && filterSubject === 'all') {
-        state._forceRender = true;
-        scheduleRender(0);
+        if (window._plannerGetDayContentHTML) {
+            area.innerHTML = window._plannerGetDayContentHTML();
+        } else {
+            state._forceRender = true;
+            scheduleRender(0);
+        }
         return;
     }
 
     const TC = window._plannerTC;
     const MN = window._plannerMN || ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-
-    // TC non ancora disponibile (render non ancora avvenuto) → attendi il render
     if (!TC) { state._forceRender = true; scheduleRender(60); return; }
 
     const allTasks = (state.tasks || []).filter(function(t) { return t.subject !== 'QUEST'; });
@@ -6487,7 +6591,7 @@ window.refreshPlannerSearch = function() {
         return t.subject || t.materia || '';
     }).filter(Boolean))].sort();
 
-    // Filtra + ordina: dalla scadenza più vicina alla più lontana (ascending)
+    // FIX ORDINE: Da più recente a meno recente (Discendente, b localeCompare a)
     const results = allTasks.filter(function(t) {
         if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
         if (!query) return true;
@@ -6495,10 +6599,9 @@ window.refreshPlannerSearch = function() {
             || (t.materia  || '').toLowerCase().includes(query)
             || (t.text     || '').toLowerCase().includes(query);
     }).sort(function(a, b) {
-        return (a.due_date || '').localeCompare(b.due_date || '');
+        return (b.due_date || '').localeCompare(a.due_date || '');
     });
 
-    // Chip filtro materie
     const chipsHtml = [{l: 'Tutte', s: 'all'}]
         .concat(subjects.map(function(s) { return {l: s, s: s}; }))
         .map(function(item) {
@@ -6520,8 +6623,9 @@ window.refreshPlannerSearch = function() {
     const countLabel = results.length + ' risultat' + (results.length === 1 ? 'o' : 'i') +
         (query ? ' per "' + escapeHtml(query) + '"' : '');
 
+    // FIX NAVBAR OVERLAP: Aggiunto padding-bottom: 120px
     area.innerHTML =
-        '<div style="padding:0 24px;">' +
+        '<div style="padding:0 24px 120px 24px;">' +
             '<div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
                 chipsHtml +
             '</div>' +
