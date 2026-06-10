@@ -3318,31 +3318,15 @@ function renderClassActivitiesExportModalContent() {
 
     modalContent.innerHTML = `
         <div style="font-family:Hanken Grotesk,sans-serif;">
-            <!-- Drag handle -->
-            <div style="display:flex;justify-content:center;padding:16px 0 8px;">
-                <div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>
-            </div>
-
             <!-- Header -->
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 22px 16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:18px 22px 16px;">
                 <div>
                     <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Esporta attività</h2>
                     <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Solo attività svolte in classe</p>
                 </div>
-                <button onclick="closeModal()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                <button onclick="(function(){var o=document.querySelector('.modal-overlay.active');if(o)o.remove();else{var mc=document.getElementById('class-activities-export-modal-content');if(mc&&mc.parentNode)mc.parentNode.remove();}})()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
                     <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
                 </button>
-            </div>
-
-            <!-- Info card -->
-            <div style="margin:0 22px 18px;background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                    <div style="width:26px;height:26px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:14px;color:white;font-variation-settings:'FILL' 1;">info</span>
-                    </div>
-                    <span style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:0.07em;">Info point</span>
-                </div>
-                <p style="margin:0;font-size:12px;color:#475569;line-height:1.6;">Il Tutor AI ha limiti strutturali e può non restituire grandi volumi in un messaggio. Esporta qui in PDF e usale su ChatGPT, Claude o NotebookLM.</p>
             </div>
 
             <!-- Period tabs + controls -->
