@@ -6807,82 +6807,157 @@ function renderProfile() {
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
+    // ── Data ────────────────────────────────────────────────────────────────
     const votiData = getVotiData();
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
     const media = averageFromNumeric(numericVotes) || 0;
 
+    // Group by subject
     const subjectsMap = {};
     votiData.forEach(v => {
         const sub = v.materia || v.subject || 'Altro';
-        const subjectKey = getSubjectGroupKey(sub);
-        if (!subjectsMap[subjectKey]) subjectsMap[subjectKey] = { name: sub, list: [] };
-        subjectsMap[subjectKey].list.push(v);
+        const key = getSubjectGroupKey(sub);
+        if (!subjectsMap[key]) subjectsMap[key] = { name: sub, list: [] };
+        subjectsMap[key].list.push(v);
     });
 
     const subjects = Object.values(subjectsMap).map(({ name, list }) => {
-        const subMedia = averageFromNumeric(list.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
-        const lastVote = list.sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''))[0];
-        const lastVal = getNumericGradeValue(lastVote);
+        const sorted = [...list].sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''));
+        const subMedia = averageFromNumeric(sorted.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
+        const lastVal = getNumericGradeValue(sorted[0]);
         return { name, media: subMedia, lastVote: lastVal };
     }).sort((a, b) => b.media - a.media);
 
-    return `
-    <div class="view grades-view pb-32">
-        <header class="flex justify-between items-center mb-6 pt-4">
-            <h1 class="text-primary font-bold text-xl">Voti & Rendimento</h1>
-        </header>
+    // ── Monthly bar chart (last 5 months with data, else decorative) ────────
+    const monthlyMap = {};
+    votiData.forEach(v => {
+        const dateStr = v.data || v.date || '';
+        if (!dateStr) return;
+        const monthKey = dateStr.slice(0, 7); // "YYYY-MM"
+        if (!monthlyMap[monthKey]) monthlyMap[monthKey] = [];
+        const val = getNumericGradeValue(v);
+        if (Number.isFinite(val)) monthlyMap[monthKey].push(val);
+    });
 
-        <!-- Main Media Card -->
-        <section class="liquid-glass rounded-[40px] p-8 mb-10 relative overflow-hidden">
-            <h2 class="body-md text-on-surface-variant/60 mb-2">Media Generale</h2>
-            <div class="flex items-center gap-4 mb-4">
-                <span class="text-[56px] font-bold text-primary leading-none">${media.toFixed(1)}</span>
-                <span class="bg-green/10 text-green px-3 py-1 rounded-full font-bold text-[12px] flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[14px]">trending_up</span> +0.2
-                </span>
-            </div>
-            <p class="text-on-surface-variant/40 text-[11px] mb-8">Ultimo aggiornamento: Oggi</p>
+    const monthNames = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    let monthlyEntries = Object.entries(monthlyMap)
+        .map(([key, vals]) => ({
+            key,
+            label: monthNames[parseInt(key.slice(5, 7), 10) - 1] || key.slice(5, 7),
+            avg: averageFromNumeric(vals) || 0
+        }))
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .slice(-5);
 
-            <!-- Media Graph Placeholder -->
-            <div class="flex items-end gap-2 h-24">
-                <div class="flex-1 bg-primary/5 rounded-t-lg h-[20%]"></div>
-                <div class="flex-1 bg-primary/10 rounded-t-lg h-[40%]"></div>
-                <div class="flex-1 bg-primary/20 rounded-t-lg h-[30%]"></div>
-                <div class="flex-1 bg-primary/30 rounded-t-lg h-[60%]"></div>
-                <div class="flex-1 bg-primary/40 rounded-t-lg h-[50%]"></div>
-                <div class="flex-1 bg-primary/50 rounded-t-lg h-[70%]"></div>
-                <div class="flex-1 bg-primary rounded-t-lg h-[90%] relative">
-                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-on-surface-variant/60 text-[9px] font-bold">Feb</div>
+    // Fallback: decorative 5-bar static pattern if no real data
+    if (monthlyEntries.length === 0) {
+        monthlyEntries = [
+            { label: 'Ott', avg: 4.5 },
+            { label: 'Nov', avg: 5.5 },
+            { label: 'Dic', avg: 6.5 },
+            { label: 'Gen', avg: 8.0 },
+            { label: 'Feb', avg: media > 0 ? media : 8.4 },
+        ];
+    }
+
+    const maxAvg = Math.max(...monthlyEntries.map(m => m.avg), 1);
+    const barsHtml = monthlyEntries.map((m, i) => {
+        const isLast = i === monthlyEntries.length - 1;
+        const pct = Math.round((m.avg / maxAvg) * 100);
+        const bg = isLast ? '#3b82f6' : i === monthlyEntries.length - 2 ? '#82aee6' : 'rgba(255,255,255,0.9)';
+        const shadow = isLast ? '0 2px 8px rgba(59,130,246,0.3)' : '0 1px 3px rgba(0,0,0,0.06)';
+        const tooltip = isLast
+            ? `<div style="position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.18);">${m.label}</div>`
+            : '';
+        return `<div style="flex:1;background:${bg};box-shadow:${shadow};border-radius:6px 6px 0 0;height:${pct}%;position:relative;">${tooltip}</div>`;
+    }).join('');
+
+    // ── Subject circle color palette ─────────────────────────────────────────
+    const CIRCLE_PALETTE = ['#dbeafe','#f3e8ff','#ffedd5','#dcfce7','#fce7f3','#e0f2fe','#fef9c3','#fde8e8'];
+
+    // ── Status badge styles ──────────────────────────────────────────────────
+    function getStatusStyle(avg) {
+        if (avg >= 8)  return { label: 'Ottimo',        bg: 'rgba(230,244,234,0.8)', border: 'rgba(188,227,200,0.6)', color: '#16a34a' };
+        if (avg >= 7)  return { label: 'Buono',         bg: 'rgba(239,246,255,0.8)', border: 'rgba(191,219,254,0.6)', color: '#2563eb' };
+        if (avg >= 6)  return { label: 'Discreto',      bg: 'rgba(255,247,237,0.8)', border: 'rgba(254,215,170,0.6)', color: '#ea580c' };
+        return              { label: 'Insufficiente',   bg: 'rgba(254,242,242,0.8)', border: 'rgba(254,202,202,0.6)', color: '#dc2626' };
+    }
+
+    // ── Subjects HTML ────────────────────────────────────────────────────────
+    const subjectsHtml = subjects.map((s, i) => {
+        const circleColor = CIRCLE_PALETTE[i % CIRCLE_PALETTE.length];
+        const st = getStatusStyle(s.media);
+
+        let trendSymbol = '—';
+        let trendColor = '#94a3b8';
+        if (s.lastVote !== null && s.lastVote !== undefined && Number.isFinite(s.lastVote)) {
+            if (s.lastVote > s.media)      { trendSymbol = '↑'; trendColor = '#16a34a'; }
+            else if (s.lastVote < s.media) { trendSymbol = '↓'; trendColor = '#dc2626'; }
+        }
+
+        const lastVoteDisplay = (s.lastVote !== null && s.lastVote !== undefined && Number.isFinite(s.lastVote))
+            ? s.lastVote
+            : '—';
+
+        return `
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 10px 40px -10px rgba(0,0,0,0.04);border-radius:32px;padding:24px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform 0.15s ease;"
+             ontouchstart="this.style.transform='scale(0.98)'"
+             ontouchend="this.style.transform='scale(1)'"
+             ontouchcancel="this.style.transform='scale(1)'"
+             onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:${circleColor};flex-shrink:0;"></div>
+                <div style="background:${st.bg};border:1px solid ${st.border};color:${st.color};font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;">
+                    ${st.label}
                 </div>
             </div>
-        </section>
+            <h4 style="font-size:22px;font-weight:700;color:#1b1b1d;line-height:1.2;margin-bottom:4px;">${escapeHtml(s.name)}</h4>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
+                <div style="font-size:44px;font-weight:700;color:#0058bc;line-height:1;letter-spacing:-1px;">${s.media.toFixed(1)}</div>
+                <div style="font-size:13px;color:#64748b;font-weight:500;display:flex;align-items:center;gap:6px;padding-bottom:4px;">
+                    Ultimo: ${lastVoteDisplay}
+                    <span style="color:${trendColor};font-weight:700;font-size:14px;line-height:1;">${trendSymbol}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 
-        <h2 class="title-md mb-6">Materie</h2>
+    // ── Main render ──────────────────────────────────────────────────────────
+    return `
+    <div class="view grades-view pb-32" style="padding-top:8px;">
 
-        <!-- Subjects Grid -->
-        <div class="flex flex-col gap-4">
-            ${subjects.map(s => {
-                const status = s.media >= 8 ? 'Ottimo' : s.media >= 7 ? 'Buono' : s.media >= 6 ? 'Discreto' : 'Insufficiente';
-                const statusColor = s.media >= 8 ? 'green' : s.media >= 7 ? 'primary' : s.media >= 6 ? 'orange' : 'error';
+        <!-- CARD: Media Generale -->
+        <div style="background:linear-gradient(135deg,#ffffff 0%,#eff4ff 100%);box-shadow:0 12px 35px -10px rgba(37,99,235,0.12),inset 0 2px 5px rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:36px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
 
-                return `
-                <div class="liquid-glass rounded-[28px] p-6 liquid-shadow cursor-pointer transition-all hover:scale-[1.02]" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-symbols-outlined">${getSubjectIcon(s.name)}</span>
-                        </div>
-                        <span class="bg-${statusColor}/10 text-${statusColor} px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">${status}</span>
+            <!-- Decorative blobs -->
+            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(219,234,254,0.5);border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
+            <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(245,243,255,0.5);border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
+
+            <div style="position:relative;z-index:1;">
+                <h2 style="font-size:17px;font-weight:600;color:#475569;margin-bottom:4px;">Media Generale</h2>
+
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+                    <div style="font-size:56px;font-weight:700;color:#0058bc;line-height:1;letter-spacing:-2px;">${media.toFixed(1)}</div>
+                    <div style="display:flex;align-items:center;gap:4px;background:#e6f4ea;border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
+                        <i class="ph-bold ph-trend-up" style="color:#16a34a;font-size:11px;"></i>
+                        <span style="color:#16a34a;font-size:11px;font-weight:700;letter-spacing:0.05em;">+0.2</span>
                     </div>
-                    <h3 class="title-md text-on-surface mb-1">${s.name}</h3>
-                    <div class="flex justify-between items-baseline">
-                        <span class="text-[32px] font-bold text-primary">${s.media.toFixed(1)}</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-on-surface-variant/40 text-[12px] font-medium">Ultimo: ${s.lastVote || '—'}</span>
-                            ${s.lastVote ? `<span class="material-symbols-outlined text-[14px] ${s.lastVote >= s.media ? 'text-green' : 'text-error'}">${s.lastVote >= s.media ? 'trending_up' : 'trending_down'}</span>` : ''}
-                        </div>
-                    </div>
-                </div>`;
-            }).join('')}
+                </div>
+
+                <p style="font-size:13px;color:#94a3b8;font-weight:500;margin-bottom:32px;">Ultimo aggiornamento: Oggi</p>
+
+                <!-- Bar chart -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;height:100px;gap:8px;">
+                    ${barsHtml}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sezione Materie -->
+        <h3 style="font-size:20px;font-weight:700;color:#1b1b1d;margin-bottom:20px;padding:0 4px;">Materie</h3>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+            ${subjectsHtml}
         </div>
     </div>`;
 }
