@@ -6104,7 +6104,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 20px;box-sizing:border-box;scroll-snap-align:start;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 return `<div onclick="plannerSelectDay('${d.iso}')" style="
@@ -6169,7 +6169,7 @@ function renderPlanner() {
         </div>
 
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
-        <div id="planner-week-carousel" style="
+       <div id="planner-week-carousel" style="
             display:flex;
             overflow-x:auto;
             scroll-snap-type:x mandatory;
@@ -6178,7 +6178,7 @@ function renderPlanner() {
             scrollbar-width:none;
             -ms-overflow-style:none;
             gap:0;
-            margin:0;
+            margin: 0 0 -20px 0;
             padding:0;
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
