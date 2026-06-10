@@ -906,6 +906,7 @@ function showToast(message, type = 'success', customBackground = '') {
     }, 2500);
 }
 function showBoot(text) {
+window.showBoot = showBoot; // expose globally for app-bootstrap.js
     const el = document.getElementById('boot-overlay');
     if (!el) return;
     if (text) {
@@ -4359,6 +4360,7 @@ function showQuickAddTaskModal() {
             if (r.ok) {
                 if(typeof closeModal==='function') closeModal();
                 state.selectedDate = date;
+                window._plannerDayContentCache = null;
                 state._forceRender = true;
                 showToast((isExam?'Verifica':'Compito')+' aggiunto!','success');
                 scheduleRender(0);
@@ -5989,6 +5991,8 @@ function getSubjectIcon(subject) {
     return 'school';
 }
 window._plannerGetDayContentHTML = function() {
+    // Usa la cache se disponibile (invalidata da ogni render completo o cambio giorno)
+    if (window._plannerDayContentCache) return window._plannerDayContentCache;
     const today = new Date();
     today.setHours(0,0,0,0);
     const todayISO = getLocalDateString(today);
@@ -6045,6 +6049,7 @@ window._plannerGetDayContentHTML = function() {
     }
 
     html += `</div>`;
+    window._plannerDayContentCache = html; // salva cache
     return html;
 };
 
@@ -6160,6 +6165,7 @@ function renderPlanner() {
     // Salva TC e MN su window per refreshPlannerSearch() (aggiornamento chirurgico)
     window._plannerTC = TC;
     window._plannerMN = MN;
+    window._plannerDayContentCache = null; // invalidata ad ogni render completo
 
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
@@ -6439,101 +6445,6 @@ window._renderMonthPicker = function() {
         card.style.transform  = 'translateY(0)';
     });
 };
-    // ── anno scolastico ──────────────────────────────────────────
-    const schoolYear = (month >= 8)
-        ? year + '\u2013' + (year + 1)
-        : (year - 1) + '\u2013' + year;
-
-    // ── overlay ──────────────────────────────────────────────────
-    const overlay = document.createElement('div');
-    overlay.id = 'month-picker-overlay';
-    overlay.style.cssText =
-        'position:fixed;inset:0;' +
-        'background:rgba(15,23,42,0.30);' +
-        'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
-        'z-index:9000;' +
-        'display:flex;align-items:flex-end;justify-content:center;' +
-        'padding:0 0 0 0;' +
-        'opacity:0;transition:opacity 0.18s ease;';
-    overlay.onclick = function(e) {
-        if (e.target === overlay) window.closePlannerMonthPicker();
-    };
-
-    const card = document.createElement('div');
-    card.style.cssText =
-        'width:100%;max-width:430px;' +
-        'background:rgba(255,255,255,0.72);' +
-        'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);' +
-        'border:1px solid rgba(255,255,255,0.55);' +
-        'border-radius:32px 32px 0 0;' +
-        'padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;' +
-        'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.8);' +
-        'overflow:hidden;' +
-        'transform:translateY(40px);transition:transform 0.22s cubic-bezier(0.2,0.8,0.2,1);';
-
-    card.innerHTML =
-        // drag handle
-        '<div style="display:flex;justify-content:center;padding:12px 0 6px;">' +
-            '<div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.12);"></div>' +
-        '</div>' +
-
-        // header mese
-        '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
-            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;' +
-            'background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;' +
-            'display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);' +
-            '-webkit-backdrop-filter:blur(8px);" ' +
-            'ontouchstart="this.style.background=\'rgba(226,232,240,0.9)\'" ' +
-            'ontouchend="this.style.background=\'rgba(241,245,249,0.85)\'">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_left</span>' +
-            '</button>' +
-            '<div style="text-align:center;">' +
-                '<div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">' +
-                    MN_FULL[month] + ' ' + year +
-                '</div>' +
-                '<div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">' +
-                    'A.S.\u00a0' + schoolYear +
-                '</div>' +
-            '</div>' +
-            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;' +
-            'background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;' +
-            'display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);' +
-            '-webkit-backdrop-filter:blur(8px);" ' +
-            'ontouchstart="this.style.background=\'rgba(226,232,240,0.9)\'" ' +
-            'ontouchend="this.style.background=\'rgba(241,245,249,0.85)\'">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_right</span>' +
-            '</button>' +
-        '</div>' +
-
-        // intestazioni giorni
-        '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:14px 16px 6px;">' +
-            ['L','M','M','G','V','S','D'].map(function(l){
-                return '<div style="text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;">' + l + '</div>';
-            }).join('') +
-        '</div>' +
-
-        // griglia giorni
-        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' +
-            cells.join('') +
-        '</div>' +
-
-        // footer
-        '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
-            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" ' +
-            'style="padding:10px 28px;border-radius:999px;' +
-            'background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.6);cursor:pointer;' +
-            'font-size:13px;font-weight:700;color:#2563eb;font-family:Hanken Grotesk,sans-serif;' +
-            'backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">Vai a Oggi</button>' +
-        '</div>';
-
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-
-    requestAnimationFrame(function() {
-        overlay.style.opacity = '1';
-        card.style.transform  = 'translateY(0)';
-    });
-};
 
 window._pkPrev = function() {
     window._pk.month--;
@@ -6549,6 +6460,7 @@ window._pkNext = function() {
 
 window._pkSelectDay = function(iso) {
     state.selectedDate = iso;
+    window._plannerDayContentCache = null;
     state._forceRender = true;
     window.closePlannerMonthPicker();
     scheduleRender(0);
@@ -6571,14 +6483,16 @@ window.refreshPlannerSearch = function() {
     const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || 'all';
 
-    // FIX SCATTO: Ricarica chirurgicamente il giorno senza distruggere la view
+    // FIX SCATTO: quando la query torna vuota, ripristina il giorno senza toccare il DOM se non è cambiato
     if (!query && filterSubject === 'all') {
         if (window._plannerGetDayContentHTML) {
-            area.innerHTML = window._plannerGetDayContentHTML();
-        } else {
-            state._forceRender = true;
-            scheduleRender(0);
+            const freshHtml = window._plannerGetDayContentHTML();
+            // Scrivi solo se il contenuto è effettivamente diverso, altrimenti lascia stare
+            if (area.innerHTML !== freshHtml) {
+                area.innerHTML = freshHtml;
+            }
         }
+        // Non chiamare scheduleRender: evita il re-mount dell'intera view
         return;
     }
 
