@@ -3360,8 +3360,8 @@ window.openClassActivitiesExportModal = function () {
         };
     }
     modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);box-sizing:border-box;">
-            <div id="class-activities-export-modal-content" class="modal-content glass-panel activities-export-shell" onclick="event.stopPropagation()"></div>
+        <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,0.35);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
+            <div id="class-activities-export-modal-content" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:#ffffff;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;max-height:90vh;overflow-y:auto;font-family:Hanken Grotesk,sans-serif;"></div>
         </div>
     `;
     renderClassActivitiesExportModalContent();
@@ -4249,7 +4249,7 @@ function showQuickAddTaskModal() {
         <div><label style="${LBL}">Descrizione</label><textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="3" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Data di consegna</label><input id="qs-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
         <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
-            <span class="material-symbols-outlined" style="font-size:19px;">add_task</span>Aggiungi compito
+            <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">check_circle</span>Aggiungi compito
         </button>
     </div>
 
@@ -4317,7 +4317,12 @@ function showQuickAddTaskModal() {
 
         // Close button
         const closeBtn = document.getElementById('qs-close-btn');
-        if (closeBtn) closeBtn.onclick = () => { if(typeof closeModal==='function') closeModal(); };
+        if (closeBtn) closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const overlay = document.querySelector('.modal-overlay.active');
+            if (overlay) overlay.remove();
+            else if (typeof closeModal === 'function') closeModal();
+        });
 
         // Tab buttons
         ['new','existing','verifica'].forEach(t => {
@@ -6396,8 +6401,8 @@ window._renderMonthPicker = function() {
     const schoolYear = (month >= 8) ? year + '\u2013' + (year + 1) : (year - 1) + '\u2013' + year;
 
     const innerHTML = 
-        '<div style="display:flex;justify-content:center;padding:12px 0 6px;">' +
-            '<div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.12);"></div>' +
+        '<div data-drag-handle style="display:flex;justify-content:center;padding:16px 0 8px;cursor:grab;touch-action:none;">' +
+            '<div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
             '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
@@ -6434,7 +6439,7 @@ window._renderMonthPicker = function() {
 
     const card = document.createElement('div');
     card.className = 'month-picker-card';
-    card.style.cssText = 'width:100%;max-width:430px;background:rgba(255,255,255,0.72);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.8);overflow:hidden;transform:translateY(40px);transition:transform 0.22s cubic-bezier(0.2,0.8,0.2,1);';
+    card.style.cssText = 'width:100%;max-width:430px;background:#ffffff;border:none;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
     card.innerHTML = innerHTML;
 
     overlay.appendChild(card);
@@ -6442,8 +6447,38 @@ window._renderMonthPicker = function() {
 
     requestAnimationFrame(function() {
         overlay.style.opacity = '1';
-        card.style.transform  = 'translateY(0)';
+        card.style.transform  = 'translateY(0px)';
     });
+
+    // ── Drag-to-dismiss sul drag handle ─────────────────────────────────────
+    var handle = card.querySelector('[data-drag-handle]');
+    if (!handle) handle = card.firstElementChild; // fallback: prima div (drag handle)
+    var startY = 0, currentY = 0, dragging = false;
+    function onTouchStart(e) {
+        startY = e.touches[0].clientY;
+        currentY = 0;
+        dragging = true;
+        card.style.transition = 'none';
+    }
+    function onTouchMove(e) {
+        if (!dragging) return;
+        currentY = e.touches[0].clientY - startY;
+        if (currentY < 0) currentY = 0;
+        card.style.transform = 'translateY(' + currentY + 'px)';
+    }
+    function onTouchEnd() {
+        if (!dragging) return;
+        dragging = false;
+        card.style.transition = 'transform 0.28s cubic-bezier(0.2,0.8,0.2,1)';
+        if (currentY > 100) {
+            window.closePlannerMonthPicker();
+        } else {
+            card.style.transform = 'translateY(0px)';
+        }
+    }
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('touchmove',  onTouchMove,  { passive: true });
+    handle.addEventListener('touchend',   onTouchEnd);
 };
 
 window._pkPrev = function() {
