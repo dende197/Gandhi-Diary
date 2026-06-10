@@ -6112,8 +6112,8 @@ function renderPlanner() {
                     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
                     cursor:pointer;
                     background:${isSel ? '#2563eb' : 'white'};
-                    border:1.5px solid ${isSel ? '#2563eb' : 'rgba(241,245,249,0.9)'};
-                    box-shadow:${isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)'};
+                    border:${isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)'};
+                    filter:${isSel ? 'drop-shadow(0 5px 12px rgba(37,99,235,0.42))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.04))'};
                     transform:${isSel ? 'scale(1.04)' : 'scale(1)'};
                     transition:all 0.15s cubic-bezier(0.2,0.8,0.2,1);
                     -webkit-tap-highlight-color:transparent;
@@ -6243,11 +6243,11 @@ function renderPlanner() {
         </div><!-- /planner-content-area -->
 
         <!-- ══ FABs ══ -->
-        <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:10px;z-index:40;">
-            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:21px;">history</span>
+        <div style="position:fixed;bottom:calc(112px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;align-items:center;gap:12px;z-index:40;">
+            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:52px;height:52px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(79,70,229,0.32);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:22px;">history</span>
             </button>
-            <button onclick="showQuickAddTaskModal()" style="width:56px;height:56px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,99,235,0.35);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
+            <button onclick="showQuickAddTaskModal()" style="width:52px;height:52px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(37,99,235,0.38);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:26px;">add</span>
             </button>
         </div>
@@ -6286,117 +6286,148 @@ window.closePlannerMonthPicker = function() {
 };
 
 window._renderMonthPicker = function() {
-    // Rimuove eventuale picker già presente
     const existing = document.getElementById('month-picker-overlay');
     if (existing) existing.remove();
 
     const MN_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const { year, month } = window._pk;
-    const todayISO = getLocalDateString(new Date());
+    const todayISO    = getLocalDateString(new Date());
     const selectedISO = state.selectedDate || todayISO;
 
-    // Primo giorno del mese — lunedì come inizio settimana (standard IT)
     const firstDay = new Date(year, month, 1);
     const lastDay  = new Date(year, month + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // 0=Lun … 6=Dom
+    const startDow = (firstDay.getDay() + 6) % 7; // 0=Lun, 6=Dom
 
-    // Celle griglia
-    let cells = '';
-    // Celle vuote iniziali
-    for (let i = 0; i < startDow; i++) {
-        cells += '<div></div>';
-    }
-    // Celle giorno
+    // ── griglia celle ────────────────────────────────────────────
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push('<div></div>');
+
     for (let d = 1; d <= lastDay.getDate(); d++) {
-        const iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-        const isToday = iso === todayISO;
-        const isSel   = iso === selectedISO;
-        const hasTask = (state.tasks || []).some(function(t) {
-            return t.due_date === iso && t.subject !== 'QUEST' && !t.done;
-        });
-        const hasVerifica = (state.verifiche || []).some(function(v) {
-            return (v.data || v.date || '') === iso;
-        });
-        const dotColor = hasVerifica ? '#f97316' : '#94a3b8';
+        const iso       = year + '-' + String(month + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        const isToday   = iso === todayISO;
+        const isSel     = iso === selectedISO;
+        const hasVerif  = (state.verifiche  || []).some(function(v){ return (v.data||v.date||'') === iso; });
+        const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
+        const dotColor  = hasVerif ? '#f97316' : '#3b82f6';
 
-        cells += '<button onclick="window._pkSelectDay('' + iso + '')" ' +
-            'style="height:38px;width:100%;border-radius:50%;border:none;cursor:pointer;' +
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-            'position:relative;font-family:'Hanken Grotesk',sans-serif;' +
-            'background:' + (isSel ? '#2563eb' : isToday ? '#eff6ff' : 'transparent') + ';' +
-            'font-size:14px;font-weight:' + (isSel || isToday ? '700' : '400') + ';' +
-            'color:' + (isSel ? 'white' : isToday ? '#2563eb' : '#1e293b') + ';' +
-            '-webkit-tap-highlight-color:transparent;">' +
-            d +
-            ((hasTask || hasVerifica) && !isSel ?
-                '<div style="position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:' + dotColor + ';"></div>' : '') +
-            '</button>';
+        // selBg / todayBg / selRing come Liquid Glass
+        let bg = 'transparent', color = '#1e293b', fw = '400', ring = 'none', shadow = 'none';
+        if (isSel)   { bg = '#2563eb'; color = 'white'; fw = '800'; shadow = '0 4px 14px -3px rgba(37,99,235,0.45)'; }
+        else if (isToday) { bg = 'rgba(37,99,235,0.09)'; color = '#2563eb'; fw = '700'; ring = '2px solid rgba(37,99,235,0.25)'; }
+
+        const dot = (hasTask || hasVerif) && !isSel
+            ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);' +
+              'width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
+            : '';
+
+        cells.push(
+            '<button onclick="window._pkSelectDay(\'' + iso + '\')" ' +
+            'style="position:relative;width:100%;aspect-ratio:1/1;border-radius:50%;border:' + ring + ';' +
+            'cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+            'background:' + bg + ';' +
+            'box-shadow:' + shadow + ';' +
+            'font-size:14px;font-weight:' + fw + ';color:' + color + ';' +
+            'font-family:Hanken Grotesk,sans-serif;transition:transform 0.1s ease;' +
+            '-webkit-tap-highlight-color:transparent;" ' +
+            'ontouchstart="this.style.transform=\'scale(0.88)\'" ontouchend="this.style.transform=\'scale(1)\'">' +
+            d + dot + '</button>'
+        );
     }
 
-    // Overlay
+    // ── anno scolastico ──────────────────────────────────────────
+    const schoolYear = (month >= 8)
+        ? year + '\u2013' + (year + 1)
+        : (year - 1) + '\u2013' + year;
+
+    // ── overlay ──────────────────────────────────────────────────
     const overlay = document.createElement('div');
     overlay.id = 'month-picker-overlay';
-    overlay.style.cssText = [
-        'position:fixed;inset:0',
-        'background:rgba(0,0,0,0.28)',
-        'backdrop-filter:blur(8px)',
-        '-webkit-backdrop-filter:blur(8px)',
-        'z-index:9000',
-        'display:flex;align-items:flex-end;justify-content:center',
-        'padding:0 16px 90px',
-        'opacity:0;transition:opacity 0.18s ease'
-    ].join(';');
+    overlay.style.cssText =
+        'position:fixed;inset:0;' +
+        'background:rgba(15,23,42,0.30);' +
+        'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
+        'z-index:9000;' +
+        'display:flex;align-items:flex-end;justify-content:center;' +
+        'padding:0 0 0 0;' +
+        'opacity:0;transition:opacity 0.18s ease;';
     overlay.onclick = function(e) {
         if (e.target === overlay) window.closePlannerMonthPicker();
     };
 
-    // Anno scolastico attuale per label
-    const schoolYear = month >= 8
-        ? year + '-' + (year + 1)
-        : (year - 1) + '-' + year;
+    const card = document.createElement('div');
+    card.style.cssText =
+        'width:100%;max-width:430px;' +
+        'background:rgba(255,255,255,0.72);' +
+        'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);' +
+        'border:1px solid rgba(255,255,255,0.55);' +
+        'border-radius:32px 32px 0 0;' +
+        'padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;' +
+        'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.8);' +
+        'overflow:hidden;' +
+        'transform:translateY(40px);transition:transform 0.22s cubic-bezier(0.2,0.8,0.2,1);';
 
-    overlay.innerHTML =
-        '<div style="background:white;border-radius:28px;padding:20px 20px 24px;width:100%;max-width:400px;' +
-        'box-shadow:0 -4px 40px rgba(0,0,0,0.12);">' +
+    card.innerHTML =
+        // drag handle
+        '<div style="display:flex;justify-content:center;padding:12px 0 6px;">' +
+            '<div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.12);"></div>' +
+        '</div>' +
 
-            // Header
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-                '<button onclick="window._pkPrev()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" ontouchstart="this.style.background='#e2e8f0'" ontouchend="this.style.background='#f1f5f9'">' +
-                    '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_left</span>' +
-                '</button>' +
-                '<div style="text-align:center;">' +
-                    '<div style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
-                    '<div style="font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">A.S. ' + schoolYear + '</div>' +
+        // header mese
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
+            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;' +
+            'background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;' +
+            'display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);' +
+            '-webkit-backdrop-filter:blur(8px);" ' +
+            'ontouchstart="this.style.background=\'rgba(226,232,240,0.9)\'" ' +
+            'ontouchend="this.style.background=\'rgba(241,245,249,0.85)\'">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_left</span>' +
+            '</button>' +
+            '<div style="text-align:center;">' +
+                '<div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">' +
+                    MN_FULL[month] + ' ' + year +
                 '</div>' +
-                '<button onclick="window._pkNext()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" ontouchstart="this.style.background='#e2e8f0'" ontouchend="this.style.background='#f1f5f9'">' +
-                    '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_right</span>' +
-                '</button>' +
+                '<div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">' +
+                    'A.S.\u00a0' + schoolYear +
+                '</div>' +
             '</div>' +
+            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;' +
+            'background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;' +
+            'display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);' +
+            '-webkit-backdrop-filter:blur(8px);" ' +
+            'ontouchstart="this.style.background=\'rgba(226,232,240,0.9)\'" ' +
+            'ontouchend="this.style.background=\'rgba(241,245,249,0.85)\'">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_right</span>' +
+            '</button>' +
+        '</div>' +
 
-            // Intestazioni giorni (Lun…Dom)
-            '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:14px 0 6px;">' +
-                ['L','M','M','G','V','S','D'].map(function(l) {
-                    return '<div style="text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;padding:4px 0;">' + l + '</div>';
-                }).join('') +
-            '</div>' +
+        // intestazioni giorni
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:14px 16px 6px;">' +
+            ['L','M','M','G','V','S','D'].map(function(l){
+                return '<div style="text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;">' + l + '</div>';
+            }).join('') +
+        '</div>' +
 
-            // Griglia giorni
-            '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">' +
-                cells +
-            '</div>' +
+        // griglia giorni
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' +
+            cells.join('') +
+        '</div>' +
 
-            // Footer
-            '<div style="margin-top:16px;display:flex;justify-content:center;gap:10px;">' +
-                '<button onclick="window._pkSelectDay('' + todayISO + '')" style="padding:9px 24px;border-radius:999px;background:#eff6ff;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#2563eb;font-family:'Hanken Grotesk',sans-serif;">Vai a Oggi</button>' +
-            '</div>' +
-
+        // footer
+        '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
+            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" ' +
+            'style="padding:10px 28px;border-radius:999px;' +
+            'background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.6);cursor:pointer;' +
+            'font-size:13px;font-weight:700;color:#2563eb;font-family:Hanken Grotesk,sans-serif;' +
+            'backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">Vai a Oggi</button>' +
         '</div>';
 
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
-    // Animazione entrata
+
     requestAnimationFrame(function() {
         overlay.style.opacity = '1';
+        card.style.transform  = 'translateY(0)';
     });
 };
 
@@ -6516,8 +6547,9 @@ window.plannerSelectDay = function(iso) {
         if (!elIso) return;
         const isSel = elIso === iso;
         el.style.background = isSel ? '#2563eb' : 'white';
-        el.style.border     = '1.5px solid ' + (isSel ? '#2563eb' : 'rgba(241,245,249,0.9)');
-        el.style.boxShadow  = isSel ? '0 6px 18px -4px rgba(37,99,235,0.38)' : '0 3px 12px -5px rgba(0,0,0,0.06)';
+        el.style.border     = isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)';
+        el.style.filter    = isSel ? 'drop-shadow(0 5px 12px rgba(37,99,235,0.40))' : 'drop-shadow(0 2px 8px rgba(0,0,0,0.05))';
+    el.style.boxShadow = 'none';
         el.style.transform  = isSel ? 'scale(1.04)' : 'scale(1)';
         const spans = el.querySelectorAll('span');
         if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
