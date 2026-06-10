@@ -4222,7 +4222,7 @@ function showQuickAddTaskModal() {
 
     // Full-screen-style bottom sheet
     showModal(`
-<div style="padding:24px 20px 32px;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:32px;font-family:'Hanken Grotesk',sans-serif;width:100%;box-sizing:border-box;">
+<div style="padding:24px 20px 32px;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:32px;font-family:Hanken Grotesk,sans-serif;width:100%;box-sizing:border-box;">
 
     <!-- Header — X uses document.getElementById approach to avoid scope issues -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -4237,9 +4237,9 @@ function showQuickAddTaskModal() {
 
     <!-- 3 tabs -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:20px;">
-        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;" id="qs-tab-new">📚 Nuovo</button>
-        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">📋 Assegnati</button>
-        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">✏️ Verifica</button>
+        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;" id="qs-tab-new">📚 Nuovo</button>
+        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">📋 Assegnati</button>
+        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">✏️ Verifica</button>
     </div>
 
     <!-- PANEL: Nuovo compito -->
@@ -4247,7 +4247,7 @@ function showQuickAddTaskModal() {
         <div><label style="${LBL}">Materia</label><select id="qs-subject" style="${INP}-webkit-appearance:none;">${subjectOptions}</select></div>
         <div><label style="${LBL}">Descrizione</label><textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="3" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Data di consegna</label><input id="qs-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
-        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
+        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
             <span class="material-symbols-outlined" style="font-size:19px;">add_task</span>Aggiungi compito
         </button>
     </div>
@@ -4267,7 +4267,7 @@ function showQuickAddTaskModal() {
         <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid rgba(226,232,240,0.6);">
             <label style="${LBL}">Quando lo studi?</label>
             <input id="qs-existing-date" type="date" value="${preselectedDate}" style="${INP}" />
-            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
+            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
         </div>
     </div>
 
@@ -4277,13 +4277,13 @@ function showQuickAddTaskModal() {
         <div><label style="${LBL}">Argomenti</label><textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Tipo</label>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
-                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Scritta</button>
-                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Orale</button>
-                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;">Pratica</button>
+                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Scritta</button>
+                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Orale</button>
+                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Pratica</button>
             </div>
         </div>
         <div><label style="${LBL}">Data</label><input id="qs-v-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
-        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:15px;border:none;background:#dc2626;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.28);display:flex;align-items:center;justify-content:center;gap:7px;">
+        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:15px;border:none;background:#dc2626;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.28);display:flex;align-items:center;justify-content:center;gap:7px;">
             <span class="material-symbols-outlined" style="font-size:19px;">warning</span>Aggiungi verifica
         </button>
     </div>
@@ -6148,7 +6148,7 @@ function renderPlanner() {
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:'Hanken Grotesk',sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+            <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:Hanken Grotesk,sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:16px;color:#1e40af;font-variation-settings:'FILL' 1;">calendar_month</span>
                 <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
             </button>
@@ -6163,7 +6163,7 @@ function renderPlanner() {
                     oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
                     onfocus="window._psfocused=true;"
                     onblur="setTimeout(()=>{window._psfocused=false;},200);"
-                    style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;box-sizing:border-box;" />
+                    style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:Hanken Grotesk,sans-serif;box-sizing:border-box;" />
                 ${query ? `<button onclick="window._psfocused=false;state.agendaSearchQuery='';state._forceRender=true;scheduleRender(0);" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}
             </div>
         </div>
@@ -6196,7 +6196,7 @@ function renderPlanner() {
             <!-- Subject chips -->
             <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
+                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
             </div>
             <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:10px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
             <div style="display:flex;flex-direction:column;gap:9px;">
@@ -6230,7 +6230,7 @@ function renderPlanner() {
                     <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
                 </div>
                 <p style="font-size:12px;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'Hanken Grotesk',sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
+                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
             </div>` : ''}
 
             ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
@@ -6503,10 +6503,9 @@ window.refreshPlannerSearch = function() {
         .concat(subjects.map(function(s) { return {l: s, s: s}; }))
         .map(function(item) {
             const active = filterSubject === item.s;
-            return '<button onclick="state.agendaSearchSubject='' + escapeJsSingleQuote(item.s) +
-                '';window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
-                'style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;' +
-                'cursor:pointer;font-family:'Hanken Grotesk',sans-serif;white-space:nowrap;' +
+            const safeS = escapeJsSingleQuote(item.s);
+            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
+                'style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;white-space:nowrap;' +
                 'border:' + (active ? '2px solid #2563eb' : '1.5px solid rgba(226,232,240,0.9)') + ';' +
                 'background:' + (active ? '#2563eb' : 'white') + ';' +
                 'color:' + (active ? 'white' : '#64748b') + ';">' +
