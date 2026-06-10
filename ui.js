@@ -3286,63 +3286,86 @@ function renderClassActivitiesExportModalContent() {
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
 
+
+    // ── Period controls — tutto inline, zero dipendenze CSS esterne ─────────
+    const S = 'width:100%;padding:12px 14px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#1e293b;font-size:14px;font-weight:500;font-family:Hanken Grotesk,sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';
+
     const periodControls = selection.period === 'month'
-        ? `<input type="month" class="activities-export-input" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)">`
+        ? `<input type="month" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)" style="${S}">`
         : selection.period === 'week'
-            ? `<div class="activities-week-picker-wrap">
-                <div class="activities-week-picker">
-                    <button type="button" class="activities-week-nav-btn" onclick="shiftClassActivitiesExportWeek(-1)" aria-label="Settimana precedente">
-                        <i class="ph-bold ph-caret-left"></i>
+            ? `<div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button type="button" onclick="shiftClassActivitiesExportWeek(-1)" style="width:38px;height:38px;border-radius:50%;background:#f1f5f9;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#64748b;">chevron_left</span>
                     </button>
-                    <select class="activities-export-input activities-week-select" onchange="updateClassActivitiesExportPeriodValue('week', this.value)">
+                    <select onchange="updateClassActivitiesExportPeriodValue('week', this.value)" style="${S}flex:1;">
                         ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue, compactWeekLabels ? { compact: true } : {}))}</option>`).join('')}
                     </select>
-                    <button type="button" class="activities-week-nav-btn" onclick="shiftClassActivitiesExportWeek(1)" aria-label="Settimana successiva">
-                        <i class="ph-bold ph-caret-right"></i>
+                    <button type="button" onclick="shiftClassActivitiesExportWeek(1)" style="width:38px;height:38px;border-radius:50%;background:#f1f5f9;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#64748b;">chevron_right</span>
                     </button>
                 </div>
-                ${weekDetailLabel ? `<small style="font-size:11px; color:#6B6761; font-weight:700;">${escapeHtml(weekDetailLabel)}</small>` : ''}
+                ${weekDetailLabel ? `<p style="font-size:11px;color:#94a3b8;font-weight:700;text-align:center;margin:0;">${escapeHtml(weekDetailLabel)}</p>` : ''}
               </div>`
-            : `<select class="activities-export-input" onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)">
+            : `<select onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)" style="${S}">
                 ${years.map(y => `<option value="${escapeHtml(y)}" ${selection.schoolYearValue === y ? 'selected' : ''}>${escapeHtml(y.replace('-', '/'))}</option>`).join('')}
               </select>`;
 
+    const mkTab = (period, label) => {
+        const act = selection.period === period;
+        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 4px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${act?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${act?'#2563eb':'white'};color:${act?'white':'#64748b'};">${label}</button>`;
+    };
+
     modalContent.innerHTML = `
-        <div class="activities-export-modal">
-            <div class="activities-export-head">
-                <div class="activities-export-title-wrap">
-                    <h2>Download attività svolte (PDF)</h2>
-                    <p>Solo attività svolte in classe, aggiornate automaticamente ad ogni nuovo sync.</p>
+        <div style="font-family:Hanken Grotesk,sans-serif;">
+            <!-- Drag handle -->
+            <div style="display:flex;justify-content:center;padding:16px 0 8px;">
+                <div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>
+            </div>
+
+            <!-- Header -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 22px 16px;">
+                <div>
+                    <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Esporta attività</h2>
+                    <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Solo attività svolte in classe</p>
                 </div>
-                <button class="activities-export-close" onclick="closeModal()" aria-label="Chiudi">
-                    <i class="ph-bold ph-x"></i>
+                <button onclick="closeModal()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
                 </button>
             </div>
 
-            <div class="activities-export-info-card">
-                <div class="activities-export-info-badge">Info point</div>
-                <p>Il Tutor AI ha limiti strutturali di contesto e può non restituire grandi volumi di attività in un solo messaggio. Da qui puoi esportare in PDF tutte le attività svolte e usarle su strumenti esterni (ChatGPT, Claude, NotebookLM) con un formato chiaro e lineare.</p>
+            <!-- Info card -->
+            <div style="margin:0 22px 18px;background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <div style="width:26px;height:26px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:14px;color:white;font-variation-settings:'FILL' 1;">info</span>
+                    </div>
+                    <span style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:0.07em;">Info point</span>
+                </div>
+                <p style="margin:0;font-size:12px;color:#475569;line-height:1.6;">Il Tutor AI ha limiti strutturali e può non restituire grandi volumi in un messaggio. Esporta qui in PDF e usale su ChatGPT, Claude o NotebookLM.</p>
             </div>
 
-            <div class="activities-export-filters">
-                <div class="activities-export-filter-tabs">
-                    <button class="${selection.period === 'week' ? 'active' : ''}" onclick="setClassActivitiesExportPeriod('week')">Settimana</button>
-                    <button class="${selection.period === 'month' ? 'active' : ''}" onclick="setClassActivitiesExportPeriod('month')">Mese</button>
-                    <button class="${selection.period === 'school_year' ? 'active' : ''}" onclick="setClassActivitiesExportPeriod('school_year')">Anno scolastico</button>
+            <!-- Period tabs + controls -->
+            <div style="padding:0 22px 16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                    ${mkTab('week','Settimana')}
+                    ${mkTab('month','Mese')}
+                    ${mkTab('school_year','Anno scol.')}
                 </div>
-                <div class="activities-export-filter-input">${periodControls}</div>
-                <div class="activities-export-stats">
-                    <span>${escapeHtml(selection.periodLabel)}</span>
-                    <strong>${selection.items.length} attività trovate</strong>
+                <div>${periodControls}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);">
+                    <span style="font-size:12px;color:#64748b;font-weight:500;">${escapeHtml(selection.periodLabel)}</span>
+                    <span style="font-size:13px;font-weight:800;color:#2563eb;">${selection.items.length} attività trovate</span>
                 </div>
             </div>
 
-            <div class="activities-export-actions">
-                <button class="activities-export-download-btn" onclick="downloadClassActivitiesPdf()">
-                    <i class="ph-bold ph-file-pdf"></i>
+            <!-- PDF button -->
+            <div style="padding:0 22px 8px;">
+                <button onclick="downloadClassActivitiesPdf()" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.30);display:flex;align-items:center;justify-content:center;gap:8px;" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">picture_as_pdf</span>
                     Genera PDF
                 </button>
-                <small>Si aprirà l’anteprima di stampa: scegli “Salva come PDF”.</small>
+                <p style="text-align:center;font-size:11px;color:#94a3b8;margin:8px 0 0;line-height:1.4;">Si aprirà l'anteprima di stampa: scegli "Salva come PDF".</p>
             </div>
         </div>
     `;
