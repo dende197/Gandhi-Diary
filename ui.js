@@ -6009,11 +6009,12 @@ function renderPlanner() {
     const TOTAL_WEEKS = 5;      // slides total
     const CENTER_IDX  = 2;      // today's week is slide index 2
 
-    // Build all 5 weeks
+    // Build all 5 weeks centred on the SELECTED date (not always on today)
+    // This allows navigating to any school-year date via the month picker.
     const weeks = [];
     for (let w = -CENTER_IDX; w <= TOTAL_WEEKS - CENTER_IDX - 1; w++) {
-        const wStart = new Date(today);
-        wStart.setDate(today.getDate() - today.getDay() + w * 7); // Sun-start
+        const wStart = new Date(selDate);
+        wStart.setDate(selDate.getDate() - selDate.getDay() + w * 7); // Sun-start
         const days = [];
         for (let i = 0; i < 7; i++) {
             const d = new Date(wStart);
@@ -6030,11 +6031,8 @@ function renderPlanner() {
         weeks.push(days);
     }
 
-    // Which slide contains selectedDate?
-    let activeSlide = CENTER_IDX;
-    weeks.forEach((wk, idx) => {
-        if (wk.some(d => d.iso === selectedDate)) activeSlide = idx;
-    });
+    // Since carousel is centred on selDate, selected date is ALWAYS in CENTER_IDX slide
+    const activeSlide = CENTER_IDX;
 
     const allTasks   = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
     const subjects   = [...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
@@ -6046,7 +6044,8 @@ function renderPlanner() {
         return (d-today)/86400000>0 && (d-today)/86400000<=7;
     }).length;
 
-    const searchResults = showSearchPanel ? allTasks.filter(t=>{
+    // searchResults: attivo quando c'è query o filtro materia (nearest deadline first)
+    const searchResults = (query || filterSubject !== 'all') ? allTasks.filter(t=>{
         if(filterSubject!=='all'&&(t.subject||t.materia||'')!==filterSubject) return false;
         if(!query) return true;
         return (t.subject||'').toLowerCase().includes(query)
@@ -6099,6 +6098,10 @@ function renderPlanner() {
         </div>`;
     }
 
+    // Salva TC e MN su window per refreshPlannerSearch() (aggiornamento chirurgico)
+    window._plannerTC = TC;
+    window._plannerMN = MN;
+
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
         return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:4px 20px;box-sizing:border-box;scroll-snap-align:start;">
@@ -6145,10 +6148,10 @@ function renderPlanner() {
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+            <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:'Hanken Grotesk',sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:16px;color:#1e40af;font-variation-settings:'FILL' 1;">calendar_month</span>
                 <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
-            </div>
+            </button>
         </header>
 
         <!-- ══ SEARCH BAR (Apple pill, sempre visibile) ══ -->
@@ -6157,7 +6160,7 @@ function renderPlanner() {
                 <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px;pointer-events:none;">search</span>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche..."
                     value="${escapeHtml(query)}"
-                    oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;state._forceRender=true;scheduleRender(0);"
+                    oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
                     onfocus="window._psfocused=true;"
                     onblur="setTimeout(()=>{window._psfocused=false;},200);"
                     style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:'Hanken Grotesk',sans-serif;box-sizing:border-box;" />
@@ -6187,12 +6190,13 @@ function renderPlanner() {
         </div>
 
         <!-- ══ RISULTATI RICERCA / CONTENUTO GIORNO ══ -->
+        <div id="planner-content-area">
         ${(query || filterSubject !== 'all') ? `
         <div style="padding:0 24px;">
             <!-- Subject chips -->
             <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state._filterJustTriggered=true;state._forceRender=true;refreshAgenda();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
+                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
             </div>
             <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:10px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
             <div style="display:flex;flex-direction:column;gap:9px;">
@@ -6236,6 +6240,8 @@ function renderPlanner() {
             </div>`}
         </div>`}
 
+        </div><!-- /planner-content-area -->
+
         <!-- ══ FABs ══ -->
         <div style="position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;gap:10px;z-index:40;">
             <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:48px;height:48px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(79,70,229,0.30);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
@@ -6250,6 +6256,251 @@ function renderPlanner() {
     </div>`;
 }
 
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MONTH PICKER — bottom-sheet overlay per navigare all'anno scolastico
+// Aperto dal badge mese nella header del planner.
+// Gestisce il proprio DOM separatamente dal ciclo di render principale.
+// ══════════════════════════════════════════════════════════════════════════════
+
+window.openPlannerMonthPicker = function() {
+    // Toggle: se già aperto, chiudi
+    if (document.getElementById('month-picker-overlay')) {
+        window.closePlannerMonthPicker();
+        return;
+    }
+    // Inizializza sul mese della data selezionata
+    const sel = new Date((state.selectedDate || getLocalDateString(new Date())) + 'T00:00:00');
+    window._pk = { year: sel.getFullYear(), month: sel.getMonth() };
+    window._renderMonthPicker();
+};
+
+window.closePlannerMonthPicker = function() {
+    const el = document.getElementById('month-picker-overlay');
+    if (el) {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.15s ease';
+        setTimeout(() => el.remove(), 150);
+    }
+};
+
+window._renderMonthPicker = function() {
+    // Rimuove eventuale picker già presente
+    const existing = document.getElementById('month-picker-overlay');
+    if (existing) existing.remove();
+
+    const MN_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                     'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const { year, month } = window._pk;
+    const todayISO = getLocalDateString(new Date());
+    const selectedISO = state.selectedDate || todayISO;
+
+    // Primo giorno del mese — lunedì come inizio settimana (standard IT)
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; // 0=Lun … 6=Dom
+
+    // Celle griglia
+    let cells = '';
+    // Celle vuote iniziali
+    for (let i = 0; i < startDow; i++) {
+        cells += '<div></div>';
+    }
+    // Celle giorno
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const isToday = iso === todayISO;
+        const isSel   = iso === selectedISO;
+        const hasTask = (state.tasks || []).some(function(t) {
+            return t.due_date === iso && t.subject !== 'QUEST' && !t.done;
+        });
+        const hasVerifica = (state.verifiche || []).some(function(v) {
+            return (v.data || v.date || '') === iso;
+        });
+        const dotColor = hasVerifica ? '#f97316' : '#94a3b8';
+
+        cells += '<button onclick="window._pkSelectDay('' + iso + '')" ' +
+            'style="height:38px;width:100%;border-radius:50%;border:none;cursor:pointer;' +
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+            'position:relative;font-family:'Hanken Grotesk',sans-serif;' +
+            'background:' + (isSel ? '#2563eb' : isToday ? '#eff6ff' : 'transparent') + ';' +
+            'font-size:14px;font-weight:' + (isSel || isToday ? '700' : '400') + ';' +
+            'color:' + (isSel ? 'white' : isToday ? '#2563eb' : '#1e293b') + ';' +
+            '-webkit-tap-highlight-color:transparent;">' +
+            d +
+            ((hasTask || hasVerifica) && !isSel ?
+                '<div style="position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:' + dotColor + ';"></div>' : '') +
+            '</button>';
+    }
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'month-picker-overlay';
+    overlay.style.cssText = [
+        'position:fixed;inset:0',
+        'background:rgba(0,0,0,0.28)',
+        'backdrop-filter:blur(8px)',
+        '-webkit-backdrop-filter:blur(8px)',
+        'z-index:9000',
+        'display:flex;align-items:flex-end;justify-content:center',
+        'padding:0 16px 90px',
+        'opacity:0;transition:opacity 0.18s ease'
+    ].join(';');
+    overlay.onclick = function(e) {
+        if (e.target === overlay) window.closePlannerMonthPicker();
+    };
+
+    // Anno scolastico attuale per label
+    const schoolYear = month >= 8
+        ? year + '-' + (year + 1)
+        : (year - 1) + '-' + year;
+
+    overlay.innerHTML =
+        '<div style="background:white;border-radius:28px;padding:20px 20px 24px;width:100%;max-width:400px;' +
+        'box-shadow:0 -4px 40px rgba(0,0,0,0.12);">' +
+
+            // Header
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
+                '<button onclick="window._pkPrev()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" ontouchstart="this.style.background='#e2e8f0'" ontouchend="this.style.background='#f1f5f9'">' +
+                    '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_left</span>' +
+                '</button>' +
+                '<div style="text-align:center;">' +
+                    '<div style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
+                    '<div style="font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">A.S. ' + schoolYear + '</div>' +
+                '</div>' +
+                '<button onclick="window._pkNext()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" ontouchstart="this.style.background='#e2e8f0'" ontouchend="this.style.background='#f1f5f9'">' +
+                    '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_right</span>' +
+                '</button>' +
+            '</div>' +
+
+            // Intestazioni giorni (Lun…Dom)
+            '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:14px 0 6px;">' +
+                ['L','M','M','G','V','S','D'].map(function(l) {
+                    return '<div style="text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;padding:4px 0;">' + l + '</div>';
+                }).join('') +
+            '</div>' +
+
+            // Griglia giorni
+            '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">' +
+                cells +
+            '</div>' +
+
+            // Footer
+            '<div style="margin-top:16px;display:flex;justify-content:center;gap:10px;">' +
+                '<button onclick="window._pkSelectDay('' + todayISO + '')" style="padding:9px 24px;border-radius:999px;background:#eff6ff;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#2563eb;font-family:'Hanken Grotesk',sans-serif;">Vai a Oggi</button>' +
+            '</div>' +
+
+        '</div>';
+
+    document.body.appendChild(overlay);
+    // Animazione entrata
+    requestAnimationFrame(function() {
+        overlay.style.opacity = '1';
+    });
+};
+
+window._pkPrev = function() {
+    window._pk.month--;
+    if (window._pk.month < 0) { window._pk.month = 11; window._pk.year--; }
+    window._renderMonthPicker();
+};
+
+window._pkNext = function() {
+    window._pk.month++;
+    if (window._pk.month > 11) { window._pk.month = 0; window._pk.year++; }
+    window._renderMonthPicker();
+};
+
+window._pkSelectDay = function(iso) {
+    state.selectedDate = iso;
+    state._forceRender = true;
+    window.closePlannerMonthPicker();
+    scheduleRender(0);
+};
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// refreshPlannerSearch — aggiornamento CHIRURGICO dei risultati ricerca
+// Aggiorna solo #planner-content-area senza toccare header, search bar o carousel.
+// Chiamata dall'oninput della search bar e dai chip filtro materia.
+// ══════════════════════════════════════════════════════════════════════════════
+window.refreshPlannerSearch = function() {
+    const area = document.getElementById('planner-content-area');
+    if (!area) {
+        // Il div non esiste ancora (primo render) → full render normale
+        state._forceRender = true;
+        scheduleRender(60);
+        return;
+    }
+
+    const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
+    const filterSubject = state.agendaSearchSubject || 'all';
+
+    // Se non c'è né query né filtro, mostra il contenuto del giorno
+    // (serve un re-render completo per rigenerare il day content con TC)
+    if (!query && filterSubject === 'all') {
+        state._forceRender = true;
+        scheduleRender(0);
+        return;
+    }
+
+    const TC = window._plannerTC;
+    const MN = window._plannerMN || ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+    // TC non ancora disponibile (render non ancora avvenuto) → attendi il render
+    if (!TC) { state._forceRender = true; scheduleRender(60); return; }
+
+    const allTasks = (state.tasks || []).filter(function(t) { return t.subject !== 'QUEST'; });
+    const subjects = [...new Set(allTasks.map(function(t) {
+        return t.subject || t.materia || '';
+    }).filter(Boolean))].sort();
+
+    // Filtra + ordina: dalla scadenza più vicina alla più lontana (ascending)
+    const results = allTasks.filter(function(t) {
+        if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
+        if (!query) return true;
+        return (t.subject  || '').toLowerCase().includes(query)
+            || (t.materia  || '').toLowerCase().includes(query)
+            || (t.text     || '').toLowerCase().includes(query);
+    }).sort(function(a, b) {
+        return (a.due_date || '').localeCompare(b.due_date || '');
+    });
+
+    // Chip filtro materie
+    const chipsHtml = [{l: 'Tutte', s: 'all'}]
+        .concat(subjects.map(function(s) { return {l: s, s: s}; }))
+        .map(function(item) {
+            const active = filterSubject === item.s;
+            return '<button onclick="state.agendaSearchSubject='' + escapeJsSingleQuote(item.s) +
+                '';window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
+                'style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;' +
+                'cursor:pointer;font-family:'Hanken Grotesk',sans-serif;white-space:nowrap;' +
+                'border:' + (active ? '2px solid #2563eb' : '1.5px solid rgba(226,232,240,0.9)') + ';' +
+                'background:' + (active ? '#2563eb' : 'white') + ';' +
+                'color:' + (active ? 'white' : '#64748b') + ';">' +
+                escapeHtml(item.l) + '</button>';
+        }).join('');
+
+    const emptyHtml = '<div style="text-align:center;padding:44px 0;">' +
+        '<span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">search_off</span>' +
+        '<p style="color:#94a3b8;font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p>' +
+        '</div>';
+
+    const countLabel = results.length + ' risultat' + (results.length === 1 ? 'o' : 'i') +
+        (query ? ' per "' + escapeHtml(query) + '"' : '');
+
+    area.innerHTML =
+        '<div style="padding:0 24px;">' +
+            '<div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
+                chipsHtml +
+            '</div>' +
+            '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:12px;">' + countLabel + '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:9px;">' +
+                (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
+            '</div>' +
+        '</div>';
+};
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PLANNER CAROUSEL FUNCTIONS — definite a livello modulo (non in innerHTML)
