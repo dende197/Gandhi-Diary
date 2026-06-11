@@ -2360,342 +2360,63 @@ function initGradesCharts() {
         ctx.fillText(labels[i], x, H - 5);
     });
 }
-function _injectSubjectDetailCSS() {
-    const STYLE_ID = 'subject-detail-range-style';
-    if (document.getElementById(STYLE_ID)) return;
-    const s = document.createElement('style');
-    s.id = STYLE_ID;
-    s.textContent = `
-        .sdv-slider { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:4px; cursor:pointer; outline:none; }
-        .sdv-slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#2563eb; cursor:pointer; margin-top:-6px; box-shadow:0 0 0 4px #ffffff, 0 2px 5px rgba(0,0,0,0.12); }
-        .sdv-slider::-webkit-slider-runnable-track { height:6px; border-radius:4px; }
-        .sdv-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#2563eb; cursor:pointer; border:4px solid #ffffff; box-shadow:0 2px 5px rgba(0,0,0,0.12); }
-    `;
-    document.head.appendChild(s);
-}
-
 function renderSubjectDetailView(subjectName) {
-    _injectSubjectDetailCSS();
-
-    // ── Data ──────────────────────────────────────────────────────────────────
     const normalizedSubject = normalizeSubjectName(subjectName);
     const votiData = getVotiData()
         .filter(v => areSubjectsEquivalent(v.materia || v.subject, normalizedSubject))
-        .sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
-
-    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const media = averageFromNumeric(numericVotes) || 0;
+        .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
+    const media = parseFloat(calcolaMedia(votiData)) || 0;
     const goal = state.goals?.[subjectName] || 8.0;
 
-    // ── Semester split ────────────────────────────────────────────────────────
-    const firstTermVotes  = getVotesBySchoolTerm(votiData, 'first');
-    const secondTermVotes = getVotesBySchoolTerm(votiData, 'second');
-    const firstNums  = firstTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const secondNums = secondTermVotes.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const mediaFirst  = averageFromNumeric(firstNums)  || 0;
-    const mediaSecond = averageFromNumeric(secondNums) || 0;
-    const hasFirst  = firstNums.length  > 0;
-    const hasSecond = secondNums.length > 0;
-    const semDiffPct = (hasFirst && hasSecond && mediaFirst > 0)
-        ? Math.round(((mediaSecond - mediaFirst) / mediaFirst) * 100)
-        : 0;
-    const semImproved = semDiffPct >= 0;
-
-    // ── SVG area chart (monthly averages, last 6 months) ─────────────────────
-    const MONTH_LABELS = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-    const mMap = {};
-    votiData.forEach(v => {
-        const d = parseArgoDate(v.data || v.date);
-        if (!(d instanceof Date) || isNaN(d.getTime())) return;
-        const val = getNumericGradeValue(v);
-        if (!Number.isFinite(val)) return;
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!mMap[key]) mMap[key] = { label: MONTH_LABELS[d.getMonth()], vals: [] };
-        mMap[key].vals.push(val);
-    });
-
-    let chartPts = Object.entries(mMap)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, { label, vals }]) => ({ label, avg: averageFromNumeric(vals) || 0 }))
-        .slice(-6);
-
-    if (chartPts.length < 2) {
-        const base = media > 0 ? media : 7;
-        chartPts = [
-            { label: 'Set', avg: Math.max(3, base - 1.8) },
-            { label: 'Ott', avg: Math.max(4, base - 1.2) },
-            { label: 'Nov', avg: Math.max(4.5, base - 0.7) },
-            { label: 'Dic', avg: Math.max(5, base - 0.4) },
-            { label: 'Gen', avg: Math.max(5, base - 0.1) },
-            { label: 'Feb', avg: base },
-        ];
-    }
-
-    // SVG coordinate mapping (300×100 viewBox)
-    const SVG_W = 300, SVG_H = 100, PAD_TOP = 8, PAD_BTM = 6;
-    const avgs = chartPts.map(p => p.avg);
-    const gMin = Math.min(...avgs) - 0.3;
-    const gMax = Math.max(...avgs) + 0.3;
-    const gRange = Math.max(gMax - gMin, 0.5);
-    const toX = i  => (i / (chartPts.length - 1)) * SVG_W;
-    const toY = v  => SVG_H - PAD_BTM - ((v - gMin) / gRange) * (SVG_H - PAD_TOP - PAD_BTM);
-    const pts = chartPts.map((p, i) => ({ x: toX(i), y: toY(p.avg) }));
-
-    // Smooth cubic-bezier path
-    let linePath = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
-    for (let i = 1; i < pts.length; i++) {
-        const tension = (pts[i].x - pts[i - 1].x) * 0.35;
-        const cp1x = (pts[i - 1].x + tension).toFixed(1);
-        const cp2x = (pts[i].x - tension).toFixed(1);
-        linePath += ` C${cp1x},${pts[i - 1].y.toFixed(1)} ${cp2x},${pts[i].y.toFixed(1)} ${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)}`;
-    }
-    const areaPath = `${linePath} L${SVG_W},${SVG_H} L0,${SVG_H} Z`;
-    const dotsHtml = pts.slice(1)
-        .map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="#2563eb"/>`)
-        .join('');
-    const xLabelsHtml = chartPts.map(p => `<span>${p.label}</span>`).join('');
-
-    // ── Trend badge ───────────────────────────────────────────────────────────
-    const lastVote = [...votiData].sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date))[0];
-    const lastVal  = lastVote ? getNumericGradeValue(lastVote) : null;
-    const trendDiff = (lastVal !== null && media > 0) ? (lastVal - media) : null;
-
-    // ── Predictive Hub ────────────────────────────────────────────────────────
-    const predInit = 7.5;
-    const predPct  = ((predInit - 1) / 9 * 100).toFixed(1);
-    const predVotesJson = JSON.stringify(numericVotes);
-    const estimatedInit = numericVotes.length > 0
-        ? ((numericVotes.reduce((a, b) => a + b, 0) + predInit) / (numericVotes.length + 1)).toFixed(1)
-        : predInit.toFixed(1);
-
-    // ── Goal calculation ──────────────────────────────────────────────────────
-    const sum = numericVotes.reduce((a, b) => a + b, 0);
-    const n   = numericVotes.length;
-    let goalMsg = '';
-    if (media >= goal) {
-        goalMsg = `Obiettivo <b style="color:#1e3a8a;">${goal.toFixed(1)}</b> già raggiunto. Continua così! 🎉`;
-    } else {
-        const needed1 = goal * (n + 1) - sum;
-        const needed2 = (goal * (n + 2) - sum) / 2;
-        if (needed1 <= 10) {
-            goalMsg = `Per raggiungere <b style="color:#1e3a8a;">${goal.toFixed(1)}</b> devi prendere almeno <b style="color:#2563eb;">${needed1.toFixed(1)}</b> nella prossima verifica.`;
-        } else if (needed2 <= 10) {
-            goalMsg = `Per raggiungere <b style="color:#1e3a8a;">${goal.toFixed(1)}</b> devi prendere almeno <b style="color:#2563eb;">${needed2.toFixed(1)}</b> nelle prossime 2 verifiche.`;
-        } else {
-            goalMsg = `Punta al massimo nelle prossime verifiche per avvicinarti all'obiettivo di <b style="color:#1e3a8a;">${goal.toFixed(1)}</b>.`;
-        }
-    }
-
-    // ── Date formatter ────────────────────────────────────────────────────────
-    const fmtDate = ds => {
-        if (!ds) return '';
-        const d = parseArgoDate(ds);
-        return (d instanceof Date && !isNaN(d.getTime()))
-            ? d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-            : ds;
-    };
-
-    // ── Shared card style ─────────────────────────────────────────────────────
-    const C = 'background:#ffffff;border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:1px solid #f8fafc;';
-
-    // ── Voti list (desc date) ─────────────────────────────────────────────────
-    const votiDesc = [...votiData].sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
-
     return `
-    <div class="view subject-detail-view" style="padding-top:0;padding-bottom:128px;">
-
-        <!-- Sticky Header -->
-        <header style="display:flex;align-items:center;gap:16px;padding:40px 20px 16px;position:sticky;top:0;margin:0 -20px;background:rgba(244,247,251,0.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:40;">
-            <button onclick="window.closeSubject()"
-                    style="background:none;border:none;padding:4px;cursor:pointer;color:#1e3a8a;-webkit-tap-highlight-color:transparent;touch-action:manipulation;line-height:1;"
-                    ontouchstart="this.style.opacity='0.4'"
-                    ontouchend="this.style.opacity='1'"
-                    ontouchcancel="this.style.opacity='1'">
-                <i class="ph-bold ph-arrow-left" style="font-size:22px;display:block;"></i>
-            </button>
-            <h1 style="font-size:24px;font-weight:800;color:#1e3a8a;letter-spacing:-0.5px;line-height:1;margin:0;">${escapeHtml(subjectName)}</h1>
-        </header>
-
-        <div style="display:flex;flex-direction:column;gap:16px;padding-top:8px;">
-
-            <!-- ① Current Average & Chart ──────────────────────────────── -->
-            <div style="${C}">
-                <div style="font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Media Attuale</div>
-
-                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;">
-                    <div style="font-size:56px;font-weight:800;color:#2563eb;line-height:1;letter-spacing:-2px;margin-bottom:-8px;">${media.toFixed(1)}</div>
-                    ${trendDiff !== null ? `
-                    <div style="display:flex;align-items:center;gap:6px;background:rgba(239,246,255,0.8);border:1px solid #bfdbfe;padding:6px 12px;border-radius:999px;margin-bottom:4px;">
-                        <i class="ph-bold ph-trend-${trendDiff >= 0 ? 'up' : 'down'}" style="color:#2563eb;font-size:12px;"></i>
-                        <span style="color:#2563eb;font-size:10px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;">${trendDiff >= 0 ? '+' : ''}${trendDiff.toFixed(1)} ULTIMO VOTO</span>
-                    </div>` : ''}
+        <div class="view subject-detail-view pb-32">
+            <header class="flex items-center gap-4 mb-8 pt-4">
+                <button onclick="window.closeSubject()" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                    <h1 class="headline-lg text-primary">${subjectName}</h1>
+                    <p class="body-md text-on-surface-variant/60">Dettaglio voti e andamento</p>
                 </div>
+            </header>
 
-                <!-- SVG area chart -->
-                <div style="width:100%;height:96px;position:relative;">
-                    <svg viewBox="0 0 300 100" style="width:100%;height:100%;" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="sdvGrad" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%"   stop-color="#2563eb" stop-opacity="0.18"/>
-                                <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
-                            </linearGradient>
-                        </defs>
-                        <path d="${areaPath}" fill="url(#sdvGrad)"/>
-                        <path d="${linePath}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        ${dotsHtml}
-                    </svg>
-                </div>
-
-                <!-- X-axis labels -->
-                <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:0.08em;text-transform:uppercase;margin-top:12px;padding:0 2px;">
-                    ${xLabelsHtml}
-                </div>
-            </div>
-
-            <!-- ② Predictive Hub ────────────────────────────────────────── -->
-            <div style="${C}">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:#f0f5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="ph-fill ph-lightning" style="font-size:20px;color:#2563eb;"></i>
-                    </div>
-                    <h2 style="font-size:18px;font-weight:700;color:#1e3a8a;margin:0;">Predictive Hub</h2>
-                </div>
-
-                <p style="color:#64748b;font-size:13px;line-height:1.65;font-weight:500;margin:0 0 24px;">
-                    Simula il tuo prossimo voto per vedere come impatta la media in tempo reale.
-                </p>
-
-                <!-- Slider -->
-                <div style="margin-bottom:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
-                        <span style="font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Voto Simulato</span>
-                        <span id="sdv-pred-val" style="color:#2563eb;font-size:22px;font-weight:700;line-height:1;">${predInit.toFixed(1)}</span>
-                    </div>
-                    <input type="range" min="1" max="10" step="0.5" value="${predInit}"
-                           class="sdv-slider"
-                           style="background:linear-gradient(to right,#2563eb 0%,#2563eb ${predPct}%,#dbeafe ${predPct}%,#dbeafe 100%);"
-                           oninput="(function(el){
-                               var val=parseFloat(el.value);
-                               document.getElementById('sdv-pred-val').textContent=val.toFixed(1);
-                               var votes=${predVotesJson};
-                               var s=votes.reduce(function(a,b){return a+b;},0);
-                               var avg=(votes.length>0)?(s+val)/(votes.length+1):val;
-                               document.getElementById('sdv-est-final').textContent=avg.toFixed(1);
-                               var pct=((val-1)/9*100).toFixed(1);
-                               el.style.background='linear-gradient(to right,#2563eb 0%,#2563eb '+pct+'%,#dbeafe '+pct+'%,#dbeafe 100%)';
-                           })(this)">
-                </div>
-
-                <!-- Estimated final -->
-                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(248,250,252,0.8);border-radius:20px;padding:16px;border:1px solid #f1f5f9;">
+            <section class="liquid-glass rounded-[40px] p-8 mb-10 liquid-shadow relative overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
                     <div>
-                        <div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Media Stimata</div>
-                        <div id="sdv-est-final" style="font-size:24px;font-weight:800;color:#1e3a8a;line-height:1;">${estimatedInit}</div>
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Media Materia</div>
+                        <div class="text-[48px] font-bold text-primary leading-none">${media.toFixed(2)}</div>
                     </div>
-                    <button onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')"
-                            style="width:48px;height:48px;border-radius:50%;border:1px solid #dbeafe;background:#ffffff;color:#94a3b8;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;"
-                            ontouchstart="this.style.background='#f0f5ff'"
-                            ontouchend="this.style.background='#ffffff'"
-                            ontouchcancel="this.style.background='#ffffff'">
-                        <i class="ph-bold ph-magic-wand" style="font-size:20px;"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- ③ Confronto Quadrimestri ────────────────────────────────── -->
-            ${(hasFirst || hasSecond) ? `
-            <div style="${C}">
-                <div style="font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:20px;">Confronto Quadrimestri</div>
-
-                ${hasFirst ? `
-                <div style="margin-bottom:${hasSecond ? '20' : '0'}px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <span style="font-size:14px;font-weight:700;color:#1e293b;">1° Quadrimestre</span>
-                        <span style="font-size:15px;font-weight:700;color:#1e293b;">${mediaFirst.toFixed(1)}</span>
-                    </div>
-                    <div style="width:100%;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;">
-                        <div style="background:#94a3b8;height:100%;border-radius:999px;width:${Math.min((mediaFirst / 10) * 100, 100).toFixed(0)}%;"></div>
-                    </div>
-                </div>` : ''}
-
-                ${hasSecond ? `
-                <div style="margin-bottom:${hasFirst ? '24' : '0'}px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <span style="font-size:14px;font-weight:700;color:#1e293b;">2° Quadrimestre</span>
-                        <span style="font-size:15px;font-weight:700;color:#2563eb;">${mediaSecond.toFixed(1)}</span>
-                    </div>
-                    <div style="width:100%;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;">
-                        <div style="background:#2563eb;height:100%;border-radius:999px;width:${Math.min((mediaSecond / 10) * 100, 100).toFixed(0)}%;"></div>
-                    </div>
-                </div>` : ''}
-
-                ${(hasFirst && hasSecond) ? `
-                <div style="background:${semImproved ? 'rgba(236,253,245,0.8)' : 'rgba(254,242,242,0.8)'};border-radius:20px;padding:16px;display:flex;align-items:center;gap:16px;">
-                    <div style="width:40px;height:40px;flex-shrink:0;border-radius:14px;background:${semImproved ? '#d1fae5' : '#fee2e2'};color:${semImproved ? '#059669' : '#dc2626'};display:flex;align-items:center;justify-content:center;">
-                        <i class="ph-bold ph-caret-double-${semImproved ? 'up' : 'down'}" style="font-size:18px;"></i>
-                    </div>
-                    <p style="color:#374151;font-size:13px;line-height:1.45;margin:0;">
-                        ${semImproved
-                            ? `Stai andando <b style="color:#1e293b;">${Math.abs(semDiffPct)}% meglio</b> rispetto al primo quadrimestre.`
-                            : `Sei al <b style="color:#1e293b;">${Math.abs(semDiffPct)}% sotto</b> il primo quadrimestre.`}
-                    </p>
-                </div>` : ''}
-            </div>` : ''}
-
-            <!-- ④ Voti Ricevuti ─────────────────────────────────────────── -->
-            <div style="${C}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <div style="font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Voti Ricevuti</div>
-                    <i class="ph-bold ph-clock-counter-clockwise" style="color:#93c5fd;font-size:14px;"></i>
-                </div>
-
-                ${votiDesc.length === 0
-                    ? `<div style="text-align:center;padding:28px 0;color:#94a3b8;font-size:13px;font-weight:500;">Nessun voto registrato</div>`
-                    : `<div style="display:flex;flex-direction:column;gap:20px;">
-                        ${votiDesc.map(v => {
-                            const val = getNumericGradeValue(v);
-                            const gradeColor = val === null ? '#64748b' : val >= 8 ? '#1e3a8a' : val >= 6 ? '#2563eb' : '#dc2626';
-                            return `
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <div>
-                                    <h4 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 2px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
-                                    <span style="font-size:11px;font-weight:600;color:#94a3b8;">${fmtDate(v.data || v.date)}</span>
-                                </div>
-                                <span style="font-size:16px;font-weight:700;color:${gradeColor};">${escapeHtml(String(v.valore || v.value || '—'))}</span>
-                            </div>`;
-                        }).join('')}
-                    </div>`
-                }
-            </div>
-
-            <!-- ⑤ Obiettivo Accademico ──────────────────────────────────── -->
-            <div style="${C}">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:40px;height:40px;border-radius:50%;background:#f0f5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i class="ph-bold ph-flag" style="font-size:18px;color:#1e3a8a;"></i>
+                    <div class="text-right" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
+                        <div class="label-sm text-on-surface-variant/40 mb-1">Obiettivo</div>
+                        <div class="text-2xl font-bold text-on-surface flex items-center justify-end gap-2">
+                            ${goal.toFixed(1)} <span class="material-symbols-outlined text-primary text-sm">edit</span>
                         </div>
-                        <h2 style="font-size:18px;font-weight:700;color:#1e3a8a;line-height:1.2;margin:0;">Obiettivo<br>Accademico</h2>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;">Target</div>
-                        <div onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')"
-                             style="font-size:24px;font-weight:700;color:#1e3a8a;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent;">${goal.toFixed(1)}</div>
                     </div>
                 </div>
-
-                <p style="color:#374151;font-size:13px;line-height:1.65;font-weight:500;margin:0 0 20px;">
-                    ${goalMsg}
-                </p>
-
-                <div style="display:flex;align-items:center;gap:6px;color:#94a3b8;font-size:10px;font-weight:600;">
-                    <i class="ph-bold ph-info" style="font-size:12px;"></i>
-                    Calcolato sulla media attuale di ${media.toFixed(1)} · Tocca il target per modificarlo
+                <div class="h-2 bg-primary/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-primary" style="width: ${(media / goal * 100).toFixed(0)}%"></div>
                 </div>
+            </section>
+
+            <h2 class="title-md mb-6">Voti Ricevuti</h2>
+            <div class="flex flex-col gap-4">
+                ${votiData.map(v => {
+                    const val = getNumericGradeValue(v);
+                    const isSuff = val >= 6;
+                    return `
+                    <div class="liquid-glass rounded-[28px] p-6 liquid-shadow flex items-center gap-6">
+                        <div class="w-14 h-14 rounded-2xl ${isSuff ? 'bg-green/10 text-green' : 'bg-error/10 text-error'} flex items-center justify-center text-2xl font-bold border border-white/40">
+                            ${v.valore || v.value}
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-on-surface">${normalizeTipoVerifica(v.tipo, false)}</h3>
+                            <p class="text-on-surface-variant/40 text-[13px] font-medium">${v.data || v.date}</p>
+                        </div>
+                        ${v.commento ? `<span class="material-symbols-outlined text-primary/40" title="${escapeHtml(v.commento)}">chat_bubble</span>` : ''}
+                    </div>`;
+                }).join('')}
             </div>
-
-        </div>
-    </div>`;
+        </div> `;
 }
 function mostraAssenzeModal() {
     const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0 };
@@ -7086,12 +6807,11 @@ function renderProfile() {
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
-    // ── Data ────────────────────────────────────────────────────────────────
     const votiData = getVotiData();
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
     const media = averageFromNumeric(numericVotes) || 0;
 
-    // Group by subject
+    // ── Per-subject stats ────────────────────────────────────────────────────
     const subjectsMap = {};
     votiData.forEach(v => {
         const sub = v.materia || v.subject || 'Altro';
@@ -7101,142 +6821,132 @@ function renderGradesView() {
     });
 
     const subjects = Object.values(subjectsMap).map(({ name, list }) => {
-        const sorted = [...list].sort((a, b) => (b.data || b.date || '').localeCompare(a.data || a.date || ''));
-        const subMedia = averageFromNumeric(sorted.map(getNumericGradeValue).filter(v => Number.isFinite(v))) || 0;
-        const lastVal = getNumericGradeValue(sorted[0]);
+        const nums = list.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+        const subMedia = averageFromNumeric(nums) || 0;
+        const lastVote = [...list].sort((a, b) =>
+            (b.data || b.date || '').localeCompare(a.data || a.date || '')
+        )[0];
+        const lastVal = getNumericGradeValue(lastVote);
         return { name, media: subMedia, lastVote: lastVal };
     }).sort((a, b) => b.media - a.media);
 
-    // ── Monthly bar chart (last 5 months with data, else decorative) ────────
-    const monthlyMap = {};
-    votiData.forEach(v => {
-        const dateStr = v.data || v.date || '';
-        if (!dateStr) return;
-        const monthKey = dateStr.slice(0, 7); // "YYYY-MM"
-        if (!monthlyMap[monthKey]) monthlyMap[monthKey] = [];
+    // ── Bar chart: last 7 numeric grades, chronological ──────────────────────
+    const sortedAll = [...votiData]
+        .filter(v => Number.isFinite(getNumericGradeValue(v)))
+        .sort((a, b) => (a.data || a.date || '').localeCompare(b.data || b.date || ''));
+    const chartVotes = sortedAll.slice(-7);
+
+    const chartBars = chartVotes.map((v, i) => {
         const val = getNumericGradeValue(v);
-        if (Number.isFinite(val)) monthlyMap[monthKey].push(val);
+        const pct = Math.round((val / 10) * 100);
+        const isLast = i === chartVotes.length - 1;
+        const isSecondLast = i === chartVotes.length - 2;
+        const color = isLast ? '#2563eb' : isSecondLast ? '#82aee6' : 'rgba(255,255,255,0.75)';
+        const shadow = isLast ? '0 4px 12px rgba(37,99,235,0.3)' : '0 2px 6px rgba(0,0,0,0.06)';
+        const raw = v.data || v.date || '';
+        let label = '';
+        if (isLast && raw) {
+            const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+            if (d && !isNaN(d)) {
+                label = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][d.getMonth()];
+            }
+        }
+        return { pct, color, shadow, label };
     });
 
-    const monthNames = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-    let monthlyEntries = Object.entries(monthlyMap)
-        .map(([key, vals]) => ({
-            key,
-            label: monthNames[parseInt(key.slice(5, 7), 10) - 1] || key.slice(5, 7),
-            avg: averageFromNumeric(vals) || 0
-        }))
-        .sort((a, b) => a.key.localeCompare(b.key))
-        .slice(-5);
-
-    // Fallback: decorative 5-bar static pattern if no real data
-    if (monthlyEntries.length === 0) {
-        monthlyEntries = [
-            { label: 'Ott', avg: 4.5 },
-            { label: 'Nov', avg: 5.5 },
-            { label: 'Dic', avg: 6.5 },
-            { label: 'Gen', avg: 8.0 },
-            { label: 'Feb', avg: media > 0 ? media : 8.4 },
-        ];
+    // Pad left with empty bars up to 7
+    while (chartBars.length < 7) {
+        chartBars.unshift({ pct: 0, color: 'rgba(255,255,255,0.3)', shadow: 'none', label: '' });
     }
 
-    const maxAvg = Math.max(...monthlyEntries.map(m => m.avg), 1);
-    const barsHtml = monthlyEntries.map((m, i) => {
-        const isLast = i === monthlyEntries.length - 1;
-        const pct = Math.round((m.avg / maxAvg) * 100);
-        const bg = isLast ? '#3b82f6' : i === monthlyEntries.length - 2 ? '#82aee6' : 'rgba(255,255,255,0.9)';
-        const shadow = isLast ? '0 2px 8px rgba(59,130,246,0.3)' : '0 1px 3px rgba(0,0,0,0.06)';
-        const tooltip = isLast
-            ? `<div style="position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.18);">${m.label}</div>`
-            : '';
-        return `<div style="flex:1;background:${bg};box-shadow:${shadow};border-radius:6px 6px 0 0;height:${pct}%;position:relative;">${tooltip}</div>`;
-    }).join('');
+    const barsHtml = chartBars.map(b => `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+            <span style="font-size:10px;font-weight:700;color:white;opacity:0.85;margin-bottom:4px;min-height:14px;">${b.label}</span>
+            <div style="width:100%;height:${b.pct || 2}%;background:${b.color};border-radius:6px 6px 0 0;box-shadow:${b.shadow};min-height:3px;"></div>
+        </div>`).join('');
 
-    // ── Subject circle color palette ─────────────────────────────────────────
-    const CIRCLE_PALETTE = ['#dbeafe','#f3e8ff','#ffedd5','#dcfce7','#fce7f3','#e0f2fe','#fef9c3','#fde8e8'];
-
-    // ── Status badge styles ──────────────────────────────────────────────────
-    function getStatusStyle(avg) {
-        if (avg >= 8)  return { label: 'Ottimo',        bg: 'rgba(230,244,234,0.8)', border: 'rgba(188,227,200,0.6)', color: '#16a34a' };
-        if (avg >= 7)  return { label: 'Buono',         bg: 'rgba(239,246,255,0.8)', border: 'rgba(191,219,254,0.6)', color: '#2563eb' };
-        if (avg >= 6)  return { label: 'Discreto',      bg: 'rgba(255,247,237,0.8)', border: 'rgba(254,215,170,0.6)', color: '#ea580c' };
-        return              { label: 'Insufficiente',   bg: 'rgba(254,242,242,0.8)', border: 'rgba(254,202,202,0.6)', color: '#dc2626' };
+    // ── Badge helpers ─────────────────────────────────────────────────────────
+    function getBadge(m) {
+        if (m >= 8) return { bg:'#e6f4ea', border:'#bce3c8', color:'#16a34a', label:'Ottimo' };
+        if (m >= 7) return { bg:'#eff6ff', border:'#bfdbfe', color:'#2563eb', label:'Buono' };
+        if (m >= 6) return { bg:'#fff7ed', border:'#fed7aa', color:'#ea580c', label:'Discreto' };
+        return      { bg:'#fef2f2', border:'#fecaca', color:'#dc2626', label:'Insufficiente' };
     }
 
-    // ── Subjects HTML ────────────────────────────────────────────────────────
-    const subjectsHtml = subjects.map((s, i) => {
-        const circleColor = CIRCLE_PALETTE[i % CIRCLE_PALETTE.length];
-        const st = getStatusStyle(s.media);
+    function getTrend(lastVal, avg) {
+        if (lastVal === null || lastVal === undefined) return '<span style="color:#94a3b8;font-weight:700;">—</span>';
+        if (lastVal > avg)  return '<span style="font-size:16px;font-weight:800;color:#16a34a;line-height:1;">&#8593;</span>';
+        if (lastVal < avg)  return '<span style="font-size:16px;font-weight:800;color:#dc2626;line-height:1;">&#8595;</span>';
+        return '<span style="color:#94a3b8;font-weight:700;">—</span>';
+    }
 
-        let trendSymbol = '—';
-        let trendColor = '#94a3b8';
-        if (s.lastVote !== null && s.lastVote !== undefined && Number.isFinite(s.lastVote)) {
-            if (s.lastVote > s.media)      { trendSymbol = '↑'; trendColor = '#16a34a'; }
-            else if (s.lastVote < s.media) { trendSymbol = '↓'; trendColor = '#dc2626'; }
-        }
-
-        const lastVoteDisplay = (s.lastVote !== null && s.lastVote !== undefined && Number.isFinite(s.lastVote))
-            ? s.lastVote
-            : '—';
-
+    // ── Subject cards HTML ────────────────────────────────────────────────────
+    const subjectsHtml = subjects.map(s => {
+        const badge = getBadge(s.media);
+        const color = getSubjectColor(s.name);
+        const iconBg = color + '22';
         return `
-        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 10px 40px -10px rgba(0,0,0,0.04);border-radius:32px;padding:24px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform 0.15s ease;"
-             ontouchstart="this.style.transform='scale(0.98)'"
-             ontouchend="this.style.transform='scale(1)'"
-             ontouchcancel="this.style.transform='scale(1)'"
-             onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')">
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 10px 40px -10px rgba(0,0,0,0.04);border-radius:32px;padding:24px;cursor:pointer;transition:transform 0.12s ease;" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                <div style="width:42px;height:42px;border-radius:50%;background:${circleColor};flex-shrink:0;"></div>
-                <div style="background:${st.bg};border:1px solid ${st.border};color:${st.color};font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;">
-                    ${st.label}
+                <div style="width:42px;height:42px;border-radius:50%;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:20px;color:${color};font-variation-settings:'FILL' 1;">${getSubjectIcon(s.name)}</span>
+                </div>
+                <div style="background:${badge.bg};border:1px solid ${badge.border};color:${badge.color};font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">
+                    ${badge.label}
                 </div>
             </div>
-            <h4 style="font-size:22px;font-weight:700;color:#1b1b1d;line-height:1.2;margin-bottom:4px;">${escapeHtml(s.name)}</h4>
+            <h4 style="font-size:20px;font-weight:800;color:#1b1b1d;letter-spacing:-0.01em;margin:0 0 2px;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(s.name)}</h4>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
-                <div style="font-size:44px;font-weight:700;color:#0058bc;line-height:1;letter-spacing:-1px;">${s.media.toFixed(1)}</div>
-                <div style="font-size:13px;color:#64748b;font-weight:500;display:flex;align-items:center;gap:6px;padding-bottom:4px;">
-                    Ultimo: ${lastVoteDisplay}
-                    <span style="color:${trendColor};font-weight:700;font-size:14px;line-height:1;">${trendSymbol}</span>
+                <span style="font-size:44px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.02em;font-family:Hanken Grotesk,sans-serif;">${s.media.toFixed(1)}</span>
+                <div style="font-size:13px;color:#64748b;font-weight:500;display:flex;align-items:center;gap:5px;padding-bottom:4px;font-family:Hanken Grotesk,sans-serif;">
+                    Ultimo: ${s.lastVote !== null && s.lastVote !== undefined ? s.lastVote : '—'}
+                    ${getTrend(s.lastVote, s.media)}
                 </div>
             </div>
         </div>`;
     }).join('');
 
-    // ── Main render ──────────────────────────────────────────────────────────
     return `
-    <div class="view grades-view pb-32" style="padding-top:8px;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
+        <div style="padding:max(env(safe-area-inset-top,0px),32px) 20px 0;">
 
-        <!-- CARD: Media Generale -->
-        <div style="background:linear-gradient(135deg,#ffffff 0%,#eff4ff 100%);box-shadow:0 12px 35px -10px rgba(37,99,235,0.12),inset 0 2px 5px rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:36px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
+            <!-- Header -->
+            <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;">
+                <h1 style="font-size:30px;font-weight:800;color:#0058bc;letter-spacing:-0.025em;margin:0;line-height:1;">Voti</h1>
+            </header>
 
-            <!-- Decorative blobs -->
-            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(219,234,254,0.5);border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
-            <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(245,243,255,0.5);border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
+            <!-- ── CARD MEDIA GENERALE ────────────────────────────────────── -->
+            <div style="background:linear-gradient(135deg,#ffffff 0%,#eff4ff 100%);box-shadow:0 12px 35px -10px rgba(37,99,235,0.12),inset 0 2px 5px rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:36px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
+                <!-- Decorative blobs -->
+                <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(219,234,254,0.5);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(243,232,255,0.4);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
 
-            <div style="position:relative;z-index:1;">
-                <h2 style="font-size:17px;font-weight:600;color:#475569;margin-bottom:4px;">Media Generale</h2>
+                <div style="position:relative;z-index:1;">
+                    <p style="font-size:13px;font-weight:600;color:#64748b;margin:0 0 4px;font-family:Hanken Grotesk,sans-serif;">Media Generale</p>
+                    <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
+                        <span style="font-size:56px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.03em;font-family:Hanken Grotesk,sans-serif;">${media.toFixed(1)}</span>
+                        ${numericVotes.length >= 2 ? `
+                        <div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
+                            <span class="material-symbols-outlined" style="font-size:13px;color:#16a34a;font-variation-settings:'FILL' 1;">trending_up</span>
+                            <span style="font-size:11px;font-weight:700;color:#16a34a;letter-spacing:0.04em;">${numericVotes.length} voti</span>
+                        </div>` : ''}
+                    </div>
+                    <p style="font-size:12px;color:#94a3b8;font-weight:500;margin:0 0 24px;font-family:Hanken Grotesk,sans-serif;">Ultimo aggiornamento: Oggi</p>
 
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
-                    <div style="font-size:56px;font-weight:700;color:#0058bc;line-height:1;letter-spacing:-2px;">${media.toFixed(1)}</div>
-                    <div style="display:flex;align-items:center;gap:4px;background:#e6f4ea;border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
-                        <i class="ph-bold ph-trend-up" style="color:#16a34a;font-size:11px;"></i>
-                        <span style="color:#16a34a;font-size:11px;font-weight:700;letter-spacing:0.05em;">+0.2</span>
+                    <!-- Bar chart (ultimi voti) -->
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:5px;height:100px;">
+                        ${barsHtml}
                     </div>
                 </div>
-
-                <p style="font-size:13px;color:#94a3b8;font-weight:500;margin-bottom:32px;">Ultimo aggiornamento: Oggi</p>
-
-                <!-- Bar chart -->
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;height:100px;gap:8px;">
-                    ${barsHtml}
-                </div>
             </div>
-        </div>
 
-        <!-- Sezione Materie -->
-        <h3 style="font-size:20px;font-weight:700;color:#1b1b1d;margin-bottom:20px;padding:0 4px;">Materie</h3>
+            <!-- ── MATERIE ─────────────────────────────────────────────────── -->
+            <h2 style="font-size:20px;font-weight:800;color:#1b1b1d;letter-spacing:-0.01em;margin:0 0 20px 4px;font-family:Hanken Grotesk,sans-serif;">Materie</h2>
 
-        <div style="display:flex;flex-direction:column;gap:16px;">
-            ${subjectsHtml}
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                ${subjectsHtml}
+            </div>
+
         </div>
     </div>`;
 }
