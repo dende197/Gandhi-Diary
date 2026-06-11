@@ -2454,8 +2454,8 @@ function renderSubjectDetailView(subjectName) {
     const CARD = 'background:white;border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:1px solid #f8fafc;margin-bottom:16px;';
 
     return `
-    <div style="position:relative;width:100%;min-height:100vh;padding-bottom:128px;background:#f4f7fb;background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
-        <div style="padding:max(env(safe-area-inset-top,0px),40px) 20px 0;font-family:Hanken Grotesk,sans-serif;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:#f4f7fb;background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
+        <div style="padding:max(env(safe-area-inset-top,0px),40px) 24px 0;font-family:Hanken Grotesk,sans-serif;">
 
             <!-- Header -->
             <header style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
@@ -7084,8 +7084,8 @@ function renderGradesView() {
     }).join('');
 
     return `
-    <div style="position:relative;width:100%;min-height:100vh;padding-bottom:128px;background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
-        <div style="padding:max(env(safe-area-inset-top,0px),32px) 20px 0;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
+        <div style="padding:max(env(safe-area-inset-top,0px),32px) 24px 0;">
 
             <!-- Header -->
             <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;">
