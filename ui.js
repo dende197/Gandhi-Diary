@@ -2367,57 +2367,234 @@ function renderSubjectDetailView(subjectName) {
         .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
     const media = parseFloat(calcolaMedia(votiData)) || 0;
     const goal = state.goals?.[subjectName] || 8.0;
+    const n = votiData.length;
+
+    // ── Semester split ────────────────────────────────────────────────────────
+    function semesterOf(v) {
+        const raw = v.data || v.date || '';
+        const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+        if (!d || isNaN(d)) return 0;
+        const m = d.getMonth();
+        return (m >= 8 || m === 0) ? 1 : 2;
+    }
+    const s1 = votiData.filter(v => semesterOf(v) === 1);
+    const s2 = votiData.filter(v => semesterOf(v) === 2);
+    const media1 = parseFloat(calcolaMedia(s1)) || 0;
+    const media2 = parseFloat(calcolaMedia(s2)) || 0;
+    const hasSemesters = s1.length > 0 && s2.length > 0;
+
+    // ── Predictive Hub IDs ────────────────────────────────────────────────────
+    const uid = Math.random().toString(36).slice(2, 7);
+    const simLblId = 'sL' + uid;
+    const simResId = 'sR' + uid;
+    const simDefault = ((media * n + 7.5) / (n + 1)).toFixed(2);
+
+    // ── Goal text ─────────────────────────────────────────────────────────────
+    let goalText;
+    if (n > 0 && goal > media) {
+        const needed = (goal * (n + 2) - media * n).toFixed(1);
+        goalText = `Per raggiungere il tuo obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b>, devi prendere almeno <b style="color:#2563eb">${needed}</b> nelle prossime 2 verifiche.`;
+    } else if (media >= goal) {
+        goalText = `Hai già raggiunto il tuo obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b>. Continua così!`;
+    } else {
+        goalText = `Imposta un obiettivo per ricevere suggerimenti personalizzati.`;
+    }
+
+    // ── SVG area chart ────────────────────────────────────────────────────────
+    const chartVotes = [...votiData].reverse().slice(-6);
+    let svgArea = '', svgPath = '', svgDots = '';
+    const MN = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    let xLabels = [];
+    if (chartVotes.length >= 2) {
+        const W = 300, H = 100, PAD = 10;
+        const pts = chartVotes.map((v, i) => {
+            const val = getNumericGradeValue(v) || 5;
+            const x = PAD + (i / (chartVotes.length - 1)) * (W - PAD * 2);
+            const y = H - PAD - ((val - 1) / 9) * (H - PAD * 2);
+            return [x, y];
+        });
+        let d = `M${pts[0][0]},${pts[0][1]}`;
+        for (let i = 1; i < pts.length; i++) {
+            const cx = (pts[i-1][0] + pts[i][0]) / 2;
+            d += ` C${cx},${pts[i-1][1]} ${cx},${pts[i][1]} ${pts[i][0]},${pts[i][1]}`;
+        }
+        svgPath = `<path d="${d}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>`;
+        svgArea = `<path d="${d} L${pts[pts.length-1][0]},100 L${pts[0][0]},100 Z" fill="url(#bG${uid})" opacity="0.7"/>`;
+        svgDots = pts.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2563eb"/>`).join('');
+        xLabels = chartVotes.map(v => {
+            const raw = v.data || v.date || '';
+            const d2 = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+            return (d2 && !isNaN(d2)) ? MN[d2.getMonth()] : '';
+        });
+    }
+
+    // ── Date formatting ───────────────────────────────────────────────────────
+    function fmtDate(raw) {
+        if (!raw) return '';
+        const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+        if (!d || isNaN(d)) return raw;
+        return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+    }
+
+    // ── Voti list rows ────────────────────────────────────────────────────────
+    const votiRows = votiData.map((v, i) => {
+        const val = getNumericGradeValue(v);
+        const color = val >= 6 ? '#2563eb' : '#dc2626';
+        const sep = i < votiData.length - 1 ? '<div style="height:1px;background:#f1f5f9;margin:12px 0;"></div>' : '';
+        return `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <h4 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 3px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
+                <span style="font-size:11px;font-weight:600;color:#94a3b8;">${fmtDate(v.data || v.date)}</span>
+            </div>
+            <span style="font-size:17px;font-weight:800;color:${color};">${v.valore || v.value}</span>
+        </div>${sep}`;
+    }).join('');
+
+    const CARD = 'background:white;border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:1px solid #f8fafc;margin-bottom:16px;';
 
     return `
-        <div class="view subject-detail-view pb-32">
-            <header class="flex items-center gap-4 mb-8 pt-4">
-                <button onclick="window.closeSubject()" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all">
-                    <span class="material-symbols-outlined">arrow_back</span>
+    <div style="position:relative;width:100%;min-height:100vh;padding-bottom:128px;background:#f4f7fb;background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
+        <div style="padding:max(env(safe-area-inset-top,0px),40px) 20px 0;font-family:Hanken Grotesk,sans-serif;">
+
+            <!-- Header -->
+            <header style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+                <button onclick="window.closeSubject()" style="width:44px;height:44px;border-radius:16px;background:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(0,0,0,0.08);flex-shrink:0;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:20px;color:#1e3a8a;">arrow_back</span>
                 </button>
-                <div>
-                    <h1 class="headline-lg text-primary">${subjectName}</h1>
-                    <p class="body-md text-on-surface-variant/60">Dettaglio voti e andamento</p>
-                </div>
+                <h1 style="font-size:24px;font-weight:800;color:#1e3a8a;letter-spacing:-0.02em;margin:0;">${escapeHtml(subjectName)}</h1>
             </header>
 
-            <section class="liquid-glass rounded-[40px] p-8 mb-10 liquid-shadow relative overflow-hidden">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <div class="label-sm text-on-surface-variant/40 mb-1">Media Materia</div>
-                        <div class="text-[48px] font-bold text-primary leading-none">${media.toFixed(2)}</div>
-                    </div>
-                    <div class="text-right" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
-                        <div class="label-sm text-on-surface-variant/40 mb-1">Obiettivo</div>
-                        <div class="text-2xl font-bold text-on-surface flex items-center justify-end gap-2">
-                            ${goal.toFixed(1)} <span class="material-symbols-outlined text-primary text-sm">edit</span>
-                        </div>
-                    </div>
+            <!-- CARD 1: Media + grafico area -->
+            <div style="${CARD}">
+                <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Media Materia</p>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
+                    <span style="font-size:56px;font-weight:800;color:#2563eb;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                    ${n >= 2 ? `<div style="display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
+                        <span class="material-symbols-outlined" style="font-size:12px;color:#2563eb;font-variation-settings:'FILL' 1;">trending_up</span>
+                        <span style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
+                    </div>` : ''}
                 </div>
-                <div class="h-2 bg-primary/10 rounded-full overflow-hidden">
-                    <div class="h-full bg-primary" style="width: ${(media / goal * 100).toFixed(0)}%"></div>
+                ${chartVotes.length >= 2 ? `
+                <div style="width:100%;height:96px;margin-bottom:10px;">
+                    <svg viewBox="0 0 300 100" style="width:100%;height:100%;" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="bG${uid}" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#2563eb" stop-opacity="0.18"/>
+                                <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        ${svgArea}${svgPath}${svgDots}
+                    </svg>
                 </div>
-            </section>
-
-            <h2 class="title-md mb-6">Voti Ricevuti</h2>
-            <div class="flex flex-col gap-4">
-                ${votiData.map(v => {
-                    const val = getNumericGradeValue(v);
-                    const isSuff = val >= 6;
-                    return `
-                    <div class="liquid-glass rounded-[28px] p-6 liquid-shadow flex items-center gap-6">
-                        <div class="w-14 h-14 rounded-2xl ${isSuff ? 'bg-green/10 text-green' : 'bg-error/10 text-error'} flex items-center justify-center text-2xl font-bold border border-white/40">
-                            ${v.valore || v.value}
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="font-bold text-on-surface">${normalizeTipoVerifica(v.tipo, false)}</h3>
-                            <p class="text-on-surface-variant/40 text-[13px] font-medium">${v.data || v.date}</p>
-                        </div>
-                        ${v.commento ? `<span class="material-symbols-outlined text-primary/40" title="${escapeHtml(v.commento)}">chat_bubble</span>` : ''}
-                    </div>`;
-                }).join('')}
+                <div style="display:flex;justify-content:space-between;padding:0 2px;">
+                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
+                </div>` : ''}
             </div>
-        </div> `;
+
+            <!-- CARD 2: Predictive Hub -->
+            <div style="${CARD}">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:20px;color:#2563eb;font-variation-settings:'FILL' 1;">bolt</span>
+                    </div>
+                    <h2 style="font-size:18px;font-weight:700;color:#1e3a8a;margin:0;">Predictive Hub</h2>
+                </div>
+                <p style="font-size:13px;color:#64748b;line-height:1.6;font-weight:500;margin:0 0 20px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;">
+                        <span style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Voto simulato</span>
+                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">7.5</span>
+                    </div>
+                    <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
+                        style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2563eb 65%,#dbeafe 65%);"
+                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2563eb '+pct+'%,#dbeafe '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:20px;padding:14px 16px;border:1px solid #f1f5f9;">
+                    <div>
+                        <p style="font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">Media stimata</p>
+                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:#1e3a8a;line-height:1;">${simDefault}</span>
+                    </div>
+                    <div style="width:44px;height:44px;border-radius:50%;background:white;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;">
+                        <span class="material-symbols-outlined" style="font-size:20px;color:#94a3b8;">auto_fix_high</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: Confronto Semestri -->
+            ${hasSemesters ? `
+            <div style="${CARD}">
+                <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 20px;">Confronto Semestri</p>
+                <div style="margin-bottom:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+                        <span style="font-size:14px;font-weight:700;color:#1e293b;">1° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:#475569;">${media1.toFixed(1)}</span>
+                    </div>
+                    <div style="width:100%;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;">
+                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:#94a3b8;border-radius:999px;"></div>
+                    </div>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+                        <span style="font-size:14px;font-weight:700;color:#1e293b;">2° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:#2563eb;">${media2.toFixed(1)}</span>
+                    </div>
+                    <div style="width:100%;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;">
+                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2563eb;border-radius:999px;"></div>
+                    </div>
+                </div>
+                ${media2 > media1 ? `
+                <div style="background:#f0fdf4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:40px;height:40px;border-radius:14px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#16a34a;">keyboard_double_arrow_up</span>
+                    </div>
+                    <p style="font-size:13px;color:#374151;line-height:1.4;margin:0;">Stai andando <b style="color:#1e293b;">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
+                </div>` : `
+                <div style="background:#fff7ed;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:40px;height:40px;border-radius:14px;background:#fed7aa;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#ea580c;">keyboard_double_arrow_down</span>
+                    </div>
+                    <p style="font-size:13px;color:#374151;line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
+                </div>`}
+            </div>` : ''}
+
+            <!-- CARD 4: Voti Ricevuti -->
+            <div style="${CARD}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                    <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Voti Ricevuti</p>
+                    <span class="material-symbols-outlined" style="font-size:16px;color:#93c5fd;">history</span>
+                </div>
+                ${votiRows}
+            </div>
+
+            <!-- CARD 5: Obiettivo Accademico -->
+            <div style="${CARD}margin-bottom:0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:#1e3a8a;font-variation-settings:'FILL' 1;">flag</span>
+                        </div>
+                        <h2 style="font-size:17px;font-weight:700;color:#1e3a8a;margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
+                    </div>
+                    <div style="text-align:right;cursor:pointer;" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
+                        <p style="font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Target</p>
+                        <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
+                            <span style="font-size:24px;font-weight:800;color:#1e3a8a;line-height:1;">${goal.toFixed(1)}</span>
+                            <span class="material-symbols-outlined" style="font-size:14px;color:#64748b;">edit</span>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size:13px;color:#475569;line-height:1.65;font-weight:500;margin:0 0 14px;">${goalText}</p>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:13px;color:#94a3b8;">info</span>
+                    <span style="font-size:10px;color:#94a3b8;font-weight:600;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
+                </div>
+            </div>
+
+        </div>
+    </div>`;
 }
+
 function mostraAssenzeModal() {
     const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0 };
     const all = [...ad.assenze.map(x => ({ ...x, icon: 'event_busy', color: 'error' })),
@@ -6907,7 +7084,7 @@ function renderGradesView() {
     }).join('');
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
+    <div style="position:relative;width:100%;min-height:100vh;padding-bottom:128px;background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
         <div style="padding:max(env(safe-area-inset-top,0px),32px) 20px 0;">
 
             <!-- Header -->
