@@ -6988,6 +6988,29 @@ function renderGradesView() {
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
     const media = averageFromNumeric(numericVotes) || 0;
 
+    // ── Monthly trend: current month vs previous month ─────────────────────────
+    const now = new Date();
+    const curYear  = now.getFullYear();
+    const curMonth = now.getMonth(); // 0-indexed
+    const prevYear  = curMonth === 0 ? curYear - 1 : curYear;
+    const prevMonth = curMonth === 0 ? 11 : curMonth - 1;
+
+    function voteMonth(v) {
+        const raw = v.data || v.date || '';
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
+        return (d && !isNaN(d)) ? { y: d.getFullYear(), m: d.getMonth() } : null;
+    }
+
+    const curMonthNums  = votiData
+        .filter(v => { const t = voteMonth(v); return t && t.y === curYear  && t.m === curMonth;  })
+        .map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const prevMonthNums = votiData
+        .filter(v => { const t = voteMonth(v); return t && t.y === prevYear && t.m === prevMonth; })
+        .map(getNumericGradeValue).filter(v => Number.isFinite(v));
+
+    const mediaCurMese  = curMonthNums.length  > 0 ? averageFromNumeric(curMonthNums)  : null;
+    const mediaPrevMese = prevMonthNums.length > 0 ? averageFromNumeric(prevMonthNums) : null;
+
     // ── Per-subject stats ────────────────────────────────────────────────────
     const subjectsMap = {};
     votiData.forEach(v => {
@@ -7013,6 +7036,8 @@ function renderGradesView() {
         .sort((a, b) => (a.data || a.date || '').localeCompare(b.data || b.date || ''));
     const chartVotes = sortedAll.slice(-7);
 
+    const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
     const chartBars = chartVotes.map((v, i) => {
         const val = getNumericGradeValue(v);
         const pct = Math.round((val / 10) * 100);
@@ -7022,12 +7047,8 @@ function renderGradesView() {
         const shadow = isLast ? '0 4px 12px rgba(37,99,235,0.3)' : '0 2px 6px rgba(0,0,0,0.06)';
         const raw = v.data || v.date || '';
         let label = '';
-        if (isLast && raw) {
-            const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
-            if (d && !isNaN(d)) {
-                label = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][d.getMonth()];
-            }
-        }
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
+        if (d && !isNaN(d)) label = MONTHS_IT[d.getMonth()];
         return { pct, color, shadow, label };
     });
 
@@ -7038,7 +7059,7 @@ function renderGradesView() {
 
     const barsHtml = chartBars.map(b => `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-            <span style="font-size:10px;font-weight:700;color:white;opacity:0.85;margin-bottom:4px;min-height:14px;">${b.label}</span>
+            <span style="font-size:9px;font-weight:700;color:#475569;opacity:0.9;margin-bottom:4px;min-height:13px;text-align:center;">${b.label}</span>
             <div style="width:100%;height:${b.pct || 2}%;background:${b.color};border-radius:6px 6px 0 0;box-shadow:${b.shadow};min-height:3px;"></div>
         </div>`).join('');
 
@@ -7102,11 +7123,27 @@ function renderGradesView() {
                     <p style="font-size:13px;font-weight:600;color:#64748b;margin:0 0 4px;font-family:Hanken Grotesk,sans-serif;">Media Generale</p>
                     <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
                         <span style="font-size:56px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.03em;font-family:Hanken Grotesk,sans-serif;">${media.toFixed(1)}</span>
-                        ${numericVotes.length >= 2 ? `
-                        <div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
-                            <span class="material-symbols-outlined" style="font-size:13px;color:#16a34a;font-variation-settings:'FILL' 1;">trending_up</span>
-                            <span style="font-size:11px;font-weight:700;color:#16a34a;letter-spacing:0.04em;">${numericVotes.length} voti</span>
-                        </div>` : ''}
+                        ${ (() => {
+                            if (mediaCurMese !== null && mediaPrevMese !== null) {
+                                const diff = mediaCurMese - mediaPrevMese;
+                                const diffFmt = (diff >= 0 ? '+' : '') + diff.toFixed(2).replace('.', ',');
+                                const isPos = diff >= 0;
+                                const bg     = isPos ? 'rgba(230,244,234,0.9)' : 'rgba(254,242,242,0.9)';
+                                const border = isPos ? '#bce3c8' : '#fecaca';
+                                const clr    = isPos ? '#16a34a' : '#dc2626';
+                                const icon   = isPos ? 'trending_up' : 'trending_down';
+                                return `<div style="display:flex;align-items:center;gap:4px;background:${bg};border:1px solid ${border};padding:4px 10px;border-radius:999px;margin-top:8px;">
+                                    <span class="material-symbols-outlined" style="font-size:13px;color:${clr};font-variation-settings:'FILL' 1;">${icon}</span>
+                                    <span style="font-size:11px;font-weight:700;color:${clr};letter-spacing:0.04em;">${diffFmt} vs ${MONTHS_IT[prevMonth]}</span>
+                                </div>`;
+                            } else if (numericVotes.length >= 2) {
+                                return `<div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
+                                    <span class="material-symbols-outlined" style="font-size:13px;color:#16a34a;font-variation-settings:'FILL' 1;">trending_up</span>
+                                    <span style="font-size:11px;font-weight:700;color:#16a34a;letter-spacing:0.04em;">${numericVotes.length} voti</span>
+                                </div>`;
+                            }
+                            return '';
+                        })() }
                     </div>
                     <p style="font-size:12px;color:#94a3b8;font-weight:500;margin:0 0 24px;font-family:Hanken Grotesk,sans-serif;">Ultimo aggiornamento: Oggi</p>
 
