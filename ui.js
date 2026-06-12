@@ -7043,7 +7043,7 @@ function renderGradesView() {
         const pct = Math.round((val / 10) * 100);
         const isLast = i === chartVotes.length - 1;
         const isSecondLast = i === chartVotes.length - 2;
-        const color = isLast ? '#2563eb' : isSecondLast ? '#82aee6' : 'rgba(255,255,255,0.75)';
+        const color = isLast ? '#2563eb' : isSecondLast ? '#82aee6' : '#cbd5e1';
         const shadow = isLast ? '0 4px 12px rgba(37,99,235,0.3)' : '0 2px 6px rgba(0,0,0,0.06)';
         const raw = v.data || v.date || '';
         let label = '';
@@ -7054,7 +7054,7 @@ function renderGradesView() {
 
     // Pad left with empty bars up to 7
     while (chartBars.length < 7) {
-        chartBars.unshift({ pct: 0, color: 'rgba(255,255,255,0.3)', shadow: 'none', label: '' });
+        chartBars.unshift({ pct: 0, color: '#e2e8f0', shadow: 'none', label: '' });
     }
 
     const barsHtml = chartBars.map(b => `
