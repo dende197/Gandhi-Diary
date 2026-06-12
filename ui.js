@@ -2481,12 +2481,14 @@ function renderSubjectDetailView(subjectName) {
                 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
                     <span style="font-size:56px;font-weight:800;color:#2563eb;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
                     ${ (() => {
-                        const subLastAvg  = subMonthList.length >= 1 ? subMonthList[subMonthList.length - 1].avg  : null;
-                        const subPrevAvg  = subMonthList.length >= 2 ? subMonthList[subMonthList.length - 2].avg  : null;
-                        const subPrevLbl  = subMonthList.length >= 2 ? subMonthList[subMonthList.length - 2].label : '';
-                        if (subLastAvg !== null && subPrevAvg !== null) {
-                            const diff = subLastAvg - subPrevAvg;
-                            const fmt  = (diff >= 0 ? '+' : '') + diff.toFixed(2).replace('.', ',');
+                        // Delta: media con tutti i voti - media senza l'ultimo voto
+                        const sortedByDate = [...votiData].sort((a,b) => (a.data||a.date||'').localeCompare(b.data||b.date||''));
+                        const allNums = sortedByDate.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+                        const mediaConTutti = allNums.length > 0 ? allNums.reduce((s,x)=>s+x,0)/allNums.length : null;
+                        const mediaSenzaUltimo = allNums.length > 1 ? allNums.slice(0,-1).reduce((s,x)=>s+x,0)/(allNums.length-1) : null;
+                        if (mediaConTutti !== null && mediaSenzaUltimo !== null) {
+                            const diff = mediaConTutti - mediaSenzaUltimo;
+                            const fmt  = diff.toFixed(2).replace('.', ',');
                             const isP  = diff >= 0;
                             return `<div style="display:flex;align-items:center;gap:5px;background:${isP ? 'rgba(230,244,234,0.9)' : 'rgba(254,242,242,0.9)'};border:1px solid ${isP ? '#bce3c8' : '#fecaca'};padding:5px 11px;border-radius:999px;margin-bottom:4px;">
                                 <span class="material-symbols-outlined" style="font-size:12px;color:${isP ? '#16a34a' : '#dc2626'};font-variation-settings:'FILL' 1;">${isP ? 'trending_up' : 'trending_down'}</span>
@@ -7146,7 +7148,7 @@ function renderGradesView() {
                         ${ (() => {
                             if (mediaCurMese !== null && mediaPrevMese !== null) {
                                 const diff = mediaCurMese - mediaPrevMese;
-                                const diffFmt = (diff >= 0 ? '+' : '') + diff.toFixed(2).replace('.', ',');
+                                const diffFmt = diff.toFixed(2).replace('.', ',');
                                 const isPos = diff >= 0;
                                 const bg     = isPos ? 'rgba(230,244,234,0.9)' : 'rgba(254,242,242,0.9)';
                                 const border = isPos ? '#bce3c8' : '#fecaca';
