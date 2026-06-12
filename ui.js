@@ -2400,17 +2400,31 @@ function renderSubjectDetailView(subjectName) {
         goalText = `Imposta un obiettivo per ricevere suggerimenti personalizzati.`;
     }
 
-    // ── SVG area chart ────────────────────────────────────────────────────────
-    const chartVotes = [...votiData].reverse().slice(-6);
-    let svgArea = '', svgPath = '', svgDots = '';
+    // ── SVG area chart: aggregated by month, last 6 months ──────────────────
     const MN = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    // Build monthly averages for this subject
+    const subMonthMap = {};
+    votiData.forEach(v => {
+        const raw = v.data || v.date || '';
+        const d0 = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+        if (!d0 || isNaN(d0)) return;
+        const key = d0.getFullYear() * 100 + d0.getMonth();
+        if (!subMonthMap[key]) subMonthMap[key] = { label: MN[d0.getMonth()], nums: [] };
+        const val = getNumericGradeValue(v);
+        if (Number.isFinite(val)) subMonthMap[key].nums.push(val);
+    });
+    const subMonthList = Object.entries(subMonthMap)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([, m]) => ({ label: m.label, avg: m.nums.reduce((s, x) => s + x, 0) / m.nums.length }))
+        .slice(-6);
+
+    let svgArea = '', svgPath = '', svgDots = '';
     let xLabels = [];
-    if (chartVotes.length >= 2) {
+    if (subMonthList.length >= 2) {
         const W = 300, H = 100, PAD = 10;
-        const pts = chartVotes.map((v, i) => {
-            const val = getNumericGradeValue(v) || 5;
-            const x = PAD + (i / (chartVotes.length - 1)) * (W - PAD * 2);
-            const y = H - PAD - ((val - 1) / 9) * (H - PAD * 2);
+        const pts = subMonthList.map((m, i) => {
+            const x = PAD + (i / (subMonthList.length - 1)) * (W - PAD * 2);
+            const y = H - PAD - ((m.avg - 1) / 9) * (H - PAD * 2);
             return [x, y];
         });
         let d = `M${pts[0][0]},${pts[0][1]}`;
@@ -2421,11 +2435,7 @@ function renderSubjectDetailView(subjectName) {
         svgPath = `<path d="${d}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>`;
         svgArea = `<path d="${d} L${pts[pts.length-1][0]},100 L${pts[0][0]},100 Z" fill="url(#bG${uid})" opacity="0.7"/>`;
         svgDots = pts.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2563eb"/>`).join('');
-        xLabels = chartVotes.map(v => {
-            const raw = v.data || v.date || '';
-            const d2 = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
-            return (d2 && !isNaN(d2)) ? MN[d2.getMonth()] : '';
-        });
+        xLabels = subMonthList.map(m => m.label);
     }
 
     // ── Date formatting ───────────────────────────────────────────────────────
@@ -2470,10 +2480,26 @@ function renderSubjectDetailView(subjectName) {
                 <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Media Materia</p>
                 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
                     <span style="font-size:56px;font-weight:800;color:#2563eb;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
-                    ${n >= 2 ? `<div style="display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
-                        <span class="material-symbols-outlined" style="font-size:12px;color:#2563eb;font-variation-settings:'FILL' 1;">trending_up</span>
-                        <span style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
-                    </div>` : ''}
+                    ${ (() => {
+                        const subLastAvg  = subMonthList.length >= 1 ? subMonthList[subMonthList.length - 1].avg  : null;
+                        const subPrevAvg  = subMonthList.length >= 2 ? subMonthList[subMonthList.length - 2].avg  : null;
+                        const subPrevLbl  = subMonthList.length >= 2 ? subMonthList[subMonthList.length - 2].label : '';
+                        if (subLastAvg !== null && subPrevAvg !== null) {
+                            const diff = subLastAvg - subPrevAvg;
+                            const fmt  = (diff >= 0 ? '+' : '') + diff.toFixed(2).replace('.', ',');
+                            const isP  = diff >= 0;
+                            return `<div style="display:flex;align-items:center;gap:5px;background:${isP ? 'rgba(230,244,234,0.9)' : 'rgba(254,242,242,0.9)'};border:1px solid ${isP ? '#bce3c8' : '#fecaca'};padding:5px 11px;border-radius:999px;margin-bottom:4px;">
+                                <span class="material-symbols-outlined" style="font-size:12px;color:${isP ? '#16a34a' : '#dc2626'};font-variation-settings:'FILL' 1;">${isP ? 'trending_up' : 'trending_down'}</span>
+                                <span style="font-size:10px;font-weight:800;color:${isP ? '#16a34a' : '#dc2626'};letter-spacing:0.05em;">${fmt} vs ${subPrevLbl}</span>
+                            </div>`;
+                        } else if (n >= 2) {
+                            return `<div style="display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
+                                <span class="material-symbols-outlined" style="font-size:12px;color:#2563eb;font-variation-settings:'FILL' 1;">trending_up</span>
+                                <span style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
+                            </div>`;
+                        }
+                        return '';
+                    })() }
                 </div>
                 ${chartVotes.length >= 2 ? `
                 <div style="width:100%;height:96px;margin-bottom:10px;">
@@ -6988,28 +7014,34 @@ function renderGradesView() {
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
     const media = averageFromNumeric(numericVotes) || 0;
 
-    // ── Monthly trend: current month vs previous month ─────────────────────────
-    const now = new Date();
-    const curYear  = now.getFullYear();
-    const curMonth = now.getMonth(); // 0-indexed
-    const prevYear  = curMonth === 0 ? curYear - 1 : curYear;
-    const prevMonth = curMonth === 0 ? 11 : curMonth - 1;
+    // ── Monthly aggregation: group all votes by year-month ──────────────────
+    const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 
-    function voteMonth(v) {
+    function voteYearMonth(v) {
         const raw = v.data || v.date || '';
         const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
-        return (d && !isNaN(d)) ? { y: d.getFullYear(), m: d.getMonth() } : null;
+        return (d && !isNaN(d)) ? { y: d.getFullYear(), m: d.getMonth(), key: d.getFullYear() * 100 + d.getMonth() } : null;
     }
 
-    const curMonthNums  = votiData
-        .filter(v => { const t = voteMonth(v); return t && t.y === curYear  && t.m === curMonth;  })
-        .map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const prevMonthNums = votiData
-        .filter(v => { const t = voteMonth(v); return t && t.y === prevYear && t.m === prevMonth; })
-        .map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    // Build a map of { key -> { label, avg } } sorted chronologically
+    const monthMap = {};
+    votiData.forEach(v => {
+        const ym = voteYearMonth(v);
+        const val = getNumericGradeValue(v);
+        if (!ym || !Number.isFinite(val)) return;
+        if (!monthMap[ym.key]) monthMap[ym.key] = { key: ym.key, label: MONTHS_IT[ym.m], nums: [] };
+        monthMap[ym.key].nums.push(val);
+    });
+    const monthList = Object.values(monthMap)
+        .sort((a, b) => a.key - b.key)
+        .map(m => ({ ...m, avg: averageFromNumeric(m.nums) }));
 
-    const mediaCurMese  = curMonthNums.length  > 0 ? averageFromNumeric(curMonthNums)  : null;
-    const mediaPrevMese = prevMonthNums.length > 0 ? averageFromNumeric(prevMonthNums) : null;
+    // Last 7 months with data for bar chart
+    const chartMonths = monthList.slice(-7);
+    // Trend: compare last two months with data
+    const mediaCurMese  = monthList.length >= 1 ? monthList[monthList.length - 1].avg  : null;
+    const mediaPrevMese = monthList.length >= 2 ? monthList[monthList.length - 2].avg  : null;
+    const prevMonthLabel = monthList.length >= 2 ? monthList[monthList.length - 2].label : '';
 
     // ── Per-subject stats ────────────────────────────────────────────────────
     const subjectsMap = {};
@@ -7030,26 +7062,14 @@ function renderGradesView() {
         return { name, media: subMedia, lastVote: lastVal };
     }).sort((a, b) => b.media - a.media);
 
-    // ── Bar chart: last 7 numeric grades, chronological ──────────────────────
-    const sortedAll = [...votiData]
-        .filter(v => Number.isFinite(getNumericGradeValue(v)))
-        .sort((a, b) => (a.data || a.date || '').localeCompare(b.data || b.date || ''));
-    const chartVotes = sortedAll.slice(-7);
-
-    const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-
-    const chartBars = chartVotes.map((v, i) => {
-        const val = getNumericGradeValue(v);
-        const pct = Math.round((val / 10) * 100);
-        const isLast = i === chartVotes.length - 1;
-        const isSecondLast = i === chartVotes.length - 2;
+    // ── Bar chart: one bar per month (last 7 months with data) ─────────────
+    const chartBars = chartMonths.map((m, i) => {
+        const pct = Math.round((m.avg / 10) * 100);
+        const isLast = i === chartMonths.length - 1;
+        const isSecondLast = i === chartMonths.length - 2;
         const color = isLast ? '#2563eb' : isSecondLast ? '#82aee6' : '#cbd5e1';
         const shadow = isLast ? '0 4px 12px rgba(37,99,235,0.3)' : '0 2px 6px rgba(0,0,0,0.06)';
-        const raw = v.data || v.date || '';
-        let label = '';
-        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
-        if (d && !isNaN(d)) label = MONTHS_IT[d.getMonth()];
-        return { pct, color, shadow, label };
+        return { pct, color, shadow, label: m.label };
     });
 
     // Pad left with empty bars up to 7
@@ -7134,7 +7154,7 @@ function renderGradesView() {
                                 const icon   = isPos ? 'trending_up' : 'trending_down';
                                 return `<div style="display:flex;align-items:center;gap:4px;background:${bg};border:1px solid ${border};padding:4px 10px;border-radius:999px;margin-top:8px;">
                                     <span class="material-symbols-outlined" style="font-size:13px;color:${clr};font-variation-settings:'FILL' 1;">${icon}</span>
-                                    <span style="font-size:11px;font-weight:700;color:${clr};letter-spacing:0.04em;">${diffFmt} vs ${MONTHS_IT[prevMonth]}</span>
+                                    <span style="font-size:11px;font-weight:700;color:${clr};letter-spacing:0.04em;">${diffFmt} vs ${prevMonthLabel}</span>
                                 </div>`;
                             } else if (numericVotes.length >= 2) {
                                 return `<div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
