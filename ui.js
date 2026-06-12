@@ -2490,7 +2490,7 @@ function renderSubjectDetailView(subjectName) {
                             const isP  = diff >= 0;
                             return `<div style="display:flex;align-items:center;gap:5px;background:${isP ? 'rgba(230,244,234,0.9)' : 'rgba(254,242,242,0.9)'};border:1px solid ${isP ? '#bce3c8' : '#fecaca'};padding:5px 11px;border-radius:999px;margin-bottom:4px;">
                                 <span class="material-symbols-outlined" style="font-size:12px;color:${isP ? '#16a34a' : '#dc2626'};font-variation-settings:'FILL' 1;">${isP ? 'trending_up' : 'trending_down'}</span>
-                                <span style="font-size:10px;font-weight:800;color:${isP ? '#16a34a' : '#dc2626'};letter-spacing:0.05em;">${fmt} vs ${subPrevLbl}</span>
+                                <span style="font-size:10px;font-weight:800;color:${isP ? '#16a34a' : '#dc2626'};letter-spacing:0.05em;">${fmt}</span>
                             </div>`;
                         } else if (n >= 2) {
                             return `<div style="display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
@@ -2501,7 +2501,7 @@ function renderSubjectDetailView(subjectName) {
                         return '';
                     })() }
                 </div>
-                ${chartVotes.length >= 2 ? `
+                ${subMonthList.length >= 2 ? `
                 <div style="width:100%;height:96px;margin-bottom:10px;">
                     <svg viewBox="0 0 300 100" style="width:100%;height:100%;" preserveAspectRatio="none">
                         <defs>
@@ -7142,7 +7142,7 @@ function renderGradesView() {
                 <div style="position:relative;z-index:1;">
                     <p style="font-size:13px;font-weight:600;color:#64748b;margin:0 0 4px;font-family:Hanken Grotesk,sans-serif;">Media Generale</p>
                     <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
-                        <span style="font-size:56px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.03em;font-family:Hanken Grotesk,sans-serif;">${media.toFixed(1)}</span>
+                        <span style="font-size:56px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.03em;font-family:Hanken Grotesk,sans-serif;">${media.toFixed(2)}</span>
                         ${ (() => {
                             if (mediaCurMese !== null && mediaPrevMese !== null) {
                                 const diff = mediaCurMese - mediaPrevMese;
@@ -7154,7 +7154,7 @@ function renderGradesView() {
                                 const icon   = isPos ? 'trending_up' : 'trending_down';
                                 return `<div style="display:flex;align-items:center;gap:4px;background:${bg};border:1px solid ${border};padding:4px 10px;border-radius:999px;margin-top:8px;">
                                     <span class="material-symbols-outlined" style="font-size:13px;color:${clr};font-variation-settings:'FILL' 1;">${icon}</span>
-                                    <span style="font-size:11px;font-weight:700;color:${clr};letter-spacing:0.04em;">${diffFmt} vs ${prevMonthLabel}</span>
+                                    <span style="font-size:11px;font-weight:700;color:${clr};letter-spacing:0.04em;">${diffFmt}</span>
                                 </div>`;
                             } else if (numericVotes.length >= 2) {
                                 return `<div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
