@@ -2389,11 +2389,29 @@ function renderSubjectDetailView(subjectName) {
     const simResId = 'sR' + uid;
     const simDefault = ((media * n + 7.5) / (n + 1)).toFixed(2);
 
-    // ── Goal text ─────────────────────────────────────────────────────────────
+    // ── Goal text: find minimum grades needed at a realistic value ────────────
     let goalText;
     if (n > 0 && goal > media) {
-        const needed = (goal * (n + 2) - media * n).toFixed(1);
-        goalText = `Per raggiungere il tuo obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b>, devi prendere almeno <b style="color:#2563eb">${needed}</b> nelle prossime 2 verifiche.`;
+        // Find the minimum number of identical grades (between 1-10) needed
+        // to bring the average up to `goal`.
+        // Formula: (media*n + k*x) / (n+k) >= goal  →  k >= (goal*n - media*n) / (x - goal)
+        // Try each integer grade from 10 down to 1, find smallest k
+        const sumNow = media * n;
+        let bestDesc = '';
+        for (let gradeVal = 10; gradeVal >= 1; gradeVal--) {
+            if (gradeVal <= goal) continue; // grade must be above goal to help
+            const k = Math.ceil((goal * n - sumNow) / (gradeVal - goal));
+            if (k >= 1 && k <= 20) {
+                bestDesc = `${k} vot${k===1?'o':'i'} da <b style="color:#2563eb">${gradeVal}</b>`;
+                break;
+            }
+        }
+        // Fallback: just show grade=10
+        if (!bestDesc) {
+            const k = Math.ceil((goal * n - sumNow) / (10 - goal));
+            bestDesc = `${Math.max(1,k)} vot${k===1?'o':'i'} da <b style="color:#2563eb">10</b>`;
+        }
+        goalText = `Per raggiungere <b style="color:#1e3a8a">${goal.toFixed(1)}</b> ti servono almeno ${bestDesc}.`;
     } else if (media >= goal) {
         goalText = `Hai già raggiunto il tuo obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b>. Continua così!`;
     } else {
@@ -4008,19 +4026,64 @@ function showBachecaModal() {
 }
 function promptSetGoal(type) {
     const currentGoal = state.goals?.[type] || 8.0;
-    const res = prompt("A quale media vuoi puntare? (es. 8.5)", currentGoal);
-    if (res !== null) {
-        const val = parseFloat(res.replace(',', '.'));
-        if (!isNaN(val) && val > 0 && val <= 10) {
+
+    // Build options: 5.0 to 10.0 in steps of 0.5
+    const options = [];
+    for (let v = 5.0; v <= 10.0; v = Math.round((v + 0.5) * 10) / 10) options.push(v);
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;';
+
+    // Sheet
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'width:100%;max-width:480px;background:#ffffff;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);font-family:Hanken Grotesk,sans-serif;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
+    sheet.innerHTML = `
+        <div style="display:flex;justify-content:center;padding:14px 0 6px;">
+            <div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 22px 16px;">
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Obiettivo</h2>
+            <button id="goal-close-btn" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#64748b;">close</span>
+            </button>
+        </div>
+        <div style="padding:0 22px 20px;">
+            <p style="font-size:13px;color:#64748b;font-weight:500;margin:0 0 16px;">Seleziona la media che vuoi raggiungere in questa materia.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+                ${options.map(v => {
+                    const isActive = Math.abs(v - currentGoal) < 0.01;
+                    return `<button data-goal-val="${v}" style="padding:14px 8px;border-radius:16px;font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;cursor:pointer;border:${isActive?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${isActive?'#2563eb':'white'};color:${isActive?'white':'#1e293b'};transition:all 0.12s ease;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">${v.toFixed(1)}</button>`;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+
+    function closeSheet() {
+        sheet.style.transform = 'translateY(100%)';
+        setTimeout(() => overlay.remove(), 300);
+    }
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeSheet(); });
+    sheet.querySelector('#goal-close-btn').addEventListener('click', closeSheet);
+
+    sheet.querySelectorAll('[data-goal-val]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = parseFloat(btn.dataset.goalVal);
             if (!state.goals) state.goals = {};
             state.goals[type] = val;
             localStorage.setItem(lsKey('goals'), JSON.stringify(state.goals));
-            saveTasks(); // Persist tasks
-            render();
-        } else {
-            alert("Inserisci un valore valido tra 1 e 10");
-        }
-    }
+            closeSheet();
+            // Re-render immediately without full page refresh
+            state._forceRender = true;
+            if (typeof scheduleRender === 'function') scheduleRender(0);
+        });
+    });
 }
 function renderFocusTimer() {
     const mins = Math.floor(pomodoroState.timeLeft / 60);
