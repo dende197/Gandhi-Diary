@@ -2799,41 +2799,123 @@ function mostraCircolare(id) {
     const c = state.circolari.find(x => x.id === id);
     if (!c) return;
 
-    showModal(`
-        <div class="flex flex-col h-full">
-            <header class="mb-6">
-                <div class="label-sm text-primary mb-2">Circolare N. ${c.numero}</div>
-                <h2 class="title-md text-on-surface mb-2">${c.titolo}</h2>
-                <p class="body-md text-on-surface-variant/60 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">calendar_today</span> ${c.data}
-                </p>
-            </header>
+    // ── Build overlay inline — zero CSS class dependencies ──────────────────
+    const overlay = document.createElement('div');
+    overlay.id = 'circ-overlay-' + id;
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;';
 
-            <div class="flex-1 overflow-y-auto no-scrollbar mb-6 p-6 rounded-[32px] bg-surface-container-low border border-white/40">
-                <div id="sintesi-box-${c.id}" class="h-full">
-                    ${c.sintesi ? `<div class="ai-prose">${marked.parse(c.sintesi)}</div>` : `
-                        <div class="flex flex-col items-center justify-center h-full text-center gap-4">
-                            <div class="w-16 h-16 rounded-2xl liquid-glass flex items-center justify-center text-primary mb-2">
-                                <span class="material-symbols-outlined text-3xl">auto_awesome</span>
-                            </div>
-                            <p class="body-md font-bold text-on-surface">Analisi AI Disponibile</p>
-                            <p class="body-md text-on-surface-variant/60 max-w-[240px] mb-4">Ottieni una sintesi intelligente dei punti chiave.</p>
-                            <button onclick="requestCircularSynthesis('${c.id}', '${c.link}')" class="btn btn-glass w-full">
-                                Elabora Sintesi
-                            </button>
-                        </div>
-                    `}
-                </div>
-            </div>
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'width:100%;max-width:520px;background:#ffffff;border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 -4px 32px rgba(0,0,0,0.12);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);font-family:Hanken Grotesk,sans-serif;';
 
-            <div class="flex flex-col gap-3">
-                <button onclick="window.open('${c.link}', '_blank')" class="btn btn-primary w-full h-14">
-                    <span class="material-symbols-outlined">open_in_new</span> Apri Documento
-                </button>
-                <button onclick="closeModal()" class="btn btn-glass w-full h-14">Chiudi</button>
+    const sintesiContent = c.sintesi
+        ? `<div style="font-size:15px;line-height:1.7;color:#334155;">${typeof marked !== 'undefined' ? marked.parse(c.sintesi) : escapeHtml(c.sintesi)}</div>`
+        : `<div id="sintesi-placeholder-${c.id}" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 0;gap:12px;">
+               <div style="width:56px;height:56px;border-radius:20px;background:#eff6ff;display:flex;align-items:center;justify-content:center;">
+                   <span class="material-symbols-outlined" style="font-size:28px;color:#2563eb;font-variation-settings:'FILL' 1;">auto_awesome</span>
+               </div>
+               <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0;">Analisi AI disponibile</p>
+               <p style="font-size:13px;color:#94a3b8;font-weight:500;margin:0;max-width:220px;">Ottieni una sintesi intelligente dei punti chiave della circolare.</p>
+               <button id="btn-sintesi-${c.id}" onclick="window._circ_startSintesi('${escapeJsSingleQuote(c.id)}','${escapeJsSingleQuote(c.link || '')}')" style="width:100%;height:48px;border-radius:14px;background:#2563eb;color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:Hanken Grotesk,sans-serif;margin-top:4px;">
+                   <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">psychology</span>
+                   Elabora Sintesi
+               </button>
+           </div>`;
+
+    sheet.innerHTML = `
+        <!-- Drag handle -->
+        <div style="display:flex;justify-content:center;padding:14px 0 6px;flex-shrink:0;">
+            <div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>
+        </div>
+
+        <!-- Header -->
+        <div style="padding:8px 22px 16px;flex-shrink:0;border-bottom:1px solid #f1f5f9;">
+            <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px;">Circolare N. ${escapeHtml(String(c.numero || ''))}</p>
+            <h2 style="font-size:20px;font-weight:800;color:#0f172a;line-height:1.25;margin:0 0 8px;letter-spacing:-0.01em;">${escapeHtml(c.titolo)}</h2>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:14px;color:#94a3b8;">calendar_today</span>
+                <span style="font-size:13px;font-weight:500;color:#64748b;">${escapeHtml(c.data || '')}</span>
             </div>
         </div>
-    `);
+
+        <!-- Scrollable body -->
+        <div id="sintesi-box-${c.id}" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 22px;">
+            ${sintesiContent}
+        </div>
+
+        <!-- Actions -->
+        <div style="padding:16px 22px calc(28px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;">
+            ${c.link ? `<button onclick="window.open('${escapeJsSingleQuote(c.link)}','_blank')" style="width:100%;height:52px;border-radius:15px;background:#2563eb;color:white;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.35);">
+                <span class="material-symbols-outlined" style="font-size:19px;">open_in_new</span>Apri Documento
+            </button>` : ''}
+            <button id="circ-close-btn-${id}" style="width:100%;height:44px;background:none;border:none;color:#2563eb;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Chiudi</button>
+        </div>
+    `;
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+
+    // Close logic — robust DOM removal
+    function closeCirc() {
+        sheet.style.transform = 'translateY(100%)';
+        setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 320);
+    }
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCirc(); });
+    document.getElementById('circ-close-btn-' + id).addEventListener('click', closeCirc);
+
+    // ── Sintesi progress animation ───────────────────────────────────────────
+    window._circ_startSintesi = function(cid, link) {
+        const btn = document.getElementById('btn-sintesi-' + cid);
+        const placeholder = document.getElementById('sintesi-placeholder-' + cid);
+        if (!placeholder) return;
+
+        // Replace placeholder with progress UI
+        placeholder.innerHTML = `
+            <div style="width:100%;padding:8px 0;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#2563eb;font-variation-settings:'FILL' 1;">psychology</span>
+                    </div>
+                    <div style="flex:1;">
+                        <p id="sintesi-stage-${cid}" style="font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Avvio analisi…</p>
+                        <div style="width:100%;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                            <div id="sintesi-bar-${cid}" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:999px;transition:width 0.4s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+                <p id="sintesi-sub-${cid}" style="font-size:12px;color:#94a3b8;font-weight:500;margin:0;">Lettura del documento in corso…</p>
+            </div>`;
+
+        const stages = [
+            { pct: 15, label: 'Scansione metadati…',       sub: 'Identificazione del documento' },
+            { pct: 35, label: 'Recupero PDF…',             sub: 'Download del file circolare' },
+            { pct: 60, label: 'Estrazione testo…',         sub: 'Analisi del contenuto' },
+            { pct: 80, label: 'Sintesi neurale in corso…', sub: 'Il modello AI sta elaborando' },
+            { pct: 92, label: 'Quasi pronto…',             sub: 'Finalizzazione della risposta' },
+        ];
+        let si = 0;
+        const bar = document.getElementById('sintesi-bar-' + cid);
+        const stageEl = document.getElementById('sintesi-stage-' + cid);
+        const subEl = document.getElementById('sintesi-sub-' + cid);
+
+        const iv = setInterval(() => {
+            if (si >= stages.length) { clearInterval(iv); return; }
+            const s = stages[si++];
+            if (bar) bar.style.width = s.pct + '%';
+            if (stageEl) stageEl.textContent = s.label;
+            if (subEl) subEl.textContent = s.sub;
+        }, 1400);
+
+        // Call the real synthesis
+        (async () => {
+            if (typeof window.requestCircularSynthesis === 'function') {
+                await window.requestCircularSynthesis(cid, link);
+            }
+            clearInterval(iv);
+            if (bar) bar.style.width = '100%';
+            if (stageEl) stageEl.textContent = 'Completato';
+        })();
+    };
 }
 function renderDayDetailModal(dateStr) {
     const container = getModalContainer();
