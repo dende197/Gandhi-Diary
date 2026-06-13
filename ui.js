@@ -6210,70 +6210,97 @@ console.log('✅ GSAP Animations consolidated into ui.js');
 
 function renderCircolariView() {
     const list = state.circolari || [];
-    const urgent = list.slice(0, 2);
-    const recent = list.slice(2, 6);
+
+    // ── Gradient palettes for featured cards ─────────────────────────────────
+    const palettes = [
+        { bg: 'linear-gradient(135deg,#ffffff 0%,#e0efff 50%,#b3d4ff 100%)', shadow: '0 10px 40px -10px rgba(37,99,235,0.15)', icon: 'campaign',       iconColor: '#1d4ed8', iconBg: '#dbeafe', badgeText: 'In evidenza' },
+        { bg: 'linear-gradient(135deg,#ffffff 0%,#f3e8ff 70%,#e9d5ff 100%)', shadow: '0 8px 30px -12px rgba(147,51,234,0.15)', icon: 'calendar_month', iconColor: '#6d28d9', iconBg: '#f3e8ff', badgeText: 'Evento'       },
+        { bg: 'linear-gradient(135deg,#ffffff 0%,#f0fdf4 70%,#bbf7d0 100%)', shadow: '0 8px 30px -12px rgba(22,163,74,0.12)',  icon: 'school',         iconColor: '#15803d', iconBg: '#dcfce7', badgeText: 'Comunicato'    },
+    ];
+
+    function fmtDate(raw) {
+        if (!raw) return '';
+        const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+        if (!d || isNaN(d)) return raw;
+        const diff = Math.round((new Date() - d) / 86400000);
+        if (diff === 0) return 'Oggi';
+        if (diff === 1) return 'Ieri';
+        return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+    }
+
+    // First card: full-width featured
+    const featured   = list[0] || null;
+    // Next 2: small grid
+    const gridCards  = list.slice(1, 3);
+    // Rest: list rows
+    const recentList = list.slice(3);
+
+    const featuredHtml = featured ? `
+        <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(255,255,255,0.6);background:linear-gradient(135deg,#ffffff 0%,#e0efff 50%,#b3d4ff 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                <div style="background:#dbeafe;border:1px solid rgba(191,219,254,0.6);color:#1d4ed8;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
+                <span class="material-symbols-outlined" style="font-size:20px;color:#1d4ed8;font-variation-settings:'FILL' 1;">campaign</span>
+            </div>
+            <h2 style="font-size:24px;font-weight:800;color:#0f172a;line-height:1.2;margin:0 0 28px;letter-spacing:-0.01em;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(featured.titolo)}</h2>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+                <span style="font-size:13px;font-weight:600;color:#475569;font-family:Hanken Grotesk,sans-serif;">${fmtDate(featured.data)}</span>
+                <div style="width:52px;height:52px;border-radius:50%;background:#0058bc;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -4px rgba(0,88,188,0.4);" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:22px;color:white;">arrow_forward</span>
+                </div>
+            </div>
+        </div>` : '';
+
+    const gridHtml = gridCards.length ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;">
+            ${gridCards.map((c, i) => {
+                const p = palettes[i + 1] || palettes[0];
+                return `<div style="border-radius:32px;padding:22px;background:${p.bg};box-shadow:${p.shadow};border:1px solid rgba(255,255,255,0.6);display:flex;flex-direction:column;cursor:pointer;min-height:160px;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:24px;color:${p.iconColor};margin-bottom:10px;font-variation-settings:'FILL' 1;">${p.icon}</span>
+                    <h3 style="font-size:16px;font-weight:700;color:#0f172a;line-height:1.25;margin:0 0 auto;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</h3>
+                    <span style="font-size:12px;font-weight:500;color:#64748b;margin-top:14px;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</span>
+                </div>`;
+            }).join('')}
+        </div>` : '';
+
+    const recentHtml = recentList.length ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h2 style="font-size:20px;font-weight:800;color:#1b1b1d;letter-spacing:-0.01em;margin:0;font-family:Hanken Grotesk,sans-serif;">Circolari recenti</h2>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            ${recentList.map(c => `
+                <div style="background:rgba(255,255,255,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border-radius:28px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.12s ease;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                    <div style="width:48px;height:48px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:22px;color:#475569;font-variation-settings:'FILL' 1;">description</span>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</p>
+                        <p style="font-size:12px;font-weight:500;color:#94a3b8;margin:0;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</p>
+                    </div>
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;flex-shrink:0;">chevron_right</span>
+                </div>`).join('')}
+        </div>` : '';
+
+    const emptyHtml = !list.length ? `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
+            <span class="material-symbols-outlined" style="font-size:48px;color:#cbd5e1;margin-bottom:12px;">inbox</span>
+            <p style="font-size:16px;font-weight:600;color:#94a3b8;margin:0;font-family:Hanken Grotesk,sans-serif;">Nessuna circolare disponibile</p>
+        </div>` : '';
 
     return `
-    <div class="view circulars-view pb-32">
-        <header class="mb-8 pt-4">
-            <h1 class="headline-lg text-primary mb-1">In Evidenza</h1>
-            <p class="body-md text-on-surface-variant/60">Important updates</p>
-        </header>
+    <div class="view-fullbleed min-h-screen pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.3) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.2) 0%,transparent 40%);background-attachment:fixed;">
+        <div style="padding:max(env(safe-area-inset-top,0px),32px) 24px 0;font-family:Hanken Grotesk,sans-serif;">
 
-        <!-- Urgent Circulars (Horizontal Scroll) -->
-        <section class="mb-10">
-            <div class="flex overflow-x-auto no-scrollbar gap-4 py-2">
-                ${urgent.length ? urgent.map(c => `
-                    <div class="flex-none w-[280px] liquid-glass rounded-[32px] p-6 liquid-shadow relative overflow-hidden group cursor-pointer" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-primary text-[10px] font-bold uppercase tracking-wider">Urgent</span>
-                            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                                <span class="material-symbols-outlined text-[18px]">campaign</span>
-                            </div>
-                        </div>
-                        <h3 class="title-md text-on-surface line-clamp-2 mb-4 h-14">${c.titolo}</h3>
-                        <p class="body-md text-on-surface-variant/40 line-clamp-2 mb-6 text-[13px]">Please review the updated examination timetable ...</p>
-                        <div class="flex justify-between items-center mt-auto">
-                            <span class="text-on-surface-variant/40 text-[11px] font-medium">${c.data}</span>
-                            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                            </div>
-                        </div>
-                        <!-- Glow effect -->
-                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
-                    </div>
-                `).join('') : `
-                    <div class="flex-none w-full liquid-glass rounded-[32px] p-12 text-center text-on-surface-variant/40">
-                        Nessun avviso in evidenza.
-                    </div>
-                `}
-            </div>
-        </section>
+            <!-- Header -->
+            <header style="margin-bottom:24px;">
+                <h1 style="font-size:30px;font-weight:800;color:#1b1b1d;letter-spacing:-0.025em;margin:0 0 4px;line-height:1;">In Evidenza</h1>
+            </header>
 
-        <section>
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="title-md">Recent Circulars</h2>
-                <button class="text-primary font-bold text-[13px]">View All</button>
-            </div>
+            ${featuredHtml}
+            ${gridHtml}
+            ${recentHtml}
+            ${emptyHtml}
 
-            <div class="flex flex-col gap-3">
-                ${recent.length ? recent.map(c => `
-                    <div class="liquid-glass rounded-[24px] p-5 liquid-shadow flex justify-between items-center group cursor-pointer transition-all hover:translate-x-1" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')">
-                        <div class="flex-1 min-width-0 pr-4">
-                            <h3 class="font-bold text-[15px] text-on-surface truncate mb-1">${c.titolo}</h3>
-                            <p class="text-on-surface-variant/40 text-[12px] font-medium">New healthy options added to the daily rotat...</p>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p class="text-on-surface-variant/40 text-[11px] font-bold">${c.data}</p>
-                        </div>
-                    </div>
-                `).join('') : `
-                    <div class="liquid-glass rounded-[24px] p-8 text-center text-on-surface-variant/40">
-                        Nessuna circolare recente.
-                    </div>
-                `}
-            </div>
-        </section>
+        </div>
     </div>`;
 }
 
