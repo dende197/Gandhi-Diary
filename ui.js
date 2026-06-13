@@ -2389,29 +2389,45 @@ function renderSubjectDetailView(subjectName) {
     const simResId = 'sR' + uid;
     const simDefault = ((media * n + 7.5) / (n + 1)).toFixed(2);
 
-    // ── Goal text: find minimum grades needed at a realistic value ────────────
+    // ── Goal text: realistic multi-scenario breakdown ───────────────────────
     let goalText;
     if (n > 0 && goal > media) {
-        // Find the minimum number of identical grades (between 1-10) needed
-        // to bring the average up to `goal`.
-        // Formula: (media*n + k*x) / (n+k) >= goal  →  k >= (goal*n - media*n) / (x - goal)
-        // Try each integer grade from 10 down to 1, find smallest k
+        const gap = goal - media;
         const sumNow = media * n;
-        let bestDesc = '';
-        for (let gradeVal = 10; gradeVal >= 1; gradeVal--) {
-            if (gradeVal <= goal) continue; // grade must be above goal to help
-            const k = Math.ceil((goal * n - sumNow) / (gradeVal - goal));
-            if (k >= 1 && k <= 20) {
-                bestDesc = `${k} vot${k===1?'o':'i'} da <b style="color:#2563eb">${gradeVal}</b>`;
-                break;
+
+        // Impossibility check: even all 10s can't reach goal
+        // Max achievable with k perfect grades: (sumNow + k*10)/(n+k)
+        // As k→∞ this tends to 10. If goal > 10 it's impossible (shouldn't happen).
+        // Sanity: if gap > 4 (e.g. media 4, goal 9) → "feet on the ground"
+        if (gap >= 4) {
+            goalText = `Obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)}: resta con i piedi per terra! La distanza è troppo grande per essere colmata in tempi ragionevoli.`;
+        } else {
+            // Build scenarios for grade values 7, 8, 9, 10 (all above goal, capped at 10)
+            const gradeValues = [7, 8, 9, 10].filter(g => g > goal);
+            const scenarios = [];
+
+            for (const gradeVal of gradeValues) {
+                // k = ceil((goal*(n+k) - sumNow) / gradeVal)  solved:
+                // k >= (goal*n - sumNow) / (gradeVal - goal)
+                const raw = (goal * n - sumNow) / (gradeVal - goal);
+                const k = Math.ceil(raw);
+                if (k >= 1 && k <= 30 && Number.isFinite(k)) {
+                    scenarios.push({ gradeVal, k });
+                }
+            }
+
+            if (scenarios.length === 0) {
+                // Even 10s not enough in reasonable count — very high goal
+                goalText = `Per raggiungere <b style="color:#1e3a8a">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)} servirebbero troppi voti perfetti. Considera un obiettivo più vicino alla tua media attuale.`;
+            } else {
+                // Pick 2-3 most readable scenarios (prefer fewest votes needed)
+                const picked = scenarios.slice(0, 3);
+                const lines = picked.map(s =>
+                    `<b style="color:#2563eb">${s.k} ${s.k===1?'voto':'voti'} da ${s.gradeVal}</b>`
+                ).join(' &nbsp;·&nbsp; ');
+                goalText = `Per raggiungere <b style="color:#1e3a8a">${goal.toFixed(1)}</b> ti bastano: ${lines}.`;
             }
         }
-        // Fallback: just show grade=10
-        if (!bestDesc) {
-            const k = Math.ceil((goal * n - sumNow) / (10 - goal));
-            bestDesc = `${Math.max(1,k)} vot${k===1?'o':'i'} da <b style="color:#2563eb">10</b>`;
-        }
-        goalText = `Per raggiungere <b style="color:#1e3a8a">${goal.toFixed(1)}</b> ti servono almeno ${bestDesc}.`;
     } else if (media >= goal) {
         goalText = `Hai già raggiunto il tuo obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b>. Continua così!`;
     } else {
