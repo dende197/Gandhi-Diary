@@ -7111,7 +7111,7 @@ function renderProfile() {
     };
 
     return `
-    <div class="view-fullbleed profile-view min-h-screen pb-32" style="padding:0 24px;">
+    <div class="view-fullbleed profile-view min-h-screen pb-32 hide-scrollbar" style="padding:0 24px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
         <!-- ── HEADER ── -->
         <div style="display:flex;align-items:center;gap:14px;padding:max(env(safe-area-inset-top,0px),28px) 0 20px;">
@@ -7284,22 +7284,24 @@ function renderProfile() {
                     </div>
                     <span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;">chevron_right</span>
                 </div>
+
+                <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
+
+                <!-- Logout row — visibile subito senza scorrere -->
+                <div onclick="window.mostraConfermaEsciUI()"
+                    style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;"
+                    ontouchstart="this.style.background='rgba(239,68,68,0.04)'" ontouchend="this.style.background='transparent'">
+                    <div style="display:flex;align-items:center;gap:13px;">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(239,68,68,0.09);
+                                    display:flex;align-items:center;justify-content:center;">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:#dc2626;">logout</span>
+                        </div>
+                        <span style="font-size:15px;font-weight:600;color:#dc2626;">Esci dall'Account</span>
+                    </div>
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#fca5a5;">chevron_right</span>
+                </div>
             </div>
         </div>
-
-        <!-- ── LOGOUT BUTTON ── -->
-        <button onclick="window.mostraConfermaEsciUI()"
-            style="width:100%;height:54px;border-radius:999px;
-                   background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
-                   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-                   display:flex;align-items:center;justify-content:center;gap:9px;
-                   color:#dc2626;font-size:15px;font-weight:700;cursor:pointer;
-                   font-family:Hanken Grotesk,sans-serif;
-                   box-shadow:0 4px 16px -6px rgba(239,68,68,0.15);"
-            ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-            <span class="material-symbols-outlined" style="font-size:20px;">logout</span>
-            Esci dall'Account
-        </button>
 
         <!-- ── MODAL CONFERMA LOGOUT ── -->
         <div id="logout-confirm-modal"
