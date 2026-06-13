@@ -6907,6 +6907,46 @@ window._pkSelectDay = function(iso) {
 // Aggiorna solo #planner-content-area senza toccare header, search bar o carousel.
 // Chiamata dall'oninput della search bar e dai chip filtro materia.
 // ══════════════════════════════════════════════════════════════════════════════
+// ── Builder chirurgico day content (usato da refreshPlannerSearch quando query svuotata) ──
+window._buildPlannerDayContentHTML = function() {
+    const TC = window._plannerTC;
+    if (!TC) return null;
+    const MN = window._plannerMN || ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const dayLabels  = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    const today      = new Date(); today.setHours(0,0,0,0);
+    const todayISO   = getLocalDateString(today);
+    const selDate    = state.selectedDate || todayISO;
+    const allTasks   = (state.tasks || []).filter(function(t){ return t.subject !== 'QUEST'; });
+    const dayTasks   = allTasks.filter(function(t){ return t.due_date === selDate; });
+    const upcoming   = allTasks.filter(function(t){
+        if(t.done) return false;
+        try { var d = parseLocalDate(t.due_date); var diff = (d-today)/86400000; return diff > 0 && diff <= 7; }
+        catch(e){ return false; }
+    }).length;
+    var d    = new Date(selDate + 'T00:00:00');
+    var diff = Math.round((d-today)/86400000);
+    var base = dayLabels[d.getDay()] + ' ' + d.getDate() + ' ' + MN[d.getMonth()];
+    var dayLabel = diff===0 ? 'Oggi · '+base : diff===1 ? 'Domani · '+base : diff===-1 ? 'Ieri · '+base : base;
+    var smart = upcoming > 0 && selDate === todayISO
+        ? '<div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">' +
+          '<div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">' +
+          '<div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;">' +
+          '<span class="material-symbols-outlined" style="font-size:15px;color:white;">lightbulb</span></div>' +
+          '<span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span></div>' +
+          '<p style="font-size:12px;color:#475569;margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
+          '</div>' : '';
+    var empty = '<div style="background:rgba(255,255,255,0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid rgba(241,245,249,0.9);">' +
+        '<span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">event_busy</span>' +
+        '<p style="font-size:14px;font-weight:600;color:#94a3b8;margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
+    return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
+        '<h2 style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">' + dayLabel + '</h2>' +
+        '<span style="font-size:11px;font-weight:700;color:#94a3b8;">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
+        smart + (dayTasks.length ? dayTasks.map(function(t){ return TC(t,false); }).join('') : empty) +
+        '</div>';
+};
+
 window.refreshPlannerSearch = function() {
     const area = document.getElementById('planner-content-area');
     if (!area) {
@@ -7046,156 +7086,264 @@ function formatFullDate(dateInput) {
 }
 
 function renderProfile() {
-    const isGoogleConnected = state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1';
-    
-    // Funzioni helper integrate direttamente per il toggle della UI
-    window.toggleConnectionLocal = function(type) {
-        if(type === 'didup') {
-            showToast('Il sync DidUP viene gestito in automatico dal background.', 'info');
-            return;
+    const isGoogleConnected = !!(state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1');
+    const userName  = escapeHtml(state.user?.name  || 'Utente');
+    const userClass = escapeHtml(normalizeClassUi(state.user?.class || '') || 'Studente');
+
+    // ── Funzioni logout/modal definite a livello modulo (innerHTML non esegue <script>) ──
+    window.mostraConfermaEsciUI = function() {
+        const modal = document.getElementById('logout-confirm-modal');
+        const box   = document.getElementById('logout-confirm-box');
+        if (modal && box) {
+            modal.style.opacity        = '1';
+            modal.style.pointerEvents  = 'all';
+            box.style.transform        = 'scale(1)';
         }
-        if(type === 'calendar') {
-            isGoogleConnected ? window.syncGoogleCalendar() : window.connectGoogle();
+    };
+    window.nascondiConfermaEsciUI = function() {
+        const modal = document.getElementById('logout-confirm-modal');
+        const box   = document.getElementById('logout-confirm-box');
+        if (modal && box) {
+            modal.style.opacity       = '0';
+            modal.style.pointerEvents = 'none';
+            box.style.transform       = 'scale(0.92)';
         }
     };
 
     return `
-    <div class="view profile-view pb-32 flex flex-col gap-6" style="padding: 0 20px;">
-        
-        <header class="flex items-center gap-4 mb-4">
-            <button onclick="navigate('home')" class="w-12 h-12 rounded-2xl liquid-glass flex items-center justify-center text-slate-800 cursor-pointer hover:scale-105 transition-all shadow-sm border border-white/60">
-                <span class="material-symbols-outlined">arrow_back</span>
+    <div class="view-fullbleed profile-view min-h-screen pb-32" style="padding:0 24px;">
+
+        <!-- ── HEADER ── -->
+        <div style="display:flex;align-items:center;gap:14px;padding:max(env(safe-area-inset-top,0px),28px) 0 20px;">
+            <button onclick="navigate('home')"
+                style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.7);
+                       backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+                       border:1px solid rgba(255,255,255,0.6);display:flex;align-items:center;
+                       justify-content:center;cursor:pointer;flex-shrink:0;"
+                ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">arrow_back</span>
             </button>
             <div>
-                <h1 class="text-2xl font-bold text-slate-800">Profilo</h1>
-                <p class="text-sm text-slate-500 font-medium">Gestione account e impostazioni</p>
+                <h1 style="font-size:26px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;margin:0;line-height:1.1;">Profilo</h1>
+                <p style="font-size:13px;color:#94a3b8;font-weight:600;margin:2px 0 0;">Gestione account e impostazioni</p>
             </div>
-        </header>
+        </div>
 
-        <div class="flex flex-col gap-4">
-            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Connessioni</h3>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div onclick="toggleConnectionLocal('didup')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
-                        <span class="material-symbols-outlined text-[24px] font-light">power</span>
-                    </div>
-                    <div class="flex flex-col gap-0.5">
-                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">DIDUP</span>
-                        <span class="text-[13px] font-extrabold text-emerald-600 tracking-wide">COLLEGATO</span>
-                    </div>
-                </div>
-
-                <div onclick="toggleConnectionLocal('calendar')" class="liquid-glass rounded-[32px] p-5 flex flex-col items-center text-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 border border-white/50 bg-white/50">
-                    <div class="w-12 h-12 rounded-2xl ${isGoogleConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'} flex items-center justify-center transition-colors duration-300">
-                        <span class="material-symbols-outlined text-[24px] font-light">calendar_today</span>
-                    </div>
-                    <div class="flex flex-col gap-0.5">
-                        <span class="text-[11px] font-bold text-slate-400 tracking-wider">CALENDAR</span>
-                        <span class="text-[13px] font-extrabold ${isGoogleConnected ? 'text-emerald-600' : 'text-red-500'} tracking-wide">${isGoogleConnected ? 'COLLEGATO' : 'DISCONNESSO'}</span>
-                    </div>
+        <!-- ── CARTA UTENTE ── -->
+        <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+                    border:1px solid rgba(255,255,255,0.55);border-radius:28px;padding:20px;
+                    display:flex;align-items:center;gap:16px;margin-bottom:28px;
+                    box-shadow:0 4px 20px -8px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.8);">
+            <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#4f46e5);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                        box-shadow:0 6px 16px -4px rgba(37,99,235,0.38);">
+                <span style="font-size:22px;font-weight:800;color:white;">
+                    ${(state.user?.name||'U').trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}
+                </span>
+            </div>
+            <div style="min-width:0;">
+                <div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${userName}</div>
+                <div style="font-size:13px;font-weight:600;color:#64748b;margin-top:2px;">${userClass}</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
+                    <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,0.2);"></div>
+                    <span style="font-size:11px;font-weight:700;color:#22c55e;letter-spacing:0.02em;">DidUP Collegato</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Impostazioni Account</h3>
-            
-            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showEditProfileModal()">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-[18px]">edit</span>
-                        </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Modifica Profilo</span>
-                    </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                </div>
-                
-                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
+        <!-- ── SEZIONE: GOOGLE CALENDAR ── -->
+        <div style="margin-bottom:28px;">
+            <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 12px 2px;">Google Calendar</p>
 
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="performArgoSync()">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-[18px]">sync</span>
+            <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+                        border:1px solid rgba(255,255,255,0.55);border-radius:28px;overflow:hidden;
+                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(255,255,255,0.8);">
+
+                ${isGoogleConnected ? `
+                <!-- CONNESSO -->
+                <div style="padding:20px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <div style="width:42px;height:42px;border-radius:14px;background:rgba(34,197,94,0.12);
+                                    border:1px solid rgba(34,197,94,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:#16a34a;font-variation-settings:'FILL' 1;">calendar_month</span>
                         </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Forza Sync DidUp</span>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#0f172a;">Google Calendar</div>
+                            <div style="font-size:12px;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:4px;">
+                                <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                                Account collegato
+                            </div>
+                        </div>
                     </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+                    <p style="font-size:13px;color:#64748b;line-height:1.5;margin:0 0 14px;">
+                        Le tue verifiche e i tuoi compiti vengono sincronizzati automaticamente con Google Calendar.
+                    </p>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="window.syncGoogleCalendar&&syncGoogleCalendar()"
+                            style="flex:1;height:44px;border-radius:14px;border:none;cursor:pointer;
+                                   background:#2563eb;color:white;font-size:13px;font-weight:700;
+                                   font-family:Hanken Grotesk,sans-serif;display:flex;align-items:center;
+                                   justify-content:center;gap:7px;"
+                            ontouchstart="this.style.opacity='0.8'" ontouchend="this.style.opacity='1'">
+                            <span class="material-symbols-outlined" style="font-size:17px;">sync</span>
+                            Sincronizza ora
+                        </button>
+                        <button onclick="if(confirm('Disconnettere Google Calendar?'))window.disconnectGoogle&&disconnectGoogle()"
+                            style="height:44px;padding:0 16px;border-radius:14px;cursor:pointer;
+                                   background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+                                   color:#dc2626;font-size:13px;font-weight:700;font-family:Hanken Grotesk,sans-serif;
+                                   white-space:nowrap;"
+                            ontouchstart="this.style.opacity='0.7'" ontouchend="this.style.opacity='1'">
+                            Disconnetti
+                        </button>
+                    </div>
+                </div>
+                ` : `
+                <!-- NON CONNESSO -->
+                <div style="padding:20px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <div style="width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,0.8);
+                                    border:1px solid rgba(226,232,240,0.9);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:#64748b;">calendar_month</span>
+                        </div>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#0f172a;">Google Calendar</div>
+                            <div style="font-size:12px;font-weight:600;color:#94a3b8;">Non collegato</div>
+                        </div>
+                    </div>
+
+                    <p style="font-size:13px;color:#64748b;line-height:1.55;margin:0 0 14px;">
+                        Collega il tuo Google Calendar per sincronizzare automaticamente verifiche e compiti. Funziona in background senza aprire l'app.
+                    </p>
+
+                    <div style="background:rgba(239,246,255,0.7);border:1px solid rgba(191,219,254,0.5);
+                                border-radius:16px;padding:14px 16px;margin-bottom:16px;">
+                        <div style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;
+                                    letter-spacing:0.06em;margin-bottom:10px;">Come collegare</div>
+                        ${['Tocca "Collega Google Calendar" qui sotto',
+                           'Scegli il tuo account Google scolastico o personale',
+                           'Autorizza Gandhi Diary ad accedere al calendario',
+                           'Le verifiche appariranno in Google Calendar entro pochi secondi'
+                          ].map((s,i)=>`
+                        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${i<3?'9px':'0'};">
+                            <div style="width:20px;height:20px;border-radius:50%;background:#2563eb;color:white;
+                                        font-size:10px;font-weight:800;display:flex;align-items:center;
+                                        justify-content:center;flex-shrink:0;margin-top:1px;">${i+1}</div>
+                            <span style="font-size:13px;color:#374151;line-height:1.45;">${s}</span>
+                        </div>`).join('')}
+                    </div>
+
+                    <button onclick="window.connectGoogle&&connectGoogle()"
+                        style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;
+                               background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;
+                               font-size:15px;font-weight:700;font-family:Hanken Grotesk,sans-serif;
+                               display:flex;align-items:center;justify-content:center;gap:8px;
+                               box-shadow:0 6px 20px -6px rgba(37,99,235,0.45);"
+                        ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                        <span class="material-symbols-outlined" style="font-size:19px;">link</span>
+                        Collega Google Calendar
+                    </button>
+                </div>
+                `}
+            </div>
+        </div>
+
+        <!-- ── SEZIONE: ACCOUNT ── -->
+        <div style="margin-bottom:28px;">
+            <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 12px 2px;">Account</p>
+
+            <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+                        border:1px solid rgba(255,255,255,0.55);border-radius:28px;overflow:hidden;
+                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(255,255,255,0.8);">
+
+                <div onclick="showToast('Notifiche in arrivo prossimamente','info')"
+                    style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;"
+                    ontouchstart="this.style.background='rgba(0,0,0,0.03)'" ontouchend="this.style.background='transparent'">
+                    <div style="display:flex;align-items:center;gap:13px;">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(249,115,22,0.1);
+                                    display:flex;align-items:center;justify-content:center;">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:#ea580c;">notifications</span>
+                        </div>
+                        <span style="font-size:15px;font-weight:600;color:#0f172a;">Notifiche</span>
+                    </div>
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;">chevron_right</span>
+                </div>
+
+                <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
+
+                <div onclick="showToast('Privacy & Sicurezza in arrivo','info')"
+                    style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;"
+                    ontouchstart="this.style.background='rgba(0,0,0,0.03)'" ontouchend="this.style.background='transparent'">
+                    <div style="display:flex;align-items:center;gap:13px;">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(20,184,166,0.1);
+                                    display:flex;align-items:center;justify-content:center;">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:#0d9488;">lock</span>
+                        </div>
+                        <span style="font-size:15px;font-weight:600;color:#0f172a;">Privacy & Sicurezza</span>
+                    </div>
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;">chevron_right</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-4">
-            <h3 class="text-[12px] font-extrabold text-slate-400 tracking-[0.1em] px-1 uppercase">Altro</h3>
-            
-            <div class="bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden flex flex-col p-1.5 gap-0.5 border border-white/60">
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Notifiche in arrivo', 'info')">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-[18px]">notifications</span>
-                        </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Notifiche</span>
-                    </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                </div>
-                
-                <div class="h-[1px] bg-slate-400/15 mx-4"></div>
-
-                <div class="interactive-row flex items-center justify-between p-4 px-5 rounded-[26px] cursor-pointer hover:bg-white/60" onclick="showToast('Impostazioni privacy', 'info')">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-600 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-[18px]">lock</span>
-                        </div>
-                        <span class="text-[15px] font-semibold text-slate-800">Privacy & Security</span>
-                    </div>
-                    <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
-                </div>
-            </div>
-        </div>
-
-        <button onclick="mostraConfermaEsciUI()" class="mt-4 w-full h-14 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-md flex items-center justify-center gap-2 text-red-600 font-bold text-base transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97] shadow-sm">
-            <span class="material-symbols-outlined text-[20px]">logout</span>
-            <span>Esci dall'Account</span>
+        <!-- ── LOGOUT BUTTON ── -->
+        <button onclick="window.mostraConfermaEsciUI()"
+            style="width:100%;height:54px;border-radius:999px;
+                   background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+                   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+                   display:flex;align-items:center;justify-content:center;gap:9px;
+                   color:#dc2626;font-size:15px;font-weight:700;cursor:pointer;
+                   font-family:Hanken Grotesk,sans-serif;
+                   box-shadow:0 4px 16px -6px rgba(239,68,68,0.15);"
+            ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+            <span class="material-symbols-outlined" style="font-size:20px;">logout</span>
+            Esci dall'Account
         </button>
 
-        <div id="logout-modal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 z-[9999]">
-            <div class="bg-white/70 backdrop-blur-xl border border-white rounded-[36px] p-8 max-w-[340px] w-full text-center flex flex-col gap-6 scale-90 transition-transform duration-300 shadow-2xl" id="modal-box">
-                <div class="w-14 h-14 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center mx-auto border border-red-500/20">
-                    <span class="material-symbols-outlined text-[28px]">logout</span>
+        <!-- ── MODAL CONFERMA LOGOUT ── -->
+        <div id="logout-confirm-modal"
+            style="position:fixed;inset:0;background:rgba(15,23,42,0.35);backdrop-filter:blur(12px);
+                   -webkit-backdrop-filter:blur(12px);z-index:9999;
+                   display:flex;align-items:center;justify-content:center;padding:24px;
+                   opacity:0;pointer-events:none;transition:opacity 0.18s ease;">
+            <div id="logout-confirm-box"
+                style="background:rgba(255,255,255,0.85);backdrop-filter:blur(40px);
+                       -webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.7);
+                       border-radius:32px;padding:32px 28px;max-width:340px;width:100%;text-align:center;
+                       box-shadow:0 20px 60px -12px rgba(0,0,0,0.18);
+                       transform:scale(0.92);transition:transform 0.2s cubic-bezier(0.2,0.8,0.2,1);">
+                <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.1);
+                            border:1px solid rgba(239,68,68,0.2);
+                            display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <span class="material-symbols-outlined" style="font-size:26px;color:#dc2626;">logout</span>
                 </div>
-                <div>
-                    <h4 class="text-xl font-bold text-slate-800">Sei sicuro di voler uscire?</h4>
-                    <p class="text-sm text-slate-500 mt-2 leading-relaxed">Dovrai inserire nuovamente le tue credenziali al prossimo accesso.</p>
-                </div>
-                <div class="flex gap-3 mt-2">
-                    <button onclick="nascondiConfermaEsciUI()" class="flex-1 py-3.5 rounded-full bg-slate-100/80 border border-slate-200/50 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors shadow-sm">Annulla</button>
-                    <button onclick="nascondiConfermaEsciUI(); logout();" class="flex-1 py-3.5 rounded-full bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 border border-red-400/50">Esci</button>
+                <h4 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 8px;">Sei sicuro?</h4>
+                <p style="font-size:14px;color:#64748b;line-height:1.5;margin:0 0 24px;">
+                    Dovrai inserire nuovamente le credenziali al prossimo accesso.
+                </p>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="window.nascondiConfermaEsciUI()"
+                        style="flex:1;height:48px;border-radius:999px;border:1px solid rgba(226,232,240,0.8);
+                               background:rgba(241,245,249,0.8);color:#475569;font-size:14px;font-weight:700;
+                               cursor:pointer;font-family:Hanken Grotesk,sans-serif;">
+                        Annulla
+                    </button>
+                    <button onclick="window.nascondiConfermaEsciUI();setTimeout(function(){logout&&logout();},120);"
+                        style="flex:1;height:48px;border-radius:999px;border:none;
+                               background:#dc2626;color:white;font-size:14px;font-weight:700;
+                               cursor:pointer;font-family:Hanken Grotesk,sans-serif;
+                               box-shadow:0 6px 18px -4px rgba(220,38,38,0.38);">
+                        Esci
+                    </button>
                 </div>
             </div>
         </div>
+
     </div>
-    
-    <script>
-        window.mostraConfermaEsciUI = function() {
-            const modal = document.getElementById('logout-modal');
-            const box = document.getElementById('modal-box');
-            if(modal && box) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                box.classList.remove('scale-90');
-            }
-        }
-        window.nascondiConfermaEsciUI = function() {
-            const modal = document.getElementById('logout-modal');
-            const box = document.getElementById('modal-box');
-            if(modal && box) {
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                box.classList.add('scale-90');
-            }
-        }
-    </script>
-    `;;
+    `;
 }
+
 
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
