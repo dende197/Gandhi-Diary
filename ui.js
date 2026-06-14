@@ -972,10 +972,10 @@ function renderNav() {
     // Helper to generate a nav item link with Liquid Glass aesthetics
     const renderNavItem = (view, iconBase, label) => {
         const isActive = currentView === view;
-        const color = isActive ? '#0056D2' : '#8B95A5';
+        const color = isActive ? '#0051C5' : '#8B95A5';
         const fontStyle = isActive ? 'font-bold' : 'font-semibold';
         const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
-        const glowHtml = isActive ? '<div class="active-glow"></div>' : '';
+        const glowHtml = ''; // nessun glow, solo colore
 
         // Sostituito <a> con <button> per evitare problemi di reload
         return `
@@ -1785,8 +1785,8 @@ function renderHome() {
     const userPhoto = state.userPhoto || '';
     const avatarHtml = userPhoto
         ? `<img src="${escapeHtml(userPhoto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid #EEF0F3;" onclick="navigate('profile')" alt="Profilo">`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:#1F2937;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid #EEF0F3;" onclick="navigate('profile')">
-            <span class="material-symbols-outlined" style="font-size:20px;color:white;">person</span>
+        : `<div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(0,81,197,0.18);" onclick="navigate('profile')">
+            <span class="material-symbols-outlined" style="font-size:20px;color:#0051C5;font-variation-settings:'FILL' 1;">person</span>
            </div>`;
 
     // 6. Ritorno dell'HTML strutturale della Dashboard
@@ -1805,10 +1805,13 @@ function renderHome() {
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
                     <div class="widget-card">
-                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
-                            <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#eff4ff 100%);position:relative;overflow:hidden;">
+                            <!-- Blob decorativi identici alla card media in Voti -->
+                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(219,234,254,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(243,232,255,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:start;">
                                 <div>
-                                    <h2 style="color:#0250C5;font-weight:700;font-size:1.15rem;line-height:1.2;">Buongiorno, ${getSafeUserName()}</h2>
+                                    <h2 style="color:#0051C5;font-weight:800;font-size:1.15rem;line-height:1.2;letter-spacing:-0.01em;">Buongiorno, ${getSafeUserName()}</h2>
                                     <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
                                 </div>
                                 <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
@@ -1943,7 +1946,7 @@ function renderHome() {
                 <div style="margin-bottom:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
                         <h3 style="font-size:1.35rem;font-weight:700;color:#1F2937;margin:0;">Domani</h3>
-                        <a href="#" style="color:#0250C5;font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">See all</a>
+                        <a href="#" style="color:#0250C5;font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">Vedi tutti</a>
                     </div>
                     ${htmlDomani}
                 </div>
@@ -7274,8 +7277,8 @@ function renderProfile() {
     const initials  = (state.user?.name || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
 
     return `
-    <div class="view-fullbleed profile-view min-h-screen pb-32 hide-scrollbar"
-         style="padding:0 24px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div class="view-fullbleed profile-view hide-scrollbar"
+         style="padding:0 24px;height:100dvh;overflow-y:scroll;-webkit-overflow-scrolling:touch;">
 
         <!-- ── HEADER ── -->
         <div style="display:flex;align-items:center;gap:14px;
@@ -7488,9 +7491,10 @@ function renderProfile() {
             </div>
         </div>
 
-        <!-- versione app -->
+        <!-- versione app + spacer navbar -->
         <p style="text-align:center;font-size:11px;color:#cbd5e1;font-weight:600;
                   letter-spacing:0.04em;padding-bottom:12px;">Gandhi Diary • v3.3.8</p>
+        <div style="height:100px;"></div><!-- spacer sopra la navbar -->
 
     </div>
     `;
