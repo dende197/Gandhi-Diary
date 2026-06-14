@@ -862,6 +862,16 @@ function getModalContainer() {
     }
     return el;
 }
+
+// ── closeModal fallback (nel caso app-bootstrap.js non l'abbia ancora definita) ──
+if (typeof window.closeModal !== 'function') {
+    window.closeModal = function(e) {
+        if (e && e.target !== e.currentTarget) return; // stopPropagation behaviour
+        var mc = document.getElementById('modal-container');
+        if (mc) mc.innerHTML = '';
+    };
+}
+
 const modalRuntime = { pendingCloseTimeout: null };
 function showModal(html, className = '') {
     const container = getModalContainer();
@@ -1574,8 +1584,16 @@ function renderLogin() {
             <p class="body-lg text-on-surface-variant/60 mb-12 max-w-[280px]">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
             
             <div class="w-full max-w-[320px] flex flex-col gap-4">
-                <button class="btn btn-primary w-full h-14 text-lg" onclick="openArgoLogin()">
-                    <span class="material-symbols-outlined">login</span> Accedi con DidUP
+                <button onclick="window.openArgoLogin()"
+                    style="width:100%;height:56px;border-radius:18px;border:none;cursor:pointer;
+                           background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;
+                           font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;
+                           display:flex;align-items:center;justify-content:center;gap:10px;
+                           box-shadow:0 8px 24px -6px rgba(37,99,235,0.45);"
+                    ontouchstart="this.style.transform='scale(0.97)'"
+                    ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:22px;">login</span>
+                    Accedi con DidUP
                 </button>
                 
                 ${hasSession ? `
@@ -4389,33 +4407,105 @@ function renderRecoveries() {
                    </div>
                </div>`;
 }
-function openArgoLogin() {
-    const modalContainer = getModalContainer();
-    if (!modalContainer) return;
+// openArgoLogin — definita su window così è raggiungibile da onclick inline
+window.openArgoLogin = function openArgoLogin() {
+    var modalContainer = getModalContainer();
+    if (!modalContainer) {
+        console.error('[openArgoLogin] modal container non trovato');
+        return;
+    }
+
     modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)" style="display:flex; align-items:center; justify-content:center; padding:16px;">
-            <div class="modal-content" onclick="event.stopPropagation()" style="width:100%; max-width:380px; margin:0 auto;">
-                <div style="text-align:center; margin-bottom:20px;">
-                    <div style="width:60px; height:60px; background:var(--meeting-gradient); border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; box-shadow:0 8px 18px rgba(13,31,45,0.24); overflow:hidden;">
-                       <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-512.png';" style="width:44px; height:44px; border-radius:10px; object-fit:cover;">
+        <div onclick="(typeof closeModal==='function'?closeModal(event):document.getElementById('modal-container').innerHTML='')"
+             style="position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,0.35);
+                    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+                    display:flex;align-items:flex-end;justify-content:center;padding:0;">
+            <div onclick="event.stopPropagation()"
+                 style="width:100%;max-width:420px;background:rgba(255,255,255,0.82);
+                        backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+                        border:1px solid rgba(255,255,255,0.6);
+                        border-radius:32px 32px 0 0;
+                        padding:20px 24px calc(28px + env(safe-area-inset-bottom,0px));
+                        box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14);">
+
+                <!-- Handle -->
+                <div style="display:flex;justify-content:center;margin-bottom:16px;">
+                    <div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.12);"></div>
+                </div>
+
+                <!-- Logo + titolo -->
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+                    <div style="width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0;
+                                box-shadow:0 4px 12px rgba(0,0,0,0.12);">
+                        <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary"
+                             onerror="this.src='gandhi-diary-icon-512.png'"
+                             style="width:100%;height:100%;object-fit:cover;">
                     </div>
-                    <h2 style="margin:0; color:var(--text-primary);">Collega DidUP</h2>
+                    <div>
+                        <div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Accedi con DidUP</div>
+                        <div style="font-size:12px;color:#94a3b8;font-weight:600;">Inserisci le credenziali del registro</div>
+                    </div>
                 </div>
 
-                <div id="server-status" style="margin-bottom: 20px; font-size: 12px; color: var(--orange); display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    <span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span>
-                    In attesa del server...
+                <!-- Status server -->
+                <div id="server-status"
+                     style="margin-bottom:16px;font-size:12px;color:#f59e0b;
+                            display:flex;align-items:center;justify-content:center;gap:6px;
+                            background:rgba(245,158,11,0.08);border-radius:10px;padding:8px;">
+                    <span style="width:7px;height:7px;background:#f59e0b;border-radius:50%;flex-shrink:0;"></span>
+                    Verifica stato server in corso...
                 </div>
 
-                <input id="argo-school" placeholder="Codice Scuola" value="${localStorage.getItem('argo_school') || ''}">
-                <input id="argo-user" placeholder="Nome Utente">
-                <input type="password" id="argo-pass" placeholder="Password">
-                <button id="login-btn" onclick="performArgoSync()" class="btn-primary" style="width:100%; margin-top:10px; background:var(--meeting-gradient); border:none; color:#fff;">Accedi e Sincronizza</button>
-                <button onclick="closeModal()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; cursor:pointer;">Annulla</button>
+                <!-- Campi input -->
+                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+                    <input id="argo-school" placeholder="Codice Scuola (es. SS19014)" autocomplete="organization"
+                           value="${localStorage.getItem('argo_school') || ''}"
+                           style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
+                                  padding:0 16px;font-size:15px;font-weight:500;
+                                  background:rgba(255,255,255,0.9);color:#0f172a;
+                                  font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
+                    <input id="argo-user" placeholder="Nome Utente" autocomplete="username"
+                           style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
+                                  padding:0 16px;font-size:15px;font-weight:500;
+                                  background:rgba(255,255,255,0.9);color:#0f172a;
+                                  font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
+                    <input id="argo-pass" type="password" placeholder="Password" autocomplete="current-password"
+                           style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
+                                  padding:0 16px;font-size:15px;font-weight:500;
+                                  background:rgba(255,255,255,0.9);color:#0f172a;
+                                  font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
+                </div>
+
+                <!-- Bottone accedi -->
+                <button id="login-btn"
+                        onclick="if(typeof performArgoSync==='function')performArgoSync();else console.error('performArgoSync non definita')"
+                        style="width:100%;height:52px;border-radius:16px;border:none;cursor:pointer;
+                               background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;
+                               font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;
+                               box-shadow:0 6px 20px -6px rgba(37,99,235,0.45);margin-bottom:10px;"
+                        ontouchstart="this.style.opacity='0.85'" ontouchend="this.style.opacity='1'">
+                    Accedi e Sincronizza
+                </button>
+
+                <!-- Annulla -->
+                <button onclick="(typeof closeModal==='function'?closeModal():document.getElementById('modal-container').innerHTML='')"
+                        style="width:100%;height:44px;border-radius:14px;border:none;cursor:pointer;
+                               background:rgba(241,245,249,0.8);color:#64748b;
+                               font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">
+                    Annulla
+                </button>
             </div>
         </div>`;
-    checkServerHealth();
-}
+
+    // checkServerHealth chiamata con guardia — non blocca il modal se non definita
+    try {
+        if (typeof checkServerHealth === 'function') checkServerHealth();
+    } catch(err) {
+        console.warn('[openArgoLogin] checkServerHealth non disponibile:', err.message);
+        var ss = document.getElementById('server-status');
+        if (ss) { ss.style.color = '#22c55e'; ss.innerHTML = '<span style="width:7px;height:7px;background:#22c55e;border-radius:50%;flex-shrink:0;"></span> Server pronto'; }
+    }
+};
 function showProfileSelectionModal(profiles, credentials) {
     console.log("👥 Mostro modale selezione profili:", profiles);
     const container = getModalContainer();
