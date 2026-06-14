@@ -4507,79 +4507,171 @@ window.openArgoLogin = function openArgoLogin() {
     }
 };
 function showProfileSelectionModal(profiles, credentials) {
-    console.log("👥 Mostro modale selezione profili:", profiles);
     const container = getModalContainer();
     if (!container) return;
 
-    container.innerHTML = `
-        <div class="modal-overlay active" style="z-index: 9999; animation: fadeIn 0.3s ease-out; display:flex; align-items:center; justify-content:center; padding:16px;">
-            <div class="modal-content" onclick="event.stopPropagation()" style="width:100%; max-width: 440px; margin:0 auto; padding: 0; overflow: hidden;">
-                <div style="padding: 28px 24px 20px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.06);">
-                    <div style="width: 64px; height: 64px; background: #141414; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; overflow:hidden;">
-                        <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" onerror="this.onerror=null; this.src='gandhi-diary-icon-512.png';" style="width:48px; height:48px; border-radius:12px; object-fit:cover;">
-                    </div>
-                    <h2 style="font-size: 20px; font-weight: 800; margin: 0 0 6px 0; color: var(--text-primary);">Seleziona Profilo</h2>
-                    <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Scegli quale studente visualizzare</p>
-                </div>
+    // ── Costruisce le card profilo ────────────────────────────────────────────
+    const profileCards = profiles.map(function(p) {
+        const initial = escapeHtml((p.name || 'S')[0].toUpperCase());
+        const name    = escapeHtml(p.name  || ('Studente ' + (p.index + 1)));
+        const cls     = escapeHtml(p.class || p.school || '');
+        // Colore avatar basato sull'iniziale
+        const hue     = ((p.name || 'A').charCodeAt(0) * 37) % 360;
+        const avatarBg = 'hsl(' + hue + ',60%,48%)';
 
-                <div class="profiles-list" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;">
-                    ${profiles.map(p => `
-                        <button class="btn-profile"
-                                data-index="${p.index}"
-                                style="background: var(--bg-card); border: 1px solid rgba(0,0,0,0.06); padding: 14px 16px; border-radius: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: left; -webkit-tap-highlight-color: transparent; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                            <div class="profile-avatar" style="width: 44px; height: 44px; background: #141414; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: white; flex-shrink: 0;">
-                                ${escapeHtml((p.name || 'S')[0].toUpperCase())}
-                            </div>
-                            <div style="flex-grow: 1; min-width: 0;">
-                                <div class="profile-name" style="font-weight: 700; font-size: 16px; color: var(--text-primary); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.name || ('Studente ' + (p.index + 1)))}</div>
-                                <div class="profile-class" style="font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.class || p.school || 'Caricamento...')}</div>
-                            </div>
-                            <i class="ph-bold ph-caret-right" style="color: var(--text-dim); flex-shrink: 0;"></i>
-                        </button>
-                    `).join('')}
-                </div>
+        return '<button class="btn-profile" data-index="' + p.index + '" ' +
+            'style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;' +
+            'background:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.7);' +
+            'border-radius:20px;cursor:pointer;text-align:left;' +
+            '-webkit-tap-highlight-color:transparent;' +
+            'box-shadow:0 2px 12px -4px rgba(0,0,0,0.06);' +
+            'transition:transform 0.12s ease;" ' +
+            'ontouchstart="this.style.transform=\'scale(0.97)\'" ' +
+            'ontouchend="this.style.transform=\'scale(1)\'">' +
+                '<div style="width:48px;height:48px;border-radius:16px;flex-shrink:0;' +
+                'background:' + avatarBg + ';' +
+                'display:flex;align-items:center;justify-content:center;' +
+                'font-size:20px;font-weight:800;color:white;' +
+                'box-shadow:0 4px 12px -4px ' + avatarBg + ';">' +
+                    initial +
+                '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                    '<div class="profile-name" style="font-size:15px;font-weight:800;color:#0f172a;' +
+                    'font-family:Hanken Grotesk,sans-serif;letter-spacing:-0.01em;' +
+                    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>' +
+                    (cls ? '<div class="profile-class" style="font-size:12px;font-weight:600;color:#94a3b8;' +
+                    'font-family:Hanken Grotesk,sans-serif;margin-top:2px;">' + cls + '</div>' : '') +
+                '</div>' +
+                '<span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;flex-shrink:0;">chevron_right</span>' +
+            '</button>';
+    }).join('');
 
-                <div style="padding: 12px 16px 16px; border-top: 1px solid rgba(0,0,0,0.06);">
-                    <button onclick="closeModal()" style="width: 100%; height: 44px; border-radius: 14px; border: none; background: rgba(0,0,0,0.05); color: var(--text-secondary); font-weight: 600; cursor: pointer; font-size: 14px;">Annulla</button>
-                </div>
-            </div>
-        </div>`;
+    // ── Overlay + bottom-sheet liquid glass ───────────────────────────────────
+    container.innerHTML =
+        '<div id="psel-overlay" ' +
+        'style="position:fixed;inset:0;z-index:9999;' +
+        'background:rgba(15,23,42,0.28);' +
+        'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);' +
+        'display:flex;align-items:flex-end;justify-content:center;' +
+        'opacity:0;transition:opacity 0.18s ease;">' +
 
-    // Event Delegation
-    const list = container.querySelector('.profiles-list');
-    list.addEventListener('click', async (ev) => {
-        const btn = ev.target.closest('.btn-profile');
+            '<div id="psel-card" ' +
+            'style="width:100%;max-width:480px;' +
+            'background:rgba(248,250,252,0.88);' +
+            'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);' +
+            'border:1px solid rgba(255,255,255,0.65);' +
+            'border-radius:32px 32px 0 0;' +
+            'padding:0 20px calc(24px + env(safe-area-inset-bottom,0px)) 20px;' +
+            'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.9);' +
+            'transform:translateY(32px);' +
+            'transition:transform 0.24s cubic-bezier(0.2,0.8,0.2,1);">' +
+
+                // drag handle
+                '<div style="display:flex;justify-content:center;padding:14px 0 10px;">' +
+                    '<div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.10);"></div>' +
+                '</div>' +
+
+                // header
+                '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">' +
+                    '<div style="width:46px;height:46px;border-radius:14px;overflow:hidden;flex-shrink:0;' +
+                    'box-shadow:0 4px 12px rgba(0,0,0,0.10);">' +
+                        '<img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" ' +
+                        'onerror="this.src=\'gandhi-diary-icon-512.png\'" ' +
+                        'style="width:100%;height:100%;object-fit:cover;">' +
+                    '</div>' +
+                    '<div>' +
+                        '<div style="font-size:18px;font-weight:800;color:#0f172a;' +
+                        'letter-spacing:-0.02em;font-family:Hanken Grotesk,sans-serif;">' +
+                            'Seleziona Profilo' +
+                        '</div>' +
+                        '<div style="font-size:12px;font-weight:600;color:#94a3b8;' +
+                        'font-family:Hanken Grotesk,sans-serif;margin-top:2px;">' +
+                            'Scegli quale studente visualizzare' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+
+                // lista profili
+                '<div class="profiles-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">' +
+                    profileCards +
+                '</div>' +
+
+                // annulla
+                '<button onclick="var mc=document.getElementById(\'modal-container\');if(typeof closeModal===\'function\')closeModal();else if(mc)mc.innerHTML=\'\';" ' +
+                'style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;' +
+                'background:rgba(241,245,249,0.9);color:#64748b;' +
+                'font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">' +
+                    'Annulla' +
+                '</button>' +
+
+            '</div>' +
+        '</div>';
+
+    // Animazione entrata
+    requestAnimationFrame(function() {
+        var ov = document.getElementById('psel-overlay');
+        var cd = document.getElementById('psel-card');
+        if (ov) ov.style.opacity = '1';
+        if (cd) cd.style.transform = 'translateY(0)';
+    });
+
+    // Chiudi cliccando backdrop
+    var overlay = document.getElementById('psel-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(function() { container.innerHTML = ''; }, 180);
+            }
+        });
+    }
+
+    // ── Click su profilo ──────────────────────────────────────────────────────
+    var list = container.querySelector('.profiles-list');
+    if (!list) return;
+
+    list.addEventListener('click', async function(ev) {
+        var btn = ev.target.closest('.btn-profile');
         if (!btn) return;
 
-        // Get selected profile name for the loading screen
-        const selectedName = btn.querySelector('.profile-name')?.textContent || 'Studente';
+        var selectedName = btn.querySelector('.profile-name') ?
+            btn.querySelector('.profile-name').textContent : 'Studente';
 
-        // Replace entire modal content with a large gradient spinner
-        const modalContent = container.querySelector('.modal-content');
-        if (modalContent) {
-            modalContent.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-            modalContent.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; gap: 24px; text-align: center;">
-                    <div style="width: 56px; height: 56px; border-radius: 50%; display: inline-block;
-                        animation: profile-loader-spin 1s linear infinite;
-                        background: conic-gradient(#C6F2DF, #1A6B8A, #0D1F2D, transparent 90%);
-                        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
-                        mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));">
-                    </div>
-                    <div>
-                        <div style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Caricamento profilo</div>
-                        <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(selectedName)}</div>
-                    </div>
-                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;">Sincronizzazione in corso…</div>
-                </div>
-            `;
+        // Loading screen dentro la card
+        var card = document.getElementById('psel-card');
+        if (card) {
+            card.innerHTML =
+                '<div style="display:flex;flex-direction:column;align-items:center;' +
+                'justify-content:center;padding:52px 24px;gap:20px;text-align:center;">' +
+                    '<div style="width:52px;height:52px;border-radius:50%;' +
+                    'background:conic-gradient(from 0deg,#2563eb 0%,#4f46e5 50%,rgba(191,219,254,0.3) 100%);' +
+                    '-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));' +
+                    'mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));' +
+                    'animation:spin 0.85s cubic-bezier(.4,0,.2,1) infinite;"></div>' +
+                    '<div>' +
+                        '<div style="font-size:16px;font-weight:800;color:#0f172a;' +
+                        'font-family:Hanken Grotesk,sans-serif;letter-spacing:-0.01em;margin-bottom:4px;">' +
+                            'Caricamento profilo' +
+                        '</div>' +
+                        '<div style="font-size:13px;color:#64748b;font-family:Hanken Grotesk,sans-serif;">' +
+                            escapeHtml(selectedName) +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="font-size:11px;font-weight:700;color:#cbd5e1;' +
+                    'text-transform:uppercase;letter-spacing:0.08em;' +
+                    'font-family:Hanken Grotesk,sans-serif;">' +
+                        'Sincronizzazione in corso…' +
+                    '</div>' +
+                '</div>';
         }
 
         await selectProfile(parseInt(btn.dataset.index, 10), credentials);
     }, { once: true });
 
-    // Risolvi i nomi veri in background
-    resolveProfileNamesAsync(profiles, credentials, container);
+    // Risolvi nomi veri in background
+    if (typeof resolveProfileNamesAsync === 'function') {
+        resolveProfileNamesAsync(profiles, credentials, container);
+    }
 }
 function setLoginBtnText(txt) {
     const btn = document.getElementById('login-btn') ||
