@@ -1837,56 +1837,50 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#fff5f5 0%,#fecaca 100%) !important;position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(254,202,202,0.50);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
-                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(252,165,165,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
-                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(254,202,202,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
-                            <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(253,164,175,0.40);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#fff1f2 100%);position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(254,202,202,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(243,182,182,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:start;">
-                                <h2 style="font-weight:700;font-size:1.15rem;color:#BD1118;letter-spacing:-0.01em;">Assenze</h2>
-                                <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
-                                    <i data-lucide="user-x" style="width:20px;height:20px;"></i>
+                                <div style="display:flex;justify-content:space-between;align-items:start;">
+                                    <h2 style="font-weight:700;font-size:1.15rem;color:#BD1118;letter-spacing:-0.01em;">Assenze</h2>
+                                    <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
+                                        <i data-lucide="user-x" style="width:20px;height:20px;"></i>
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
+                                    <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
+                                        ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
+                                    </div>
+                                    <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
+                                        <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
+                                            <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                            <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
+                                        </svg>
+                                        <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;gap:10px;">
+                                    <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                        <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
+                                        <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
+                                    </div>
+                                    <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                        <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
+                                        <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
+                                    </div>
+                                    <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
+                                        <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
+                                        <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
-                                <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
-                                    ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
-                                </div>
-
-                                <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
-                                    <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
-                                        <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                        <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
-                                    </svg>
-                                    <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
-                                </div>
-                            </div>
-
-                            <div style="display:flex;justify-content:space-between;gap:10px;">
-                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                    <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
-                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
-                                </div>
-                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
-                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
-                                </div>
-                                <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                    <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
-                                    <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
-                                </div>
-                            </div>
-                            </div><!-- /inner content -->
-                            </div><!-- /z-index wrapper completo assenze -->
                         </div>
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#f0fdf4 0%,#bbf7d0 100%);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(187,247,208,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
-                            <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(134,239,172,0.40);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(187,247,208,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(134,239,172,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
@@ -6848,9 +6842,6 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             gap:0;
             margin: 0 0 -20px 0;
             padding:0;
-            will-change:transform;
-            transform:translateZ(0);
-            -webkit-transform:translateZ(0);
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
         </div>
