@@ -972,7 +972,8 @@ function renderNav() {
     // Helper to generate a nav item link with Liquid Glass aesthetics
     const renderNavItem = (view, iconBase, label) => {
         const isActive = currentView === view;
-        const color = isActive ? '#0051C5' : '#8B95A5';
+        const color    = isActive ? '#0051C5' : '#8B95A5';
+        const opacity  = isActive ? '1' : '0.55';
         const fontStyle = isActive ? 'font-bold' : 'font-semibold';
         const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
         const glowHtml = ''; // nessun glow, solo colore
@@ -981,9 +982,9 @@ function renderNav() {
         return `
         <button onclick="navigate('${view}')" 
            class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-colors bg-transparent border-none outline-none cursor-pointer p-0"
-           style="color: ${color}; -webkit-tap-highlight-color: transparent;"
-           onmouseenter="if(!${isActive}) this.style.color='#475569'"
-           onmouseleave="if(!${isActive}) this.style.color='#8B95A5'">
+           style="color:${color};opacity:${opacity};-webkit-tap-highlight-color:transparent;"
+           onmouseenter="if(!${isActive}){this.style.color='#475569';this.style.opacity='0.8';}"
+           onmouseleave="if(!${isActive}){this.style.color='#8B95A5';this.style.opacity='0.55';}">
             ${glowHtml}
             <i class="${iconClass} text-[28px]"></i>
             <span class="text-[13px] ${fontStyle} tracking-wide">${label}</span>
@@ -1838,8 +1839,7 @@ function renderHome() {
 
                     <div class="widget-card">
                         <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#fff1f2 100%);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(254,202,202,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
-                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(243,182,182,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(254,202,202,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                                 <div style="display:flex;justify-content:space-between;align-items:start;">
                                     <h2 style="font-weight:700;font-size:1.15rem;color:#BD1118;letter-spacing:-0.01em;">Assenze</h2>
@@ -1879,8 +1879,7 @@ function renderHome() {
 
                     <div class="widget-card">
                         <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(187,247,208,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
-                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(134,239,172,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(167,243,208,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
