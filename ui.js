@@ -1837,9 +1837,14 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
+                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#fff5f5 0%,#fecaca 100%) !important;position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(254,202,202,0.50);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(252,165,165,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(254,202,202,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                            <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(253,164,175,0.40);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                            <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             <div style="display:flex;justify-content:space-between;align-items:start;">
-                                <h2 style="font-weight:600;font-size:1.15rem;color:#BD1118;">Assenze</h2>
+                                <h2 style="font-weight:700;font-size:1.15rem;color:#BD1118;letter-spacing:-0.01em;">Assenze</h2>
                                 <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
                                     <i data-lucide="user-x" style="width:20px;height:20px;"></i>
                                 </div>
@@ -1873,11 +1878,16 @@ function renderHome() {
                                     <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
                                 </div>
                             </div>
+                            </div><!-- /inner content -->
+                            </div><!-- /z-index wrapper completo assenze -->
                         </div>
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;">
+                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#f0fdf4 0%,#bbf7d0 100%);position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(187,247,208,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                            <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(134,239,172,0.40);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                            <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
                                     <div style="display:flex;justify-content:space-between;align-items:start;">
@@ -1930,6 +1940,7 @@ function renderHome() {
                                     </div>
                                 </div>
                             `}
+                            </div><!-- /z-index wrapper verifiche -->
                         </div>
                     </div>
                 </div>
@@ -1946,7 +1957,7 @@ function renderHome() {
                 <div style="margin-bottom:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
                         <h3 style="font-size:1.35rem;font-weight:700;color:#1F2937;margin:0;">Domani</h3>
-                        <a href="#" style="color:#0250C5;font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">Vedi tutti</a>
+                        <a href="#" style="color:#0250C5;font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">See all</a>
                     </div>
                     ${htmlDomani}
                 </div>
@@ -6759,7 +6770,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day pills) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;transform:translateZ(0);-webkit-transform:translateZ(0);">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 return `<div onclick="plannerSelectDay('${d.iso}')" style="
@@ -6768,9 +6779,12 @@ function renderPlanner() {
                     cursor:pointer;
                     background:${isSel ? '#2563eb' : 'white'};
                     border:${isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)'};
-                    box-shadow:${isSel ? '0 8px 16px -4px rgba(37,99,235,0.45)' : '0 2px 6px rgba(0,0,0,0.04)'};
-                    transform:${isSel ? 'scale(1.04)' : 'scale(1)'};
-                    transition:all 0.15s cubic-bezier(0.2,0.8,0.2,1);
+                    box-shadow:${isSel ? 'inset 0 1px 1px rgba(255,255,255,0.2),0 0 0 2.5px rgba(37,99,235,0.18)' : 'none'};
+                    transform:translateZ(0);
+                    will-change:background,box-shadow;
+                    -webkit-backface-visibility:hidden;
+                    backface-visibility:hidden;
+                    transition:background 0.13s ease,box-shadow 0.13s ease,border-color 0.13s ease;
                     -webkit-tap-highlight-color:transparent;
                 ">
                     <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.75)':'#94a3b8'};">${d.label}</span>
@@ -6834,6 +6848,9 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             gap:0;
             margin: 0 0 -20px 0;
             padding:0;
+            will-change:transform;
+            transform:translateZ(0);
+            -webkit-transform:translateZ(0);
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
         </div>
@@ -7223,18 +7240,27 @@ window.plannerSelectDay = function(iso) {
         const elIso = m ? m[1] : null;
         if (!elIso) return;
         const isSel = elIso === iso;
-        el.style.background = isSel ? '#2563eb' : 'white';
-        el.style.border     = isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)';
-        el.style.boxShadow  = isSel ? '0 8px 16px -4px rgba(37,99,235,0.45)' : '0 2px 6px rgba(0,0,0,0.04)';
-        el.style.filter     = 'none'; // Rimuoviamo il drop-shadow difettoso
-        el.style.transform  = isSel ? 'scale(1.04)' : 'scale(1)';
+        el.style.background  = isSel ? '#2563eb' : 'white';
+        el.style.border      = isSel ? '1.5px solid rgba(241,245,249,0.9)' : '1.5px solid rgba(241,245,249,0.9)';
+        el.style.boxShadow   = isSel
+            ? 'inset 0 1px 1px rgba(255,255,255,0.2),0 0 0 2.5px rgba(37,99,235,0.18)'
+            : 'none';
+        el.style.transform   = 'translateZ(0)'; // fisso, no scale → zero layer thrashing
+        el.style.filter      = '';              // mai cambiare → evita flash GPU WebKit
         const spans = el.querySelectorAll('span');
         if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
         if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
     });
-    // Aggiorna il contenuto del giorno selezionato
-    state._forceRender = true;
-    scheduleRender(0);
+    // Swap istantaneo: niente opacity, niente scale → zero flash/nero WebKit
+    var _area = document.getElementById('planner-content-area');
+    var _dayHtml = window._buildPlannerDayContentHTML && window._buildPlannerDayContentHTML();
+    if (_area && _dayHtml) {
+        _area.innerHTML = _dayHtml; // sostituzione diretta, nessuna animazione intermedia
+    } else {
+        // fallback solo se builder non disponibile
+        state._forceRender = true;
+        scheduleRender(60);
+    }
 };
 
 window.handlePlannerCarouselScroll = function(el) {
