@@ -359,7 +359,7 @@ window.switchPlannerMode = function (mode) {
     document.querySelectorAll('[data-planner-mode]').forEach(btn => {
         const isActive = btn.dataset.plannerMode === mode;
         btn.style.background = isActive ? 'rgba(139,92,246,0.25)' : 'transparent';
-        btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.6)';
+        btn.style.color = isActive ? 'white' : 'rgba(var(--glass-rgb),0.6)';
         btn.style.border = isActive ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent';
     });
     const list = document.getElementById('weekly-agenda-list');
@@ -925,7 +925,7 @@ function showModal(html, className = '') {
         modalRuntime.pendingCloseTimeout = null;
     }
     container.innerHTML = `
-            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(20px);box-sizing:border-box;transition: opacity 0.3s ease;">
+            <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99990;background:rgba(var(--glass-rgb),0.2);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(20px);box-sizing:border-box;transition: opacity 0.3s ease;">
                 <div class="modal-content liquid-glass rounded-[40px] deep-shadow ${className}" onclick="event.stopPropagation()" style="position:relative;z-index:99991;max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;width:100%;max-width:640px;padding:0;animation: modalAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);">
                     ${html}
                 </div>
@@ -1102,7 +1102,7 @@ function updatePlanTaskUI(taskId, isPlanned) {
             checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>';
         } else {
             checkbox.style.background = 'transparent';
-            checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
+            checkbox.style.borderColor = 'rgba(var(--glass-rgb),0.2)';
             checkbox.innerHTML = '';
         }
 
@@ -1116,8 +1116,8 @@ function updatePlanTaskUI(taskId, isPlanned) {
 
     if (container) {
         container.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-        container.style.borderLeftColor = isPlanned ? 'var(--green, #30D158)' : 'rgba(255,255,255,0.05)';
-        container.style.background = isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)';
+        container.style.borderLeftColor = isPlanned ? 'var(--green, #30D158)' : 'rgba(var(--glass-rgb),0.05)';
+        container.style.background = isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(var(--glass-rgb),0.03)';
     }
 }
 function updatePlannerCounter() {
@@ -1836,7 +1836,7 @@ function renderHome() {
 
     // 6. Ritorno dell'HTML strutturale della Dashboard
     return `
-    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#1F2937] antialiased overflow-y-auto hide-scrollbar">
+    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[var(--on-surface)] antialiased overflow-y-auto hide-scrollbar">
 
         <div style="padding:0;">
 
@@ -1850,7 +1850,7 @@ function renderHome() {
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
                     <div class="widget-card">
-                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#eff4ff 100%);position:relative;overflow:hidden;">
+                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--info-container) 100%);position:relative;overflow:hidden;">
                             <!-- Blob decorativi identici alla card media in Voti -->
                             <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(219,234,254,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
                             <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(243,232,255,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
@@ -1882,7 +1882,7 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#fff1f2 100%);position:relative;overflow:hidden;">
+                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--error-container) 100%);position:relative;overflow:hidden;">
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(254,202,202,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                                 <div style="display:flex;justify-content:space-between;align-items:start;">
@@ -1922,7 +1922,7 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);position:relative;overflow:hidden;">
+                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--success-container) 100%);position:relative;overflow:hidden;">
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(167,243,208,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
@@ -2347,7 +2347,7 @@ function initGradesCharts() {
     votiData.sort((a, b) => parseArgoDate(a.data || a.date) - parseArgoDate(b.data || b.date));
 
     if (votiData.length < 2) {
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillStyle = 'rgba(var(--glass-rgb),0.3)';
         ctx.font = '700 13px Rubik';
         ctx.textAlign = 'center';
         ctx.fillText("Trend disponibile dopo 2 voti", W / 2, H / 2);
@@ -3224,7 +3224,7 @@ function renderAvatar(displayName, size = 44) {
     const bg = `hsl(${hue}, 60%, 45%)`;
 
     return `
-            <div style="width:${size}px; height:${size}px; background:${bg}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:${size * 0.4}px; border:2px solid rgba(255,255,255,0.15); flex-shrink:0; pointer-events:none;">
+            <div style="width:${size}px; height:${size}px; background:${bg}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:${size * 0.4}px; border:2px solid rgba(var(--glass-rgb),0.15); flex-shrink:0; pointer-events:none;">
                 ${initials}
             </div>`;
 }
@@ -3280,7 +3280,7 @@ function showProfileActions() {
                         <span style="font-size: 14px; font-weight: 700; color: var(--text-primary);">Configurazione</span>
                     </button>
 
-                    <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 8px 4px;"></div>
+                    <div style="height: 1px; background: rgba(var(--glass-rgb),0.05); margin: 8px 4px;"></div>
 
                     <button onclick="logout()" style="width: 100%; border-radius: 12px; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: rgba(239, 68, 68, 0.05); border: none; cursor: pointer; color: var(--red);">
                         <i class="ph-bold ph-sign-out" style="font-size: 20px;"></i>
@@ -3301,7 +3301,7 @@ function renderSettings() {
 
                 <div class="glass-panel" style="padding: 0; overflow: hidden;">
                     <!-- Profile Section -->
-                    <div style="padding: 20px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="padding: 20px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(var(--glass-rgb),0.05);">
                          ${renderAvatar(state.user.name, 56)}
                         <div>
                             <div style="font-size: 17px; font-weight: 600; color: var(--text-primary);">${escapeHtml(state.user.name)}</div>
@@ -3998,7 +3998,7 @@ function showVotiView() {
     modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()" style="max-height:85vh; overflow-y:auto; padding: 0;">
-                <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
+                <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(var(--glass-rgb),0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Voti DidUP</h2>
                     <button onclick="closeModal()" style="background:none; border:none; color:var(--blue); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
                 </div>
@@ -4146,7 +4146,7 @@ function showBachecaModal() {
     modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)">
             <div class="modal-content" style="max-height:85vh; overflow-y:auto; padding: 0;">
-                <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
+                <div style="position: sticky; top: 0; background:#1c1c1e; padding: 20px; border-bottom:1px solid rgba(var(--glass-rgb),0.1); display:flex; justify-content:space-between; align-items:center; z-index: 10;">
                     <h2 style="margin:0;">Bacheca & Avvisi</h2>
                     <button onclick="closeModal()" style="background:none; border:none; color:var(--orange); font-weight:700; font-size:16px; cursor:pointer;">Chiudi</button>
                 </div>
@@ -4271,7 +4271,7 @@ function renderFocusTimer() {
                     <button onclick="togglePomodoro()" style="padding:12px 28px; border-radius:14px; border:none; background:${pomodoroState.running ? 'var(--red)' : modeColor}; color:white; font-weight:800; font-size:15px; cursor:pointer; min-width:120px;">
                         ${pomodoroState.running ? '⏸ Pausa' : '▶ Avvia'}
                     </button>
-                    <button onclick="resetPomodoro()" style="padding:12px 20px; border-radius:14px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:white; font-weight:700; font-size:14px; cursor:pointer;">
+                    <button onclick="resetPomodoro()" style="padding:12px 20px; border-radius:14px; border:1px solid rgba(var(--glass-rgb),0.15); background:rgba(var(--glass-rgb),0.06); color:white; font-weight:700; font-size:14px; cursor:pointer;">
                         ↺ Reset
                     </button>
                 </div>
@@ -4324,15 +4324,15 @@ function showAddBacklogModal() {
 
                     <div style="display:flex; flex-direction:column; gap:16px;">
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Materia</label>
-                            <select id="backlogSubject" style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none; appearance:none; -webkit-appearance:none;">
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(var(--glass-rgb),0.5); text-transform:uppercase; margin-bottom:6px;">Materia</label>
+                            <select id="backlogSubject" style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(var(--glass-rgb),0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none; appearance:none; -webkit-appearance:none;">
                                 ${subjects.map(s => `<option value="${s}" style="background:#1a1a2e;">${s}</option>`).join('')}
                            </select>
                        </div>
 
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Cosa devi recuperare?</label>
-                            <input type="text" id="backlogTopic" placeholder="Es: Equazioni di 2° grado, Canto V Inferno..." style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
+                            <label style="display:block; font-size:11px; font-weight:700; color:rgba(var(--glass-rgb),0.5); text-transform:uppercase; margin-bottom:6px;">Cosa devi recuperare?</label>
+                            <input type="text" id="backlogTopic" placeholder="Es: Equazioni di 2° grado, Canto V Inferno..." style="width:100%; height:46px; background:rgba(0,0,0,0.3); border:1px solid rgba(var(--glass-rgb),0.15); border-radius:12px; color:white; padding:0 12px; font-size:14px; outline:none;">
                        </div>
 
                         <button onclick="submitBacklogForm()" style="width:100%; height:50px; background:var(--blue); color:white; border:none; border-radius:14px; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -4352,7 +4352,7 @@ function renderVerifiche() {
                     <div class="view">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Verifiche</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                            <div style="width: 64px; height: 64px; background: rgba(var(--glass-rgb),0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
                                 <i class="ph-bold ph-exam" style="font-size: 32px; color: var(--text-secondary);"></i>
                            </div>
                             <h3 style="font-size: 18px; color: var(--text-primary); margin-bottom: 8px;">Nessuna verifica</h3>
@@ -4386,7 +4386,7 @@ function renderVerifiche() {
 
         return `
                             <div class="glass-panel" style="padding: 20px; display: flex; align-items: flex-start; gap: 16px;">
-                                <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(255,255,255,0.05);">
+                                <div style="min-width: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(var(--glass-rgb),0.05); border-radius: 12px; padding: 10px 0; border: 1px solid rgba(var(--glass-rgb),0.05);">
                                     <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">${monthName}</span>
                                     <span style="font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1.1;">${dayNum}</span>
                                </div>
@@ -4419,7 +4419,7 @@ function renderRecoveries() {
                     <div class="view">
                         <h1 style="font-size: 28px; color: var(--text-primary); margin-bottom: 24px;">Arretrati</h1>
                         <div class="glass-panel" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                            <div style="width: 64px; height: 64px; background: rgba(var(--glass-rgb),0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
                                 <i class="ph-bold ph-check-fat" style="font-size: 32px; color: var(--green);"></i>
                            </div>
                             <h3 style="font-size: 18px; color: var(--text-primary); margin-bottom: 8px;">Tutto in ordine!</h3>
@@ -4450,7 +4450,7 @@ function renderRecoveries() {
                                     <div style="font-size: 11px; font-weight: 700; color: ${getSubjectColor(b.subject)}; text-transform: uppercase; margin-bottom: 4px;">${escapeHtml(b.subject)}</div>
                                     <div style="font-size: 15px; font-weight: 500; color: var(--text-primary); line-height: 1.3;">${escapeHtml(b.topic)}</div>
                                </div>
-                                <button onclick="removeBacklog(${index})" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                <button onclick="removeBacklog(${index})" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(var(--glass-rgb),0.1); background: rgba(var(--glass-rgb),0.05); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
                                     <i class="ph-bold ph-check"></i>
                                </button>
                            </div>
@@ -4472,9 +4472,9 @@ window.openArgoLogin = function openArgoLogin() {
                     backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
                     display:flex;align-items:flex-end;justify-content:center;padding:0;">
             <div onclick="event.stopPropagation()"
-                 style="width:100%;max-width:420px;background:rgba(255,255,255,0.82);
+                 style="width:100%;max-width:420px;background:rgba(var(--glass-rgb),0.82);
                         backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
-                        border:1px solid rgba(255,255,255,0.6);
+                        border:1px solid rgba(var(--glass-rgb),0.6);
                         border-radius:32px 32px 0 0;
                         padding:20px 24px calc(28px + env(safe-area-inset-bottom,0px));
                         box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14);">
@@ -4513,17 +4513,17 @@ window.openArgoLogin = function openArgoLogin() {
                            value="${localStorage.getItem('argo_school') || ''}"
                            style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
                                   padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(255,255,255,0.9);color:var(--on-surface);
+                                  background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                     <input id="argo-user" placeholder="Nome Utente" autocomplete="username"
                            style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
                                   padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(255,255,255,0.9);color:var(--on-surface);
+                                  background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                     <input id="argo-pass" type="password" placeholder="Password" autocomplete="current-password"
                            style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
                                   padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(255,255,255,0.9);color:var(--on-surface);
+                                  background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                 </div>
 
@@ -4572,7 +4572,7 @@ function showProfileSelectionModal(profiles, credentials) {
 
         return '<button class="btn-profile" data-index="' + p.index + '" ' +
             'style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;' +
-            'background:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.7);' +
+            'background:rgba(var(--glass-rgb),0.7);border:1px solid rgba(var(--glass-rgb),0.7);' +
             'border-radius:20px;cursor:pointer;text-align:left;' +
             '-webkit-tap-highlight-color:transparent;' +
             'box-shadow:0 2px 12px -4px rgba(0,0,0,0.06);' +
@@ -4610,10 +4610,10 @@ function showProfileSelectionModal(profiles, credentials) {
             'style="width:100%;max-width:480px;' +
             'background:rgba(248,250,252,0.88);' +
             'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);' +
-            'border:1px solid rgba(255,255,255,0.65);' +
+            'border:1px solid rgba(var(--glass-rgb),0.65);' +
             'border-radius:32px 32px 0 0;' +
             'padding:0 20px calc(24px + env(safe-area-inset-bottom,0px)) 20px;' +
-            'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(255,255,255,0.9);' +
+            'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(var(--glass-rgb),0.9);' +
             'transform:translateY(32px);' +
             'transition:transform 0.24s cubic-bezier(0.2,0.8,0.2,1);">' +
 
@@ -4824,7 +4824,7 @@ function showQuickAddTaskModal() {
     const pendingTasks = allTasks.filter(t=>!t.done && (t.due_date||'')>=getLocalDateString());
     const pendingSubjs = [...new Set(pendingTasks.map(t=>t.subject||t.materia||'Generale'))].sort();
 
-    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);background:rgba(255,255,255,0.9);color:var(--on-surface);font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
+    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
     const LBL = 'font-size:11px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;';
 
     // Full-screen-style bottom sheet
@@ -4837,7 +4837,7 @@ function showQuickAddTaskModal() {
             <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Aggiungi</h2>
             <p style="margin:2px 0 0;font-size:12px;color:var(--outline);font-weight:500;">Compito, verifica o impegno</p>
         </div>
-        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.9);border:1.5px solid rgba(226,232,240,0.7);color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(var(--glass-rgb),0.9);border:1.5px solid rgba(226,232,240,0.7);color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
         </button>
     </div>
@@ -5112,7 +5112,7 @@ function showCompetencyInputModal() {
 
                     <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
                         ${subjectsList.map(s => `
-                            <div style="padding: 18px; border-radius: 16px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08);">
+                            <div style="padding: 18px; border-radius: 16px; background: rgba(var(--glass-rgb),0.035); border: 1px solid rgba(var(--glass-rgb),0.08);">
                                 <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px; cursor: pointer;" onclick="const chk=this.querySelector('input'); chk.checked=!chk.checked">
                                     <input type="checkbox" value="${escapeHtml(s.name)}" class="competency-check" id="comp-${s.name.replace(/[^a-zA-Z0-9]/g, '_')}" ${s.media < 6.5 || s.savedLevel < 3 ? 'checked' : ''} style="accent-color: var(--accent); width: 22px; height: 22px; cursor: pointer;" onclick="event.stopPropagation()" />
                                     <span style="background: ${s.color}; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;"></span>
@@ -5162,8 +5162,8 @@ function showOrganizeStudyModal() {
         const isPlanned = plannedIds.includes(t.id);
         const subjectColor = getSubjectColor(t.subject);
         return `
-                                <div class="glass-list-item" style="padding: 18px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-left: 4px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.05)'}; background: ${isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255,255,255,0.03)'};" onclick="togglePlanTask('${t.id}')">
-                                    <div class="plan-checkbox ${isPlanned ? 'checked' : ''}" style="width: 28px; height: 28px; border-radius: 8px; background: ${isPlanned ? 'var(--green)' : 'transparent'}; border: 2px solid ${isPlanned ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <div class="glass-list-item" style="padding: 18px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-left: 4px solid ${isPlanned ? 'var(--green)' : 'rgba(var(--glass-rgb),0.05)'}; background: ${isPlanned ? 'rgba(48, 209, 88, 0.08)' : 'rgba(var(--glass-rgb),0.03)'};" onclick="togglePlanTask('${t.id}')">
+                                    <div class="plan-checkbox ${isPlanned ? 'checked' : ''}" style="width: 28px; height: 28px; border-radius: 8px; background: ${isPlanned ? 'var(--green)' : 'transparent'}; border: 2px solid ${isPlanned ? 'var(--green)' : 'rgba(var(--glass-rgb),0.2)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         ${isPlanned ? '<i class="ph-bold ph-check" style="font-size: 16px; color: black;"></i>' : ''}
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
@@ -5240,8 +5240,8 @@ function showTasksBySubjectModal() {
                                     </h3>
                                     <div style="display: flex; flex-direction: column; gap: 10px;">
                                         ${subjectTasks.map(t => `
-                                            <div class="glass-list-item" style="padding: 12px; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03);">
-                                                <div class="task-checkbox ${t.done ? 'checked' : ''}" style="width: 18px; height: 18px; border: 2px solid ${t.done ? 'var(--green)' : 'rgba(255,255,255,0.2)'}; border-radius: 5px; background: ${t.done ? 'var(--green)' : 'transparent'}; display: flex; align-items: center; justify-content: center;">
+                                            <div class="glass-list-item" style="padding: 12px; display: flex; align-items: center; gap: 12px; background: rgba(var(--glass-rgb),0.03);">
+                                                <div class="task-checkbox ${t.done ? 'checked' : ''}" style="width: 18px; height: 18px; border: 2px solid ${t.done ? 'var(--green)' : 'rgba(var(--glass-rgb),0.2)'}; border-radius: 5px; background: ${t.done ? 'var(--green)' : 'transparent'}; display: flex; align-items: center; justify-content: center;">
                                                     ${t.done ? '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>' : ''}
                                                 </div>
                                                 <div style="flex: 1;">
@@ -5292,7 +5292,7 @@ function updateTaskUI(taskId, isDone) {
             checkbox.innerHTML = '<i class="ph-bold ph-check" style="font-size: 10px; color: black;"></i>';
         } else {
             checkbox.style.background = 'transparent';
-            checkbox.style.borderColor = 'rgba(255,255,255,0.2)';
+            checkbox.style.borderColor = 'rgba(var(--glass-rgb),0.2)';
             checkbox.innerHTML = '';
         }
 
@@ -6528,9 +6528,9 @@ function renderCircolariView() {
 
     // ── Gradient palettes for featured cards ─────────────────────────────────
     const palettes = [
-        { bg: 'linear-gradient(135deg,#ffffff 0%,#e0efff 50%,#b3d4ff 100%)', shadow: '0 10px 40px -10px rgba(37,99,235,0.15)', icon: 'campaign',       iconColor: '#1d4ed8', iconBg: '#dbeafe', badgeText: 'In evidenza' },
-        { bg: 'linear-gradient(135deg,#ffffff 0%,#f3e8ff 70%,#e9d5ff 100%)', shadow: '0 8px 30px -12px rgba(147,51,234,0.15)', icon: 'calendar_month', iconColor: '#6d28d9', iconBg: '#f3e8ff', badgeText: 'Evento'       },
-        { bg: 'linear-gradient(135deg,#ffffff 0%,#f0fdf4 70%,#bbf7d0 100%)', shadow: '0 8px 30px -12px rgba(22,163,74,0.12)',  icon: 'school',         iconColor: '#15803d', iconBg: '#dcfce7', badgeText: 'Comunicato'    },
+        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,#e0efff 50%,#b3d4ff 100%)', shadow: '0 10px 40px -10px rgba(37,99,235,0.15)', icon: 'campaign',       iconColor: '#1d4ed8', iconBg: '#dbeafe', badgeText: 'In evidenza' },
+        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,#f3e8ff 70%,#e9d5ff 100%)', shadow: '0 8px 30px -12px rgba(147,51,234,0.15)', icon: 'calendar_month', iconColor: '#6d28d9', iconBg: '#f3e8ff', badgeText: 'Evento'       },
+        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,#f0fdf4 70%,#bbf7d0 100%)', shadow: '0 8px 30px -12px rgba(22,163,74,0.12)',  icon: 'school',         iconColor: '#15803d', iconBg: '#dcfce7', badgeText: 'Comunicato'    },
     ];
 
     function fmtDate(raw) {
@@ -6551,7 +6551,7 @@ function renderCircolariView() {
     const recentList = list.slice(3);
 
     const featuredHtml = featured ? `
-        <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(255,255,255,0.6);background:linear-gradient(135deg,#ffffff 0%,#e0efff 50%,#b3d4ff 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(var(--glass-rgb),0.6);background:linear-gradient(135deg,var(--surface-container-lowest) 0%,#e0efff 50%,#b3d4ff 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                 <div style="background:var(--info-container);border:1px solid rgba(191,219,254,0.6);color:var(--info);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
                 <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">campaign</span>
@@ -6569,7 +6569,7 @@ function renderCircolariView() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;">
             ${gridCards.map((c, i) => {
                 const p = palettes[i + 1] || palettes[0];
-                return `<div style="border-radius:32px;padding:22px;background:${p.bg};box-shadow:${p.shadow};border:1px solid rgba(255,255,255,0.6);display:flex;flex-direction:column;cursor:pointer;min-height:160px;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                return `<div style="border-radius:32px;padding:22px;background:${p.bg};box-shadow:${p.shadow};border:1px solid rgba(var(--glass-rgb),0.6);display:flex;flex-direction:column;cursor:pointer;min-height:160px;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
                     <span class="material-symbols-outlined" style="font-size:24px;color:${p.iconColor};margin-bottom:10px;font-variation-settings:'FILL' 1;">${p.icon}</span>
                     <h3 style="font-size:16px;font-weight:700;color:var(--on-surface);line-height:1.25;margin:0 0 auto;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</h3>
                     <span style="font-size:12px;font-weight:500;color:var(--on-surface-variant);margin-top:14px;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</span>
@@ -6583,7 +6583,7 @@ function renderCircolariView() {
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
             ${recentList.map(c => `
-                <div style="background:rgba(255,255,255,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border-radius:28px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.12s ease;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                <div style="background:rgba(var(--glass-rgb),0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(var(--glass-rgb),0.9);box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border-radius:28px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.12s ease;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
                     <div style="width:48px;height:48px;border-radius:50%;background:var(--surface-container-low);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-surface-variant);font-variation-settings:'FILL' 1;">description</span>
                     </div>
@@ -6816,7 +6816,7 @@ function renderPlanner() {
                     cursor:pointer;
                     background:${isSel ? '#2563eb' : 'white'};
                     border:${isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)'};
-                    box-shadow:${isSel ? 'inset 0 1px 1px rgba(255,255,255,0.2),0 0 0 2.5px rgba(37,99,235,0.18)' : 'none'};
+                    box-shadow:${isSel ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)' : 'none'};
                     transform:translateZ(0);
                     will-change:background,box-shadow;
                     -webkit-backface-visibility:hidden;
@@ -6824,13 +6824,13 @@ function renderPlanner() {
                     transition:background 0.13s ease,box-shadow 0.13s ease,border-color 0.13s ease;
                     -webkit-tap-highlight-color:transparent;
                 ">
-                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(255,255,255,0.75)':'#94a3b8'};">${d.label}</span>
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(var(--glass-rgb),0.75)':'#94a3b8'};">${d.label}</span>
                     <span style="font-size:20px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
                     <div style="width:5px;height:5px;border-radius:50%;background:${
                         d.isToday
-                            ? (isSel ? 'rgba(255,255,255,0.9)' : '#2563eb')
+                            ? (isSel ? 'rgba(var(--glass-rgb),0.9)' : '#2563eb')
                             : d.hasTask
-                                ? (isSel ? 'rgba(255,255,255,0.45)' : 'rgba(37,99,235,0.28)')
+                                ? (isSel ? 'rgba(var(--glass-rgb),0.45)' : 'rgba(37,99,235,0.28)')
                                 : 'transparent'
                     };"></div>
                 </div>`;
@@ -6854,7 +6854,7 @@ function renderPlanner() {
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
             <h1 style="font-size:30px;font-weight:800;color:var(--info);letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:Hanken Grotesk,sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+            <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(var(--glass-rgb),0.92);border:1.5px solid rgba(var(--glass-rgb),0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:Hanken Grotesk,sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
                 <span class="material-symbols-outlined" style="font-size:16px;color:var(--info);font-variation-settings:'FILL' 1;">calendar_month</span>
                 <span style="font-size:13px;font-weight:700;color:var(--info);">${monthLabel}</span>
             </button>
@@ -7041,14 +7041,14 @@ window._renderMonthPicker = function() {
             '<div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
-            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
+            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(var(--glass-rgb),0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
                 '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_left</span>' +
             '</button>' +
             '<div style="text-align:center;">' +
                 '<div style="font-size:18px;font-weight:800;color:var(--on-surface);letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
                 '<div style="font-size:10px;font-weight:700;color:var(--outline);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
             '</div>' +
-            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
+            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(var(--glass-rgb),0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
                 '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_right</span>' +
             '</button>' +
         '</div>' +
@@ -7172,7 +7172,7 @@ window._buildPlannerDayContentHTML = function() {
           '<span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span></div>' +
           '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
           '</div>' : '';
-    var empty = '<div style="background:rgba(255,255,255,0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid rgba(241,245,249,0.9);">' +
+    var empty = '<div style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid rgba(241,245,249,0.9);">' +
         '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>' +
         '<p style="font-size:14px;font-weight:600;color:var(--outline);margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
     return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
@@ -7277,12 +7277,12 @@ window.plannerSelectDay = function(iso) {
         el.style.background  = isSel ? '#2563eb' : 'white';
         el.style.border      = isSel ? '1.5px solid rgba(241,245,249,0.9)' : '1.5px solid rgba(241,245,249,0.9)';
         el.style.boxShadow   = isSel
-            ? 'inset 0 1px 1px rgba(255,255,255,0.2),0 0 0 2.5px rgba(37,99,235,0.18)'
+            ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)'
             : 'none';
         el.style.transform   = 'translateZ(0)'; // fisso, no scale → zero layer thrashing
         el.style.filter      = '';              // mai cambiare → evita flash GPU WebKit
         const spans = el.querySelectorAll('span');
-        if (spans[0]) spans[0].style.color = isSel ? 'rgba(255,255,255,0.75)' : '#94a3b8';
+        if (spans[0]) spans[0].style.color = isSel ? 'rgba(var(--glass-rgb),0.75)' : '#94a3b8';
         if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
     });
     // Swap istantaneo: niente opacity, niente scale → zero flash/nero WebKit
@@ -7345,8 +7345,8 @@ function renderProfile() {
                     padding:max(env(safe-area-inset-top,0px),28px) 0 20px;">
             <button onclick="navigate('home')"
                 style="width:44px;height:44px;border-radius:50%;
-                       background:rgba(255,255,255,0.7);backdrop-filter:blur(12px);
-                       -webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.6);
+                       background:rgba(var(--glass-rgb),0.7);backdrop-filter:blur(12px);
+                       -webkit-backdrop-filter:blur(12px);border:1px solid rgba(var(--glass-rgb),0.6);
                        display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"
                 ontouchstart="this.style.transform='scale(0.92)'"
                 ontouchend="this.style.transform='scale(1)'">
@@ -7361,11 +7361,11 @@ function renderProfile() {
         </div>
 
         <!-- ── CARTA UTENTE ── -->
-        <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);
-                    -webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);
+        <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
+                    -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
                     border-radius:28px;padding:20px;display:flex;align-items:center;gap:16px;
                     margin-bottom:20px;
-                    box-shadow:0 4px 20px -8px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.8);">
+                    box-shadow:0 4px 20px -8px rgba(0,0,0,0.08),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
             <div style="width:56px;height:56px;border-radius:50%;
                         background:linear-gradient(135deg,#2563eb,#4f46e5);
                         display:flex;align-items:center;justify-content:center;flex-shrink:0;
@@ -7406,10 +7406,10 @@ function renderProfile() {
         <div style="margin-bottom:28px;">
             <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
                       text-transform:uppercase;margin:0 0 12px 2px;">Google Calendar</p>
-            <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);
-                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);
+            <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
+                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
                         border-radius:28px;overflow:hidden;
-                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(255,255,255,0.8);">
+                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
                 ${isGoogleConnected ? `
                 <div style="padding:20px;">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
@@ -7458,7 +7458,7 @@ function renderProfile() {
                 <div style="padding:20px;">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
                         <div style="width:42px;height:42px;border-radius:14px;
-                                    background:rgba(255,255,255,0.8);border:1px solid rgba(226,232,240,0.9);
+                                    background:rgba(var(--glass-rgb),0.8);border:1px solid rgba(226,232,240,0.9);
                                     display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-surface-variant);">
                                 calendar_month</span>
@@ -7508,10 +7508,10 @@ function renderProfile() {
         <div style="margin-bottom:28px;">
             <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
                       text-transform:uppercase;margin:0 0 12px 2px;">Impostazioni</p>
-            <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);
-                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);
+            <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
+                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
                         border-radius:28px;overflow:hidden;
-                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(255,255,255,0.8);">
+                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
                 <div onclick="showToast('Notifiche in arrivo prossimamente','info')"
                     style="display:flex;align-items:center;justify-content:space-between;
                            padding:16px 20px;cursor:pointer;"
@@ -7689,7 +7689,7 @@ function renderGradesView() {
         const color = getSubjectColor(s.name);
         const iconBg = color + '22';
         return `
-        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 10px 40px -10px rgba(0,0,0,0.04);border-radius:32px;padding:24px;cursor:pointer;transition:transform 0.12s ease;" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="background:rgba(var(--glass-rgb),0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(var(--glass-rgb),0.9);box-shadow:0 10px 40px -10px rgba(0,0,0,0.04);border-radius:32px;padding:24px;cursor:pointer;transition:transform 0.12s ease;" onclick="navigateSubject('${escapeJsSingleQuote(s.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                 <div style="width:42px;height:42px;border-radius:50%;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <span class="material-symbols-outlined" style="font-size:20px;color:${color};font-variation-settings:'FILL' 1;">${getSubjectIcon(s.name)}</span>
@@ -7719,7 +7719,7 @@ function renderGradesView() {
             </header>
 
             <!-- ── CARD MEDIA GENERALE ────────────────────────────────────── -->
-            <div style="background:linear-gradient(135deg,#ffffff 0%,#eff4ff 100%);box-shadow:0 12px 35px -10px rgba(37,99,235,0.12),inset 0 2px 5px rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);border-radius:36px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--info-container) 100%);box-shadow:0 12px 35px -10px rgba(37,99,235,0.12),inset 0 2px 5px rgba(var(--glass-rgb),0.8);border:1px solid rgba(var(--glass-rgb),0.9);border-radius:36px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
                 <!-- Decorative blobs -->
                 <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(219,234,254,0.5);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                 <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(243,232,255,0.4);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
