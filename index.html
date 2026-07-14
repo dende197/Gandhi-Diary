@@ -165,15 +165,21 @@
     <script src="app-bootstrap.js?v=3.3.8" defer></script>
 
     <style>
-        /* Essential inline styles only */
+        /* Essential inline styles only — flat paint color to avoid a white flash
+           before style.css loads. The full satin-glass gradient/grain lives in
+           style.css so it isn't duplicated/overridden here. */
         html, body {
             background-color: #fcf8fb;
-            background-image: radial-gradient(circle at 10% 20%, rgba(0, 122, 255, 0.04) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(76, 74, 202, 0.04) 0%, transparent 40%);
-            background-attachment: fixed;
             font-family: 'Hanken Grotesk', sans-serif;
         }
-        @media (prefers-color-scheme: dark) { html, body { background-color: #0D1117; } }
+        html[data-theme="dark"], html.dark, html[data-theme="dark"] body, html.dark body {
+            background-color: #121318;
+        }
+        @media (prefers-color-scheme: dark) {
+            html:not([data-theme="light"]):not(.light), html:not([data-theme="light"]):not(.light) body {
+                background-color: #121318;
+            }
+        }
         
         .liquid-glass {
             background-color: rgba(255, 255, 255, 0.45);
