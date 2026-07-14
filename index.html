@@ -12,6 +12,22 @@
     <meta name="apple-mobile-web-app-title" content="Gandhi diary">
     <meta name="application-name" content="Gandhi diary">
     <meta name="theme-color" content="#F6F5F3">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('gc_theme') || 'auto';
+            let resolvedTheme = theme;
+            if (theme === 'auto') {
+                resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (resolvedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="version" content="3.3.8">
     <link rel="manifest" href="manifest.webmanifest">

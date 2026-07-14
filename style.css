@@ -438,7 +438,7 @@ h1, h2, h3, h4, h5, h6 {
     margin-left: calc(-1 * var(--margin-mobile));
     margin-right: calc(-1 * var(--margin-mobile));
     width: calc(100% + 2 * var(--margin-mobile));
-    background-color: #F3F6F8;
+    background-color: transparent !important;
     overflow-x: hidden;
 }
 
@@ -447,6 +447,7 @@ h1, h2, h3, h4, h5, h6 {
         margin-left: calc(-1 * var(--margin-desktop));
         margin-right: calc(-1 * var(--margin-desktop));
         width: calc(100% + 2 * var(--margin-desktop));
+        background-color: transparent !important;
     }
 }
 
@@ -511,7 +512,7 @@ h1, h2, h3, h4, h5, h6 {
 /* --- PROFILE PREMIUM GLASS --- */
 .profile-view {
     min-height: 100vh;
-    background: linear-gradient(145deg, #f8fafc, #eef2f6);
+    background: transparent !important;
 }
 
 .interactive-row {
@@ -521,3 +522,316 @@ h1, h2, h3, h4, h5, h6 {
     transform: scale(0.97);
     background: rgba(255,255,255,0.4);
 }
+
+
+/* ================================================================
+   DARK MODE THEME — iOS 26 Style
+   ================================================================ */
+
+[data-theme="dark"],
+.dark {
+  /* Surface & Background */
+  --surface: #121318 !important;
+  --surface-dim: #1d1e24 !important;
+  --surface-bright: #1b1c22 !important;
+  --surface-container-lowest: #0c0d12 !important;
+  --surface-container-low: #15161c !important;
+  --surface-container: #1b1c22 !important;
+  --surface-container-high: #23252a !important;
+  --surface-container-highest: #2d3036 !important;
+  --on-surface: #e4e2e6 !important;
+  --on-surface-variant: #c1c6d7 !important;
+  --inverse-surface: #eae6e9 !important;
+  --inverse-on-surface: #1b1b1d !important;
+  --outline: #8b90a0 !important;
+  --outline-variant: #414755 !important;
+  --surface-tint: #adc6ff !important;
+  --background: #0d1117 !important;
+  --on-background: #e4e2e6 !important;
+  --surface-variant: #414755 !important;
+
+  /* Primary */
+  --primary: #adc6ff !important;
+  --on-primary: #002e69 !important;
+  --primary-container: #004493 !important;
+  --on-primary-container: #d8e2ff !important;
+
+  /* Secondary */
+  --secondary: #c2c1ff !important;
+  --on-secondary: #251b9b !important;
+  --secondary-container: #3d37b4 !important;
+  --on-secondary-container: #e2dfff !important;
+
+  /* Tertiary */
+  --tertiary: #c6c6cb !important;
+  --on-tertiary: #2c2e32 !important;
+  --tertiary-container: #424549 !important;
+  --on-tertiary-container: #e2e2e7 !important;
+
+  /* Error */
+  --error: #ffb4ab !important;
+  --on-error: #690005 !important;
+  --error-container: #93000a !important;
+  --on-error-container: #ffdad6 !important;
+}
+
+/* ── Smooth transition for theme switching ── */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.35s ease,
+              color 0.35s ease,
+              border-color 0.35s ease,
+              box-shadow 0.35s ease,
+              background 0.35s ease !important;
+}
+
+/* ── Dark: Overrides for hardcoded elements ── */
+[data-theme="dark"] body {
+  color: var(--on-background) !important;
+}
+
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3, 
+[data-theme="dark"] h4,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4 {
+  color: var(--on-surface) !important;
+}
+
+[data-theme="dark"] div[style*="background:white"],
+[data-theme="dark"] div[style*="background: white"],
+[data-theme="dark"] div[style*="background:#FFFFFF"],
+[data-theme="dark"] div[style*="background: #FFFFFF"],
+.dark div[style*="background:white"],
+.dark div[style*="background: white"],
+.dark div[style*="background:#FFFFFF"],
+.dark div[style*="background: #FFFFFF"] {
+  background: var(--surface-container-lowest) !important;
+  color: var(--on-surface) !important;
+}
+
+/* Glassmorphism overrides for premium cards on the dashboard */
+.card-media-premium,
+.card-assenze-premium,
+.card-verifiche-premium {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease !important;
+}
+
+[data-theme="dark"] .card-media-premium,
+[data-theme="dark"] .card-assenze-premium,
+[data-theme="dark"] .card-verifiche-premium,
+.dark .card-media-premium,
+.dark .card-assenze-premium,
+.dark .card-verifiche-premium {
+    background: rgba(26, 32, 44, 0.5) !important;
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Also customize content within the cards for Dark Mode */
+[data-theme="dark"] .card-media-premium h2,
+[data-theme="dark"] .card-media-premium span,
+[data-theme="dark"] .card-media-premium p,
+.dark .card-media-premium h2,
+.dark .card-media-premium span,
+.dark .card-media-premium p {
+    color: #adc6ff !important;
+}
+[data-theme="dark"] .card-media-premium div[style*="background:#EFF6FF"],
+.dark .card-media-premium div[style*="background:#EFF6FF"] {
+    background: rgba(173, 198, 255, 0.15) !important;
+    color: #adc6ff !important;
+}
+
+[data-theme="dark"] .card-assenze-premium h2,
+[data-theme="dark"] .card-assenze-premium span,
+[data-theme="dark"] .card-assenze-premium circle[style*="stroke:#BD1118"],
+.dark .card-assenze-premium h2,
+.dark .card-assenze-premium span,
+.dark .card-assenze-premium circle[style*="stroke:#BD1118"] {
+    color: #ffb4ab !important;
+    stroke: #ffb4ab !important;
+}
+[data-theme="dark"] .card-assenze-premium circle[style*="stroke:#FEE2E2"],
+.dark .card-assenze-premium circle[style*="stroke:#FEE2E2"] {
+    stroke: rgba(255, 180, 171, 0.15) !important;
+}
+[data-theme="dark"] .card-assenze-premium div[style*="background:#FEF2F2"],
+.dark .card-assenze-premium div[style*="background:#FEF2F2"] {
+    background: rgba(255, 180, 171, 0.15) !important;
+    color: #ffb4ab !important;
+}
+[data-theme="dark"] .card-assenze-premium div[style*="background:#FAFBFC"],
+.dark .card-assenze-premium div[style*="background:#FAFBFC"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .card-verifiche-premium h2,
+[data-theme="dark"] .card-verifiche-premium p,
+[data-theme="dark"] .card-verifiche-premium span,
+.dark .card-verifiche-premium h2,
+.dark .card-verifiche-premium p,
+.dark .card-verifiche-premium span {
+    color: #86efac !important; /* light green */
+}
+[data-theme="dark"] .card-verifiche-premium div[style*="background:#F0FDF4"],
+.dark .card-verifiche-premium div[style*="background:#F0FDF4"] {
+    background: rgba(134, 239, 172, 0.15) !important;
+    color: #86efac !important;
+}
+[data-theme="dark"] .card-verifiche-premium div[style*="background:#FAFBFC"],
+.dark .card-verifiche-premium div[style*="background:#FAFBFC"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .home-card-item,
+.dark .home-card-item {
+    background: var(--surface-container-lowest) !important;
+    border-color: var(--outline-variant) !important;
+}
+
+[data-theme="dark"] .home-card-item h4,
+.dark .home-card-item h4 {
+    color: var(--on-surface) !important;
+}
+
+[data-theme="dark"] .profile-view div[style*="background:rgba(255,255,255,0.65)"],
+.dark .profile-view div[style*="background:rgba(255,255,255,0.65)"] {
+    background: rgba(22, 27, 38, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .profile-view div[style*="color:#0f172a"],
+.dark .profile-view div[style*="color:#0f172a"] {
+    color: var(--on-surface) !important;
+}
+
+[data-theme="dark"] .profile-view p[style*="color:#64748b"],
+.dark .profile-view p[style*="color:#64748b"] {
+    color: var(--on-surface-variant) !important;
+}
+
+/* ── Animated Gradient Orbs Background ── */
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(45px, -65px) scale(1.1); }
+  50% { transform: translate(-35px, 35px) scale(0.9); }
+  75% { transform: translate(25px, 55px) scale(1.05); }
+}
+
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-55px, 45px) scale(1.15); }
+  66% { transform: translate(35px, -35px) scale(0.85); }
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -2;
+  filter: blur(80px);
+  opacity: 0.6;
+  transition: all 0.5s ease;
+}
+
+body::before {
+  top: -10%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(168, 216, 234, 0.8) 0%, rgba(0, 88, 188, 0.15) 100%);
+  animation: orb-float-1 25s ease-in-out infinite;
+}
+
+body::after {
+  bottom: -10%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(170, 150, 218, 0.7) 0%, rgba(102, 100, 228, 0.1) 100%);
+  animation: orb-float-2 30s ease-in-out infinite;
+}
+
+/* In dark mode, make the orbs more subtle and deep */
+[data-theme="dark"] body::before,
+.dark body::before {
+  background: radial-gradient(circle, rgba(0, 88, 188, 0.25) 0%, rgba(0, 0, 0, 0) 100%) !important;
+}
+
+[data-theme="dark"] body::after,
+.dark body::after {
+  background: radial-gradient(circle, rgba(61, 55, 180, 0.2) 0%, rgba(0, 0, 0, 0) 100%) !important;
+}
+
+/* ── Theme Toggle Switch (Profile Page) ── */
+.theme-toggle-group {
+  display: flex;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+  width: 100%;
+}
+
+[data-theme="dark"] .theme-toggle-group,
+.dark .theme-toggle-group {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.theme-toggle-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Hanken Grotesk', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.theme-toggle-btn.active {
+  background: #ffffff;
+  color: #0058bc;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .theme-toggle-btn.active,
+.dark .theme-toggle-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #adc6ff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+.theme-toggle-btn:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .theme-toggle-btn:hover:not(.active),
+.dark .theme-toggle-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.04);
+}
+

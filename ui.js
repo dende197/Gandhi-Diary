@@ -20,6 +20,50 @@ function escapeJsSingleQuote(str) {
         .replace(/\u2029/g, '\\u2029');
 }
 
+// --- THEME ENGINE ---
+window.applyTheme = function (theme) {
+    document.documentElement.classList.add('theme-transition');
+    
+    let resolvedTheme = theme;
+    if (theme === 'auto' || !theme) {
+        resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    
+    if (resolvedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.classList.add('dark');
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', '#0D1117');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.classList.remove('dark');
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', '#F6F5F3');
+    }
+    
+    localStorage.setItem('gc_theme', theme || 'auto');
+    
+    setTimeout(() => {
+        document.documentElement.classList.remove('theme-transition');
+    }, 400);
+
+    if (typeof state !== 'undefined' && typeof render === 'function') {
+        state._forceRender = true;
+        render();
+    }
+};
+
+// Initialise theme
+const savedTheme = localStorage.getItem('gc_theme') || 'auto';
+window.applyTheme(savedTheme);
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const currentTheme = localStorage.getItem('gc_theme') || 'auto';
+    if (currentTheme === 'auto') {
+        window.applyTheme('auto');
+    }
+});
+
 // --- AGENDA SEARCH & FILTER HELPERS ---
 setInterval(() => {
     const clock = document.getElementById('topbar-clock');
@@ -7503,6 +7547,37 @@ function renderProfile() {
                     </div>
                     <span class="material-symbols-outlined"
                           style="font-size:18px;color:#cbd5e1;">chevron_right</span>
+                </div>
+                <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
+                <div style="padding:16px 20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:13px;">
+                            <div style="width:34px;height:34px;border-radius:10px;
+                                        background:rgba(99,102,241,0.1);
+                                        display:flex;align-items:center;justify-content:center;">
+                                <span class="material-symbols-outlined"
+                                      style="font-size:18px;color:#4f46e5;">palette</span>
+                            </div>
+                            <span style="font-size:15px;font-weight:600;color:#0f172a;">Aspetto visivo</span>
+                        </div>
+                        <span style="font-size:13px;font-weight:700;color:#64748b;">
+                            ${(() => {
+                                const t = localStorage.getItem('gc_theme') || 'auto';
+                                return t === 'light' ? 'Chiaro' : t === 'dark' ? 'Scuro' : 'Automatico';
+                            })()}
+                        </span>
+                    </div>
+                    <div class="theme-toggle-group">
+                        <button class="theme-toggle-btn ${localStorage.getItem('gc_theme') === 'light' ? 'active' : ''}" onclick="window.applyTheme('light')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">light_mode</span> Chiaro
+                        </button>
+                        <button class="theme-toggle-btn ${localStorage.getItem('gc_theme') === 'dark' ? 'active' : ''}" onclick="window.applyTheme('dark')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">dark_mode</span> Scuro
+                        </button>
+                        <button class="theme-toggle-btn ${!localStorage.getItem('gc_theme') || localStorage.getItem('gc_theme') === 'auto' ? 'active' : ''}" onclick="window.applyTheme('auto')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">devices</span> Auto
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
