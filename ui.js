@@ -296,7 +296,7 @@ function refreshPlannerSwitchButtons() {
         const targetView = btn.dataset.plannerView;
         const isActive = targetView === state.uiMode;
         btn.classList.toggle('active', isActive);
-        btn.style.background = isActive ? '#141414' : 'transparent';
+        btn.style.background = isActive ? 'var(--on-surface)' : 'transparent';
         btn.style.color = isActive ? 'white' : 'var(--text-secondary)';
     });
 }
@@ -1052,12 +1052,12 @@ function renderNav() {
             z-index:9999; display:flex; align-items:flex-end;
             transition:opacity 0.3s ease;">
             <div id="drawerContent" onclick="event.stopPropagation()" style="
-                width:100%; background:white; border-radius:36px 36px 0 0;
+                width:100%; background:var(--surface-container-lowest); border-radius:36px 36px 0 0;
                 padding:32px 32px 40px; box-shadow:0 -10px 40px rgba(0,0,0,0.12);
                 transform:translateY(100%); display:flex; flex-direction:column;
                 max-height:80%; overflow-y:auto;
                 transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);">
-                <div style="width:44px;height:5px;background:#E2E8F0;border-radius:999px;margin:0 auto 24px;flex-shrink:0;"></div>
+                <div style="width:44px;height:5px;background:var(--surface-container-low);border-radius:999px;margin:0 auto 24px;flex-shrink:0;"></div>
                 <div id="drawerDynamicBody"></div>
             </div>
         </div>
@@ -1068,18 +1068,18 @@ function renderNav() {
             backdrop-filter:blur(4px); opacity:0; pointer-events:none;
             z-index:9999; display:flex; align-items:center; justify-content:center;
             padding:0 24px; transition:opacity 0.2s ease;">
-            <div style="background:white; border-radius:24px; padding:24px;
+            <div style="background:var(--surface-container-lowest); border-radius:24px; padding:24px;
                         width:100%; max-height:80%; overflow-y:auto;
                         box-shadow:0 25px 50px rgba(0,0,0,0.15);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <h4 id="dialogTitle" style="font-size:1.1rem;font-weight:700;color:#0F172A;">Dettagli</h4>
+                    <h4 id="dialogTitle" style="font-size:1.1rem;font-weight:700;color:var(--on-surface);">Dettagli</h4>
                     <button onclick="closeDialog()" style="width:32px;height:32px;border-radius:50%;
-                        background:#F1F5F9;border:none;display:flex;align-items:center;
-                        justify-content:center;color:#64748B;cursor:pointer;">
+                        background:var(--surface-container-low);border:none;display:flex;align-items:center;
+                        justify-content:center;color:var(--on-surface-variant);cursor:pointer;">
                         <i data-lucide="x" style="width:16px;height:16px;"></i>
                     </button>
                 </div>
-                <div id="dialogBody" style="font-size:0.875rem;color:#475569;"></div>
+                <div id="dialogBody" style="font-size:0.875rem;color:var(--on-surface-variant);"></div>
             </div>
         </div>
 
@@ -1169,21 +1169,21 @@ function getHomeTaskWidgetData() {
 }
 function renderHomeTaskListHtml(homeTaskData) {
     if (!homeTaskData.tasks.length) {
-        return `<div style="font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;">${homeTaskData.emptyMessage}</div>`;
+        return `<div style="font-size:11px; color:var(--outline-variant); padding:10px 0; text-align:center;">${homeTaskData.emptyMessage}</div>`;
     }
     return homeTaskData.tasks.map(t => {
         const abbr = getSubjectAbbrev(t.subject);
         const key = abbr.toLowerCase();
         return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid #F4F2EE; cursor:pointer;" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                <div data-task-toggle="${escapeHtml(t.id)}" style="width:17px; height:17px; border:1.5px solid ${t.done ? '#141414' : '#DEDAD4'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? '#141414' : '#fff'}; transition: background 0.15s ease, border-color 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid var(--outline-variant); cursor:pointer;" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                <div data-task-toggle="${escapeHtml(t.id)}" style="width:17px; height:17px; border:1.5px solid ${t.done ? 'var(--on-surface)' : 'var(--outline-variant)'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? 'var(--on-surface)' : 'var(--surface-container-lowest)'}; transition: background 0.15s ease, border-color 0.15s ease;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
                 <span style="font-family:\'JetBrains Mono\',monospace; font-size:9px; font-weight:500; border-radius:5px; padding:2px 6px; flex-shrink:0; background:var(--${key},#EEE); color:var(--${key}-t,#444);">${abbr}</span>
-                <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? '#C8C4BE' : '#141414'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
+                <span data-task-text="${escapeHtml(t.id)}" style="font-size:12.5px; font-weight:500; color:${t.done ? 'var(--on-surface-variant)' : 'var(--on-surface)'}; flex:1; line-height:1.3; ${t.done ? 'text-decoration:line-through;' : ''} white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.text)}</span>
                 ${isUserGeneratedTaskId(t.id) ? `
-                <button onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:20px; height:20px; border-radius:6px; background:#FFF0EE; border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
-                    <i class="ph-bold ph-trash" style="font-size:10px; color:#FF3B30;"></i>
+                <button onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:20px; height:20px; border-radius:6px; background:var(--error-container); border:1px solid rgba(255,59,48,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;" aria-label="Elimina attività" title="Elimina attività">
+                    <i class="ph-bold ph-trash" style="font-size:10px; color:var(--error);"></i>
                 </button>` : ''}
               </div>`;
     }).join('');
@@ -1201,9 +1201,9 @@ function updateHomeTaskFocusWidget() {
     list.innerHTML = renderHomeTaskListHtml(homeTaskData);
 
     const applyBtnState = (btn, active) => {
-        btn.style.borderColor = active ? '#141414' : '#D3CEC7';
-        btn.style.background = active ? '#141414' : '#FFFFFF';
-        btn.style.color = active ? '#FFFFFF' : '#4F4A43';
+        btn.style.borderColor = active ? 'var(--on-surface)' : 'var(--outline-variant)';
+        btn.style.background = active ? 'var(--on-surface)' : 'var(--surface-container-lowest)';
+        btn.style.color = active ? 'var(--surface-container-lowest)' : '#4F4A43';
     };
     applyBtnState(btnToday, homeTaskData.mode === 'today');
     applyBtnState(btnTomorrow, homeTaskData.mode === 'tomorrow');
@@ -1236,7 +1236,7 @@ function updateNextGradeSimulatorWidget() {
         impactEl.style.color = simulatedDelta >= 0 ? '#2DB86A' : '#FF3B30';
     } else {
         impactEl.textContent = '—';
-        impactEl.style.color = '#908C86';
+        impactEl.style.color = 'var(--on-surface-variant)';
     }
     if (termLabelEl) {
         termLabelEl.textContent = currentTerm === 'first' ? 'Primo quadrimestre' : (currentTerm === 'second' ? 'Secondo quadrimestre' : 'Nessun quadrimestre attivo');
@@ -1278,7 +1278,7 @@ function updateHomeView() {
             if (remaining === 0 && !focusCard.querySelector('[data-empty-msg]')) {
                 const empty = document.createElement('div');
                 empty.setAttribute('data-empty-msg', '1');
-                empty.style.cssText = 'font-size:11px; color:#C0BBB4; padding:10px 0; text-align:center;';
+                empty.style.cssText = 'font-size:11px; color:var(--outline-variant); padding:10px 0; text-align:center;';
                 empty.textContent = focusData.emptyMessage || 'Nessun compito';
                 focusCard.appendChild(empty);
             }
@@ -1289,13 +1289,13 @@ function updateHomeView() {
             const cb = focusCard.querySelector(`[data-task-toggle="${t.id}"]`);
             const txt = focusCard.querySelector(`[data-task-text="${t.id}"]`);
             if (cb) {
-                cb.style.background = t.done ? '#141414' : '#fff';
-                cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
+                cb.style.background = t.done ? 'var(--on-surface)' : 'var(--surface-container-lowest)';
+                cb.style.borderColor = t.done ? 'var(--on-surface)' : 'var(--outline-variant)';
                 cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
             }
             if (txt) {
                 txt.style.textDecoration = t.done ? 'line-through' : 'none';
-                txt.style.color = t.done ? '#C8C4BE' : '#141414';
+                txt.style.color = t.done ? 'var(--on-surface-variant)' : 'var(--on-surface)';
             }
         });
     }
@@ -1313,7 +1313,7 @@ function buildCalendarEventsFromState() {
                 title: `${sub}: ${t.text}`,
                 start: t.due_date,
                 color: t.done ? '#30D158' : color,
-                textColor: '#fff',
+                textColor: 'var(--surface-container-lowest)',
                 extendedProps: { fullText: t.text, subject: t.subject }
             };
         });
@@ -1538,15 +1538,15 @@ function renderCalendarWeekList(weekStart) {
         totalItems += dayTasks.length + dayVerifiche.length;
 
         const labelText = isToday ? 'OGGI' : isTomorrow ? 'DOMANI' : '';
-        const labelColor = isToday ? '#34C759' : '#FF9F0A';
+        const labelColor = isToday ? 'var(--success)' : '#FF9F0A';
 
         daySections += `
             <div class="asw-day-section">
                 <div class="asw-day-header">
                     <div class="asw-date-block">
-                        <span class="asw-day-name" style="color:${isToday ? '#34C759' : isPast ? '#C0BBB4' : '#908C86'};">${dayNames[i]}</span>
-                        <span class="asw-day-num" style="color:${isToday ? '#34C759' : isPast ? '#C0BBB4' : '#141414'};">${dayDate.getDate()}</span>
-                        <span class="asw-month" style="color:${isPast ? '#C0BBB4' : '#908C86'};">${monthNames[dayDate.getMonth()]}</span>
+                        <span class="asw-day-name" style="color:${isToday ? 'var(--success)' : isPast ? 'var(--outline)' : 'var(--on-surface-variant)'};">${dayNames[i]}</span>
+                        <span class="asw-day-num" style="color:${isToday ? 'var(--success)' : isPast ? 'var(--outline)' : 'var(--on-surface)'};">${dayDate.getDate()}</span>
+                        <span class="asw-month" style="color:${isPast ? 'var(--outline)' : 'var(--on-surface-variant)'};">${monthNames[dayDate.getMonth()]}</span>
                     </div>
                     <div class="asw-separator"></div>
                     ${labelText ? `<span class="asw-label-tag" style="color:${labelColor}; border-color:${labelColor};">${labelText}</span>` : ''}
@@ -1560,7 +1560,7 @@ function renderCalendarWeekList(weekStart) {
                             <div class="asw-task-stripe" style="background:#FF9F0A;"></div>
                             <div class="asw-task-body">
                                 <div class="asw-task-meta">
-                                    <span class="asw-subject-badge" style="color:#D97706; background:rgba(255,159,10,0.1);">${escapeHtml(abbr)}</span>
+                                    <span class="asw-subject-badge" style="color:var(--warning); background:rgba(255,159,10,0.1);">${escapeHtml(abbr)}</span>
                                     <span class="asw-verifica-tag"><i class="ph-bold ph-pencil-simple"></i> ${escapeHtml(normalizeTipoVerifica(v.tipo))}</span>
                                 </div>
                                 <div class="asw-task-text">${escapeHtml(v.text || v.subject)}</div>
@@ -1573,15 +1573,15 @@ function renderCalendarWeekList(weekStart) {
             const displayText = (t.text || '').replace(/\*/g, '').trim();
             return `
                         <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
-                            <div class="asw-task-stripe" style="background:${t.done ? '#C8C5C0' : subjColor};"></div>
+                            <div class="asw-task-stripe" style="background:${t.done ? 'var(--outline-variant)' : subjColor};"></div>
                             <div class="asw-task-body">
                                 <div class="asw-task-meta">
-                                    <span class="asw-subject-badge" style="color:${t.done ? '#908C86' : subjColor}; background:rgba(0,0,0,0.04);">${escapeHtml(abbr)}</span>
+                                    <span class="asw-subject-badge" style="color:${t.done ? 'var(--on-surface-variant)' : subjColor}; background:rgba(0,0,0,0.04);">${escapeHtml(abbr)}</span>
                                 </div>
                                 <div class="asw-task-text" data-task-text="${escapeHtml(t.id)}">${escapeHtml(displayText)}</div>
                             </div>
                             <div class="asw-task-actions">
-                                <div class="asw-toggle-btn" data-task-toggle="${t.id}" style="border-color:${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'};">
+                                <div class="asw-toggle-btn" data-task-toggle="${t.id}" style="border-color:${t.done ? 'var(--on-surface)' : 'var(--outline-variant)'}; background:${t.done ? 'var(--on-surface)' : 'transparent'};">
                                     ${t.done ? '<i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i>' : ''}
                                 </div>
                                 ${isUserGeneratedTaskId(t.id) ? `
@@ -1749,13 +1749,13 @@ function renderHome() {
 
         if (daysDiff <= 2) {
             urgencyLabel = 'HARD';
-            urgencyColor = 'color:#DC2626; background:#FEF2F2; border:1px solid #FECACA;';
+            urgencyColor = 'color:var(--error); background:var(--error-container); border:1px solid var(--outline-variant);';
         } else if (daysDiff <= 5) {
             urgencyLabel = 'MEDIUM';
-            urgencyColor = 'color:#D97706; background:#FFFBEB; border:1px solid #FDE68A;';
+            urgencyColor = 'color:var(--warning); background:var(--warning-container); border:1px solid var(--outline-variant);';
         } else {
             urgencyLabel = 'EASY';
-            urgencyColor = 'color:#059669; background:#F0FDF4; border:1px solid #A7F3D0;';
+            urgencyColor = 'color:var(--success); background:var(--success-container); border:1px solid var(--outline-variant);';
         }
 
         progressWidth = Math.max(0, Math.min(100, ((10 - daysDiff) / 10) * 100));
@@ -1775,11 +1775,11 @@ function renderHome() {
 
     // Helper per colori inline delle materie
     const getSubjectInlineColors = (subject, isExam) => {
-        if (isExam) return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' };
+        if (isExam) return { bg: 'var(--error-container)', text: 'var(--on-error-container)', border: 'var(--outline-variant)' };
         const s = (subject || '').toLowerCase();
-        if (s.includes('matem') || s.includes('math')) return { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' };
-        if (s.includes('fisic') || s.includes('physics') || s.includes('scienz') || s.includes('chimic')) return { bg: '#F0FDF4', text: '#16A34A', border: '#BBF7D0' };
-        return { bg: '#EEF2FF', text: '#4F46E5', border: '#C7D2FE' };
+        if (s.includes('matem') || s.includes('math')) return { bg: 'var(--info-container)', text: 'var(--on-info-container)', border: 'var(--outline-variant)' };
+        if (s.includes('fisic') || s.includes('physics') || s.includes('scienz') || s.includes('chimic')) return { bg: 'var(--success-container)', text: 'var(--on-success-container)', border: 'var(--outline-variant)' };
+        return { bg: 'var(--secondary-container)', text: 'var(--on-secondary-container)', border: 'var(--outline-variant)' };
     };
 
     // 5. Card compatte per sezione "Domani" — border-radius ridotto, padding ridotto, icone più piccole
@@ -1789,9 +1789,9 @@ function renderHome() {
             const colors = getSubjectInlineColors(item.title, item.isExam);
             return `
             <div style="
-                background:white; border-radius:22px; padding:16px 18px;
+                background:var(--surface-container-lowest); border-radius:22px; padding:16px 18px;
                 box-shadow:0 2px 12px -2px rgba(0,0,0,0.04);
-                border:1px solid #EEF0F3; margin-bottom:10px;
+                border:1px solid var(--outline-variant); margin-bottom:10px;
                 position:relative; overflow:hidden; cursor:pointer;
                 transition:transform 0.2s ease;
             " onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}"
@@ -1811,17 +1811,17 @@ function renderHome() {
                     ">${item.isExam ? 'Verifica' : 'Compito'}</span>
                 </div>
                 
-                <h4 style="font-size:1rem;font-weight:700;color:#1F2937;margin:0 0 4px 10px;">${escapeHtml(item.title || 'Generico')}</h4>
+                <h4 style="font-size:1rem;font-weight:700;color:var(--on-surface);margin:0 0 4px 10px;">${escapeHtml(item.title || 'Generico')}</h4>
                 
-                <div style="display:flex;align-items:center;color:#6B7280;font-size:12px;margin-left:10px;">
+                <div style="display:flex;align-items:center;color:var(--on-surface-variant);font-size:12px;margin-left:10px;">
                     <i data-lucide="clock" style="width:13px;height:13px;margin-right:6px;stroke-width:2;"></i>
                     <span style="font-weight:500;">${item.isExam ? '09:00 - 12:00' : 'Scadenza domani'}</span>
                 </div>
 
-                ${item.desc ? `<p style="font-size:12px;color:#9CA3AF;font-style:italic;margin:8px 0 0 10px;border-top:1px solid #F3F4F6;padding-top:8px;">"${escapeHtml(truncateWithEllipsis(item.desc, 100))}"</p>` : ''}
+                ${item.desc ? `<p style="font-size:12px;color:var(--outline);font-style:italic;margin:8px 0 0 10px;border-top:1px solid var(--outline-variant);padding-top:8px;">"${escapeHtml(truncateWithEllipsis(item.desc, 100))}"</p>` : ''}
             </div>`;
         }).join('')
-        : `<div style="text-align:center;padding:32px 16px;background:white;border-radius:22px;border:1px solid #EEF0F3;color:#9CA3AF;font-style:italic;">Nessun impegno programmato per domani.</div>`;
+        : `<div style="text-align:center;padding:32px 16px;background:var(--surface-container-lowest);border-radius:22px;border:1px solid var(--outline-variant);color:var(--outline);font-style:italic;">Nessun impegno programmato per domani.</div>`;
 
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
@@ -1829,9 +1829,9 @@ function renderHome() {
     // Avatar utente
     const userPhoto = state.userPhoto || '';
     const avatarHtml = userPhoto
-        ? `<img src="${escapeHtml(userPhoto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid #EEF0F3;" onclick="navigate('profile')" alt="Profilo">`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(0,81,197,0.18);" onclick="navigate('profile')">
-            <span class="material-symbols-outlined" style="font-size:20px;color:#0051C5;font-variation-settings:'FILL' 1;">person</span>
+        ? `<img src="${escapeHtml(userPhoto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid var(--outline-variant);" onclick="navigate('profile')" alt="Profilo">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(0,81,197,0.18);" onclick="navigate('profile')">
+            <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary);font-variation-settings:'FILL' 1;">person</span>
            </div>`;
 
     // 6. Ritorno dell'HTML strutturale della Dashboard
@@ -1842,7 +1842,7 @@ function renderHome() {
 
             <!-- HEADER: GANDHI DIARY + Avatar -->
             <div style="display:flex;justify-content:space-between;align-items:center;padding:0 24px 16px;">
-                <h1 style="font-size:13px;font-weight:800;letter-spacing:0.12em;color:#9CA3AF;text-transform:uppercase;margin:0;">GANDHI DIARY</h1>
+                <h1 style="font-size:13px;font-weight:800;letter-spacing:0.12em;color:var(--outline);text-transform:uppercase;margin:0;">GANDHI DIARY</h1>
                 ${avatarHtml}
             </div>
 
@@ -1856,16 +1856,16 @@ function renderHome() {
                             <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(243,232,255,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:start;">
                                 <div>
-                                    <h2 style="color:#0051C5;font-weight:800;font-size:1.15rem;line-height:1.2;letter-spacing:-0.01em;">Buongiorno, ${getSafeUserName()}</h2>
+                                    <h2 style="color:var(--primary);font-weight:800;font-size:1.15rem;line-height:1.2;letter-spacing:-0.01em;">Buongiorno, ${getSafeUserName()}</h2>
                                     <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
                                 </div>
-                                <div style="width:40px;height:40px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;color:#0250C5;">
+                                <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;color:var(--primary);">
                                     <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
                                 </div>
                             </div>
 
                             <div style="margin-top:8px;">
-                                <span style="font-size:3.2rem;font-weight:800;color:#0250C5;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                                <span style="font-size:3.2rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;">${media.toFixed(2)}</span>
                             </div>
 
                             <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
@@ -1886,13 +1886,13 @@ function renderHome() {
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(254,202,202,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                                 <div style="display:flex;justify-content:space-between;align-items:start;">
-                                    <h2 style="font-weight:700;font-size:1.15rem;color:#BD1118;letter-spacing:-0.01em;">Assenze</h2>
-                                    <div style="width:40px;height:40px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;color:#BD1118;">
+                                    <h2 style="font-weight:700;font-size:1.15rem;color:var(--error);letter-spacing:-0.01em;">Assenze</h2>
+                                    <div style="width:40px;height:40px;border-radius:50%;background:var(--error-container);display:flex;align-items:center;justify-content:center;color:var(--error);">
                                         <i data-lucide="user-x" style="width:20px;height:20px;"></i>
                                     </div>
                                 </div>
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
-                                    <div style="font-size:3.2rem;font-weight:700;color:#BD1118;letter-spacing:-0.03em;">
+                                    <div style="font-size:3.2rem;font-weight:700;color:var(--error);letter-spacing:-0.03em;">
                                         ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
                                     </div>
                                     <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
@@ -1900,21 +1900,21 @@ function renderHome() {
                                             <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
                                             <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
                                         </svg>
-                                        <span style="position:absolute;font-size:11px;font-weight:700;color:#BD1118;">${Math.round(progressPercentage)}%</span>
+                                        <span style="position:absolute;font-size:11px;font-weight:700;color:var(--error);">${Math.round(progressPercentage)}%</span>
                                     </div>
                                 </div>
                                 <div style="display:flex;justify-content:space-between;gap:10px;">
-                                    <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                        <div style="font-weight:700;font-size:14px;color:#BD1118;">${assenzeGiorni}g</div>
-                                        <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
+                                    <div style="background:var(--surface-container-low);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid var(--outline-variant);">
+                                        <div style="font-weight:700;font-size:14px;color:var(--error);">${assenzeGiorni}g</div>
+                                        <div style="font-size:8px;font-weight:600;color:var(--outline);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
                                     </div>
-                                    <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                        <div style="font-weight:700;font-size:14px;color:#1F2937;">${ritardiTotali}</div>
-                                        <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
+                                    <div style="background:var(--surface-container-low);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid var(--outline-variant);">
+                                        <div style="font-weight:700;font-size:14px;color:var(--on-surface);">${ritardiTotali}</div>
+                                        <div style="font-size:8px;font-weight:600;color:var(--outline);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
                                     </div>
-                                    <div style="background:#FAFBFC;border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid #F3F4F6;">
-                                        <div style="font-weight:700;font-size:14px;color:#1F2937;">${usciteTotali}</div>
-                                        <div style="font-size:8px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
+                                    <div style="background:var(--surface-container-low);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid var(--outline-variant);">
+                                        <div style="font-weight:700;font-size:14px;color:var(--on-surface);">${usciteTotali}</div>
+                                        <div style="font-size:8px;font-weight:600;color:var(--outline);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
                                     </div>
                                 </div>
                             </div>
@@ -1929,21 +1929,21 @@ function renderHome() {
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
                                     <div style="display:flex;justify-content:space-between;align-items:start;">
                                         <div style="display:flex;flex-direction:column;">
-                                            <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
+                                            <h2 style="font-weight:600;font-size:1.15rem;color:var(--success);">Prossime Verifiche</h2>
                                             <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
                                         </div>
-                                        <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                        <div style="width:40px;height:40px;border-radius:50%;background:var(--success-container);display:flex;align-items:center;justify-content:center;color:var(--success);">
                                             <i data-lucide="calendar" style="width:20px;height:20px;"></i>
                                         </div>
                                     </div>
 
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
                                         <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
-                                            <span style="font-size:1.1rem;font-weight:700;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
-                                            <span style="font-size:11px;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
+                                            <span style="font-size:1.1rem;font-weight:700;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
+                                            <span style="font-size:11px;color:var(--outline);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
                                         </div>
                                         <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
-                                            <span style="font-size:1.8rem;font-weight:800;color:#059669;letter-spacing:-0.02em;">${countdownText}</span>
+                                            <span style="font-size:1.8rem;font-weight:800;color:var(--success);letter-spacing:-0.02em;">${countdownText}</span>
                                             <span style="
                                                 display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
                                                 font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
@@ -1953,7 +1953,7 @@ function renderHome() {
                                     </div>
 
                                     <div style="width:100%;">
-                                        <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:#9CA3AF;margin-bottom:4px;padding:0 2px;">
+                                        <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:var(--outline);margin-bottom:4px;padding:0 2px;">
                                             <span>STATO STUDIO</span>
                                             <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
                                         </div>
@@ -1965,15 +1965,15 @@ function renderHome() {
                             ` : `
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
                                     <div style="display:flex;justify-content:space-between;align-items:start;">
-                                        <h2 style="font-weight:600;font-size:1.15rem;color:#059669;">Prossime Verifiche</h2>
-                                        <div style="width:40px;height:40px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#059669;">
+                                        <h2 style="font-weight:600;font-size:1.15rem;color:var(--success);">Prossime Verifiche</h2>
+                                        <div style="width:40px;height:40px;border-radius:50%;background:var(--success-container);display:flex;align-items:center;justify-content:center;color:var(--success);">
                                             <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
                                         </div>
                                     </div>
                                     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
                                         <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
-                                        <p style="font-size:13px;font-weight:600;color:#065F46;">Nessuna verifica</p>
-                                        <p style="font-size:11px;color:#9CA3AF;margin-top:2px;">Niente da studiare per ora!</p>
+                                        <p style="font-size:13px;font-weight:600;color:var(--success);">Nessuna verifica</p>
+                                        <p style="font-size:11px;color:var(--outline);margin-top:2px;">Niente da studiare per ora!</p>
                                     </div>
                                 </div>
                             `}
@@ -1984,8 +1984,8 @@ function renderHome() {
 
                 <div class="widget-indicators">
                     <div class="widget-indicator active carousel-dot" style="width: 20px; height: 6px; border-radius: 4px; background: #0250C5; transition: all 0.3s;"></div>
-                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background: #CBD5E1; transition: all 0.3s;"></div>
-                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background: #CBD5E1; transition: all 0.3s;"></div>
+                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background:var(--surface-container-high); transition: all 0.3s;"></div>
+                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background:var(--surface-container-high); transition: all 0.3s;"></div>
                 </div>
             </div>
 
@@ -1993,8 +1993,8 @@ function renderHome() {
             <div style="padding:0 24px;">
                 <div style="margin-bottom:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
-                        <h3 style="font-size:1.35rem;font-weight:700;color:#1F2937;margin:0;">Domani</h3>
-                        <a href="#" style="color:#0250C5;font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">See all</a>
+                        <h3 style="font-size:1.35rem;font-weight:700;color:var(--on-surface);margin:0;">Domani</h3>
+                        <a href="#" style="color:var(--primary);font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">See all</a>
                     </div>
                     ${htmlDomani}
                 </div>
@@ -2171,7 +2171,7 @@ function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
         ctx.moveTo(p.left, y);
         ctx.lineTo(W - p.right, y);
         ctx.stroke();
-        ctx.fillStyle = '#908C86';
+        ctx.fillStyle = 'var(--on-surface-variant)';
         ctx.font = '700 10px JetBrains Mono';
         ctx.textAlign = 'right';
         ctx.fillText(String(t), p.left - 8, y + 3);
@@ -2210,14 +2210,14 @@ function drawSubjectTrendFrame(ctx, W, H, trendItems, subjColor, progress = 1) {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeStyle = 'var(--surface-container-lowest)';
         ctx.lineWidth = 2;
         ctx.stroke();
     });
 
     const firstLabel = trendItems[0].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
     const lastLabel = trendItems[trendItems.length - 1].date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-    ctx.fillStyle = '#908C86';
+    ctx.fillStyle = 'var(--on-surface-variant)';
     ctx.font = '700 10px JetBrains Mono';
     ctx.textAlign = 'left';
     ctx.fillText(firstLabel, p.left, H - 10);
@@ -2469,7 +2469,7 @@ function renderSubjectDetailView(subjectName) {
         // As k→∞ this tends to 10. If goal > 10 it's impossible (shouldn't happen).
         // Sanity: if gap > 4 (e.g. media 4, goal 9) → "feet on the ground"
         if (gap >= 4) {
-            goalText = `Obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)}: resta con i piedi per terra! La distanza è troppo grande per essere colmata in tempi ragionevoli.`;
+            goalText = `Obiettivo di <b style="color:var(--info)">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)}: resta con i piedi per terra! La distanza è troppo grande per essere colmata in tempi ragionevoli.`;
         } else {
             // Build scenarios for grade values 7, 8, 9, 10 (all above goal, capped at 10)
             const gradeValues = [7, 8, 9, 10].filter(g => g > goal);
@@ -2487,18 +2487,18 @@ function renderSubjectDetailView(subjectName) {
 
             if (scenarios.length === 0) {
                 // Even 10s not enough in reasonable count — very high goal
-                goalText = `Per raggiungere <b style="color:#1e3a8a">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)} servirebbero troppi voti perfetti. Considera un obiettivo più vicino alla tua media attuale.`;
+                goalText = `Per raggiungere <b style="color:var(--info)">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)} servirebbero troppi voti perfetti. Considera un obiettivo più vicino alla tua media attuale.`;
             } else {
                 // Pick 2-3 most readable scenarios (prefer fewest votes needed)
                 const picked = scenarios.slice(0, 3);
                 const lines = picked.map(s =>
-                    `<b style="color:#2563eb">${s.k} ${s.k===1?'voto':'voti'} da ${s.gradeVal}</b>`
+                    `<b style="color:var(--info)">${s.k} ${s.k===1?'voto':'voti'} da ${s.gradeVal}</b>`
                 ).join(' &nbsp;·&nbsp; ');
-                goalText = `Per raggiungere <b style="color:#1e3a8a">${goal.toFixed(1)}</b> ti bastano: ${lines}.`;
+                goalText = `Per raggiungere <b style="color:var(--info)">${goal.toFixed(1)}</b> ti bastano: ${lines}.`;
             }
         }
     } else if (media >= goal) {
-        goalText = `Hai già raggiunto il tuo obiettivo di <b style="color:#1e3a8a">${goal.toFixed(1)}</b>. Continua così!`;
+        goalText = `Hai già raggiunto il tuo obiettivo di <b style="color:var(--info)">${goal.toFixed(1)}</b>. Continua così!`;
     } else {
         goalText = `Imposta un obiettivo per ricevere suggerimenti personalizzati.`;
     }
@@ -2553,36 +2553,36 @@ function renderSubjectDetailView(subjectName) {
     const votiRows = votiData.map((v, i) => {
         const val = getNumericGradeValue(v);
         const color = val >= 6 ? '#2563eb' : '#dc2626';
-        const sep = i < votiData.length - 1 ? '<div style="height:1px;background:#f1f5f9;margin:12px 0;"></div>' : '';
+        const sep = i < votiData.length - 1 ? '<div style="height:1px;background:var(--surface-container-low);margin:12px 0;"></div>' : '';
         return `
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
-                <h4 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 3px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
-                <span style="font-size:11px;font-weight:600;color:#94a3b8;">${fmtDate(v.data || v.date)}</span>
+                <h4 style="font-size:14px;font-weight:700;color:var(--on-surface);margin:0 0 3px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
+                <span style="font-size:11px;font-weight:600;color:var(--outline);">${fmtDate(v.data || v.date)}</span>
             </div>
             <span style="font-size:17px;font-weight:800;color:${color};">${v.valore || v.value}</span>
         </div>${sep}`;
     }).join('');
 
-    const CARD = 'background:white;border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:1px solid #f8fafc;margin-bottom:16px;';
+    const CARD = 'background:var(--surface-container-lowest);border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:1px solid var(--outline-variant);margin-bottom:16px;';
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:#f4f7fb;background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--surface-container-low);background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
         <div style="padding:max(env(safe-area-inset-top,0px),40px) 24px 0;font-family:Hanken Grotesk,sans-serif;">
 
             <!-- Header -->
             <header style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
-                <button onclick="window.closeSubject()" style="width:44px;height:44px;border-radius:16px;background:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(0,0,0,0.08);flex-shrink:0;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:20px;color:#1e3a8a;">arrow_back</span>
+                <button onclick="window.closeSubject()" style="width:44px;height:44px;border-radius:16px;background:var(--surface-container-lowest);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(0,0,0,0.08);flex-shrink:0;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">arrow_back</span>
                 </button>
-                <h1 style="font-size:24px;font-weight:800;color:#1e3a8a;letter-spacing:-0.02em;margin:0;">${escapeHtml(subjectName)}</h1>
+                <h1 style="font-size:24px;font-weight:800;color:var(--info);letter-spacing:-0.02em;margin:0;">${escapeHtml(subjectName)}</h1>
             </header>
 
             <!-- CARD 1: Media + grafico area -->
             <div style="${CARD}">
-                <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Media Materia</p>
+                <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Media Materia</p>
                 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
-                    <span style="font-size:56px;font-weight:800;color:#2563eb;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                    <span style="font-size:56px;font-weight:800;color:var(--info);line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
                     ${ (() => {
                         // Delta: media con tutti i voti - media senza l'ultimo voto
                         const sortedByDate = [...votiData].sort((a,b) => (a.data||a.date||'').localeCompare(b.data||b.date||''));
@@ -2598,9 +2598,9 @@ function renderSubjectDetailView(subjectName) {
                                 <span style="font-size:10px;font-weight:800;color:${isP ? '#16a34a' : '#dc2626'};letter-spacing:0.05em;">${fmt}</span>
                             </div>`;
                         } else if (n >= 2) {
-                            return `<div style="display:flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
-                                <span class="material-symbols-outlined" style="font-size:12px;color:#2563eb;font-variation-settings:'FILL' 1;">trending_up</span>
-                                <span style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:var(--info-container);border:1px solid var(--outline-variant);padding:5px 11px;border-radius:999px;margin-bottom:4px;">
+                                <span class="material-symbols-outlined" style="font-size:12px;color:var(--info);font-variation-settings:'FILL' 1;">trending_up</span>
+                                <span style="font-size:10px;font-weight:800;color:var(--info);letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
                             </div>`;
                         }
                         return '';
@@ -2619,35 +2619,35 @@ function renderSubjectDetailView(subjectName) {
                     </svg>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:0 2px;">
-                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
+                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
                 </div>` : ''}
             </div>
 
             <!-- CARD 2: Predictive Hub -->
             <div style="${CARD}">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:20px;color:#2563eb;font-variation-settings:'FILL' 1;">bolt</span>
+                    <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">bolt</span>
                     </div>
-                    <h2 style="font-size:18px;font-weight:700;color:#1e3a8a;margin:0;">Predictive Hub</h2>
+                    <h2 style="font-size:18px;font-weight:700;color:var(--info);margin:0;">Predictive Hub</h2>
                 </div>
-                <p style="font-size:13px;color:#64748b;line-height:1.6;font-weight:500;margin:0 0 20px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
+                <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.6;font-weight:500;margin:0 0 20px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
                 <div style="margin-bottom:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;">
-                        <span style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Voto simulato</span>
-                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">7.5</span>
+                        <span style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;">Voto simulato</span>
+                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:var(--info);line-height:1;">7.5</span>
                     </div>
                     <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
                         style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2563eb 65%,#dbeafe 65%);"
                         oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2563eb '+pct+'%,#dbeafe '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:20px;padding:14px 16px;border:1px solid #f1f5f9;">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface-container-low);border-radius:20px;padding:14px 16px;border:1px solid var(--outline-variant);">
                     <div>
-                        <p style="font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">Media stimata</p>
-                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:#1e3a8a;line-height:1;">${simDefault}</span>
+                        <p style="font-size:10px;font-weight:800;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">Media stimata</p>
+                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:var(--info);line-height:1;">${simDefault}</span>
                     </div>
-                    <div style="width:44px;height:44px;border-radius:50%;background:white;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;">
-                        <span class="material-symbols-outlined" style="font-size:20px;color:#94a3b8;">auto_fix_high</span>
+                    <div style="width:44px;height:44px;border-radius:50%;background:var(--surface-container-lowest);border:1px solid var(--outline-variant);display:flex;align-items:center;justify-content:center;">
+                        <span class="material-symbols-outlined" style="font-size:20px;color:var(--outline);">auto_fix_high</span>
                     </div>
                 </div>
             </div>
@@ -2655,45 +2655,45 @@ function renderSubjectDetailView(subjectName) {
             <!-- CARD 3: Confronto Semestri -->
             ${hasSemesters ? `
             <div style="${CARD}">
-                <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 20px;">Confronto Semestri</p>
+                <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 20px;">Confronto Semestri</p>
                 <div style="margin-bottom:18px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                        <span style="font-size:14px;font-weight:700;color:#1e293b;">1° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:#475569;">${media1.toFixed(1)}</span>
+                        <span style="font-size:14px;font-weight:700;color:var(--on-surface);">1° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:var(--on-surface-variant);">${media1.toFixed(1)}</span>
                     </div>
-                    <div style="width:100%;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;">
+                    <div style="width:100%;background:var(--surface-container-low);height:8px;border-radius:999px;overflow:hidden;">
                         <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:#94a3b8;border-radius:999px;"></div>
                     </div>
                 </div>
                 <div style="margin-bottom:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                        <span style="font-size:14px;font-weight:700;color:#1e293b;">2° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:#2563eb;">${media2.toFixed(1)}</span>
+                        <span style="font-size:14px;font-weight:700;color:var(--on-surface);">2° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:var(--info);">${media2.toFixed(1)}</span>
                     </div>
-                    <div style="width:100%;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;">
+                    <div style="width:100%;background:var(--surface-container-low);height:8px;border-radius:999px;overflow:hidden;">
                         <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2563eb;border-radius:999px;"></div>
                     </div>
                 </div>
                 ${media2 > media1 ? `
-                <div style="background:#f0fdf4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
-                    <div style="width:40px;height:40px;border-radius:14px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:#16a34a;">keyboard_double_arrow_up</span>
+                <div style="background:var(--success-container);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:40px;height:40px;border-radius:14px;background:var(--success-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--success);">keyboard_double_arrow_up</span>
                     </div>
-                    <p style="font-size:13px;color:#374151;line-height:1.4;margin:0;">Stai andando <b style="color:#1e293b;">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
+                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.4;margin:0;">Stai andando <b style="color:var(--on-surface);">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
                 </div>` : `
-                <div style="background:#fff7ed;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
-                    <div style="width:40px;height:40px;border-radius:14px;background:#fed7aa;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:#ea580c;">keyboard_double_arrow_down</span>
+                <div style="background:var(--warning-container);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:40px;height:40px;border-radius:14px;background:var(--warning-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--warning);">keyboard_double_arrow_down</span>
                     </div>
-                    <p style="font-size:13px;color:#374151;line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
+                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
                 </div>`}
             </div>` : ''}
 
             <!-- CARD 4: Voti Ricevuti -->
             <div style="${CARD}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-                    <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Voti Ricevuti</p>
-                    <span class="material-symbols-outlined" style="font-size:16px;color:#93c5fd;">history</span>
+                    <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0;">Voti Ricevuti</p>
+                    <span class="material-symbols-outlined" style="font-size:16px;color:var(--info);">history</span>
                 </div>
                 ${votiRows}
             </div>
@@ -2702,23 +2702,23 @@ function renderSubjectDetailView(subjectName) {
             <div style="${CARD}margin-bottom:0;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:40px;height:40px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:18px;color:#1e3a8a;font-variation-settings:'FILL' 1;">flag</span>
+                        <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--info);font-variation-settings:'FILL' 1;">flag</span>
                         </div>
-                        <h2 style="font-size:17px;font-weight:700;color:#1e3a8a;margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
+                        <h2 style="font-size:17px;font-weight:700;color:var(--info);margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
                     </div>
                     <div style="text-align:right;cursor:pointer;" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
-                        <p style="font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Target</p>
+                        <p style="font-size:10px;font-weight:800;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Target</p>
                         <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
-                            <span style="font-size:24px;font-weight:800;color:#1e3a8a;line-height:1;">${goal.toFixed(1)}</span>
-                            <span class="material-symbols-outlined" style="font-size:14px;color:#64748b;">edit</span>
+                            <span style="font-size:24px;font-weight:800;color:var(--info);line-height:1;">${goal.toFixed(1)}</span>
+                            <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);">edit</span>
                         </div>
                     </div>
                 </div>
-                <p style="font-size:13px;color:#475569;line-height:1.65;font-weight:500;margin:0 0 14px;">${goalText}</p>
+                <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.65;font-weight:500;margin:0 0 14px;">${goalText}</p>
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:13px;color:#94a3b8;">info</span>
-                    <span style="font-size:10px;color:#94a3b8;font-weight:600;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
+                    <span class="material-symbols-outlined" style="font-size:13px;color:var(--outline);">info</span>
+                    <span style="font-size:10px;color:var(--outline);font-weight:600;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
                 </div>
             </div>
 
@@ -2874,16 +2874,16 @@ function mostraCircolare(id) {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;';
 
     const sheet = document.createElement('div');
-    sheet.style.cssText = 'width:100%;max-width:520px;background:#ffffff;border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 -4px 32px rgba(0,0,0,0.12);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);font-family:Hanken Grotesk,sans-serif;';
+    sheet.style.cssText = 'width:100%;max-width:520px;background:var(--surface-container-lowest);border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 -4px 32px rgba(0,0,0,0.12);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);font-family:Hanken Grotesk,sans-serif;';
 
     const sintesiContent = c.sintesi
-        ? `<div style="font-size:15px;line-height:1.7;color:#334155;">${typeof marked !== 'undefined' ? marked.parse(c.sintesi) : escapeHtml(c.sintesi)}</div>`
+        ? `<div style="font-size:15px;line-height:1.7;color:var(--on-surface-variant);">${typeof marked !== 'undefined' ? marked.parse(c.sintesi) : escapeHtml(c.sintesi)}</div>`
         : `<div id="sintesi-placeholder-${c.id}" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 0;gap:12px;">
-               <div style="width:56px;height:56px;border-radius:20px;background:#eff6ff;display:flex;align-items:center;justify-content:center;">
-                   <span class="material-symbols-outlined" style="font-size:28px;color:#2563eb;font-variation-settings:'FILL' 1;">auto_awesome</span>
+               <div style="width:56px;height:56px;border-radius:20px;background:var(--info-container);display:flex;align-items:center;justify-content:center;">
+                   <span class="material-symbols-outlined" style="font-size:28px;color:var(--info);font-variation-settings:'FILL' 1;">auto_awesome</span>
                </div>
-               <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0;">Analisi AI disponibile</p>
-               <p style="font-size:13px;color:#94a3b8;font-weight:500;margin:0;max-width:220px;">Ottieni una sintesi intelligente dei punti chiave della circolare.</p>
+               <p style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">Analisi AI disponibile</p>
+               <p style="font-size:13px;color:var(--outline);font-weight:500;margin:0;max-width:220px;">Ottieni una sintesi intelligente dei punti chiave della circolare.</p>
                <button id="btn-sintesi-${c.id}" onclick="window._circ_startSintesi('${escapeJsSingleQuote(c.id)}','${escapeJsSingleQuote(c.link || '')}')" style="width:100%;height:48px;border-radius:14px;background:#2563eb;color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:Hanken Grotesk,sans-serif;margin-top:4px;">
                    <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">psychology</span>
                    Elabora Sintesi
@@ -2893,16 +2893,16 @@ function mostraCircolare(id) {
     sheet.innerHTML = `
         <!-- Drag handle -->
         <div style="display:flex;justify-content:center;padding:14px 0 6px;flex-shrink:0;">
-            <div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>
+            <div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>
         </div>
 
         <!-- Header -->
-        <div style="padding:8px 22px 16px;flex-shrink:0;border-bottom:1px solid #f1f5f9;">
-            <p style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px;">Circolare N. ${escapeHtml(String(c.numero || ''))}</p>
-            <h2 style="font-size:20px;font-weight:800;color:#0f172a;line-height:1.25;margin:0 0 8px;letter-spacing:-0.01em;">${escapeHtml(c.titolo)}</h2>
+        <div style="padding:8px 22px 16px;flex-shrink:0;border-bottom:1px solid var(--outline-variant);">
+            <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px;">Circolare N. ${escapeHtml(String(c.numero || ''))}</p>
+            <h2 style="font-size:20px;font-weight:800;color:var(--on-surface);line-height:1.25;margin:0 0 8px;letter-spacing:-0.01em;">${escapeHtml(c.titolo)}</h2>
             <div style="display:flex;align-items:center;gap:6px;">
-                <span class="material-symbols-outlined" style="font-size:14px;color:#94a3b8;">calendar_today</span>
-                <span style="font-size:13px;font-weight:500;color:#64748b;">${escapeHtml(c.data || '')}</span>
+                <span class="material-symbols-outlined" style="font-size:14px;color:var(--outline);">calendar_today</span>
+                <span style="font-size:13px;font-weight:500;color:var(--on-surface-variant);">${escapeHtml(c.data || '')}</span>
             </div>
         </div>
 
@@ -2912,11 +2912,11 @@ function mostraCircolare(id) {
         </div>
 
         <!-- Actions -->
-        <div style="padding:16px 22px calc(28px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;">
+        <div style="padding:16px 22px calc(28px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--outline-variant);">
             ${c.link ? `<button onclick="window.open('${escapeJsSingleQuote(c.link)}','_blank')" style="width:100%;height:52px;border-radius:15px;background:#2563eb;color:white;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.35);">
                 <span class="material-symbols-outlined" style="font-size:19px;">open_in_new</span>Apri Documento
             </button>` : ''}
-            <button id="circ-close-btn-${id}" style="width:100%;height:44px;background:none;border:none;color:#2563eb;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Chiudi</button>
+            <button id="circ-close-btn-${id}" style="width:100%;height:44px;background:none;border:none;color:var(--info);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Chiudi</button>
         </div>
     `;
 
@@ -2942,17 +2942,17 @@ function mostraCircolare(id) {
         placeholder.innerHTML = `
             <div style="width:100%;padding:8px 0;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-                    <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:#2563eb;font-variation-settings:'FILL' 1;">psychology</span>
+                    <div style="width:36px;height:36px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--info);font-variation-settings:'FILL' 1;">psychology</span>
                     </div>
                     <div style="flex:1;">
-                        <p id="sintesi-stage-${cid}" style="font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Avvio analisi…</p>
-                        <div style="width:100%;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                        <p id="sintesi-stage-${cid}" style="font-size:11px;font-weight:800;color:var(--info);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Avvio analisi…</p>
+                        <div style="width:100%;height:6px;background:var(--surface-container-low);border-radius:999px;overflow:hidden;">
                             <div id="sintesi-bar-${cid}" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:999px;transition:width 0.4s ease;"></div>
                         </div>
                     </div>
                 </div>
-                <p id="sintesi-sub-${cid}" style="font-size:12px;color:#94a3b8;font-weight:500;margin:0;">Lettura del documento in corso…</p>
+                <p id="sintesi-sub-${cid}" style="font-size:12px;color:var(--outline);font-weight:500;margin:0;">Lettura del documento in corso…</p>
             </div>`;
 
         const stages = [
@@ -3431,7 +3431,7 @@ function renderWeeklyAgenda() {
         const isToday = dateStr === getLocalDateString();
         const isTomorrow = (() => { const tm = new Date(); tm.setDate(tm.getDate() + 1); return dateStr === getLocalDateString(tm); })();
 
-        const labelColor = isToday ? '#34C759' : isTomorrow ? '#FF9F0A' : 'transparent';
+        const labelColor = isToday ? 'var(--success)' : isTomorrow ? '#FF9F0A' : 'transparent';
         const labelText = isToday ? 'TODAY' : isTomorrow ? 'BEYOND' : '';
         const labelTag = isToday || isTomorrow
             ? `<span class="agenda-day-label" style="font-family: var(--font-main); font-size:10px; font-weight:800; color:${labelColor}; border: 1px solid ${labelColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em;">${labelText}</span>`
@@ -3466,23 +3466,23 @@ function renderWeeklyAgenda() {
                 .trim();
 
             return `
-                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : '#FFFFFF'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: background 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);">
-                        <div style="width:4px; background:${t.done ? '#C8C5C0' : subjColor}; flex-shrink:0;"></div>
+                        <div class="card agenda-task-card" style="display:flex; align-items:stretch; background:${t.done ? '#FAFAF9' : 'var(--surface-container-lowest)'}; border: 1px solid ${t.done ? '#EDEBE7' : 'rgba(0,0,0,0.06)'}; border-radius:14px; min-height:80px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: background 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);">
+                        <div style="width:4px; background:${t.done ? 'var(--outline-variant)' : subjColor}; flex-shrink:0;"></div>
                         
                         <div class="agenda-task-main" style="flex:1; padding:16px 20px; min-width:0; display:flex; flex-direction:column; justify-content:center;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
-                                <span class="agenda-subject-badge" style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${t.done ? '#908C86' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
-                                ${timeStr ? `<span class="agenda-time-badge" style="font-family: var(--font-main); font-size:9px; font-weight:600; color:#908C86; background:#F6F5F3; padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
+                                <span class="agenda-subject-badge" style="font-family: var(--font-main); font-size:9px; font-weight:700; color:${t.done ? 'var(--on-surface-variant)' : subjColor}; text-transform:uppercase; letter-spacing:0.08em; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">${escapeHtml(cleanSubject)}</span>
+                                ${timeStr ? `<span class="agenda-time-badge" style="font-family: var(--font-main); font-size:9px; font-weight:600; color:var(--on-surface-variant); background:var(--surface-container-low); padding:2px 6px; border-radius:4px;">${escapeHtml(timeStr)}</span>` : ''}
                             </div>
-                            <div data-task-text="${escapeHtml(t.id)}" style="font-family: var(--font-main); font-size:14px; font-weight:600; color:${t.done ? '#908C86' : '#141414'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
+                            <div data-task-text="${escapeHtml(t.id)}" style="font-family: var(--font-main); font-size:14px; font-weight:600; color:${t.done ? 'var(--on-surface-variant)' : 'var(--on-surface)'}; line-height:1.5; word-break:break-word; ${t.done ? 'text-decoration:line-through; opacity: 0.5;' : ''}">${escapeHtml(displayText)}</div>
                         </div>
                         
                         <div class="agenda-task-actions" style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
-                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? '#141414' : '#C8C5C0'}; background:${t.done ? '#141414' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease, border-color 0.18s ease; flex-shrink:0;">
+                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? 'var(--on-surface)' : 'var(--outline-variant)'}; background:${t.done ? 'var(--on-surface)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease, border-color 0.18s ease; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                             ${isUserGeneratedTaskId(t.id) ? `
-                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:#FFF0EE; color:#FF3B30; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease; flex-shrink:0;" aria-label="Elimina attività">
+                            <button class="agenda-task-action-btn" onclick="event.stopPropagation(); deleteCalendarTask('${escapeJsSingleQuote(t.id)}');" style="width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,59,48,0.18); background:var(--error-container); color:var(--error); display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease; flex-shrink:0;" aria-label="Elimina attività">
                                 <i class="ph-bold ph-trash" style="font-size:13px;"></i>
                             </button>` : ''}
                         </div>
@@ -3678,24 +3678,24 @@ function renderClassActivitiesExportModalContent() {
 
 
     // ── Period controls — tutto inline, zero dipendenze CSS esterne ─────────
-    const S = 'width:100%;padding:12px 14px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#1e293b;font-size:14px;font-weight:500;font-family:Hanken Grotesk,sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';
+    const S = 'width:100%;padding:12px 14px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface);font-size:14px;font-weight:500;font-family:Hanken Grotesk,sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';
 
     const periodControls = selection.period === 'month'
         ? `<input type="month" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)" style="${S}">`
         : selection.period === 'week'
             ? `<div style="display:flex;flex-direction:column;gap:6px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <button type="button" onclick="shiftClassActivitiesExportWeek(-1)" style="width:38px;height:38px;border-radius:50%;background:#f1f5f9;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:#64748b;">chevron_left</span>
+                    <button type="button" onclick="shiftClassActivitiesExportWeek(-1)" style="width:38px;height:38px;border-radius:50%;background:var(--surface-container-low);border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant);">chevron_left</span>
                     </button>
                     <select onchange="updateClassActivitiesExportPeriodValue('week', this.value)" style="${S}flex:1;">
                         ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue, compactWeekLabels ? { compact: true } : {}))}</option>`).join('')}
                     </select>
-                    <button type="button" onclick="shiftClassActivitiesExportWeek(1)" style="width:38px;height:38px;border-radius:50%;background:#f1f5f9;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:#64748b;">chevron_right</span>
+                    <button type="button" onclick="shiftClassActivitiesExportWeek(1)" style="width:38px;height:38px;border-radius:50%;background:var(--surface-container-low);border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant);">chevron_right</span>
                     </button>
                 </div>
-                ${weekDetailLabel ? `<p style="font-size:11px;color:#94a3b8;font-weight:700;text-align:center;margin:0;">${escapeHtml(weekDetailLabel)}</p>` : ''}
+                ${weekDetailLabel ? `<p style="font-size:11px;color:var(--outline);font-weight:700;text-align:center;margin:0;">${escapeHtml(weekDetailLabel)}</p>` : ''}
               </div>`
             : `<select onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)" style="${S}">
                 ${years.map(y => `<option value="${escapeHtml(y)}" ${selection.schoolYearValue === y ? 'selected' : ''}>${escapeHtml(y.replace('-', '/'))}</option>`).join('')}
@@ -3703,7 +3703,7 @@ function renderClassActivitiesExportModalContent() {
 
     const mkTab = (period, label) => {
         const act = selection.period === period;
-        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 4px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${act?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${act?'#2563eb':'white'};color:${act?'white':'#64748b'};">${label}</button>`;
+        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 4px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${act?'2px solid var(--primary)':'1.5px solid rgba(226,232,240,0.9)'};background:${act?'#2563eb':'white'};color:${act?'white':'#64748b'};">${label}</button>`;
     };
 
     modalContent.innerHTML = `
@@ -3711,10 +3711,10 @@ function renderClassActivitiesExportModalContent() {
             <!-- Header -->
             <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:18px 22px 16px;">
                 <div>
-                    <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Esporta attività</h2>
-                    <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Solo attività svolte in classe</p>
+                    <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Esporta attività</h2>
+                    <p style="margin:4px 0 0;font-size:12px;color:var(--outline);font-weight:500;">Solo attività svolte in classe</p>
                 </div>
-                <button onclick="(function(){var o=document.querySelector('.modal-overlay.active');if(o)o.remove();else{var mc=document.getElementById('class-activities-export-modal-content');if(mc&&mc.parentNode)mc.parentNode.remove();}})()" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                <button onclick="(function(){var o=document.querySelector('.modal-overlay.active');if(o)o.remove();else{var mc=document.getElementById('class-activities-export-modal-content');if(mc&&mc.parentNode)mc.parentNode.remove();}})()" style="width:36px;height:36px;border-radius:50%;background:var(--surface-container-low);border:none;color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
                     <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
                 </button>
             </div>
@@ -3727,9 +3727,9 @@ function renderClassActivitiesExportModalContent() {
                     ${mkTab('school_year','Anno scol.')}
                 </div>
                 <div>${periodControls}</div>
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);">
-                    <span style="font-size:12px;color:#64748b;font-weight:500;">${escapeHtml(selection.periodLabel)}</span>
-                    <span style="font-size:13px;font-weight:800;color:#2563eb;">${selection.items.length} attività trovate</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container-low);border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);">
+                    <span style="font-size:12px;color:var(--on-surface-variant);font-weight:500;">${escapeHtml(selection.periodLabel)}</span>
+                    <span style="font-size:13px;font-weight:800;color:var(--info);">${selection.items.length} attività trovate</span>
                 </div>
             </div>
 
@@ -3739,7 +3739,7 @@ function renderClassActivitiesExportModalContent() {
                     <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">picture_as_pdf</span>
                     Genera PDF
                 </button>
-                <p style="text-align:center;font-size:11px;color:#94a3b8;margin:8px 0 0;line-height:1.4;">Si aprirà l'anteprima di stampa: scegli "Salva come PDF".</p>
+                <p style="text-align:center;font-size:11px;color:var(--outline);margin:8px 0 0;line-height:1.4;">Si aprirà l'anteprima di stampa: scegli "Salva come PDF".</p>
             </div>
         </div>
     `;
@@ -3758,7 +3758,7 @@ window.openClassActivitiesExportModal = function () {
     }
     modalContainer.innerHTML = `
         <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,0.35);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
-            <div id="class-activities-export-modal-content" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:#ffffff;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;max-height:90vh;overflow-y:auto;font-family:Hanken Grotesk,sans-serif;"></div>
+            <div id="class-activities-export-modal-content" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:var(--surface-container-lowest);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;max-height:90vh;overflow-y:auto;font-family:Hanken Grotesk,sans-serif;"></div>
         </div>
     `;
     renderClassActivitiesExportModalContent();
@@ -3910,13 +3910,13 @@ window.downloadClassActivitiesPdf = function () {
             <style>
                 @page { size: A4; margin: 18mm 14mm; }
                 body { font-family: Inter, -apple-system, BlinkMacSystemFont, Arial, sans-serif; color:#111; line-height:1.45; }
-                .doc-head { border-bottom: 1px solid #E6E6E6; padding-bottom: 12px; margin-bottom: 18px; }
+                .doc-head { border-bottom: 1px solid var(--outline-variant); padding-bottom: 12px; margin-bottom: 18px; }
                 .doc-head h1 { font-size: 20px; margin:0 0 4px 0; letter-spacing:-0.02em; }
                 .doc-head .meta { font-size: 12px; color:#555; }
-                .note { font-size: 12px; color:#444; background:#F7F7F7; border:1px solid #ECECEC; border-radius:10px; padding:10px 12px; margin-bottom:16px; }
-                .entry { border:1px solid #EAEAEA; border-radius:10px; padding:10px 12px; margin-bottom:10px; page-break-inside: avoid; }
+                .note { font-size: 12px; color:#444; background:var(--surface-container-low); border:1px solid var(--outline-variant); border-radius:10px; padding:10px 12px; margin-bottom:16px; }
+                .entry { border:1px solid var(--outline-variant); border-radius:10px; padding:10px 12px; margin-bottom:10px; page-break-inside: avoid; }
                 .entry-head { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
-                .entry-index { font-weight:700; font-size:11px; color:#3B82F6; }
+                .entry-index { font-weight:700; font-size:11px; color:var(--info); }
                 .entry-date, .entry-subject { font-size:11px; color:#666; font-weight:600; }
                 .entry p { margin:0; font-size:13px; color:#111; white-space:pre-wrap; }
             </style>
@@ -3982,11 +3982,11 @@ function togglePlanDay(taskId, dateStr) {
     // ✅ FIX: Immediate surgical DOM update — border shorthand, background, color
     const isNowPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
     document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
-        btn.style.background = isNowPlanned ? '#141414' : '#FFFFFF';
+        btn.style.background = isNowPlanned ? 'var(--on-surface)' : 'var(--surface-container-lowest)';
         btn.style.color = isNowPlanned ? 'white' : '#4F4A43';
         btn.style.border = isNowPlanned
-            ? '2px solid #141414'
-            : (dateStr === todayStr ? '2px solid #007AFF' : '1px solid #E0DDD8');
+            ? '2px solid var(--on-surface)'
+            : (dateStr === todayStr ? '2px solid #007AFF' : '1px solid var(--outline-variant)');
         // Spring feedback
         btn.style.transform = 'scale(0.9)';
         setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.transition = 'all 0.25s cubic-bezier(0.2,0.8,0.2,1)'; }, 80);
@@ -4172,15 +4172,15 @@ function showBachecaModal() {
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                                         <div style="padding:4px 8px; background: rgba(255, 159, 10, 0.2); border-radius:6px; display:flex; gap:6px; align-items:center;">
                                             <i class="ph-fill ph-bell" style="color: var(--orange); font-size: 14px;"></i>
-                                            <span style="font-size:11px; color: #fb923c; font-weight:700; text-transform:uppercase;">AVVISO</span>
+                                            <span style="font-size:11px; color:var(--warning); font-weight:700; text-transform:uppercase;">AVVISO</span>
                                        </div>
                                         <div style="font-size:12px; color:var(--text-secondary); font-weight:600;">
                                             ${data} • ${autore}
                                        </div>
                                    </div>
                                     <div style="font-weight:700; font-size:17px; margin-bottom:8px; color: white; line-height:1.3;">${oggetto}</div>
-                                    ${testo ? `<div style="font-size:14px; opacity:0.9; line-height:1.6; color: #cbd5e1; margin-bottom: ${url ? '8px' : '0'}; white-space: pre-wrap;">${testo}</div>` : ''}
-                                    ${url ? `<a href="${url}" target="_blank" style="margin-top:12px; background:rgba(37, 99, 235, 0.2); padding:8px 12px; border-radius:8px; border:1px solid rgba(37, 99, 235, 0.3); color:#60a5fa; font-size:13px; display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none;">
+                                    ${testo ? `<div style="font-size:14px; opacity:0.9; line-height:1.6; color:var(--outline-variant); margin-bottom: ${url ? '8px' : '0'}; white-space: pre-wrap;">${testo}</div>` : ''}
+                                    ${url ? `<a href="${url}" target="_blank" style="margin-top:12px; background:rgba(37, 99, 235, 0.2); padding:8px 12px; border-radius:8px; border:1px solid rgba(37, 99, 235, 0.3); color:var(--info); font-size:13px; display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none;">
                                         <i class="ph ph-paperclip"></i> Apri Allegato <i class="ph-bold ph-arrow-up-right" style="font-size:10px;"></i>
                                    </a>` : ''}
                                </div>
@@ -4204,23 +4204,23 @@ function promptSetGoal(type) {
 
     // Sheet
     const sheet = document.createElement('div');
-    sheet.style.cssText = 'width:100%;max-width:480px;background:#ffffff;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);font-family:Hanken Grotesk,sans-serif;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
+    sheet.style.cssText = 'width:100%;max-width:480px;background:var(--surface-container-lowest);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);font-family:Hanken Grotesk,sans-serif;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
     sheet.innerHTML = `
         <div style="display:flex;justify-content:center;padding:14px 0 6px;">
-            <div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>
+            <div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 22px 16px;">
-            <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Obiettivo</h2>
-            <button id="goal-close-btn" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#64748b;">close</span>
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Obiettivo</h2>
+            <button id="goal-close-btn" style="width:36px;height:36px;border-radius:50%;background:var(--surface-container-low);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant);">close</span>
             </button>
         </div>
         <div style="padding:0 22px 20px;">
-            <p style="font-size:13px;color:#64748b;font-weight:500;margin:0 0 16px;">Seleziona la media che vuoi raggiungere in questa materia.</p>
+            <p style="font-size:13px;color:var(--on-surface-variant);font-weight:500;margin:0 0 16px;">Seleziona la media che vuoi raggiungere in questa materia.</p>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
                 ${options.map(v => {
                     const isActive = Math.abs(v - currentGoal) < 0.01;
-                    return `<button data-goal-val="${v}" style="padding:14px 8px;border-radius:16px;font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;cursor:pointer;border:${isActive?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${isActive?'#2563eb':'white'};color:${isActive?'white':'#1e293b'};transition:all 0.12s ease;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">${v.toFixed(1)}</button>`;
+                    return `<button data-goal-val="${v}" style="padding:14px 8px;border-radius:16px;font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;cursor:pointer;border:${isActive?'2px solid var(--primary)':'1.5px solid rgba(226,232,240,0.9)'};background:${isActive?'#2563eb':'white'};color:${isActive?'white':'#1e293b'};transition:all 0.12s ease;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">${v.toFixed(1)}</button>`;
                 }).join('')}
             </div>
         </div>
@@ -4319,7 +4319,7 @@ function showAddBacklogModal() {
                 <div class="modal-content glass-panel" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                         <h2 style="margin:0; font-size:18px; font-weight:800;">📚 Argomento Arretrato</h2>
-                        <button onclick="closeModal()" style="background:none; border:none; color:#60a5fa; font-weight:700; cursor:pointer;">Chiudi</button>
+                        <button onclick="closeModal()" style="background:none; border:none; color:var(--info); font-weight:700; cursor:pointer;">Chiudi</button>
                    </div>
 
                     <div style="display:flex; flex-direction:column; gap:16px;">
@@ -4493,14 +4493,14 @@ window.openArgoLogin = function openArgoLogin() {
                              style="width:100%;height:100%;object-fit:cover;">
                     </div>
                     <div>
-                        <div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Accedi con DidUP</div>
-                        <div style="font-size:12px;color:#94a3b8;font-weight:600;">Inserisci le credenziali del registro</div>
+                        <div style="font-size:18px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Accedi con DidUP</div>
+                        <div style="font-size:12px;color:var(--outline);font-weight:600;">Inserisci le credenziali del registro</div>
                     </div>
                 </div>
 
                 <!-- Status server -->
                 <div id="server-status"
-                     style="margin-bottom:16px;font-size:12px;color:#f59e0b;
+                     style="margin-bottom:16px;font-size:12px;color:var(--warning);
                             display:flex;align-items:center;justify-content:center;gap:6px;
                             background:rgba(245,158,11,0.08);border-radius:10px;padding:8px;">
                     <span style="width:7px;height:7px;background:#f59e0b;border-radius:50%;flex-shrink:0;"></span>
@@ -4513,17 +4513,17 @@ window.openArgoLogin = function openArgoLogin() {
                            value="${localStorage.getItem('argo_school') || ''}"
                            style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
                                   padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(255,255,255,0.9);color:#0f172a;
+                                  background:rgba(255,255,255,0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                     <input id="argo-user" placeholder="Nome Utente" autocomplete="username"
                            style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
                                   padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(255,255,255,0.9);color:#0f172a;
+                                  background:rgba(255,255,255,0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                     <input id="argo-pass" type="password" placeholder="Password" autocomplete="current-password"
                            style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
                                   padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(255,255,255,0.9);color:#0f172a;
+                                  background:rgba(255,255,255,0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                 </div>
 
@@ -4541,7 +4541,7 @@ window.openArgoLogin = function openArgoLogin() {
                 <!-- Annulla -->
                 <button onclick="(typeof closeModal==='function'?closeModal():document.getElementById('modal-container').innerHTML='')"
                         style="width:100%;height:44px;border-radius:14px;border:none;cursor:pointer;
-                               background:rgba(241,245,249,0.8);color:#64748b;
+                               background:rgba(241,245,249,0.8);color:var(--on-surface-variant);
                                font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">
                     Annulla
                 </button>
@@ -4587,13 +4587,13 @@ function showProfileSelectionModal(profiles, credentials) {
                     initial +
                 '</div>' +
                 '<div style="flex:1;min-width:0;">' +
-                    '<div class="profile-name" style="font-size:15px;font-weight:800;color:#0f172a;' +
+                    '<div class="profile-name" style="font-size:15px;font-weight:800;color:var(--on-surface);' +
                     'font-family:Hanken Grotesk,sans-serif;letter-spacing:-0.01em;' +
                     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>' +
-                    (cls ? '<div class="profile-class" style="font-size:12px;font-weight:600;color:#94a3b8;' +
+                    (cls ? '<div class="profile-class" style="font-size:12px;font-weight:600;color:var(--outline);' +
                     'font-family:Hanken Grotesk,sans-serif;margin-top:2px;">' + cls + '</div>' : '') +
                 '</div>' +
-                '<span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;flex-shrink:0;">chevron_right</span>' +
+                '<span class="material-symbols-outlined" style="font-size:18px;color:var(--outline-variant);flex-shrink:0;">chevron_right</span>' +
             '</button>';
     }).join('');
 
@@ -4631,11 +4631,11 @@ function showProfileSelectionModal(profiles, credentials) {
                         'style="width:100%;height:100%;object-fit:cover;">' +
                     '</div>' +
                     '<div>' +
-                        '<div style="font-size:18px;font-weight:800;color:#0f172a;' +
+                        '<div style="font-size:18px;font-weight:800;color:var(--on-surface);' +
                         'letter-spacing:-0.02em;font-family:Hanken Grotesk,sans-serif;">' +
                             'Seleziona Profilo' +
                         '</div>' +
-                        '<div style="font-size:12px;font-weight:600;color:#94a3b8;' +
+                        '<div style="font-size:12px;font-weight:600;color:var(--outline);' +
                         'font-family:Hanken Grotesk,sans-serif;margin-top:2px;">' +
                             'Scegli quale studente visualizzare' +
                         '</div>' +
@@ -4650,7 +4650,7 @@ function showProfileSelectionModal(profiles, credentials) {
                 // annulla
                 '<button onclick="var mc=document.getElementById(\'modal-container\');if(typeof closeModal===\'function\')closeModal();else if(mc)mc.innerHTML=\'\';" ' +
                 'style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;' +
-                'background:rgba(241,245,249,0.9);color:#64748b;' +
+                'background:rgba(241,245,249,0.9);color:var(--on-surface-variant);' +
                 'font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">' +
                     'Annulla' +
                 '</button>' +
@@ -4700,15 +4700,15 @@ function showProfileSelectionModal(profiles, credentials) {
                     'mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));' +
                     'animation:spin 0.85s cubic-bezier(.4,0,.2,1) infinite;"></div>' +
                     '<div>' +
-                        '<div style="font-size:16px;font-weight:800;color:#0f172a;' +
+                        '<div style="font-size:16px;font-weight:800;color:var(--on-surface);' +
                         'font-family:Hanken Grotesk,sans-serif;letter-spacing:-0.01em;margin-bottom:4px;">' +
                             'Caricamento profilo' +
                         '</div>' +
-                        '<div style="font-size:13px;color:#64748b;font-family:Hanken Grotesk,sans-serif;">' +
+                        '<div style="font-size:13px;color:var(--on-surface-variant);font-family:Hanken Grotesk,sans-serif;">' +
                             escapeHtml(selectedName) +
                         '</div>' +
                     '</div>' +
-                    '<div style="font-size:11px;font-weight:700;color:#cbd5e1;' +
+                    '<div style="font-size:11px;font-weight:700;color:var(--outline-variant);' +
                     'text-transform:uppercase;letter-spacing:0.08em;' +
                     'font-family:Hanken Grotesk,sans-serif;">' +
                         'Sincronizzazione in corso…' +
@@ -4755,12 +4755,12 @@ function toggleTask(id) {
         document.querySelectorAll(`[data-task-toggle="${id}"]`).forEach(cb => {
             const isPlanner = cb.closest('.planner-content') || cb.closest('#weekly-agenda-list');
             if (isPlanner) {
-                cb.style.borderColor = t.done ? '#141414' : '#E5E5EA';
-                cb.style.background = t.done ? '#141414' : 'transparent';
+                cb.style.borderColor = t.done ? 'var(--on-surface)' : 'var(--outline-variant)';
+                cb.style.background = t.done ? 'var(--on-surface)' : 'transparent';
                 cb.innerHTML = t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : '';
             } else {
-                cb.style.borderColor = t.done ? '#141414' : '#DEDAD4';
-                cb.style.background = t.done ? '#141414' : '#fff';
+                cb.style.borderColor = t.done ? 'var(--on-surface)' : 'var(--outline-variant)';
+                cb.style.background = t.done ? 'var(--on-surface)' : 'var(--surface-container-lowest)';
                 cb.innerHTML = t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : '';
             }
             cb.style.transform = 'scale(0.85)';
@@ -4770,7 +4770,7 @@ function toggleTask(id) {
         document.querySelectorAll(`[data-task-text="${id}"]`).forEach(el => {
             el.style.textDecoration = t.done ? 'line-through' : 'none';
             el.style.opacity = t.done ? '0.5' : '1';
-            el.style.color = t.done ? '#C8C4BE' : '';
+            el.style.color = t.done ? 'var(--on-surface-variant)' : '';
         });
 
         // Update Home's Focus di Oggi toggle checkboxes (inline onclick) 
@@ -4824,8 +4824,8 @@ function showQuickAddTaskModal() {
     const pendingTasks = allTasks.filter(t=>!t.done && (t.due_date||'')>=getLocalDateString());
     const pendingSubjs = [...new Set(pendingTasks.map(t=>t.subject||t.materia||'Generale'))].sort();
 
-    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);background:rgba(255,255,255,0.9);color:#1e293b;font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
-    const LBL = 'font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;';
+    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);background:rgba(255,255,255,0.9);color:var(--on-surface);font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
+    const LBL = 'font-size:11px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;';
 
     // Full-screen-style bottom sheet
     showModal(`
@@ -4834,19 +4834,19 @@ function showQuickAddTaskModal() {
     <!-- Header — X uses document.getElementById approach to avoid scope issues -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <div>
-            <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.01em;">Aggiungi</h2>
-            <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;font-weight:500;">Compito, verifica o impegno</p>
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Aggiungi</h2>
+            <p style="margin:2px 0 0;font-size:12px;color:var(--outline);font-weight:500;">Compito, verifica o impegno</p>
         </div>
-        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.9);border:1.5px solid rgba(226,232,240,0.7);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.9);border:1.5px solid rgba(226,232,240,0.7);color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
         </button>
     </div>
 
     <!-- 3 tabs -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:20px;">
-        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;" id="qs-tab-new">📚 Nuovo</button>
-        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">📋 Assegnati</button>
-        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">✏️ Verifica</button>
+        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;" id="qs-tab-new">📚 Nuovo</button>
+        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">📋 Assegnati</button>
+        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">✏️ Verifica</button>
     </div>
 
     <!-- PANEL: Nuovo compito -->
@@ -4861,15 +4861,15 @@ function showQuickAddTaskModal() {
 
     <!-- PANEL: Assegnati -->
     <div id="qs-panel-existing" style="display:none;flex-direction:column;gap:10px;">
-        <p style="font-size:13px;color:#64748b;margin:0 0 6px;">Seleziona un compito già assegnato, poi scegli quando studiarlo.</p>
+        <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 6px;">Seleziona un compito già assegnato, poi scegli quando studiarlo.</p>
         <div style="max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px;">
         ${pendingSubjs.length>0 ? pendingSubjs.map(s=>`
-            <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin:6px 0 3px;">${escapeHtml(s)}</p>
+            <p style="font-size:10px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:6px 0 3px;">${escapeHtml(s)}</p>
             ${pendingTasks.filter(t=>(t.subject||t.materia||'Generale')===s).map(t=>`
-            <div id="qs-ex-${escapeHtml(t.id)}" style="background:white;border-radius:14px;padding:12px 14px;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color 0.15s;">
-                <span style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
-                <span style="font-size:11px;color:#94a3b8;">Scadenza: ${t.due_date||'—'}</span>
-            </div>`).join('')}`).join('') : '<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
+            <div id="qs-ex-${escapeHtml(t.id)}" style="background:var(--surface-container-lowest);border-radius:14px;padding:12px 14px;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color 0.15s;">
+                <span style="font-size:13px;font-weight:600;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
+                <span style="font-size:11px;color:var(--outline);">Scadenza: ${t.due_date||'—'}</span>
+            </div>`).join('')}`).join('') : '<p style="text-align:center;color:var(--outline);font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
         </div>
         <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid rgba(226,232,240,0.6);">
             <label style="${LBL}">Quando lo studi?</label>
@@ -4884,9 +4884,9 @@ function showQuickAddTaskModal() {
         <div><label style="${LBL}">Argomenti</label><textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Tipo</label>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
-                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Scritta</button>
-                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Orale</button>
-                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Pratica</button>
+                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Scritta</button>
+                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Orale</button>
+                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Pratica</button>
             </div>
         </div>
         <div><label style="${LBL}">Data</label><input id="qs-v-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
@@ -4900,11 +4900,11 @@ function showQuickAddTaskModal() {
     // ── Wire up all interactivity after DOM is ready ────────────────────────────
     requestAnimationFrame(() => {
         // Styles for tabs
-        const ACTIVE_BLUE = 'padding:11px 4px;border-radius:13px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const ACTIVE_RED  = 'padding:11px 4px;border-radius:13px;border:2px solid #dc2626;background:#dc2626;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const INACTIVE    = 'padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:2px solid #2563eb;background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:white;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const ACTIVE_BLUE = 'padding:11px 4px;border-radius:13px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const ACTIVE_RED  = 'padding:11px 4px;border-radius:13px;border:2px solid var(--error);background:#dc2626;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const INACTIVE    = 'padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
 
         let currentTab = 'new';
         let pickedTaskId = null;
@@ -4944,7 +4944,7 @@ function showQuickAddTaskModal() {
                     e.style.border = '1.5px solid rgba(226,232,240,0.9)';
                     e.style.background = 'white';
                 });
-                el.style.border = '2px solid #2563eb';
+                el.style.border = '2px solid var(--primary)';
                 el.style.background = 'rgba(239,246,255,0.6)';
                 const row = document.getElementById('qs-existing-date-row');
                 if (row) row.style.display = 'flex';
@@ -4987,7 +4987,7 @@ function showQuickAddTaskModal() {
             const sub = document.getElementById('qs-subject')?.value?.trim()||'Generale';
             const txt = document.getElementById('qs-text')?.value?.trim()||'';
             const dt  = document.getElementById('qs-date')?.value||getLocalDateString();
-            if (!txt) { const el=document.getElementById('qs-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
+            if (!txt) { const el=document.getElementById('qs-text'); if(el){el.style.border='2px solid var(--error)';el.focus();} return; }
             doAdd(sub,txt,dt,false);
         };
 
@@ -5007,7 +5007,7 @@ function showQuickAddTaskModal() {
             const sub = document.getElementById('qs-v-subject')?.value?.trim()||'Generale';
             const txt = document.getElementById('qs-v-text')?.value?.trim()||'';
             const dt  = document.getElementById('qs-v-date')?.value||getLocalDateString();
-            if (!txt) { const el=document.getElementById('qs-v-text'); if(el){el.style.border='2px solid #ef4444';el.focus();} return; }
+            if (!txt) { const el=document.getElementById('qs-v-text'); if(el){el.style.border='2px solid var(--error)';el.focus();} return; }
             doAdd(sub,`${vTipo.charAt(0).toUpperCase()+vTipo.slice(1)} · ${txt}`,dt,true);
         };
     });
@@ -5022,33 +5022,33 @@ function showAddRegistroTaskModal() {
     showModal(`
                 <div style="padding: 28px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #141414;">Nuova Verifica</h2>
-                        <button onclick="closeModal()" style="width: 32px; height: 32px; border-radius: 10px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-x" style="font-size: 14px;"></i></button>
+                        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color:var(--on-surface);">Nuova Verifica</h2>
+                        <button onclick="closeModal()" style="width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-x" style="font-size: 14px;"></i></button>
                     </div>
-                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// AGGIUNGI_VERIFICA_O_ORALE</p>
+                    <p style="font-family:'JetBrains Mono', monospace; font-size: 10px; color:var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 24px;">// AGGIUNGI_VERIFICA_O_ORALE</p>
                     <div style="display: flex; flex-direction: column; gap: 18px;">
                         <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Tipo</label>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color:var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Tipo</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <button id="tipo-scritta" onclick="selectRegistroTipo('scritta')" style="padding: 14px; border-radius: 14px; border: 2px solid #141414; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">✏️ Scritta</button>
-                                <button id="tipo-orale" onclick="selectRegistroTipo('orale')" style="padding: 14px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">🎤 Orale</button>
+                                <button id="tipo-scritta" onclick="selectRegistroTipo('scritta')" style="padding: 14px; border-radius: 14px; border: 2px solid var(--on-surface); background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">✏️ Scritta</button>
+                                <button id="tipo-orale" onclick="selectRegistroTipo('orale')" style="padding: 14px; border-radius: 14px; border: 1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); font-family:'JetBrains Mono', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">🎤 Orale</button>
                             </div>
                         </div>
                         <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Materia</label>
-                            <select id="registroTaskSubject" style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; -webkit-appearance: none;">
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color:var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Materia</label>
+                            <select id="registroTaskSubject" style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; -webkit-appearance: none;">
                                 ${subjectOptions}
                             </select>
                         </div>
                         <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Argomenti</label>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color:var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Argomenti</label>
                             <textarea id="registroTaskArgs" placeholder="Es. Capitoli 3-5, Equazioni 2° grado" rows="2"
-                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
+                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); font-size: 14px; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
                         </div>
                         <div>
-                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color: #908C86; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Data</label>
+                            <label style="font-family:'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; color:var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block;">Data</label>
                             <input id="registroTaskDate" type="date" value="${getLocalDateString()}"
-                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid #E0DDD8; background: #F6F5F3; color: #141414; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box;" />
+                                style="width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box;" />
                         </div>
                     </div>
                     <button id="submit-registro-btn" onclick="submitRegistroTask()" style="width: 100%; margin-top: 24px; padding: 16px; border-radius: 16px; border: none; background: #141414; color: #FFF; font-family:'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);">
@@ -5068,11 +5068,11 @@ window.selectRegistroTipo = function (tipo) {
     const btnOr = document.getElementById('tipo-orale');
     if (btnSc && btnOr) {
         if (tipo === 'scritta') {
-            btnSc.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
-            btnOr.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+            btnSc.style.cssText = 'padding:14px; border-radius:14px; border:2px solid var(--on-surface); background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+            btnOr.style.cssText = 'padding:14px; border-radius:14px; border:1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
         } else {
-            btnOr.style.cssText = 'padding:14px; border-radius:14px; border:2px solid #141414; background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
-            btnSc.style.cssText = 'padding:14px; border-radius:14px; border:1px solid #E0DDD8; background:#F6F5F3; color:#141414; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+            btnOr.style.cssText = 'padding:14px; border-radius:14px; border:2px solid var(--on-surface); background:#141414; color:#FFF; font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
+            btnSc.style.cssText = 'padding:14px; border-radius:14px; border:1px solid var(--outline-variant); background:var(--surface-container-low); color:var(--on-surface); font-family:JetBrains Mono,monospace; font-size:12px; font-weight:800; text-transform:uppercase; cursor:pointer; transition:all 0.2s;';
         }
     }
 };
@@ -5350,7 +5350,7 @@ document.addEventListener('animationend', (e) => {
             if (!container) return;
             container.innerHTML = `
                 <div class="modal-overlay active" onclick="closeModal(event)">
-                  <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 360px; padding: 16px; border-radius: 20px; background: white; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                  <div class="modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 360px; padding: 16px; border-radius: 20px; background:var(--surface-container-lowest); box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
                     <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">Profilo</div>
                     <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Sessione caricata parzialmente. Riprova a navigare nel profilo.</p>
                     <button onclick="closeModal(); if(window.navigate) navigate('profile')" class="btn-primary" style="width:100%; margin-bottom:8px; border-radius: 12px; height: 48px; font-weight: 700;">Apri profilo</button>
@@ -5877,23 +5877,23 @@ window.refreshPlanWeekModalContent = function () {
     });
     contentEl.innerHTML = `
         <div style="display: flex; align-items: center; margin-bottom: 24px; padding: 0 4px;">
-            <h2 style="margin:0; flex:1; min-width:0; font-family:'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: #141414; letter-spacing: 0.01em; text-transform: uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Pianifica Settimana</h2>
-            <button onclick="closeModal()" style="flex-shrink:0; margin-left:auto; background:#F0EDE8; border:1px solid #DAD4CC; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#141414;">
+            <h2 style="margin:0; flex:1; min-width:0; font-family:'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color:var(--on-surface); letter-spacing: 0.01em; text-transform: uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Pianifica Settimana</h2>
+            <button onclick="closeModal()" style="flex-shrink:0; margin-left:auto; background:var(--surface-container-low); border:1px solid var(--outline-variant); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--on-surface);">
                 <i class="ph ph-x" style="font-size: 18px;"></i>
             </button>
         </div>
         <div style="display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 8px; padding-bottom: 20px;">
-            ${calendarTasks.length === 0 ? '<div style="text-align:center; padding:40px 20px; color:#908C86; font-family:JetBrains Mono, monospace; font-size:12px; text-transform:uppercase;">Nessun compito nelle prossime 2 settimane.</div>' : ''}
+            ${calendarTasks.length === 0 ? '<div style="text-align:center; padding:40px 20px; color:var(--on-surface-variant); font-family:JetBrains Mono, monospace; font-size:12px; text-transform:uppercase;">Nessun compito nelle prossime 2 settimane.</div>' : ''}
             ${calendarTasks.map(t => {
         const subContent = t.subject || 'N/A';
         const abbr = getSubjectAbbrev(subContent);
         const key = abbr.toLowerCase();
         return `
-                <div style="background: #FFFFFF; padding: 20px; border-radius: 16px; border: 1px solid #DAD4CC; box-shadow: 0 3px 10px rgba(0,0,0,0.03);">
+                <div style="background:var(--surface-container-lowest); padding: 20px; border-radius: 16px; border: 1px solid var(--outline-variant); box-shadow: 0 3px 10px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
                         <div style="min-width: 0; flex:1;">
                             <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: var(--${key}-t, #141414); text-transform: uppercase; letter-spacing: 0.1em; background: var(--${key}, #EEE); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 8px;">${escapeHtml(subContent)}</div>
-                            <div style="font-size: 15px; font-weight: 700; color: #141414; line-height: 1.4; padding-right: 10px;">${escapeHtml(t.text)}</div>
+                            <div style="font-size: 15px; font-weight: 700; color:var(--on-surface); line-height: 1.4; padding-right: 10px;">${escapeHtml(t.text)}</div>
                         </div>
                     </div>
                     <div style="display: flex; gap: 6px;">
@@ -5904,9 +5904,9 @@ window.refreshPlanWeekModalContent = function () {
                             <div data-task-id="${t.id}" data-date="${day.dateStr}" 
                                 onclick="togglePlanDay('${t.id}', '${day.dateStr}')"
                                 style="flex: 1; text-align:center; padding: 12px 4px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
-                                background: ${isPlanned ? '#141414' : '#FFFFFF'};
+                                background: ${isPlanned ? 'var(--on-surface)' : 'var(--surface-container-lowest)'};
                                 color: ${isPlanned ? 'white' : '#4F4A43'};
-                                border: ${isToday ? '2px solid #007AFF' : '1px solid #E0DDD8'};">
+                                border: ${isToday ? '2px solid #007AFF' : '1px solid var(--outline-variant)'};">
                                 <div style="font-family:'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; margin-bottom: 4px; opacity: ${isPlanned ? '0.6' : '1'};">${day.label.toUpperCase()}</div>
                                 <div style="font-weight: 800; font-size: 15px; letter-spacing: -0.02em;">${day.dayNum}</div>
                             </div>`;
@@ -5915,7 +5915,7 @@ window.refreshPlanWeekModalContent = function () {
                 </div>`;
     }).join('')}
         </div>
-        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #F0EDE8; display:flex; align-items:center; gap:10px;">
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--outline-variant); display:flex; align-items:center; gap:10px;">
             <button id="plan-week-done-btn" onclick="finalizePlanWeekModal()" style="width: 100%; height: 50px; background: #141414; color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; transition: all 0.25s cubic-bezier(0.2,0.8,0.2,1);">Fatto</button>
             <span id="plan-week-added-badge" class="badge badge-success" style="display:none; white-space:nowrap; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;">0 compiti aggiunti</span>
         </div>`;
@@ -5928,7 +5928,7 @@ window.finalizePlanWeekModal = function () {
 
     if (doneBtn) {
         doneBtn.style.background = '#2DB86A';
-        doneBtn.style.color = '#FFFFFF';
+        doneBtn.style.color = 'var(--surface-container-lowest)';
         doneBtn.textContent = 'Fatto ✓';
         doneBtn.style.transform = 'scale(0.98)';
         setTimeout(() => { if (doneBtn) doneBtn.style.transform = 'scale(1)'; }, 180);
@@ -5954,11 +5954,11 @@ window.updateWeekDayButton = function (taskId, dateStr) {
     const todayStr = getLocalDateString();
     document.querySelectorAll(`[data-task-id="${taskId}"][data-date="${dateStr}"]`).forEach(btn => {
         if (isPlanned) {
-            btn.style.background = '#141414';
-            btn.style.borderColor = '#141414';
+            btn.style.background = 'var(--on-surface)';
+            btn.style.borderColor = 'var(--on-surface)';
             btn.style.color = 'white';
         } else {
-            btn.style.background = '#FFFFFF';
+            btn.style.background = 'var(--surface-container-lowest)';
             btn.style.borderColor = (dateStr === todayStr) ? '#007AFF' : '#E0DDD8';
             btn.style.color = '#4F4A43';
         }
@@ -6553,12 +6553,12 @@ function renderCircolariView() {
     const featuredHtml = featured ? `
         <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(255,255,255,0.6);background:linear-gradient(135deg,#ffffff 0%,#e0efff 50%,#b3d4ff 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                <div style="background:#dbeafe;border:1px solid rgba(191,219,254,0.6);color:#1d4ed8;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
-                <span class="material-symbols-outlined" style="font-size:20px;color:#1d4ed8;font-variation-settings:'FILL' 1;">campaign</span>
+                <div style="background:var(--info-container);border:1px solid rgba(191,219,254,0.6);color:var(--info);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
+                <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">campaign</span>
             </div>
-            <h2 style="font-size:24px;font-weight:800;color:#0f172a;line-height:1.2;margin:0 0 28px;letter-spacing:-0.01em;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(featured.titolo)}</h2>
+            <h2 style="font-size:24px;font-weight:800;color:var(--on-surface);line-height:1.2;margin:0 0 28px;letter-spacing:-0.01em;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(featured.titolo)}</h2>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-                <span style="font-size:13px;font-weight:600;color:#475569;font-family:Hanken Grotesk,sans-serif;">${fmtDate(featured.data)}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--on-surface-variant);font-family:Hanken Grotesk,sans-serif;">${fmtDate(featured.data)}</span>
                 <div style="width:52px;height:52px;border-radius:50%;background:#0058bc;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -4px rgba(0,88,188,0.4);" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
                     <span class="material-symbols-outlined" style="font-size:22px;color:white;">arrow_forward</span>
                 </div>
@@ -6571,43 +6571,43 @@ function renderCircolariView() {
                 const p = palettes[i + 1] || palettes[0];
                 return `<div style="border-radius:32px;padding:22px;background:${p.bg};box-shadow:${p.shadow};border:1px solid rgba(255,255,255,0.6);display:flex;flex-direction:column;cursor:pointer;min-height:160px;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
                     <span class="material-symbols-outlined" style="font-size:24px;color:${p.iconColor};margin-bottom:10px;font-variation-settings:'FILL' 1;">${p.icon}</span>
-                    <h3 style="font-size:16px;font-weight:700;color:#0f172a;line-height:1.25;margin:0 0 auto;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</h3>
-                    <span style="font-size:12px;font-weight:500;color:#64748b;margin-top:14px;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</span>
+                    <h3 style="font-size:16px;font-weight:700;color:var(--on-surface);line-height:1.25;margin:0 0 auto;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</h3>
+                    <span style="font-size:12px;font-weight:500;color:var(--on-surface-variant);margin-top:14px;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</span>
                 </div>`;
             }).join('')}
         </div>` : '';
 
     const recentHtml = recentList.length ? `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h2 style="font-size:20px;font-weight:800;color:#1b1b1d;letter-spacing:-0.01em;margin:0;font-family:Hanken Grotesk,sans-serif;">Circolari recenti</h2>
+            <h2 style="font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;margin:0;font-family:Hanken Grotesk,sans-serif;">Circolari recenti</h2>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
             ${recentList.map(c => `
                 <div style="background:rgba(255,255,255,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border-radius:28px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.12s ease;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-                    <div style="width:48px;height:48px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:22px;color:#475569;font-variation-settings:'FILL' 1;">description</span>
+                    <div style="width:48px;height:48px;border-radius:50%;background:var(--surface-container-low);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-surface-variant);font-variation-settings:'FILL' 1;">description</span>
                     </div>
                     <div style="flex:1;min-width:0;">
-                        <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</p>
-                        <p style="font-size:12px;font-weight:500;color:#94a3b8;margin:0;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</p>
+                        <p style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</p>
+                        <p style="font-size:12px;font-weight:500;color:var(--outline);margin:0;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</p>
                     </div>
-                    <span class="material-symbols-outlined" style="font-size:18px;color:#cbd5e1;flex-shrink:0;">chevron_right</span>
+                    <span class="material-symbols-outlined" style="font-size:18px;color:var(--outline-variant);flex-shrink:0;">chevron_right</span>
                 </div>`).join('')}
         </div>` : '';
 
     const emptyHtml = !list.length ? `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
-            <span class="material-symbols-outlined" style="font-size:48px;color:#cbd5e1;margin-bottom:12px;">inbox</span>
-            <p style="font-size:16px;font-weight:600;color:#94a3b8;margin:0;font-family:Hanken Grotesk,sans-serif;">Nessuna circolare disponibile</p>
+            <span class="material-symbols-outlined" style="font-size:48px;color:var(--outline-variant);margin-bottom:12px;">inbox</span>
+            <p style="font-size:16px;font-weight:600;color:var(--outline);margin:0;font-family:Hanken Grotesk,sans-serif;">Nessuna circolare disponibile</p>
         </div>` : '';
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.3) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.2) 0%,transparent 40%);background-attachment:fixed;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--surface-container-low);background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.3) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.2) 0%,transparent 40%);background-attachment:fixed;">
         <div style="padding:max(env(safe-area-inset-top,0px),32px) 24px 0;font-family:Hanken Grotesk,sans-serif;">
 
             <!-- Header -->
             <header style="margin-bottom:24px;">
-                <h1 style="font-size:30px;font-weight:800;color:#1b1b1d;letter-spacing:-0.025em;margin:0 0 4px;line-height:1;">In Evidenza</h1>
+                <h1 style="font-size:30px;font-weight:800;color:var(--on-surface);letter-spacing:-0.025em;margin:0 0 4px;line-height:1;">In Evidenza</h1>
             </header>
 
             ${featuredHtml}
@@ -6662,27 +6662,27 @@ window._plannerGetDayContentHTML = function() {
     else if(diff===-1) title = `Ieri · ${base}`;
 
     html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-        <h2 style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">${title}</h2>
-        <span style="font-size:11px;font-weight:700;color:#94a3b8;">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
+        <h2 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">${title}</h2>
+        <span style="font-size:11px;font-weight:700;color:var(--outline);">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
     </div>`;
 
     if (upcomingCount>0 && selectedDate===todayISO) {
-        html += `<div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
+        html += `<div style="background:var(--info-container);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
             <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
                 <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
-                <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
+                <span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span>
             </div>
-            <p style="font-size:12px;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-            <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
+            <p style="font-size:12px;color:var(--on-surface-variant);line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+            <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:var(--info);font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
         </div>`;
     }
 
     if (dayTasks.length) {
         html += dayTasks.map(t=>TC(t,false)).join('');
     } else {
-        html += `<div style="background:white;border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
-            <span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">event_busy</span>
-            <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività per questo giorno</p>
+        html += `<div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+            <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
+            <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
         </div>`;
     }
 
@@ -6768,9 +6768,9 @@ function renderPlanner() {
         const canDel = typeof isUserGeneratedTaskId==='function' ? isUserGeneratedTaskId(t.id) : false;
         const dLabel = showDate&&t.due_date ? (()=>{
             const d=new Date(t.due_date+'T00:00:00');
-            return `<span style="font-size:9px;font-weight:700;color:#94a3b8;display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
+            return `<span style="font-size:9px;font-weight:700;color:var(--outline);display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
         })() : '';
-        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:#fff0ee;border:1px solid rgba(255,59,48,0.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;">delete</span></button>` : '';
+        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:var(--error-container);border:1px solid rgba(255,59,48,0.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:var(--error);">delete</span></button>` : '';
         const rerender = "state._forceRender=true;scheduleRender(0);";
 
         if (isExam) return `
@@ -6779,24 +6779,24 @@ function renderPlanner() {
             ${dLabel}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1;">
                 <div style="flex:1;min-width:0;">
-                    <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
-                    <p style="font-size:13px;color:#64748b;margin:0 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</p>
+                    <h3 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
+                    <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</p>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${delBtn}<span class="material-symbols-outlined" style="font-size:22px;color:#dc2626;">warning</span></div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${delBtn}<span class="material-symbols-outlined" style="font-size:22px;color:var(--error);">warning</span></div>
             </div>
-            <div style="display:inline-flex;background:rgba(254,226,226,0.95);color:#b91c1c;font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;">VERIFICA${t.done?' · ✓':''}</div>
+            <div style="display:inline-flex;background:rgba(254,226,226,0.95);color:var(--error);font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;">VERIFICA${t.done?' · ✓':''}</div>
         </div>`;
 
         if (t.done) return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
-            <div style="width:44px;height:44px;flex-shrink:0;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#10b981;"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
-            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#64748b;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:#94a3b8;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
+        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
+            <div style="width:44px;height:44px;flex-shrink:0;background:var(--success-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--success);"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
+            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface-variant);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--outline);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:white;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);cursor:pointer;">
-            <div style="width:44px;height:44px;flex-shrink:0;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#1e40af;"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
-            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
+        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);cursor:pointer;">
+            <div style="width:44px;height:44px;flex-shrink:0;background:var(--info-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--info);"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
+            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
     }
 
@@ -6853,24 +6853,24 @@ function renderPlanner() {
 
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
-            <h1 style="font-size:30px;font-weight:800;color:#1e40af;letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
+            <h1 style="font-size:30px;font-weight:800;color:var(--info);letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
             <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.92);border:1.5px solid rgba(255,255,255,0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:Hanken Grotesk,sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:16px;color:#1e40af;font-variation-settings:'FILL' 1;">calendar_month</span>
-                <span style="font-size:13px;font-weight:700;color:#1e40af;">${monthLabel}</span>
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--info);font-variation-settings:'FILL' 1;">calendar_month</span>
+                <span style="font-size:13px;font-weight:700;color:var(--info);">${monthLabel}</span>
             </button>
         </header>
 
         <!-- ══ SEARCH BAR (Apple pill, sempre visibile) ══ -->
         <div style="padding:0 24px 14px;">
             <div style="position:relative;">
-                <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px;pointer-events:none;">search</span>
+                <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--outline);font-size:18px;pointer-events:none;">search</span>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche..."
                     value="${escapeHtml(query)}"
                     oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
                     onfocus="window._psfocused=true;"
                     onblur="setTimeout(()=>{window._psfocused=false;},200);"
-                    style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:white;border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:#1e293b;outline:none;font-family:Hanken Grotesk,sans-serif;box-sizing:border-box;" />
-${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElementById('planner-search-input');if(si)si.value='';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f1f5f9;border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}            </div>
+                    style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:var(--surface-container-lowest);border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:var(--on-surface);outline:none;font-family:Hanken Grotesk,sans-serif;box-sizing:border-box;" />
+${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElementById('planner-search-input');if(si)si.value='';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--surface-container-low);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--on-surface-variant);padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}            </div>
         </div>
 
         <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
@@ -6901,11 +6901,11 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             <!-- Subject chips -->
             <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${filterSubject===s?'2px solid #2563eb':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
+                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${filterSubject===s?'2px solid var(--primary)':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
             </div>
-            <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:10px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--outline);margin-bottom:10px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
             <div style="display:flex;flex-direction:column;gap:9px;">
-                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div style="text-align:center;padding:40px 0;"><span class="material-symbols-outlined" style="font-size:40px;color:#cbd5e1;">search_off</span><p style="color:#94a3b8;font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p></div>`}
+                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div style="text-align:center;padding:40px 0;"><span class="material-symbols-outlined" style="font-size:40px;color:var(--outline-variant);">search_off</span><p style="color:var(--outline);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p></div>`}
             </div>
         </div>` : `
 
@@ -6914,7 +6914,7 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
 
             <!-- Selected day label -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                <h2 style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">
+                <h2 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">
                     ${(()=>{
                         const d=new Date(selectedDate+'T00:00:00');
                         const diff=Math.round((d-today)/86400000);
@@ -6925,23 +6925,23 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
                         return base;
                     })()}
                 </h2>
-                <span style="font-size:11px;font-weight:700;color:#94a3b8;">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
+                <span style="font-size:11px;font-weight:700;color:var(--outline);">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
             </div>
 
             ${upcomingCount>0 && selectedDate===todayISO ? `
-            <div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
+            <div style="background:var(--info-container);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
                 <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
                     <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
-                    <span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span>
+                    <span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span>
                 </div>
-                <p style="font-size:12px;color:#475569;line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#1e40af;font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
+                <p style="font-size:12px;color:var(--on-surface-variant);line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:var(--info);font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
             </div>` : ''}
 
             ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
-            <div style="background:white;border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
-                <span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">event_busy</span>
-                <p style="font-size:14px;font-weight:600;color:#94a3b8;margin:0;">Nessuna attività per questo giorno</p>
+            <div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+                <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
+                <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
             </div>`}
         </div>`}
 
@@ -7038,26 +7038,26 @@ window._renderMonthPicker = function() {
 
     const innerHTML = 
         '<div data-drag-handle style="display:flex;justify-content:center;padding:16px 0 8px;cursor:grab;touch-action:none;">' +
-            '<div style="width:40px;height:4px;border-radius:999px;background:#d1d5db;"></div>' +
+            '<div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
             '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_left</span>' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_left</span>' +
             '</button>' +
             '<div style="text-align:center;">' +
-                '<div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
-                '<div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
+                '<div style="font-size:18px;font-weight:800;color:var(--on-surface);letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
+                '<div style="font-size:10px;font-weight:700;color:var(--outline);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
             '</div>' +
             '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">chevron_right</span>' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_right</span>' +
             '</button>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:14px 16px 6px;">' +
-            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;">' + l + '</div>'; }).join('') +
+            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--outline-variant);">' + l + '</div>'; }).join('') +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' + cells.join('') + '</div>' +
         '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
-            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" style="padding:10px 28px;border-radius:999px;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.6);cursor:pointer;font-size:13px;font-weight:700;color:#2563eb;font-family:Hanken Grotesk,sans-serif;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">Vai a Oggi</button>' +
+            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" style="padding:10px 28px;border-radius:999px;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.6);cursor:pointer;font-size:13px;font-weight:700;color:var(--info);font-family:Hanken Grotesk,sans-serif;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">Vai a Oggi</button>' +
         '</div>';
 
     // FIX SCATTO MESE: Aggiorniamo solo il contenuto senza rimuovere l'overlay!
@@ -7075,7 +7075,7 @@ window._renderMonthPicker = function() {
 
     const card = document.createElement('div');
     card.className = 'month-picker-card';
-    card.style.cssText = 'width:100%;max-width:430px;background:#ffffff;border:none;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
+    card.style.cssText = 'width:100%;max-width:430px;background:var(--surface-container-lowest);border:none;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
     card.innerHTML = innerHTML;
 
     overlay.appendChild(card);
@@ -7165,20 +7165,20 @@ window._buildPlannerDayContentHTML = function() {
     var base = dayLabels[d.getDay()] + ' ' + d.getDate() + ' ' + MN[d.getMonth()];
     var dayLabel = diff===0 ? 'Oggi · '+base : diff===1 ? 'Domani · '+base : diff===-1 ? 'Ieri · '+base : base;
     var smart = upcoming > 0 && selDate === todayISO
-        ? '<div style="background:#f0f7ff;border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">' +
+        ? '<div style="background:var(--info-container);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">' +
           '<div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">' +
           '<div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;">' +
           '<span class="material-symbols-outlined" style="font-size:15px;color:white;">lightbulb</span></div>' +
-          '<span style="font-size:13px;font-weight:700;color:#1e40af;">Smart Planner</span></div>' +
-          '<p style="font-size:12px;color:#475569;margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
+          '<span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span></div>' +
+          '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
           '</div>' : '';
     var empty = '<div style="background:rgba(255,255,255,0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid rgba(241,245,249,0.9);">' +
-        '<span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">event_busy</span>' +
-        '<p style="font-size:14px;font-weight:600;color:#94a3b8;margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
+        '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>' +
+        '<p style="font-size:14px;font-weight:600;color:var(--outline);margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
     return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-        '<h2 style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">' + dayLabel + '</h2>' +
-        '<span style="font-size:11px;font-weight:700;color:#94a3b8;">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
+        '<h2 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">' + dayLabel + '</h2>' +
+        '<span style="font-size:11px;font-weight:700;color:var(--outline);">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
         smart + (dayTasks.length ? dayTasks.map(function(t){ return TC(t,false); }).join('') : empty) +
         '</div>';
 };
@@ -7234,15 +7234,15 @@ window.refreshPlannerSearch = function() {
             const safeS = escapeJsSingleQuote(item.s);
             return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
                 'style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;white-space:nowrap;' +
-                'border:' + (active ? '2px solid #2563eb' : '1.5px solid rgba(226,232,240,0.9)') + ';' +
+                'border:' + (active ? '2px solid var(--primary)' : '1.5px solid rgba(226,232,240,0.9)') + ';' +
                 'background:' + (active ? '#2563eb' : 'white') + ';' +
                 'color:' + (active ? 'white' : '#64748b') + ';">' +
                 escapeHtml(item.l) + '</button>';
         }).join('');
 
     const emptyHtml = '<div style="text-align:center;padding:44px 0;">' +
-        '<span class="material-symbols-outlined" style="font-size:44px;color:#cbd5e1;">search_off</span>' +
-        '<p style="color:#94a3b8;font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p>' +
+        '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">search_off</span>' +
+        '<p style="color:var(--outline);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p>' +
         '</div>';
 
     const countLabel = results.length + ' risultat' + (results.length === 1 ? 'o' : 'i') +
@@ -7254,7 +7254,7 @@ window.refreshPlannerSearch = function() {
             '<div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
                 chipsHtml +
             '</div>' +
-            '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:12px;">' + countLabel + '</div>' +
+            '<div style="font-size:11px;font-weight:600;color:var(--outline);margin-bottom:12px;">' + countLabel + '</div>' +
             '<div style="display:flex;flex-direction:column;gap:9px;">' +
                 (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
             '</div>' +
@@ -7350,12 +7350,12 @@ function renderProfile() {
                        display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"
                 ontouchstart="this.style.transform='scale(0.92)'"
                 ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:20px;color:#1e40af;">arrow_back</span>
+                <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">arrow_back</span>
             </button>
             <div>
-                <h1 style="font-size:26px;font-weight:800;color:#0f172a;
+                <h1 style="font-size:26px;font-weight:800;color:var(--on-surface);
                             letter-spacing:-0.02em;margin:0;line-height:1.1;">Profilo</h1>
-                <p style="font-size:13px;color:#94a3b8;font-weight:600;margin:2px 0 0;">
+                <p style="font-size:13px;color:var(--outline);font-weight:600;margin:2px 0 0;">
                     Gestione account e impostazioni</p>
             </div>
         </div>
@@ -7373,13 +7373,13 @@ function renderProfile() {
                 <span style="font-size:22px;font-weight:800;color:white;">${initials}</span>
             </div>
             <div style="min-width:0;flex:1;">
-                <div style="font-size:18px;font-weight:800;color:#0f172a;
+                <div style="font-size:18px;font-weight:800;color:var(--on-surface);
                             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${userName}</div>
-                <div style="font-size:13px;font-weight:600;color:#64748b;margin-top:2px;">${userClass}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--on-surface-variant);margin-top:2px;">${userClass}</div>
                 <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
                     <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;
                                 box-shadow:0 0 0 2px rgba(34,197,94,0.2);"></div>
-                    <span style="font-size:11px;font-weight:700;color:#22c55e;">DidUP Collegato</span>
+                    <span style="font-size:11px;font-weight:700;color:var(--success);">DidUP Collegato</span>
                 </div>
             </div>
         </div>
@@ -7392,7 +7392,7 @@ function renderProfile() {
                    background:rgba(239,68,68,0.07);
                    border:1.5px solid rgba(239,68,68,0.18);
                    display:flex;align-items:center;justify-content:center;gap:10px;
-                   color:#dc2626;font-size:15px;font-weight:700;cursor:pointer;
+                   color:var(--error);font-size:15px;font-weight:700;cursor:pointer;
                    font-family:Hanken Grotesk,sans-serif;
                    margin-bottom:28px;
                    box-shadow:0 2px 12px -4px rgba(239,68,68,0.12);"
@@ -7404,7 +7404,7 @@ function renderProfile() {
 
         <!-- ── GOOGLE CALENDAR ── -->
         <div style="margin-bottom:28px;">
-            <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.08em;
+            <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
                       text-transform:uppercase;margin:0 0 12px 2px;">Google Calendar</p>
             <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);
                         -webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);
@@ -7417,12 +7417,12 @@ function renderProfile() {
                                     background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);
                                     display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <span class="material-symbols-outlined"
-                                  style="font-size:22px;color:#16a34a;font-variation-settings:'FILL' 1;">
+                                  style="font-size:22px;color:var(--success);font-variation-settings:'FILL' 1;">
                                 calendar_month</span>
                         </div>
                         <div>
-                            <div style="font-size:15px;font-weight:700;color:#0f172a;">Google Calendar</div>
-                            <div style="font-size:12px;font-weight:600;color:#16a34a;
+                            <div style="font-size:15px;font-weight:700;color:var(--on-surface);">Google Calendar</div>
+                            <div style="font-size:12px;font-weight:600;color:var(--success);
                                         display:flex;align-items:center;gap:4px;">
                                 <span style="width:6px;height:6px;border-radius:50%;
                                              background:#22c55e;display:inline-block;"></span>
@@ -7430,7 +7430,7 @@ function renderProfile() {
                             </div>
                         </div>
                     </div>
-                    <p style="font-size:13px;color:#64748b;line-height:1.5;margin:0 0 14px;">
+                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.5;margin:0 0 14px;">
                         Verifiche e compiti sincronizzati automaticamente con Google Calendar.
                     </p>
                     <div style="display:flex;gap:10px;">
@@ -7447,7 +7447,7 @@ function renderProfile() {
                         <button onclick="if(confirm('Disconnettere Google Calendar?'))window.disconnectGoogle&&disconnectGoogle()"
                             style="height:44px;padding:0 16px;border-radius:14px;cursor:pointer;
                                    background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
-                                   color:#dc2626;font-size:13px;font-weight:700;
+                                   color:var(--error);font-size:13px;font-weight:700;
                                    font-family:Hanken Grotesk,sans-serif;white-space:nowrap;"
                             ontouchstart="this.style.opacity='0.7'"
                             ontouchend="this.style.opacity='1'">
@@ -7460,21 +7460,21 @@ function renderProfile() {
                         <div style="width:42px;height:42px;border-radius:14px;
                                     background:rgba(255,255,255,0.8);border:1px solid rgba(226,232,240,0.9);
                                     display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:22px;color:#64748b;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-surface-variant);">
                                 calendar_month</span>
                         </div>
                         <div>
-                            <div style="font-size:15px;font-weight:700;color:#0f172a;">Google Calendar</div>
-                            <div style="font-size:12px;font-weight:600;color:#94a3b8;">Non collegato</div>
+                            <div style="font-size:15px;font-weight:700;color:var(--on-surface);">Google Calendar</div>
+                            <div style="font-size:12px;font-weight:600;color:var(--outline);">Non collegato</div>
                         </div>
                     </div>
-                    <p style="font-size:13px;color:#64748b;line-height:1.55;margin:0 0 14px;">
+                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.55;margin:0 0 14px;">
                         Collega il tuo Google Calendar per sincronizzare automaticamente verifiche
                         e compiti. Funziona in background senza dover aprire l'app.
                     </p>
                     <div style="background:rgba(239,246,255,0.7);border:1px solid rgba(191,219,254,0.5);
                                 border-radius:16px;padding:14px 16px;margin-bottom:16px;">
-                        <div style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;
+                        <div style="font-size:11px;font-weight:700;color:var(--info);text-transform:uppercase;
                                     letter-spacing:0.06em;margin-bottom:10px;">Come collegare</div>
                         ${[
                             'Tocca "Collega Google Calendar" qui sotto',
@@ -7486,7 +7486,7 @@ function renderProfile() {
                             <div style="width:20px;height:20px;border-radius:50%;background:#2563eb;color:white;
                                         font-size:10px;font-weight:800;display:flex;align-items:center;
                                         justify-content:center;flex-shrink:0;margin-top:1px;">${i+1}</div>
-                            <span style="font-size:13px;color:#374151;line-height:1.45;">${s}</span>
+                            <span style="font-size:13px;color:var(--on-surface-variant);line-height:1.45;">${s}</span>
                         </div>`).join('')}
                     </div>
                     <button onclick="window.connectGoogle&&connectGoogle()"
@@ -7506,7 +7506,7 @@ function renderProfile() {
 
         <!-- ── IMPOSTAZIONI ── -->
         <div style="margin-bottom:28px;">
-            <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.08em;
+            <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
                       text-transform:uppercase;margin:0 0 12px 2px;">Impostazioni</p>
             <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(40px);
                         -webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.55);
@@ -7522,12 +7522,12 @@ function renderProfile() {
                                     background:rgba(249,115,22,0.1);
                                     display:flex;align-items:center;justify-content:center;">
                             <span class="material-symbols-outlined"
-                                  style="font-size:18px;color:#ea580c;">notifications</span>
+                                  style="font-size:18px;color:var(--warning);">notifications</span>
                         </div>
-                        <span style="font-size:15px;font-weight:600;color:#0f172a;">Notifiche</span>
+                        <span style="font-size:15px;font-weight:600;color:var(--on-surface);">Notifiche</span>
                     </div>
                     <span class="material-symbols-outlined"
-                          style="font-size:18px;color:#cbd5e1;">chevron_right</span>
+                          style="font-size:18px;color:var(--outline-variant);">chevron_right</span>
                 </div>
                 <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
                 <div onclick="showToast('Privacy & Sicurezza in arrivo','info')"
@@ -7540,13 +7540,13 @@ function renderProfile() {
                                     background:rgba(20,184,166,0.1);
                                     display:flex;align-items:center;justify-content:center;">
                             <span class="material-symbols-outlined"
-                                  style="font-size:18px;color:#0d9488;">lock</span>
+                                  style="font-size:18px;color:var(--success);">lock</span>
                         </div>
-                        <span style="font-size:15px;font-weight:600;color:#0f172a;">
+                        <span style="font-size:15px;font-weight:600;color:var(--on-surface);">
                             Privacy & Sicurezza</span>
                     </div>
                     <span class="material-symbols-outlined"
-                          style="font-size:18px;color:#cbd5e1;">chevron_right</span>
+                          style="font-size:18px;color:var(--outline-variant);">chevron_right</span>
                 </div>
                 <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
                 <div style="padding:16px 20px;">
@@ -7556,11 +7556,11 @@ function renderProfile() {
                                         background:rgba(99,102,241,0.1);
                                         display:flex;align-items:center;justify-content:center;">
                                 <span class="material-symbols-outlined"
-                                      style="font-size:18px;color:#4f46e5;">palette</span>
+                                      style="font-size:18px;color:var(--info);">palette</span>
                             </div>
-                            <span style="font-size:15px;font-weight:600;color:#0f172a;">Aspetto visivo</span>
+                            <span style="font-size:15px;font-weight:600;color:var(--on-surface);">Aspetto visivo</span>
                         </div>
-                        <span style="font-size:13px;font-weight:700;color:#64748b;">
+                        <span style="font-size:13px;font-weight:700;color:var(--on-surface-variant);">
                             ${(() => {
                                 const t = localStorage.getItem('gc_theme') || 'auto';
                                 return t === 'light' ? 'Chiaro' : t === 'dark' ? 'Scuro' : 'Automatico';
@@ -7583,7 +7583,7 @@ function renderProfile() {
         </div>
 
         <!-- versione app + spacer navbar -->
-        <p style="text-align:center;font-size:11px;color:#cbd5e1;font-weight:600;
+        <p style="text-align:center;font-size:11px;color:var(--outline-variant);font-weight:600;
                   letter-spacing:0.04em;padding-bottom:12px;">Gandhi Diary • v3.3.8</p>
         <div style="height:100px;"></div><!-- spacer sopra la navbar -->
 
@@ -7659,28 +7659,28 @@ function renderGradesView() {
 
     // Pad left with empty bars up to 7
     while (chartBars.length < 7) {
-        chartBars.unshift({ pct: 0, color: '#e2e8f0', shadow: 'none', label: '' });
+        chartBars.unshift({ pct: 0, color: 'var(--surface-container-high)', shadow: 'none', label: '' });
     }
 
     const barsHtml = chartBars.map(b => `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-            <span style="font-size:9px;font-weight:700;color:#475569;opacity:0.9;margin-bottom:4px;min-height:13px;text-align:center;">${b.label}</span>
+            <span style="font-size:9px;font-weight:700;color:var(--on-surface-variant);opacity:0.9;margin-bottom:4px;min-height:13px;text-align:center;">${b.label}</span>
             <div style="width:100%;height:${b.pct || 2}%;background:${b.color};border-radius:6px 6px 0 0;box-shadow:${b.shadow};min-height:3px;"></div>
         </div>`).join('');
 
     // ── Badge helpers ─────────────────────────────────────────────────────────
     function getBadge(m) {
-        if (m >= 8) return { bg:'#e6f4ea', border:'#bce3c8', color:'#16a34a', label:'Ottimo' };
-        if (m >= 7) return { bg:'#eff6ff', border:'#bfdbfe', color:'#2563eb', label:'Buono' };
-        if (m >= 6) return { bg:'#fff7ed', border:'#fed7aa', color:'#ea580c', label:'Discreto' };
-        return      { bg:'#fef2f2', border:'#fecaca', color:'#dc2626', label:'Insufficiente' };
+        if (m >= 8) return { bg:'var(--success-container)', border:'var(--outline-variant)', color:'var(--on-success-container)', label:'Ottimo' };
+        if (m >= 7) return { bg:'var(--info-container)', border:'var(--outline-variant)', color:'var(--on-info-container)', label:'Buono' };
+        if (m >= 6) return { bg:'var(--warning-container)', border:'var(--outline-variant)', color:'var(--on-warning-container)', label:'Discreto' };
+        return      { bg:'var(--error-container)', border:'var(--outline-variant)', color:'var(--on-error-container)', label:'Insufficiente' };
     }
 
     function getTrend(lastVal, avg) {
-        if (lastVal === null || lastVal === undefined) return '<span style="color:#94a3b8;font-weight:700;">—</span>';
-        if (lastVal > avg)  return '<span style="font-size:16px;font-weight:800;color:#16a34a;line-height:1;">&#8593;</span>';
-        if (lastVal < avg)  return '<span style="font-size:16px;font-weight:800;color:#dc2626;line-height:1;">&#8595;</span>';
-        return '<span style="color:#94a3b8;font-weight:700;">—</span>';
+        if (lastVal === null || lastVal === undefined) return '<span style="color:var(--outline);font-weight:700;">—</span>';
+        if (lastVal > avg)  return '<span style="font-size:16px;font-weight:800;color:var(--success);line-height:1;">&#8593;</span>';
+        if (lastVal < avg)  return '<span style="font-size:16px;font-weight:800;color:var(--error);line-height:1;">&#8595;</span>';
+        return '<span style="color:var(--outline);font-weight:700;">—</span>';
     }
 
     // ── Subject cards HTML ────────────────────────────────────────────────────
@@ -7698,10 +7698,10 @@ function renderGradesView() {
                     ${badge.label}
                 </div>
             </div>
-            <h4 style="font-size:20px;font-weight:800;color:#1b1b1d;letter-spacing:-0.01em;margin:0 0 2px;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(s.name)}</h4>
+            <h4 style="font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;margin:0 0 2px;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(s.name)}</h4>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
-                <span style="font-size:44px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.02em;font-family:Hanken Grotesk,sans-serif;">${s.media.toFixed(1)}</span>
-                <div style="font-size:13px;color:#64748b;font-weight:500;display:flex;align-items:center;gap:5px;padding-bottom:4px;font-family:Hanken Grotesk,sans-serif;">
+                <span style="font-size:44px;font-weight:800;color:var(--primary);line-height:1;letter-spacing:-0.02em;font-family:Hanken Grotesk,sans-serif;">${s.media.toFixed(1)}</span>
+                <div style="font-size:13px;color:var(--on-surface-variant);font-weight:500;display:flex;align-items:center;gap:5px;padding-bottom:4px;font-family:Hanken Grotesk,sans-serif;">
                     Ultimo: ${s.lastVote !== null && s.lastVote !== undefined ? s.lastVote : '—'}
                     ${getTrend(s.lastVote, s.media)}
                 </div>
@@ -7710,12 +7710,12 @@ function renderGradesView() {
     }).join('');
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:#f8fafc;background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--surface-container-low);background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.4) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.3) 0%,transparent 40%);background-attachment:fixed;">
         <div style="padding:max(env(safe-area-inset-top,0px),32px) 24px 0;">
 
             <!-- Header -->
             <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;">
-                <h1 style="font-size:30px;font-weight:800;color:#0058bc;letter-spacing:-0.025em;margin:0;line-height:1;">Voti</h1>
+                <h1 style="font-size:30px;font-weight:800;color:var(--primary);letter-spacing:-0.025em;margin:0;line-height:1;">Voti</h1>
             </header>
 
             <!-- ── CARD MEDIA GENERALE ────────────────────────────────────── -->
@@ -7725,9 +7725,9 @@ function renderGradesView() {
                 <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(243,232,255,0.4);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
 
                 <div style="position:relative;z-index:1;">
-                    <p style="font-size:13px;font-weight:600;color:#64748b;margin:0 0 4px;font-family:Hanken Grotesk,sans-serif;">Media Generale</p>
+                    <p style="font-size:13px;font-weight:600;color:var(--on-surface-variant);margin:0 0 4px;font-family:Hanken Grotesk,sans-serif;">Media Generale</p>
                     <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
-                        <span style="font-size:56px;font-weight:800;color:#0058bc;line-height:1;letter-spacing:-0.03em;font-family:Hanken Grotesk,sans-serif;">${media.toFixed(2)}</span>
+                        <span style="font-size:56px;font-weight:800;color:var(--primary);line-height:1;letter-spacing:-0.03em;font-family:Hanken Grotesk,sans-serif;">${media.toFixed(2)}</span>
                         ${ (() => {
                             if (mediaCurMese !== null && mediaPrevMese !== null) {
                                 const diff = mediaCurMese - mediaPrevMese;
@@ -7742,15 +7742,15 @@ function renderGradesView() {
                                     <span style="font-size:11px;font-weight:700;color:${clr};letter-spacing:0.04em;">${diffFmt}</span>
                                 </div>`;
                             } else if (numericVotes.length >= 2) {
-                                return `<div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid #bce3c8;padding:4px 10px;border-radius:999px;margin-top:8px;">
-                                    <span class="material-symbols-outlined" style="font-size:13px;color:#16a34a;font-variation-settings:'FILL' 1;">trending_up</span>
-                                    <span style="font-size:11px;font-weight:700;color:#16a34a;letter-spacing:0.04em;">${numericVotes.length} voti</span>
+                                return `<div style="display:flex;align-items:center;gap:4px;background:rgba(230,244,234,0.8);border:1px solid var(--outline-variant);padding:4px 10px;border-radius:999px;margin-top:8px;">
+                                    <span class="material-symbols-outlined" style="font-size:13px;color:var(--success);font-variation-settings:'FILL' 1;">trending_up</span>
+                                    <span style="font-size:11px;font-weight:700;color:var(--success);letter-spacing:0.04em;">${numericVotes.length} voti</span>
                                 </div>`;
                             }
                             return '';
                         })() }
                     </div>
-                    <p style="font-size:12px;color:#94a3b8;font-weight:500;margin:0 0 24px;font-family:Hanken Grotesk,sans-serif;">Ultimo aggiornamento: Oggi</p>
+                    <p style="font-size:12px;color:var(--outline);font-weight:500;margin:0 0 24px;font-family:Hanken Grotesk,sans-serif;">Ultimo aggiornamento: Oggi</p>
 
                     <!-- Bar chart (ultimi voti) -->
                     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:5px;height:100px;">
@@ -7760,7 +7760,7 @@ function renderGradesView() {
             </div>
 
             <!-- ── MATERIE ─────────────────────────────────────────────────── -->
-            <h2 style="font-size:20px;font-weight:800;color:#1b1b1d;letter-spacing:-0.01em;margin:0 0 20px 4px;font-family:Hanken Grotesk,sans-serif;">Materie</h2>
+            <h2 style="font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;margin:0 0 20px 4px;font-family:Hanken Grotesk,sans-serif;">Materie</h2>
 
             <div style="display:flex;flex-direction:column;gap:16px;">
                 ${subjectsHtml}
