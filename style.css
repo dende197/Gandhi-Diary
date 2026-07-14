@@ -60,6 +60,24 @@
   --error-container: #ffdad6;
   --on-error-container: #93000a;
 
+  /* Success (voti/verifiche positivi, presenze) */
+  --success: #16a34a;
+  --on-success: #ffffff;
+  --success-container: #dcfce7;
+  --on-success-container: #14532d;
+
+  /* Warning (voti medi, avvisi) */
+  --warning: #ea580c;
+  --on-warning: #ffffff;
+  --warning-container: #ffedd5;
+  --on-warning-container: #7c2d12;
+
+  /* Info (badge/chip azzurri, media) */
+  --info: #2563eb;
+  --on-info: #ffffff;
+  --info-container: #dbeafe;
+  --on-info-container: #1e3a8a;
+
   /* Radii */
   --radius-sm: 0.25rem;
   --radius-default: 0.5rem;
@@ -421,8 +439,8 @@ h1, h2, h3, h4, h5, h6 {
 .card-assenze-premium,
 .card-verifiche-premium,
 .card-assenze-bg {
-    background: white;
-    border: 1px solid #EEF0F3;
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
     box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.06);
 }
 
@@ -453,11 +471,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Card items for Domani section — compact */
 .home-card-item {
-    background: white;
+    background: var(--surface-container-lowest);
     border-radius: 22px;
     padding: 16px 18px;
     box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.04);
-    border: 1px solid #EEF0F3;
+    border: 1px solid var(--outline-variant);
 }
 
 .avatar-group > img {
@@ -573,6 +591,24 @@ h1, h2, h3, h4, h5, h6 {
   --on-error: #690005 !important;
   --error-container: #93000a !important;
   --on-error-container: #ffdad6 !important;
+
+  /* Success */
+  --success: #86efac !important;
+  --on-success: #0a3820 !important;
+  --success-container: #14532d !important;
+  --on-success-container: #bbf7d0 !important;
+
+  /* Warning */
+  --warning: #fdba74 !important;
+  --on-warning: #4a1d05 !important;
+  --warning-container: #7c2d12 !important;
+  --on-warning-container: #fed7aa !important;
+
+  /* Info */
+  --info: #93c5fd !important;
+  --on-info: #0d2a5c !important;
+  --info-container: #1e3a8a !important;
+  --on-info-container: #dbeafe !important;
 }
 
 /* ── Smooth transition for theme switching ── */
@@ -725,59 +761,90 @@ html.theme-transition *::after {
     color: var(--on-surface-variant) !important;
 }
 
-/* ── Animated Gradient Orbs Background ── */
-@keyframes orb-float-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(45px, -65px) scale(1.1); }
-  50% { transform: translate(-35px, 35px) scale(0.9); }
-  75% { transform: translate(25px, 55px) scale(1.05); }
+/* ================================================================
+   SATIN GLASS BACKGROUND — blurred blue gradient mesh + grain
+   ================================================================ */
+
+@keyframes satin-drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  33%      { transform: translate(3%, -4%) rotate(6deg) scale(1.05); }
+  66%      { transform: translate(-4%, 3%) rotate(-5deg) scale(0.98); }
 }
 
-@keyframes orb-float-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-55px, 45px) scale(1.15); }
-  66% { transform: translate(35px, -35px) scale(0.85); }
+/* Base wash: sits directly on the body, no blur needed — cheap & always-on */
+body {
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(120% 90% at 15% -10%, rgba(0, 88, 188, 0.16) 0%, transparent 55%),
+    radial-gradient(110% 80% at 100% 0%, rgba(76, 74, 202, 0.14) 0%, transparent 55%),
+    radial-gradient(140% 100% at 50% 120%, rgba(0, 122, 255, 0.08) 0%, transparent 60%);
+  background-attachment: fixed;
+  transition: background-color 0.35s ease;
 }
 
-body::before,
+/* Soft, blurred moving mesh — the "vetro satinato" sheen */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20% -20% -20% -20%;
+  pointer-events: none;
+  z-index: -3;
+  background:
+    radial-gradient(38% 30% at 12% 18%, rgba(0, 88, 188, 0.35) 0%, transparent 100%),
+    radial-gradient(42% 34% at 88% 12%, rgba(76, 74, 202, 0.28) 0%, transparent 100%),
+    radial-gradient(46% 38% at 20% 92%, rgba(0, 122, 255, 0.18) 0%, transparent 100%),
+    radial-gradient(40% 32% at 92% 88%, rgba(102, 100, 228, 0.22) 0%, transparent 100%);
+  filter: blur(90px) saturate(140%);
+  opacity: 0.7;
+  animation: satin-drift 40s ease-in-out infinite;
+  transition: opacity 0.5s ease;
+}
+
+/* Fine grain layer — gives the flat gradient a "satin" (matte, non-plasticky) finish */
 body::after {
   content: '';
   position: fixed;
-  border-radius: 50%;
+  inset: 0;
   pointer-events: none;
   z-index: -2;
-  filter: blur(80px);
-  opacity: 0.6;
-  transition: all 0.5s ease;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
 }
 
-body::before {
-  top: -10%;
-  left: -10%;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(168, 216, 234, 0.8) 0%, rgba(0, 88, 188, 0.15) 100%);
-  animation: orb-float-1 25s ease-in-out infinite;
+/* A thin frosted "glass pane" glaze right above the mesh, under the content —
+   this is what reads as satin/blurred-glass rather than a plain gradient */
+body {
+  isolation: isolate;
 }
 
-body::after {
-  bottom: -10%;
-  right: -10%;
-  width: 60vw;
-  height: 60vw;
-  background: radial-gradient(circle, rgba(170, 150, 218, 0.7) 0%, rgba(102, 100, 228, 0.1) 100%);
-  animation: orb-float-2 30s ease-in-out infinite;
+/* Dark mode: deeper, more saturated satin — same structure, richer values */
+[data-theme="dark"] body,
+.dark body {
+  background-image:
+    radial-gradient(120% 90% at 15% -10%, rgba(0, 88, 188, 0.20) 0%, transparent 55%),
+    radial-gradient(110% 80% at 100% 0%, rgba(76, 74, 202, 0.18) 0%, transparent 55%),
+    radial-gradient(140% 100% at 50% 120%, rgba(0, 122, 255, 0.10) 0%, transparent 60%) !important;
 }
 
-/* In dark mode, make the orbs more subtle and deep */
 [data-theme="dark"] body::before,
 .dark body::before {
-  background: radial-gradient(circle, rgba(0, 88, 188, 0.25) 0%, rgba(0, 0, 0, 0) 100%) !important;
+  background:
+    radial-gradient(38% 30% at 12% 18%, rgba(56, 116, 220, 0.35) 0%, transparent 100%),
+    radial-gradient(42% 34% at 88% 12%, rgba(99, 97, 220, 0.30) 0%, transparent 100%),
+    radial-gradient(46% 38% at 20% 92%, rgba(0, 88, 188, 0.22) 0%, transparent 100%),
+    radial-gradient(40% 32% at 92% 88%, rgba(102, 100, 228, 0.24) 0%, transparent 100%) !important;
+  opacity: 0.55 !important;
 }
 
 [data-theme="dark"] body::after,
 .dark body::after {
-  background: radial-gradient(circle, rgba(61, 55, 180, 0.2) 0%, rgba(0, 0, 0, 0) 100%) !important;
+  opacity: 0.08 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
 }
 
 /* ── Theme Toggle Switch (Profile Page) ── */
@@ -801,7 +868,7 @@ body::after {
   border: none;
   border-radius: 11px;
   background: transparent;
-  color: #64748b;
+  color: var(--on-surface-variant);
   font-size: 13px;
   font-weight: 700;
   font-family: 'Hanken Grotesk', sans-serif;
@@ -814,8 +881,8 @@ body::after {
 }
 
 .theme-toggle-btn.active {
-  background: #ffffff;
-  color: #0058bc;
+  background: var(--surface-container-lowest);
+  color: var(--primary);
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -834,4 +901,3 @@ body::after {
 .dark .theme-toggle-btn:hover:not(.active) {
   background: rgba(255, 255, 255, 0.04);
 }
-
