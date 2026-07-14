@@ -910,3 +910,319 @@ body {
 .dark .theme-toggle-btn:hover:not(.active) {
   background: rgba(var(--glass-rgb), 0.04);
 }
+
+/* ================================================================
+   GLASS PANEL — Modal / Sheet glassmorphism container
+   ================================================================ */
+.glass-panel {
+  background: rgba(var(--glass-rgb), 0.72);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(var(--glass-rgb), 0.5);
+  border-radius: 28px;
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.12),
+              inset 0 1px 1px 0 rgba(var(--glass-rgb), 0.8);
+}
+
+[data-theme="dark"] .glass-panel,
+.dark .glass-panel {
+  background: rgba(22, 27, 38, 0.82) !important;
+  border-color: rgba(var(--glass-rgb), 0.08) !important;
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5),
+              inset 0 1px 1px 0 rgba(var(--glass-rgb), 0.05) !important;
+}
+
+/* ================================================================
+   DARK MODE — Comprehensive inline-style overrides
+   Targets every hardcoded colour pattern found in ui.js so the
+   theme works without touching the 7,700-line JS file.
+   ================================================================ */
+
+/* ── App Loader & Boot Overlay ── */
+[data-theme="dark"] #app-loader,
+.dark #app-loader {
+  background: #0d1117 !important;
+}
+
+[data-theme="dark"] #boot-overlay,
+.dark #boot-overlay {
+  background: #0d1117 !important;
+}
+
+/* ── Login page ── */
+[data-theme="dark"] .login-view,
+.dark .login-view {
+  background: transparent !important;
+}
+
+[data-theme="dark"] .login-view h1,
+.dark .login-view h1 {
+  color: var(--primary) !important;
+}
+
+/* ── Dashboard card gradient backgrounds ── */
+[data-theme="dark"] .card-media-premium[style*="linear-gradient"],
+.dark .card-media-premium[style*="linear-gradient"] {
+  background: rgba(26, 32, 44, 0.55) !important;
+}
+
+[data-theme="dark"] .card-assenze-premium[style*="linear-gradient"],
+.dark .card-assenze-premium[style*="linear-gradient"] {
+  background: rgba(26, 32, 44, 0.55) !important;
+}
+
+[data-theme="dark"] .card-verifiche-premium[style*="linear-gradient"],
+.dark .card-verifiche-premium[style*="linear-gradient"] {
+  background: rgba(26, 32, 44, 0.55) !important;
+}
+
+/* ── Decorative blobs inside cards — soften in dark ── */
+[data-theme="dark"] .card-media-premium div[style*="rgba(219,234,254"],
+[data-theme="dark"] .card-media-premium div[style*="rgba(243,232,255"],
+.dark .card-media-premium div[style*="rgba(219,234,254"],
+.dark .card-media-premium div[style*="rgba(243,232,255"] {
+  background: rgba(56, 116, 220, 0.12) !important;
+}
+
+[data-theme="dark"] .card-assenze-premium div[style*="rgba(254,202,202"],
+.dark .card-assenze-premium div[style*="rgba(254,202,202"] {
+  background: rgba(255, 180, 171, 0.10) !important;
+}
+
+[data-theme="dark"] .card-verifiche-premium div[style*="rgba(167,243,208"],
+.dark .card-verifiche-premium div[style*="rgba(167,243,208"] {
+  background: rgba(134, 239, 172, 0.10) !important;
+}
+
+/* ── Media card subtitle (rgba(2,80,197,0.6)) ── */
+[data-theme="dark"] .card-media-premium p[style*="rgba(2,80,197"],
+.dark .card-media-premium p[style*="rgba(2,80,197"] {
+  color: rgba(173, 198, 255, 0.7) !important;
+}
+
+/* ── Verifiche subtitle (rgba(5,150,105,0.6)) ── */
+[data-theme="dark"] .card-verifiche-premium p[style*="rgba(5,150,105"],
+.dark .card-verifiche-premium p[style*="rgba(5,150,105"] {
+  color: rgba(134, 239, 172, 0.65) !important;
+}
+
+/* ── Progress bar track (#E5E7EB) and fill (#059669) ── */
+[data-theme="dark"] div[style*="background:#E5E7EB"],
+.dark div[style*="background:#E5E7EB"] {
+  background: rgba(var(--glass-rgb), 0.15) !important;
+}
+
+[data-theme="dark"] div[style*="background:#059669"],
+.dark div[style*="background:#059669"] {
+  background: var(--success) !important;
+}
+
+/* ── NOW badge (#1F2937 bg) ── */
+[data-theme="dark"] div[style*="background:#1F2937"],
+.dark div[style*="background:#1F2937"] {
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
+}
+
+/* ── Active chart bar (#0250C5) ── */
+[data-theme="dark"] div[style*="background:#0250C5"],
+.dark div[style*="background:#0250C5"] {
+  background: var(--primary) !important;
+}
+
+/* ── Carousel active dot (#0250C5) ── */
+[data-theme="dark"] .carousel-dot[style*="background: #0250C5"],
+[data-theme="dark"] .carousel-dot[style*="background:#0250C5"],
+.dark .carousel-dot[style*="background: #0250C5"],
+.dark .carousel-dot[style*="background:#0250C5"] {
+  background: var(--primary) !important;
+}
+
+/* ── Red accent stripe (#E5A7A7) ── */
+[data-theme="dark"] div[style*="background:#E5A7A7"],
+.dark div[style*="background:#E5A7A7"] {
+  background: rgba(255, 180, 171, 0.35) !important;
+}
+
+/* ── Blue buttons (#2563eb background) ── */
+[data-theme="dark"] button[style*="background:#2563eb"],
+.dark button[style*="background:#2563eb"] {
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
+}
+
+/* ── Red buttons (#dc2626 background) ── */
+[data-theme="dark"] button[style*="background:#dc2626"],
+.dark button[style*="background:#dc2626"] {
+  background: var(--error) !important;
+  color: var(--on-error) !important;
+}
+
+/* ── Primary action (#0058bc background — FAB) ── */
+[data-theme="dark"] div[style*="background:#0058bc"],
+.dark div[style*="background:#0058bc"] {
+  background: var(--primary) !important;
+}
+
+/* ── Deep blue accent (#1e40af) ── */
+[data-theme="dark"] div[style*="background:#1e40af"],
+.dark div[style*="background:#1e40af"] {
+  background: var(--primary-container) !important;
+}
+
+/* ── Purple FAB (#4f46e5) ── */
+[data-theme="dark"] button[style*="background:#4f46e5"],
+.dark button[style*="background:#4f46e5"] {
+  background: var(--secondary) !important;
+  color: var(--on-secondary) !important;
+}
+
+/* ── Green dots (#22c55e) ── */
+[data-theme="dark"] div[style*="background:#22c55e"],
+[data-theme="dark"] span[style*="background:#22c55e"],
+.dark div[style*="background:#22c55e"],
+.dark span[style*="background:#22c55e"] {
+  background: var(--success) !important;
+}
+
+/* ── Amber dot (#f59e0b) ── */
+[data-theme="dark"] span[style*="background:#f59e0b"],
+.dark span[style*="background:#f59e0b"] {
+  background: var(--warning) !important;
+}
+
+/* ── Orange stripe (#FF9F0A) ── */
+[data-theme="dark"] div[style*="background:#FF9F0A"],
+.dark div[style*="background:#FF9F0A"] {
+  background: var(--warning) !important;
+}
+
+/* ── Today dot (#007AFF) ── */
+[data-theme="dark"] div[style*="background:#007AFF"],
+.dark div[style*="background:#007AFF"] {
+  background: var(--primary) !important;
+}
+
+/* ── Inline grade bar colors ── */
+[data-theme="dark"] div[style*="background:#94a3b8"],
+.dark div[style*="background:#94a3b8"] {
+  background: var(--outline) !important;
+}
+
+/* ── Modal sticky headers (#1c1c1e) ── */
+[data-theme="dark"] div[style*="background:#1c1c1e"],
+.dark div[style*="background:#1c1c1e"] {
+  background: var(--surface-container-lowest) !important;
+  border-color: var(--outline-variant) !important;
+}
+
+/* ── Dark panel in study tool (#141414 / #1a1a2e) ── */
+[data-theme="dark"] div[style*="background:#141414"],
+[data-theme="dark"] option[style*="background:#1a1a2e"],
+.dark div[style*="background:#141414"],
+.dark option[style*="background:#1a1a2e"] {
+  background: var(--surface-container-lowest) !important;
+}
+
+/* ── Separator / divider lines ── */
+[data-theme="dark"] div[style*="background:rgba(226,232,240"],
+.dark div[style*="background:rgba(226,232,240"] {
+  background: var(--outline-variant) !important;
+}
+
+[data-theme="dark"] div[style*="background:rgba(0,0,0,0.05)"],
+[data-theme="dark"] div[style*="background:rgba(0,0,0,0.02)"],
+.dark div[style*="background:rgba(0,0,0,0.05)"],
+.dark div[style*="background:rgba(0,0,0,0.02)"] {
+  background: rgba(var(--glass-rgb), 0.06) !important;
+}
+
+/* ── Subject badges with rgba(0,0,0,0.04) bg ── */
+[data-theme="dark"] span[style*="background:rgba(0,0,0,0.04)"],
+.dark span[style*="background:rgba(0,0,0,0.04)"] {
+  background: rgba(var(--glass-rgb), 0.08) !important;
+}
+
+/* ── Profile section icon bg (rgba(99,102,241,0.1)) ── */
+[data-theme="dark"] div[style*="background:rgba(99,102,241,0.1)"],
+.dark div[style*="background:rgba(99,102,241,0.1)"] {
+  background: rgba(99, 102, 241, 0.15) !important;
+}
+
+/* ── Dashed empty-state card ── */
+[data-theme="dark"] .card[style*="rgba(0,0,0,0.02)"],
+.dark .card[style*="rgba(0,0,0,0.02)"] {
+  background: rgba(var(--glass-rgb), 0.04) !important;
+  border-color: var(--outline-variant) !important;
+}
+
+/* ── Avatar group image borders (white → dark surface) ── */
+[data-theme="dark"] .avatar-group > img,
+.dark .avatar-group > img {
+  border-color: var(--surface-container-lowest) !important;
+}
+
+/* ── Nav active glow ── */
+[data-theme="dark"] .nav-item.active::before,
+.dark .nav-item.active::before {
+  background: rgba(173, 198, 255, 0.08) !important;
+}
+
+/* ── Active glow circle ── */
+[data-theme="dark"] .active-glow,
+.dark .active-glow {
+  background: rgba(173, 198, 255, 0.10) !important;
+}
+
+/* ── Login gradient button ── */
+[data-theme="dark"] button[style*="linear-gradient(135deg,#2563eb,#4f46e5)"],
+.dark button[style*="linear-gradient(135deg,#2563eb,#4f46e5)"] {
+  background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+  color: var(--on-primary) !important;
+}
+
+/* ── Inline text color overrides for generic dark text ── */
+[data-theme="dark"] [style*="color:#111"],
+.dark [style*="color:#111"] {
+  color: var(--on-surface) !important;
+}
+
+[data-theme="dark"] [style*="color:#444"],
+[data-theme="dark"] [style*="color:#555"],
+[data-theme="dark"] [style*="color:#666"],
+.dark [style*="color:#444"],
+.dark [style*="color:#555"],
+.dark [style*="color:#666"] {
+  color: var(--on-surface-variant) !important;
+}
+
+/* ── Presence badges (border overrides) ── */
+[data-theme="dark"] div[style*="border:1px solid #bce3c8"],
+[data-theme="dark"] [style*="solid #bce3c8"],
+.dark div[style*="border:1px solid #bce3c8"],
+.dark [style*="solid #bce3c8"] {
+  border-color: rgba(134, 239, 172, 0.25) !important;
+}
+
+[data-theme="dark"] div[style*="border:1px solid #fecaca"],
+[data-theme="dark"] [style*="solid #fecaca"],
+.dark div[style*="border:1px solid #fecaca"],
+.dark [style*="solid #fecaca"] {
+  border-color: rgba(255, 180, 171, 0.25) !important;
+}
+
+/* ── Presence pill backgrounds ── */
+[data-theme="dark"] div[style*="rgba(230,244,234"],
+.dark div[style*="rgba(230,244,234"] {
+  background: rgba(134, 239, 172, 0.12) !important;
+}
+
+[data-theme="dark"] div[style*="rgba(254,242,242,0.9)"],
+.dark div[style*="rgba(254,242,242,0.9)"] {
+  background: rgba(255, 180, 171, 0.12) !important;
+}
+
+/* ── PDF/print view: keep light regardless of theme ── */
+.doc-print-view {
+  color-scheme: light !important;
+}

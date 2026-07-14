@@ -1665,15 +1665,18 @@ function renderHome() {
         const width = el.clientWidth;
         const index = Math.round(scrollLeft / width);
         const dots = document.querySelectorAll('.carousel-dot');
+        const cs = getComputedStyle(document.documentElement);
+        const activeBg = cs.getPropertyValue('--primary').trim() || '#0250C5';
+        const inactiveBg = cs.getPropertyValue('--surface-container-high').trim() || '#CBD5E1';
         dots.forEach((dot, idx) => {
             if (idx === index) {
                 dot.style.width = '20px';
                 dot.style.height = '6px';
-                dot.style.background = '#0250C5';
+                dot.style.background = activeBg;
             } else {
                 dot.style.width = '6px';
                 dot.style.height = '6px';
-                dot.style.background = '#CBD5E1';
+                dot.style.background = inactiveBg;
             }
         });
     };
