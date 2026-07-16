@@ -128,7 +128,7 @@
 html, body {
   height: auto;
   min-height: 100%;
-  background-color: var(--surface);
+  background-color: var(--surface) !important;
   font-family: var(--font-main);
   color: var(--on-surface);
   -webkit-font-smoothing: antialiased;
