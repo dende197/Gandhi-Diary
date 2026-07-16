@@ -128,17 +128,14 @@
 html, body {
   height: auto;
   min-height: 100%;
-  background-color: var(--background);
+  background-color: var(--surface);
   font-family: var(--font-main);
-  color: var(--on-background);
+  color: var(--on-surface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background-image: radial-gradient(circle at 10% 20%, rgba(0, 122, 255, 0.04) 0%, transparent 40%),
-                    radial-gradient(circle at 90% 80%, rgba(76, 74, 202, 0.04) 0%, transparent 40%);
-  background-attachment: fixed;
   line-height: 1.6;
 }
 
@@ -456,6 +453,7 @@ h1, h2, h3, h4, h5, h6 {
     background: var(--surface-container-lowest);
     border: 1px solid var(--outline-variant);
     box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
 }
 
 /* SVG Progress Ring delle Assenze */
@@ -642,12 +640,12 @@ h1, h2, h3, h4, h5, h6 {
   --glass-rgb: 22, 24, 32 !important;
 
   /* Navigation Bar Styles — Dark Theme overrides */
-  --nav-active-color: #60a5fa !important;
-  --nav-inactive-color: #94a3b8 !important;
-  --nav-bg: rgba(18, 24, 38, 0.85) !important;
-  --nav-border: rgba(255, 255, 255, 0.08) !important;
-  --nav-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-  --nav-glow: rgba(96, 165, 250, 0.15) !important;
+  --nav-active-color: #93c5fd !important;
+  --nav-inactive-color: #9aa6ba !important;
+  --nav-bg: linear-gradient(135deg, rgba(10, 13, 22, 0.94) 0%, rgba(23, 42, 92, 0.9) 100%) !important;
+  --nav-border: rgba(96, 165, 250, 0.18) !important;
+  --nav-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  --nav-glow: rgba(147, 197, 253, 0.16) !important;
 }
 
 /* ── Smooth transition for theme switching ── */
@@ -664,7 +662,7 @@ html.theme-transition *::after {
 
 /* ── Dark: Overrides for hardcoded elements ── */
 [data-theme="dark"] body {
-  color: var(--on-background) !important;
+  color: var(--on-surface) !important;
 }
 
 [data-theme="dark"] h1, 
@@ -690,30 +688,8 @@ html.theme-transition *::after {
   color: var(--on-surface) !important;
 }
 
-/* Glassmorphism overrides for premium cards on the dashboard */
-.card-media-premium,
-.card-assenze-premium,
-.card-verifiche-premium {
-    background: rgba(var(--glass-rgb), 0.45) !important;
-    backdrop-filter: blur(40px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
-    border: 1px solid rgba(var(--glass-rgb), 0.5) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(var(--glass-rgb), 0.6) !important;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease !important;
-}
-
-[data-theme="dark"] .card-media-premium,
-[data-theme="dark"] .card-assenze-premium,
-[data-theme="dark"] .card-verifiche-premium,
-.dark .card-media-premium,
-.dark .card-assenze-premium,
-.dark .card-verifiche-premium {
-    background: rgba(26, 32, 44, 0.5) !important;
-    backdrop-filter: blur(40px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
-    border: 1px solid rgba(var(--glass-rgb), 0.08) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(var(--glass-rgb), 0.05) !important;
-}
+/* Premium card dark-mode background/border/shadow are defined once,
+   further down, as a solid navy gradient matching the hero card. */
 
 /* Also customize content within the cards for Dark Mode */
 [data-theme="dark"] .card-media-premium h2,
@@ -775,8 +751,8 @@ html.theme-transition *::after {
 
 [data-theme="dark"] .home-card-item,
 .dark .home-card-item {
-    background: var(--surface-container-lowest) !important;
-    border-color: var(--outline-variant) !important;
+    background: linear-gradient(135deg, #10131c 0%, #171f30 100%) !important;
+    border-color: rgba(96, 165, 250, 0.14) !important;
 }
 
 [data-theme="dark"] .home-card-item h4,
@@ -802,88 +778,40 @@ html.theme-transition *::after {
 
 /* ================================================================
    SATIN GLASS BACKGROUND — blurred blue gradient mesh + grain
+   Painted directly as body background layers (no fixed pseudo-
+   elements, no filter:blur, no transform animation). That older
+   approach combined position:fixed + filter:blur + an animated
+   transform behind dozens of backdrop-filter cards — a known
+   WebKit/mobile compositing trap that can make backdrop-filter
+   surfaces sample a blank/white layer instead of what's behind
+   them. This version has no extra layers to fight with: it's
+   just the body's own background-image, so it always paints.
    ================================================================ */
 
-@keyframes satin-drift {
-  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-  33%      { transform: translate(3%, -4%) rotate(6deg) scale(1.05); }
-  66%      { transform: translate(-4%, 3%) rotate(-5deg) scale(0.98); }
-}
-
-/* Base wash: sits directly on the body, no blur needed — cheap & always-on */
 body {
   background-color: var(--surface);
   background-image:
-    radial-gradient(120% 90% at 15% -10%, rgba(0, 88, 188, 0.16) 0%, transparent 55%),
-    radial-gradient(110% 80% at 100% 0%, rgba(76, 74, 202, 0.14) 0%, transparent 55%),
-    radial-gradient(140% 100% at 50% 120%, rgba(0, 122, 255, 0.08) 0%, transparent 60%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(55% 45% at 12% 10%, rgba(0, 88, 188, 0.22) 0%, transparent 100%),
+    radial-gradient(60% 48% at 92% 6%, rgba(76, 74, 202, 0.18) 0%, transparent 100%),
+    radial-gradient(65% 55% at 15% 95%, rgba(0, 122, 255, 0.12) 0%, transparent 100%),
+    radial-gradient(58% 48% at 95% 92%, rgba(102, 100, 228, 0.15) 0%, transparent 100%);
+  background-size: 180px 180px, auto, auto, auto, auto;
+  background-blend-mode: overlay, normal, normal, normal, normal;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   background-attachment: fixed;
   transition: background-color 0.35s ease;
 }
 
-/* Soft, blurred moving mesh — the "vetro satinato" sheen */
-body::before {
-  content: '';
-  position: fixed;
-  inset: -20% -20% -20% -20%;
-  pointer-events: none;
-  z-index: -3;
-  background:
-    radial-gradient(38% 30% at 12% 18%, rgba(0, 88, 188, 0.35) 0%, transparent 100%),
-    radial-gradient(42% 34% at 88% 12%, rgba(76, 74, 202, 0.28) 0%, transparent 100%),
-    radial-gradient(46% 38% at 20% 92%, rgba(0, 122, 255, 0.18) 0%, transparent 100%),
-    radial-gradient(40% 32% at 92% 88%, rgba(102, 100, 228, 0.22) 0%, transparent 100%);
-  filter: blur(90px) saturate(140%);
-  opacity: 0.7;
-  animation: satin-drift 40s ease-in-out infinite;
-  transition: opacity 0.5s ease;
-}
-
-/* Fine grain layer — gives the flat gradient a "satin" (matte, non-plasticky) finish */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -2;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-}
-
-/* A thin frosted "glass pane" glaze right above the mesh, under the content —
-   this is what reads as satin/blurred-glass rather than a plain gradient */
-body {
-  isolation: isolate;
-}
-
-/* Dark mode: deeper, more saturated satin — same structure, richer values */
+/* Dark mode: deeper, richer satin — same structure, no extra layers */
 [data-theme="dark"] body,
 .dark body {
   background-image:
-    radial-gradient(120% 90% at 15% -10%, rgba(0, 88, 188, 0.20) 0%, transparent 55%),
-    radial-gradient(110% 80% at 100% 0%, rgba(76, 74, 202, 0.18) 0%, transparent 55%),
-    radial-gradient(140% 100% at 50% 120%, rgba(0, 122, 255, 0.10) 0%, transparent 60%) !important;
-}
-
-[data-theme="dark"] body::before,
-.dark body::before {
-  background:
-    radial-gradient(38% 30% at 12% 18%, rgba(56, 116, 220, 0.35) 0%, transparent 100%),
-    radial-gradient(42% 34% at 88% 12%, rgba(99, 97, 220, 0.30) 0%, transparent 100%),
-    radial-gradient(46% 38% at 20% 92%, rgba(0, 88, 188, 0.22) 0%, transparent 100%),
-    radial-gradient(40% 32% at 92% 88%, rgba(102, 100, 228, 0.24) 0%, transparent 100%) !important;
-  opacity: 0.55 !important;
-}
-
-[data-theme="dark"] body::after,
-.dark body::after {
-  opacity: 0.08 !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::before { animation: none; }
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(55% 45% at 12% 10%, rgba(56, 116, 220, 0.30) 0%, transparent 100%),
+    radial-gradient(60% 48% at 92% 6%, rgba(99, 97, 220, 0.26) 0%, transparent 100%),
+    radial-gradient(65% 55% at 15% 95%, rgba(0, 88, 188, 0.18) 0%, transparent 100%),
+    radial-gradient(58% 48% at 95% 92%, rgba(102, 100, 228, 0.20) 0%, transparent 100%) !important;
 }
 
 /* ── Theme Toggle Switch (Profile Page) ── */
@@ -1066,9 +994,9 @@ body {
 
 [data-theme="dark"] .tomorrow-card,
 .dark .tomorrow-card {
-  background: rgba(22, 28, 45, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  background: linear-gradient(135deg, #0c0f17 0%, #16213e 100%) !important;
+  border: 1px solid rgba(96, 165, 250, 0.18) !important;
+  box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.08) !important;
 }
 
 .empty-state-card {
@@ -1081,8 +1009,10 @@ body {
 
 [data-theme="dark"] .empty-state-card,
 .dark .empty-state-card {
-  background: rgba(22, 28, 45, 0.45) !important;
-  border: 1px dashed rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(135deg, #0d1017 0%, #131b2e 100%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px dashed rgba(148, 163, 184, 0.3) !important;
   color: var(--outline) !important;
 }
 
