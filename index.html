@@ -29,7 +29,7 @@
         })();
     </script>
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="version" content="3.3.9">
+    <meta name="version" content="3.4.1">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="shortcut icon" href="gandhi-diary-icon-192.png?v=3.3.8">
     <link rel="icon" type="image/png" sizes="192x192" href="gandhi-diary-icon-192.png?v=3.3.8">
@@ -155,11 +155,11 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
 
     <!-- Consolidated Assets -->
-    <link rel="stylesheet" href="style.css?v=3.3.9">
+    <link rel="stylesheet" href="style.css?v=3.4.1">
     <link rel="stylesheet" href="animations.css?v=3.3.8">
     
     <!-- App Logic -->
-    <script src="ui.js?v=3.3.9" defer></script>
+    <script src="ui.js?v=3.4.1" defer></script>
     <script src="fluidity-engine-v3.js?v=3.3.8" defer></script>
     <script src="fluidity-boot-patch.js?v=1.2.0" defer></script>
     <script src="app-bootstrap.js?v=3.3.8" defer></script>
@@ -169,15 +169,15 @@
            before style.css loads. The full satin-glass gradient/grain lives in
            style.css so it isn't duplicated/overridden here. */
         html, body {
-            background-color: #fcf8fb;
+            background-color: #fcf8fb !important;
             font-family: 'Hanken Grotesk', sans-serif;
         }
         html[data-theme="dark"], html.dark, html[data-theme="dark"] body, html.dark body {
-            background-color: #121318;
+            background-color: #121318 !important;
         }
         @media (prefers-color-scheme: dark) {
             html:not([data-theme="light"]):not(.light), html:not([data-theme="light"]):not(.light) body {
-                background-color: #121318;
+                background-color: #121318 !important;
             }
         }
         
@@ -219,9 +219,7 @@
             scrollbar-width: none;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:#fcf8fb;z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
-        html[data-theme="dark"] #app-loader, html.dark #app-loader { background:#0d1117; }
-        html[data-theme="dark"] #boot-overlay, html.dark #boot-overlay { background:#0d1117 !important; }
+        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--surface, #fcf8fb);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
         .app-loader-ring{
             width:42px;height:42px;border-radius:50%;
             background:conic-gradient(from 0deg, #0058bc 0%, #4c4aca 50%, #adc6ff 100%);
@@ -244,7 +242,7 @@
     </div>
 
     <!-- BOOT OVERLAY (Hydration) -->
-    <div id="boot-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#fcf8fb;z-index:99998;display:none;align-items:center;justify-content:center;transition:opacity 0.3s ease-out;">
+    <div id="boot-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--surface, #fcf8fb);z-index:99998;display:none;align-items:center;justify-content:center;transition:opacity 0.3s ease-out;">
         <div style="text-align:center;">
              <h2 style="font-size:22px; font-weight:700; color:#fff; margin-bottom:8px; letter-spacing:-0.5px;"></h2>
              <p id="boot-status" style="font-size:12px; color:rgba(255,255,255,0.4);">Sincronizzazione scadenze...</p>
