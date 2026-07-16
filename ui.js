@@ -1016,22 +1016,20 @@ function renderNav() {
     // Helper to generate a nav item link with Liquid Glass aesthetics
     const renderNavItem = (view, iconBase, label) => {
         const isActive = currentView === view;
-        const color    = isActive ? '#0051C5' : '#8B95A5';
+        const color    = isActive ? 'var(--nav-active-color)' : 'var(--nav-inactive-color)';
         const opacity  = isActive ? '1' : '0.55';
         const fontStyle = isActive ? 'font-bold' : 'font-semibold';
         const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
-        const glowHtml = ''; // nessun glow, solo colore
+        const glowHtml = isActive ? '<div class="active-glow"></div>' : '';
 
         // Sostituito <a> con <button> per evitare problemi di reload
         return `
         <button onclick="navigate('${view}')" 
-           class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-colors bg-transparent border-none outline-none cursor-pointer p-0"
-           style="color:${color};opacity:${opacity};-webkit-tap-highlight-color:transparent;"
-           onmouseenter="if(!${isActive}){this.style.color='#475569';this.style.opacity='0.8';}"
-           onmouseleave="if(!${isActive}){this.style.color='#8B95A5';this.style.opacity='0.55';}">
+           class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-all bg-transparent border-none outline-none cursor-pointer p-0"
+           style="color:${color};opacity:${opacity};-webkit-tap-highlight-color:transparent;">
             ${glowHtml}
-            <i class="${iconClass} text-[28px]"></i>
-            <span class="text-[13px] ${fontStyle} tracking-wide">${label}</span>
+            <i class="${iconClass} text-[28px] relative z-10"></i>
+            <span class="text-[13px] ${fontStyle} tracking-wide relative z-10">${label}</span>
         </button>
         `;
     };
@@ -1791,10 +1789,9 @@ function renderHome() {
             const icon = getSubjectLucideIcon(item.title);
             const colors = getSubjectInlineColors(item.title, item.isExam);
             return `
-            <div style="
-                background:var(--surface-container-lowest); border-radius:22px; padding:16px 18px;
-                box-shadow:0 2px 12px -2px rgba(0,0,0,0.04);
-                border:1px solid var(--outline-variant); margin-bottom:10px;
+            <div class="tomorrow-card" style="
+                border-radius:22px; padding:16px 18px;
+                margin-bottom:10px;
                 position:relative; overflow:hidden; cursor:pointer;
                 transition:transform 0.2s ease;
             " onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}"
@@ -1824,7 +1821,7 @@ function renderHome() {
                 ${item.desc ? `<p style="font-size:12px;color:var(--outline);font-style:italic;margin:8px 0 0 10px;border-top:1px solid var(--outline-variant);padding-top:8px;">"${escapeHtml(truncateWithEllipsis(item.desc, 100))}"</p>` : ''}
             </div>`;
         }).join('')
-        : `<div style="text-align:center;padding:32px 16px;background:var(--surface-container-lowest);border-radius:22px;border:1px solid var(--outline-variant);color:var(--outline);font-style:italic;">Nessun impegno programmato per domani.</div>`;
+        : `<div class="empty-state-card" style="text-align:center;padding:32px 16px;border-radius:22px;font-style:italic;">Nessun impegno programmato per domani.</div>`;
 
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
@@ -7722,7 +7719,7 @@ function renderGradesView() {
             </header>
 
             <!-- ── CARD MEDIA GENERALE ────────────────────────────────────── -->
-            <div style="background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--info-container) 100%);box-shadow:0 12px 35px -10px rgba(37,99,235,0.12),inset 0 2px 5px rgba(var(--glass-rgb),0.8);border:1px solid rgba(var(--glass-rgb),0.9);border-radius:36px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
+            <div class="card-media-premium" style="background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--info-container) 100%);padding:28px;margin-bottom:32px;position:relative;overflow:hidden;">
                 <!-- Decorative blobs -->
                 <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(219,234,254,0.5);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                 <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:rgba(243,232,255,0.4);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>

@@ -84,6 +84,14 @@
      white/translucent regardless of theme. */
   --glass-rgb: 255, 255, 255;
 
+  /* Navigation Bar Styles */
+  --nav-active-color: #0058bc;
+  --nav-inactive-color: #8b95a5;
+  --nav-bg: rgba(255, 255, 255, 0.75);
+  --nav-border: rgba(255, 255, 255, 0.5);
+  --nav-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --nav-glow: rgba(0, 88, 188, 0.08);
+
   /* Radii */
   --radius-sm: 0.25rem;
   --radius-default: 0.5rem;
@@ -507,11 +515,12 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Stile della barra fluttuante bottom su Mobile */
 .liquid-navbar {
-    background: rgba(var(--glass-rgb), 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(var(--glass-rgb), 0.4);
-    box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.1);
+    background: var(--nav-bg) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid var(--nav-border) !important;
+    box-shadow: var(--nav-shadow) !important;
+    transition: all 0.3s ease;
 }
 
 /* Cerchio di luce azzurra per l'icona attiva */
@@ -520,12 +529,25 @@ h1, h2, h3, h4, h5, h6 {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 46px;
-    height: 46px;
-    background: rgba(0, 86, 210, 0.08);
+    width: 48px;
+    height: 48px;
+    background: var(--nav-glow) !important;
     border-radius: 50%;
     filter: blur(2px);
     z-index: 0;
+}
+
+.nav-item {
+    transition: color 0.25s ease, opacity 0.25s ease, transform 0.2s ease !important;
+}
+
+.nav-item:active {
+    transform: scale(0.92);
+}
+
+.nav-item:hover:not([style*="opacity: 1"]):not([style*="opacity:1"]) {
+    color: var(--nav-active-color) !important;
+    opacity: 0.8 !important;
 }
 
 .nav-item i, .nav-item span {
@@ -618,6 +640,14 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Glass tint flips to a dark slate so liquid-glass surfaces read as dark */
   --glass-rgb: 22, 24, 32 !important;
+
+  /* Navigation Bar Styles — Dark Theme overrides */
+  --nav-active-color: #60a5fa !important;
+  --nav-inactive-color: #94a3b8 !important;
+  --nav-bg: rgba(18, 24, 38, 0.85) !important;
+  --nav-border: rgba(255, 255, 255, 0.08) !important;
+  --nav-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  --nav-glow: rgba(96, 165, 250, 0.15) !important;
 }
 
 /* ── Smooth transition for theme switching ── */
@@ -960,38 +990,100 @@ body {
   color: var(--primary) !important;
 }
 
-/* ── Dashboard card gradient backgrounds ── */
-[data-theme="dark"] .card-media-premium[style*="linear-gradient"],
-.dark .card-media-premium[style*="linear-gradient"] {
-  background: rgba(26, 32, 44, 0.55) !important;
+/* ── Views transparency to allow body background mesh to shine ── */
+.view-fullbleed, .view {
+  background: transparent !important;
+  background-image: none !important;
 }
 
-[data-theme="dark"] .card-assenze-premium[style*="linear-gradient"],
-.dark .card-assenze-premium[style*="linear-gradient"] {
-  background: rgba(26, 32, 44, 0.55) !important;
+/* ── Premium Dashboard Widgets ── */
+.card-media-premium, .card-assenze-premium, .card-verifiche-premium {
+  border-radius: 36px !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 12px 35px -10px rgba(0, 0, 0, 0.05), inset 0 2px 6px rgba(255, 255, 255, 0.7) !important;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
 }
 
-[data-theme="dark"] .card-verifiche-premium[style*="linear-gradient"],
-.dark .card-verifiche-premium[style*="linear-gradient"] {
-  background: rgba(26, 32, 44, 0.55) !important;
+/* Specific light borders */
+.card-media-premium {
+  border-color: rgba(37, 99, 235, 0.15) !important;
+}
+.card-assenze-premium {
+  border-color: rgba(220, 38, 38, 0.15) !important;
+}
+.card-verifiche-premium {
+  border-color: rgba(5, 150, 105, 0.15) !important;
 }
 
-/* ── Decorative blobs inside cards — soften in dark ── */
+/* Dark mode premium widget cards override */
+[data-theme="dark"] .card-media-premium,
+.dark .card-media-premium {
+  background: linear-gradient(135deg, #0c0f17 0%, #1e3a8a 100%) !important;
+  border: 1px solid rgba(96, 165, 250, 0.25) !important;
+  box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .card-assenze-premium,
+.dark .card-assenze-premium {
+  background: linear-gradient(135deg, #120909 0%, #7f1d1d 100%) !important;
+  border: 1px solid rgba(248, 113, 113, 0.25) !important;
+  box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .card-verifiche-premium,
+.dark .card-verifiche-premium {
+  background: linear-gradient(135deg, #06100a 0%, #064e3b 100%) !important;
+  border: 1px solid rgba(52, 211, 153, 0.25) !important;
+  box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ── Decorative blobs inside cards — glowing in dark ── */
 [data-theme="dark"] .card-media-premium div[style*="rgba(219,234,254"],
 [data-theme="dark"] .card-media-premium div[style*="rgba(243,232,255"],
 .dark .card-media-premium div[style*="rgba(219,234,254"],
 .dark .card-media-premium div[style*="rgba(243,232,255"] {
-  background: rgba(56, 116, 220, 0.12) !important;
+  background: rgba(96, 165, 250, 0.18) !important;
 }
 
 [data-theme="dark"] .card-assenze-premium div[style*="rgba(254,202,202"],
 .dark .card-assenze-premium div[style*="rgba(254,202,202"] {
-  background: rgba(255, 180, 171, 0.10) !important;
+  background: rgba(248, 113, 113, 0.15) !important;
 }
 
 [data-theme="dark"] .card-verifiche-premium div[style*="rgba(167,243,208"],
 .dark .card-verifiche-premium div[style*="rgba(167,243,208"] {
-  background: rgba(134, 239, 172, 0.10) !important;
+  background: rgba(52, 211, 153, 0.15) !important;
+}
+
+/* Tomorrow Card & Empty State Card styling */
+.tomorrow-card {
+  background: rgba(var(--glass-rgb), 0.5) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  border: 1px solid rgba(var(--glass-rgb), 0.5) !important;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+[data-theme="dark"] .tomorrow-card,
+.dark .tomorrow-card {
+  background: rgba(22, 28, 45, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.empty-state-card {
+  background: rgba(var(--glass-rgb), 0.25) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px dashed rgba(var(--glass-rgb), 0.4) !important;
+  color: var(--outline) !important;
+}
+
+[data-theme="dark"] .empty-state-card,
+.dark .empty-state-card {
+  background: rgba(22, 28, 45, 0.45) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.1) !important;
+  color: var(--outline) !important;
 }
 
 /* ── Media card subtitle (rgba(2,80,197,0.6)) ── */
