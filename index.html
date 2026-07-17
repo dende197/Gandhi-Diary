@@ -29,7 +29,7 @@
         })();
     </script>
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="version" content="3.4.1">
+    <meta name="version" content="3.4.3">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="shortcut icon" href="gandhi-diary-icon-192.png?v=3.3.8">
     <link rel="icon" type="image/png" sizes="192x192" href="gandhi-diary-icon-192.png?v=3.3.8">
@@ -155,30 +155,27 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
 
     <!-- Consolidated Assets -->
-    <link rel="stylesheet" href="style.css?v=3.4.1">
+    <link rel="stylesheet" href="style.css?v=3.4.3">
     <link rel="stylesheet" href="animations.css?v=3.3.8">
     
     <!-- App Logic -->
     <script src="ui.js?v=3.4.1" defer></script>
     <script src="fluidity-engine-v3.js?v=3.3.8" defer></script>
-    <script src="fluidity-boot-patch.js?v=1.2.0" defer></script>
+    <script src="fluidity-boot-patch.js?v=1.3.0" defer></script>
     <script src="app-bootstrap.js?v=3.3.8" defer></script>
 
     <style>
         /* Essential inline styles only — flat paint color to avoid a white flash
            before style.css loads. The full satin-glass gradient/grain lives in
-           style.css so it isn't duplicated/overridden here. */
+           style.css so it isn't duplicated/overridden here. The boot script
+           above already resolves 'auto' into a concrete data-theme attribute,
+           so a single attribute selector is enough here. */
         html, body {
-            background-color: #fcf8fb !important;
+            background-color: #fcf8fb;
             font-family: 'Hanken Grotesk', sans-serif;
         }
-        html[data-theme="dark"], html.dark, html[data-theme="dark"] body, html.dark body {
-            background-color: #121318 !important;
-        }
-        @media (prefers-color-scheme: dark) {
-            html:not([data-theme="light"]):not(.light), html:not([data-theme="light"]):not(.light) body {
-                background-color: #121318 !important;
-            }
+        html[data-theme="dark"], html[data-theme="dark"] body {
+            background-color: #121318;
         }
         
         .liquid-glass {
