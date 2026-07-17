@@ -2638,8 +2638,8 @@ function renderSubjectDetailView(subjectName) {
                         <span id="${simLblId}" style="font-size:22px;font-weight:800;color:var(--info);line-height:1;">7.5</span>
                     </div>
                     <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
-                        style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2563eb 65%,#dbeafe 65%);"
-                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2563eb '+pct+'%,#dbeafe '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
+                        style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,var(--primary) 65%,var(--info-container) 65%);"
+                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,var(--primary) '+pct+'%,var(--info-container) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface-container-low);border-radius:20px;padding:14px 16px;border:1px solid var(--outline-variant);">
                     <div>
@@ -4554,7 +4554,7 @@ window.openArgoLogin = function openArgoLogin() {
     } catch(err) {
         console.warn('[openArgoLogin] checkServerHealth non disponibile:', err.message);
         var ss = document.getElementById('server-status');
-        if (ss) { ss.style.color = '#22c55e'; ss.innerHTML = '<span style="width:7px;height:7px;background:#22c55e;border-radius:50%;flex-shrink:0;"></span> Server pronto'; }
+        if (ss) { ss.style.color = 'var(--success)'; ss.innerHTML = '<span style="width:7px;height:7px;background:var(--success);border-radius:50%;flex-shrink:0;"></span> Server pronto'; }
     }
 };
 function showProfileSelectionModal(profiles, credentials) {
@@ -4650,7 +4650,7 @@ function showProfileSelectionModal(profiles, credentials) {
                 // annulla
                 '<button onclick="var mc=document.getElementById(\'modal-container\');if(typeof closeModal===\'function\')closeModal();else if(mc)mc.innerHTML=\'\';" ' +
                 'style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;' +
-                'background:rgba(241,245,249,0.9);color:var(--on-surface-variant);' +
+                'background:var(--surface-container-high);color:var(--on-surface-variant);' +
                 'font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">' +
                     'Annulla' +
                 '</button>' +
@@ -4941,11 +4941,11 @@ function showQuickAddTaskModal() {
             el.onclick = () => {
                 pickedTaskId = el.id.replace('qs-ex-','');
                 document.querySelectorAll('[id^="qs-ex-"]').forEach(e => {
-                    e.style.border = '1.5px solid rgba(226,232,240,0.9)';
-                    e.style.background = 'white';
+                    e.style.border = '1.5px solid var(--outline-variant)';
+                    e.style.background = 'var(--surface-container-lowest)';
                 });
                 el.style.border = '2px solid var(--primary)';
-                el.style.background = 'rgba(239,246,255,0.6)';
+                el.style.background = 'var(--info-container)';
                 const row = document.getElementById('qs-existing-date-row');
                 if (row) row.style.display = 'flex';
             };
@@ -5956,11 +5956,11 @@ window.updateWeekDayButton = function (taskId, dateStr) {
         if (isPlanned) {
             btn.style.background = 'var(--on-surface)';
             btn.style.borderColor = 'var(--on-surface)';
-            btn.style.color = 'white';
+            btn.style.color = 'var(--surface)';
         } else {
             btn.style.background = 'var(--surface-container-lowest)';
-            btn.style.borderColor = (dateStr === todayStr) ? '#007AFF' : '#E0DDD8';
-            btn.style.color = '#4F4A43';
+            btn.style.borderColor = (dateStr === todayStr) ? 'var(--primary)' : 'var(--outline-variant)';
+            btn.style.color = 'var(--on-surface-variant)';
         }
     });
 };
@@ -6528,9 +6528,9 @@ function renderCircolariView() {
 
     // ── Gradient palettes for featured cards ─────────────────────────────────
     const palettes = [
-        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,#e0efff 50%,#b3d4ff 100%)', shadow: '0 10px 40px -10px rgba(37,99,235,0.15)', icon: 'campaign',       iconColor: '#1d4ed8', iconBg: '#dbeafe', badgeText: 'In evidenza' },
-        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,#f3e8ff 70%,#e9d5ff 100%)', shadow: '0 8px 30px -12px rgba(147,51,234,0.15)', icon: 'calendar_month', iconColor: '#6d28d9', iconBg: '#f3e8ff', badgeText: 'Evento'       },
-        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,#f0fdf4 70%,#bbf7d0 100%)', shadow: '0 8px 30px -12px rgba(22,163,74,0.12)',  icon: 'school',         iconColor: '#15803d', iconBg: '#dcfce7', badgeText: 'Comunicato'    },
+        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-blue-mid) 50%,var(--circ-blue-end) 100%)', shadow: '0 10px 40px -10px rgba(37,99,235,0.15)', icon: 'campaign',       iconColor: 'var(--info)', iconBg: 'var(--info-container)', badgeText: 'In evidenza' },
+        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-violet-mid) 70%,var(--circ-violet-end) 100%)', shadow: '0 8px 30px -12px rgba(147,51,234,0.15)', icon: 'calendar_month', iconColor: 'var(--violet)', iconBg: 'var(--violet-container)', badgeText: 'Evento'       },
+        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-green-mid) 70%,var(--circ-green-end) 100%)', shadow: '0 8px 30px -12px rgba(22,163,74,0.12)',  icon: 'school',         iconColor: 'var(--success)', iconBg: 'var(--success-container)', badgeText: 'Comunicato'    },
     ];
 
     function fmtDate(raw) {
@@ -6551,16 +6551,16 @@ function renderCircolariView() {
     const recentList = list.slice(3);
 
     const featuredHtml = featured ? `
-        <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(var(--glass-rgb),0.6);background:linear-gradient(135deg,var(--surface-container-lowest) 0%,#e0efff 50%,#b3d4ff 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(var(--glass-rgb),0.6);background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-blue-mid) 50%,var(--circ-blue-end) 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                <div style="background:var(--info-container);border:1px solid rgba(191,219,254,0.6);color:var(--info);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
+                <div style="background:var(--info-container);border:1px solid var(--outline-variant);color:var(--info);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
                 <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">campaign</span>
             </div>
             <h2 style="font-size:24px;font-weight:800;color:var(--on-surface);line-height:1.2;margin:0 0 28px;letter-spacing:-0.01em;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(featured.titolo)}</h2>
             <div style="display:flex;justify-content:space-between;align-items:flex-end;">
                 <span style="font-size:13px;font-weight:600;color:var(--on-surface-variant);font-family:Hanken Grotesk,sans-serif;">${fmtDate(featured.data)}</span>
-                <div style="width:52px;height:52px;border-radius:50%;background:#0058bc;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -4px rgba(0,88,188,0.4);" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:22px;color:white;">arrow_forward</span>
+                <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -4px rgba(0,88,188,0.4);" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-primary);">arrow_forward</span>
                 </div>
             </div>
         </div>` : '';
@@ -6680,7 +6680,7 @@ window._plannerGetDayContentHTML = function() {
     if (dayTasks.length) {
         html += dayTasks.map(t=>TC(t,false)).join('');
     } else {
-        html += `<div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+        html += `<div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
             <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
             <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
         </div>`;
@@ -6788,13 +6788,13 @@ function renderPlanner() {
         </div>`;
 
         if (t.done) return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid rgba(241,245,249,0.9);opacity:0.5;cursor:pointer;">
+        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid var(--outline-variant);opacity:0.5;cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:var(--success-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--success);"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface-variant);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--outline);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid rgba(241,245,249,0.9);cursor:pointer;">
+        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid var(--outline-variant);cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:var(--info-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--info);"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
@@ -6814,8 +6814,8 @@ function renderPlanner() {
                     flex:1;height:88px;border-radius:20px;
                     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
                     cursor:pointer;
-                    background:${isSel ? '#2563eb' : 'white'};
-                    border:${isSel ? 'none' : '1.5px solid rgba(241,245,249,0.9)'};
+                    background:${isSel ? 'var(--primary)' : 'var(--surface-container-lowest)'};
+                    border:${isSel ? 'none' : '1.5px solid var(--outline-variant)'};
                     box-shadow:${isSel ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)' : 'none'};
                     transform:translateZ(0);
                     will-change:background,box-shadow;
@@ -6824,11 +6824,11 @@ function renderPlanner() {
                     transition:background 0.13s ease,box-shadow 0.13s ease,border-color 0.13s ease;
                     -webkit-tap-highlight-color:transparent;
                 ">
-                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(var(--glass-rgb),0.75)':'#94a3b8'};">${d.label}</span>
-                    <span style="font-size:20px;font-weight:800;color:${isSel?'white':'#1e293b'};line-height:1;">${d.dayNum}</span>
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(var(--glass-rgb),0.75)':'var(--outline)'};">${d.label}</span>
+                    <span style="font-size:20px;font-weight:800;color:${isSel?'var(--on-primary)':'var(--on-surface)'};line-height:1;">${d.dayNum}</span>
                     <div style="width:5px;height:5px;border-radius:50%;background:${
                         d.isToday
-                            ? (isSel ? 'rgba(var(--glass-rgb),0.9)' : '#2563eb')
+                            ? (isSel ? 'rgba(var(--glass-rgb),0.9)' : 'var(--primary)')
                             : d.hasTask
                                 ? (isSel ? 'rgba(var(--glass-rgb),0.45)' : 'rgba(37,99,235,0.28)')
                                 : 'transparent'
@@ -6842,7 +6842,7 @@ function renderPlanner() {
     const dotsHtml = weeks.map((_, i) => `
         <div class="planner-week-dot" data-idx="${i}" style="
             width:${i===activeSlide?'20px':'6px'};height:6px;border-radius:4px;
-            background:${i===activeSlide?'#2563eb':'#CBD5E1'};
+            background:${i===activeSlide?'var(--primary)':'var(--outline-variant)'};
             transition:all 0.3s ease;cursor:pointer;
         " onclick="plannerJumpToWeek(${i})"></div>
     `).join('');
@@ -6939,7 +6939,7 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             </div>` : ''}
 
             ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
-            <div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid rgba(241,245,249,0.9);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+            <div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
                 <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
                 <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
             </div>`}
@@ -7172,7 +7172,7 @@ window._buildPlannerDayContentHTML = function() {
           '<span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span></div>' +
           '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
           '</div>' : '';
-    var empty = '<div style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid rgba(241,245,249,0.9);">' +
+    var empty = '<div style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid var(--outline-variant);">' +
         '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>' +
         '<p style="font-size:14px;font-weight:600;color:var(--outline);margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
     return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
@@ -7274,16 +7274,16 @@ window.plannerSelectDay = function(iso) {
         const elIso = m ? m[1] : null;
         if (!elIso) return;
         const isSel = elIso === iso;
-        el.style.background  = isSel ? '#2563eb' : 'white';
-        el.style.border      = isSel ? '1.5px solid rgba(241,245,249,0.9)' : '1.5px solid rgba(241,245,249,0.9)';
+        el.style.background  = isSel ? 'var(--primary)' : 'var(--surface-container-lowest)';
+        el.style.border      = isSel ? 'none' : '1.5px solid var(--outline-variant)';
         el.style.boxShadow   = isSel
             ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)'
             : 'none';
         el.style.transform   = 'translateZ(0)'; // fisso, no scale → zero layer thrashing
         el.style.filter      = '';              // mai cambiare → evita flash GPU WebKit
         const spans = el.querySelectorAll('span');
-        if (spans[0]) spans[0].style.color = isSel ? 'rgba(var(--glass-rgb),0.75)' : '#94a3b8';
-        if (spans[1]) spans[1].style.color = isSel ? 'white' : '#1e293b';
+        if (spans[0]) spans[0].style.color = isSel ? 'rgba(var(--glass-rgb),0.75)' : 'var(--outline)';
+        if (spans[1]) spans[1].style.color = isSel ? 'var(--on-primary)' : 'var(--on-surface)';
     });
     // Swap istantaneo: niente opacity, niente scale → zero flash/nero WebKit
     var _area = document.getElementById('planner-content-area');
@@ -7303,7 +7303,7 @@ window.handlePlannerCarouselScroll = function(el) {
     window._lastPlannerScrollIdx = idx;
     document.querySelectorAll('.planner-week-dot').forEach(function(dot, i) {
         dot.style.width      = i === idx ? '20px' : '6px';
-        dot.style.background = i === idx ? '#2563eb' : '#CBD5E1';
+        dot.style.background = i === idx ? 'var(--primary)' : 'var(--outline-variant)';
         dot.style.borderRadius = '4px';
     });
     // Aggiorna lo stato settimana senza re-render immediato
