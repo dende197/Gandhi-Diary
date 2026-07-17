@@ -78,6 +78,22 @@
   --info-container: #dbeafe;
   --on-info-container: #1e3a8a;
 
+  /* Violet (circolari "Evento" accent — no existing token covers purple) */
+  --violet: #6d28d9;
+  --on-violet: #ffffff;
+  --violet-container: #f3e8ff;
+  --on-violet-container: #4c1d95;
+
+  /* Circolari featured-card gradient stops — kept as tokens (not raw hex
+     in ui.js) specifically so dark mode can swap them for a navy-to-vivid
+     range instead of fading into a pastel that swallows light-mode text. */
+  --circ-blue-mid: #e0efff;
+  --circ-blue-end: #b3d4ff;
+  --circ-violet-mid: #f3e8ff;
+  --circ-violet-end: #e9d5ff;
+  --circ-green-mid: #f0fdf4;
+  --circ-green-end: #bbf7d0;
+
   /* Glass tint base — used as rgba(var(--glass-rgb), X) everywhere for the
      liquid-glass surfaces (nav bar, cards, headers). Flips to a dark tint
      in dark mode so "glass" surfaces are actually dark instead of staying
@@ -635,6 +651,22 @@ h1, h2, h3, h4, h5, h6 {
   --on-info: #0d2a5c !important;
   --info-container: #1e3a8a !important;
   --on-info-container: #dbeafe !important;
+
+  /* Violet */
+  --violet: #c4b5fd !important;
+  --on-violet: #2e1065 !important;
+  --violet-container: #4c1d95 !important;
+  --on-violet-container: #ede9fe !important;
+
+  /* Circolari featured-card gradients: stay in a dark navy→vivid range
+     instead of fading to a pastel, so --on-surface text (light in dark
+     mode) never has to cross a bright patch inside the same card. */
+  --circ-blue-mid: #142647 !important;
+  --circ-blue-end: #1e3a8a !important;
+  --circ-violet-mid: #241a3d !important;
+  --circ-violet-end: #4c1d95 !important;
+  --circ-green-mid: #12261c !important;
+  --circ-green-end: #14532d !important;
 
   /* Glass tint flips to a dark slate so liquid-glass surfaces read as dark */
   --glass-rgb: 22, 24, 32 !important;
