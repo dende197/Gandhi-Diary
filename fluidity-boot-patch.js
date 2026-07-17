@@ -2,30 +2,21 @@
   if (window.__fluidityBootPatchInstalled) return;
   window.__fluidityBootPatchInstalled = true;
 
-  const PATCH_VERSION = '1.3.0';
+  const PATCH_VERSION = '1.4.0';
   const LOADER_REMOVE_TIMEOUT_MS    = 180;
   const POST_NAV_SCHEDULE_BLOCK_MS  = 160;
   const PATCH_RETRY_INTERVAL_MS     = 50;
   const PATCH_RETRY_MAX_ATTEMPTS    = 120;
 
-  // ─── 0. Cold-start flash guard (theme-aware) ─────────────────
-  try {
-    const id = 'fluidity-boot-bg-patch';
-    if (!document.getElementById(id)) {
-      let theme = document.documentElement.getAttribute('data-theme');
-      if (theme !== 'light' && theme !== 'dark') {
-        theme = localStorage.getItem('gc_theme') || 'auto';
-        if (theme === 'auto') {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-      }
-      const bg = theme === 'dark' ? '#121318' : '#F6F5F3';
-      const s = document.createElement('style');
-      s.id = id;
-      s.textContent = 'html,body{background-color:' + bg + '!important;}';
-      document.head.appendChild(s);
-    }
-  } catch (_) {}
+  // NOTE: this file used to inject its own <style> tag here as a
+  // "cold-start flash guard" (background-color forced via !important).
+  // It's been removed: index.html already has a static, non-JS
+  // `html[data-theme="dark"] { background-color: ... }` rule for this,
+  // which reacts to theme changes automatically and can never go stale.
+  // The JS version could only be un-done by explicitly deleting the
+  // injected tag again, which made it fight later in-app theme toggles
+  // whenever that cleanup didn't run — this removes that whole class of
+  // bug instead of patching it further.
 
   // ═══════════════════════════════════════════════════════════════
   //  PWA MULTI-RELOAD FIX  (v1.2.0)
@@ -242,11 +233,6 @@
         loader.style.opacity = '0';
         setTimeout(done, LOADER_REMOVE_TIMEOUT_MS);
       }
-      // The cold-start bg patch has done its job now that the real app
-      // (and therefore style.css + data-theme) is in control — remove it
-      // so it can't go stale and fight a later in-app theme toggle.
-      const bgPatch = document.getElementById('fluidity-boot-bg-patch');
-      if (bgPatch && bgPatch.parentNode) bgPatch.remove();
     };
     window.hideBoot = markPatched(patched, '__fluidityBootPatched');
   }
