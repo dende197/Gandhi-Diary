@@ -1048,6 +1048,48 @@ body {
   color: var(--outline) !important;
 }
 
+/* ── Planner / Agenda — same navy-gradient family as the dashboard,
+   replacing the flat near-black surface tokens these elements used to
+   fall back to (that's what read as "quasi neri" / low-contrast). ── */
+[data-theme="dark"] #planner-search-input,
+.dark #planner-search-input {
+  background: linear-gradient(135deg, rgba(12, 15, 23, 0.95) 0%, rgba(23, 42, 92, 0.85) 100%) !important;
+}
+
+[data-theme="dark"] .planner-day-pill[style*="var(--surface-container-lowest)"],
+.dark .planner-day-pill[style*="var(--surface-container-lowest)"] {
+  background: linear-gradient(135deg, #10131c 0%, #1a2340 100%) !important;
+  border-color: rgba(96, 165, 250, 0.16) !important;
+}
+
+[data-theme="dark"] .planner-empty-card,
+.dark .planner-empty-card {
+  background: linear-gradient(135deg, #0d1017 0%, #131b2e 100%) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+[data-theme="dark"] .planner-task-todo,
+[data-theme="dark"] .planner-task-done,
+.dark .planner-task-todo,
+.dark .planner-task-done {
+  background: linear-gradient(135deg, #10131c 0%, #171f30 100%) !important;
+  border-color: rgba(96, 165, 250, 0.14) !important;
+}
+
+[data-theme="dark"] .planner-task-exam,
+.dark .planner-task-exam {
+  background: linear-gradient(135deg, #180a0a 0%, #5c1616 100%) !important;
+  border-color: rgba(248, 113, 113, 0.25) !important;
+}
+[data-theme="dark"] .planner-task-exam > div:first-child,
+.dark .planner-task-exam > div:first-child {
+  background: rgba(248, 113, 113, 0.15) !important;
+}
+[data-theme="dark"] .planner-task-exam div[style*="background:rgba(254,226,226"],
+.dark .planner-task-exam div[style*="background:rgba(254,226,226"] {
+  background: rgba(248, 113, 113, 0.2) !important;
+}
+
 /* ── Media card subtitle (rgba(2,80,197,0.6)) ── */
 [data-theme="dark"] .card-media-premium p[style*="rgba(2,80,197"],
 .dark .card-media-premium p[style*="rgba(2,80,197"] {
