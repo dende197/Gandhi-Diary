@@ -4941,7 +4941,7 @@ function showQuickAddTaskModal() {
             el.onclick = () => {
                 pickedTaskId = el.id.replace('qs-ex-','');
                 document.querySelectorAll('[id^="qs-ex-"]').forEach(e => {
-                    e.style.border = '1.5px solid var(--outline-variant)';
+                    e.style.border = 'none';
                     e.style.background = 'var(--surface-container-lowest)';
                 });
                 el.style.border = '2px solid var(--primary)';
@@ -6680,7 +6680,7 @@ window._plannerGetDayContentHTML = function() {
     if (dayTasks.length) {
         html += dayTasks.map(t=>TC(t,false)).join('');
     } else {
-        html += `<div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+        html += `<div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:none;box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
             <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
             <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
         </div>`;
@@ -6788,13 +6788,13 @@ function renderPlanner() {
         </div>`;
 
         if (t.done) return `
-        <div class="planner-task-done" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid var(--outline-variant);opacity:0.5;cursor:pointer;">
+        <div class="planner-task-done" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:none;opacity:0.5;cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:var(--success-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--success);"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface-variant);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--outline);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div class="planner-task-todo" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid var(--outline-variant);cursor:pointer;">
+        <div class="planner-task-todo" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:none;cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:var(--info-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--info);"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
@@ -6815,7 +6815,7 @@ function renderPlanner() {
                     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
                     cursor:pointer;
                     background:${isSel ? 'var(--primary)' : 'var(--surface-container-lowest)'};
-                    border:${isSel ? 'none' : '1.5px solid var(--outline-variant)'};
+                    border:none;
                     box-shadow:${isSel ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)' : 'none'};
                     transform:translateZ(0);
                     will-change:background,box-shadow;
@@ -6939,7 +6939,7 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             </div>` : ''}
 
             ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
-            <div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+            <div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:none;box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
                 <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
                 <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
             </div>`}
@@ -7172,7 +7172,7 @@ window._buildPlannerDayContentHTML = function() {
           '<span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span></div>' +
           '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
           '</div>' : '';
-    var empty = '<div class="planner-empty-card" style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid var(--outline-variant);">' +
+    var empty = '<div class="planner-empty-card" style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:none;">' +
         '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>' +
         '<p style="font-size:14px;font-weight:600;color:var(--outline);margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
     return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
@@ -7275,7 +7275,7 @@ window.plannerSelectDay = function(iso) {
         if (!elIso) return;
         const isSel = elIso === iso;
         el.style.background  = isSel ? 'var(--primary)' : 'var(--surface-container-lowest)';
-        el.style.border      = isSel ? 'none' : '1.5px solid var(--outline-variant)';
+        el.style.border      = 'none';
         el.style.boxShadow   = isSel
             ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)'
             : 'none';
