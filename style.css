@@ -467,7 +467,7 @@ h1, h2, h3, h4, h5, h6 {
 .card-verifiche-premium,
 .card-assenze-bg {
     background: var(--surface-container-lowest);
-    border: 1px solid var(--outline-variant);
+    border: none;
     box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.06);
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
 }
@@ -503,7 +503,7 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 22px;
     padding: 16px 18px;
     box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.04);
-    border: 1px solid var(--outline-variant);
+    border: none;
 }
 
 .avatar-group > img {
@@ -532,7 +532,7 @@ h1, h2, h3, h4, h5, h6 {
     background: var(--nav-bg) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid var(--nav-border) !important;
+    border: none !important;
     box-shadow: var(--nav-shadow) !important;
     transition: all 0.3s ease;
 }
@@ -759,7 +759,7 @@ html.theme-transition *::after {
 [data-theme="dark"] .card-assenze-premium div[style*="background:#FAFBFC"],
 .dark .card-assenze-premium div[style*="background:#FAFBFC"] {
     background: rgba(var(--glass-rgb), 0.04) !important;
-    border-color: rgba(var(--glass-rgb), 0.08) !important;
+    border-color: transparent !important;
 }
 
 [data-theme="dark"] .card-verifiche-premium h2,
@@ -778,13 +778,13 @@ html.theme-transition *::after {
 [data-theme="dark"] .card-verifiche-premium div[style*="background:#FAFBFC"],
 .dark .card-verifiche-premium div[style*="background:#FAFBFC"] {
     background: rgba(var(--glass-rgb), 0.04) !important;
-    border-color: rgba(var(--glass-rgb), 0.08) !important;
+    border-color: transparent !important;
 }
 
 [data-theme="dark"] .home-card-item,
 .dark .home-card-item {
     background: linear-gradient(135deg, #10131c 0%, #171f30 100%) !important;
-    border-color: rgba(96, 165, 250, 0.14) !important;
+    border-color: transparent !important;
 }
 
 [data-theme="dark"] .home-card-item h4,
@@ -820,30 +820,34 @@ html.theme-transition *::after {
    just the body's own background-image, so it always paints.
    ================================================================ */
 
+/* ================================================================
+   SMOOTH BACKGROUND — soft blue gradient wash, no grain/noise.
+   Uses the same hues as the widget cards (not just "blue" in the
+   abstract) so the page reads as one continuous surface instead of
+   a flat backdrop the cards sit on top of with a hard jump.
+   ================================================================ */
+
 body {
   background-color: var(--surface);
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(55% 45% at 12% 10%, rgba(0, 88, 188, 0.22) 0%, transparent 100%),
-    radial-gradient(60% 48% at 92% 6%, rgba(76, 74, 202, 0.18) 0%, transparent 100%),
-    radial-gradient(65% 55% at 15% 95%, rgba(0, 122, 255, 0.12) 0%, transparent 100%),
-    radial-gradient(58% 48% at 95% 92%, rgba(102, 100, 228, 0.15) 0%, transparent 100%);
-  background-size: 180px 180px, auto, auto, auto, auto;
-  background-blend-mode: overlay, normal, normal, normal, normal;
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+    radial-gradient(60% 50% at 15% 8%, rgba(0, 88, 188, 0.14) 0%, transparent 100%),
+    radial-gradient(65% 52% at 90% 5%, rgba(76, 74, 202, 0.10) 0%, transparent 100%),
+    radial-gradient(70% 58% at 12% 96%, rgba(0, 122, 255, 0.08) 0%, transparent 100%),
+    radial-gradient(62% 50% at 95% 92%, rgba(102, 100, 228, 0.10) 0%, transparent 100%);
   background-attachment: fixed;
   transition: background-color 0.35s ease;
 }
 
-/* Dark mode: deeper, richer satin — same structure, no extra layers */
+/* Dark mode: same hues the cards themselves are built from
+   (#1e3a8a / #16213e), so the ambient glow and the widgets read
+   as one family instead of two different blues fighting. */
 [data-theme="dark"] body,
 .dark body {
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(55% 45% at 12% 10%, rgba(56, 116, 220, 0.30) 0%, transparent 100%),
-    radial-gradient(60% 48% at 92% 6%, rgba(99, 97, 220, 0.26) 0%, transparent 100%),
-    radial-gradient(65% 55% at 15% 95%, rgba(0, 88, 188, 0.18) 0%, transparent 100%),
-    radial-gradient(58% 48% at 95% 92%, rgba(102, 100, 228, 0.20) 0%, transparent 100%) !important;
+    radial-gradient(65% 55% at 15% 8%, rgba(30, 58, 138, 0.30) 0%, transparent 100%),
+    radial-gradient(70% 58% at 90% 4%, rgba(76, 74, 202, 0.20) 0%, transparent 100%),
+    radial-gradient(75% 62% at 10% 98%, rgba(22, 33, 62, 0.55) 0%, transparent 100%),
+    radial-gradient(65% 55% at 95% 94%, rgba(30, 58, 138, 0.22) 0%, transparent 100%) !important;
 }
 
 /* ── Theme Toggle Switch (Profile Page) ── */
@@ -959,27 +963,16 @@ body {
 /* ── Premium Dashboard Widgets ── */
 .card-media-premium, .card-assenze-premium, .card-verifiche-premium {
   border-radius: 36px !important;
-  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border: none !important;
   box-shadow: 0 12px 35px -10px rgba(0, 0, 0, 0.05), inset 0 2px 6px rgba(255, 255, 255, 0.7) !important;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
-}
-
-/* Specific light borders */
-.card-media-premium {
-  border-color: rgba(37, 99, 235, 0.15) !important;
-}
-.card-assenze-premium {
-  border-color: rgba(220, 38, 38, 0.15) !important;
-}
-.card-verifiche-premium {
-  border-color: rgba(5, 150, 105, 0.15) !important;
 }
 
 /* Dark mode premium widget cards override */
 [data-theme="dark"] .card-media-premium,
 .dark .card-media-premium {
   background: linear-gradient(135deg, #0c0f17 0%, #1e3a8a 100%) !important;
-  border: 1px solid rgba(96, 165, 250, 0.25) !important;
+  border: none !important;
   box-shadow:
     0 2px 8px -2px rgba(0, 0, 0, 0.28),
     0 28px 56px -24px rgba(0, 0, 0, 0.45),
@@ -989,23 +982,23 @@ body {
 
 [data-theme="dark"] .card-assenze-premium,
 .dark .card-assenze-premium {
-  background: linear-gradient(135deg, #120909 0%, #7f1d1d 100%) !important;
-  border: 1px solid rgba(248, 113, 113, 0.25) !important;
+  background: linear-gradient(135deg, #0c0f17 0%, #1c1420 55%, #3d1e26 100%) !important;
+  border: none !important;
   box-shadow:
     0 2px 8px -2px rgba(0, 0, 0, 0.28),
     0 28px 56px -24px rgba(0, 0, 0, 0.45),
-    0 14px 36px -14px rgba(239, 68, 68, 0.22),
+    0 14px 36px -14px rgba(239, 68, 68, 0.12),
     inset 0 1px 1px rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .card-verifiche-premium,
 .dark .card-verifiche-premium {
-  background: linear-gradient(135deg, #06100a 0%, #064e3b 100%) !important;
-  border: 1px solid rgba(52, 211, 153, 0.25) !important;
+  background: linear-gradient(135deg, #0c0f17 0%, #0f1f1e 55%, #16332c 100%) !important;
+  border: none !important;
   box-shadow:
     0 2px 8px -2px rgba(0, 0, 0, 0.28),
     0 28px 56px -24px rgba(0, 0, 0, 0.45),
-    0 14px 36px -14px rgba(16, 185, 129, 0.22),
+    0 14px 36px -14px rgba(16, 185, 129, 0.12),
     inset 0 1px 1px rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -1019,12 +1012,12 @@ body {
 
 [data-theme="dark"] .card-assenze-premium div[style*="rgba(254,202,202"],
 .dark .card-assenze-premium div[style*="rgba(254,202,202"] {
-  background: rgba(248, 113, 113, 0.15) !important;
+  background: rgba(248, 113, 113, 0.08) !important;
 }
 
 [data-theme="dark"] .card-verifiche-premium div[style*="rgba(167,243,208"],
 .dark .card-verifiche-premium div[style*="rgba(167,243,208"] {
-  background: rgba(52, 211, 153, 0.15) !important;
+  background: rgba(52, 211, 153, 0.08) !important;
 }
 
 /* Tomorrow Card & Empty State Card styling */
@@ -1032,14 +1025,14 @@ body {
   background: rgba(var(--glass-rgb), 0.5) !important;
   backdrop-filter: blur(12px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  border: 1px solid rgba(var(--glass-rgb), 0.5) !important;
+  border: none !important;
   box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
 [data-theme="dark"] .tomorrow-card,
 .dark .tomorrow-card {
   background: linear-gradient(135deg, #0c0f17 0%, #16213e 100%) !important;
-  border: 1px solid rgba(96, 165, 250, 0.18) !important;
+  border: none !important;
   box-shadow:
     0 2px 8px -2px rgba(0, 0, 0, 0.25),
     0 24px 48px -20px rgba(0, 0, 0, 0.4),
@@ -1051,7 +1044,7 @@ body {
   background: rgba(var(--glass-rgb), 0.25) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(var(--glass-rgb), 0.5) !important;
+  border: none !important;
   box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.06) !important;
   color: var(--outline) !important;
 }
@@ -1061,7 +1054,7 @@ body {
   background: linear-gradient(135deg, #0d1017 0%, #131b2e 100%) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border: 1px solid rgba(96, 165, 250, 0.14) !important;
+  border: none !important;
   box-shadow:
     0 2px 8px -2px rgba(0, 0, 0, 0.25),
     0 20px 44px -20px rgba(0, 0, 0, 0.4) !important;
@@ -1074,18 +1067,19 @@ body {
 [data-theme="dark"] #planner-search-input,
 .dark #planner-search-input {
   background: linear-gradient(135deg, rgba(12, 15, 23, 0.95) 0%, rgba(23, 42, 92, 0.85) 100%) !important;
+  border: none !important;
 }
 
 [data-theme="dark"] .planner-day-pill[style*="var(--surface-container-lowest)"],
 .dark .planner-day-pill[style*="var(--surface-container-lowest)"] {
   background: linear-gradient(135deg, #10131c 0%, #1a2340 100%) !important;
-  border-color: rgba(96, 165, 250, 0.16) !important;
+  border-color: transparent !important;
 }
 
 [data-theme="dark"] .planner-empty-card,
 .dark .planner-empty-card {
   background: linear-gradient(135deg, #0d1017 0%, #131b2e 100%) !important;
-  border-color: rgba(148, 163, 184, 0.22) !important;
+  border-color: transparent !important;
 }
 
 [data-theme="dark"] .planner-task-todo,
@@ -1093,17 +1087,17 @@ body {
 .dark .planner-task-todo,
 .dark .planner-task-done {
   background: linear-gradient(135deg, #10131c 0%, #171f30 100%) !important;
-  border-color: rgba(96, 165, 250, 0.14) !important;
+  border-color: transparent !important;
 }
 
 [data-theme="dark"] .planner-task-exam,
 .dark .planner-task-exam {
-  background: linear-gradient(135deg, #180a0a 0%, #5c1616 100%) !important;
-  border-color: rgba(248, 113, 113, 0.25) !important;
+  background: linear-gradient(135deg, #12101a 0%, #2e161c 100%) !important;
+  border: none !important;
 }
 [data-theme="dark"] .planner-task-exam > div:first-child,
 .dark .planner-task-exam > div:first-child {
-  background: rgba(248, 113, 113, 0.15) !important;
+  background: rgba(248, 113, 113, 0.08) !important;
 }
 [data-theme="dark"] .planner-task-exam div[style*="background:rgba(254,226,226"],
 .dark .planner-task-exam div[style*="background:rgba(254,226,226"] {
