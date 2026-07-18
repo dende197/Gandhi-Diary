@@ -6680,7 +6680,7 @@ window._plannerGetDayContentHTML = function() {
     if (dayTasks.length) {
         html += dayTasks.map(t=>TC(t,false)).join('');
     } else {
-        html += `<div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+        html += `<div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
             <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
             <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
         </div>`;
@@ -6774,7 +6774,7 @@ function renderPlanner() {
         const rerender = "state._forceRender=true;scheduleRender(0);";
 
         if (isExam) return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:rgba(254,242,242,0.85);border:1.5px solid rgba(254,202,202,0.6);border-radius:22px;padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 4px 16px -6px rgba(239,68,68,0.18);">
+        <div class="planner-task-exam" onclick="toggleTask('${tid}');${rerender}" style="background:rgba(254,242,242,0.85);border:1.5px solid rgba(254,202,202,0.6);border-radius:22px;padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 4px 16px -6px rgba(239,68,68,0.18);">
             <div style="position:absolute;top:-24px;right:-24px;width:80px;height:80px;background:rgba(254,202,202,0.25);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
             ${dLabel}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1;">
@@ -6788,13 +6788,13 @@ function renderPlanner() {
         </div>`;
 
         if (t.done) return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid var(--outline-variant);opacity:0.5;cursor:pointer;">
+        <div class="planner-task-done" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:1.5px solid var(--outline-variant);opacity:0.5;cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:var(--success-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--success);"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface-variant);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--outline);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid var(--outline-variant);cursor:pointer;">
+        <div class="planner-task-todo" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:1.5px solid var(--outline-variant);cursor:pointer;">
             <div style="width:44px;height:44px;flex-shrink:0;background:var(--info-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--info);"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
             <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
@@ -6810,7 +6810,7 @@ function renderPlanner() {
         return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;transform:translateZ(0);-webkit-transform:translateZ(0);">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
-                return `<div onclick="plannerSelectDay('${d.iso}')" style="
+                return `<div class="planner-day-pill" onclick="plannerSelectDay('${d.iso}')" style="
                     flex:1;height:88px;border-radius:20px;
                     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
                     cursor:pointer;
@@ -6939,7 +6939,7 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             </div>` : ''}
 
             ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
-            <div style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
+            <div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:1.5px solid var(--outline-variant);box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
                 <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
                 <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
             </div>`}
@@ -7167,12 +7167,12 @@ window._buildPlannerDayContentHTML = function() {
     var smart = upcoming > 0 && selDate === todayISO
         ? '<div style="background:var(--info-container);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">' +
           '<div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">' +
-          '<div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;">' +
-          '<span class="material-symbols-outlined" style="font-size:15px;color:white;">lightbulb</span></div>' +
+          '<div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;">' +
+          '<span class="material-symbols-outlined" style="font-size:15px;color:var(--on-primary);">lightbulb</span></div>' +
           '<span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span></div>' +
           '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
           '</div>' : '';
-    var empty = '<div style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid var(--outline-variant);">' +
+    var empty = '<div class="planner-empty-card" style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:1.5px solid var(--outline-variant);">' +
         '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>' +
         '<p style="font-size:14px;font-weight:600;color:var(--outline);margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
     return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
