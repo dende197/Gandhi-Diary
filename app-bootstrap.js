@@ -167,6 +167,32 @@
         };
         window.state = state;
 
+        // Keep local data "fresh enough" for fast relaunches without forcing boot sync.
+        const SYNC_TTL_MS = 8 * 60 * 60 * 1000;
+        window.SYNC_TTL_MS = SYNC_TTL_MS;
+
+        function getPersistedLastSyncAt() {
+            const legacyDidupTs = parseInt(localStorage.getItem(lsKey('didup_last_success_ts')) || '0', 10);
+            const persisted = parseInt(localStorage.getItem(lsKey('last_sync_at')) || '0', 10);
+            const ts = Number.isFinite(persisted) && persisted > 0 ? persisted : legacyDidupTs;
+            return Number.isFinite(ts) && ts > 0 ? ts : 0;
+        }
+
+        function setPersistedLastSyncAt(ts = Date.now()) {
+            const safeTs = Number.isFinite(ts) && ts > 0 ? ts : Date.now();
+            localStorage.setItem(lsKey('last_sync_at'), String(safeTs));
+            localStorage.setItem(lsKey('didup_last_success_ts'), String(safeTs));
+            state.didup.lastSuccessTs = safeTs;
+        }
+
+        // Sync on boot only when cache is missing/stale (> 8h).
+        function shouldSyncOnBoot(lastSyncAt) {
+            const ts = Number(lastSyncAt);
+            if (!Number.isFinite(ts) || ts <= 0) return true;
+            return (Date.now() - ts) > SYNC_TTL_MS;
+        }
+        window.shouldSyncOnBoot = shouldSyncOnBoot;
+
         function appendSyncDiagnostic(entry) {
             try {
                 const fallbackSummary = entry?.success ? 'Sync completato' : 'Sync fallito';
@@ -193,6 +219,70 @@
             if (!_allowedViews.includes(v)) v = 'home';
             location.hash = v;
         };
+
+        function saveNavigationState() {
+            if (!state.isLoggedIn || state._loggedOut) return;
+            try {
+                localStorage.setItem(lsKey('last_view'), String(state.view || 'home'));
+                localStorage.setItem(lsKey('last_scroll_y'), String(Math.max(0, Math.round(window.scrollY || 0))));
+            } catch (_) {}
+        }
+        window.saveNavigationState = saveNavigationState;
+
+        function restoreNavigationStateFromStorage() {
+            try {
+                const lastView = String(localStorage.getItem(lsKey('last_view')) || '').trim();
+                const view = _allowedViews.includes(lastView) ? lastView : null;
+                const scrollY = parseInt(localStorage.getItem(lsKey('last_scroll_y')) || '0', 10);
+                return { view, scrollY: Number.isFinite(scrollY) && scrollY > 0 ? scrollY : 0 };
+            } catch (_) {
+                return { view: null, scrollY: 0 };
+            }
+        }
+
+        function snapshotUiStateForSync() {
+            return {
+                view: state.view,
+                hash: window.location.hash || '',
+                scrollY: Math.max(0, Math.round(window.scrollY || 0)),
+                selectedDate: state.selectedDate,
+                plannerWeekOffset: state.plannerWeekOffset,
+                plannerMonthView: state.plannerMonthView,
+                plannerMonthViewYear: state.plannerMonthViewYear,
+                plannerMonthViewMonth: state.plannerMonthViewMonth,
+                agendaSearchQuery: state.agendaSearchQuery,
+                agendaSearchSubject: state.agendaSearchSubject,
+                homeTaskFocus: state.homeTaskFocus,
+                activeSubject: state.activeSubject
+            };
+        }
+
+        function restoreUiStateAfterSync(snapshot) {
+            if (!snapshot || state._loggedOut || !state.isLoggedIn) return;
+            if (_allowedViews.includes(snapshot.view)) {
+                state.view = snapshot.view;
+            }
+            state.selectedDate = snapshot.selectedDate;
+            state.plannerWeekOffset = snapshot.plannerWeekOffset;
+            state.plannerMonthView = snapshot.plannerMonthView;
+            state.plannerMonthViewYear = snapshot.plannerMonthViewYear;
+            state.plannerMonthViewMonth = snapshot.plannerMonthViewMonth;
+            state.agendaSearchQuery = snapshot.agendaSearchQuery || '';
+            state.agendaSearchSubject = snapshot.agendaSearchSubject || 'all';
+            state.homeTaskFocus = snapshot.homeTaskFocus || 'today';
+            state.activeSubject = snapshot.activeSubject || null;
+
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    if (!state._loggedOut) window.scrollTo({ top: Math.max(0, snapshot.scrollY || 0), behavior: 'auto' });
+                }));
+            } else {
+                setTimeout(() => {
+                    if (!state._loggedOut) window.scrollTo({ top: Math.max(0, snapshot.scrollY || 0), behavior: 'auto' });
+                }, 0);
+            }
+            saveNavigationState();
+        }
 
         // --- UTILS ---
         function parseArgoDate(dateStr) {
@@ -367,10 +457,106 @@
         }
         window.saveTasksToSupabase = saveTasksToSupabase;
 
+        const PULL_REFRESH_TRIGGER_PX = 72;
+        const PULL_REFRESH_MAX_PX = 120;
+        let _pullRefreshInFlight = false;
+        let _pullToRefreshBound = false;
+
+        function setPullRefreshIndicator(progress = 0, options = {}) {
+            const indicator = document.getElementById('pull-refresh-indicator');
+            if (!indicator) return;
+            const bar = indicator.querySelector('.pull-refresh-indicator__bar');
+            const clamped = Math.max(0, Math.min(1, Number(progress) || 0));
+            const active = !!options.active || clamped > 0;
+            const loading = !!options.loading;
+            indicator.classList.toggle('active', active || loading);
+            indicator.classList.toggle('loading', loading);
+            if (bar) {
+                const scale = loading ? 1 : Math.max(0.08, clamped);
+                bar.style.transform = `scaleX(${scale})`;
+            }
+        }
+
+        async function triggerPullToRefresh() {
+            if (_pullRefreshInFlight || state.syncing || !state.isLoggedIn || state._loggedOut) return false;
+            const session = sessionManager.load();
+            if (!session) return false;
+            _pullRefreshInFlight = true;
+            setPullRefreshIndicator(1, { active: true, loading: true });
+            try {
+                await performSync(session, {
+                    suppressRender: false,
+                    suppressHideBoot: true,
+                    allowAuthRetry: true,
+                    preserveUiState: true
+                });
+                await runSilentGoogleSync(session);
+                await loadCircolari();
+                return true;
+            } finally {
+                _pullRefreshInFlight = false;
+                setPullRefreshIndicator(0, { active: false, loading: false });
+            }
+        }
+
+        function initPullToRefresh() {
+            if (_pullToRefreshBound) return;
+            _pullToRefreshBound = true;
+            let isPulling = false;
+            let startY = 0;
+            let distance = 0;
+
+            const isAtTop = () => {
+                const scrollingEl = document.scrollingElement || document.documentElement;
+                return (scrollingEl?.scrollTop || window.scrollY || 0) <= 0;
+            };
+
+            const resetGesture = () => {
+                isPulling = false;
+                startY = 0;
+                distance = 0;
+                if (!_pullRefreshInFlight) setPullRefreshIndicator(0, { active: false, loading: false });
+            };
+
+            document.addEventListener('touchstart', (event) => {
+                if (!state.isLoggedIn || state._loggedOut || _pullRefreshInFlight || state.syncing) return;
+                if (event.touches.length !== 1 || !isAtTop()) return;
+                isPulling = true;
+                startY = event.touches[0].clientY;
+                distance = 0;
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (event) => {
+                if (!isPulling) return;
+                const delta = event.touches[0].clientY - startY;
+                if (delta <= 0 || !isAtTop()) {
+                    resetGesture();
+                    return;
+                }
+                distance = Math.min(PULL_REFRESH_MAX_PX, delta * 0.5);
+                const progress = Math.min(1, distance / PULL_REFRESH_TRIGGER_PX);
+                setPullRefreshIndicator(progress, { active: true, loading: false });
+                if (delta > 8) event.preventDefault();
+            }, { passive: false });
+
+            const finishPull = () => {
+                if (!isPulling) return;
+                const shouldRefresh = distance >= PULL_REFRESH_TRIGGER_PX;
+                resetGesture();
+                if (shouldRefresh) triggerPullToRefresh();
+            };
+
+            document.addEventListener('touchend', finishPull, { passive: true });
+            document.addEventListener('touchcancel', finishPull, { passive: true });
+        }
+        window.triggerPullToRefresh = triggerPullToRefresh;
+
         async function performSync(sessionData, options = {}) {
             const suppressRender = !!options.suppressRender;
             const suppressHideBoot = !!options.suppressHideBoot;
             const allowAuthRetry = options.allowAuthRetry !== false;
+            const preserveUiState = options.preserveUiState !== false;
+            let uiSnapshot = null;
             if (state.syncing || state._loggedOut) return;
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
@@ -429,6 +615,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    if (preserveUiState) uiSnapshot = snapshotUiStateForSync();
                     updateLoader("Analisi Dati...");
                     
                     // 1. Process Planner Data FIRST (contains remote manual tasks & verifiche)
@@ -481,11 +668,11 @@
                         });
                     }
 
-                    state.lastSync = new Date().toLocaleTimeString();
+                    const syncCompletedAt = Date.now();
+                    state.lastSync = new Date(syncCompletedAt).toLocaleTimeString();
                     state.didup.connected = true;
                     state.didup.stale = false;
-                    state.didup.lastSuccessTs = Date.now();
-                    localStorage.setItem(lsKey('didup_last_success_ts'), String(Date.now()));
+                    setPersistedLastSyncAt(syncCompletedAt);
                     state.isOffline = false;
                     const activitiesCount = Array.isArray(data.activities) ? data.activities.length : 0;
                     appendSyncDiagnostic({
@@ -535,14 +722,15 @@
                 if (state._loggedOut) return; // Don't render after logout
                 if (!suppressRender) {
                     state._forceRender = true;
-                    state._animateOnNextRender = true;
                     if (window.scheduleRender) window.scheduleRender();
                 }
+                if (uiSnapshot) restoreUiStateAfterSync(uiSnapshot);
             }
         }
         window.performSync = performSync;
 
-        async function runManualOwaResync() {
+        async function runManualOwaResync(options = {}) {
+            const showBootOverlay = options.showBootOverlay !== false;
             if (!state.isLoggedIn || state._loggedOut) return false;
             if (state.syncing) {
                 if (typeof showToast === 'function') showToast('Sincronizzazione già in corso...');
@@ -551,8 +739,13 @@
             const session = sessionManager.load();
             if (!session) return false;
             try {
-                if (typeof showBoot === 'function') showBoot('Resync manuale OWA in corso...');
-                await performSync(session, { suppressRender: false, suppressHideBoot: true, allowAuthRetry: true });
+                if (showBootOverlay && typeof showBoot === 'function') showBoot('Resync manuale OWA in corso...');
+                await performSync(session, {
+                    suppressRender: false,
+                    suppressHideBoot: true,
+                    allowAuthRetry: true,
+                    preserveUiState: true
+                });
                 await runSilentGoogleSync(session);
                 if (typeof loadCircolari === 'function') await loadCircolari();
                 if (typeof showToast === 'function') showToast('✅ Resync manuale completato');
@@ -561,7 +754,7 @@
                 if (typeof showToast === 'function') showToast(e?.message || 'Resync manuale fallito. Verifica la connessione e riprova.', 'error', '#ff453a');
                 return false;
             } finally {
-                if (typeof hideBoot === 'function') hideBoot();
+                if (showBootOverlay && typeof hideBoot === 'function') hideBoot();
             }
         }
         window.runManualOwaResync = runManualOwaResync;
@@ -792,25 +985,41 @@
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
                     try { localStorage.removeItem(lsKey('ai_chat')); } catch (_) {}
-                    // Restore DiDUP sync timestamp to determine data freshness
-                    const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
-                    const didupTs = parseInt(localStorage.getItem(lsKey('didup_last_success_ts')) || '0');
+                    // Restore persisted sync timestamp and freshness against SYNC_TTL_MS.
+                    const didupTs = getPersistedLastSyncAt();
                     state.didup.lastSuccessTs = didupTs;
-                    if (didupTs && (Date.now() - didupTs) < STALE_THRESHOLD_MS) {
+                    if (didupTs && !shouldSyncOnBoot(didupTs)) {
                         state.didup.stale = false;
                     } else if (didupTs) {
                         state.didup.stale = true;
                     }
                     // didup.connected remains FALSE until performSync actually succeeds
                 } catch(e) {}
-                
-                state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
+
+                const navState = restoreNavigationStateFromStorage();
+                const hashView = (location.hash || '').replace('#', '').split('?')[0].trim();
+                state.view = _allowedViews.includes(hashView) ? hashView : (navState.view || 'home');
+                if (!_allowedViews.includes(hashView)) {
+                    window.history.replaceState(null, '', `#${state.view}`);
+                }
                 finalizeBootHydrationRender();
+                if (navState.scrollY > 0) {
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        window.scrollTo({ top: navState.scrollY, behavior: 'auto' });
+                    }));
+                }
+
+                const lastSyncAt = getPersistedLastSyncAt();
+                const needsBootSync = shouldSyncOnBoot(lastSyncAt);
                 runWhenIdle(() => {
-                    Promise.all([
-                        performSync(session, { suppressRender: true, suppressHideBoot: true }),
-                        loadCircolari()
-                    ])
+                    const jobs = [loadCircolari()];
+                    if (needsBootSync) {
+                        // Stale cache: refresh in background without blocking first paint/navigation state.
+                        jobs.push(performSync(session, { suppressRender: false, suppressHideBoot: true, preserveUiState: true }));
+                    } else {
+                        console.log(`[Boot] Fresh cache (< ${Math.round(SYNC_TTL_MS / (60 * 60 * 1000))}h) — skipping boot sync`);
+                    }
+                    Promise.all(jobs)
                         .then(() => {
                             if (typeof window.warmWeeklyAgendaCache === 'function') {
                                 setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
@@ -818,11 +1027,6 @@
                         })
                         .catch((e) => {
                             console.warn('Background sync failed:', e);
-                        })
-                        .finally(() => {
-                            if (state._loggedOut) return;
-                            state._forceRender = true;
-                            if (typeof window.scheduleRender === 'function') window.scheduleRender(0);
                         });
                 });
             } else {
@@ -851,6 +1055,7 @@
                 });
             }
             if (state.isLoggedIn) ensureAutomaticSyncScheduler();
+            initPullToRefresh();
 
             // Handle hash-based navigation: update view when URL hash changes
             // (covers both the simple navigate fallback and browser back/forward)
@@ -869,11 +1074,16 @@
                 if (state.view !== newView) {
                     state.view = newView;
                     window.scrollTo({ top: 0, behavior: 'auto' });
+                    saveNavigationState();
                     if (window.scheduleRender) window.scheduleRender(0);
                 }
             }
             window.addEventListener('hashchange', _handleNavFromHash);
             window.addEventListener('popstate', _handleNavFromHash);
+            window.addEventListener('pagehide', saveNavigationState);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') saveNavigationState();
+            });
 
         // Global APIs
         window.saveTasks = () => {
@@ -1163,10 +1373,10 @@
             state.isLoggedIn = true;
             state.didup.connected = true;
             state.didup.stale = false;
-            state.didup.lastSuccessTs = Date.now();
-            localStorage.setItem(lsKey('didup_last_success_ts'), String(Date.now()));
+            const loginSyncCompletedAt = Date.now();
+            setPersistedLastSyncAt(loginSyncCompletedAt);
             state.isOffline = false;
-            state.lastSync = new Date().toLocaleTimeString();
+            state.lastSync = new Date(loginSyncCompletedAt).toLocaleTimeString();
             if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
             appendSyncDiagnostic({
                 source: 'login',
