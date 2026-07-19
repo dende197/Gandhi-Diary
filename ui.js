@@ -2639,7 +2639,7 @@ function renderSubjectDetailView(subjectName) {
                         <span id="${simLblId}" style="font-size:22px;font-weight:800;color:var(--info);line-height:1;">7.5</span>
                     </div>
                     <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
-                        style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,var(--primary) 65%,var(--info-container) 65%);"
+                        style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,var(--primary) 72.22%,var(--info-container) 72.22%);"
                         oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,var(--primary) '+pct+'%,var(--info-container) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface-container-low);border-radius:20px;padding:14px 16px;border:none;">
