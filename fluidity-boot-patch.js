@@ -154,30 +154,13 @@
   } catch (_) {}
 
   // ── D) PWA standalone entry — single-render lock ──────────────
-  //
-  // In standalone/fullscreen PWA mode, suppress ALL renders for the
-  // first 500ms, then release exactly one.  This coalesces the entire
-  // boot burst (localStorage, partial sync, hashchange) into a single
-  // DOM write, eliminating the multiple visible flashes on launch.
-  //
+  // Removed: now handled natively by fluidity-engine-v3.js (BOOT_LOCK_MS)
   const isPWAStandalone = (
     window.matchMedia('(display-mode: standalone)').matches ||
     window.matchMedia('(display-mode: fullscreen)').matches ||
     window.navigator.standalone === true          // iOS legacy
   );
 
-  if (isPWAStandalone) {
-    const PWA_BOOT_LOCK_MS = 500;
-    _suppress(PWA_BOOT_LOCK_MS);
-    const _pwaBootTimer = setTimeout(function () {
-      _suppressUntil = 0;
-      clearTimeout(window._gRenderTimer);
-      if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
-      if (typeof window.render === 'function') window.render();
-      console.log('[FluidityPatch] PWA boot lock released — single render fired');
-    }, PWA_BOOT_LOCK_MS);
-    console.log('[FluidityPatch] PWA standalone mode detected — boot lock active for', PWA_BOOT_LOCK_MS, 'ms');
-  }
 
   // ── hashchange debounce (same as v1.1) ────────────────────────
   let _hashChangeTimer = null;

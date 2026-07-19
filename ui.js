@@ -1680,6 +1680,7 @@ function renderHome() {
     };
 
     // 1. Recupero dei dati reali dal backend/stato globale
+    const isInitialLoad = !state.lastSync && (!state.tasks || state.tasks.length === 0) && (!state.voti || state.voti.length === 0);
     const media = parseFloat(calcolaMedia(getVotiData())) || 0;
     const assenze = state.assenzeData || {};
     const verifiche = state.manualVerifiche || [];
@@ -1784,7 +1785,12 @@ function renderHome() {
     };
 
     // 5. Card compatte per sezione "Domani" — border-radius ridotto, padding ridotto, icone più piccole
-    const htmlDomani = allTomorrowItems.length > 0
+    const htmlDomani = isInitialLoad
+        ? [1, 2].map(() => `
+            <div class="tomorrow-card skeleton" style="border-radius:22px; padding:16px 18px; margin-bottom:10px; height:90px;">
+                SKELETON DATA
+            </div>`).join('')
+        : allTomorrowItems.length > 0
         ? allTomorrowItems.map(item => {
             const icon = getSubjectLucideIcon(item.title);
             const colors = getSubjectInlineColors(item.title, item.isExam);
@@ -1865,7 +1871,7 @@ function renderHome() {
                             </div>
 
                             <div style="margin-top:8px;">
-                                <span style="font-size:3.2rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3.2rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
                             </div>
 
                             <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
@@ -1892,8 +1898,8 @@ function renderHome() {
                                     </div>
                                 </div>
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
-                                    <div style="font-size:3.2rem;font-weight:700;color:var(--error);letter-spacing:-0.03em;">
-                                        ${oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
+                                    <div class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3.2rem;font-weight:700;color:var(--error);letter-spacing:-0.03em;">
+                                        ${isInitialLoad ? '0.0' : oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
                                     </div>
                                     <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
                                         <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
@@ -2865,9 +2871,13 @@ window._navVerifica = function (dir) {
 
 
 /* Remaining UI/Modal/Logic Functions */
-function mostraCircolare(id) {
+async function mostraCircolare(id) {
     const c = state.circolari.find(x => x.id === id);
     if (!c) return;
+
+    if (c.sintesi && typeof marked === 'undefined') {
+        await window.ensureMarked();
+    }
 
     // ── Build overlay inline — zero CSS class dependencies ──────────────────
     const overlay = document.createElement('div');
@@ -5815,6 +5825,17 @@ window.requestCircularSynthesis = async function (id, link) {
     clearInterval(interval);
 };
 
+window.ensureMarked = function() {
+    return new Promise((resolve, reject) => {
+        if (typeof marked !== 'undefined') return resolve();
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+};
+
 window.loadCircolareSintesi = async function (id, link) {
     try {
         console.log(`[Network] Sintesi Request: ${id}`);
@@ -5827,6 +5848,8 @@ window.loadCircolareSintesi = async function (id, link) {
         if (data.success && data.sintesi) {
             const circolare = state.circolari.find(c => c.id === id);
             if (circolare) circolare.sintesi = data.sintesi;
+
+            await window.ensureMarked();
 
             const box = document.getElementById(`sintesi-box-${id}`);
             if (box) {

@@ -1002,7 +1002,18 @@
                 if (!_allowedViews.includes(hashView)) {
                     window.history.replaceState(null, '', `#${state.view}`);
                 }
+
+                // Check if Google Status is returning from OAuth before render
+                if (window.location.hash.includes('google=success')) {
+                    state.googleConnected = true;
+                    history.replaceState(null, '', '/#profile');
+                    state.view = 'profile';
+                    setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
+                }
+
+                if (typeof hideLoader === 'function') hideLoader();
                 finalizeBootHydrationRender();
+                
                 if (navState.scrollY > 0) {
                     requestAnimationFrame(() => requestAnimationFrame(() => {
                         window.scrollTo({ top: navState.scrollY, behavior: 'auto' });
@@ -1036,13 +1047,6 @@
                 window._bootRenderedOnce = false;
                 state._animateOnNextRender = true;
                 renderBootFallback();
-            }
-            
-            // Handle Google OAuth callback (must run BEFORE initial render so state is correct)
-            if (window.location.hash.includes('google=success')) {
-                state.googleConnected = true;
-                history.replaceState(null, '', '/#profile');
-                setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
             }
 
             // Check Google connection status (async, fires a re-render only on state change)

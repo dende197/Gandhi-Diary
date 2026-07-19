@@ -147,7 +147,7 @@
     
     <!-- Logic Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- marked.js loaded lazily via ensureMarked() -->
     
     <!-- GSAP Premium Suite -->
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
@@ -237,17 +237,11 @@
         </div>
     </div>
 
-    <!-- BOOT OVERLAY (Hydration) -->
-    <div id="boot-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--surface, #fcf8fb);z-index:99998;display:none;align-items:center;justify-content:center;transition:opacity 0.3s ease-out;">
-        <div style="text-align:center;">
-             <h2 style="font-size:22px; font-weight:700; color:#fff; margin-bottom:8px; letter-spacing:-0.5px;"></h2>
-             <p id="boot-status" style="font-size:12px; color:rgba(255,255,255,0.4);">Sincronizzazione scadenze...</p>
-        </div>
-    </div>
+    <!-- BOOT OVERLAY REMOVED (Native Boot Flow) -->
+    
     <div id="pull-refresh-indicator" aria-hidden="true">
         <div class="pull-refresh-indicator__bar"></div>
     </div>
-
 
 
     <div id="nav-container"></div>

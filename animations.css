@@ -142,3 +142,33 @@
 .anim-done {
     will-change: auto !important;
 }
+
+/* Today calendar pulse micro-animation */
+@keyframes todayPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(2, 80, 197, 0.4); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(2, 80, 197, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(2, 80, 197, 0); }
+}
+
+.calendar-day.today {
+    animation: todayPulse 2.5s infinite ease-in-out;
+}
+
+/* Skeleton Loading Shimmer */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, rgba(200,200,200,0.15) 25%, rgba(200,200,200,0.3) 50%, rgba(200,200,200,0.15) 75%);
+    background-size: 400% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 8px;
+    color: transparent !important;
+    pointer-events: none;
+    user-select: none;
+}
+.skeleton * {
+    visibility: hidden !important;
+}
