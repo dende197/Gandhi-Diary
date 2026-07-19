@@ -1,4 +1,4 @@
-        // ==============================================================================
+// ==============================================================================
         // G-CONNECT CORE SYSTEM v3.0
         // ==============================================================================
         const GCONNECT_DEFAULT_API_BACKEND = 'https://g-connect-backend-r5j1.vercel.app';
@@ -919,8 +919,9 @@
                 });
                 clearTimeout(id);
                 if (res.ok) {
-                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> Server Online`;
-                    statusEl.style.color = "var(--green)";
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span> Server Online`;
+                    statusEl.style.color = "var(--success)";
+                    statusEl.style.background = "var(--success-container)";
                 } else {
                     const err = new Error("Server error");
                     err.status = res.status;
@@ -929,11 +930,14 @@
             } catch (e) {
                 const shouldRetry = e.status !== 404;
                 if (attempt < 15 && shouldRetry) {
-                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--warning); border-radius: 50%;"></span> Sveglio il server (${attempt})...`;
+                    statusEl.style.color = "var(--warning)";
+                    statusEl.style.background = "var(--warning-container)";
                     setTimeout(() => checkServerHealth(attempt + 1), 2500);
                 } else {
-                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> Offline (uso dati cached)`;
-                    statusEl.style.color = "var(--red)";
+                    statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: var(--error); border-radius: 50%;"></span> Offline (uso dati cached)`;
+                    statusEl.style.color = "var(--error)";
+                    statusEl.style.background = "var(--error-container)";
                 }
             }
         }
