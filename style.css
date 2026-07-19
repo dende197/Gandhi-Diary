@@ -979,11 +979,7 @@ body {
 .dark .card-media-premium {
   background: linear-gradient(135deg, #0c0f17 0%, #1e3a8a 100%) !important;
   border: none !important;
-  box-shadow:
-    0 2px 8px -2px rgba(0, 0, 0, 0.28),
-    0 28px 56px -24px rgba(0, 0, 0, 0.45),
-    0 14px 36px -14px rgba(37, 99, 235, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .card-assenze-premium,
@@ -1110,6 +1106,17 @@ body {
   background: rgba(248, 113, 113, 0.2) !important;
 }
 
+/* ── Grades > subject detail — same navy family as the rest of the
+   app instead of the flat near-black surface-container-lowest. ── */
+[data-theme="dark"] .subject-detail-card,
+.dark .subject-detail-card {
+  background: linear-gradient(135deg, #10131c 0%, #1a2340 100%) !important;
+  border: none !important;
+  box-shadow:
+    0 2px 8px -2px rgba(0, 0, 0, 0.25),
+    0 24px 48px -20px rgba(0, 0, 0, 0.4) !important;
+}
+
 /* ── Media card subtitle (rgba(2,80,197,0.6)) ── */
 [data-theme="dark"] .card-media-premium p[style*="rgba(2,80,197"],
 .dark .card-media-premium p[style*="rgba(2,80,197"] {
@@ -1138,6 +1145,26 @@ body {
 .dark div[style*="background:#1F2937"] {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
+}
+
+/* ── Hero card month bars — low-alpha blue-on-blue was invisible
+   against the dark gradient; white-based translucency reads
+   regardless of how dark/vivid the card background is. ── */
+[data-theme="dark"] .card-media-premium div[style*="background:rgba(37,99,235,0.08)"],
+.dark .card-media-premium div[style*="background:rgba(37,99,235,0.08)"] {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+[data-theme="dark"] .card-media-premium div[style*="background:rgba(37,99,235,0.12)"],
+.dark .card-media-premium div[style*="background:rgba(37,99,235,0.12)"] {
+  background: rgba(255, 255, 255, 0.20) !important;
+}
+[data-theme="dark"] .card-media-premium div[style*="background:rgba(37,99,235,0.16)"],
+.dark .card-media-premium div[style*="background:rgba(37,99,235,0.16)"] {
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+[data-theme="dark"] .card-media-premium div[style*="background:rgba(37,99,235,0.24)"],
+.dark .card-media-premium div[style*="background:rgba(37,99,235,0.24)"] {
+  background: rgba(255, 255, 255, 0.4) !important;
 }
 
 /* ── Active chart bar (#0250C5) ── */
