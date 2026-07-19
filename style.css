@@ -452,6 +452,45 @@ h1, h2, h3, h4, h5, h6 {
     transform-origin: 50% 50%;
 }
 
+/* Custom range slider thumb — the track gets custom -webkit-appearance:none
+   styling inline (grade simulator), but without matching thumb rules the
+   browser's default thumb doesn't align to a thin custom track, leaving a
+   visible gap between the dot and the line. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid var(--surface-container-lowest);
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.3);
+  margin-top: -7px;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid var(--surface-container-lowest);
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 4px;
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 4px;
+}
+
 /* --- NUOVO SISTEMA CAROSELLO E STRUTTURA PREMIUM --- */
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
