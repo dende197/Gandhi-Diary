@@ -919,14 +919,7 @@
                         requestAnimationFrame(() => {
                             if (loader) {
                                 loader.style.opacity = '0';
-                                const appElement = document.getElementById('app');
-                                if (appElement) {
-                                    appElement.style.opacity = '0';
-                                    appElement.style.transition = 'opacity 0.4s ease-out';
-                                    requestAnimationFrame(() => {
-                                        appElement.style.opacity = '1';
-                                    });
-                                }
+                                // Removed appElement opacity override to allow GSAP entrance animations to play naturally
                                 setTimeout(() => { if (loader.parentNode) loader.remove(); }, 220);
                             }
                         });

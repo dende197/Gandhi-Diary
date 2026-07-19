@@ -32,7 +32,7 @@
   function _exitCurrent(dir = 'up', opts = {}) {
     const { duration = 0.14, distance = 10, scale = 0.995 } = opts;
     const root = document.getElementById('app');
-    const cv = root ? root.querySelector('.view') : null;
+    const cv = root ? root.querySelector('.view, .view-fullbleed') : null;
     if (!cv || typeof gsap === 'undefined') return Promise.resolve();
     const to = _directionVector(dir, distance);
     return new Promise((resolve) => {
@@ -49,7 +49,7 @@
 
   function _enterView(dir = 'down', opts = {}) {
     const { duration = 0.22, distance = 8, scale = 0.995 } = opts;
-    const viewEl = document.querySelector('.view');
+    const viewEl = document.querySelector('.view, .view-fullbleed');
     if (!viewEl || typeof gsap === 'undefined') return;
     const from = _directionVector(dir, distance);
     _setWillChange(viewEl, true); gsap.killTweensOf(viewEl);
@@ -77,6 +77,7 @@
   // flashes visible during PWA cold start.
   const BOOT_LOCK_MS = 550;
   let _bootLockActive = true;
+  let _bootLockCount = 0;
   let _bootLockTimer = null;
   let _bootRenderPending = false;
 
@@ -101,10 +102,13 @@
       if (typeof window.__fluidityIsBfcacheSuppressed === 'function' &&
           window.__fluidityIsBfcacheSuppressed()) return;
 
-      // During boot lock, queue at most one pending render
+      // During boot lock, queue subsequent renders, but allow the first one or forced renders
       if (_bootLockActive) {
-        _bootRenderPending = true;
-        return;
+        if (_bootLockCount > 0 && !state._forceRender) {
+          _bootRenderPending = true;
+          return;
+        }
+        _bootLockCount++;
       }
 
       if (window._gRenderRAF || state.booting || (state._loggedOut && state.view !== 'login')) return;
@@ -267,7 +271,7 @@
   function _animateViewEntrance(view, direction = 'down') {
     if (!state.isLoggedIn || view === 'login') return;
     if (typeof gsap === 'undefined') return;
-    const viewEl = document.querySelector('.view');
+    const viewEl = document.querySelector('.view, .view-fullbleed');
     if (!viewEl) return;
 
     _lastAnimatedViewRender = view;
@@ -288,157 +292,102 @@
     const ease  = 'power3.out';
     const easeB = 'back.out(1.7)';
 
-    // Greeting card shell
-    const gc = viewEl.querySelector('.greeting-card');
-    if (gc) {
-      gsap.killTweensOf(gc);
-      gsap.fromTo(gc,
-        { opacity: 0, y: 22, scale: 0.97 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.46, ease: easeB, delay: 0.06, clearProps: 'transform,opacity' }
+    // Title / Avatar header
+    const header = viewEl.querySelector('div[style*="justify-content:space-between"]');
+    if (header) {
+      gsap.killTweensOf(header);
+      gsap.fromTo(header,
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.35, ease, clearProps: 'transform,opacity' }
       );
-
-      // .greeting-period  (LUNEDÌ · MATTINA)
-      const period = gc.querySelector('.greeting-period');
-      if (period) {
-        gsap.killTweensOf(period);
-        gsap.fromTo(period,
-          { opacity: 0, y: 8 },
-          { opacity: 1, y: 0, duration: 0.30, ease, delay: 0.19, clearProps: 'transform,opacity' }
-        );
-      }
-
-      // .greeting-text  (Ciao, Mario.)
-      const text = gc.querySelector('.greeting-text');
-      if (text) {
-        gsap.killTweensOf(text);
-        gsap.fromTo(text,
-          { opacity: 0, y: 12, filter: 'blur(4px)' },
-          { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.40, ease, delay: 0.26, clearProps: 'transform,opacity,filter' }
-        );
-      }
-
-      // .greeting-quote  ("Lorem ipsum…")
-      const quote = gc.querySelector('.greeting-quote');
-      if (quote) {
-        gsap.killTweensOf(quote);
-        gsap.fromTo(quote,
-          { opacity: 0, y: 9 },
-          { opacity: 1, y: 0, duration: 0.34, ease, delay: 0.35, clearProps: 'transform,opacity' }
-        );
-      }
-
-      // Refresh button (top-right)
-      const refreshBtn = gc.querySelector('button');
-      if (refreshBtn) {
-        gsap.killTweensOf(refreshBtn);
-        gsap.fromTo(refreshBtn,
-          { opacity: 0, scale: 0.6, rotate: -40 },
-          { opacity: 1, scale: 1, rotate: 0, duration: 0.40, ease: easeB, delay: 0.44, clearProps: 'transform,opacity' }
-        );
-      }
     }
 
-    // Verifica card — enters from right
-    const vc = viewEl.querySelector('.verifica-card, #widget-verifiche');
-    if (vc) {
-      gsap.killTweensOf(vc);
-      gsap.fromTo(vc,
-        { opacity: 0, x: 20, scale: 0.97 },
-        { opacity: 1, x: 0, scale: 1, duration: 0.44, ease: easeB, delay: 0.10, clearProps: 'transform,opacity' }
+    // Carousel widgets
+    const widgets = viewEl.querySelectorAll('.widget-card');
+    if (widgets.length) {
+      gsap.killTweensOf(widgets);
+      gsap.fromTo(widgets,
+        { opacity: 0, y: 22, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.48, stagger: 0.08, ease: easeB, delay: 0.08, clearProps: 'transform,opacity' }
       );
-      const vInner = vc.querySelectorAll('#vw-abbr, #vw-tipo, #vw-counter, #vw-desc, #vw-days');
-      if (vInner.length) {
-        gsap.killTweensOf(vInner);
-        gsap.fromTo(vInner,
-          { opacity: 0, y: 6 },
-          { opacity: 1, y: 0, duration: 0.28, stagger: 0.05, ease, delay: 0.30, clearProps: 'transform,opacity' }
-        );
-      }
-      const barFill = vc.querySelector('#vw-bar-fill');
-      if (barFill) {
-        const tw = barFill.style.width || '0%';
-        gsap.fromTo(barFill, { width: '0%' }, { width: tw, duration: 0.65, ease: 'power2.out', delay: 0.52 });
-      }
-    }
 
-    // ROW 2: Media · Assenze · Ultima circolare
-    const row2 = viewEl.querySelectorAll('.home-grid-row + .home-grid-row .card, .home-grid-row:nth-child(2) .card');
-    if (row2.length) {
-      gsap.killTweensOf(row2);
-      gsap.fromTo(row2,
-        { opacity: 0, y: 20, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.44, stagger: 0.08, ease: easeB, delay: 0.18, clearProps: 'transform,opacity' }
-      );
-      row2.forEach((card, ci) => {
-        const bigNum = card.querySelector('[style*="font-size:42px"], [style*="font-size:32px"], [style*="font-size: 42px"], [style*="font-size: 32px"]');
-        if (bigNum) {
-          const raw = bigNum.textContent.trim().replace('%', '').replace('—', '');
-          const num = parseFloat(raw);
-          if (!isNaN(num) && num > 0) {
-            const isPercent = bigNum.textContent.includes('%');
-            const dec = bigNum.textContent.includes('.') ? 2 : 0;
-            const obj = { val: 0 };
-            gsap.to(obj, {
-              val: num, duration: 0.85, delay: 0.55 + ci * 0.06, ease: 'power2.out',
-              onUpdate: () => {
-                bigNum.textContent = isPercent
-                  ? obj.val.toFixed(2) + '%'
-                  : dec ? obj.val.toFixed(dec) : Math.round(obj.val).toString();
-              }
-            });
+      // Widget 1 (Media): .card-media-premium
+      const mediaVal = viewEl.querySelector('.card-media-premium span[style*="font-size:3.2rem"]');
+      if (mediaVal && !mediaVal.classList.contains('skeleton')) {
+        const num = parseFloat(mediaVal.textContent.trim());
+        if (!isNaN(num) && num > 0) {
+          const obj = { val: 0 };
+          gsap.to(obj, {
+            val: num, duration: 0.9, delay: 0.45, ease: 'power2.out',
+            onUpdate: () => { mediaVal.textContent = obj.val.toFixed(2); }
+          });
+        }
+      }
+
+      // Widget 2 (Assenze): .card-assenze-premium
+      const assenzeVal = viewEl.querySelector('.card-assenze-premium div[style*="font-size:3.2rem"]');
+      if (assenzeVal && !assenzeVal.classList.contains('skeleton')) {
+        const num = parseFloat(assenzeVal.textContent.trim().replace('h', ''));
+        if (!isNaN(num) && num > 0) {
+          const obj = { val: 0 };
+          gsap.to(obj, {
+            val: num, duration: 0.9, delay: 0.5, ease: 'power2.out',
+            onUpdate: () => {
+              assenzeVal.innerHTML = `${obj.val.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>`;
+            }
+          });
+        }
+        // circular progress stroke-dashoffset animation
+        const circle = viewEl.querySelector('.card-assenze-premium circle[stroke-dasharray]:nth-child(2)');
+        if (circle) {
+          const targetOffset = parseFloat(circle.getAttribute('stroke-dashoffset'));
+          if (!isNaN(targetOffset)) {
+            gsap.fromTo(circle, 
+              { strokeDashoffset: 251.2 }, 
+              { strokeDashoffset: targetOffset, duration: 0.85, delay: 0.55, ease: 'power2.out' }
+            );
           }
         }
-        const pBar = card.querySelector('[style*="background:#3B9DD4"], [style*="background:#EF4444"], [style*="background: #3B9DD4"], [style*="background: #EF4444"]');
-        if (pBar) {
-          const tw = pBar.style.width || '0%';
-          gsap.fromTo(pBar, { width: '0%' }, { width: tw, duration: 0.70, ease: 'power2.out', delay: 0.56 + ci * 0.06 });
-        }
-      });
+      }
+
+      // Widget 3 (Verifiche progress bar): .card-verifiche-premium
+      const progressFill = viewEl.querySelector('.card-verifiche-premium div[style*="width:"][style*="background:#059669"]');
+      if (progressFill) {
+        const targetWidth = progressFill.style.width || '0%';
+        gsap.fromTo(progressFill, 
+          { width: '0%' }, 
+          { width: targetWidth, duration: 0.75, delay: 0.6, ease: 'power2.out' }
+        );
+      }
     }
 
-    // Widget headers
-    const wh = viewEl.querySelectorAll('.widget-header');
-    if (wh.length) {
-      gsap.killTweensOf(wh);
-      gsap.fromTo(wh,
-        { opacity: 0, y: 7 },
-        { opacity: 1, y: 0, duration: 0.26, stagger: 0.07, ease, delay: 0.27, clearProps: 'transform,opacity' }
+    // Carousel dots
+    const dots = viewEl.querySelectorAll('.widget-indicators');
+    if (dots.length) {
+      gsap.killTweensOf(dots);
+      gsap.fromTo(dots,
+        { opacity: 0, scale: 0.7 },
+        { opacity: 1, scale: 1, duration: 0.35, ease: easeB, delay: 0.28, clearProps: 'transform,opacity' }
       );
     }
 
-    // ROW 3 cards: Voti recenti + Focus task list
-    const r3 = viewEl.querySelectorAll('.home-grid-row:last-child .card, #home-focus-task-list');
-    if (r3.length) {
-      gsap.killTweensOf(r3);
-      gsap.fromTo(r3,
-        { opacity: 0, y: 16, scale: 0.97 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.42, stagger: 0.09, ease: easeB, delay: 0.30, clearProps: 'transform,opacity' }
+    // Tomorrow section header (Domani)
+    const domaniHeader = viewEl.querySelector('h3');
+    if (domaniHeader) {
+      gsap.killTweensOf(domaniHeader);
+      gsap.fromTo(domaniHeader,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.30, ease, delay: 0.32, clearProps: 'transform,opacity' }
       );
     }
 
-    // Grade rows
-    const gr = viewEl.querySelectorAll('[style*="border-bottom:1px solid #F4F2EE"], [style*="border-bottom: 1px solid #F4F2EE"]');
-    if (gr.length) {
-      gsap.killTweensOf(gr);
-      gsap.fromTo(gr,
-        { opacity: 0, x: -10 },
-        { opacity: 1, x: 0, duration: 0.26, stagger: 0.035, ease, delay: 0.44, clearProps: 'transform,opacity' }
-      );
-      gr.forEach((row, i) => {
-        const bar = row.querySelector('div > div[style]');
-        if (!bar || !bar.style.width) return;
-        const tw = bar.style.width;
-        gsap.fromTo(bar, { width: '0%' }, { width: tw, duration: 0.48, ease: 'power2.out', delay: 0.52 + i * 0.04 });
-      });
-    }
-
-    // Task rows
-    const tr = viewEl.querySelectorAll('#home-focus-task-list > div, .task-row');
-    if (tr.length) {
-      gsap.killTweensOf(tr);
-      gsap.fromTo(tr,
-        { opacity: 0, y: 7 },
-        { opacity: 1, y: 0, duration: 0.26, stagger: 0.04, ease, delay: 0.46, clearProps: 'transform,opacity' }
+    // Tomorrow cards
+    const tomorrowCards = viewEl.querySelectorAll('.tomorrow-card');
+    if (tomorrowCards.length) {
+      gsap.killTweensOf(tomorrowCards);
+      gsap.fromTo(tomorrowCards,
+        { opacity: 0, y: 15, scale: 0.97 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.40, stagger: 0.08, ease: easeB, delay: 0.36, clearProps: 'transform,opacity' }
       );
     }
   }
