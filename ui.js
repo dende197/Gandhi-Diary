@@ -2564,7 +2564,8 @@ function renderSubjectDetailView(subjectName) {
         </div>${sep}`;
     }).join('');
 
-    const CARD = 'background:var(--surface-container-lowest);border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:1px solid var(--outline-variant);margin-bottom:16px;';
+    const CARD = 'background:var(--surface-container-lowest);border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:none;margin-bottom:16px;';
+    const CARD_CLASS = 'subject-detail-card';
 
     return `
     <div class="view-fullbleed min-h-screen pb-32" style="background:var(--surface-container-low);background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
@@ -2579,7 +2580,7 @@ function renderSubjectDetailView(subjectName) {
             </header>
 
             <!-- CARD 1: Media + grafico area -->
-            <div style="${CARD}">
+            <div class="${CARD_CLASS}" style="${CARD}">
                 <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Media Materia</p>
                 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
                     <span style="font-size:56px;font-weight:800;color:var(--info);line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
@@ -2593,14 +2594,14 @@ function renderSubjectDetailView(subjectName) {
                             const diff = mediaConTutti - mediaSenzaUltimo;
                             const fmt  = diff.toFixed(2).replace('.', ',');
                             const isP  = diff >= 0;
-                            return `<div style="display:flex;align-items:center;gap:5px;background:${isP ? 'rgba(230,244,234,0.9)' : 'rgba(254,242,242,0.9)'};border:1px solid ${isP ? '#bce3c8' : '#fecaca'};padding:5px 11px;border-radius:999px;margin-bottom:4px;">
-                                <span class="material-symbols-outlined" style="font-size:12px;color:${isP ? '#16a34a' : '#dc2626'};font-variation-settings:'FILL' 1;">${isP ? 'trending_up' : 'trending_down'}</span>
-                                <span style="font-size:10px;font-weight:800;color:${isP ? '#16a34a' : '#dc2626'};letter-spacing:0.05em;">${fmt}</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:${isP ? 'var(--success-container)' : 'var(--error-container)'};border:none;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
+                                <span class="material-symbols-outlined" style="font-size:12px;color:${isP ? 'var(--on-success-container)' : 'var(--on-error-container)'};font-variation-settings:'FILL' 1;">${isP ? 'trending_up' : 'trending_down'}</span>
+                                <span style="font-size:10px;font-weight:800;color:${isP ? 'var(--on-success-container)' : 'var(--on-error-container)'};letter-spacing:0.05em;">${fmt}</span>
                             </div>`;
                         } else if (n >= 2) {
-                            return `<div style="display:flex;align-items:center;gap:5px;background:var(--info-container);border:1px solid var(--outline-variant);padding:5px 11px;border-radius:999px;margin-bottom:4px;">
-                                <span class="material-symbols-outlined" style="font-size:12px;color:var(--info);font-variation-settings:'FILL' 1;">trending_up</span>
-                                <span style="font-size:10px;font-weight:800;color:var(--info);letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:var(--info-container);border:none;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
+                                <span class="material-symbols-outlined" style="font-size:12px;color:var(--on-info-container);font-variation-settings:'FILL' 1;">trending_up</span>
+                                <span style="font-size:10px;font-weight:800;color:var(--on-info-container);letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
                             </div>`;
                         }
                         return '';
@@ -2624,7 +2625,7 @@ function renderSubjectDetailView(subjectName) {
             </div>
 
             <!-- CARD 2: Predictive Hub -->
-            <div style="${CARD}">
+            <div class="${CARD_CLASS}" style="${CARD}">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                     <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">bolt</span>
@@ -2641,12 +2642,12 @@ function renderSubjectDetailView(subjectName) {
                         style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,var(--primary) 65%,var(--info-container) 65%);"
                         oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,var(--primary) '+pct+'%,var(--info-container) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface-container-low);border-radius:20px;padding:14px 16px;border:1px solid var(--outline-variant);">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface-container-low);border-radius:20px;padding:14px 16px;border:none;">
                     <div>
                         <p style="font-size:10px;font-weight:800;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">Media stimata</p>
                         <span id="${simResId}" style="font-size:24px;font-weight:800;color:var(--info);line-height:1;">${simDefault}</span>
                     </div>
-                    <div style="width:44px;height:44px;border-radius:50%;background:var(--surface-container-lowest);border:1px solid var(--outline-variant);display:flex;align-items:center;justify-content:center;">
+                    <div style="width:44px;height:44px;border-radius:50%;background:var(--surface-container-lowest);border:none;display:flex;align-items:center;justify-content:center;">
                         <span class="material-symbols-outlined" style="font-size:20px;color:var(--outline);">auto_fix_high</span>
                     </div>
                 </div>
@@ -2654,7 +2655,7 @@ function renderSubjectDetailView(subjectName) {
 
             <!-- CARD 3: Confronto Semestri -->
             ${hasSemesters ? `
-            <div style="${CARD}">
+            <div class="${CARD_CLASS}" style="${CARD}">
                 <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 20px;">Confronto Semestri</p>
                 <div style="margin-bottom:18px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
@@ -2662,7 +2663,7 @@ function renderSubjectDetailView(subjectName) {
                         <span style="font-size:15px;font-weight:700;color:var(--on-surface-variant);">${media1.toFixed(1)}</span>
                     </div>
                     <div style="width:100%;background:var(--surface-container-low);height:8px;border-radius:999px;overflow:hidden;">
-                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:#94a3b8;border-radius:999px;"></div>
+                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:var(--outline);border-radius:999px;"></div>
                     </div>
                 </div>
                 <div style="margin-bottom:20px;">
@@ -2671,7 +2672,7 @@ function renderSubjectDetailView(subjectName) {
                         <span style="font-size:15px;font-weight:700;color:var(--info);">${media2.toFixed(1)}</span>
                     </div>
                     <div style="width:100%;background:var(--surface-container-low);height:8px;border-radius:999px;overflow:hidden;">
-                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2563eb;border-radius:999px;"></div>
+                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:var(--primary);border-radius:999px;"></div>
                     </div>
                 </div>
                 ${media2 > media1 ? `
@@ -2690,7 +2691,7 @@ function renderSubjectDetailView(subjectName) {
             </div>` : ''}
 
             <!-- CARD 4: Voti Ricevuti -->
-            <div style="${CARD}">
+            <div class="${CARD_CLASS}" style="${CARD}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
                     <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0;">Voti Ricevuti</p>
                     <span class="material-symbols-outlined" style="font-size:16px;color:var(--info);">history</span>
@@ -2699,7 +2700,7 @@ function renderSubjectDetailView(subjectName) {
             </div>
 
             <!-- CARD 5: Obiettivo Accademico -->
-            <div style="${CARD}margin-bottom:0;">
+            <div class="${CARD_CLASS}" style="${CARD}margin-bottom:0;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
                     <div style="display:flex;align-items:center;gap:12px;">
                         <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -3678,7 +3679,7 @@ function renderClassActivitiesExportModalContent() {
 
 
     // ── Period controls — tutto inline, zero dipendenze CSS esterne ─────────
-    const S = 'width:100%;padding:12px 14px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface);font-size:14px;font-weight:500;font-family:Hanken Grotesk,sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';
+    const S = 'width:100%;padding:12px 14px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface);font-size:14px;font-weight:500;font-family:Hanken Grotesk,sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';;
 
     const periodControls = selection.period === 'month'
         ? `<input type="month" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)" style="${S}">`
@@ -3703,7 +3704,7 @@ function renderClassActivitiesExportModalContent() {
 
     const mkTab = (period, label) => {
         const act = selection.period === period;
-        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 4px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${act?'2px solid var(--primary)':'1.5px solid rgba(226,232,240,0.9)'};background:${act?'#2563eb':'white'};color:${act?'white':'#64748b'};">${label}</button>`;
+        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 4px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:none;background:${act?'var(--primary)':'var(--surface-container-low)'};color:${act?'var(--on-primary)':'var(--on-surface-variant)'};">${label}</button>`;
     };
 
     modalContent.innerHTML = `
@@ -3727,7 +3728,7 @@ function renderClassActivitiesExportModalContent() {
                     ${mkTab('school_year','Anno scol.')}
                 </div>
                 <div>${periodControls}</div>
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container-low);border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container-low);border-radius:14px;border:none;">
                     <span style="font-size:12px;color:var(--on-surface-variant);font-weight:500;">${escapeHtml(selection.periodLabel)}</span>
                     <span style="font-size:13px;font-weight:800;color:var(--info);">${selection.items.length} attività trovate</span>
                 </div>
@@ -4824,12 +4825,12 @@ function showQuickAddTaskModal() {
     const pendingTasks = allTasks.filter(t=>!t.done && (t.due_date||'')>=getLocalDateString());
     const pendingSubjs = [...new Set(pendingTasks.map(t=>t.subject||t.materia||'Generale'))].sort();
 
-    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.9);background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
+    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:none;background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
     const LBL = 'font-size:11px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;';
 
     // Full-screen-style bottom sheet
     showModal(`
-<div style="padding:24px 20px 32px;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:32px;font-family:Hanken Grotesk,sans-serif;width:100%;box-sizing:border-box;">
+<div style="padding:24px 20px 32px;background:var(--surface-container-lowest);border-radius:32px;font-family:Hanken Grotesk,sans-serif;width:100%;box-sizing:border-box;">
 
     <!-- Header — X uses document.getElementById approach to avoid scope issues -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -4837,16 +4838,16 @@ function showQuickAddTaskModal() {
             <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Aggiungi</h2>
             <p style="margin:2px 0 0;font-size:12px;color:var(--outline);font-weight:500;">Compito, verifica o impegno</p>
         </div>
-        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(var(--glass-rgb),0.9);border:1.5px solid rgba(226,232,240,0.7);color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(var(--glass-rgb),0.9);border:none;color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
         </button>
     </div>
 
     <!-- 3 tabs -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:20px;">
-        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;" id="qs-tab-new">📚 Nuovo</button>
-        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">📋 Assegnati</button>
-        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">✏️ Verifica</button>
+        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;" id="qs-tab-new">📚 Nuovo</button>
+        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">📋 Assegnati</button>
+        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">✏️ Verifica</button>
     </div>
 
     <!-- PANEL: Nuovo compito -->
@@ -4854,7 +4855,7 @@ function showQuickAddTaskModal() {
         <div><label style="${LBL}">Materia</label><select id="qs-subject" style="${INP}-webkit-appearance:none;">${subjectOptions}</select></div>
         <div><label style="${LBL}">Descrizione</label><textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="3" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Data di consegna</label><input id="qs-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
-        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
+        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
             <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">check_circle</span>Aggiungi compito
         </button>
     </div>
@@ -4866,15 +4867,15 @@ function showQuickAddTaskModal() {
         ${pendingSubjs.length>0 ? pendingSubjs.map(s=>`
             <p style="font-size:10px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:6px 0 3px;">${escapeHtml(s)}</p>
             ${pendingTasks.filter(t=>(t.subject||t.materia||'Generale')===s).map(t=>`
-            <div id="qs-ex-${escapeHtml(t.id)}" style="background:var(--surface-container-lowest);border-radius:14px;padding:12px 14px;border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color 0.15s;">
+            <div id="qs-ex-${escapeHtml(t.id)}" style="background:var(--surface-container-lowest);border-radius:14px;padding:12px 14px;border:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color 0.15s;">
                 <span style="font-size:13px;font-weight:600;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
                 <span style="font-size:11px;color:var(--outline);">Scadenza: ${t.due_date||'—'}</span>
             </div>`).join('')}`).join('') : '<p style="text-align:center;color:var(--outline);font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
         </div>
-        <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid rgba(226,232,240,0.6);">
+        <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:10px;border-top:none;">
             <label style="${LBL}">Quando lo studi?</label>
             <input id="qs-existing-date" type="date" value="${preselectedDate}" style="${INP}" />
-            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
+            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:15px;border:none;background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
         </div>
     </div>
 
@@ -4884,13 +4885,13 @@ function showQuickAddTaskModal() {
         <div><label style="${LBL}">Argomenti</label><textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Tipo</label>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
-                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Scritta</button>
-                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Orale</button>
-                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Pratica</button>
+                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Scritta</button>
+                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Orale</button>
+                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Pratica</button>
             </div>
         </div>
         <div><label style="${LBL}">Data</label><input id="qs-v-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
-        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:15px;border:none;background:#dc2626;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.28);display:flex;align-items:center;justify-content:center;gap:7px;">
+        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:15px;border:none;background:var(--error);color:var(--on-error);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.28);display:flex;align-items:center;justify-content:center;gap:7px;">
             <span class="material-symbols-outlined" style="font-size:19px;">warning</span>Aggiungi verifica
         </button>
     </div>
@@ -4900,11 +4901,11 @@ function showQuickAddTaskModal() {
     // ── Wire up all interactivity after DOM is ready ────────────────────────────
     requestAnimationFrame(() => {
         // Styles for tabs
-        const ACTIVE_BLUE = 'padding:11px 4px;border-radius:13px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const ACTIVE_RED  = 'padding:11px 4px;border-radius:13px;border:2px solid var(--error);background:#dc2626;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const INACTIVE    = 'padding:11px 4px;border-radius:13px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:2px solid var(--primary);background:#2563eb;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:1.5px solid rgba(226,232,240,0.9);background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const ACTIVE_BLUE = 'padding:11px 4px;border-radius:13px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const ACTIVE_RED  = 'padding:11px 4px;border-radius:13px;border:none;background:var(--error);color:var(--on-error);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const INACTIVE    = 'padding:11px 4px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
 
         let currentTab = 'new';
         let pickedTaskId = null;
@@ -7010,11 +7011,11 @@ window._renderMonthPicker = function() {
         const isSel     = iso === selectedISO;
         const hasVerif  = (state.verifiche  || []).some(function(v){ return (v.data||v.date||'') === iso; });
         const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
-        const dotColor  = hasVerif ? '#f97316' : '#3b82f6';
+        const dotColor  = hasVerif ? 'var(--warning)' : 'var(--info)';
 
-        let bg = 'transparent', color = '#1e293b', fw = '400', ring = 'none', shadow = 'none';
-        if (isSel)   { bg = '#2563eb'; color = 'white'; fw = '800'; shadow = '0 4px 14px -3px rgba(37,99,235,0.45)'; }
-        else if (isToday) { bg = 'rgba(37,99,235,0.09)'; color = '#2563eb'; fw = '700'; ring = '2px solid rgba(37,99,235,0.25)'; }
+        let bg = 'transparent', color = 'var(--on-surface)', fw = '400', ring = 'none', shadow = 'none';
+        if (isSel)   { bg = 'var(--primary)'; color = 'var(--on-primary)'; fw = '800'; shadow = '0 4px 14px -3px rgba(37,99,235,0.45)'; }
+        else if (isToday) { bg = 'var(--info-container)'; color = 'var(--info)'; fw = '700'; }
 
         const dot = (hasTask || hasVerif) && !isSel
             ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
@@ -7041,14 +7042,14 @@ window._renderMonthPicker = function() {
             '<div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
-            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(var(--glass-rgb),0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
+            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(var(--glass-rgb),0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
                 '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_left</span>' +
             '</button>' +
             '<div style="text-align:center;">' +
                 '<div style="font-size:18px;font-weight:800;color:var(--on-surface);letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
                 '<div style="font-size:10px;font-weight:700;color:var(--outline);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
             '</div>' +
-            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(241,245,249,0.85);border:1px solid rgba(var(--glass-rgb),0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
+            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(var(--glass-rgb),0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
                 '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_right</span>' +
             '</button>' +
         '</div>' +
@@ -7057,7 +7058,7 @@ window._renderMonthPicker = function() {
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' + cells.join('') + '</div>' +
         '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
-            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" style="padding:10px 28px;border-radius:999px;background:rgba(239,246,255,0.9);border:1px solid rgba(191,219,254,0.6);cursor:pointer;font-size:13px;font-weight:700;color:var(--info);font-family:Hanken Grotesk,sans-serif;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">Vai a Oggi</button>' +
+            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" style="padding:10px 28px;border-radius:999px;background:var(--info-container);border:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--info);font-family:Hanken Grotesk,sans-serif;">Vai a Oggi</button>' +
         '</div>';
 
     // FIX SCATTO MESE: Aggiorniamo solo il contenuto senza rimuovere l'overlay!
