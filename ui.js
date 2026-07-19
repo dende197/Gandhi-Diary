@@ -4156,10 +4156,7 @@ function showBachecaModal() {
             `<div style="text-align:center; padding: 40px; color: var(--text-secondary);">
                         <i class="ph ph-megaphone" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
                         Nessun avviso in bacheca<br>
-                        <span style="font-size: 12px; margin-top: 8px; display: block;">Gli avvisi verranno caricati dopo la sincronizzazione con DidUP</span>
-                        <button onclick="performSync(); closeModal();" style="background:var(--orange); color:black; padding:10px 20px; border-radius:10px; border:none; margin-top:16px; cursor:pointer; font-weight:600;">
-                            <i class="ph ph-arrow-clockwise"></i> Sincronizza Ora
-                       </button>
+                        <span style="font-size: 12px; margin-top: 8px; display: block;">Scorri verso il basso dalla parte alta della schermata per aggiornare i dati.</span>
                    </div>` :
             dataBacheca.map(item => {
                 const data = item.data || item.date || item.datGiorno || 'Data non disponibile';
