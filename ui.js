@@ -4482,7 +4482,7 @@ window.openArgoLogin = function openArgoLogin() {
 
                 <!-- Handle -->
                 <div style="display:flex;justify-content:center;margin-bottom:16px;">
-                    <div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.12);"></div>
+                    <div style="width:36px;height:4px;border-radius:999px;background:var(--outline-variant);"></div>
                 </div>
 
                 <!-- Logo + titolo -->
@@ -4503,7 +4503,7 @@ window.openArgoLogin = function openArgoLogin() {
                 <div id="server-status"
                      style="margin-bottom:16px;font-size:12px;color:var(--warning);
                             display:flex;align-items:center;justify-content:center;gap:6px;
-                            background:rgba(245,158,11,0.08);border-radius:10px;padding:8px;">
+                            background:var(--warning-container);border-radius:10px;padding:8px;">
                     <span style="width:7px;height:7px;background:#f59e0b;border-radius:50%;flex-shrink:0;"></span>
                     Verifica stato server in corso...
                 </div>
@@ -4512,17 +4512,17 @@ window.openArgoLogin = function openArgoLogin() {
                 <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
                     <input id="argo-school" placeholder="Codice Scuola (es. SS19014)" autocomplete="organization"
                            value="${localStorage.getItem('argo_school') || ''}"
-                           style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
+                           style="height:48px;border-radius:14px;border:none;
                                   padding:0 16px;font-size:15px;font-weight:500;
                                   background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                     <input id="argo-user" placeholder="Nome Utente" autocomplete="username"
-                           style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
+                           style="height:48px;border-radius:14px;border:none;
                                   padding:0 16px;font-size:15px;font-weight:500;
                                   background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
                     <input id="argo-pass" type="password" placeholder="Password" autocomplete="current-password"
-                           style="height:48px;border-radius:14px;border:1.5px solid rgba(226,232,240,0.8);
+                           style="height:48px;border-radius:14px;border:none;
                                   padding:0 16px;font-size:15px;font-weight:500;
                                   background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
                                   font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
@@ -4542,7 +4542,7 @@ window.openArgoLogin = function openArgoLogin() {
                 <!-- Annulla -->
                 <button onclick="(typeof closeModal==='function'?closeModal():document.getElementById('modal-container').innerHTML='')"
                         style="width:100%;height:44px;border-radius:14px;border:none;cursor:pointer;
-                               background:rgba(241,245,249,0.8);color:var(--on-surface-variant);
+                               background:var(--surface-container-high);color:var(--on-surface-variant);
                                font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">
                     Annulla
                 </button>
@@ -4555,7 +4555,7 @@ window.openArgoLogin = function openArgoLogin() {
     } catch(err) {
         console.warn('[openArgoLogin] checkServerHealth non disponibile:', err.message);
         var ss = document.getElementById('server-status');
-        if (ss) { ss.style.color = 'var(--success)'; ss.innerHTML = '<span style="width:7px;height:7px;background:var(--success);border-radius:50%;flex-shrink:0;"></span> Server pronto'; }
+        if (ss) { ss.style.color = 'var(--success)'; ss.style.background = 'var(--success-container)'; ss.innerHTML = '<span style="width:7px;height:7px;background:var(--success);border-radius:50%;flex-shrink:0;"></span> Server pronto'; }
     }
 };
 function showProfileSelectionModal(profiles, credentials) {
@@ -4609,9 +4609,9 @@ function showProfileSelectionModal(profiles, credentials) {
 
             '<div id="psel-card" ' +
             'style="width:100%;max-width:480px;' +
-            'background:rgba(248,250,252,0.88);' +
+            'background:rgba(var(--glass-rgb),0.92);' +
             'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);' +
-            'border:1px solid rgba(var(--glass-rgb),0.65);' +
+            'border:none;' +
             'border-radius:32px 32px 0 0;' +
             'padding:0 20px calc(24px + env(safe-area-inset-bottom,0px)) 20px;' +
             'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(var(--glass-rgb),0.9);' +
@@ -4620,7 +4620,7 @@ function showProfileSelectionModal(profiles, credentials) {
 
                 // drag handle
                 '<div style="display:flex;justify-content:center;padding:14px 0 10px;">' +
-                    '<div style="width:36px;height:4px;border-radius:999px;background:rgba(0,0,0,0.10);"></div>' +
+                    '<div style="width:36px;height:4px;border-radius:999px;background:var(--outline-variant);"></div>' +
                 '</div>' +
 
                 // header
