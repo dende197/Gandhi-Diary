@@ -1,7 +1,9 @@
-const CACHE_VERSION = '3.3.8';
+const CACHE_VERSION = '3.8.2';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+const STATIC_DESTINATIONS = new Set(['style', 'script', 'font', 'image']);
+const STATIC_PATH_REGEX = /\.(?:css|js|mjs|png|jpe?g|svg|webp|avif|woff2?|ttf|ico|json)$/i;
 const EXTERNAL_ASSETS = [
   'https://cdn.tailwindcss.com?plugins=forms,container-queries',
   'https://unpkg.com/@phosphor-icons/web',
@@ -21,12 +23,12 @@ const EXTERNAL_ORIGINS = new Set([
 const APP_SHELL = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/style.css?v=3.3.8`,
+  `${BASE_PATH}/style.css?v=3.8.1`,
   `${BASE_PATH}/animations.css?v=3.3.8`,
-  `${BASE_PATH}/ui.js?v=3.3.8`,
-  `${BASE_PATH}/app-bootstrap.js?v=3.3.8`,
+  `${BASE_PATH}/ui.js?v=3.8.0`,
+  `${BASE_PATH}/app-bootstrap.js?v=3.8.0`,
   `${BASE_PATH}/fluidity-engine-v3.js?v=3.3.8`,
-  `${BASE_PATH}/fluidity-boot-patch.js?v=1.2.0`,
+  `${BASE_PATH}/fluidity-boot-patch.js?v=1.4.0`,
   `${BASE_PATH}/manifest.webmanifest`,
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
@@ -112,18 +114,53 @@ self.addEventListener('fetch', (event) => {
 
   if (isNavigation) {
     event.respondWith(
-      fetch(normalizedRequest).then(async (response) => {
-        const cloned = response.clone();
-        try {
-          const cache = await caches.open(CACHE_NAME);
-          await cache.put(normalizedRequest, cloned);
-        } catch (err) {
-          console.warn('[SW] Navigation cache write failed:', err?.message || err);
+      caches.match(normalizedRequest).then(async (cached) => {
+        const networkPromise = fetch(normalizedRequest).then(async (response) => {
+          const cloned = response.clone();
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(normalizedRequest, cloned);
+          } catch (err) {
+            console.warn('[SW] Navigation cache write failed:', err?.message || err);
+          }
+          return response;
+        }).catch(() => null);
+
+        if (cached) {
+          event.waitUntil(networkPromise);
+          return cached;
         }
-        return response;
-      }).catch(async () => {
-        const cached = await caches.match(normalizedRequest);
-        if (cached) return cached;
+
+        const networkResponse = await networkPromise;
+        if (networkResponse) return networkResponse;
+        return caches.match(`${BASE_PATH}/index.html`);
+      })
+    );
+    return;
+  }
+
+  const isStaticAsset =
+    STATIC_DESTINATIONS.has(event.request.destination) ||
+    STATIC_PATH_REGEX.test(url.pathname);
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(normalizedRequest).then(async (cached) => {
+        const networkPromise = fetch(normalizedRequest).then(async (response) => {
+          const cloned = response.clone();
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(normalizedRequest, cloned);
+          } catch (err) {
+            console.warn('[SW] Static cache write failed:', err?.message || err);
+          }
+          return response;
+        }).catch(() => null);
+        if (cached) {
+          event.waitUntil(networkPromise);
+          return cached;
+        }
+        const networkResponse = await networkPromise;
+        if (networkResponse) return networkResponse;
         return caches.match(`${BASE_PATH}/index.html`);
       })
     );
