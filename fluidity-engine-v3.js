@@ -104,6 +104,10 @@
 
       // During boot lock, queue subsequent renders, but allow the first one or forced renders
       if (_bootLockActive) {
+        if (window._fluidityBootRenderConsumed && _bootLockCount === 0) {
+          _bootLockCount = 1;
+          window._fluidityBootRenderConsumed = false;
+        }
         if (_bootLockCount > 0 && !state._forceRender) {
           _bootRenderPending = true;
           return;
@@ -182,12 +186,12 @@
   const _installNavigation = () => {
     if (typeof window.navigate !== 'function' || window.navigate._isV3) return;
 
-    window.navigate = function navigate(v) {
+    window.navigate = function navigate(v, force = false, skipExit = false) {
       const allowed = ['login', 'home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
       if (!allowed.includes(v) || (!state.isLoggedIn && v !== 'login')) v = state.isLoggedIn ? 'home' : 'login';
       if (v !== 'login' && state.isLoggedIn && state._loggedOut) state._loggedOut = false;
 
-      if (v === state.view) {
+      if (v === state.view && !force) {
         try {
           if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
           else if (typeof window.scheduleRender === 'function') window.scheduleRender(0);
@@ -208,7 +212,7 @@
         _animateViewEntrance(v);
       };
 
-      if (!state.isLoggedIn || v === 'login') { go(); return; }
+      if (!state.isLoggedIn || v === 'login' || skipExit) { go(); return; }
       _exitCurrent('up', { duration: 0.13, distance: 7, scale: 0.996 }).then(go);
     };
     window.navigate._isV3 = true;

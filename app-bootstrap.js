@@ -906,32 +906,39 @@
                 if (window._bootRenderedOnce) return;
                 window._bootRenderedOnce = true;
                 const loader = document.getElementById('app-loader');
+
+                // Use navigate() which triggers the full V3 animation pipeline
+                // (_renderViewDirect + _animateViewEntrance with GSAP)
                 const _doRender = () => {
-                    if (window.render) {
+                    if (typeof window.navigate === 'function' && window.navigate._isV3) {
+                        // Force the engine to treat this as a new view and skip exit animations
+                        window._fluidityLastAnimatedView = null;
+                        window.navigate(state.view || 'home', true, true);
+                        state._forceRender = false;
+                        if (window.render && window.render._isV3) {
+                            // Tell the engine we consumed the initial render
+                            window._fluidityBootRenderConsumed = true;
+                        }
+                    } else if (window.render) {
                         window.render();
-                    } else {
-                        const checkRender = setInterval(() => {
-                            if (window.render) { window.render(); clearInterval(checkRender); }
-                        }, RENDER_AVAILABILITY_CHECK_INTERVAL_MS);
-                        setTimeout(() => clearInterval(checkRender), RENDER_AVAILABILITY_TIMEOUT_MS);
                     }
+                    // Fade out the spinner ring after the first paint
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
                             if (loader) {
                                 loader.style.opacity = '0';
-                                // Removed appElement opacity override to allow GSAP entrance animations to play naturally
-                                setTimeout(() => { if (loader.parentNode) loader.remove(); }, 220);
+                                setTimeout(() => { if (loader.parentNode) loader.remove(); }, 300);
                             }
                         });
                     });
                 };
-                setTimeout(_doRender, 16);
+                // No delay — render immediately so GSAP animations drive the entrance
+                _doRender();
             };
             const finalizeBootHydrationRender = () => {
                 state._forceRender = true;
                 state._animateOnNextRender = true;
                 renderBootFallback();
-                hideBoot();
             };
             
             // Assign offlineBadge reference for updateOfflineBadge()
