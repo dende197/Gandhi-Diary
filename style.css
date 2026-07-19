@@ -827,13 +827,21 @@ html.theme-transition *::after {
    a flat backdrop the cards sit on top of with a hard jump.
    ================================================================ */
 
+/* ================================================================
+   SMOOTH BACKGROUND — one hue family, eased multi-stop falloff.
+   Two large, gently overlapping shapes instead of four smaller
+   ones — fewer edges means fewer places for a "ring" to become
+   visible. Each stop fades gradually (0% → 45% → 100%) instead of
+   jumping straight to transparent, which is what caused the
+   banded/blotchy look. Same hues as the widget cards so the page
+   reads as one continuous surface, not a backdrop the cards sit on.
+   ================================================================ */
+
 body {
   background-color: var(--surface);
   background-image:
-    radial-gradient(60% 50% at 15% 8%, rgba(0, 88, 188, 0.14) 0%, transparent 100%),
-    radial-gradient(65% 52% at 90% 5%, rgba(76, 74, 202, 0.10) 0%, transparent 100%),
-    radial-gradient(70% 58% at 12% 96%, rgba(0, 122, 255, 0.08) 0%, transparent 100%),
-    radial-gradient(62% 50% at 95% 92%, rgba(102, 100, 228, 0.10) 0%, transparent 100%);
+    radial-gradient(135% 105% at 18% -12%, rgba(0, 88, 188, 0.12) 0%, rgba(0, 88, 188, 0.04) 45%, rgba(0, 88, 188, 0) 100%),
+    radial-gradient(125% 100% at 100% 108%, rgba(76, 74, 202, 0.09) 0%, rgba(76, 74, 202, 0.03) 45%, rgba(76, 74, 202, 0) 100%);
   background-attachment: fixed;
   transition: background-color 0.35s ease;
 }
@@ -844,10 +852,8 @@ body {
 [data-theme="dark"] body,
 .dark body {
   background-image:
-    radial-gradient(65% 55% at 15% 8%, rgba(30, 58, 138, 0.30) 0%, transparent 100%),
-    radial-gradient(70% 58% at 90% 4%, rgba(76, 74, 202, 0.20) 0%, transparent 100%),
-    radial-gradient(75% 62% at 10% 98%, rgba(22, 33, 62, 0.55) 0%, transparent 100%),
-    radial-gradient(65% 55% at 95% 94%, rgba(30, 58, 138, 0.22) 0%, transparent 100%) !important;
+    radial-gradient(135% 105% at 18% -12%, rgba(30, 58, 138, 0.30) 0%, rgba(30, 58, 138, 0.11) 45%, rgba(30, 58, 138, 0) 100%),
+    radial-gradient(125% 100% at 100% 108%, rgba(22, 33, 62, 0.55) 0%, rgba(22, 33, 62, 0.20) 45%, rgba(22, 33, 62, 0) 100%) !important;
 }
 
 /* ── Theme Toggle Switch (Profile Page) ── */
