@@ -697,6 +697,15 @@
 
         const RENDER_AVAILABILITY_CHECK_INTERVAL_MS = 30;
         const RENDER_AVAILABILITY_TIMEOUT_MS = 1800;
+        const IDLE_BOOT_TASK_TIMEOUT_MS = 180;
+        const runWhenIdle = (task) => {
+            if (typeof task !== 'function') return;
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => task(), { timeout: IDLE_BOOT_TASK_TIMEOUT_MS });
+                return;
+            }
+            setTimeout(task, 32);
+        };
         // --- BOOT FLOW ---
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
@@ -796,20 +805,26 @@
                 } catch(e) {}
                 
                 state.view = (location.hash || '#home').replace('#','').split('?')[0].trim() || 'home';
-                showBoot("Sincronizzazione in corso...");
-                Promise.all([
-                    performSync(session, { suppressRender: true, suppressHideBoot: true }),
-                    loadCircolari()
-                ])
-                    .then(() => {
-                        if (typeof window.warmWeeklyAgendaCache === 'function') {
-                            setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
-                        }
-                    })
-                    .catch((e) => {
-                        console.warn('Background sync failed:', e);
-                    })
-                    .finally(finalizeBootHydrationRender);
+                finalizeBootHydrationRender();
+                runWhenIdle(() => {
+                    Promise.all([
+                        performSync(session, { suppressRender: true, suppressHideBoot: true }),
+                        loadCircolari()
+                    ])
+                        .then(() => {
+                            if (typeof window.warmWeeklyAgendaCache === 'function') {
+                                setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
+                            }
+                        })
+                        .catch((e) => {
+                            console.warn('Background sync failed:', e);
+                        })
+                        .finally(() => {
+                            if (state._loggedOut) return;
+                            state._forceRender = true;
+                            if (typeof window.scheduleRender === 'function') window.scheduleRender(0);
+                        });
+                });
             } else {
                 state.isLoggedIn = false;
                 state.view = 'login';
