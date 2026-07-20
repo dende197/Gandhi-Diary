@@ -891,6 +891,43 @@
         const RENDER_AVAILABILITY_CHECK_INTERVAL_MS = 30;
         const RENDER_AVAILABILITY_TIMEOUT_MS = 1800;
         const IDLE_BOOT_TASK_TIMEOUT_MS = 180;
+
+        // FIX: previously these two constants were declared but never used anywhere,
+        // and the boot flow checked `window.navigate._isV3` exactly ONCE, synchronously,
+        // with zero tolerance for the fluidity engine not having installed itself yet.
+        // If that single check lost the race (script order, slow network, stale SW
+        // cache serving an old fluidity-engine-v3.js) the app would boot on the raw,
+        // non-animated render/navigate for the whole session — silently, no errors.
+        //
+        // This waits for the engine's readiness promise (or polls manually if that
+        // promise isn't there yet — e.g. the engine file hasn't parsed at all) before
+        // the boot flow decides which render path to use.
+        function waitForFluidityEngine() {
+            if (window._fluidityEngineReady && typeof window._fluidityEngineReady.then === 'function') {
+                return window._fluidityEngineReady;
+            }
+            return new Promise((resolve) => {
+                let elapsed = 0;
+                const check = () => {
+                    if (window._fluidityEngineReady && typeof window._fluidityEngineReady.then === 'function') {
+                        window._fluidityEngineReady.then(resolve);
+                        return;
+                    }
+                    if (window.navigate && window.navigate._isV3 && window.render && window.render._isV3) {
+                        resolve(true);
+                        return;
+                    }
+                    elapsed += RENDER_AVAILABILITY_CHECK_INTERVAL_MS;
+                    if (elapsed >= RENDER_AVAILABILITY_TIMEOUT_MS) {
+                        console.warn('[Boot] fluidity-engine-v3.js never signaled readiness — booting without entrance animations.');
+                        resolve(false);
+                        return;
+                    }
+                    setTimeout(check, RENDER_AVAILABILITY_CHECK_INTERVAL_MS);
+                };
+                check();
+            });
+        }
         const runWhenIdle = (task) => {
             if (typeof task !== 'function') return;
             if (typeof window.requestIdleCallback === 'function') {
@@ -902,6 +939,15 @@
         // --- BOOT FLOW ---
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 G-Connect v2.9.1 Booting...");
+
+            // Give the fluidity (GSAP) engine a chance to finish patching
+            // window.render/window.navigate before we decide how to boot.
+            // See waitForFluidityEngine() above for why this is necessary.
+            const engineReady = await waitForFluidityEngine();
+            console.log(engineReady
+                ? "✅ Fluidity Engine ready — booting with entrance animations."
+                : "⚠️ Fluidity Engine not ready — booting with raw (non-animated) render.");
+
             const renderBootFallback = () => {
                 if (window._bootRenderedOnce) return;
                 window._bootRenderedOnce = true;
@@ -912,7 +958,7 @@
                 const _doRender = () => {
                     if (typeof window.navigate === 'function' && window.navigate._isV3) {
                         // Force the engine to treat this as a new view and skip exit animations
-                        window._fluidityLastAnimatedView = null;
+                        if (typeof window._fluidityResetAnimatedView === 'function') window._fluidityResetAnimatedView();
                         window.navigate(state.view || 'home', true, true);
                         state._forceRender = false;
                         if (window.render && window.render._isV3) {
