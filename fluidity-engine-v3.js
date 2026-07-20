@@ -18,6 +18,12 @@
 
   let _lastAnimatedViewRender = null;
 
+  // Exposed so app-bootstrap.js can force the next render to replay the
+  // entrance animation (e.g. after a fresh login or forced boot render).
+  // Previously app-bootstrap.js wrote to window._fluidityLastAnimatedView,
+  // a global this engine never read — that reset was a silent no-op.
+  window._fluidityResetAnimatedView = () => { _lastAnimatedViewRender = null; };
+
   // ─── Helpers ──────────────────────────────────────────────────
   function _setWillChange(el, on) {
     if (el) el.style.willChange = on ? 'transform, opacity' : 'auto';
@@ -540,16 +546,65 @@
   };
 
   // ── INIT ─────────────────────────────────────────────────────
-  const init = () => {
-    _installCoreRender();
-    _installNavigation();
-    _installSubjectTransitions();
-    _patchCircolari();
+  //
+  // FIX: the old init() ran exactly ONCE, at DOMContentLoaded, and called
+  // _installCoreRender()/_installNavigation() which silently no-op if
+  // window.render / window.navigate (defined by ui.js) don't exist yet.
+  // If ui.js's script tag executed a tick later than this file's — or the
+  // service worker served a stale cached copy of one of the two files —
+  // the patch was skipped forever with zero console output, and the app
+  // ran on ui.js's raw, non-animated render/navigate for the entire
+  // session. That is almost certainly why you saw nothing.
+  //
+  // Fix: poll for readiness instead of checking once, and expose a real
+  // promise (window._fluidityEngineReady) that app-bootstrap.js awaits
+  // before deciding which render path to boot with.
+
+  const READY_POLL_MS = 25;
+  const READY_TIMEOUT_MS = 4000;
+
+  let _resolveEngineReady;
+  window._fluidityEngineReady = new Promise((resolve) => { _resolveEngineReady = resolve; });
+
+  // Things that don't depend on ui.js's render/navigate — safe immediately.
+  const _attachAlways = () => {
     _installButtonFeedback(document);
     _installCardHover(document);
     document.addEventListener('animationend', (e) => {
       setTimeout(() => e.target.classList.add('anim-done'), 100);
     }, true);
+  };
+
+  const _coreReady = () => typeof window.render === 'function' && typeof window.navigate === 'function';
+
+  const init = () => {
+    _attachAlways();
+
+    let elapsed = 0;
+    const tryInstall = () => {
+      if (_coreReady()) {
+        _installCoreRender();
+        _installNavigation();
+        _installSubjectTransitions();
+        _patchCircolari();
+        console.log('✅ Fluidity Engine v3.3: fully installed (render + navigation patched).');
+        _resolveEngineReady(true);
+        return;
+      }
+      elapsed += READY_POLL_MS;
+      if (elapsed >= READY_TIMEOUT_MS) {
+        console.error(
+          '⛔ Fluidity Engine v3.3: window.render/window.navigate from ui.js never ' +
+          'became available within ' + READY_TIMEOUT_MS + 'ms. Animations are DISABLED ' +
+          'for this session. Check that ui.js is actually loading (network tab / SW cache) ' +
+          'and that its <script> tag runs before or independently of this file.'
+        );
+        _resolveEngineReady(false);
+        return;
+      }
+      setTimeout(tryInstall, READY_POLL_MS);
+    };
+    tryInstall();
   };
 
   if (document.readyState === 'loading') {
