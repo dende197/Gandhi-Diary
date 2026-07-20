@@ -59,10 +59,15 @@
     if (!viewEl || typeof gsap === 'undefined') return;
     const from = _directionVector(dir, distance);
     _setWillChange(viewEl, true); gsap.killTweensOf(viewEl);
+    // While the entrance animation is running, lower the backdrop-filter blur
+    // radius (see the CSS snippet noted below) — recompositing a full 20px
+    // blur on every frame while transform/opacity are also animating is one
+    // of the most common mobile jank sources with glassmorphism UIs.
+    document.body.classList.add('gsap-animating');
     gsap.fromTo(viewEl,
       { opacity: 0, x: from.x, y: from.y, scale },
       { opacity: 1, x: 0, y: 0, scale: 1, duration, ease: 'power3.out', overwrite: 'auto',
-        onComplete: () => _setWillChange(viewEl, false) }
+        onComplete: () => { _setWillChange(viewEl, false); document.body.classList.remove('gsap-animating'); } }
     );
   }
 
@@ -259,10 +264,14 @@
       default:                 html = (typeof renderHome === 'function') ? renderHome() : ''; break;
     }
 
-    // Silent cross-fade swap — no white flash
-    if (typeof gsap !== 'undefined') gsap.set(root, { opacity: 0 });
+    // NOTE: previously this did a gsap opacity fade on `root` (parent) here,
+    // WHILE _enterView() (called right after by _animateViewEntrance) does its
+    // own independent opacity fade on `viewEl` (child). Two overlapping,
+    // differently-timed opacity tweens on parent+child compound multiplicatively
+    // and produce a visibly uneven/stuttery fade. viewEl's own fromTo() already
+    // starts at opacity:0, so it alone is enough to avoid any white flash —
+    // the root-level fade was pure redundant cost. Just swap the HTML directly.
     root.innerHTML = html;
-    if (typeof gsap !== 'undefined') gsap.to(root, { opacity: 1, duration: 0.10, ease: 'none', overwrite: 'auto' });
 
     requestAnimationFrame(() => {
       if (view === 'home') {
@@ -286,7 +295,6 @@
 
     _lastAnimatedViewRender = view;
     gsap.killTweensOf(viewEl);
-    gsap.killTweensOf(viewEl.querySelectorAll('*'));
 
     _enterView(direction, { duration: 0.24, distance: 9, scale: 0.992 });
 
@@ -363,10 +371,14 @@
       // Widget 3 (Verifiche progress bar): .card-verifiche-premium
       const progressFill = viewEl.querySelector('.card-verifiche-premium div[style*="width:"][style*="background:#059669"]');
       if (progressFill) {
-        const targetWidth = progressFill.style.width || '0%';
-        gsap.fromTo(progressFill, 
-          { width: '0%' }, 
-          { width: targetWidth, duration: 0.75, delay: 0.6, ease: 'power2.out' }
+        // FIX: was animating `width` (forces a layout reflow every frame —
+        // a major mobile jank source). The inline width is already the
+        // correct target set by the render function; we just grow it in
+        // visually via transform:scaleX, which is compositor-only.
+        gsap.set(progressFill, { transformOrigin: 'left center' });
+        gsap.fromTo(progressFill,
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.75, delay: 0.6, ease: 'power2.out' }
         );
       }
     }
@@ -408,8 +420,8 @@
     const easeB = 'back.out(1.5)';
 
     _stagger(viewEl, 'h1, h2, h3, .section-title, .widget-title',
-      { opacity: 0, y: 10, filter: 'blur(2px)' },
-      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.30, stagger: 0.05, ease }, 0.05);
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: 0.30, stagger: 0.05, ease }, 0.05);
 
     _stagger(viewEl, '.card, .subject-summary-card, .glass-panel, .registro-card, .circolare-card',
       { opacity: 0, y: 16, scale: 0.96 },
@@ -424,8 +436,9 @@
       { opacity: 1, scale: 1, duration: 0.26, stagger: 0.012, ease: easeB }, 0.18);
 
     viewEl.querySelectorAll('.progress-bar, .streak-bar, [class*="progress"]').forEach((bar, i) => {
-      const tw = bar.style.width || '100%';
-      gsap.fromTo(bar, { width: '0%' }, { width: tw, duration: 0.55, ease: 'power2.out', delay: 0.22 + i * 0.04 });
+      // FIX: width→scaleX, same reflow issue as the verifiche widget above.
+      gsap.set(bar, { transformOrigin: 'left center' });
+      gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: 'power2.out', delay: 0.22 + i * 0.04 });
     });
 
     viewEl.querySelectorAll('.media-value, [data-animate-number]').forEach(el => {
