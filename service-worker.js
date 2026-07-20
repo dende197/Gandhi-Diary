@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.8.2';
+const CACHE_VERSION = '3.8.3';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
@@ -33,6 +33,7 @@ const APP_SHELL = [
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
   `${BASE_PATH}/gandhi-diary-icon-512.png`,
+  `${BASE_PATH}/gandhi-diary-icon-1024.png`,
 ];
 
 async function precacheExternalAssets() {
