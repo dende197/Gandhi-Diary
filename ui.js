@@ -1043,10 +1043,11 @@ function renderNav() {
             ${renderNavItem('circolari', 'ph-newspaper', 'Circulars')}
         </nav>
 
-        <!-- ══ TOP PILL NAV — Tablet & Desktop only (≥ 768px). Same compact
-             pill treatment as mobile, just docked at the top instead of a
-             bulky sidebar — 4 buttons don't need a whole side column. ══ -->
-        <nav class="liquid-navbar fixed top-6 left-1/2 -translate-x-1/2 hidden md:flex items-center justify-around px-4 py-2 rounded-[32px] z-[1000] w-auto gap-2 h-[72px]">
+        <!-- ══ TOP NAV — Tablet & Desktop only (≥ 768px). Attached flush to
+             the top edge of the page (not a floating pill) — 4 buttons
+             don't need a whole side column, and a pill felt disconnected
+             floating in space. ══ -->
+        <nav class="top-bar-nav fixed top-0 left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center gap-2 z-[1000]">
             ${renderNavItem('home', 'ph-squares-four', 'Overview')}
             ${renderNavItem('planner', 'ph-calendar-blank', 'Planner')}
             ${renderNavItem('voti', 'ph-exam', 'Grades')}
