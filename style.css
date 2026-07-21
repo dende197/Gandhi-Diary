@@ -255,7 +255,26 @@ h1, h2, h3, h4, h5, h6 {
 @media (min-width: 1024px) {
   .main-container {
     padding: 0 var(--margin-desktop);
+    max-width: 1680px;
   }
+}
+@media (min-width: 1440px) {
+  .main-container {
+    max-width: 1960px;
+    padding: 0 56px;
+  }
+}
+
+/* Safari-specific fix: overflow:hidden + border-radius can fail to properly
+   clip a child with `filter: blur()` that overflows its bounds (the glow
+   blobs positioned top:-40px/right:-40px inside these cards) — Safari's
+   compositor sometimes leaves a hard square edge right where the blur gets
+   clipped, especially once a GPU layer is promoted (which our GSAP entrance
+   animations do via will-change). Forcing Safari onto its mask-based clip
+   path instead of overflow-clip fixes it. Harmless no-op on other browsers. */
+.card-media-premium, .card-assenze-premium, .card-verifiche-premium, .card-assenze-bg {
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
 }
 
 /* === NAVIGATION === */
@@ -1453,15 +1472,15 @@ body {
    ============================================================ */
 
 @media (min-width: 768px) {
-  /* The top pill nav floats over content, so give the page some
-     breathing room at the top; and since there's no bottom pill
-     nav on desktop/tablet, the mobile safe-area bottom padding
+  /* The top nav is now flush with the top edge instead of a floating pill,
+     so give the page some breathing room at the top; and since there's no
+     bottom pill nav on desktop/tablet, the mobile safe-area bottom padding
      on <body> (pb-28) is no longer needed. */
   body:not(.logged-out) {
     padding-bottom: 0;
   }
   body:not(.logged-out) .main-container {
-    padding-top: 112px;
+    padding-top: 104px;
   }
 
   /* Widget dashboard: mobile shows one widget at a time via horizontal
@@ -1480,6 +1499,33 @@ body {
   .widget-indicators {
     display: none;
   }
+}
+
+/* Top nav — attached to the very top edge of the page (no gap, no floating),
+   rounded only at the bottom so it reads as a tab hanging down from the
+   browser's top border rather than a pill. Background is a distinct layered
+   gradient (not just the flat frosted glass used elsewhere) in both themes. */
+.top-bar-nav {
+  padding: 0 10px;
+  height: 68px;
+  border-radius: 0 0 26px 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 100%),
+    linear-gradient(120deg, rgba(0, 88, 188, 0.10), rgba(76, 74, 202, 0.08));
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(var(--glass-rgb), 0.55);
+  border-top: none;
+  box-shadow: 0 18px 36px -14px rgba(0, 0, 0, 0.18), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+[data-theme="dark"] .top-bar-nav,
+.dark .top-bar-nav {
+  background:
+    linear-gradient(180deg, rgba(24, 26, 34, 0.94) 0%, rgba(24, 26, 34, 0.78) 100%),
+    linear-gradient(120deg, rgba(173, 198, 255, 0.10), rgba(194, 193, 255, 0.06));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 36px -14px rgba(0, 0, 0, 0.55), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ============================================================
