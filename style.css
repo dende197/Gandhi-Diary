@@ -1439,3 +1439,116 @@ body {
 .doc-print-view {
   color-scheme: light !important;
 }
+
+/* ============================================================
+   DESKTOP / TABLET — SIDEBAR NAVIGATION (≥ 768px)
+   Additive only: every rule below is scoped to a min-width media
+   query, so nothing here can affect the < 768px mobile layout.
+   The mobile bottom pill nav (.liquid-navbar, "md:hidden" via
+   Tailwind) is untouched and keeps working exactly as before.
+   ============================================================ */
+
+.sidebar-nav {
+  flex-direction: column;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 96px;
+  padding: 28px 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--outline-variant);
+  z-index: 1000;
+  gap: 8px;
+  /* display:flex is applied responsively by the "md:flex" Tailwind
+     utility class already on the element — intentionally not set here
+     so it doesn't fight with the "hidden" utility on mobile. */
+}
+
+.sidebar-nav__logo {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 28px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.sidebar-nav__items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.sidebar-nav .nav-item.sidebar-nav__item {
+  width: 68px;
+  height: 60px;
+  border-radius: 18px;
+}
+
+.sidebar-nav .nav-item.sidebar-nav__item:hover {
+  opacity: 0.85 !important;
+  background: rgba(var(--glass-rgb), 0.5);
+}
+
+.sidebar-nav .nav-item.sidebar-nav__item.active {
+  background: rgba(0, 88, 188, 0.08);
+}
+
+[data-theme="dark"] .sidebar-nav .nav-item.sidebar-nav__item.active,
+.dark .sidebar-nav .nav-item.sidebar-nav__item.active {
+  background: rgba(173, 198, 255, 0.12);
+}
+
+@media (min-width: 768px) {
+  /* Make room for the fixed sidebar so page content doesn't sit under it */
+  body:not(.logged-out) .main-container {
+    padding-left: calc(var(--margin-desktop) + 96px);
+  }
+
+  /* Keep the full-bleed sections (home dashboard widgets background, etc.)
+     truly edge-to-edge on the right while respecting the sidebar on the left.
+     This intentionally overrides the min-width:1024px rule defined earlier
+     in this file for .view-fullbleed, restated in full below so both sides
+     stay correct together rather than half-old/half-new. */
+  body:not(.logged-out) .view-fullbleed {
+    margin-left: calc(-1 * (var(--margin-desktop) + 96px));
+    margin-right: calc(-1 * var(--margin-desktop));
+    width: calc(100% + var(--margin-desktop) + 96px + var(--margin-desktop));
+  }
+
+  /* Widget dashboard: mobile shows one widget at a time via horizontal
+     swipe; tablet/desktop have room to show them all at once as a grid. */
+  .widgets-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    overflow: visible;
+    gap: 20px;
+  }
+  .widget-card {
+    flex: initial;
+    width: auto;
+    scroll-snap-align: none;
+  }
+  .widget-indicators {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sidebar-nav {
+    width: 112px;
+  }
+  body:not(.logged-out) .main-container {
+    padding-left: calc(var(--margin-desktop) + 112px);
+  }
+  body:not(.logged-out) .view-fullbleed {
+    margin-left: calc(-1 * (var(--margin-desktop) + 112px));
+    margin-right: calc(-1 * var(--margin-desktop));
+    width: calc(100% + var(--margin-desktop) + 112px + var(--margin-desktop));
+  }
+}
