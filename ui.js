@@ -1034,13 +1034,44 @@ function renderNav() {
         `;
     };
 
+    // Desktop/tablet sidebar item — same active-state logic as the mobile
+    // pill nav above, laid out vertically instead of horizontally.
+    const renderSidebarItem = (view, iconBase, label) => {
+        const isActive = currentView === view;
+        const color     = isActive ? 'var(--nav-active-color)' : 'var(--nav-inactive-color)';
+        const opacity   = isActive ? '1' : '0.6';
+        const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
+        const activeCls = isActive ? ' active' : '';
+
+        return `
+        <button onclick="navigate('${view}')"
+           class="nav-item sidebar-nav__item${activeCls} relative flex flex-col items-center justify-center gap-1 transition-all bg-transparent border-none outline-none cursor-pointer"
+           style="color:${color};opacity:${opacity};-webkit-tap-highlight-color:transparent;"
+           title="${label}">
+            <i class="${iconClass} text-[24px] relative z-10"></i>
+            <span class="text-[10px] font-semibold tracking-wide relative z-10">${label}</span>
+        </button>
+        `;
+    };
+
     return `
-        <!-- ══ BOTTOM NAV — Liquid Glass ══ -->
+        <!-- ══ BOTTOM NAV — Liquid Glass (mobile / < 768px only) ══ -->
         <nav class="liquid-navbar fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-around px-4 py-2 rounded-[32px] z-[1000] w-[92%] max-w-[380px] h-[76px] md:hidden">
             ${renderNavItem('home', 'ph-squares-four', 'Overview')}
             ${renderNavItem('planner', 'ph-calendar-blank', 'Planner')}
             ${renderNavItem('voti', 'ph-exam', 'Grades')}
             ${renderNavItem('circolari', 'ph-newspaper', 'Circulars')}
+        </nav>
+
+        <!-- ══ SIDEBAR NAV — Tablet & Desktop only (≥ 768px) ══ -->
+        <nav class="sidebar-nav hidden md:flex">
+            <img src="gandhi_diary_icon_final-2.svg" alt="" class="sidebar-nav__logo" />
+            <div class="sidebar-nav__items">
+                ${renderSidebarItem('home', 'ph-squares-four', 'Overview')}
+                ${renderSidebarItem('planner', 'ph-calendar-blank', 'Planner')}
+                ${renderSidebarItem('voti', 'ph-exam', 'Grades')}
+                ${renderSidebarItem('circolari', 'ph-newspaper', 'Circulars')}
+            </div>
         </nav>
 
         <!-- Drawer overlay -->
