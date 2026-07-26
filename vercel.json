@@ -26,6 +26,10 @@
       "destination": "/api/profile/:user_id"
     },
     {
+      "source": "/api/watch-summary/:user_id",
+      "destination": "/api/watch-summary/:user_id"
+    },
+    {
       "source": "/api/ai/:action",
       "destination": "/api/ai"
     },
