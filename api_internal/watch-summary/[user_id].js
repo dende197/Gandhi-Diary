@@ -148,6 +148,7 @@ module.exports = async function handler(req, res) {
         const grades = extractGradesFromDashboard(dashboardData);
         const assenze = extractAssenzeFromDashboard(dashboardData);
         const verifiche = extractVerificheFromDashboard(dashboardData);
+
         const media = calcolaMedia(grades);
         const prossimaVerifica = pickNextVerifica(verifiche);
 
