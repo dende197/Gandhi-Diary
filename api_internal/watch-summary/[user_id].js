@@ -8,8 +8,8 @@
  * tasks, promemoria, activities, planner...), this endpoint returns only the
  * three numbers the watch tile needs:
  *   - media generale (computed server-side, same logic as ui.js:calcolaMedia)
- *   - assenze (ore totali, giorni, ritardi, uscite)
- *   - prossima verifica (the single soonest upcoming test)
+ *   - assenze (ore totali, giorni, ritardi, uscite + percentuale su monte ore annuo)
+ *   - prossima verifica (from manual_verifiche only — Argo text-scraping is unreliable)
  *
  * Auth model is identical to every other per-user endpoint in this repo:
  * X-Session-Token header, verified via verifySessionToken() against the
@@ -21,15 +21,20 @@
 
 const {
     handleCors, verifySessionToken, normalizeUserIdParam, createHeaders,
-    decryptArgoPassword, debugLog
+    decryptArgoPassword, debugLog, generatePid
 } = require('../../lib/helpers');
 const { getSupabase } = require('../../lib/supabase');
 const {
     AdvancedArgo, getDashboard,
-    extractGradesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
+    extractGradesFromDashboard, extractAssenzeFromDashboard
 } = require('../../lib/argo');
 
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h — same conservative TTL as cron-sync.js
+
+// Total curricular hours for the school year (~5h/day × ~200 school days, but the
+// user's actual schedule totals approximately 250 hours).  This constant is used to
+// compute the absence percentage shown on the watch tile.
+const ORE_ANNO_SCOLASTICO = 250;
 
 // Mirrors ui.js:calcolaMedia() exactly — simple arithmetic mean of numeric grades.
 function calcolaMedia(voti) {
@@ -41,14 +46,26 @@ function calcolaMedia(voti) {
     return validi.reduce((a, b) => a + b, 0) / validi.length;
 }
 
-// Picks the single soonest upcoming verifica (today or later), with how many
-// days remain — exactly the "254 gg" style figure shown in the Overview widget.
-function pickNextVerifica(verifiche) {
+/**
+ * Picks the single soonest upcoming verifica from manual_verifiche (the user-
+ * created entries stored in Supabase, same source the phone app uses).
+ *
+ * We intentionally do NOT use extractVerificheFromDashboard() because its
+ * parseDateFromText() heuristic pushes past dates into the next year, which
+ * generates phantom tests 200+ days in the future when no real test exists.
+ */
+function pickNextVerifica(manualVerifiche) {
     const todayMidnight = new Date();
     todayMidnight.setHours(0, 0, 0, 0);
 
-    const upcoming = (verifiche || [])
-        .map(v => ({ ...v, _d: new Date(v.data) }))
+    const upcoming = (manualVerifiche || [])
+        .filter(v => !v.done) // skip completed entries
+        .map(v => {
+            // manual_verifiche table uses `date` (not `data`) and `subject` (not `materia`)
+            const dateStr = v.date || v.data || '';
+            const d = new Date(dateStr);
+            return { ...v, _d: d, _dateStr: dateStr };
+        })
         .filter(v => !isNaN(v._d.getTime()) && v._d >= todayMidnight)
         .sort((a, b) => a._d - b._d);
 
@@ -58,10 +75,10 @@ function pickNextVerifica(verifiche) {
     const giorniMancanti = Math.round((next._d - todayMidnight) / 86400000);
 
     return {
-        materia: next.materia || '',
-        descrizione: next.text || '',
-        tipo: next.tipo || 'unknown',
-        data: next.data,
+        materia: next.subject || next.materia || '',
+        descrizione: next.args || next.text || '',
+        tipo: next.type || next.tipo || 'unknown',
+        data: next._dateStr,
         giorniMancanti
     };
 }
@@ -145,12 +162,38 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // ── Extract grades & absences from Argo dashboard ──
         const grades = extractGradesFromDashboard(dashboardData);
         const assenze = extractAssenzeFromDashboard(dashboardData);
-        const verifiche = extractVerificheFromDashboard(dashboardData);
 
         const media = calcolaMedia(grades);
-        const prossimaVerifica = pickNextVerifica(verifiche);
+
+        // ── Compute composite absence hours ──
+        // The raw oreAssenzaTotali already includes full-day absences, ritardi, and uscite
+        // (computed by extractAssenzeFromDashboard with assembly-day modifiers).
+        // We add the percentage against the total yearly hours so the watch can display it.
+        const oreAssenzaTotali = typeof assenze.oreAssenzaTotali === 'number' ? assenze.oreAssenzaTotali : 0;
+        const percentualeAssenze = Math.round((oreAssenzaTotali / ORE_ANNO_SCOLASTICO) * 1000) / 10; // one decimal
+
+        // ── Fetch manual verifiche from Supabase (same source as the phone) ──
+        const pid = generatePid(
+            user.argo_school_code,
+            user.argo_username,
+            Number.isInteger(user.profile_index) ? user.profile_index : 0
+        );
+
+        let manualVerifiche = [];
+        try {
+            const { data: mv, error: mvError } = await supabase
+                .from('manual_verifiche')
+                .select('*')
+                .eq('user_id', pid);
+            if (!mvError && mv) manualVerifiche = mv;
+        } catch (e) {
+            debugLog('[Watch] manual_verifiche fetch failed', e.message);
+        }
+
+        const prossimaVerifica = pickNextVerifica(manualVerifiche);
 
         // Best-effort: keep last_argo_sync fresh so the phone's "connection status" stays accurate too
         try {
@@ -164,14 +207,16 @@ module.exports = async function handler(req, res) {
                 media: media !== null ? Math.round(media * 100) / 100 : null,
                 gradesCount: grades.length,
                 assenze: {
-                    oreTotali: Math.round((assenze.oreAssenzaTotali || 0) * 10) / 10,
+                    oreTotali: Math.round(oreAssenzaTotali * 10) / 10,
+                    percentuale: percentualeAssenze,
+                    oreAnnoScolastico: ORE_ANNO_SCOLASTICO,
                     giorni: assenze.totaleAssenze || 0,
                     ritardi: assenze.totaleRitardi || 0,
                     uscite: assenze.totaleUscite || 0,
                     daGiustificare: assenze.daGiustificare || 0
                 },
                 prossimaVerifica,
-                verificheProgrammate: verifiche.length,
+                verificheProgrammate: manualVerifiche.filter(v => !v.done).length,
                 lastSync: new Date().toISOString(),
                 usedCache
             }
