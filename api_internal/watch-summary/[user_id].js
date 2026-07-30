@@ -206,6 +206,8 @@ module.exports = async function handler(req, res) {
             data: {
                 media: media !== null ? Math.round(media * 100) / 100 : null,
                 gradesCount: grades.length,
+                grades: grades,
+                voti: grades,
                 assenze: {
                     oreTotali: Math.round(oreAssenzaTotali * 10) / 10,
                     percentuale: percentualeAssenze,
