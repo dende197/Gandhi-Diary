@@ -195,6 +195,38 @@ module.exports = async function handler(req, res) {
 
         const prossimaVerifica = pickNextVerifica(manualVerifiche);
 
+        // Build listAssenze array for detailed watch screens ({ data, tipo, ore, giustificata })
+        const listAssenze = [
+            ...(assenze.assenze || []),
+            ...(assenze.ritardi || []),
+            ...(assenze.uscite || [])
+        ].map(item => ({
+            data: item.data || '',
+            tipo: item.tipo || 'assenza',
+            ore: typeof item.numOre === 'number' ? item.numOre : 1,
+            giustificata: Boolean(item.giustificata)
+        })).sort((a, b) => new Date(b.data) - new Date(a.data));
+
+        // Build allVerifiche array for detailed watch screens ({ materia, descrizione, data, giorniMancanti })
+        const todayMidnight = new Date();
+        todayMidnight.setHours(0, 0, 0, 0);
+        const allVerifiche = (manualVerifiche || [])
+            .filter(v => !v.done)
+            .map(v => {
+                const dateStr = v.date || v.data || '';
+                const d = new Date(dateStr);
+                const giorniMancanti = !isNaN(d.getTime()) ? Math.round((d - todayMidnight) / 86400000) : 0;
+                return {
+                    materia: v.subject || v.materia || '',
+                    descrizione: v.args || v.text || '',
+                    tipo: v.type || v.tipo || 'unknown',
+                    data: dateStr,
+                    giorniMancanti
+                };
+            })
+            .filter(v => v.giorniMancanti >= 0)
+            .sort((a, b) => new Date(a.data) - new Date(b.data));
+
         // Best-effort: keep last_argo_sync fresh so the phone's "connection status" stays accurate too
         try {
             await supabase.from('google_tokens').update({ last_argo_sync: new Date().toISOString() }).eq('user_id', userId);
@@ -217,7 +249,9 @@ module.exports = async function handler(req, res) {
                     uscite: assenze.totaleUscite || 0,
                     daGiustificare: assenze.daGiustificare || 0
                 },
+                listAssenze,
                 prossimaVerifica,
+                allVerifiche,
                 verificheProgrammate: manualVerifiche.filter(v => !v.done).length,
                 lastSync: new Date().toISOString(),
                 usedCache
