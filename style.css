@@ -833,9 +833,8 @@ body {
    (#1e3a8a / #16213e), so the ambient glow and the widgets read
    as one family instead of two different blues fighting. */
 body {
-  background-image:
-    radial-gradient(135% 105% at 18% -12%, rgba(30, 58, 138, 0.30) 0%, rgba(30, 58, 138, 0.11) 45%, rgba(30, 58, 138, 0) 100%),
-    radial-gradient(125% 100% at 100% 108%, rgba(22, 33, 62, 0.55) 0%, rgba(22, 33, 62, 0.20) 45%, rgba(22, 33, 62, 0) 100%) !important;
+  background-color: #0b1326 !important;
+  background-image: none !important;
 }
 
 /* ================================================================
@@ -896,9 +895,8 @@ body {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
 }
 
-/* Dark mode premium widget cards override */
-.card-media-premium {
-  background: linear-gradient(135deg, #0c0f17 0%, #1e3a8a 100%) !important;
+.card-media-premium, #home-media-widget {
+  background: linear-gradient(135deg, #3f4f7e 0%, #161f35 100%) !important;
   border: none !important;
   box-shadow: none !important;
 }

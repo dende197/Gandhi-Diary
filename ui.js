@@ -1982,7 +1982,7 @@ function renderHome() {
 
     // 7. Ritorno dell'HTML strutturale della Dashboard (Screenshot High Fidelity)
     return `
-    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:var(--surface);">
+    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:#0b1326;">
 
         <div style="padding:0;">
 
@@ -1993,8 +1993,8 @@ function renderHome() {
             </div>
 
             <div style="margin-bottom: 20px; padding: 0 24px;">
-                <!-- WIDGET PRINCIPALE — carosello a 3 slide, identico al mockup HTML (swipe touch/mouse + drag) -->
-                <div id="home-media-widget" style="background:linear-gradient(150deg, #1d2c4e 0%, #131e36 60%, #0d1527 100%);box-shadow:0 20px 40px -10px rgba(0,0,0,0.7), inset 0 1px 1px 0 rgba(255,255,255,0.12), inset 0 -1px 2px 0 rgba(0,0,0,0.5);border-radius:30px;border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;user-select:none;cursor:grab;">
+                <!-- WIDGET PRINCIPALE — carosello a 3 slide (gradiente #3f4f7e -> #161f35, no ombra, no bordo) -->
+                <div id="home-media-widget" style="background:linear-gradient(135deg, #3f4f7e 0%, #161f35 100%);box-shadow:none;border-radius:30px;border:none;position:relative;overflow:hidden;user-select:none;cursor:grab;">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.38s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
                         <!-- SLIDE 1: MEDIA GENERALE -->
