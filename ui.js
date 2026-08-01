@@ -1835,7 +1835,7 @@ function renderHome() {
 
     // 7. Ritorno dell'HTML strutturale della Dashboard (Screenshot High Fidelity)
     return `
-    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:#080d1a;">
+    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:var(--surface);">
 
         <div style="padding:0;">
 
@@ -1848,36 +1848,36 @@ function renderHome() {
             <div style="margin-bottom: 20px;">
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
-                    <!-- WIDGET 1: MEDIA GENERALE (PROPRIO COME NELLA FOTO) -->
+                    <!-- WIDGET 1: MEDIA GENERALE (fedele alla foto) -->
                     <div class="widget-card">
-                        <div class="card-media-premium rounded-[36px] p-6 w-full flex flex-col justify-between" style="height:240px;background:linear-gradient(140deg, #1c2b5e 0%, #152247 45%, #101936 80%, #0d142b 100%);border:1px solid rgba(255,255,255,0.12);box-shadow:0 20px 50px -15px rgba(0,0,0,0.6);position:relative;overflow:hidden;border-radius:36px;">
+                        <div class="card-media-premium glass-hero rounded-[32px] p-6 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(47,88,205,0.45) 0%, var(--surface-container) 100%);position:relative;overflow:hidden;">
                             <div style="position:relative;z-index:1;display:flex;flex-direction:column;">
-                                <h2 style="color:#ffffff;font-weight:600;font-size:1.35rem;line-height:1.2;letter-spacing:-0.01em;margin:0 0 2px;">Buongiorno, ${getSafeUserName()}</h2>
-                                <p style="color:rgba(255,255,255,0.45);font-size:14px;font-weight:400;margin:0;">Media generale attiva</p>
+                                <h2 style="color:#ffffff;font-weight:600;font-size:1.25rem;line-height:1.2;letter-spacing:-0.01em;margin:0 0 2px;">Buongiorno, ${getSafeUserName()}</h2>
+                                <p style="color:rgba(255,255,255,0.5);font-size:14px;font-weight:400;margin:0;">Media generale attiva</p>
                             </div>
 
-                            <div style="position:relative;z-index:1;margin-top:2px;display:flex;align-items:center;gap:12px;">
-                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3.2rem;font-weight:700;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                <span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:13px;font-weight:600;color:#34d399;background:rgba(16,185,129,0.22);border:1px solid rgba(52,211,153,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">+0.15</span>
+                            <div style="position:relative;z-index:1;margin-top:2px;display:flex;align-items:center;gap:10px;">
+                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3rem;font-weight:800;letter-spacing:-0.03em;color:#ffffff;line-height:1;filter:drop-shadow(0 0 20px rgba(255,255,255,0.15));">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                <span style="display:inline-flex;align-items:center;padding:3px 11px;border-radius:9999px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(16,185,129,0.35);border:1px solid rgba(52,211,153,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">+0.15</span>
                             </div>
 
                             <!-- ROW DI CAPSULE STORICO CON LABEL ADESSO SOPRA -->
-                            <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;height:54px;margin-top:8px;width:100%;">
-                                <div style="width:34px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;"></div>
-                                <div style="width:40px;height:12px;background:rgba(255,255,255,0.09);border-radius:999px;"></div>
-                                <div style="width:44px;height:14px;background:rgba(255,255,255,0.1);border-radius:999px;"></div>
-                                <div style="width:48px;height:20px;background:rgba(255,255,255,0.12);border-radius:999px;"></div>
-                                <div style="width:52px;height:28px;background:rgba(255,255,255,0.16);border-radius:999px;"></div>
+                            <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;height:44px;margin-top:8px;width:100%;">
+                                <div style="width:34px;height:9px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="width:40px;height:16px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="width:44px;height:12px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="width:48px;height:24px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="width:52px;height:32px;background:rgba(255,255,255,0.1);border-radius:999px;"></div>
                                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">
-                                    <span style="font-size:12px;font-weight:600;color:#ffffff;margin-bottom:6px;white-space:nowrap;letter-spacing:0.01em;">Adesso</span>
-                                    <div style="width:54px;height:46px;background:#626c7d;border-radius:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
+                                    <span style="font-size:11px;font-weight:600;color:#ffffff;margin-bottom:6px;white-space:nowrap;letter-spacing:0.01em;">Adesso</span>
+                                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.4);border:1.5px solid rgba(255,255,255,0.6);border-radius:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[36px] p-5 w-full flex flex-col justify-between" style="height:240px;background:linear-gradient(135deg, rgba(255,80,80,0.12) 0%, #101936 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;border-radius:36px;">
+                        <div class="card-assenze-premium rounded-[32px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(255,80,80,0.12) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,120,120,0.18);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                                 <div style="display:flex;justify-content:space-between;align-items:start;">
@@ -1917,7 +1917,7 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[36px] p-5 w-full flex flex-col justify-between" style="height:240px;background:linear-gradient(135deg, rgba(52,211,153,0.14) 0%, #101936 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;border-radius:36px;">
+                        <div class="card-verifiche-premium rounded-[32px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(52,211,153,0.14) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(52,211,153,0.2);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
@@ -1990,48 +1990,48 @@ function renderHome() {
                 <div style="margin-bottom:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 2px;">
                         <h3 style="font-size:22px;font-weight:600;color:#ffffff;margin:0;letter-spacing:-0.01em;">Domani</h3>
-                        <a href="#" style="color:#3b82f6;font-weight:600;font-size:14px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
+                        <a href="#" style="color:var(--primary);font-weight:600;font-size:14px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
                     </div>
                     ${htmlDomani.includes('empty-state-card') ? `
-                    <div style="background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);border:1px solid rgba(255,255,255,0.07);border-radius:32px;min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px 20px;">
-                        <p style="font-size:14px;font-style:italic;color:#64748b;margin:0;">Nessun impegno programmato per domani.</p>
+                    <div style="background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);border:1px solid rgba(255,255,255,0.07);border-radius:24px;min-height:88px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px 20px;">
+                        <p style="font-size:13px;font-style:italic;color:#64748b;margin:0;">Nessun impegno programmato per domani.</p>
                     </div>` : htmlDomani}
                 </div>
             </div>
 
-            <!-- WIDGETS NOTIFICHE & ASSENZE (PROPRIO COME NELLA FOTO) -->
-            <div style="padding:0 24px;margin-top:16px;">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <!-- WIDGETS NOTIFICHE & ASSENZE (fedeli alla foto, dimensioni compatte) -->
+            <div style="padding:0 24px;margin-top:14px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <!-- NOTIFICHE -->
                     <div onclick="openTodayNotifications()" style="
                         background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-                        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-                        border:1px solid rgba(255,255,255,0.07);
-                        border-radius:32px;padding:22px 20px;cursor:pointer;
+                        backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+                        border:1px solid rgba(255,255,255,0.08);
+                        border-radius:24px;padding:16px 18px;cursor:pointer;
                         transition:transform 0.15s ease,box-shadow 0.15s ease;
                         position:relative;overflow:hidden;
                     " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
                         <div style="position:relative;display:inline-block;">
-                            <i class="ph ph-bell" style="font-size:26px;color:rgba(255,255,255,0.75);"></i>
-                            <div style="position:absolute;top:0;right:-2px;width:8px;height:8px;background:#3b82f6;border-radius:50%;"></div>
+                            <i class="ph ph-bell" style="font-size:22px;color:rgba(255,255,255,0.7);"></i>
+                            <div style="position:absolute;top:0;right:-2px;width:7px;height:7px;background:var(--primary);border-radius:50%;"></div>
                         </div>
-                        <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:14px 0 2px;">Notifiche</h4>
-                        <p style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' nuovi messaggi' : '3 nuovi messaggi'}</p>
+                        <h4 style="font-size:15px;font-weight:600;color:#ffffff;margin:10px 0 2px;">Notifiche</h4>
+                        <p style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' nuovi messaggi' : '3 nuovi messaggi'}</p>
                     </div>
                     <!-- ASSENZE -->
                     <div onclick="navigate('assenze')" style="
                         background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-                        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-                        border:1px solid rgba(255,255,255,0.07);
-                        border-radius:32px;padding:22px 20px;cursor:pointer;
+                        backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+                        border:1px solid rgba(255,255,255,0.08);
+                        border-radius:24px;padding:16px 18px;cursor:pointer;
                         transition:transform 0.15s ease,box-shadow 0.15s ease;
                         position:relative;overflow:hidden;
                     " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
                         <div>
-                            <i class="ph ph-calendar-check" style="font-size:26px;color:rgba(255,255,255,0.75);"></i>
+                            <i class="ph ph-calendar-check" style="font-size:22px;color:rgba(255,255,255,0.7);"></i>
                         </div>
-                        <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:14px 0 2px;">Assenze</h4>
-                        <p style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeAssenzeLabel}</p>
+                        <h4 style="font-size:15px;font-weight:600;color:#ffffff;margin:10px 0 2px;">Assenze</h4>
+                        <p style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeAssenzeLabel}</p>
                     </div>
                 </div>
             </div>
