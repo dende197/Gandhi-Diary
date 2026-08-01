@@ -1632,6 +1632,101 @@ function renderLogin() {
         </div>`;
 }
 // ================================================================
+// WIDGET PRINCIPALE — carosello a 3 slide (swipe touch/mouse)
+// Logica identica al mockup widget_media_generale.html: stessa soglia
+// di trascinamento (30px), stessa curva di transizione, stessi 3 dot.
+// Ri-eseguibile ad ogni render (root.innerHTML sostituisce il DOM,
+// quindi i vecchi listener vengono scartati automaticamente insieme
+// ai vecchi nodi — nessun listener duplicato tra un render e l'altro).
+// ================================================================
+function gcInitMediaWidgetSwipe() {
+    const widget = document.getElementById('home-media-widget');
+    const track = document.getElementById('home-media-track');
+    if (!widget || !track) return;
+
+    let currentSlide = 0;
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+    const totalSlides = track.children.length;
+
+    function goToSlide(index) {
+        currentSlide = Math.max(0, Math.min(totalSlides - 1, index));
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.getElementById(`home-media-dot${i}`);
+            if (!dot) continue;
+            if (i === currentSlide) {
+                dot.style.width = '24px';
+                dot.style.background = '#ffffff';
+            } else {
+                dot.style.width = '6px';
+                dot.style.background = 'rgba(255,255,255,0.3)';
+            }
+        }
+    }
+
+    function handleSwipe() {
+        const diffX = startX - currentX;
+        if (Math.abs(diffX) > 30 && currentX !== 0) {
+            if (diffX > 0 && currentSlide < totalSlides - 1) {
+                goToSlide(currentSlide + 1);
+            } else if (diffX < 0 && currentSlide > 0) {
+                goToSlide(currentSlide - 1);
+            }
+        }
+        startX = 0;
+        currentX = 0;
+    }
+
+    widget.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+    }, { passive: true });
+
+    widget.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        currentX = e.touches[0].clientX;
+    }, { passive: true });
+
+    widget.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        handleSwipe();
+    });
+
+    widget.addEventListener('mousedown', (e) => {
+        startX = e.clientX;
+        isDragging = true;
+    });
+
+    widget.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        currentX = e.clientX;
+    });
+
+    widget.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        handleSwipe();
+    });
+
+    widget.addEventListener('mouseleave', () => {
+        if (isDragging) {
+            isDragging = false;
+            handleSwipe();
+        }
+    });
+
+    // Espone l'istanza corrente ai pulsanti-dot (onclick="gcMediaGoToSlide(n)"
+    // nel markup), che restano semplici attributi HTML come nel resto dell'app.
+    window._gcMediaGoToSlideImpl = goToSlide;
+}
+window.gcMediaGoToSlide = function (index) {
+    if (typeof window._gcMediaGoToSlideImpl === 'function') window._gcMediaGoToSlideImpl(index);
+};
+
+// ================================================================
 // G-CONNECT — renderHome() PATCH v7
 // ================================================================
 // Multi-widget dashboard with swipeable interface
@@ -1811,6 +1906,7 @@ function renderHome() {
 
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
+    setTimeout(() => { if (typeof gcInitMediaWidgetSwipe === 'function') gcInitMediaWidgetSwipe(); }, 80);
 
     // Avatar utente — screenshot style
     const userPhoto = state.userPhoto || '';
@@ -1843,6 +1939,47 @@ function renderHome() {
         ? `${assenzeGiorni}g, ${ritardiTotali}r, ${usciteTotali}u`
         : 'Nessuna recente';
 
+    // 6c. Dati reali per lo SLIDE 2 del widget principale (Dettaglio Voti)
+    const _votiValidi = getVotiData()
+        .map(v => ({ val: getNumericGradeValue(v), materia: v.materia || v.subject || '', date: getVoteDate(v) }))
+        .filter(v => v.val !== null);
+    let _votoAlto = null, _votoAltoSubj = '', _ultimoVoto = null, _ultimoVotoSubj = '', _trendPct = null;
+    if (_votiValidi.length > 0) {
+        const maxEntry = _votiValidi.reduce((a, b) => (b.val > a.val ? b : a));
+        _votoAlto = maxEntry.val; _votoAltoSubj = getSubjectAbbrev(maxEntry.materia);
+        const withDate = _votiValidi.filter(v => v.date instanceof Date && !isNaN(v.date));
+        const sortedByDate = withDate.length > 0 ? [...withDate].sort((a, b) => b.date - a.date) : null;
+        const lastEntry = sortedByDate ? sortedByDate[0] : _votiValidi[_votiValidi.length - 1];
+        _ultimoVoto = lastEntry.val; _ultimoVotoSubj = getSubjectAbbrev(lastEntry.materia);
+        // Trend: media delle ultime 3 valutazioni (per data, se disponibile) vs media delle precedenti
+        const ordered = sortedByDate || _votiValidi;
+        if (ordered.length >= 4) {
+            const recent = ordered.slice(0, 3);
+            const older = ordered.slice(3);
+            const avg = arr => arr.reduce((s, v) => s + v.val, 0) / arr.length;
+            const recentAvg = avg(recent), olderAvg = avg(older);
+            if (olderAvg > 0) _trendPct = ((recentAvg - olderAvg) / olderAvg) * 100;
+        }
+    }
+    const _votiTotali = _votiValidi.length;
+
+    // 6d. SLIDE 3 (Obiettivo Media) — euristica: nessun obiettivo è ancora
+    // salvato da nessuna parte (né in Supabase né in state), quindi qui
+    // calcolo solo un target "suggerito" (prossimo mezzo punto sopra la
+    // media attuale) e quanti voti ipotetici da +0.5 servirebbero per
+    // arrivarci. Non è un vero obiettivo impostato dall'utente.
+    const _obiettivoTarget = isInitialLoad ? 8.00 : Math.min(10, Math.ceil(media * 2) / 2 + 0.5);
+    const _obiettivoVotoIpotetico = Math.min(10, _obiettivoTarget + 0.5);
+    const _obiettivoVotiCount = _votiValidi.length;
+    const _obiettivoSommaAttuale = _votiValidi.reduce((s, v) => s + v.val, 0);
+    let _obiettivoMancanti = 0;
+    if (_obiettivoVotoIpotetico > _obiettivoTarget && _obiettivoVotiCount > 0) {
+        _obiettivoMancanti = Math.max(0, Math.ceil(
+            (_obiettivoTarget * _obiettivoVotiCount - _obiettivoSommaAttuale) / (_obiettivoVotoIpotetico - _obiettivoTarget)
+        ));
+    }
+    const _obiettivoProgress = media > 0 ? Math.min(100, Math.round((media / _obiettivoTarget) * 100)) : 0;
+
     // 7. Ritorno dell'HTML strutturale della Dashboard (Screenshot High Fidelity)
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:var(--surface);">
@@ -1856,48 +1993,98 @@ function renderHome() {
             </div>
 
             <div style="margin-bottom: 20px; padding: 0 24px;">
-                <!-- WIDGET PRINCIPALE — Media Generale, identico al mockup HTML incollato -->
-                <div style="background:linear-gradient(150deg, #1d2c4e 0%, #131e36 60%, #0d1527 100%);box-shadow:0 20px 40px -10px rgba(0,0,0,0.7), inset 0 1px 1px 0 rgba(255,255,255,0.12), inset 0 -1px 2px 0 rgba(0,0,0,0.5);border-radius:30px;border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
-                    <div style="padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
+                <!-- WIDGET PRINCIPALE — carosello a 3 slide, identico al mockup HTML (swipe touch/mouse + drag) -->
+                <div id="home-media-widget" style="background:linear-gradient(150deg, #1d2c4e 0%, #131e36 60%, #0d1527 100%);box-shadow:0 20px 40px -10px rgba(0,0,0,0.7), inset 0 1px 1px 0 rgba(255,255,255,0.12), inset 0 -1px 2px 0 rgba(0,0,0,0.5);border-radius:30px;border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;user-select:none;cursor:grab;">
+                    <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.38s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
-                        <!-- Saluto + sottotitolo -->
-                        <div>
-                            <h2 style="font-size:21px;font-weight:700;color:#ffffff;letter-spacing:-0.025em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
-                            <p style="font-size:13px;font-weight:500;color:#7182a3;margin:2px 0 0;">Media generale attiva</p>
+                        <!-- SLIDE 1: MEDIA GENERALE -->
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div>
+                                <h2 style="font-size:21px;font-weight:700;color:#ffffff;letter-spacing:-0.025em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
+                                <p style="font-size:13px;font-weight:500;color:#7182a3;margin:2px 0 0;">Media generale attiva</p>
+                            </div>
+                            <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;background:#133d32;color:#29d68f;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(27,87,70,0.5);">+0.15</span>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span style="font-size:12px;font-weight:600;color:#7182a3;letter-spacing:0.025em;">Adesso</span>
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:46px;width:100%;padding-top:4px;">
+                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:6px;background:#1d2b45;border-radius:9999px;opacity:0.8;"></div></div>
+                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:9px;background:#223352;border-radius:9999px;opacity:0.9;"></div></div>
+                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:13px;background:#283b5e;border-radius:9999px;"></div></div>
+                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:19px;background:#2f466f;border-radius:12px;"></div></div>
+                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:28px;background:#395688;border-radius:12px;"></div></div>
+                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:44px;background:#7e90af;border-radius:13px;box-shadow:0 4px 14px rgba(126,145,178,0.25);"></div></div>
+                            </div>
                         </div>
 
-                        <!-- Voto + badge a sinistra, "Adesso" a destra -->
-                        <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                <span style="display:inline-flex;align-items:center;justify-content:center;background:#133d32;color:#29d68f;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(27,87,70,0.5);">+0.15</span>
+                        <!-- SLIDE 2: DETTAGLIO VOTI (dati reali da state.voti) -->
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:8px;">
+                                <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#38bdf8;">Dettaglio Voti</span>
+                                <span style="font-size:12px;font-weight:500;color:#7182a3;">${typeof currentTerm !== 'undefined' && currentTerm === 'second' ? '2° Quadrimestre' : '1° Quadrimestre'}</span>
                             </div>
-                            <div style="text-align:right;">
-                                <span style="font-size:12px;font-weight:600;color:#7182a3;letter-spacing:0.025em;">Adesso</span>
+                            ${_votiTotali > 0 ? `
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:auto 0;">
+                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
+                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Voto più alto</span>
+                                    <span style="font-size:16px;font-weight:700;color:#34d399;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:400;color:#cbd5e1;">${_votoAltoSubj}</span></span>
+                                </div>
+                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
+                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Voti Totali</span>
+                                    <span style="font-size:16px;font-weight:700;color:#ffffff;">${_votiTotali} <span style="font-size:10px;font-weight:400;color:#cbd5e1;">valut.</span></span>
+                                </div>
+                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
+                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Ultimo Voto</span>
+                                    <span style="font-size:16px;font-weight:700;color:#38bdf8;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:400;color:#cbd5e1;">${_ultimoVotoSubj}</span></span>
+                                </div>
+                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
+                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Trend</span>
+                                    <span style="font-size:16px;font-weight:700;color:${_trendPct === null ? '#7182a3' : (_trendPct >= 0 ? '#34d399' : '#f87171')};display:flex;align-items:center;gap:4px;">
+                                        ${_trendPct === null ? '—' : `${_trendPct >= 0 ? '↑' : '↓'} ${Math.abs(_trendPct).toFixed(1)}%`}
+                                    </span>
+                                </div>
+                            </div>
+                            ` : `
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
+                                <p style="font-size:13px;font-weight:600;color:#7182a3;margin:0;">Ancora nessun voto</p>
+                            </div>
+                            `}
+                        </div>
+
+                        <!-- SLIDE 3: OBIETTIVO MEDIA (target suggerito — nessun obiettivo salvato dall'utente ancora) -->
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:8px;">
+                                <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#fbbf24;">Obiettivo Anno</span>
+                                <i class="ph ph-target" style="font-size:14px;color:#fbbf24;"></i>
+                            </div>
+                            <div style="margin:auto 0;display:flex;flex-direction:column;gap:10px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+                                    <span style="color:#cbd5e1;font-weight:500;">Target suggerito:</span>
+                                    <span style="font-size:16px;font-weight:700;color:#fbbf24;">${_obiettivoTarget.toFixed(2)}</span>
+                                </div>
+                                <div style="width:100%;background:#0a0e1c;height:10px;border-radius:9999px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);padding:2px;">
+                                    <div style="background:#fbbf24;height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.5s ease-out;"></div>
+                                </div>
+                                <p style="font-size:11px;line-height:1.5;color:#cbd5e1;background:rgba(17,25,43,0.9);padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin:0;">
+                                    ${_obiettivoMancanti > 0
+                                        ? `💡 Mancano circa <strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> per raggiungere il target di ${_obiettivoTarget.toFixed(2)}.`
+                                        : `🎉 Hai già raggiunto il target suggerito di ${_obiettivoTarget.toFixed(2)}!`}
+                                </p>
                             </div>
                         </div>
 
-                        <!-- 6 barre progressive -->
-                        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:46px;width:100%;padding-top:4px;">
-                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
-                                <div style="width:100%;height:6px;background:#1d2b45;border-radius:9999px;opacity:0.8;"></div>
-                            </div>
-                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
-                                <div style="width:100%;height:9px;background:#223352;border-radius:9999px;opacity:0.9;"></div>
-                            </div>
-                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
-                                <div style="width:100%;height:13px;background:#283b5e;border-radius:9999px;"></div>
-                            </div>
-                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
-                                <div style="width:100%;height:19px;background:#2f466f;border-radius:12px;"></div>
-                            </div>
-                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
-                                <div style="width:100%;height:28px;background:#395688;border-radius:12px;"></div>
-                            </div>
-                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
-                                <div style="width:100%;height:44px;background:#7e90af;border-radius:13px;box-shadow:0 4px 14px rgba(126,145,178,0.25);"></div>
-                            </div>
-                        </div>
+                    </div>
+
+                    <!-- Indicatori pagina -->
+                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:2px 0 14px;">
+                        <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:4px;width:24px;background:#ffffff;border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
+                        <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:4px;width:6px;background:rgba(255,255,255,0.3);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
+                        <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:4px;width:6px;background:rgba(255,255,255,0.3);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
                     </div>
                 </div>
             </div>
