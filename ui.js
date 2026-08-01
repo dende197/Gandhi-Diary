@@ -1812,16 +1812,39 @@ function renderHome() {
         : `<div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(0,81,197,0.18);" onclick="navigate('profile')">
             <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary);font-variation-settings:'FILL' 1;">person</span>
            </div>`;
+    // 6a. Conteggio novità giornaliere per widget Notifiche
+    const _todayTasks = (state.tasks || []).filter(t => t.due_date === todayISO && t.subject !== 'QUEST');
+    const _todayVoti  = getVotiData().filter(v => {
+        const raw = v.data || v.date || '';
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
+        return d && !isNaN(d) && getLocalDateString(d) === todayISO;
+    });
+    const _todayVerifiche = (state.verifiche || []).filter(v => v.data === todayISO);
+    const _todayPromemoria = (state.promemoria || state.announcements || []).filter(p => {
+        const raw = p.data || p.date || p.datePubbl || '';
+        const d = new Date(raw);
+        return d && !isNaN(d) && getLocalDateString(d) === todayISO;
+    });
+    const _todayClassAct = (Array.isArray(state.classActivities) ? state.classActivities : []).filter(a => {
+        const d = (typeof getActivityDateObject === 'function') ? getActivityDateObject(a) : null;
+        return d && getLocalDateString(d) === todayISO;
+    });
+    const _homeNotifCount = _todayTasks.length + _todayVoti.length + _todayVerifiche.length + _todayPromemoria.length + _todayClassAct.length;
 
-    // 6. Ritorno dell'HTML strutturale della Dashboard
+    // 6b. Label assenze per widget Assenze
+    const _homeAssenzeLabel = (assenzeGiorni + ritardiTotali + usciteTotali) > 0
+        ? `${assenzeGiorni}g, ${ritardiTotali}r, ${usciteTotali}u`
+        : 'Nessuna recente';
+
+    // 7. Ritorno dell'HTML strutturale della Dashboard
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[var(--on-surface)] antialiased overflow-y-auto hide-scrollbar">
 
         <div style="padding:0;">
 
-            <!-- HEADER: GANDHI DIARY + Avatar -->
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:0 24px 16px;">
-                <h1 style="font-size:13px;font-weight:800;letter-spacing:0.12em;color:var(--outline);text-transform:uppercase;margin:0;">GANDHI DIARY</h1>
+            <!-- HEADER: Overview + Avatar -->
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0 24px 20px;">
+                <h1 style="font-size:28px;font-weight:800;color:var(--on-surface);letter-spacing:-0.02em;margin:0;line-height:1;">Overview</h1>
                 ${avatarHtml}
             </div>
 
@@ -1966,9 +1989,46 @@ function renderHome() {
                 <div style="margin-bottom:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
                         <h3 style="font-size:1.35rem;font-weight:700;color:var(--on-surface);margin:0;">Domani</h3>
-                        <a href="#" style="color:var(--primary);font-weight:500;font-size:13px;text-decoration:none;" onclick="navigate('planner')">See all</a>
+                        <a href="#" style="color:var(--primary);font-weight:600;font-size:13px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
                     </div>
                     ${htmlDomani}
+                </div>
+            </div>
+
+            <!-- ── WIDGET NOTIFICHE + ASSENZE (griglia 2 colonne) ──────── -->
+            <div style="padding:0 24px;margin-top:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <!-- NOTIFICHE -->
+                    <div onclick="openTodayNotifications()" style="
+                        background:linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+                        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+                        border:1px solid rgba(255,255,255,0.1);
+                        border-radius:24px;padding:20px 16px;cursor:pointer;
+                        transition:transform 0.15s ease,box-shadow 0.15s ease;
+                        position:relative;overflow:hidden;
+                    " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
+                        <div style="position:relative;margin-bottom:14px;">
+                            <span class="material-symbols-outlined" style="font-size:28px;color:var(--on-surface-variant);">notifications</span>
+                            ${_homeNotifCount > 0 ? '<div style="position:absolute;top:-2px;left:22px;width:10px;height:10px;background:#3b82f6;border-radius:50%;border:2px solid var(--surface);"></div>' : ''}
+                        </div>
+                        <h4 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 4px;">Notifiche</h4>
+                        <p style="font-size:12px;color:var(--on-surface-variant);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' nuovi messaggi' : 'Tutto letto'}</p>
+                    </div>
+                    <!-- ASSENZE -->
+                    <div onclick="navigate('assenze')" style="
+                        background:linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+                        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+                        border:1px solid rgba(255,255,255,0.1);
+                        border-radius:24px;padding:20px 16px;cursor:pointer;
+                        transition:transform 0.15s ease,box-shadow 0.15s ease;
+                        position:relative;overflow:hidden;
+                    " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
+                        <div style="margin-bottom:14px;">
+                            <span class="material-symbols-outlined" style="font-size:28px;color:var(--on-surface-variant);">event_busy</span>
+                        </div>
+                        <h4 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 4px;">Assenze</h4>
+                        <p style="font-size:12px;color:var(--on-surface-variant);margin:0;">${_homeAssenzeLabel}</p>
+                    </div>
                 </div>
             </div>
 
@@ -1976,6 +2036,168 @@ function renderHome() {
     </main>
     `;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// openTodayNotifications() — Panel modale con riepilogo giornata
+// ═══════════════════════════════════════════════════════════════
+function openTodayNotifications() {
+    const today = new Date();
+    const todayISO = getLocalDateString(today);
+    const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const dayLabel = `${today.getDate()} ${MN[today.getMonth()]} ${today.getFullYear()}`;
+
+    // Collect today's data from all sources
+    const todayTasks = (state.tasks || []).filter(t => t.due_date === todayISO && t.subject !== 'QUEST');
+    const todayVoti = getVotiData().filter(v => {
+        const raw = v.data || v.date || '';
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
+        return d && !isNaN(d) && getLocalDateString(d) === todayISO;
+    });
+    const todayVerifiche = (state.verifiche || []).filter(v => v.data === todayISO);
+    const todayPromemoria = (state.promemoria || state.announcements || []).filter(p => {
+        const raw = p.data || p.date || p.datePubbl || '';
+        const d = new Date(raw);
+        return d && !isNaN(d) && getLocalDateString(d) === todayISO;
+    });
+    const todayClassAct = (Array.isArray(state.classActivities) ? state.classActivities : []).filter(a => {
+        const d = (typeof getActivityDateObject === 'function') ? getActivityDateObject(a) : null;
+        return d && getLocalDateString(d) === todayISO;
+    });
+
+    const totalItems = todayTasks.length + todayVoti.length + todayVerifiche.length + todayPromemoria.length + todayClassAct.length;
+
+    // Build sections HTML
+    function sectionBlock(icon, title, items) {
+        if (!items.length) return '';
+        return `
+        <div style="margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary);">${icon}</span>
+                <h3 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">${title}</h3>
+                <span style="background:var(--primary);color:var(--on-primary);font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">${items.length}</span>
+            </div>
+            ${items.join('')}
+        </div>`;
+    }
+
+    const votiItems = todayVoti.map(v => {
+        const val = v.valore || v.voto || v.value || '';
+        const subj = escapeHtml(v.materia || v.subject || 'Materia');
+        const tipo = v.tipo || v.type || '';
+        return `<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="min-width:0;flex:1;">
+                <div style="font-size:14px;font-weight:600;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subj}</div>
+                ${tipo ? `<div style="font-size:11px;color:var(--outline);margin-top:2px;">${escapeHtml(tipo)}</div>` : ''}
+            </div>
+            <span style="font-size:22px;font-weight:800;color:var(--primary);flex-shrink:0;margin-left:12px;">${escapeHtml(String(val))}</span>
+        </div>`;
+    });
+
+    const verificheItems = todayVerifiche.map(v => {
+        const subj = escapeHtml(v.materia || v.subject || '');
+        const txt = escapeHtml(v.text || v.descrizione || 'Verifica');
+        return `<div style="background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.15);border-radius:16px;padding:14px 16px;margin-bottom:8px;">
+            <div style="font-size:14px;font-weight:600;color:var(--error);">${subj}</div>
+            <div style="font-size:12px;color:var(--on-surface-variant);margin-top:4px;">${txt}</div>
+        </div>`;
+    });
+
+    const taskItems = todayTasks.map(t => {
+        const subj = escapeHtml(t.subject || t.materia || '');
+        const txt = escapeHtml(t.text || '');
+        const doneStyle = t.done ? 'opacity:0.5;text-decoration:line-through;' : '';
+        return `<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 16px;margin-bottom:8px;${doneStyle}">
+            <div style="font-size:14px;font-weight:600;color:var(--on-surface);">${subj}</div>
+            ${txt ? `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:4px;">${txt}</div>` : ''}
+        </div>`;
+    });
+
+    const classActItems = todayClassAct.map(a => {
+        const subj = escapeHtml(a.materia || a.subject || '');
+        const desc = escapeHtml(a.argomento || a.attivita || a.description || '');
+        return `<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 16px;margin-bottom:8px;">
+            <div style="font-size:14px;font-weight:600;color:var(--on-surface);">${subj}</div>
+            ${desc ? `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:4px;">${desc}</div>` : ''}
+        </div>`;
+    });
+
+    const promemoriaItems = todayPromemoria.map(p => {
+        const txt = escapeHtml(p.testo || p.text || p.oggetto || p.title || '');
+        return `<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 16px;margin-bottom:8px;">
+            <div style="font-size:13px;color:var(--on-surface);">${txt}</div>
+        </div>`;
+    });
+
+    const sectionsHtml =
+        sectionBlock('grade', 'Nuovi Voti', votiItems) +
+        sectionBlock('warning', 'Verifiche Oggi', verificheItems) +
+        sectionBlock('assignment', 'Compiti', taskItems) +
+        sectionBlock('school', 'Lezioni e Argomenti', classActItems) +
+        sectionBlock('campaign', 'Comunicazioni', promemoriaItems);
+
+    const emptyHtml = totalItems === 0 ? `
+        <div style="text-align:center;padding:48px 16px;">
+            <span class="material-symbols-outlined" style="font-size:48px;color:var(--outline);opacity:0.4;margin-bottom:12px;display:block;">notifications_off</span>
+            <p style="font-size:15px;font-weight:600;color:var(--on-surface-variant);">Nessuna novità oggi</p>
+            <p style="font-size:13px;color:var(--outline);margin-top:4px;">Niente nuovi voti, compiti o comunicazioni.</p>
+        </div>` : '';
+
+    const modals = document.getElementById('modals');
+    if (!modals) return;
+
+    modals.innerHTML = `
+    <div id="today-notif-overlay" style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeTodayNotifications()">
+        <div style="
+            width:100%;max-width:480px;max-height:85vh;
+            background:var(--surface-container);
+            border-radius:28px 28px 0 0;
+            border-top:1px solid rgba(255,255,255,0.12);
+            overflow-y:auto;
+            animation:notifSlideUp 0.3s cubic-bezier(0.32,0.72,0,1);
+        ">
+            <!-- Handle bar -->
+            <div style="display:flex;justify-content:center;padding:12px 0 0;">
+                <div style="width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:999px;"></div>
+            </div>
+            <!-- Header -->
+            <div style="padding:20px 24px 16px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <h2 style="font-size:22px;font-weight:800;color:var(--on-surface);margin:0;letter-spacing:-0.02em;">Novità di Oggi</h2>
+                    <p style="font-size:13px;color:var(--outline);margin:4px 0 0;">${dayLabel}</p>
+                </div>
+                <button onclick="closeTodayNotifications()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface);">close</span>
+                </button>
+            </div>
+            <!-- Content -->
+            <div style="padding:0 24px 32px;">
+                ${sectionsHtml}
+                ${emptyHtml}
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes notifSlideUp {
+            from { transform: translateY(100%); opacity: 0.5; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+    </style>`;
+}
+window.openTodayNotifications = openTodayNotifications;
+
+function closeTodayNotifications() {
+    const overlay = document.getElementById('today-notif-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.2s ease-out';
+        setTimeout(() => {
+            const modals = document.getElementById('modals');
+            if (modals) modals.innerHTML = '';
+        }, 200);
+    }
+}
+window.closeTodayNotifications = closeTodayNotifications;
 
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
