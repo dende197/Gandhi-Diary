@@ -321,16 +321,25 @@
     }
 
     // Carousel widgets
-    const widgets = viewEl.querySelectorAll('.widget-card, #home-media-widget, .card-media-premium');
+    const widgets = viewEl.querySelectorAll('.widget-card');
     if (widgets.length) {
       gsap.killTweensOf(widgets);
       gsap.fromTo(widgets,
         { opacity: 0, y: 22, scale: 0.96 },
         { opacity: 1, y: 0, scale: 1, duration: 0.48, stagger: 0.08, ease: easeB, delay: 0.08, clearProps: 'transform,opacity' }
       );
+    }
 
-      // Widget 1 (Media): .card-media-premium / #home-media-widget
-      const mediaVal = viewEl.querySelector('#home-media-widget .card-media-val, #home-media-widget span[style*="font-size:52px"], .card-media-premium span[style*="font-size:3.2rem"]');
+    // Hero Media Widget
+    const heroWidget = viewEl.querySelector('#home-media-widget');
+    if (heroWidget) {
+      gsap.killTweensOf(heroWidget);
+      gsap.fromTo(heroWidget,
+        { opacity: 0, y: 22, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.48, ease: easeB, delay: 0.04, clearProps: 'transform,opacity' }
+      );
+
+      const mediaVal = heroWidget.querySelector('.card-media-val, span[style*="font-size:52px"], span[style*="font-size:48px"]');
       if (mediaVal && !mediaVal.classList.contains('skeleton')) {
         const num = parseFloat(mediaVal.textContent.trim());
         if (!isNaN(num) && num > 0) {

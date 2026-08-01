@@ -727,15 +727,6 @@ div[style*="background: #FFFFFF"] {
    further down, as a solid navy gradient matching the hero card. */
 
 /* Also customize content within the cards for Dark Mode */
-.card-media-premium h2,
-.card-media-premium span,
-.card-media-premium p {
-    color: #adc6ff !important;
-}
-.card-media-premium div[style*="background:#EFF6FF"] {
-    background: rgba(173, 198, 255, 0.15) !important;
-    color: #adc6ff !important;
-}
 
 .card-assenze-premium h2,
 .card-assenze-premium span,
@@ -895,11 +886,20 @@ body {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
 }
 
-.card-media-premium, #home-media-widget {
-  background: linear-gradient(140deg, #1b2956 0%, #142045 45%, #0e1733 80%, #0b1227 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.6) !important;
-  border-radius: 36px !important;
+#home-media-widget {
+  background: linear-gradient(135deg, #1b2956 0%, #131f42 50%, #0c1329 100%) !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 30px !important;
+  overflow: hidden !important;
+  outline: none !important;
+}
+
+.card-media-premium {
+  background: linear-gradient(135deg, #1b2956 0%, #131f42 50%, #0c1329 100%) !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 30px !important;
 }
 
 .card-assenze-premium {

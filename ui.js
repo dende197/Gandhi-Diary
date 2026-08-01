@@ -1993,23 +1993,23 @@ function renderHome() {
             </div>
 
             <div style="margin-bottom: 20px; padding: 0 24px;">
-                <!-- WIDGET PRINCIPALE — screenshot high fidelity + GSAP animations -->
-                <div id="home-media-widget" class="card-media-premium widget-card glass-hero" style="background:linear-gradient(140deg, #1b2956 0%, #142045 45%, #0e1733 80%, #0b1227 100%);box-shadow:0 20px 50px -15px rgba(0,0,0,0.6);border-radius:36px;border:1px solid rgba(255,255,255,0.12);position:relative;overflow:hidden;user-select:none;cursor:grab;">
+                <!-- WIDGET PRINCIPALE — carosello a 3 slide senza bordo, testo bianco e layout perfetto -->
+                <div id="home-media-widget" style="background:linear-gradient(135deg, #1b2956 0%, #131f42 50%, #0c1329 100%);box-shadow:none;border-radius:30px;border:none;position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.38s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
                         <!-- SLIDE 1: MEDIA GENERALE -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:24px 22px 16px 22px;height:220px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="position:relative;z-index:1;">
-                                <h2 style="font-size:22px;font-weight:600;color:#ffffff;letter-spacing:-0.01em;line-height:1.2;margin:0 0 2px;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
-                                <p style="font-size:14px;font-weight:400;color:rgba(255,255,255,0.45);margin:0;">Media generale attiva</p>
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div>
+                                <h2 style="font-size:21px;font-weight:700;color:#ffffff;letter-spacing:-0.025em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
+                                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.7);margin:2px 0 0;">Media generale attiva</p>
                             </div>
-                            <div style="position:relative;z-index:1;display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:2px;">
-                                <div style="display:flex;align-items:center;gap:12px;">
-                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:48px;font-weight:700;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.22);color:#34d399;font-size:13px;font-weight:600;padding:4px 12px;border-radius:9999px;border:1px solid rgba(52,211,153,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">+0.15</span>
+                            <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;background:#133d32;color:#29d68f;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(27,87,70,0.5);">+0.15</span>
                                 </div>
                                 <div style="text-align:right;">
-                                    <span style="font-size:12px;font-weight:600;color:#7182a3;letter-spacing:0.025em;">Adesso</span>
+                                    <span style="font-size:12px;font-weight:600;color:#ffffff;letter-spacing:0.025em;">Adesso</span>
                                 </div>
                             </div>
                             <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:46px;width:100%;padding-top:4px;">
