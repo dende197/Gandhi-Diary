@@ -1850,7 +1850,7 @@ function renderHome() {
 
                     <!-- WIDGET 1: MEDIA GENERALE (fedele alla foto) -->
                     <div class="widget-card">
-                        <div class="card-media-premium glass-hero rounded-[32px] p-6 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(47,88,205,0.45) 0%, var(--surface-container) 100%);position:relative;overflow:hidden;">
+                        <div class="card-media-premium glass-hero rounded-[32px] p-6 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(47,88,205,0.4) 0%, var(--surface-container) 100%);position:relative;overflow:hidden;">
                             <div style="position:relative;z-index:1;display:flex;flex-direction:column;">
                                 <h2 style="color:#ffffff;font-weight:600;font-size:1.25rem;line-height:1.2;letter-spacing:-0.01em;margin:0 0 2px;">Buongiorno, ${getSafeUserName()}</h2>
                                 <p style="color:rgba(255,255,255,0.5);font-size:14px;font-weight:400;margin:0;">Media generale attiva</p>

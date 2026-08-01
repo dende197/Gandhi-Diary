@@ -173,6 +173,15 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.glass-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 /* Secondary/standard glass surface — used for bento cards, list rows,
    empty states, and any non-hero "island" floating over the navy canvas. */
 .glass-secondary {
@@ -181,6 +190,16 @@ body {
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.glass-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 35%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .liquid-pill {
