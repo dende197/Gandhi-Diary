@@ -10,13 +10,12 @@
 
   // NOTE: this file used to inject its own <style> tag here as a
   // "cold-start flash guard" (background-color forced via !important).
-  // It's been removed: index.html already has a static, non-JS
-  // `html[data-theme="dark"] { background-color: ... }` rule for this,
-  // which reacts to theme changes automatically and can never go stale.
-  // The JS version could only be un-done by explicitly deleting the
-  // injected tag again, which made it fight later in-app theme toggles
-  // whenever that cleanup didn't run — this removes that whole class of
-  // bug instead of patching it further.
+  // It's been removed: index.html already paints the single navy
+  // background color inline before style.css loads, so there's no flash
+  // to guard against and nothing left to go stale.
+  // G-Connect has one visual style now (Liquid Glass) — no theme toggle,
+  // so this file no longer needs to reconcile itself with in-app theme
+  // changes at all.
 
   // ═══════════════════════════════════════════════════════════════
   //  PWA MULTI-RELOAD FIX  (v1.2.0)

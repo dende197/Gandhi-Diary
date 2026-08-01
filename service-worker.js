@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.8.3';
+const CACHE_VERSION = '3.9.0';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');

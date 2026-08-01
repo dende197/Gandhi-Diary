@@ -20,49 +20,11 @@ function escapeJsSingleQuote(str) {
         .replace(/\u2029/g, '\\u2029');
 }
 
-// --- THEME ENGINE ---
-window.applyTheme = function (theme) {
-    document.documentElement.classList.add('theme-transition');
-    
-    let resolvedTheme = theme;
-    if (theme === 'auto' || !theme) {
-        resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    
-    if (resolvedTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        document.documentElement.classList.add('dark');
-        const metaTheme = document.querySelector('meta[name="theme-color"]');
-        if (metaTheme) metaTheme.setAttribute('content', '#0D1117');
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-        document.documentElement.classList.remove('dark');
-        const metaTheme = document.querySelector('meta[name="theme-color"]');
-        if (metaTheme) metaTheme.setAttribute('content', '#F6F5F3');
-    }
-    
-    localStorage.setItem('gc_theme', theme || 'auto');
-    
-    setTimeout(() => {
-        document.documentElement.classList.remove('theme-transition');
-    }, 400);
-
-    if (typeof state !== 'undefined' && typeof render === 'function') {
-        state._forceRender = true;
-        render();
-    }
-};
-
-// Initialise theme
-const savedTheme = localStorage.getItem('gc_theme') || 'auto';
-window.applyTheme(savedTheme);
-
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const currentTheme = localStorage.getItem('gc_theme') || 'auto';
-    if (currentTheme === 'auto') {
-        window.applyTheme('auto');
-    }
-});
+// --- THEME ---
+// G-Connect ora ha un unico stile visivo (Liquid Glass / navy) — non esiste
+// più la possibilità di passare a light mode o dark mode. La costante sotto
+// resta solo per compatibilità con eventuale codice legacy che la referenzia.
+const savedTheme = 'liquid-glass';
 
 // --- AGENDA SEARCH & FILTER HELPERS ---
 setInterval(() => {
@@ -1867,40 +1829,33 @@ function renderHome() {
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
                     <div class="widget-card">
-                        <div class="card-media-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--info-container) 100%);position:relative;overflow:hidden;">
-                            <!-- Blob decorativi identici alla card media in Voti -->
-                            <div style="position:absolute;top:-36px;right:-36px;width:140px;height:140px;background:rgba(219,234,254,0.45);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
-                            <div style="position:absolute;bottom:-36px;left:-36px;width:140px;height:140px;background:rgba(243,232,255,0.35);border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
-                            <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:start;">
-                                <div>
-                                    <h2 style="color:var(--primary);font-weight:800;font-size:1.15rem;line-height:1.2;letter-spacing:-0.01em;">Buongiorno, ${getSafeUserName()}</h2>
-                                    <p style="color:rgba(2,80,197,0.6);font-size:13px;font-weight:500;margin-top:2px;">Media generale attiva</p>
-                                </div>
-                                <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;color:var(--primary);">
-                                    <i data-lucide="graduation-cap" style="width:20px;height:20px;stroke-width:2;"></i>
-                                </div>
+                        <div class="card-media-premium rounded-[32px] p-6 w-full flex flex-col justify-between glass-hero" style="height:220px;background:linear-gradient(135deg, rgba(47,88,205,0.55) 0%, var(--surface-container) 100%);position:relative;overflow:hidden;">
+                            <div style="position:relative;z-index:1;display:flex;flex-direction:column;">
+                                <h2 style="color:#ffffff;font-weight:600;font-size:1.25rem;line-height:1.2;letter-spacing:-0.01em;">Buongiorno, ${getSafeUserName()}</h2>
+                                <p style="color:rgba(255,255,255,0.5);font-size:14px;font-weight:400;margin-top:2px;">Media generale attiva</p>
                             </div>
 
-                            <div style="margin-top:8px;">
-                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3.2rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                            <div style="position:relative;z-index:1;margin-top:4px;display:flex;align-items:center;gap:10px;">
+                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3rem;font-weight:800;letter-spacing:-0.03em;color:#ffffff;filter:drop-shadow(0 0 20px rgba(255,255,255,0.15));">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                <span style="display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(16,185,129,0.35);border:1px solid rgba(52,211,153,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">+0.15</span>
                             </div>
 
-                            <div style="display:flex;align-items:flex-end;justify-content:space-between;height:44px;margin-top:4px;padding:0 2px;position:relative;">
-                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:40%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.12);border-radius:6px;height:60%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.08);border-radius:6px;height:45%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.16);border-radius:6px;height:70%;"></div>
-                                <div style="width:12%;background:rgba(37,99,235,0.24);border-radius:6px;height:85%;"></div>
-                                <div style="width:12%;background:#0250C5;border-radius:6px;height:95%;position:relative;display:flex;justify-content:center;">
-                                    <div style="position:absolute;top:-22px;background:#1F2937;color:white;font-size:7px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">NOW</div>
+                            <div style="position:relative;z-index:1;display:flex;align-items:flex-end;gap:10px;height:40px;margin-top:10px;">
+                                <div style="flex:1;height:20%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="flex:1;height:40%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="flex:1;height:30%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="flex:1;height:60%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
+                                <div style="flex:1;height:80%;background:rgba(255,255,255,0.1);border-radius:999px;"></div>
+                                <div style="flex:1;height:100%;background:rgba(255,255,255,0.4);border:1.5px solid rgba(255,255,255,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:16px;position:relative;display:flex;align-items:center;justify-content:center;">
+                                    <span style="position:absolute;top:-22px;font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap;">Adesso</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--error-container) 100%);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(254,202,202,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(255,80,80,0.12) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,120,120,0.18);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                                 <div style="display:flex;justify-content:space-between;align-items:start;">
                                     <h2 style="font-weight:700;font-size:1.15rem;color:var(--error);letter-spacing:-0.01em;">Assenze</h2>
@@ -1939,8 +1894,8 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--success-container) 100%);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(167,243,208,0.55);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
+                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(52,211,153,0.14) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
+                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(52,211,153,0.2);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
                                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
@@ -7579,37 +7534,6 @@ function renderProfile() {
                     </div>
                     <span class="material-symbols-outlined"
                           style="font-size:18px;color:var(--outline-variant);">chevron_right</span>
-                </div>
-                <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
-                <div style="padding:16px 20px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                        <div style="display:flex;align-items:center;gap:13px;">
-                            <div style="width:34px;height:34px;border-radius:10px;
-                                        background:rgba(99,102,241,0.1);
-                                        display:flex;align-items:center;justify-content:center;">
-                                <span class="material-symbols-outlined"
-                                      style="font-size:18px;color:var(--info);">palette</span>
-                            </div>
-                            <span style="font-size:15px;font-weight:600;color:var(--on-surface);">Aspetto visivo</span>
-                        </div>
-                        <span style="font-size:13px;font-weight:700;color:var(--on-surface-variant);">
-                            ${(() => {
-                                const t = localStorage.getItem('gc_theme') || 'auto';
-                                return t === 'light' ? 'Chiaro' : t === 'dark' ? 'Scuro' : 'Automatico';
-                            })()}
-                        </span>
-                    </div>
-                    <div class="theme-toggle-group">
-                        <button class="theme-toggle-btn ${localStorage.getItem('gc_theme') === 'light' ? 'active' : ''}" onclick="window.applyTheme('light')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">light_mode</span> Chiaro
-                        </button>
-                        <button class="theme-toggle-btn ${localStorage.getItem('gc_theme') === 'dark' ? 'active' : ''}" onclick="window.applyTheme('dark')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">dark_mode</span> Scuro
-                        </button>
-                        <button class="theme-toggle-btn ${!localStorage.getItem('gc_theme') || localStorage.getItem('gc_theme') === 'auto' ? 'active' : ''}" onclick="window.applyTheme('auto')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">devices</span> Auto
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>

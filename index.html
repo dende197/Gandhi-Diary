@@ -11,25 +11,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Gandhi diary">
     <meta name="application-name" content="Gandhi diary">
-    <meta name="theme-color" content="#F6F5F3">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('gc_theme') || 'auto';
-            let resolvedTheme = theme;
-            if (theme === 'auto') {
-                resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            if (resolvedTheme === 'dark') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.removeAttribute('data-theme');
-                document.documentElement.classList.remove('dark');
-            }
-        })();
-    </script>
+    <meta name="theme-color" content="#0b1326">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="version" content="3.8.1">
+    <meta name="version" content="3.9.0">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="shortcut icon" href="gandhi-diary-icon-192.png?v=3.8.3">
     <link rel="icon" type="image/png" sizes="192x192" href="gandhi-diary-icon-192.png?v=3.8.3">
@@ -53,55 +37,55 @@
             theme: {
                 extend: {
                     "colors": {
-                        "surface-variant": "#e4e2e4",
-                        "on-primary-container": "#fefcff",
-                        "surface-bright": "#fcf8fb",
-                        "surface-container-lowest": "#ffffff",
-                        "surface": "#fcf8fb",
-                        "primary": "#0058bc",
-                        "inverse-primary": "#adc6ff",
-                        "tertiary-fixed": "#e2e2e7",
-                        "on-tertiary-container": "#fdfcff",
-                        "error": "#ba1a1a",
-                        "on-secondary-container": "#fffbff",
-                        "on-error": "#ffffff",
-                        "on-primary": "#ffffff",
-                        "primary-fixed-dim": "#adc6ff",
-                        "on-surface-variant": "#414755",
-                        "outline": "#717786",
-                        "error-container": "#ffdad6",
-                        "on-primary-fixed-variant": "#004493",
-                        "on-secondary-fixed-variant": "#3631b4",
-                        "on-secondary": "#ffffff",
-                        "inverse-surface": "#303032",
-                        "surface-container-low": "#f6f3f5",
-                        "background": "#fcf8fb",
-                        "tertiary-container": "#737479",
-                        "inverse-on-surface": "#f3f0f2",
-                        "surface-container-high": "#eae7ea",
-                        "secondary": "#4c4aca",
-                        "on-surface": "#1b1b1d",
-                        "on-secondary-fixed": "#0c006a",
-                        "primary-container": "#0070eb",
-                        "on-background": "#1b1b1d",
-                        "surface-tint": "#005bc1",
-                        "on-error-container": "#93000a",
-                        "on-tertiary": "#ffffff",
-                        "secondary-fixed": "#e2dfff",
-                        "tertiary": "#5a5c60",
-                        "primary-fixed": "#d8e2ff",
-                        "secondary-container": "#6664e4",
-                        "on-primary-fixed": "#001a41",
-                        "surface-dim": "#dcd9dc",
-                        "surface-container": "#f0edef",
-                        "secondary-fixed-dim": "#c2c1ff",
-                        "surface-container-highest": "#e4e2e4",
-                        "tertiary-fixed-dim": "#c6c6cb",
-                        "on-tertiary-fixed-variant": "#45474b",
-                        "outline-variant": "#c1c6d7",
-                        "on-tertiary-fixed": "#1a1c1f",
-                        "green": "#28cd41",
-                        "orange": "#ff9f0a"
+                        "surface-variant": "#2d3449",
+                        "on-primary-container": "#d5dcff",
+                        "surface-bright": "#31394d",
+                        "surface-container-lowest": "#060e20",
+                        "surface": "#0b1326",
+                        "primary": "#6d93f0",
+                        "inverse-primary": "#2b55ca",
+                        "tertiary-fixed": "#d4e3ff",
+                        "on-tertiary-container": "#cadeff",
+                        "error": "#ffb4ab",
+                        "on-secondary-container": "#aeb9d0",
+                        "on-error": "#690005",
+                        "on-primary": "#00184a",
+                        "primary-fixed-dim": "#b6c4ff",
+                        "on-surface-variant": "#c4c5d6",
+                        "outline": "#8e909f",
+                        "error-container": "#3a0a0a",
+                        "on-primary-fixed-variant": "#003baf",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "on-secondary": "#263143",
+                        "inverse-surface": "#dae2fd",
+                        "surface-container-low": "#131b2e",
+                        "background": "#0b1326",
+                        "tertiary-container": "#0062b0",
+                        "inverse-on-surface": "#283044",
+                        "surface-container-high": "#222a3d",
+                        "secondary": "#bcc7de",
+                        "on-surface": "#dae2fd",
+                        "on-secondary-fixed": "#111c2d",
+                        "primary-container": "#2f58cd",
+                        "on-background": "#dae2fd",
+                        "surface-tint": "#b6c4ff",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary": "#00315d",
+                        "secondary-fixed": "#d8e3fb",
+                        "tertiary": "#a4c9ff",
+                        "primary-fixed": "#dce1ff",
+                        "secondary-container": "#3e495d",
+                        "on-primary-fixed": "#00164f",
+                        "surface-dim": "#0b1326",
+                        "surface-container": "#171f33",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "surface-container-highest": "#2d3449",
+                        "tertiary-fixed-dim": "#a4c9ff",
+                        "on-tertiary-fixed-variant": "#004883",
+                        "outline-variant": "#434653",
+                        "on-tertiary-fixed": "#001c39",
+                        "green": "#34d399",
+                        "orange": "#fdba74"
                     },
                     "borderRadius": {
                         "DEFAULT": "0.25rem",
@@ -154,57 +138,57 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
 
     <!-- Consolidated Assets -->
-    <link rel="stylesheet" href="style.css?v=3.8.1">
+    <link rel="stylesheet" href="style.css?v=3.9.0">
     <link rel="stylesheet" href="animations.css?v=3.3.8">
     
     <!-- App Logic -->
-    <script src="ui.js?v=3.8.0" defer></script>
+    <script src="ui.js?v=3.9.0" defer></script>
     <script src="fluidity-engine-v3.js?v=3.3.8" defer></script>
     <script src="fluidity-boot-patch.js?v=1.4.0" defer></script>
-    <script src="app-bootstrap.js?v=3.8.0" defer></script>
+    <script src="app-bootstrap.js?v=3.9.0" defer></script>
 
     <style>
-        /* Essential inline styles only — flat paint color to avoid a white flash
-           before style.css loads. The full satin-glass gradient/grain lives in
-           style.css so it isn't duplicated/overridden here. The boot script
-           above already resolves 'auto' into a concrete data-theme attribute,
-           so a single attribute selector is enough here. */
+        /* Essential inline styles only — flat paint color to avoid a white/blank
+           flash before style.css loads. The full glass-hero gradient/materiality
+           lives in style.css so it isn't duplicated/overridden here. G-Connect
+           now has a single visual style (Liquid Glass / navy) — there is no
+           theme to resolve on boot anymore. */
         html, body {
-            background-color: #fcf8fb;
-            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #0b1326;
+            font-family: 'Inter', 'Hanken Grotesk', sans-serif;
         }
-        html[data-theme="dark"], html[data-theme="dark"] body {
-            background-color: #121318;
-        }
-        
+
         .liquid-glass {
-            background-color: rgba(255, 255, 255, 0.45);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 100%);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
         
         .liquid-pill {
-            background-color: rgba(255, 255, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .deep-shadow {
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 6, 20, 0.5);
         }
 
         .liquid-shadow {
             box-shadow: 
-                0 8px 24px -6px rgba(0, 0, 0, 0.06), 
-                inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+                0 8px 24px -6px rgba(0, 6, 20, 0.35), 
+                inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .active-liquid-shadow {
             box-shadow: 
-                0 15px 30px -8px rgba(0, 88, 188, 0.3), 
-                0 4px 8px -2px rgba(0, 88, 188, 0.2);
+                0 15px 30px -8px rgba(47, 88, 205, 0.35), 
+                0 4px 8px -2px rgba(47, 88, 205, 0.25);
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -215,10 +199,10 @@
             scrollbar-width: none;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--surface, #fcf8fb);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
+        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--surface, #0b1326);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
         .app-loader-ring{
             width:42px;height:42px;border-radius:50%;
-            background:conic-gradient(from 0deg, #0058bc 0%, #4c4aca 50%, #adc6ff 100%);
+            background:conic-gradient(from 0deg, #2f58cd 0%, #6d93f0 50%, #b6c4ff 100%);
             -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
             mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
             animation:spin 0.85s cubic-bezier(.4,0,.2,1) infinite;
