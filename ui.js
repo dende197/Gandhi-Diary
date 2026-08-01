@@ -805,6 +805,16 @@ function getSafeUserName() {
     // Return only the last part (usually surname) or the first if it's single
     return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
 }
+// Argo/DIDUP restituisce i nomi in TUTTO MAIUSCOLO (dato di registro).
+// Questo helper è puramente cosmetico per la UI — non tocca mai lo state
+// né quello che viene inviato al backend, serve solo per mostrare
+// "Andrea" invece di "ANDREA" nel saluto della dashboard.
+function toDisplayName(name) {
+    if (!name) return name;
+    return String(name)
+        .toLowerCase()
+        .replace(/(^|\s|['-])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+}
 function gaugeClassForMedia(m) {
     if (m >= 6.5) return 'gauge-good';
     if (m >= 6.0) return 'gauge-warn';
@@ -1845,143 +1855,50 @@ function renderHome() {
                 ${avatarHtml}
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
+            <div style="margin-bottom: 20px; padding: 0 24px;">
+                <!-- WIDGET PRINCIPALE — Media Generale, identico al mockup HTML incollato -->
+                <div style="background:linear-gradient(150deg, #1d2c4e 0%, #131e36 60%, #0d1527 100%);box-shadow:0 20px 40px -10px rgba(0,0,0,0.7), inset 0 1px 1px 0 rgba(255,255,255,0.12), inset 0 -1px 2px 0 rgba(0,0,0,0.5);border-radius:30px;border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
+                    <div style="padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
 
-                    <!-- WIDGET 1: MEDIA GENERALE (fedele alla foto) -->
-                    <div class="widget-card">
-                        <div class="card-media-premium glass-hero rounded-[32px] p-6 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(47,88,205,0.4) 0%, var(--surface-container) 100%);position:relative;overflow:hidden;">
-                            <div style="position:relative;z-index:1;display:flex;flex-direction:column;">
-                                <h2 style="color:#ffffff;font-weight:600;font-size:1.25rem;line-height:1.2;letter-spacing:-0.01em;margin:0 0 2px;">Buongiorno, ${getSafeUserName()}</h2>
-                                <p style="color:rgba(255,255,255,0.5);font-size:14px;font-weight:400;margin:0;">Media generale attiva</p>
+                        <!-- Saluto + sottotitolo -->
+                        <div>
+                            <h2 style="font-size:21px;font-weight:700;color:#ffffff;letter-spacing:-0.025em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
+                            <p style="font-size:13px;font-weight:500;color:#7182a3;margin:2px 0 0;">Media generale attiva</p>
+                        </div>
+
+                        <!-- Voto + badge a sinistra, "Adesso" a destra -->
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                <span style="display:inline-flex;align-items:center;justify-content:center;background:#133d32;color:#29d68f;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(27,87,70,0.5);">+0.15</span>
                             </div>
-
-                            <div style="position:relative;z-index:1;margin-top:2px;display:flex;align-items:center;gap:10px;">
-                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3rem;font-weight:800;letter-spacing:-0.03em;color:#ffffff;line-height:1;filter:drop-shadow(0 0 20px rgba(255,255,255,0.15));">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                <span style="display:inline-flex;align-items:center;padding:3px 11px;border-radius:9999px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(16,185,129,0.35);border:1px solid rgba(52,211,153,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">+0.15</span>
+                            <div style="text-align:right;">
+                                <span style="font-size:12px;font-weight:600;color:#7182a3;letter-spacing:0.025em;">Adesso</span>
                             </div>
+                        </div>
 
-                            <!-- ROW DI CAPSULE STORICO CON LABEL ADESSO SOPRA -->
-                            <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;height:44px;margin-top:8px;width:100%;">
-                                <div style="width:34px;height:9px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="width:40px;height:16px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="width:44px;height:12px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="width:48px;height:24px;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="width:52px;height:32px;background:rgba(255,255,255,0.1);border-radius:999px;"></div>
-                                <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">
-                                    <span style="font-size:11px;font-weight:600;color:#ffffff;margin-bottom:6px;white-space:nowrap;letter-spacing:0.01em;">Adesso</span>
-                                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.4);border:1.5px solid rgba(255,255,255,0.6);border-radius:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
-                                </div>
+                        <!-- 6 barre progressive -->
+                        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:46px;width:100%;padding-top:4px;">
+                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
+                                <div style="width:100%;height:6px;background:#1d2b45;border-radius:9999px;opacity:0.8;"></div>
+                            </div>
+                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
+                                <div style="width:100%;height:9px;background:#223352;border-radius:9999px;opacity:0.9;"></div>
+                            </div>
+                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
+                                <div style="width:100%;height:13px;background:#283b5e;border-radius:9999px;"></div>
+                            </div>
+                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
+                                <div style="width:100%;height:19px;background:#2f466f;border-radius:12px;"></div>
+                            </div>
+                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
+                                <div style="width:100%;height:28px;background:#395688;border-radius:12px;"></div>
+                            </div>
+                            <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;">
+                                <div style="width:100%;height:44px;background:#7e90af;border-radius:13px;box-shadow:0 4px 14px rgba(126,145,178,0.25);"></div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[32px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(255,80,80,0.12) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,120,120,0.18);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
-                            <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
-                                <div style="display:flex;justify-content:space-between;align-items:start;">
-                                    <h2 style="font-weight:700;font-size:1.15rem;color:var(--error);letter-spacing:-0.01em;">Assenze</h2>
-                                    <div style="width:40px;height:40px;border-radius:50%;background:var(--error-container);display:flex;align-items:center;justify-content:center;color:var(--error);">
-                                        <i data-lucide="user-x" style="width:20px;height:20px;"></i>
-                                    </div>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
-                                    <div class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3.2rem;font-weight:700;color:var(--error);letter-spacing:-0.03em;">
-                                        ${isInitialLoad ? '0.0' : oreAssenzaTotali.toFixed(1)}<span style="font-size:2rem;font-weight:600;">h</span>
-                                    </div>
-                                    <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;">
-                                        <svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 100 100">
-                                            <circle style="stroke:#FEE2E2;" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                            <circle style="stroke:#BD1118;" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="${dashOffset}"></circle>
-                                        </svg>
-                                        <span style="position:absolute;font-size:11px;font-weight:700;color:var(--error);">${Math.round(progressPercentage)}%</span>
-                                    </div>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;gap:10px;">
-                                    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid rgba(255,255,255,0.08);">
-                                        <div style="font-weight:700;font-size:14px;color:var(--error);">${assenzeGiorni}g</div>
-                                        <div style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
-                                    </div>
-                                    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid rgba(255,255,255,0.08);">
-                                        <div style="font-weight:700;font-size:14px;color:#ffffff;">${ritardiTotali}</div>
-                                        <div style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
-                                    </div>
-                                    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid rgba(255,255,255,0.08);">
-                                        <div style="font-weight:700;font-size:14px;color:#ffffff;">${usciteTotali}</div>
-                                        <div style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[32px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(52,211,153,0.14) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
-                            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(52,211,153,0.2);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
-                            <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
-                            ${nextVerifica ? `
-                                <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
-                                    <div style="display:flex;justify-content:space-between;align-items:start;">
-                                        <div style="display:flex;flex-direction:column;">
-                                            <h2 style="font-weight:600;font-size:1.15rem;color:var(--success);">Prossime Verifiche</h2>
-                                            <p style="color:rgba(5,150,105,0.6);font-size:11px;font-weight:500;margin-top:2px;">${upcomingVerifiche.length} verifiche in programma</p>
-                                        </div>
-                                        <div style="width:40px;height:40px;border-radius:50%;background:var(--success-container);display:flex;align-items:center;justify-content:center;color:var(--success);">
-                                            <i data-lucide="calendar" style="width:20px;height:20px;"></i>
-                                        </div>
-                                    </div>
-
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;">
-                                        <div style="display:flex;flex-direction:column;min-width:0;padding-right:8px;">
-                                            <span style="font-size:1.1rem;font-weight:700;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nextVerifica.materia)}</span>
-                                            <span style="font-size:11px;color:var(--outline);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(nextVerifica.text || 'Valutazione')}</span>
-                                        </div>
-                                        <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
-                                            <span style="font-size:1.8rem;font-weight:800;color:var(--success);letter-spacing:-0.02em;">${countdownText}</span>
-                                            <span style="
-                                                display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
-                                                font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-                                                margin-top:3px;${urgencyColor}
-                                            ">${urgencyLabel}</span>
-                                        </div>
-                                    </div>
-
-                                    <div style="width:100%;">
-                                        <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:var(--outline);margin-bottom:4px;padding:0 2px;">
-                                            <span>STATO STUDIO</span>
-                                            <span>${daysDiff >= 0 ? daysDiff : 0} GG RIMANENTI</span>
-                                        </div>
-                                        <div style="width:100%;background:#E5E7EB;border-radius:999px;height:6px;overflow:hidden;">
-                                            <div style="height:100%;border-radius:999px;transition:width 0.5s ease-out;width:${progressWidth}%;background:#059669;"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : `
-                                <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;width:100%;">
-                                    <div style="display:flex;justify-content:space-between;align-items:start;">
-                                        <h2 style="font-weight:600;font-size:1.15rem;color:var(--success);">Prossime Verifiche</h2>
-                                        <div style="width:40px;height:40px;border-radius:50%;background:var(--success-container);display:flex;align-items:center;justify-content:center;color:var(--success);">
-                                            <i data-lucide="calendar-check" style="width:20px;height:20px;"></i>
-                                        </div>
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
-                                        <span class="material-symbols-outlined" style="font-size:28px;color:rgba(5,150,105,0.35);margin-bottom:4px;">event_available</span>
-                                        <p style="font-size:13px;font-weight:600;color:var(--success);">Nessuna verifica</p>
-                                        <p style="font-size:11px;color:var(--outline);margin-top:2px;">Niente da studiare per ora!</p>
-                                    </div>
-                                </div>
-                            `}
-                            </div><!-- /z-index wrapper verifiche -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CAROUSEL INDICATOR DOTS MATCHING SCREENSHOT -->
-                <div class="widget-indicators" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;">
-                    <div class="widget-indicator active carousel-dot" style="width: 24px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.7); transition: all 0.3s;"></div>
-                    <div class="widget-indicator carousel-dot" style="width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s;"></div>
-                    <div class="widget-indicator carousel-dot" style="width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s;"></div>
                 </div>
             </div>
 
