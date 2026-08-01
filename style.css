@@ -896,9 +896,10 @@ body {
 }
 
 .card-media-premium, #home-media-widget {
-  background: linear-gradient(135deg, #3f4f7e 0%, #161f35 100%) !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: linear-gradient(140deg, #1b2956 0%, #142045 45%, #0e1733 80%, #0b1227 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 36px !important;
 }
 
 .card-assenze-premium {

@@ -321,7 +321,7 @@
     }
 
     // Carousel widgets
-    const widgets = viewEl.querySelectorAll('.widget-card');
+    const widgets = viewEl.querySelectorAll('.widget-card, #home-media-widget, .card-media-premium');
     if (widgets.length) {
       gsap.killTweensOf(widgets);
       gsap.fromTo(widgets,
@@ -329,8 +329,8 @@
         { opacity: 1, y: 0, scale: 1, duration: 0.48, stagger: 0.08, ease: easeB, delay: 0.08, clearProps: 'transform,opacity' }
       );
 
-      // Widget 1 (Media): .card-media-premium
-      const mediaVal = viewEl.querySelector('.card-media-premium span[style*="font-size:3.2rem"]');
+      // Widget 1 (Media): .card-media-premium / #home-media-widget
+      const mediaVal = viewEl.querySelector('#home-media-widget .card-media-val, #home-media-widget span[style*="font-size:52px"], .card-media-premium span[style*="font-size:3.2rem"]');
       if (mediaVal && !mediaVal.classList.contains('skeleton')) {
         const num = parseFloat(mediaVal.textContent.trim());
         if (!isNaN(num) && num > 0) {
