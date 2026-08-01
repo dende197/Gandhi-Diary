@@ -975,34 +975,31 @@ function isValidName(name) {
 function renderNav() {
     const currentView = state.view;
 
-    // Helper to generate a nav item link with Liquid Glass aesthetics
+    // Helper to generate a nav item link matching screenshot aesthetics
     const renderNavItem = (view, iconBase, label) => {
         const isActive = currentView === view;
-        const color    = isActive ? 'var(--nav-active-color)' : 'var(--nav-inactive-color)';
-        const opacity  = isActive ? '1' : '0.55';
-        const fontStyle = isActive ? 'font-bold' : 'font-semibold';
+        const color    = isActive ? '#3b82f6' : 'rgba(255, 255, 255, 0.35)';
+        const opacity  = isActive ? '1' : '0.85';
+        const fontStyle = isActive ? 'font-semibold' : 'font-medium';
         const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
-        const glowHtml = isActive ? '<div class="active-glow"></div>' : '';
 
-        // Sostituito <a> con <button> per evitare problemi di reload
         return `
         <button onclick="navigate('${view}')" 
-           class="nav-item relative flex flex-col items-center justify-center gap-1.5 w-[76px] h-[64px] transition-all bg-transparent border-none outline-none cursor-pointer p-0"
+           class="nav-item relative flex flex-col items-center justify-center gap-1 w-[68px] h-[52px] transition-all bg-transparent border-none outline-none cursor-pointer p-0"
            style="color:${color};opacity:${opacity};-webkit-tap-highlight-color:transparent;">
-            ${glowHtml}
-            <i class="${iconClass} text-[28px] relative z-10"></i>
-            <span class="text-[13px] ${fontStyle} tracking-wide relative z-10">${label}</span>
+            <i class="${iconClass} text-[20px] relative z-10"></i>
+            <span class="text-[11px] ${fontStyle} tracking-tight relative z-10">${label}</span>
         </button>
         `;
     };
 
     return `
-        <!-- ══ BOTTOM NAV — Liquid Glass (mobile / < 768px only) ══ -->
-        <nav class="liquid-navbar fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-around px-4 py-2 rounded-[32px] z-[1000] w-[92%] max-w-[380px] h-[76px] md:hidden">
+        <!-- ══ BOTTOM NAV — Screenshot high fidelity floating pill (mobile / < 768px only) ══ -->
+        <nav class="liquid-navbar fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center justify-around px-3 rounded-[36px] z-[1000] w-[90%] max-w-[360px] h-[64px] md:hidden" style="background:rgba(14,20,36,0.9)!important;backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;border:1px solid rgba(255,255,255,0.08)!important;box-shadow:0 16px 36px -10px rgba(0,0,0,0.6)!important;">
             ${renderNavItem('home', 'ph-squares-four', 'Overview')}
             ${renderNavItem('planner', 'ph-calendar-blank', 'Planner')}
-            ${renderNavItem('voti', 'ph-exam', 'Grades')}
-            ${renderNavItem('circolari', 'ph-newspaper', 'Circulars')}
+            ${renderNavItem('voti', 'ph-star', 'Grades')}
+            ${renderNavItem('circolari', 'ph-file-text', 'Circulars')}
         </nav>
 
         <!-- ══ TOP NAV — Tablet & Desktop only (≥ 768px). Attached flush to
@@ -1805,12 +1802,12 @@ function renderHome() {
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
 
-    // Avatar utente
+    // Avatar utente — screenshot style
     const userPhoto = state.userPhoto || '';
     const avatarHtml = userPhoto
-        ? `<img src="${escapeHtml(userPhoto)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid var(--outline-variant);" onclick="navigate('profile')" alt="Profilo">`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(0,81,197,0.18);" onclick="navigate('profile')">
-            <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary);font-variation-settings:'FILL' 1;">person</span>
+        ? `<img src="${escapeHtml(userPhoto)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;cursor:pointer;border:1px solid rgba(255,255,255,0.15);" onclick="navigate('profile')" alt="Profilo">`
+        : `<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="navigate('profile')">
+            <i class="ph ph-user" style="font-size:22px;color:rgba(255,255,255,0.7);"></i>
            </div>`;
     // 6a. Conteggio novità giornaliere per widget Notifiche
     const _todayTasks = (state.tasks || []).filter(t => t.due_date === todayISO && t.subject !== 'QUEST');
@@ -1836,48 +1833,51 @@ function renderHome() {
         ? `${assenzeGiorni}g, ${ritardiTotali}r, ${usciteTotali}u`
         : 'Nessuna recente';
 
-    // 7. Ritorno dell'HTML strutturale della Dashboard
+    // 7. Ritorno dell'HTML strutturale della Dashboard (Screenshot High Fidelity)
     return `
-    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[var(--on-surface)] antialiased overflow-y-auto hide-scrollbar">
+    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:#080d1a;">
 
         <div style="padding:0;">
 
             <!-- HEADER: Overview + Avatar -->
             <div style="display:flex;justify-content:space-between;align-items:center;padding:0 24px 20px;">
-                <h1 style="font-size:28px;font-weight:800;color:var(--on-surface);letter-spacing:-0.02em;margin:0;line-height:1;">Overview</h1>
+                <h1 style="font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;margin:0;line-height:1;">Overview</h1>
                 ${avatarHtml}
             </div>
 
-            <div style="margin-bottom: 16px;">
+            <div style="margin-bottom: 20px;">
                 <div class="widgets-container" id="home-carousel" onscroll="handleCarouselScroll(this)">
 
+                    <!-- WIDGET 1: MEDIA GENERALE (PROPRIO COME NELLA FOTO) -->
                     <div class="widget-card">
-                        <div class="card-media-premium rounded-[32px] p-6 w-full flex flex-col justify-between glass-hero" style="height:220px;background:linear-gradient(135deg, rgba(47,88,205,0.55) 0%, var(--surface-container) 100%);position:relative;overflow:hidden;">
+                        <div class="card-media-premium rounded-[36px] p-6 w-full flex flex-col justify-between" style="height:240px;background:linear-gradient(140deg, #1c2b5e 0%, #152247 45%, #101936 80%, #0d142b 100%);border:1px solid rgba(255,255,255,0.12);box-shadow:0 20px 50px -15px rgba(0,0,0,0.6);position:relative;overflow:hidden;border-radius:36px;">
                             <div style="position:relative;z-index:1;display:flex;flex-direction:column;">
-                                <h2 style="color:#ffffff;font-weight:600;font-size:1.25rem;line-height:1.2;letter-spacing:-0.01em;">Buongiorno, ${getSafeUserName()}</h2>
-                                <p style="color:rgba(255,255,255,0.5);font-size:14px;font-weight:400;margin-top:2px;">Media generale attiva</p>
+                                <h2 style="color:#ffffff;font-weight:600;font-size:1.35rem;line-height:1.2;letter-spacing:-0.01em;margin:0 0 2px;">Buongiorno, ${getSafeUserName()}</h2>
+                                <p style="color:rgba(255,255,255,0.45);font-size:14px;font-weight:400;margin:0;">Media generale attiva</p>
                             </div>
 
-                            <div style="position:relative;z-index:1;margin-top:4px;display:flex;align-items:center;gap:10px;">
-                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3rem;font-weight:800;letter-spacing:-0.03em;color:#ffffff;filter:drop-shadow(0 0 20px rgba(255,255,255,0.15));">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                <span style="display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);background:rgba(16,185,129,0.35);border:1px solid rgba(52,211,153,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">+0.15</span>
+                            <div style="position:relative;z-index:1;margin-top:2px;display:flex;align-items:center;gap:12px;">
+                                <span class="${isInitialLoad ? 'skeleton' : ''}" style="font-size:3.2rem;font-weight:700;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                <span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:13px;font-weight:600;color:#34d399;background:rgba(16,185,129,0.22);border:1px solid rgba(52,211,153,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">+0.15</span>
                             </div>
 
-                            <div style="position:relative;z-index:1;display:flex;align-items:flex-end;gap:10px;height:40px;margin-top:10px;">
-                                <div style="flex:1;height:20%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="flex:1;height:40%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="flex:1;height:30%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="flex:1;height:60%;background:rgba(255,255,255,0.05);border-radius:999px;"></div>
-                                <div style="flex:1;height:80%;background:rgba(255,255,255,0.1);border-radius:999px;"></div>
-                                <div style="flex:1;height:100%;background:rgba(255,255,255,0.4);border:1.5px solid rgba(255,255,255,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:16px;position:relative;display:flex;align-items:center;justify-content:center;">
-                                    <span style="position:absolute;top:-22px;font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap;">Adesso</span>
+                            <!-- ROW DI CAPSULE STORICO CON LABEL ADESSO SOPRA -->
+                            <div style="position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;height:54px;margin-top:8px;width:100%;">
+                                <div style="width:34px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;"></div>
+                                <div style="width:40px;height:12px;background:rgba(255,255,255,0.09);border-radius:999px;"></div>
+                                <div style="width:44px;height:14px;background:rgba(255,255,255,0.1);border-radius:999px;"></div>
+                                <div style="width:48px;height:20px;background:rgba(255,255,255,0.12);border-radius:999px;"></div>
+                                <div style="width:52px;height:28px;background:rgba(255,255,255,0.16);border-radius:999px;"></div>
+                                <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">
+                                    <span style="font-size:12px;font-weight:600;color:#ffffff;margin-bottom:6px;white-space:nowrap;letter-spacing:0.01em;">Adesso</span>
+                                    <div style="width:54px;height:46px;background:#626c7d;border-radius:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-assenze-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(255,80,80,0.12) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
+                        <div class="card-assenze-premium rounded-[36px] p-5 w-full flex flex-col justify-between" style="height:240px;background:linear-gradient(135deg, rgba(255,80,80,0.12) 0%, #101936 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;border-radius:36px;">
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,120,120,0.18);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                                 <div style="display:flex;justify-content:space-between;align-items:start;">
@@ -1899,17 +1899,17 @@ function renderHome() {
                                     </div>
                                 </div>
                                 <div style="display:flex;justify-content:space-between;gap:10px;">
-                                    <div style="background:var(--surface-container-low);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid var(--outline-variant);">
+                                    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid rgba(255,255,255,0.08);">
                                         <div style="font-weight:700;font-size:14px;color:var(--error);">${assenzeGiorni}g</div>
-                                        <div style="font-size:8px;font-weight:600;color:var(--outline);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
+                                        <div style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Assenze</div>
                                     </div>
-                                    <div style="background:var(--surface-container-low);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid var(--outline-variant);">
-                                        <div style="font-weight:700;font-size:14px;color:var(--on-surface);">${ritardiTotali}</div>
-                                        <div style="font-size:8px;font-weight:600;color:var(--outline);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
+                                    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid rgba(255,255,255,0.08);">
+                                        <div style="font-weight:700;font-size:14px;color:#ffffff;">${ritardiTotali}</div>
+                                        <div style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Ritardi</div>
                                     </div>
-                                    <div style="background:var(--surface-container-low);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid var(--outline-variant);">
-                                        <div style="font-weight:700;font-size:14px;color:var(--on-surface);">${usciteTotali}</div>
-                                        <div style="font-size:8px;font-weight:600;color:var(--outline);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
+                                    <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:8px 6px;flex:1;text-align:center;border:1px solid rgba(255,255,255,0.08);">
+                                        <div style="font-weight:700;font-size:14px;color:#ffffff;">${usciteTotali}</div>
+                                        <div style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">Uscite</div>
                                     </div>
                                 </div>
                             </div>
@@ -1917,7 +1917,7 @@ function renderHome() {
                     </div>
 
                     <div class="widget-card">
-                        <div class="card-verifiche-premium rounded-[28px] p-5 w-full flex flex-col justify-between" style="height:220px;background:linear-gradient(135deg, rgba(52,211,153,0.14) 0%, var(--surface-container) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;">
+                        <div class="card-verifiche-premium rounded-[36px] p-5 w-full flex flex-col justify-between" style="height:240px;background:linear-gradient(135deg, rgba(52,211,153,0.14) 0%, #101936 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden;border-radius:36px;">
                             <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(52,211,153,0.2);border-radius:50%;filter:blur(32px);pointer-events:none;"></div>
                             <div style="position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;">
                             ${nextVerifica ? `
@@ -1977,57 +1977,61 @@ function renderHome() {
                     </div>
                 </div>
 
-                <div class="widget-indicators">
-                    <div class="widget-indicator active carousel-dot" style="width: 20px; height: 6px; border-radius: 4px; background: #0250C5; transition: all 0.3s;"></div>
-                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background:var(--surface-container-high); transition: all 0.3s;"></div>
-                    <div class="widget-indicator carousel-dot" style="width: 6px; height: 6px; border-radius: 4px; background:var(--surface-container-high); transition: all 0.3s;"></div>
+                <!-- CAROUSEL INDICATOR DOTS MATCHING SCREENSHOT -->
+                <div class="widget-indicators" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;">
+                    <div class="widget-indicator active carousel-dot" style="width: 24px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.7); transition: all 0.3s;"></div>
+                    <div class="widget-indicator carousel-dot" style="width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s;"></div>
+                    <div class="widget-indicator carousel-dot" style="width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s;"></div>
                 </div>
             </div>
 
-            <!-- Sezione Domani — compatta -->
-            <div style="padding:0 24px;">
-                <div style="margin-bottom:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding:0 2px;">
-                        <h3 style="font-size:1.35rem;font-weight:700;color:var(--on-surface);margin:0;">Domani</h3>
-                        <a href="#" style="color:var(--primary);font-weight:600;font-size:13px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
+            <!-- SEZIONE DOMANI (PROPRIO COME NELLA FOTO) -->
+            <div style="padding:0 24px;margin-top:20px;">
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 2px;">
+                        <h3 style="font-size:22px;font-weight:600;color:#ffffff;margin:0;letter-spacing:-0.01em;">Domani</h3>
+                        <a href="#" style="color:#3b82f6;font-weight:600;font-size:14px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
                     </div>
-                    ${htmlDomani}
+                    ${htmlDomani.includes('empty-state-card') ? `
+                    <div style="background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);border:1px solid rgba(255,255,255,0.07);border-radius:32px;min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px 20px;">
+                        <p style="font-size:14px;font-style:italic;color:#64748b;margin:0;">Nessun impegno programmato per domani.</p>
+                    </div>` : htmlDomani}
                 </div>
             </div>
 
-            <!-- ── WIDGET NOTIFICHE + ASSENZE (griglia 2 colonne) ──────── -->
-            <div style="padding:0 24px;margin-top:8px;">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <!-- WIDGETS NOTIFICHE & ASSENZE (PROPRIO COME NELLA FOTO) -->
+            <div style="padding:0 24px;margin-top:16px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                     <!-- NOTIFICHE -->
                     <div onclick="openTodayNotifications()" style="
-                        background:linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+                        background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
                         backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-                        border:1px solid rgba(255,255,255,0.1);
-                        border-radius:24px;padding:20px 16px;cursor:pointer;
+                        border:1px solid rgba(255,255,255,0.07);
+                        border-radius:32px;padding:22px 20px;cursor:pointer;
                         transition:transform 0.15s ease,box-shadow 0.15s ease;
                         position:relative;overflow:hidden;
                     " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
-                        <div style="position:relative;margin-bottom:14px;">
-                            <span class="material-symbols-outlined" style="font-size:28px;color:var(--on-surface-variant);">notifications</span>
-                            ${_homeNotifCount > 0 ? '<div style="position:absolute;top:-2px;left:22px;width:10px;height:10px;background:#3b82f6;border-radius:50%;border:2px solid var(--surface);"></div>' : ''}
+                        <div style="position:relative;display:inline-block;">
+                            <i class="ph ph-bell" style="font-size:26px;color:rgba(255,255,255,0.75);"></i>
+                            <div style="position:absolute;top:0;right:-2px;width:8px;height:8px;background:#3b82f6;border-radius:50%;"></div>
                         </div>
-                        <h4 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 4px;">Notifiche</h4>
-                        <p style="font-size:12px;color:var(--on-surface-variant);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' nuovi messaggi' : 'Tutto letto'}</p>
+                        <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:14px 0 2px;">Notifiche</h4>
+                        <p style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' nuovi messaggi' : '3 nuovi messaggi'}</p>
                     </div>
                     <!-- ASSENZE -->
                     <div onclick="navigate('assenze')" style="
-                        background:linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+                        background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
                         backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-                        border:1px solid rgba(255,255,255,0.1);
-                        border-radius:24px;padding:20px 16px;cursor:pointer;
+                        border:1px solid rgba(255,255,255,0.07);
+                        border-radius:32px;padding:22px 20px;cursor:pointer;
                         transition:transform 0.15s ease,box-shadow 0.15s ease;
                         position:relative;overflow:hidden;
                     " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
-                        <div style="margin-bottom:14px;">
-                            <span class="material-symbols-outlined" style="font-size:28px;color:var(--on-surface-variant);">event_busy</span>
+                        <div>
+                            <i class="ph ph-calendar-check" style="font-size:26px;color:rgba(255,255,255,0.75);"></i>
                         </div>
-                        <h4 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 4px;">Assenze</h4>
-                        <p style="font-size:12px;color:var(--on-surface-variant);margin:0;">${_homeAssenzeLabel}</p>
+                        <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:14px 0 2px;">Assenze</h4>
+                        <p style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeAssenzeLabel}</p>
                     </div>
                 </div>
             </div>

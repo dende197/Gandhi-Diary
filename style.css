@@ -95,13 +95,13 @@
   /* Glass tint base — white glass floating over the navy canvas */
   --glass-rgb: 255, 255, 255;
 
-  /* Navigation Bar Styles */
-  --nav-active-color: #6d93f0;
-  --nav-inactive-color: rgba(218, 226, 253, 0.4);
-  --nav-bg: rgba(255, 255, 255, 0.06);
-  --nav-border: rgba(255, 255, 255, 0.12);
-  --nav-shadow: 0 12px 40px -12px rgba(0, 6, 20, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --nav-glow: rgba(47, 88, 205, 0.28);
+  /* Navigation Bar Styles — Screenshot high fidelity */
+  --nav-active-color: #3b82f6;
+  --nav-inactive-color: rgba(255, 255, 255, 0.35);
+  --nav-bg: rgba(14, 20, 36, 0.9);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.6);
+  --nav-glow: transparent;
 
   /* Radii — Squircle system */
   --radius-sm: 0.25rem;
@@ -654,16 +654,7 @@ input[type="range"]::-moz-range-track {
 
 /* Cerchio di luce azzurra per l'icona attiva */
 .active-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 56px;
-    height: 56px;
-    background: var(--nav-glow) !important;
-    border-radius: 50%;
-    filter: blur(14px);
-    z-index: 0;
+    display: none !important;
 }
 
 .nav-item {
