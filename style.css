@@ -342,6 +342,14 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.1);
 }
 
+/* NOTE: rimosso il vecchio blocco .nav-item legacy (font-size:9px,
+   text-transform:uppercase, opacity:0.5, color:var(--on-surface-variant)).
+   Era codice pre-redesign rimasto nel file: la nav bar è ora interamente
+   gestita da renderNav() in ui.js (classi Tailwind + style inline), e quel
+   text-transform:uppercase è la causa esatta delle etichette "OVERVIEW /
+   PLANNER / GRADES / CIRCULARS" tutte maiuscole invece che in title-case
+   come nella foto di riferimento. */
+
 .nav-item i, .nav-item .material-symbols-outlined {
   font-size: 22px;
   transition: transform 0.3s ease;
@@ -456,6 +464,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
+   G-CONNECT — LIQUID GLASS PREMIUM DESIGN SYSTEM
+   ============================================ */
+
+/* ============================================
    MULTI-WIDGET DASHBOARD
    ============================================ */
 .widgets-container {
@@ -533,7 +545,10 @@ h1, h2, h3, h4, h5, h6 {
     transform-origin: 50% 50%;
 }
 
-/* Custom range slider thumb */
+/* Custom range slider thumb — the track gets custom -webkit-appearance:none
+   styling inline (grade simulator), but without matching thumb rules the
+   browser's default thumb doesn't align to a thin custom track, leaving a
+   visible gap between the dot and the line. */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -691,12 +706,16 @@ input[type="range"]::-moz-range-track {
     background: rgba(var(--glass-rgb),0.4);
 }
 
+
 /* ── Dark: Overrides for hardcoded elements ── */
 body {
   color: var(--on-surface) !important;
 }
 
-div[style*="background:white"],
+/* NOTE: rimossa la regola globale "h1,h2,h3,h4{color:var(--on-surface)!important}".
+   Era un residuo del vecchio sistema dark-mode e con !important vinceva SEMPRE
+   sugli style inline (es. color:#ffffff sull'h2 "Buongiorno, Andrea"), causando
+   il tono bluastro invece del bianco pieno della foto di riferimento. */div[style*="background:white"],
 div[style*="background: white"],
 div[style*="background:#FFFFFF"],
 div[style*="background: #FFFFFF"] {
@@ -704,6 +723,10 @@ div[style*="background: #FFFFFF"] {
   color: var(--on-surface) !important;
 }
 
+/* Premium card dark-mode background/border/shadow are defined once,
+   further down, as a solid navy gradient matching the hero card. */
+
+/* Also customize content within the cards for Dark Mode */
 .card-media-premium h2,
 .card-media-premium span,
 .card-media-premium p {
@@ -735,7 +758,7 @@ div[style*="background: #FFFFFF"] {
 .card-verifiche-premium h2,
 .card-verifiche-premium p,
 .card-verifiche-premium span {
-    color: #86efac !important;
+    color: #86efac !important; /* light green */
 }
 .card-verifiche-premium div[style*="background:#F0FDF4"] {
     background: rgba(134, 239, 172, 0.15) !important;
@@ -768,6 +791,35 @@ div[style*="background: #FFFFFF"] {
     color: var(--on-surface-variant) !important;
 }
 
+/* ================================================================
+   SATIN GLASS BACKGROUND — blurred blue gradient mesh + grain
+   Painted directly as body background layers (no fixed pseudo-
+   elements, no filter:blur, no transform animation). That older
+   approach combined position:fixed + filter:blur + an animated
+   transform behind dozens of backdrop-filter cards — a known
+   WebKit/mobile compositing trap that can make backdrop-filter
+   surfaces sample a blank/white layer instead of what's behind
+   them. This version has no extra layers to fight with: it's
+   just the body's own background-image, so it always paints.
+   ================================================================ */
+
+/* ================================================================
+   SMOOTH BACKGROUND — soft blue gradient wash, no grain/noise.
+   Uses the same hues as the widget cards (not just "blue" in the
+   abstract) so the page reads as one continuous surface instead of
+   a flat backdrop the cards sit on top of with a hard jump.
+   ================================================================ */
+
+/* ================================================================
+   SMOOTH BACKGROUND — one hue family, eased multi-stop falloff.
+   Two large, gently overlapping shapes instead of four smaller
+   ones — fewer edges means fewer places for a "ring" to become
+   visible. Each stop fades gradually (0% → 45% → 100%) instead of
+   jumping straight to transparent, which is what caused the
+   banded/blotchy look. Same hues as the widget cards so the page
+   reads as one continuous surface, not a backdrop the cards sit on.
+   ================================================================ */
+
 body {
   background-color: var(--surface);
   background-image:
@@ -777,6 +829,9 @@ body {
   transition: background-color 0.35s ease;
 }
 
+/* Dark mode: same hues the cards themselves are built from
+   (#1e3a8a / #16213e), so the ambient glow and the widgets read
+   as one family instead of two different blues fighting. */
 body {
   background-image:
     radial-gradient(135% 105% at 18% -12%, rgba(30, 58, 138, 0.30) 0%, rgba(30, 58, 138, 0.11) 45%, rgba(30, 58, 138, 0) 100%),
@@ -803,6 +858,13 @@ body {
               inset 0 1px 1px 0 rgba(var(--glass-rgb), 0.05) !important;
 }
 
+/* ================================================================
+   DARK MODE — Comprehensive inline-style overrides
+   Targets every hardcoded colour pattern found in ui.js so the
+   theme works without touching the 7,700-line JS file.
+   ================================================================ */
+
+/* ── App Loader & Boot Overlay ── */
 #app-loader {
   background: #0d1117 !important;
 }
@@ -811,6 +873,7 @@ body {
   background: #0d1117 !important;
 }
 
+/* ── Login page ── */
 .login-view {
   background: transparent !important;
 }
@@ -819,11 +882,13 @@ body {
   color: var(--primary) !important;
 }
 
+/* ── Views transparency to allow body background mesh to shine ── */
 .view-fullbleed, .view {
   background: transparent !important;
   background-image: none !important;
 }
 
+/* ── Premium Dashboard Widgets ── */
 .card-media-premium, .card-assenze-premium, .card-verifiche-premium, .card-assenze-bg {
   border-radius: 32px !important;
   border: none !important;
@@ -831,6 +896,7 @@ body {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease !important;
 }
 
+/* Dark mode premium widget cards override */
 .card-media-premium {
   background: linear-gradient(135deg, #0c0f17 0%, #1e3a8a 100%) !important;
   border: none !important;
@@ -849,6 +915,7 @@ body {
   box-shadow: none !important;
 }
 
+/* ── Decorative blobs inside cards — glowing in dark ── */
 .card-media-premium div[style*="rgba(219,234,254"],
 .card-media-premium div[style*="rgba(243,232,255"] {
   background: rgba(96, 165, 250, 0.18) !important;
@@ -862,6 +929,7 @@ body {
   background: rgba(52, 211, 153, 0.08) !important;
 }
 
+/* Tomorrow Card & Empty State Card styling */
 .tomorrow-card {
   background: rgba(var(--glass-rgb), 0.5) !important;
   backdrop-filter: blur(12px) saturate(140%) !important;
@@ -896,6 +964,9 @@ body {
   color: var(--on-surface-variant) !important;
 }
 
+/* ── Planner / Agenda — same navy-gradient family as the dashboard,
+   replacing the flat near-black surface tokens these elements used to
+   fall back to (that's what read as "quasi neri" / low-contrast). ── */
 #planner-search-input {
   background: linear-gradient(135deg, rgba(12, 15, 23, 0.95) 0%, rgba(23, 42, 92, 0.85) 100%) !important;
   border: none !important;
@@ -928,6 +999,8 @@ body {
   background: rgba(248, 113, 113, 0.2) !important;
 }
 
+/* ── Grades > subject detail — same navy family as the rest of the
+   app instead of the flat near-black surface-container-lowest. ── */
 .subject-detail-card {
   background: linear-gradient(135deg, #10131c 0%, #1a2340 100%) !important;
   border: none !important;
@@ -936,14 +1009,17 @@ body {
     0 24px 48px -20px rgba(0, 0, 0, 0.4) !important;
 }
 
+/* ── Media card subtitle (rgba(2,80,197,0.6)) ── */
 .card-media-premium p[style*="rgba(2,80,197"] {
   color: rgba(173, 198, 255, 0.7) !important;
 }
 
+/* ── Verifiche subtitle (rgba(5,150,105,0.6)) ── */
 .card-verifiche-premium p[style*="rgba(5,150,105"] {
   color: rgba(134, 239, 172, 0.65) !important;
 }
 
+/* ── Progress bar track (#E5E7EB) and fill (#059669) ── */
 div[style*="background:#E5E7EB"] {
   background: rgba(var(--glass-rgb), 0.15) !important;
 }
@@ -952,11 +1028,15 @@ div[style*="background:#059669"] {
   background: var(--success) !important;
 }
 
+/* ── NOW badge (#1F2937 bg) ── */
 div[style*="background:#1F2937"] {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
 }
 
+/* ── Hero card month bars — low-alpha blue-on-blue was invisible
+   against the dark gradient; white-based translucency reads
+   regardless of how dark/vivid the card background is. ── */
 .card-media-premium div[style*="background:rgba(37,99,235,0.08)"] {
   background: rgba(255, 255, 255, 0.14) !important;
 }
@@ -970,73 +1050,89 @@ div[style*="background:#1F2937"] {
   background: rgba(255, 255, 255, 0.4) !important;
 }
 
+/* ── Active chart bar (#0250C5) ── */
 div[style*="background:#0250C5"] {
   background: var(--primary) !important;
 }
 
+/* ── Carousel active dot (#0250C5) ── */
 .carousel-dot[style*="background: #0250C5"],
 .carousel-dot[style*="background:#0250C5"] {
   background: var(--primary) !important;
 }
 
+/* ── Red accent stripe (#E5A7A7) ── */
 div[style*="background:#E5A7A7"] {
   background: rgba(255, 180, 171, 0.35) !important;
 }
 
+/* ── Blue buttons (#2563eb background) ── */
 button[style*="background:#2563eb"] {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
 }
 
+/* ── Red buttons (#dc2626 background) ── */
 button[style*="background:#dc2626"] {
   background: var(--error) !important;
   color: var(--on-error) !important;
 }
 
+/* ── Primary action (#0058bc background — FAB) ── */
 div[style*="background:#0058bc"] {
   background: var(--primary) !important;
 }
 
+/* ── Deep blue accent (#1e40af) ── */
 div[style*="background:#1e40af"] {
   background: var(--primary-container) !important;
 }
 
+/* ── Purple FAB (#4f46e5) ── */
 button[style*="background:#4f46e5"] {
   background: var(--secondary) !important;
   color: var(--on-secondary) !important;
 }
 
+/* ── Green dots (#22c55e) ── */
 div[style*="background:#22c55e"],
 span[style*="background:#22c55e"] {
   background: var(--success) !important;
 }
 
+/* ── Amber dot (#f59e0b) ── */
 span[style*="background:#f59e0b"] {
   background: var(--warning) !important;
 }
 
+/* ── Orange stripe (#FF9F0A) ── */
 div[style*="background:#FF9F0A"] {
   background: var(--warning) !important;
 }
 
+/* ── Today dot (#007AFF) ── */
 div[style*="background:#007AFF"] {
   background: var(--primary) !important;
 }
 
+/* ── Inline grade bar colors ── */
 div[style*="background:#94a3b8"] {
   background: var(--outline) !important;
 }
 
+/* ── Modal sticky headers (#1c1c1e) ── */
 div[style*="background:#1c1c1e"] {
   background: var(--surface-container-lowest) !important;
   border-color: var(--outline-variant) !important;
 }
 
+/* ── Dark panel in study tool (#141414 / #1a1a2e) ── */
 div[style*="background:#141414"],
 option[style*="background:#1a1a2e"] {
   background: var(--surface-container-lowest) !important;
 }
 
+/* ── Separator / divider lines ── */
 div[style*="background:rgba(226,232,240"] {
   background: var(--outline-variant) !important;
 }
@@ -1046,36 +1142,44 @@ div[style*="background:rgba(0,0,0,0.02)"] {
   background: rgba(var(--glass-rgb), 0.06) !important;
 }
 
+/* ── Subject badges with rgba(0,0,0,0.04) bg ── */
 span[style*="background:rgba(0,0,0,0.04)"] {
   background: rgba(var(--glass-rgb), 0.08) !important;
 }
 
+/* ── Profile section icon bg (rgba(99,102,241,0.1)) ── */
 div[style*="background:rgba(99,102,241,0.1)"] {
   background: rgba(99, 102, 241, 0.15) !important;
 }
 
+/* ── Dashed empty-state card ── */
 .card[style*="rgba(0,0,0,0.02)"] {
   background: rgba(var(--glass-rgb), 0.04) !important;
   border-color: var(--outline-variant) !important;
 }
 
+/* ── Avatar group image borders (white → dark surface) ── */
 .avatar-group > img {
   border-color: var(--surface-container-lowest) !important;
 }
 
+/* ── Nav active glow ── */
 .nav-item.active::before {
   background: rgba(173, 198, 255, 0.08) !important;
 }
 
+/* ── Active glow circle ── */
 .active-glow {
   background: rgba(173, 198, 255, 0.10) !important;
 }
 
+/* ── Login gradient button ── */
 button[style*="linear-gradient(135deg,#2563eb,#4f46e5)"] {
   background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
   color: var(--on-primary) !important;
 }
 
+/* ── Inline text color overrides for generic dark text ── */
 [style*="color:#111"] {
   color: var(--on-surface) !important;
 }
@@ -1086,6 +1190,7 @@ button[style*="linear-gradient(135deg,#2563eb,#4f46e5)"] {
   color: var(--on-surface-variant) !important;
 }
 
+/* ── Presence badges (border overrides) ── */
 div[style*="border:1px solid #bce3c8"],
 [style*="solid #bce3c8"] {
   border-color: rgba(134, 239, 172, 0.25) !important;
@@ -1096,6 +1201,7 @@ div[style*="border:1px solid #fecaca"],
   border-color: rgba(255, 180, 171, 0.25) !important;
 }
 
+/* ── Presence pill backgrounds ── */
 div[style*="rgba(230,244,234"] {
   background: rgba(134, 239, 172, 0.12) !important;
 }
@@ -1104,11 +1210,28 @@ div[style*="rgba(254,242,242,0.9)"] {
   background: rgba(255, 180, 171, 0.12) !important;
 }
 
+/* ── PDF/print view: keep light regardless of theme ── */
 .doc-print-view {
   color-scheme: light !important;
 }
 
+/* ============================================================
+   DESKTOP / TABLET — TOP PILL NAVIGATION (≥ 768px)
+   Additive only: every rule below is scoped to a min-width media
+   query, so nothing here can affect the < 768px mobile layout.
+   The mobile bottom pill nav (.liquid-navbar, "md:hidden" via
+   Tailwind) is untouched and keeps working exactly as before.
+
+   Only 4 buttons, so a full-height sidebar was overkill — this
+   reuses the exact same compact pill treatment as the mobile nav,
+   just docked at the top and centered instead of at the bottom.
+   ============================================================ */
+
 @media (min-width: 768px) {
+  /* The top nav is now flush with the top edge instead of a floating pill,
+     so give the page some breathing room at the top; and since there's no
+     bottom pill nav on desktop/tablet, the mobile safe-area bottom padding
+     on <body> (pb-28) is no longer needed. */
   body:not(.logged-out) {
     padding-bottom: 0;
   }
@@ -1116,6 +1239,8 @@ div[style*="rgba(254,242,242,0.9)"] {
     padding-top: 104px;
   }
 
+  /* Widget dashboard: mobile shows one widget at a time via horizontal
+     swipe; tablet/desktop have room to show them all at once as a grid. */
   .widgets-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1132,6 +1257,10 @@ div[style*="rgba(254,242,242,0.9)"] {
   }
 }
 
+/* Top nav — attached to the very top edge of the page (no gap, no floating),
+   rounded only at the bottom so it reads as a tab hanging down from the
+   browser's top border rather than a pill. Background is a distinct layered
+   gradient (not just the flat frosted glass used elsewhere) in both themes. */
 .top-bar-nav {
   padding: 0 10px;
   height: 68px;
@@ -1154,6 +1283,13 @@ div[style*="rgba(254,242,242,0.9)"] {
   box-shadow: 0 18px 36px -14px rgba(0, 0, 0, 0.55), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* ============================================================
+   ROUNDED / SOFT SHADOWS — widget cards
+   home-card-item radius bumped for consistency with the widgets
+   above (see the updated .card-media-premium/.card-assenze-premium/
+   .card-verifiche-premium/.card-assenze-bg rule further down for
+   the softened shadow + rounding).
+   ============================================================ */
 .home-card-item {
   border-radius: 24px !important;
 }
