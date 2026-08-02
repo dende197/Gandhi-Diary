@@ -217,6 +217,43 @@ body {
   border-radius: var(--radius-full);
 }
 
+/* Materiality - Liquid Glass v8 Physics (from DESIGN.md & code.html) */
+.liquid-glass-v8 {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Rim light (135°) */
+.rim-light {
+  border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Active Blue State (Luminous Core) */
+.active-blue-glow {
+  background: linear-gradient(135deg, rgba(47, 88, 205, 0.6) 0%, rgba(182, 196, 255, 0.2) 100%) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 20px rgba(47, 88, 205, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+}
+
+.fab-luminous {
+  background: linear-gradient(135deg, #2f58cd 0%, #7c9aff 100%) !important;
+  box-shadow: 0 8px 24px rgba(47, 88, 205, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+.squircle-sm { border-radius: 16px !important; }
+.squircle-md { border-radius: 24px !important; }
+.squircle-lg { border-radius: 32px !important; }
+.squircle-full { border-radius: 9999px !important; }
+
 .liquid-shadow {
   box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.06),
               inset 0 1px 1px 0 rgba(var(--glass-rgb), 0.8);

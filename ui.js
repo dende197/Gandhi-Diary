@@ -7084,35 +7084,35 @@ function renderPlanner() {
         const canDel = typeof isUserGeneratedTaskId==='function' ? isUserGeneratedTaskId(t.id) : false;
         const dLabel = showDate&&t.due_date ? (()=>{
             const d=new Date(t.due_date+'T00:00:00');
-            return `<span style="font-size:9px;font-weight:700;color:var(--outline);display:block;margin-bottom:2px;text-transform:uppercase;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
+            return `<span style="font-size:10px;font-weight:700;color:rgba(218,226,253,0.6);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
         })() : '';
-        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:var(--error-container);border:1px solid rgba(255,59,48,0.18);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:var(--error);">delete</span></button>` : '';
+        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:rgba(255,59,48,0.2);border:1px solid rgba(255,59,48,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ffb4ab;">delete</span></button>` : '';
         const rerender = "state._forceRender=true;scheduleRender(0);";
 
         if (isExam) return `
-        <div class="planner-task-exam" onclick="toggleTask('${tid}');${rerender}" style="background:rgba(254,242,242,0.85);border:1.5px solid rgba(254,202,202,0.6);border-radius:22px;padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 4px 16px -6px rgba(239,68,68,0.18);">
-            <div style="position:absolute;top:-24px;right:-24px;width:80px;height:80px;background:rgba(254,202,202,0.25);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
+        <div class="planner-task-exam squircle-md" onclick="toggleTask('${tid}');${rerender}" style="background:linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(182,196,255,0.05) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(239,68,68,0.35);padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 0 20px rgba(239,68,68,0.25);">
+            <div style="position:absolute;top:-24px;right:-24px;width:80px;height:80px;background:rgba(239,68,68,0.25);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
             ${dLabel}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1;">
                 <div style="flex:1;min-width:0;">
-                    <h3 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
-                    <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</p>
+                    <h3 style="font-size:15px;font-weight:700;color:#dae2fd;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
+                    <p style="font-size:13px;color:rgba(196,197,214,0.8);margin:0 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</p>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${delBtn}<span class="material-symbols-outlined" style="font-size:22px;color:var(--error);">warning</span></div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${delBtn}<span class="material-symbols-outlined" style="font-size:22px;color:#ffb4ab;">warning</span></div>
             </div>
-            <div style="display:inline-flex;background:rgba(254,226,226,0.95);color:var(--error);font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;">VERIFICA${t.done?' · ✓':''}</div>
+            <div style="display:inline-flex;background:rgba(239,68,68,0.3);color:#ffb4ab;font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;border:1px solid rgba(239,68,68,0.4);">VERIFICA${t.done?' · ✓':''}</div>
         </div>`;
 
         if (t.done) return `
-        <div class="planner-task-done" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;border:none;opacity:0.5;cursor:pointer;">
-            <div style="width:44px;height:44px;flex-shrink:0;background:var(--success-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--success);"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
-            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface-variant);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--outline);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
+        <div class="planner-task-done liquid-glass-v8 squircle-md rim-light" onclick="toggleTask('${tid}');${rerender}" style="padding:14px 16px;display:flex;align-items:center;gap:13px;opacity:0.5;cursor:pointer;">
+            <div style="width:44px;height:44px;flex-shrink:0;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#34d399;"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
+            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:rgba(218,226,253,0.6);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:rgba(196,197,214,0.5);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
 
         return `
-        <div class="planner-task-todo" onclick="toggleTask('${tid}');${rerender}" style="background:var(--surface-container-lowest);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 18px -8px rgba(0,0,0,0.08);border:none;cursor:pointer;">
-            <div style="width:44px;height:44px;flex-shrink:0;background:var(--info-container);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--info);"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
-            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
+        <div class="planner-task-todo liquid-glass-v8 squircle-md rim-light" onclick="toggleTask('${tid}');${rerender}" style="padding:14px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;">
+            <div style="width:44px;height:44px;flex-shrink:0;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#b6c4ff;"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
+            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#dae2fd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:rgba(196,197,214,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
         </div>`;
     }
 
@@ -7121,35 +7121,34 @@ function renderPlanner() {
     window._plannerMN = MN;
     window._plannerDayContentCache = null; // invalidata ad ogni render completo
 
-    // ── Week slide HTML (one slide = one week of 7 day pills) ────
+    // ── Week slide HTML (one slide = one week of 7 day capsules) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;gap:6px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;transform:translateZ(0);-webkit-transform:translateZ(0);">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;justify-content:space-between;gap:8px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;transform:translateZ(0);-webkit-transform:translateZ(0);overflow-x:auto;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
-                return `<div class="planner-day-pill" onclick="plannerSelectDay('${d.iso}')" style="
-                    flex:1;height:88px;border-radius:20px;
-                    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-                    cursor:pointer;
-                    background:${isSel ? 'var(--primary)' : 'var(--surface-container-lowest)'};
-                    border:none;
-                    box-shadow:${isSel ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)' : 'none'};
-                    transform:translateZ(0);
-                    will-change:background,box-shadow;
-                    -webkit-backface-visibility:hidden;
-                    backface-visibility:hidden;
-                    transition:background 0.13s ease,box-shadow 0.13s ease,border-color 0.13s ease;
-                    -webkit-tap-highlight-color:transparent;
-                ">
-                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${isSel?'rgba(var(--glass-rgb),0.75)':'var(--outline)'};">${d.label}</span>
-                    <span style="font-size:20px;font-weight:800;color:${isSel?'var(--on-primary)':'var(--on-surface)'};line-height:1;">${d.dayNum}</span>
-                    <div style="width:5px;height:5px;border-radius:50%;background:${
-                        d.isToday
-                            ? (isSel ? 'rgba(var(--glass-rgb),0.9)' : 'var(--primary)')
-                            : d.hasTask
-                                ? (isSel ? 'rgba(var(--glass-rgb),0.45)' : 'rgba(37,99,235,0.28)')
-                                : 'transparent'
-                    };"></div>
-                </div>`;
+                if (isSel) {
+                    return `<div class="planner-day-pill active-blue-glow squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
+                        width:56px;height:96px;flex-shrink:0;
+                        display:flex;flex-direction:column;align-items:center;justify-content:center;
+                        cursor:pointer;transition:transform 0.15s ease;
+                        -webkit-tap-highlight-color:transparent;
+                    " ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+                        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#ffffff;margin-bottom:4px;opacity:0.8;">${d.label}</span>
+                        <span style="font-size:22px;font-weight:700;color:#ffffff;line-height:1;">${d.dayNum}</span>
+                        <div style="width:6px;height:6px;border-radius:9999px;background:#ffffff;margin-top:8px;box-shadow:0 0 8px rgba(255,255,255,0.8);"></div>
+                    </div>`;
+                } else {
+                    return `<div class="planner-day-pill liquid-glass-v8 rim-light squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
+                        width:56px;height:96px;flex-shrink:0;
+                        display:flex;flex-direction:column;align-items:center;justify-content:center;
+                        cursor:pointer;opacity:0.65;transition:transform 0.15s ease, opacity 0.15s ease;
+                        -webkit-tap-highlight-color:transparent;
+                    " ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+                        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#c4c5d6;margin-bottom:4px;">${d.label}</span>
+                        <span style="font-size:20px;font-weight:700;color:#dae2fd;line-height:1;">${d.dayNum}</span>
+                        <div style="width:5px;height:5px;border-radius:9999px;background:${(d.isToday || d.hasTask) ? 'rgba(182,196,255,0.6)' : 'transparent'};margin-top:6px;"></div>
+                    </div>`;
+                }
             }).join('')}
         </div>`;
     }
@@ -7157,39 +7156,39 @@ function renderPlanner() {
     // Dot indicators (5 dots, one per week)
     const dotsHtml = weeks.map((_, i) => `
         <div class="planner-week-dot" data-idx="${i}" style="
-            width:${i===activeSlide?'20px':'6px'};height:6px;border-radius:4px;
-            background:${i===activeSlide?'var(--primary)':'var(--outline-variant)'};
+            width:${i===activeSlide?'20px':'6px'};height:6px;border-radius:9999px;
+            background:${i===activeSlide?'rgba(47,88,205,0.8)':'rgba(255,255,255,0.2)'};
             transition:all 0.3s ease;cursor:pointer;
         " onclick="plannerJumpToWeek(${i})"></div>
     `).join('');
 
     window._plannerInitialSlide = activeSlide; // per post-render scroll
     return `
-    <div class="view-fullbleed planner-view min-h-screen pb-32" style="padding:0;">
+    <div class="view-fullbleed planner-view min-h-screen pb-40" style="padding:0;background:#0b1326;">
 
         <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),28px) 24px 16px;">
-            <h1 style="font-size:30px;font-weight:800;color:var(--info);letter-spacing:-0.025em;margin:0;line-height:1;">Agenda</h1>
-            <button onclick="window.openPlannerMonthPicker()" style="display:flex;align-items:center;gap:6px;background:rgba(var(--glass-rgb),0.92);border:1.5px solid rgba(var(--glass-rgb),0.85);padding:7px 14px 7px 10px;border-radius:999px;box-shadow:0 2px 12px -2px rgba(0,0,0,0.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-family:Hanken Grotesk,sans-serif;" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:16px;color:var(--info);font-variation-settings:'FILL' 1;">calendar_month</span>
-                <span style="font-size:13px;font-weight:700;color:var(--info);">${monthLabel}</span>
+        <header style="display:flex;justify-content:space-between;align-items:center;padding:max(env(safe-area-inset-top,0px),28px) 20px 16px;">
+            <h1 style="font-size:22px;font-weight:600;color:#dae2fd;opacity:0.9;margin:0;line-height:1.2;" class="sentence-case">Planner</h1>
+            <button onclick="window.openPlannerMonthPicker()" class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;cursor:pointer;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:18px;color:rgba(218,226,253,0.7);">calendar_today</span>
+                <span style="font-size:14px;font-weight:500;color:#dae2fd;letter-spacing:0.02em;">${monthLabel}</span>
             </button>
         </header>
 
-        <!-- ══ SEARCH BAR (Apple pill, sempre visibile) ══ -->
-        <div style="padding:0 24px 14px;">
-            <div style="position:relative;">
-                <span class="material-symbols-outlined" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--outline);font-size:18px;pointer-events:none;">search</span>
+        <!-- ══ SEARCH BAR (Refined Integrated Style) ══ -->
+        <div style="padding:0 20px 20px;">
+            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all 0.3s ease;position:relative;">
+                <span class="material-symbols-outlined" style="font-size:20px;color:rgba(196,197,214,0.6);flex-shrink:0;">search</span>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche..."
                     value="${escapeHtml(query)}"
                     oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    onfocus="window._psfocused=true;"
-                    onblur="setTimeout(()=>{window._psfocused=false;},200);"
-                    style="width:100%;height:46px;padding:0 46px;border-radius:999px;background:var(--surface-container-lowest);border:none;box-shadow:0 2px 16px -4px rgba(0,0,0,0.08);font-size:15px;font-weight:500;color:var(--on-surface);outline:none;font-family:Hanken Grotesk,sans-serif;box-sizing:border-box;" />
-${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElementById('planner-search-input');if(si)si.value='';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--surface-container-low);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--on-surface-variant);padding:0;"><span class="material-symbols-outlined" style="font-size:15px;">close</span></button>` : ''}            </div>
+                    onfocus="window._psfocused=true;if(this.parentElement)this.parentElement.style.background='rgba(255,255,255,0.1)';"
+                    onblur="setTimeout(()=>{window._psfocused=false;if(this.parentElement)this.parentElement.style.background='rgba(255,255,255,0.04)';},200);"
+                    style="width:100%;background:transparent;border:none;outline:none;font-size:16px;color:#dae2fd;padding:0;font-family:'Inter',sans-serif;" />
+${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElementById('planner-search-input');if(si)si.value='';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(218,226,253,0.7);padding:0;"><span class="material-symbols-outlined" style="font-size:14px;">close</span></button>` : ''}            </div>
         </div>
 
-        <!-- ══ WEEK CAROUSEL (same mechanics as dashboard widgets) ══ -->
+        <!-- ══ WEEK CAROUSEL (Liquid Glass Capsules) ══ -->
        <div id="planner-week-carousel" style="
             display:flex;
             overflow-x:auto;
@@ -7199,38 +7198,38 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             scrollbar-width:none;
             -ms-overflow-style:none;
             gap:0;
-            margin: 0 0 -20px 0;
+            margin:0;
             padding:0;
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
         </div>
 
         <!-- Dot indicators -->
-        <div style="display:flex;justify-content:center;align-items:center;gap:7px;margin:10px 0 16px;">
+        <div style="display:flex;justify-content:center;align-items:center;gap:6px;margin:12px 0 20px;">
             ${dotsHtml}
         </div>
 
         <!-- ══ RISULTATI RICERCA / CONTENUTO GIORNO ══ -->
-        <div id="planner-content-area">
+        <div id="planner-content-area" style="padding:0 20px;">
         ${(query || filterSubject !== 'all') ? `
-        <div style="padding:0 24px;">
+        <div>
             <!-- Subject chips -->
-            <div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;">
+            <div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:${filterSubject===s?'2px solid var(--primary)':'1.5px solid rgba(226,232,240,0.9)'};background:${filterSubject===s?'#2563eb':'white'};color:${filterSubject===s?'white':'#64748b'};">${escapeHtml(l)}</button>`).join('')}
+                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:${filterSubject===s?'#2f58cd':'rgba(255,255,255,0.04)'};color:${filterSubject===s?'#ffffff':'#c4c5d6'};">${escapeHtml(l)}</button>`).join('')}
             </div>
-            <div style="font-size:11px;font-weight:600;color:var(--outline);margin-bottom:10px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
-            <div style="display:flex;flex-direction:column;gap:9px;">
-                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div style="text-align:center;padding:40px 0;"><span class="material-symbols-outlined" style="font-size:40px;color:var(--outline-variant);">search_off</span><p style="color:var(--outline);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p></div>`}
+            <div style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);margin-bottom:12px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;"><span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span><p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p></div>`}
             </div>
         </div>` : `
 
         <!-- ══ DAY CONTENT ══ -->
-        <div style="padding:0 24px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;flex-direction:column;gap:16px;">
 
-            <!-- Selected day label -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                <h2 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">
+            <!-- Selected day header -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
+                <h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">
                     ${(()=>{
                         const d=new Date(selectedDate+'T00:00:00');
                         const diff=Math.round((d-today)/86400000);
@@ -7241,39 +7240,47 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
                         return base;
                     })()}
                 </h2>
-                <span style="font-size:11px;font-weight:700;color:var(--outline);">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
+                <span style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
             </div>
 
             ${upcomingCount>0 && selectedDate===todayISO ? `
-            <div style="background:var(--info-container);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;box-shadow:0 4px 16px -8px rgba(37,99,235,0.12);">
-                <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
-                    <div style="width:30px;height:30px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:15px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
-                    <span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span>
+            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;background:linear-gradient(135deg, rgba(47,88,205,0.2) 0%, rgba(255,255,255,0.02) 100%);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#2f58cd;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:16px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
+                    <span style="font-size:14px;font-weight:700;color:#dae2fd;">Smart Planner</span>
                 </div>
-                <p style="font-size:12px;color:var(--on-surface-variant);line-height:1.5;margin:0 0 6px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:var(--info);font-weight:700;font-size:11px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:Hanken Grotesk,sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:13px;">arrow_forward</span></button>
+                <p style="font-size:13px;color:rgba(196,197,214,0.8);line-height:1.5;margin:0 0 8px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#b6c4ff;font-weight:600;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Inter',sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>
             </div>` : ''}
 
-            ${dayTasks.length ? dayTasks.map(t=>TC(t,false)).join('') : `
-            <div class="planner-empty-card" style="background:var(--surface-container-lowest);border-radius:22px;padding:44px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border:none;box-shadow:0 3px 14px -6px rgba(0,0,0,0.05);">
-                <span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>
-                <p style="font-size:14px;font-weight:600;color:var(--outline);margin:0;">Nessuna attività per questo giorno</p>
+            ${dayTasks.length ? `<div style="display:flex;flex-direction:column;gap:12px;">${dayTasks.map(t=>TC(t,false)).join('')}</div>` : `
+            <!-- Empty State Bento Card (matches code.html) -->
+            <div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:320px;">
+                <div style="position:relative;margin-bottom:24px;">
+                    <!-- Inner Glow for Icon -->
+                    <div style="position:absolute;inset:0;background:rgba(47,88,205,0.2);filter:blur(24px);border-radius:9999px;"></div>
+                    <div class="liquid-glass-v8 squircle-md" style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px -10px rgba(0,0,0,0.3);">
+                        <span class="material-symbols-outlined" style="font-size:42px;color:rgba(196,197,214,0.3);" style="font-variation-settings:'wght' 200;">event_busy</span>
+                    </div>
+                </div>
+                <p style="font-size:15px;font-weight:500;font-style:italic;color:rgba(218,226,253,0.4);max-width:200px;line-height:1.6;margin:0;" class="sentence-case">
+                    Nessuna attività per questo giorno
+                </p>
             </div>`}
         </div>`}
 
         </div><!-- /planner-content-area -->
 
-        <!-- ══ FABs ══ -->
-        <div style="position:fixed;bottom:calc(112px + env(safe-area-inset-bottom,0px));right:18px;display:flex;flex-direction:column;align-items:center;gap:12px;z-index:40;">
-            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" style="width:52px;height:52px;border-radius:50%;background:#4f46e5;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(79,70,229,0.32);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:22px;">history</span>
+        <!-- ══ FLOATING ACTIONS (matches code.html) ══ -->
+        <div style="position:fixed;bottom:calc(110px + env(safe-area-inset-bottom,0px));right:24px;display:flex;flex-direction:column;gap:16px;z-index:40;">
+            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" class="liquid-glass-v8 squircle-full rim-light shadow-lg" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:20px;color:rgba(218,226,253,0.7);">history</span>
             </button>
-            <button onclick="showQuickAddTaskModal()" style="width:52px;height:52px;border-radius:50%;background:#2563eb;color:white;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(37,99,235,0.38);cursor:pointer;" ontouchstart="this.style.transform='scale(0.91)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:26px;">add</span>
+            <button onclick="showQuickAddTaskModal()" class="fab-luminous squircle-full shadow-2xl" style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform 0.15s ease;color:#ffffff;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:32px;font-variation-settings:'wght' 500;">add</span>
             </button>
         </div>
 
-        <!-- carousel JS moved to module level -->
     </div>`;
 }
 
