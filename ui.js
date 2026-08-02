@@ -1994,31 +1994,30 @@ function renderHome() {
 
             <div style="margin-bottom: 20px; padding: 0 24px;">
                 <!-- WIDGET PRINCIPALE — carosello a 3 slide senza bordo, testo bianco e layout perfetto -->
-                <div id="home-media-widget" style="background:linear-gradient(135deg, #1b2956 0%, #131f42 50%, #0c1329 100%) !important;box-shadow:none !important;border-radius:30px !important;border:none !important;outline:none !important;position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;">
+                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.38s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
                         <!-- SLIDE 1: MEDIA GENERALE -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div>
                                 <h2 style="font-size:21px;font-weight:700;color:#ffffff !important;letter-spacing:-0.025em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
-                                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.7) !important;margin:2px 0 0;">Media generale attiva</p>
+                                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5) !important;margin:2px 0 0;">Media generale attiva</p>
                             </div>
                             <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
                                 <div style="display:flex;align-items:center;gap:10px;">
-                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff !important;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;background:#133d32;color:#29d68f;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(27,87,70,0.5);">+0.15</span>
-                                </div>
-                                <div style="text-align:right;">
-                                    <span style="font-size:12px;font-weight:600;color:#ffffff !important;letter-spacing:0.025em;">Adesso</span>
+                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff !important;line-height:1;text-shadow:0 0 20px rgba(255,255,255,0.15);">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.35);color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;padding:4px 10px;border-radius:9999px;border:1px solid rgba(52,211,153,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 0 12px rgba(52,211,153,0.3);">+0.15</span>
                                 </div>
                             </div>
-                            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:46px;width:100%;padding-top:4px;">
-                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:6px;background:#1d2b45;border-radius:9999px;opacity:0.8;"></div></div>
-                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:9px;background:#223352;border-radius:9999px;opacity:0.9;"></div></div>
-                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:13px;background:#283b5e;border-radius:9999px;"></div></div>
-                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:19px;background:#2f466f;border-radius:12px;"></div></div>
-                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:28px;background:#395688;border-radius:12px;"></div></div>
-                                <div style="display:flex;justify-content:center;align-items:flex-end;height:100%;"><div style="width:100%;height:44px;background:#7e90af;border-radius:13px;box-shadow:0 4px 14px rgba(126,145,178,0.25);"></div></div>
+                            <div style="display:flex;align-items:end;gap:10px;height:40px;width:100%;padding-top:4px;">
+                                <div style="flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
+                                <div style="flex:1;height:16px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
+                                <div style="flex:1;height:12px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
+                                <div style="flex:1;height:24px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
+                                <div style="flex:1;height:32px;background:rgba(255,255,255,0.1);border-radius:9999px;"></div>
+                                <div style="flex:1;height:40px;background:rgba(255,255,255,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:16px;border:1.5px solid rgba(255,255,255,0.6);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                    <span style="position:absolute;top:-22px;font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap;">Adesso</span>
+                                </div>
                             </div>
                         </div>
 

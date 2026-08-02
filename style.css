@@ -887,19 +887,52 @@ body {
 }
 
 #home-media-widget {
-  background: linear-gradient(135deg, #1b2956 0%, #131f42 50%, #0c1329 100%) !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 30px !important;
+  /* Base layer: primary/40 → surface-container gradient (matches code.html) */
+  background: linear-gradient(135deg, rgba(47, 88, 205, 0.4) 0%, #171f33 100%) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 40px 80px -20px rgba(0, 10, 30, 0.45) !important;
+  border-radius: 32px !important;
   overflow: hidden !important;
   outline: none !important;
+  position: relative !important;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Rim light — glass-hero ::before for hero card */
+#home-media-widget::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.1) 28%, transparent 58%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%) !important;
+  pointer-events: none !important;
+  border-radius: inherit !important;
+  z-index: 1;
+}
+
+/* Ensure content sits above the ::before rim light */
+#home-media-widget > * {
+  position: relative;
+  z-index: 2;
 }
 
 .card-media-premium {
-  background: linear-gradient(135deg, #1b2956 0%, #131f42 50%, #0c1329 100%) !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 30px !important;
+  background: linear-gradient(135deg, rgba(47, 88, 205, 0.4) 0%, #171f33 100%) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 40px 80px -20px rgba(0, 10, 30, 0.45) !important;
+  border-radius: 32px !important;
 }
 
 .card-assenze-premium {
