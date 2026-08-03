@@ -268,11 +268,30 @@ body {
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
 }
 
-/* === TYPOGRAPHY === */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--on-surface);
+.active-glass {
+  background: linear-gradient(135deg, rgba(43, 85, 202, 0.4), rgba(43, 85, 202, 0.1)) !important;
+  border: 1px solid rgba(182, 196, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 10, 30, 0.4) !important;
+}
+
+.glow-accent {
+  filter: drop-shadow(0 0 12px rgba(182, 196, 255, 0.4));
+}
+
+#voti-subjects-carousel::-webkit-scrollbar {
+  display: none !important;
+}
+
+#voti-subjects-carousel {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  scroll-snap-type: x mandatory !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.voti-subjects-slide {
+  scroll-snap-align: start !important;
+  scroll-snap-stop: always !important;
 }
 
 .display-lg { font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; }
