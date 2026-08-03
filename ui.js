@@ -7123,7 +7123,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day capsules) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;width:100%;display:flex;justify-content:space-between;gap:8px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;transform:translateZ(0);-webkit-transform:translateZ(0);overflow-x:auto;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;display:flex;justify-content:space-between;gap:8px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;transform:translateZ(0);-webkit-transform:translateZ(0);">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 if (isSel) {
@@ -7488,21 +7488,26 @@ window._buildPlannerDayContentHTML = function() {
     var base = dayLabels[d.getDay()] + ' ' + d.getDate() + ' ' + MN[d.getMonth()];
     var dayLabel = diff===0 ? 'Oggi · '+base : diff===1 ? 'Domani · '+base : diff===-1 ? 'Ieri · '+base : base;
     var smart = upcoming > 0 && selDate === todayISO
-        ? '<div style="background:var(--info-container);border:1.5px solid rgba(191,219,254,0.6);border-radius:20px;padding:14px 16px;">' +
-          '<div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">' +
-          '<div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;">' +
-          '<span class="material-symbols-outlined" style="font-size:15px;color:var(--on-primary);">lightbulb</span></div>' +
-          '<span style="font-size:13px;font-weight:700;color:var(--info);">Smart Planner</span></div>' +
-          '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 6px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
+        ? '<div class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;background:linear-gradient(135deg, rgba(47,88,205,0.2) 0%, rgba(255,255,255,0.02) 100%);">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:#2f58cd;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:16px;color:white;font-variation-settings:\'FILL\' 1;">lightbulb</span></div>' +
+          '<span style="font-size:14px;font-weight:700;color:#dae2fd;">Smart Planner</span></div>' +
+          '<p style="font-size:13px;color:rgba(196,197,214,0.8);line-height:1.5;margin:0 0 8px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
+          '<button onclick="const si=document.getElementById(\'planner-search-input\');if(si){si.focus();si.select();}" style="color:#b6c4ff;font-weight:600;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:\'Inter\',sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>' +
           '</div>' : '';
-    var empty = '<div class="planner-empty-card" style="background:rgba(var(--glass-rgb),0.7);border-radius:22px;padding:44px 16px;text-align:center;border:none;">' +
-        '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">event_busy</span>' +
-        '<p style="font-size:14px;font-weight:600;color:var(--outline);margin:8px 0 0;">Nessuna attività per questo giorno</p></div>';
-    return '<div style="padding:0 24px 140px;display:flex;flex-direction:column;gap:10px;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-        '<h2 style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">' + dayLabel + '</h2>' +
-        '<span style="font-size:11px;font-weight:700;color:var(--outline);">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
-        smart + (dayTasks.length ? dayTasks.map(function(t){ return TC(t,false); }).join('') : empty) +
+    var empty = '<div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:320px;">' +
+        '<div style="position:relative;margin-bottom:24px;">' +
+        '<div style="position:absolute;inset:0;background:rgba(47,88,205,0.2);filter:blur(24px);border-radius:9999px;"></div>' +
+        '<div class="liquid-glass-v8 squircle-md" style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px -10px rgba(0,0,0,0.3);">' +
+        '<span class="material-symbols-outlined" style="font-size:42px;color:rgba(196,197,214,0.3);" style="font-variation-settings:\'wght\' 200;">event_busy</span>' +
+        '</div></div>' +
+        '<p style="font-size:15px;font-weight:500;font-style:italic;color:rgba(218,226,253,0.4);max-width:200px;line-height:1.6;margin:0;" class="sentence-case">Nessuna attività per questo giorno</p>' +
+        '</div>';
+    return '<div style="display:flex;flex-direction:column;gap:16px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">' +
+        '<h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">' + dayLabel + '</h2>' +
+        '<span style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
+        smart + (dayTasks.length ? '<div style="display:flex;flex-direction:column;gap:12px;">' + dayTasks.map(function(t){ return TC(t,false); }).join('') + '</div>' : empty) +
         '</div>';
 };
 
@@ -7517,21 +7522,17 @@ window.refreshPlannerSearch = function() {
     const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || 'all';
 
-    // FIX SCATTO: quando la query torna vuota, ripristina il giorno senza toccare il DOM se non è cambiato
     if (!query && filterSubject === 'all') {
-        if (window._plannerGetDayContentHTML) {
-            const freshHtml = window._plannerGetDayContentHTML();
-            // Scrivi solo se il contenuto è effettivamente diverso, altrimenti lascia stare
+        if (window._buildPlannerDayContentHTML) {
+            const freshHtml = window._buildPlannerDayContentHTML();
             if (area.innerHTML !== freshHtml) {
                 area.innerHTML = freshHtml;
             }
         }
-        // Non chiamare scheduleRender: evita il re-mount dell'intera view
         return;
     }
 
     const TC = window._plannerTC;
-    const MN = window._plannerMN || ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
     if (!TC) { state._forceRender = true; scheduleRender(60); return; }
 
     const allTasks = (state.tasks || []).filter(function(t) { return t.subject !== 'QUEST'; });
@@ -7539,7 +7540,6 @@ window.refreshPlannerSearch = function() {
         return t.subject || t.materia || '';
     }).filter(Boolean))].sort();
 
-    // FIX ORDINE: Da più recente a meno recente (Discendente, b localeCompare a)
     const results = allTasks.filter(function(t) {
         if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
         if (!query) return true;
@@ -7555,90 +7555,121 @@ window.refreshPlannerSearch = function() {
         .map(function(item) {
             const active = filterSubject === item.s;
             const safeS = escapeJsSingleQuote(item.s);
-            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
-                'style="flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;white-space:nowrap;' +
-                'border:' + (active ? '2px solid var(--primary)' : '1.5px solid rgba(226,232,240,0.9)') + ';' +
-                'background:' + (active ? '#2563eb' : 'white') + ';' +
-                'color:' + (active ? 'white' : '#64748b') + ';">' +
+            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" ' +
+                'style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap;' +
+                'background:' + (active ? '#2f58cd' : 'rgba(255,255,255,0.04)') + ';' +
+                'color:' + (active ? '#ffffff' : '#c4c5d6') + ';">' +
                 escapeHtml(item.l) + '</button>';
         }).join('');
 
-    const emptyHtml = '<div style="text-align:center;padding:44px 0;">' +
-        '<span class="material-symbols-outlined" style="font-size:44px;color:var(--outline-variant);">search_off</span>' +
-        '<p style="color:var(--outline);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p>' +
+    const emptyHtml = '<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;">' +
+        '<span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span>' +
+        '<p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p>' +
         '</div>';
 
     const countLabel = results.length + ' risultat' + (results.length === 1 ? 'o' : 'i') +
         (query ? ' per "' + escapeHtml(query) + '"' : '');
 
-    // FIX NAVBAR OVERLAP: Aggiunto padding-bottom: 120px
     area.innerHTML =
-        '<div style="padding:0 24px 120px 24px;">' +
-            '<div style="display:flex;overflow-x:auto;gap:7px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
+        '<div style="padding:0;">' +
+            '<div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
                 chipsHtml +
             '</div>' +
-            '<div style="font-size:11px;font-weight:600;color:var(--outline);margin-bottom:12px;">' + countLabel + '</div>' +
-            '<div style="display:flex;flex-direction:column;gap:9px;">' +
+            '<div style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);margin-bottom:12px;">' + countLabel + '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:12px;">' +
                 (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
             '</div>' +
         '</div>';
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PLANNER CAROUSEL FUNCTIONS — definite a livello modulo (non in innerHTML)
-// Gli script dentro innerHTML non vengono eseguiti dai browser per sicurezza.
+// PLANNER CAROUSEL FUNCTIONS
 // ══════════════════════════════════════════════════════════════════════════════
 
 window.plannerSelectDay = function(iso) {
     state.selectedDate = iso;
-    // Aggiornamento chirurgico pillole senza full re-render
     document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(function(el) {
         const m = el.getAttribute('onclick').match(/'([^']+)'/);
         const elIso = m ? m[1] : null;
         if (!elIso) return;
         const isSel = elIso === iso;
-        el.style.background  = isSel ? 'var(--primary)' : 'var(--surface-container-lowest)';
-        el.style.border      = 'none';
-        el.style.boxShadow   = isSel
-            ? 'inset 0 1px 1px rgba(var(--glass-rgb),0.2),0 0 0 2.5px rgba(37,99,235,0.18)'
-            : 'none';
-        el.style.transform   = 'translateZ(0)'; // fisso, no scale → zero layer thrashing
-        el.style.filter      = '';              // mai cambiare → evita flash GPU WebKit
+        if (isSel) {
+            el.className = 'planner-day-pill active-blue-glow squircle-full';
+            el.style.opacity = '1';
+        } else {
+            el.className = 'planner-day-pill liquid-glass-v8 rim-light squircle-full';
+            el.style.opacity = '0.65';
+        }
         const spans = el.querySelectorAll('span');
-        if (spans[0]) spans[0].style.color = isSel ? 'rgba(var(--glass-rgb),0.75)' : 'var(--outline)';
-        if (spans[1]) spans[1].style.color = isSel ? 'var(--on-primary)' : 'var(--on-surface)';
+        if (spans[0]) {
+            spans[0].style.color = '#ffffff';
+            spans[0].style.opacity = isSel ? '0.8' : '0.6';
+        }
+        if (spans[1]) {
+            spans[1].style.color = isSel ? '#ffffff' : '#dae2fd';
+        }
+        const dot = el.querySelector('div');
+        if (dot) {
+            if (isSel) {
+                dot.style.background = '#ffffff';
+                dot.style.boxShadow = '0 0 8px rgba(255,255,255,0.8)';
+                dot.style.width = '6px';
+                dot.style.height = '6px';
+            } else {
+                dot.style.boxShadow = 'none';
+                dot.style.width = '5px';
+                dot.style.height = '5px';
+            }
+        }
     });
-    // Swap istantaneo: niente opacity, niente scale → zero flash/nero WebKit
+    
     var _area = document.getElementById('planner-content-area');
     var _dayHtml = window._buildPlannerDayContentHTML && window._buildPlannerDayContentHTML();
     if (_area && _dayHtml) {
-        _area.innerHTML = _dayHtml; // sostituzione diretta, nessuna animazione intermedia
+        _area.innerHTML = _dayHtml;
     } else {
-        // fallback solo se builder non disponibile
         state._forceRender = true;
-        scheduleRender(60);
+        scheduleRender(0);
     }
 };
 
 window.handlePlannerCarouselScroll = function(el) {
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    if (window._lastPlannerScrollIdx === idx) return; // evita aggiornamenti inutili
+    if (!el) return;
+    const slideWidth = el.clientWidth || el.offsetWidth || window.innerWidth;
+    if (!slideWidth) return;
+    const idx = Math.round(el.scrollLeft / slideWidth);
+    if (window._lastPlannerScrollIdx === idx) return;
     window._lastPlannerScrollIdx = idx;
     document.querySelectorAll('.planner-week-dot').forEach(function(dot, i) {
-        dot.style.width      = i === idx ? '20px' : '6px';
-        dot.style.background = i === idx ? 'var(--primary)' : 'var(--outline-variant)';
-        dot.style.borderRadius = '4px';
+        dot.style.width = i === idx ? '20px' : '6px';
+        dot.style.background = i === idx ? 'rgba(47, 88, 205, 0.8)' : 'rgba(255, 255, 255, 0.2)';
+        dot.style.borderRadius = '9999px';
     });
-    // Aggiorna lo stato settimana senza re-render immediato
     if (typeof state !== 'undefined') {
-        state.plannerWeekOffset = (state.plannerWeekOffset || 0) + (idx - (window._plannerInitialSlide || 0));
+        state.plannerWeekOffset = (state.plannerWeekOffset || 0) + (idx - (window._plannerInitialSlide || 2));
         window._plannerInitialSlide = idx;
     }
 };
 
 window.plannerJumpToWeek = function(idx) {
     const el = document.getElementById('planner-week-carousel');
-    if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
+    if (el) {
+        const slideWidth = el.clientWidth || el.offsetWidth || window.innerWidth;
+        el.scrollTo({ left: idx * slideWidth, behavior: 'smooth' });
+    }
+};
+
+window._scrollPlannerToActiveWeek = function() {
+    const _pc = document.getElementById('planner-week-carousel');
+    if (!_pc) return;
+    const targetIdx = window._plannerInitialSlide !== undefined ? window._plannerInitialSlide : 2;
+    const slideWidth = _pc.clientWidth || _pc.offsetWidth || window.innerWidth;
+    if (slideWidth > 0) {
+        _pc.scrollLeft = targetIdx * slideWidth;
+        if (typeof window.handlePlannerCarouselScroll === 'function') {
+            window.handlePlannerCarouselScroll(_pc);
+        }
+    }
 };
 
 function formatFullDate(dateInput) {

@@ -1036,36 +1036,43 @@ body {
 /* ── Planner / Agenda — same navy-gradient family as the dashboard,
    replacing the flat near-black surface tokens these elements used to
    fall back to (that's what read as "quasi neri" / low-contrast). ── */
+/* ── Planner / Agenda — Search Input & Carousel Snap ── */
 #planner-search-input {
-  background: linear-gradient(135deg, rgba(12, 15, 23, 0.95) 0%, rgba(23, 42, 92, 0.85) 100%) !important;
+  background: transparent !important;
   border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #dae2fd !important;
 }
 
-.planner-day-pill[style*="var(--surface-container-lowest)"] {
-  background: linear-gradient(135deg, #10131c 0%, #1a2340 100%) !important;
-  border-color: transparent !important;
+#planner-search-input::placeholder {
+  color: rgba(196, 197, 214, 0.4) !important;
+  opacity: 1 !important;
 }
 
-.planner-empty-card {
-  background: linear-gradient(135deg, #0d1017 0%, #131b2e 100%) !important;
-  border-color: transparent !important;
+/* Chrome/Safari autofill background override */
+#planner-search-input:-webkit-autofill,
+#planner-search-input:-webkit-autofill:hover, 
+#planner-search-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #dae2fd !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
 }
 
-.planner-task-todo,
-.planner-task-done {
-  background: linear-gradient(135deg, #10131c 0%, #171f30 100%) !important;
-  border-color: transparent !important;
+#planner-week-carousel::-webkit-scrollbar {
+  display: none !important;
 }
 
-.planner-task-exam {
-  background: linear-gradient(135deg, #12101a 0%, #2e161c 100%) !important;
-  border: none !important;
+#planner-week-carousel {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  scroll-snap-type: x mandatory !important;
+  -webkit-overflow-scrolling: touch !important;
 }
-.planner-task-exam > div:first-child {
-  background: rgba(248, 113, 113, 0.08) !important;
-}
-.planner-task-exam div[style*="background:rgba(254,226,226"] {
-  background: rgba(248, 113, 113, 0.2) !important;
+
+.planner-week-slide {
+  scroll-snap-align: start !important;
+  scroll-snap-stop: always !important;
 }
 
 /* ── Grades > subject detail — same navy family as the rest of the
