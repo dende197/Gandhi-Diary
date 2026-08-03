@@ -5796,12 +5796,23 @@ window._renderCore = function () {
         }
         if (state.view === 'planner') {
             if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
-            // Auto-scroll week carousel to the active slide (instant, no animation)
-            const _pc = document.getElementById('planner-week-carousel');
-            if (_pc && window._plannerInitialSlide !== undefined) {
-                _pc.scrollTo({ left: window._plannerInitialSlide * _pc.clientWidth, behavior: 'instant' });
-            }
-            // Restore search bar focus + cursor if user was typing
+            const doScroll = () => {
+                if (typeof window._scrollPlannerToActiveWeek === 'function') {
+                    window._scrollPlannerToActiveWeek();
+                } else {
+                    const _pc = document.getElementById('planner-week-carousel');
+                    if (_pc) {
+                        const w = _pc.clientWidth || _pc.offsetWidth || window.innerWidth;
+                        const idx = window._plannerInitialSlide !== undefined ? window._plannerInitialSlide : 2;
+                        _pc.scrollLeft = idx * w;
+                    }
+                }
+            };
+            doScroll();
+            requestAnimationFrame(doScroll);
+            setTimeout(doScroll, 30);
+            setTimeout(doScroll, 120);
+
             if (window._psfocused) {
                 const _si = document.getElementById('planner-search-input');
                 if (_si) {
@@ -7123,7 +7134,7 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day capsules) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;display:flex;justify-content:space-between;gap:8px;padding:8px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;transform:translateZ(0);-webkit-transform:translateZ(0);">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;display:flex;justify-content:space-between;gap:8px;padding:16px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 if (isSel) {
@@ -7198,8 +7209,9 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             scrollbar-width:none;
             -ms-overflow-style:none;
             gap:0;
-            margin:0;
-            padding:0;
+            margin:-12px 0 -12px;
+            padding:12px 0;
+            width:100%;
         " onscroll="handlePlannerCarouselScroll(this)">
             ${weeks.map((wk,i) => weekSlide(wk, i)).join('')}
         </div>

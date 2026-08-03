@@ -241,7 +241,9 @@ body {
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  box-shadow: 0 0 20px rgba(47, 88, 205, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(47, 88, 205, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 .fab-luminous {
@@ -1087,11 +1089,17 @@ body {
   scrollbar-width: none !important;
   scroll-snap-type: x mandatory !important;
   -webkit-overflow-scrolling: touch !important;
+  padding-top: 10px !important;
+  padding-bottom: 14px !important;
+  margin-top: -10px !important;
+  margin-bottom: -14px !important;
 }
 
 .planner-week-slide {
   scroll-snap-align: start !important;
   scroll-snap-stop: always !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
 }
 
 /* ── Grades > subject detail — same navy family as the rest of the
