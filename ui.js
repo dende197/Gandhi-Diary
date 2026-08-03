@@ -8022,7 +8022,7 @@ function renderGradesView() {
         const featureHtml = featureItem ? `
         <div class="col-span-2 liquid-glass rounded-[28px] p-4 rim-light flex items-center justify-between group hover:active-glass transition-all duration-300 cursor-pointer mb-4" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')">
             <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary flex-shrink:0;">
+                <div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary flex-shrink-0">
                     <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(featureItem.name)}</span>
                 </div>
                 <div class="min-w-0">
@@ -8030,7 +8030,7 @@ function renderGradesView() {
                     <p class="text-on-surface-variant font-label-sm text-label-sm">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureItem.lastVoteDate})</p>
                 </div>
             </div>
-            <div class="text-right flex-shrink:0; ml-3">
+            <div class="text-right flex-shrink-0 ml-3">
                 <span class="font-headline-lg text-headline-lg text-on-surface">${featureItem.media.toFixed(1)}</span>
                 <div class="h-1 w-12 bg-tertiary rounded-full mt-1 ml-auto"></div>
             </div>
@@ -8046,7 +8046,7 @@ function renderGradesView() {
         const gridCardsHtml = gridItems.map((item, gIdx) => {
             const st = iconStyles[gIdx % iconStyles.length];
             return `
-            <div class="liquid-glass rounded-[28px] p-4 rim-light space-y-4 group hover:active-glass transition-all duration-300 cursor-pointer" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')">
+            <div class="liquid-glass rounded-[28px] p-4 rim-light space-y-3 group hover:active-glass transition-all duration-300 cursor-pointer" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')">
                 <div class="flex justify-between items-start">
                     <div class="w-10 h-10 rounded-xl ${st.bg} flex items-center justify-center ${st.color}">
                         <span class="material-symbols-outlined text-[20px]">${getSubjectIcon(item.name)}</span>
@@ -8080,7 +8080,7 @@ function renderGradesView() {
 
     return `
     <div class="view-fullbleed min-h-screen pb-40" style="background:#0b1326;">
-        <header class="flex justify-between items-center w-full max-w-7xl mx-auto pt-12 px-container-padding">
+        <header class="flex justify-between items-center w-full max-w-2xl mx-auto pt-12 px-5">
             <h1 class="font-headline-xl text-headline-xl font-bold text-on-surface sentence-case">Voti</h1>
             <div class="liquid-glass squircle-full px-4 py-2 flex items-center gap-2 rim-light shadow-lg">
                 <span class="material-symbols-outlined text-primary text-[18px]">calendar_today</span>
@@ -8088,7 +8088,7 @@ function renderGradesView() {
             </div>
         </header>
 
-        <main class="px-container-padding mt-6 space-y-6 max-w-2xl mx-auto">
+        <main class="px-5 mt-6 space-y-6 max-w-2xl mx-auto">
             <section class="liquid-glass squircle-lg p-6 rim-light overflow-hidden relative group">
                 <div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/20 blur-[60px] rounded-full group-hover:bg-primary/30 transition-all duration-700"></div>
                 <div class="flex justify-between items-start relative z-10">
