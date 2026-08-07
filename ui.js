@@ -7925,6 +7925,38 @@ function renderProfile() {
     `;
 }
 
+function formatSubjectTitle(str) {
+    if (!str) return 'Materia';
+    let s = str.trim();
+    if (s.toUpperCase() === 'STORIA TRIENNIO') return 'Storia Triennio';
+    if (s.toUpperCase().includes('LINGUA E LETTERATURA ITALIANA')) return 'Lingua e Lett. Italiana';
+    if (s.toUpperCase().includes('STRANIERA')) return 'Lingua Inglese';
+    if (s.toUpperCase().includes('SCIENZE NATURALI')) return 'Scienze Naturali';
+    if (s.toUpperCase().includes('MATEMATICA')) return 'Matematica';
+    if (s.toUpperCase().includes('FISICA')) return 'Fisica';
+    if (s.toUpperCase().includes('FILOSOFIA')) return 'Filosofia';
+    
+    // Sentence case capitalizer fallback
+    const lower = s.toLowerCase();
+    return lower.replace(/(^|\s|-|\/)\S/g, l => l.toUpperCase())
+                .replace(/\b(e|ed|di|del|della|degli|in|con|su|per|tra|fra)\b/gi, w => w.toLowerCase())
+                .replace(/^[a-z]/, l => l.toUpperCase());
+}
+
+function formatFriendlyDate(dateStr) {
+    if (!dateStr || dateStr === 'recentissimo') return 'ieri';
+    if (dateStr.includes('ieri') || dateStr.includes('fa')) return dateStr;
+    const d = (typeof parseArgoDate === 'function') ? parseArgoDate(dateStr) : new Date(dateStr);
+    if (!d || isNaN(d)) return dateStr;
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / 86400000);
+    if (diffDays <= 0) return 'oggi';
+    if (diffDays === 1) return 'ieri';
+    if (diffDays > 1 && diffDays <= 7) return `${diffDays} giorni fa`;
+    const MONTHS_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+    return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+}
+
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
@@ -7970,20 +8002,28 @@ function renderGradesView() {
         diffStr = `${numericVotes.length} voti`;
     }
 
-    // ── Build Smooth Bezier Curve SVG for trend graph ───────────────────────
+    // ── Build Organic Bezier Curve SVG Graph ────────────────────────────────
     const xCoords = [0, 14, 28, 42, 57, 71, 85, 100];
     const defaultAvgs = [6.8, 7.0, 7.2, 7.1, 7.4, 7.5, 7.7, media];
 
-    const pts = xCoords.map((x, i) => {
-        let val = defaultAvgs[i];
+    const rawVals = defaultAvgs.map((defVal, i) => {
         if (monthList.length > 0) {
             const mIdx = monthList.length - 8 + i;
             if (mIdx >= 0 && mIdx < monthList.length) {
-                val = monthList[mIdx].avg;
+                return monthList[mIdx].avg;
             }
         }
-        const clamped = Math.max(4, Math.min(10, val));
-        const y = Math.round(85 - ((clamped - 4) / 6) * 65);
+        return defVal;
+    });
+
+    const minV = Math.min(...rawVals);
+    const maxV = Math.max(...rawVals);
+    const span = (maxV - minV) || 1.0;
+
+    const pts = xCoords.map((x, i) => {
+        const val = rawVals[i];
+        const norm = (val - minV) / span;
+        const y = Math.round(75 - norm * 50); // Map to middle float (25..75)
         return { x, y };
     });
 
@@ -8040,6 +8080,9 @@ function renderGradesView() {
         const featureItem = slideItems[0];
         const gridItems = slideItems.slice(1);
 
+        const featureNameFormatted = formatSubjectTitle(featureItem ? featureItem.name : '');
+        const featureDateFormatted = formatFriendlyDate(featureItem ? featureItem.lastVoteDate : '');
+
         const featureHtml = featureItem ? `
         <div class="col-span-2 liquid-glass rounded-[28px] p-4 rim-light flex items-center justify-between group hover:active-glass transition-all duration-300 cursor-pointer mb-4 bg-surface-container-highest/40" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')">
             <div class="flex items-center gap-4">
@@ -8047,8 +8090,8 @@ function renderGradesView() {
                     <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(featureItem.name)}</span>
                 </div>
                 <div class="min-w-0">
-                    <h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">${escapeHtml(featureItem.name)}</h3>
-                    <p class="text-on-surface-variant font-label-sm text-label-sm">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureItem.lastVoteDate})</p>
+                    <h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">${escapeHtml(featureNameFormatted)}</h3>
+                    <p class="text-on-surface-variant font-label-sm text-label-sm">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
                 </div>
             </div>
             <div class="text-right flex-shrink-0 ml-3">
@@ -8066,6 +8109,7 @@ function renderGradesView() {
 
         const gridCardsHtml = gridItems.map((item, gIdx) => {
             const st = iconStyles[gIdx % iconStyles.length];
+            const itemFormattedName = formatSubjectTitle(item.name);
             return `
             <div class="liquid-glass rounded-[28px] p-4 rim-light space-y-3 group hover:active-glass transition-all duration-300 cursor-pointer bg-surface-container-highest/40" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')">
                 <div class="flex justify-between items-start">
@@ -8074,7 +8118,7 @@ function renderGradesView() {
                     </div>
                     <span class="font-headline-lg text-headline-lg text-on-surface">${item.media.toFixed(1)}</span>
                 </div>
-                <h3 class="font-body-md text-body-md font-semibold text-on-surface leading-tight truncate">${escapeHtml(item.name)}</h3>
+                <h3 class="font-body-md text-body-md font-semibold text-on-surface leading-tight truncate">${escapeHtml(itemFormattedName)}</h3>
             </div>`;
         }).join('');
 
@@ -8094,13 +8138,13 @@ function renderGradesView() {
     let aiInsightText = "Il tuo rendimento in materie umanistiche è eccellente. Ti suggeriamo di dedicare 30m extra a Fisica per equilibrare la media.";
     const minSubj = [...subjects].sort((a,b) => a.media - b.media)[0];
     if (minSubj && minSubj.media < 7 && minSubj.media > 0) {
-        aiInsightText = `Il tuo rendimento complessivo è solido. Ti suggeriamo di dedicare 30m extra a ${minSubj.name} per equilibrare la media generale.`;
+        aiInsightText = `Il tuo rendimento complessivo è solido. Ti suggeriamo di dedicare 30m extra a ${formatSubjectTitle(minSubj.name)} per equilibrare la media generale.`;
     } else if (media >= 8.5) {
         aiInsightText = "Rendimento straordinario in tutte le materie! Mantieni questo ritmo costante per il prossimo trimestre.";
     }
 
     return `
-    <div class="view-fullbleed min-h-screen pb-40" style="background:#0b1326;">
+    <div class="view-fullbleed min-h-screen pb-48" style="background:#0b1326;">
         <header class="flex justify-between items-center w-full max-w-2xl mx-auto pt-12 px-5">
             <h1 class="font-headline-xl text-headline-xl font-bold text-on-surface sentence-case">Voti</h1>
             <div class="liquid-glass squircle-full px-4 py-2 flex items-center gap-2 rim-light shadow-lg">
@@ -8109,7 +8153,7 @@ function renderGradesView() {
             </div>
         </header>
 
-        <main class="px-5 mt-6 space-y-6 max-w-2xl mx-auto">
+        <main class="px-5 mt-6 space-y-6 max-w-2xl mx-auto pb-24">
             <!-- Hero Card: Media Generale (Redesign-14 Specs) -->
             <section class="liquid-glass squircle-lg p-6 rim-light overflow-hidden relative group bg-gradient-to-br from-primary-container/40 via-surface-container-high/60 to-surface-dim shadow-2xl">
                 <div class="flex justify-between items-start relative z-10">
