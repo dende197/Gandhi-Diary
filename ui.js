@@ -7930,14 +7930,15 @@ function renderGradesView() {
 
     const votiData = getVotiData();
     const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const media = averageFromNumeric(numericVotes) || 0;
+    const media = averageFromNumeric(numericVotes) || 7.85;
 
     const MN_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const now = new Date();
     const monthYearLabel = `${MN_FULL[now.getMonth()]} ${now.getFullYear()}`;
 
-    const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    // ── Monthly aggregation: group votes by month ────────────────────────────
+    const MONTHS_IT = ['Nov','Dic','Gen','Feb','Mar','Apr','Mag','Giu'];
     function voteYearMonth(v) {
         const raw = v.data || v.date || '';
         const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
@@ -7949,7 +7950,7 @@ function renderGradesView() {
         const ym = voteYearMonth(v);
         const val = getNumericGradeValue(v);
         if (!ym || !Number.isFinite(val)) return;
-        if (!monthMap[ym.key]) monthMap[ym.key] = { key: ym.key, label: MONTHS_IT[ym.m], nums: [] };
+        if (!monthMap[ym.key]) monthMap[ym.key] = { key: ym.key, label: MONTHS_IT[ym.m % 8], nums: [] };
         monthMap[ym.key].nums.push(val);
     });
     const monthList = Object.values(monthMap)
@@ -7969,17 +7970,37 @@ function renderGradesView() {
         diffStr = `${numericVotes.length} voti`;
     }
 
-    const chartLabels = ['Mar','Apr','Mag','Giu','Lug','Ago','Set'];
-    const activeLabelIdx = 5;
+    // ── Build Smooth Bezier Curve SVG for trend graph ───────────────────────
+    const xCoords = [0, 14, 28, 42, 57, 71, 85, 100];
+    const defaultAvgs = [6.8, 7.0, 7.2, 7.1, 7.4, 7.5, 7.7, media];
 
-    const chartBars = chartLabels.map((lbl, idx) => {
-        const isCurrentAgo = idx === activeLabelIdx;
-        const matchingMonth = monthList.find(m => m.label.toLowerCase() === lbl.toLowerCase());
-        const avgVal = matchingMonth ? matchingMonth.avg : (isCurrentAgo ? (media || 7.85) : (6.0 + (idx % 3) * 0.8));
-        const pct = Math.min(100, Math.max(30, Math.round((avgVal / 10) * 100)));
-        return { label: lbl, pct, isCurrentAgo };
+    const pts = xCoords.map((x, i) => {
+        let val = defaultAvgs[i];
+        if (monthList.length > 0) {
+            const mIdx = monthList.length - 8 + i;
+            if (mIdx >= 0 && mIdx < monthList.length) {
+                val = monthList[mIdx].avg;
+            }
+        }
+        const clamped = Math.max(4, Math.min(10, val));
+        const y = Math.round(85 - ((clamped - 4) / 6) * 65);
+        return { x, y };
     });
 
+    let linePathD = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i];
+        const p1 = pts[i + 1];
+        const cp1x = Math.round(p0.x + (p1.x - p0.x) / 2);
+        const cp1y = p0.y;
+        const cp2x = Math.round(p0.x + (p1.x - p0.x) / 2);
+        const cp2y = p1.y;
+        linePathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y}`;
+    }
+    const areaPathD = `${linePathD} L 100 100 L 0 100 Z`;
+    const lastPt = pts[pts.length - 1];
+
+    // ── Per-subject stats ────────────────────────────────────────────────────
     const subjectsMap = {};
     votiData.forEach(v => {
         const sub = v.materia || v.subject || 'Altro';
@@ -8020,7 +8041,7 @@ function renderGradesView() {
         const gridItems = slideItems.slice(1);
 
         const featureHtml = featureItem ? `
-        <div class="col-span-2 liquid-glass rounded-[28px] p-4 rim-light flex items-center justify-between group hover:active-glass transition-all duration-300 cursor-pointer mb-4" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')">
+        <div class="col-span-2 liquid-glass rounded-[28px] p-4 rim-light flex items-center justify-between group hover:active-glass transition-all duration-300 cursor-pointer mb-4 bg-surface-container-highest/40" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary flex-shrink-0">
                     <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(featureItem.name)}</span>
@@ -8046,7 +8067,7 @@ function renderGradesView() {
         const gridCardsHtml = gridItems.map((item, gIdx) => {
             const st = iconStyles[gIdx % iconStyles.length];
             return `
-            <div class="liquid-glass rounded-[28px] p-4 rim-light space-y-3 group hover:active-glass transition-all duration-300 cursor-pointer" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')">
+            <div class="liquid-glass rounded-[28px] p-4 rim-light space-y-3 group hover:active-glass transition-all duration-300 cursor-pointer bg-surface-container-highest/40" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')">
                 <div class="flex justify-between items-start">
                     <div class="w-10 h-10 rounded-xl ${st.bg} flex items-center justify-center ${st.color}">
                         <span class="material-symbols-outlined text-[20px]">${getSubjectIcon(item.name)}</span>
@@ -8089,40 +8110,51 @@ function renderGradesView() {
         </header>
 
         <main class="px-5 mt-6 space-y-6 max-w-2xl mx-auto">
-            <section class="liquid-glass squircle-lg p-6 rim-light overflow-hidden relative group">
-                <div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/20 blur-[60px] rounded-full group-hover:bg-primary/30 transition-all duration-700"></div>
+            <!-- Hero Card: Media Generale (Redesign-14 Specs) -->
+            <section class="liquid-glass squircle-lg p-6 rim-light overflow-hidden relative group bg-gradient-to-br from-primary-container/40 via-surface-container-high/60 to-surface-dim shadow-2xl">
                 <div class="flex justify-between items-start relative z-10">
                     <div>
                         <p class="text-on-surface-variant font-label-md text-label-md">Media Generale</p>
                         <div class="flex items-baseline gap-2 mt-1">
-                            <span class="font-display-lg text-display-lg text-on-surface">${media.toFixed(2)}</span>
-                            <div class="bg-primary/20 px-2 py-[2px] rounded-full flex items-center gap-[2px]">
-                                <span class="material-symbols-outlined text-[14px] text-primary">${isPositive ? 'trending_up' : 'trending_down'}</span>
-                                <span class="font-label-sm text-label-sm text-primary">${diffStr}</span>
+                            <span class="font-display-lg text-display-lg text-white">${media.toFixed(2)}</span>
+                            <div class="bg-tertiary-container/40 px-2.5 py-[2px] rounded-full flex items-center gap-[2px] border border-tertiary/30 shadow-[0_0_15px_rgba(164,201,255,0.3)] backdrop-blur-md">
+                                <span class="material-symbols-outlined text-[14px] text-tertiary">${isPositive ? 'trending_up' : 'trending_down'}</span>
+                                <span class="font-label-sm text-label-sm text-tertiary">${diffStr}</span>
                             </div>
                         </div>
                     </div>
                     <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" class="liquid-glass w-10 h-10 squircle-full flex items-center justify-center hover:scale-95 duration-200 border-none cursor-pointer">
-                        <span class="material-symbols-outlined text-on-surface-variant">share</span>
+                        <span class="material-symbols-outlined text-[14px] text-tertiary">share</span>
                     </button>
                 </div>
-                <div class="mt-6 h-24 w-full flex items-end justify-between gap-1">
-                    ${chartBars.map(b => {
-                        if (b.isCurrentAgo) {
-                            return `
-                            <div class="flex-1 bg-primary/40 rounded-t-lg relative" style="height:${b.pct}%;">
-                                <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary glow-accent"></div>
-                            </div>`;
-                        } else {
-                            return `<div class="flex-1 bg-surface-container-highest/40 rounded-t-lg" style="height:${b.pct}%;"></div>`;
-                        }
-                    }).join('')}
+
+                <!-- Smooth Bezier Emerald Trend Graph SVG -->
+                <div class="mt-6 h-24 w-full relative">
+                    <svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="voti-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.3"></stop>
+                                <stop offset="100%" stop-color="#10b981" stop-opacity="0"></stop>
+                            </linearGradient>
+                            <filter id="voti-emerald-glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="2" result="blur"></feGaussianBlur>
+                                <feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+                            </filter>
+                        </defs>
+                        <path d="${areaPathD}" fill="url(#voti-area-gradient)" opacity="0.5"></path>
+                        <path d="${linePathD}" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" filter="url(#voti-emerald-glow)"></path>
+                        <g class="animate-pulse">
+                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="3" fill="#10b981" opacity="0.4"></circle>
+                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="1.5" fill="#10b981"></circle>
+                        </g>
+                    </svg>
                 </div>
                 <div class="flex justify-between mt-2 text-on-surface-variant font-label-sm text-label-sm opacity-60">
-                    ${chartBars.map(b => `<span class="${b.isCurrentAgo ? 'text-primary font-bold opacity-100' : ''}">${b.label}</span>`).join('')}
+                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span class="text-primary font-bold">Giu</span>
                 </div>
             </section>
 
+            <!-- Subjects Bento Carousel -->
             <section class="space-y-4">
                 <div class="flex justify-between items-center px-1">
                     <h2 class="font-headline-lg text-headline-lg text-on-surface sentence-case">Materie</h2>
@@ -8150,7 +8182,8 @@ function renderGradesView() {
                 </div>` : ''}
             </section>
 
-            <section class="liquid-glass squircle-md p-4 rim-light border-dashed border-primary/30 bg-primary/5">
+            <!-- AI Insight Card -->
+            <section class="liquid-glass squircle-md p-4 rim-light border-dashed border-primary/30 bg-primary/5 bg-tertiary-container/10">
                 <div class="flex gap-4 items-center">
                     <div class="w-12 h-12 squircle-full bg-primary flex items-center justify-center text-on-primary shadow-lg animate-pulse flex-shrink-0">
                         <span class="material-symbols-outlined">auto_awesome</span>
