@@ -202,6 +202,16 @@
       if (!allowed.includes(v) || (!state.isLoggedIn && v !== 'login')) v = state.isLoggedIn ? 'home' : 'login';
       if (v !== 'login' && state.isLoggedIn && state._loggedOut) state._loggedOut = false;
 
+      // Reset planner to today whenever planner view is requested
+      if (v === 'planner') {
+        const todayIso = (typeof getLocalDateString === 'function')
+          ? getLocalDateString(new Date())
+          : new Date().toISOString().split('T')[0];
+        state.selectedDate = todayIso;
+        state.plannerWeekOffset = 0;
+        window._plannerInitialSlide = 2;
+      }
+
       if (v === state.view && !force) {
         try {
           if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
@@ -215,6 +225,14 @@
 
       const go = () => {
         state.view = v;
+        if (v === 'planner') {
+          const todayIso = (typeof getLocalDateString === 'function')
+            ? getLocalDateString(new Date())
+            : new Date().toISOString().split('T')[0];
+          state.selectedDate = todayIso;
+          state.plannerWeekOffset = 0;
+          window._plannerInitialSlide = 2;
+        }
         if (typeof saveNavigationState === 'function') saveNavigationState();
         window.scrollTo({ top: 0, behavior: 'instant' });
         if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
@@ -278,7 +296,15 @@
         const mv = parseFloat((typeof calcolaMedia === 'function') ? calcolaMedia(state.voti) : 0) || 0;
         if (typeof renderMediaGauge === 'function') renderMediaGauge(mv);
       }
-      if (view === 'planner' && typeof renderCustomCalendar === 'function') renderCustomCalendar();
+      if (view === 'planner') {
+        if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
+        if (typeof window._scrollPlannerToActiveWeek === 'function') {
+          window._scrollPlannerToActiveWeek();
+          requestAnimationFrame(() => window._scrollPlannerToActiveWeek());
+          setTimeout(() => window._scrollPlannerToActiveWeek(), 30);
+          setTimeout(() => window._scrollPlannerToActiveWeek(), 120);
+        }
+      }
       if (view === 'voti'    && typeof initGradesCharts     === 'function') initGradesCharts();
     });
   }

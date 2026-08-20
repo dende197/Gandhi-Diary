@@ -2853,38 +2853,41 @@ function renderSubjectDetailView(subjectName) {
     // ── Voti list rows ────────────────────────────────────────────────────────
     const votiRows = votiData.map((v, i) => {
         const val = getNumericGradeValue(v);
-        const color = val >= 6 ? '#2563eb' : '#dc2626';
-        const sep = i < votiData.length - 1 ? '<div style="height:1px;background:var(--surface-container-low);margin:12px 0;"></div>' : '';
+        const isSuff = val >= 6;
+        const color = isSuff ? '#34d399' : '#ffb4ab';
+        const bgBadge = isSuff ? 'rgba(52,211,153,0.15)' : 'rgba(239,68,68,0.2)';
+        const borderBadge = isSuff ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.35)';
+        const sep = i < votiData.length - 1 ? '<div style="height:1px;background:rgba(255,255,255,0.06);margin:12px 0;"></div>' : '';
         return `
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
-                <h4 style="font-size:14px;font-weight:700;color:var(--on-surface);margin:0 0 3px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
-                <span style="font-size:11px;font-weight:600;color:var(--outline);">${fmtDate(v.data || v.date)}</span>
+                <h4 style="font-size:14px;font-weight:700;color:#dae2fd;margin:0 0 3px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
+                <span style="font-size:11px;font-weight:500;color:rgba(196,197,214,0.6);">${fmtDate(v.data || v.date)}</span>
             </div>
-            <span style="font-size:17px;font-weight:800;color:${color};">${v.valore || v.value}</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:15px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};">${v.valore || v.value}</span>
         </div>${sep}`;
     }).join('');
 
-    const CARD = 'background:var(--surface-container-lowest);border-radius:32px;padding:24px;box-shadow:0 8px 30px -10px rgba(0,0,0,0.06);border:none;margin-bottom:16px;';
-    const CARD_CLASS = 'subject-detail-card';
+    const CARD_CLASS = 'liquid-glass-v8 squircle-lg rim-light';
+    const CARD = 'padding:20px;margin-bottom:16px;position:relative;';
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--surface-container-low);background-image:radial-gradient(circle at 50% 0%,rgba(224,231,255,0.4) 0%,transparent 50%);background-attachment:fixed;">
-        <div style="padding:max(env(safe-area-inset-top,0px),40px) 24px 0;font-family:Hanken Grotesk,sans-serif;">
+    <div class="view-fullbleed min-h-screen pb-40" style="padding:0;background:#0b1326;font-family:'Inter',sans-serif;">
+        <div style="padding:max(env(safe-area-inset-top,0px),28px) 20px 0;">
 
             <!-- Header -->
-            <header style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
-                <button onclick="window.closeSubject()" style="width:44px;height:44px;border-radius:16px;background:var(--surface-container-lowest);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(0,0,0,0.08);flex-shrink:0;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">arrow_back</span>
+            <header style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+                <button onclick="window.closeSubject()" class="liquid-glass-v8 squircle-md rim-light shadow-md" style="width:40px;height:40px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#dae2fd;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
+                    <span class="material-symbols-outlined" style="font-size:20px;color:#dae2fd;">arrow_back</span>
                 </button>
-                <h1 style="font-size:24px;font-weight:800;color:var(--info);letter-spacing:-0.02em;margin:0;">${escapeHtml(subjectName)}</h1>
+                <h1 style="font-size:22px;font-weight:700;color:#dae2fd;letter-spacing:-0.01em;margin:0;line-height:1.2;">${escapeHtml(subjectName)}</h1>
             </header>
 
             <!-- CARD 1: Media + grafico area -->
-            <div class="${CARD_CLASS}" style="${CARD}">
-                <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Media Materia</p>
-                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
-                    <span style="font-size:56px;font-weight:800;color:var(--info);line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+            <div class="${CARD_CLASS}" style="${CARD}background:linear-gradient(135deg, rgba(47,88,205,0.25) 0%, rgba(255,255,255,0.03) 100%);">
+                <p style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Media Materia</p>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;">
+                    <span style="font-size:52px;font-weight:800;color:#dae2fd;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
                     ${ (() => {
                         // Delta: media con tutti i voti - media senza l'ultimo voto
                         const sortedByDate = [...votiData].sort((a,b) => (a.data||a.date||'').localeCompare(b.data||b.date||''));
@@ -2895,61 +2898,61 @@ function renderSubjectDetailView(subjectName) {
                             const diff = mediaConTutti - mediaSenzaUltimo;
                             const fmt  = diff.toFixed(2).replace('.', ',');
                             const isP  = diff >= 0;
-                            return `<div style="display:flex;align-items:center;gap:5px;background:${isP ? 'var(--success-container)' : 'var(--error-container)'};border:none;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
-                                <span class="material-symbols-outlined" style="font-size:12px;color:${isP ? 'var(--on-success-container)' : 'var(--on-error-container)'};font-variation-settings:'FILL' 1;">${isP ? 'trending_up' : 'trending_down'}</span>
-                                <span style="font-size:10px;font-weight:800;color:${isP ? 'var(--on-success-container)' : 'var(--on-error-container)'};letter-spacing:0.05em;">${fmt}</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(47,88,205,0.3);border:1px solid rgba(182,196,255,0.35);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
+                                <span class="material-symbols-outlined" style="font-size:13px;color:#b6c4ff;">${isP ? 'trending_up' : 'trending_down'}</span>
+                                <span style="font-size:11px;font-weight:700;color:#b6c4ff;letter-spacing:0.02em;">${isP ? '+' : ''}${fmt}</span>
                             </div>`;
                         } else if (n >= 2) {
-                            return `<div style="display:flex;align-items:center;gap:5px;background:var(--info-container);border:none;padding:5px 11px;border-radius:999px;margin-bottom:4px;">
-                                <span class="material-symbols-outlined" style="font-size:12px;color:var(--on-info-container);font-variation-settings:'FILL' 1;">trending_up</span>
-                                <span style="font-size:10px;font-weight:800;color:var(--on-info-container);letter-spacing:0.05em;text-transform:uppercase;">${n} voti totali</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(47,88,205,0.3);border:1px solid rgba(182,196,255,0.35);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
+                                <span class="material-symbols-outlined" style="font-size:13px;color:#b6c4ff;">trending_up</span>
+                                <span style="font-size:11px;font-weight:700;color:#b6c4ff;letter-spacing:0.02em;text-transform:uppercase;">${n} voti</span>
                             </div>`;
                         }
                         return '';
                     })() }
                 </div>
                 ${subMonthList.length >= 2 ? `
-                <div style="width:100%;height:96px;margin-bottom:10px;">
-                    <svg viewBox="0 0 300 100" style="width:100%;height:100%;" preserveAspectRatio="none">
+                <div style="width:100%;height:84px;margin-bottom:8px;">
+                    <svg viewBox="0 0 300 100" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
                         <defs>
                             <linearGradient id="bG${uid}" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#2563eb" stop-opacity="0.18"/>
-                                <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+                                <stop offset="0%" stop-color="#2f58cd" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="#2f58cd" stop-opacity="0"/>
                             </linearGradient>
                         </defs>
                         ${svgArea}${svgPath}${svgDots}
                     </svg>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:0 2px;">
-                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
+                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
                 </div>` : ''}
             </div>
 
             <!-- CARD 2: Predictive Hub -->
             <div class="${CARD_CLASS}" style="${CARD}">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">bolt</span>
+                    <div style="width:38px;height:38px;border-radius:12px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">bolt</span>
                     </div>
-                    <h2 style="font-size:18px;font-weight:700;color:var(--info);margin:0;">Predictive Hub</h2>
+                    <h2 style="font-size:17px;font-weight:700;color:#dae2fd;margin:0;">Predictive Hub</h2>
                 </div>
-                <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.6;font-weight:500;margin:0 0 20px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
-                <div style="margin-bottom:20px;">
+                <p style="font-size:13px;color:rgba(196,197,214,0.75);line-height:1.5;margin:0 0 18px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
+                <div style="margin-bottom:18px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;">
-                        <span style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;">Voto simulato</span>
-                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:var(--info);line-height:1;">7.5</span>
+                        <span style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.06em;">Voto simulato</span>
+                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:#b6c4ff;line-height:1;">7.5</span>
                     </div>
                     <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
-                        style="width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,var(--primary) 72.22%,var(--info-container) 72.22%);"
-                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,var(--primary) '+pct+'%,var(--info-container) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
+                        style="width:100%;height:6px;border-radius:9999px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2f58cd 72.22%,rgba(255,255,255,0.1) 72.22%);"
+                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2f58cd '+pct+'%,rgba(255,255,255,0.1) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface-container-low);border-radius:20px;padding:14px 16px;border:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:14px 16px;">
                     <div>
-                        <p style="font-size:10px;font-weight:800;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 3px;">Media stimata</p>
-                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:var(--info);line-height:1;">${simDefault}</span>
+                        <p style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Media stimata</p>
+                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:#dae2fd;line-height:1;">${simDefault}</span>
                     </div>
-                    <div style="width:44px;height:44px;border-radius:50%;background:var(--surface-container-lowest);border:none;display:flex;align-items:center;justify-content:center;">
-                        <span class="material-symbols-outlined" style="font-size:20px;color:var(--outline);">auto_fix_high</span>
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.15);display:flex;align-items:center;justify-content:center;color:#b6c4ff;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">auto_fix_high</span>
                     </div>
                 </div>
             </div>
@@ -2957,70 +2960,70 @@ function renderSubjectDetailView(subjectName) {
             <!-- CARD 3: Confronto Semestri -->
             ${hasSemesters ? `
             <div class="${CARD_CLASS}" style="${CARD}">
-                <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 20px;">Confronto Semestri</p>
-                <div style="margin-bottom:18px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                        <span style="font-size:14px;font-weight:700;color:var(--on-surface);">1° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:var(--on-surface-variant);">${media1.toFixed(1)}</span>
+                <p style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 16px;">Confronto Semestri</p>
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:14px;font-weight:700;color:#dae2fd;">1° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:rgba(196,197,214,0.8);">${media1.toFixed(1)}</span>
                     </div>
-                    <div style="width:100%;background:var(--surface-container-low);height:8px;border-radius:999px;overflow:hidden;">
-                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:var(--outline);border-radius:999px;"></div>
+                    <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
+                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:rgba(196,197,214,0.5);border-radius:9999px;"></div>
                     </div>
                 </div>
-                <div style="margin-bottom:20px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                        <span style="font-size:14px;font-weight:700;color:var(--on-surface);">2° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:var(--info);">${media2.toFixed(1)}</span>
+                <div style="margin-bottom:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:14px;font-weight:700;color:#dae2fd;">2° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:#b6c4ff;">${media2.toFixed(1)}</span>
                     </div>
-                    <div style="width:100%;background:var(--surface-container-low);height:8px;border-radius:999px;overflow:hidden;">
-                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:var(--primary);border-radius:999px;"></div>
+                    <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
+                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2f58cd;border-radius:9999px;"></div>
                     </div>
                 </div>
                 ${media2 > media1 ? `
-                <div style="background:var(--success-container);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
-                    <div style="width:40px;height:40px;border-radius:14px;background:var(--success-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--success);">keyboard_double_arrow_up</span>
+                <div style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(52,211,153,0.2);display:flex;align-items:center;justify-content:center;color:#34d399;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;">keyboard_double_arrow_up</span>
                     </div>
-                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.4;margin:0;">Stai andando <b style="color:var(--on-surface);">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
+                    <p style="font-size:13px;color:rgba(218,226,253,0.9);line-height:1.4;margin:0;">Stai andando <b style="color:#34d399;">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
                 </div>` : `
-                <div style="background:var(--warning-container);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
-                    <div style="width:40px;height:40px;border-radius:14px;background:var(--warning-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--warning);">keyboard_double_arrow_down</span>
+                <div style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(251,191,36,0.2);display:flex;align-items:center;justify-content:center;color:#fbbf24;flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:18px;">keyboard_double_arrow_down</span>
                     </div>
-                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
+                    <p style="font-size:13px;color:rgba(218,226,253,0.9);line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
                 </div>`}
             </div>` : ''}
 
             <!-- CARD 4: Voti Ricevuti -->
             <div class="${CARD_CLASS}" style="${CARD}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-                    <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0;">Voti Ricevuti</p>
-                    <span class="material-symbols-outlined" style="font-size:16px;color:var(--info);">history</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <p style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.08em;margin:0;">Voti Ricevuti</p>
+                    <span class="material-symbols-outlined" style="font-size:16px;color:#b6c4ff;">history</span>
                 </div>
                 ${votiRows}
             </div>
 
             <!-- CARD 5: Obiettivo Accademico -->
             <div class="${CARD_CLASS}" style="${CARD}margin-bottom:0;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:40px;height:40px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--info);font-variation-settings:'FILL' 1;">flag</span>
+                        <div style="width:38px;height:38px;border-radius:12px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:18px;">flag</span>
                         </div>
-                        <h2 style="font-size:17px;font-weight:700;color:var(--info);margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
+                        <h2 style="font-size:17px;font-weight:700;color:#dae2fd;margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
                     </div>
                     <div style="text-align:right;cursor:pointer;" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
-                        <p style="font-size:10px;font-weight:800;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Target</p>
+                        <p style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px;">Target</p>
                         <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
-                            <span style="font-size:24px;font-weight:800;color:var(--info);line-height:1;">${goal.toFixed(1)}</span>
-                            <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);">edit</span>
+                            <span style="font-size:24px;font-weight:800;color:#fbbf24;line-height:1;">${goal.toFixed(1)}</span>
+                            <span class="material-symbols-outlined" style="font-size:14px;color:rgba(196,197,214,0.7);">edit</span>
                         </div>
                     </div>
                 </div>
-                <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.65;font-weight:500;margin:0 0 14px;">${goalText}</p>
+                <p style="font-size:13px;color:rgba(196,197,214,0.85);line-height:1.6;margin:0 0 12px;">${goalText}</p>
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:13px;color:var(--outline);">info</span>
-                    <span style="font-size:10px;color:var(--outline);font-weight:600;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
+                    <span class="material-symbols-outlined" style="font-size:13px;color:rgba(196,197,214,0.5);">info</span>
+                    <span style="font-size:11px;color:rgba(196,197,214,0.5);font-weight:500;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
                 </div>
             </div>
 
@@ -8084,48 +8087,40 @@ function renderGradesView() {
         const featureDateFormatted = formatFriendlyDate(featureItem ? featureItem.lastVoteDate : '');
 
         const featureHtml = featureItem ? `
-        <div class="col-span-2 liquid-glass rounded-[28px] p-4 rim-light flex items-center justify-between group hover:active-glass transition-all duration-300 cursor-pointer mb-4 bg-surface-container-highest/40" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-2xl bg-tertiary-container/30 flex items-center justify-center text-tertiary flex-shrink-0">
-                    <span class="material-symbols-outlined text-[24px]">${getSubjectIcon(featureItem.name)}</span>
+        <div class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+            <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
+                <div style="width:44px;height:44px;border-radius:14px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:22px;">${getSubjectIcon(featureItem.name)}</span>
                 </div>
-                <div class="min-w-0">
-                    <h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">${escapeHtml(featureNameFormatted)}</h3>
-                    <p class="text-on-surface-variant font-label-sm text-label-sm">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
+                <div style="min-width:0;flex:1;">
+                    <h3 style="font-size:15px;font-weight:700;color:#dae2fd;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(featureNameFormatted)}</h3>
+                    <p style="font-size:12px;color:rgba(196,197,214,0.7);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0 ml-3">
-                <span class="font-headline-lg text-headline-lg text-on-surface">${featureItem.media.toFixed(1)}</span>
-                <div class="h-1 w-12 bg-tertiary rounded-full mt-1 ml-auto"></div>
+            <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+                <span style="font-size:22px;font-weight:800;color:#dae2fd;letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
+                <div style="width:36px;height:3px;background:linear-gradient(90deg, #2f58cd, #b6c4ff);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
             </div>
         </div>` : '';
 
-        const iconStyles = [
-            { bg: 'bg-primary-container/20', color: 'text-primary' },
-            { bg: 'bg-surface-variant', color: 'text-on-surface-variant' },
-            { bg: 'bg-error-container/20', color: 'text-error' },
-            { bg: 'bg-primary/20', color: 'text-primary' }
-        ];
-
         const gridCardsHtml = gridItems.map((item, gIdx) => {
-            const st = iconStyles[gIdx % iconStyles.length];
             const itemFormattedName = formatSubjectTitle(item.name);
             return `
-            <div class="liquid-glass rounded-[28px] p-4 rim-light space-y-3 group hover:active-glass transition-all duration-300 cursor-pointer bg-surface-container-highest/40" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')">
-                <div class="flex justify-between items-start">
-                    <div class="w-10 h-10 rounded-xl ${st.bg} flex items-center justify-center ${st.color}">
-                        <span class="material-symbols-outlined text-[20px]">${getSubjectIcon(item.name)}</span>
+            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;height:112px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="width:36px;height:36px;border-radius:12px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.15);display:flex;align-items:center;justify-content:center;color:#b6c4ff;">
+                        <span class="material-symbols-outlined" style="font-size:18px;">${getSubjectIcon(item.name)}</span>
                     </div>
-                    <span class="font-headline-lg text-headline-lg text-on-surface">${item.media.toFixed(1)}</span>
+                    <span style="font-size:20px;font-weight:800;color:#dae2fd;letter-spacing:-0.02em;">${item.media.toFixed(1)}</span>
                 </div>
-                <h3 class="font-body-md text-body-md font-semibold text-on-surface leading-tight truncate">${escapeHtml(itemFormattedName)}</h3>
+                <h3 style="font-size:13px;font-weight:700;color:#dae2fd;line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
             </div>`;
         }).join('');
 
         return `
         <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;box-sizing:border-box;">
             ${featureHtml}
-            <div class="grid grid-cols-2 gap-4">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 ${gridCardsHtml}
             </div>
         </div>`;
@@ -8144,65 +8139,67 @@ function renderGradesView() {
     }
 
     return `
-    <div class="view-fullbleed min-h-screen pb-48" style="background:#0b1326;">
-        <header class="flex justify-between items-center w-full max-w-2xl mx-auto pt-12 px-5">
-            <h1 class="font-headline-xl text-headline-xl font-bold text-on-surface sentence-case">Voti</h1>
-            <div class="liquid-glass squircle-full px-4 py-2 flex items-center gap-2 rim-light shadow-lg">
-                <span class="material-symbols-outlined text-primary text-[18px]">calendar_today</span>
-                <span class="font-label-md text-label-md text-on-surface">${monthYearLabel}</span>
+    <div class="view-fullbleed min-h-screen pb-40" style="padding:0;background:#0b1326;font-family:'Inter',sans-serif;">
+
+        <!-- ══ HEADER ══ -->
+        <header style="display:flex;justify-content:space-between;align-items:center;padding:max(env(safe-area-inset-top,0px),28px) 20px 16px;">
+            <h1 style="font-size:22px;font-weight:600;color:#dae2fd;opacity:0.9;margin:0;line-height:1.2;" class="sentence-case">Voti</h1>
+            <div class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
+                <span class="material-symbols-outlined" style="font-size:18px;color:rgba(218,226,253,0.7);">calendar_today</span>
+                <span style="font-size:14px;font-weight:500;color:#dae2fd;letter-spacing:0.02em;">${monthYearLabel}</span>
             </div>
         </header>
 
-        <main class="px-5 mt-6 space-y-6 max-w-2xl mx-auto pb-24">
-            <!-- Hero Card: Media Generale (Redesign-14 Specs) -->
-            <section class="liquid-glass squircle-lg p-6 rim-light overflow-hidden relative group bg-gradient-to-br from-primary-container/40 via-surface-container-high/60 to-surface-dim shadow-2xl">
-                <div class="flex justify-between items-start relative z-10">
+        <main style="padding:0 20px;display:flex;flex-direction:column;gap:18px;">
+            <!-- Hero Card: Media Generale (Liquid Glass v8) -->
+            <section class="liquid-glass-v8 squircle-lg rim-light" style="padding:22px 20px;background:linear-gradient(135deg, rgba(47,88,205,0.25) 0%, rgba(255,255,255,0.03) 100%);position:relative;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;">
                     <div>
-                        <p class="text-on-surface-variant font-label-md text-label-md">Media Generale</p>
-                        <div class="flex items-baseline gap-2 mt-1">
-                            <span class="font-display-lg text-display-lg text-white">${media.toFixed(2)}</span>
-                            <div class="bg-tertiary-container/40 px-2.5 py-[2px] rounded-full flex items-center gap-[2px] border border-tertiary/30 shadow-[0_0_15px_rgba(164,201,255,0.3)] backdrop-blur-md">
-                                <span class="material-symbols-outlined text-[14px] text-tertiary">${isPositive ? 'trending_up' : 'trending_down'}</span>
-                                <span class="font-label-sm text-label-sm text-tertiary">${diffStr}</span>
+                        <p style="font-size:13px;font-weight:500;color:rgba(196,197,214,0.7);margin:0 0 6px;">Media Generale</p>
+                        <div style="display:flex;align-items:baseline;gap:10px;">
+                            <span style="font-size:46px;font-weight:800;color:#dae2fd;letter-spacing:-0.03em;line-height:1;">${media.toFixed(2)}</span>
+                            <div style="background:rgba(47,88,205,0.3);padding:4px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(182,196,255,0.35);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                                <span class="material-symbols-outlined" style="font-size:13px;color:#b6c4ff;">${isPositive ? 'trending_up' : 'trending_down'}</span>
+                                <span style="font-size:11px;font-weight:700;color:#b6c4ff;letter-spacing:0.02em;">${diffStr}</span>
                             </div>
                         </div>
                     </div>
-                    <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" class="liquid-glass w-10 h-10 squircle-full flex items-center justify-center hover:scale-95 duration-200 border-none cursor-pointer">
-                        <span class="material-symbols-outlined text-[14px] text-tertiary">share</span>
+                    <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;color:#dae2fd;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#b6c4ff;">share</span>
                     </button>
                 </div>
 
-                <!-- Smooth Bezier Emerald Trend Graph SVG -->
-                <div class="mt-6 h-24 w-full relative">
-                    <svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <!-- Smooth Bezier Blue Trend Graph SVG -->
+                <div style="margin-top:20px;height:84px;width:100%;position:relative;">
+                    <svg style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none" viewBox="0 0 100 100">
                         <defs>
                             <linearGradient id="voti-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.3"></stop>
-                                <stop offset="100%" stop-color="#10b981" stop-opacity="0"></stop>
+                                <stop offset="0%" stop-color="#2f58cd" stop-opacity="0.35"></stop>
+                                <stop offset="100%" stop-color="#2f58cd" stop-opacity="0"></stop>
                             </linearGradient>
-                            <filter id="voti-emerald-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <filter id="voti-blue-glow" x="-20%" y="-20%" width="140%" height="140%">
                                 <feGaussianBlur stdDeviation="2" result="blur"></feGaussianBlur>
                                 <feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
                             </filter>
                         </defs>
-                        <path d="${areaPathD}" fill="url(#voti-area-gradient)" opacity="0.5"></path>
-                        <path d="${linePathD}" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" filter="url(#voti-emerald-glow)"></path>
-                        <g class="animate-pulse">
-                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="3" fill="#10b981" opacity="0.4"></circle>
-                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="1.5" fill="#10b981"></circle>
+                        <path d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
+                        <path d="${linePathD}" fill="none" stroke="#7c9aff" stroke-width="2.5" stroke-linecap="round" filter="url(#voti-blue-glow)"></path>
+                        <g>
+                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#b6c4ff" opacity="0.3"></circle>
+                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff"></circle>
                         </g>
                     </svg>
                 </div>
-                <div class="flex justify-between mt-2 text-on-surface-variant font-label-sm text-label-sm opacity-60">
-                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span class="text-primary font-bold">Giu</span>
+                <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;font-weight:600;color:rgba(196,197,214,0.5);">
+                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#b6c4ff;font-weight:700;">Giu</span>
                 </div>
             </section>
 
-            <!-- Subjects Bento Carousel -->
-            <section class="space-y-4">
-                <div class="flex justify-between items-center px-1">
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface sentence-case">Materie</h2>
-                    <span class="text-on-surface-variant font-label-md text-label-md opacity-70 cursor-pointer hover:opacity-100 transition-opacity" onclick="if(typeof openAllGradesModal==='function')openAllGradesModal();">Tutti i voti</span>
+            <!-- Subjects Bento Section -->
+            <section style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px;">
+                    <h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">Materie</h2>
+                    <span style="font-size:12px;font-weight:600;color:#b6c4ff;cursor:pointer;opacity:0.85;transition:opacity 0.15s ease;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'" onclick="if(typeof openAllGradesModal==='function')openAllGradesModal();">Tutti i voti</span>
                 </div>
 
                 <div id="voti-subjects-carousel" style="
@@ -8221,28 +8218,27 @@ function renderGradesView() {
                 </div>
 
                 ${subjectSlides.length > 1 ? `
-                <div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:12px;">
+                <div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px;">
                     ${dotsHtml}
                 </div>` : ''}
             </section>
 
             <!-- AI Insight Card -->
-            <section class="liquid-glass squircle-md p-4 rim-light border-dashed border-primary/30 bg-primary/5 bg-tertiary-container/10">
-                <div class="flex gap-4 items-center">
-                    <div class="w-12 h-12 squircle-full bg-primary flex items-center justify-center text-on-primary shadow-lg animate-pulse flex-shrink-0">
-                        <span class="material-symbols-outlined">auto_awesome</span>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="font-label-md text-label-md font-bold text-primary uppercase tracking-wider">AI Insight</h4>
-                        <p class="text-on-surface-variant text-label-sm leading-relaxed">${aiInsightText}</p>
-                    </div>
+            <section class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;background:linear-gradient(135deg, rgba(47,88,205,0.2) 0%, rgba(255,255,255,0.02) 100%);display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:#2f58cd;display:flex;align-items:center;justify-content:center;color:#ffffff;box-shadow:0 4px 14px rgba(47,88,205,0.4);flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <h4 style="font-size:11px;font-weight:700;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px;">AI Insight</h4>
+                    <p style="font-size:13px;color:rgba(196,197,214,0.85);line-height:1.45;margin:0;">${aiInsightText}</p>
                 </div>
             </section>
         </main>
 
-        <div class="fixed bottom-32 right-6 flex flex-col gap-4 z-40">
-            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal()" class="liquid-glass w-12 h-12 squircle-full flex items-center justify-center text-on-surface-variant rim-light shadow-lg active:scale-90 transition-transform border-none cursor-pointer">
-                <span class="material-symbols-outlined">history</span>
+        <!-- Floating Action Button -->
+        <div style="position:fixed;bottom:calc(110px + env(safe-area-inset-bottom,0px));right:24px;display:flex;flex-direction:column;gap:16px;z-index:40;">
+            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal()" class="liquid-glass-v8 squircle-full rim-light shadow-lg" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform 0.15s ease;color:#dae2fd;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                <span class="material-symbols-outlined" style="font-size:20px;color:rgba(218,226,253,0.8);">history</span>
             </button>
         </div>
     </div>`;

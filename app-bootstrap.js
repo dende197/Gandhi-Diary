@@ -217,6 +217,12 @@
         const _allowedViews = ['home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
         window.navigate = function navigate(v) {
             if (!_allowedViews.includes(v)) v = 'home';
+            if (v === 'planner') {
+                if (typeof getLocalDateString === 'function') {
+                    state.selectedDate = getLocalDateString(new Date());
+                }
+                state.plannerWeekOffset = 0;
+            }
             location.hash = v;
         };
 
