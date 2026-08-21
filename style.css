@@ -290,7 +290,6 @@ body {
   scroll-snap-type: x mandatory !important;
   -webkit-overflow-scrolling: touch !important;
   overscroll-behavior-x: contain !important;
-  width: 100% !important;
 }
 
 .voti-subjects-slide {

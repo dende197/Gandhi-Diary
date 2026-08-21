@@ -7137,12 +7137,12 @@ function renderPlanner() {
 
     // ── Week slide HTML (one slide = one week of 7 day capsules) ────
     function weekSlide(days, slideIdx) {
-        return `<div class="planner-week-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;display:flex;justify-content:space-between;gap:8px;padding:16px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;">
+        return `<div class="planner-week-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;display:flex;justify-content:space-between;gap:6px;padding:16px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
                 if (isSel) {
                     return `<div class="planner-day-pill active-blue-glow squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
-                        width:56px;height:96px;flex-shrink:0;
+                        flex:1 1 0%;min-width:0;height:96px;
                         display:flex;flex-direction:column;align-items:center;justify-content:center;
                         cursor:pointer;transition:transform 0.15s ease;
                         -webkit-tap-highlight-color:transparent;
@@ -7153,7 +7153,7 @@ function renderPlanner() {
                     </div>`;
                 } else {
                     return `<div class="planner-day-pill liquid-glass-v8 rim-light squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
-                        width:56px;height:96px;flex-shrink:0;
+                        flex:1 1 0%;min-width:0;height:96px;
                         display:flex;flex-direction:column;align-items:center;justify-content:center;
                         cursor:pointer;opacity:0.65;transition:transform 0.15s ease, opacity 0.15s ease;
                         -webkit-tap-highlight-color:transparent;
@@ -8136,7 +8136,7 @@ function renderGradesView() {
         }).join('');
 
         return `
-        <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:flex-start;min-height:310px;">
+        <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:flex-start;min-height:310px;padding:0 20px;">
             ${featureHtml}
             ${gridCardsHtml ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 ${gridCardsHtml}
@@ -8230,9 +8230,9 @@ function renderGradesView() {
                     scrollbar-width: none;
                     -ms-overflow-style: none;
                     gap: 0;
-                    margin: 0;
+                    margin: 0 -20px;
                     padding: 0;
-                    width: 100%;
+                    width: calc(100% + 40px);
                 " onscroll="handleVotiSubjectsScroll(this)">
                     ${slidesHtml}
                 </div>
