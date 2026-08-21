@@ -7207,8 +7207,8 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
             display:flex;
             overflow-x:auto;
             scroll-snap-type:x mandatory;
-            scroll-behavior:smooth;
             -webkit-overflow-scrolling:touch;
+            overscroll-behavior-x:contain;
             scrollbar-width:none;
             -ms-overflow-style:none;
             gap:0;
@@ -7348,11 +7348,11 @@ window._renderMonthPicker = function() {
         const isSel     = iso === selectedISO;
         const hasVerif  = (state.verifiche  || []).some(function(v){ return (v.data||v.date||'') === iso; });
         const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
-        const dotColor  = hasVerif ? 'var(--warning)' : 'var(--info)';
+        const dotColor  = hasVerif ? '#ffb4ab' : '#b6c4ff';
 
-        let bg = 'transparent', color = 'var(--on-surface)', fw = '400', ring = 'none', shadow = 'none';
-        if (isSel)   { bg = 'var(--primary)'; color = 'var(--on-primary)'; fw = '800'; shadow = '0 4px 14px -3px rgba(37,99,235,0.45)'; }
-        else if (isToday) { bg = 'var(--info-container)'; color = 'var(--info)'; fw = '700'; }
+        let bg = 'transparent', color = '#dae2fd', fw = '500', ring = 'none', shadow = 'none';
+        if (isSel)   { bg = '#2f58cd'; color = '#ffffff'; fw = '700'; shadow = '0 4px 14px rgba(47,88,205,0.5)'; }
+        else if (isToday) { bg = 'rgba(47,88,205,0.2)'; color = '#b6c4ff'; fw = '700'; ring = '1px solid rgba(182,196,255,0.3)'; }
 
         const dot = (hasTask || hasVerif) && !isSel
             ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
@@ -7365,7 +7365,7 @@ window._renderMonthPicker = function() {
             'background:' + bg + ';' +
             'box-shadow:' + shadow + ';' +
             'font-size:14px;font-weight:' + fw + ';color:' + color + ';' +
-            'font-family:Hanken Grotesk,sans-serif;transition:transform 0.1s ease;' +
+            'font-family:\'Inter\',sans-serif;transition:transform 0.1s ease;' +
             '-webkit-tap-highlight-color:transparent;" ' +
             'ontouchstart="this.style.transform=\'scale(0.88)\'" ontouchend="this.style.transform=\'scale(1)\'">' +
             d + dot + '</button>'
@@ -7376,26 +7376,26 @@ window._renderMonthPicker = function() {
 
     const innerHTML = 
         '<div data-drag-handle style="display:flex;justify-content:center;padding:16px 0 8px;cursor:grab;touch-action:none;">' +
-            '<div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>' +
+            '<div style="width:40px;height:4px;border-radius:999px;background:rgba(196,197,214,0.3);"></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
-            '<button onclick="window._pkPrev()" style="width:38px;height:38px;border-radius:50%;background:rgba(var(--glass-rgb),0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_left</span>' +
+            '<button onclick="window._pkPrev()" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#dae2fd;">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#b6c4ff;">chevron_left</span>' +
             '</button>' +
             '<div style="text-align:center;">' +
-                '<div style="font-size:18px;font-weight:800;color:var(--on-surface);letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
-                '<div style="font-size:10px;font-weight:700;color:var(--outline);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
+                '<div style="font-size:18px;font-weight:700;color:#dae2fd;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
+                '<div style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
             '</div>' +
-            '<button onclick="window._pkNext()" style="width:38px;height:38px;border-radius:50%;background:rgba(var(--glass-rgb),0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">chevron_right</span>' +
+            '<button onclick="window._pkNext()" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#dae2fd;">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#b6c4ff;">chevron_right</span>' +
             '</button>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:14px 16px 6px;">' +
-            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--outline-variant);">' + l + '</div>'; }).join('') +
+            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:rgba(196,197,214,0.5);">' + l + '</div>'; }).join('') +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' + cells.join('') + '</div>' +
         '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
-            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" style="padding:10px 28px;border-radius:999px;background:var(--info-container);border:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--info);font-family:Hanken Grotesk,sans-serif;">Vai a Oggi</button>' +
+            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" class="liquid-glass-v8 rim-light squircle-full" style="padding:10px 28px;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#b6c4ff;font-family:\'Inter\',sans-serif;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.25);">Vai a Oggi</button>' +
         '</div>';
 
     // FIX SCATTO MESE: Aggiorniamo solo il contenuto senza rimuovere l'overlay!
@@ -7408,12 +7408,12 @@ window._renderMonthPicker = function() {
 
     const overlay = document.createElement('div');
     overlay.id = 'month-picker-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.30);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.18s ease;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(7,13,27,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.18s ease;';
     overlay.onclick = function(e) { if (e.target === overlay) window.closePlannerMonthPicker(); };
 
     const card = document.createElement('div');
     card.className = 'month-picker-card';
-    card.style.cssText = 'width:100%;max-width:430px;background:var(--surface-container-lowest);border:none;border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
+    card.style.cssText = 'width:100%;max-width:430px;background:linear-gradient(180deg, #131c35 0%, #0b1326 100%);border-top:1px solid rgba(182,196,255,0.2);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -8px 32px rgba(0,0,0,0.4);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
     card.innerHTML = innerHTML;
 
     overlay.appendChild(card);
@@ -7603,8 +7603,9 @@ window.refreshPlannerSearch = function() {
 
 window.plannerSelectDay = function(iso) {
     state.selectedDate = iso;
-    document.querySelectorAll('.planner-week-slide > div[onclick]').forEach(function(el) {
-        const m = el.getAttribute('onclick').match(/'([^']+)'/);
+    document.querySelectorAll('.planner-day-pill').forEach(function(el) {
+        const onclickAttr = el.getAttribute('onclick') || '';
+        const m = onclickAttr.match(/'([^']+)'/);
         const elIso = m ? m[1] : null;
         if (!elIso) return;
         const isSel = elIso === iso;
@@ -7637,6 +7638,16 @@ window.plannerSelectDay = function(iso) {
             }
         }
     });
+
+    try {
+        const d = new Date(iso + 'T00:00:00');
+        const MN = window._plannerMN || ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                                          'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+        const monthHeaderSpan = document.querySelector('.planner-view header button span:nth-child(2)');
+        if (monthHeaderSpan && !isNaN(d.getTime())) {
+            monthHeaderSpan.textContent = `${MN[d.getMonth()]} ${d.getFullYear()}`;
+        }
+    } catch(e) {}
     
     var _area = document.getElementById('planner-content-area');
     var _dayHtml = window._buildPlannerDayContentHTML && window._buildPlannerDayContentHTML();
@@ -7652,7 +7663,7 @@ window.handlePlannerCarouselScroll = function(el) {
     if (!el) return;
     const slideWidth = el.clientWidth || el.offsetWidth || window.innerWidth;
     if (!slideWidth) return;
-    const idx = Math.round(el.scrollLeft / slideWidth);
+    const idx = Math.max(0, Math.min(4, Math.round(el.scrollLeft / slideWidth)));
     if (window._lastPlannerScrollIdx === idx) return;
     window._lastPlannerScrollIdx = idx;
     document.querySelectorAll('.planner-week-dot').forEach(function(dot, i) {
@@ -7660,30 +7671,37 @@ window.handlePlannerCarouselScroll = function(el) {
         dot.style.background = i === idx ? 'rgba(47, 88, 205, 0.8)' : 'rgba(255, 255, 255, 0.2)';
         dot.style.borderRadius = '9999px';
     });
-    if (typeof state !== 'undefined') {
-        state.plannerWeekOffset = (state.plannerWeekOffset || 0) + (idx - (window._plannerInitialSlide || 2));
-        window._plannerInitialSlide = idx;
-    }
 };
 
 window.plannerJumpToWeek = function(idx) {
     const el = document.getElementById('planner-week-carousel');
     if (el) {
-        const slideWidth = el.clientWidth || el.offsetWidth || window.innerWidth;
-        el.scrollTo({ left: idx * slideWidth, behavior: 'smooth' });
+        const slides = el.querySelectorAll('.planner-week-slide');
+        const targetSlide = slides[idx];
+        if (targetSlide) {
+            el.scrollTo({ left: targetSlide.offsetLeft, behavior: 'smooth' });
+        } else {
+            const slideWidth = el.clientWidth || el.offsetWidth || window.innerWidth;
+            el.scrollTo({ left: idx * slideWidth, behavior: 'smooth' });
+        }
     }
 };
 
 window._scrollPlannerToActiveWeek = function() {
     const _pc = document.getElementById('planner-week-carousel');
     if (!_pc) return;
-    const targetIdx = window._plannerInitialSlide !== undefined ? window._plannerInitialSlide : 2;
-    const slideWidth = _pc.clientWidth || _pc.offsetWidth || window.innerWidth;
-    if (slideWidth > 0) {
-        _pc.scrollLeft = targetIdx * slideWidth;
-        if (typeof window.handlePlannerCarouselScroll === 'function') {
-            window.handlePlannerCarouselScroll(_pc);
-        }
+    const slides = _pc.querySelectorAll('.planner-week-slide');
+    const targetIdx = 2; // Week 2 is always the week containing the active/selected date
+    const targetSlide = slides[targetIdx] || slides[0];
+    if (targetSlide) {
+        const offset = targetSlide.offsetLeft;
+        _pc.scrollTo({ left: offset, behavior: 'instant' });
+        _pc.scrollLeft = offset;
+        document.querySelectorAll('.planner-week-dot').forEach(function(dot, i) {
+            dot.style.width = i === targetIdx ? '20px' : '6px';
+            dot.style.background = i === targetIdx ? 'rgba(47, 88, 205, 0.8)' : 'rgba(255, 255, 255, 0.2)';
+            dot.style.borderRadius = '9999px';
+        });
     }
 };
 
@@ -8118,16 +8136,16 @@ function renderGradesView() {
         }).join('');
 
         return `
-        <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;box-sizing:border-box;">
+        <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:flex-start;min-height:310px;">
             ${featureHtml}
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            ${gridCardsHtml ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 ${gridCardsHtml}
-            </div>
+            </div>` : ''}
         </div>`;
     }).join('');
 
     const dotsHtml = subjectSlides.map((_, i) => `
-        <div class="voti-subjects-dot" style="width:${i===0?'20px':'6px'};height:6px;border-radius:9999px;background:${i===0?'rgba(47,88,205,0.8)':'rgba(255,255,255,0.2)'};transition:all 0.3s ease;"></div>
+        <div class="voti-subjects-dot" data-idx="${i}" onclick="window.votiJumpToSlide(${i})" style="width:${i===0?'20px':'6px'};height:6px;border-radius:9999px;background:${i===0?'rgba(47,88,205,0.8)':'rgba(255,255,255,0.2)'};transition:all 0.3s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
     `).join('');
 
     let aiInsightText = "Il tuo rendimento in materie umanistiche è eccellente. Ti suggeriamo di dedicare 30m extra a Fisica per equilibrare la media.";
@@ -8206,7 +8224,9 @@ function renderGradesView() {
                     display: flex;
                     overflow-x: auto;
                     scroll-snap-type: x mandatory;
+                    scroll-behavior: smooth;
                     -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-x: contain;
                     scrollbar-width: none;
                     -ms-overflow-style: none;
                     gap: 0;
@@ -8243,6 +8263,20 @@ function renderGradesView() {
         </div>
     </div>`;
 }
+
+window.votiJumpToSlide = function(idx) {
+    const el = document.getElementById('voti-subjects-carousel');
+    if (el) {
+        const slides = el.querySelectorAll('.voti-subjects-slide');
+        const targetSlide = slides[idx];
+        if (targetSlide) {
+            el.scrollTo({ left: targetSlide.offsetLeft, behavior: 'smooth' });
+        } else {
+            const slideWidth = el.clientWidth || el.offsetWidth || window.innerWidth;
+            el.scrollTo({ left: idx * slideWidth, behavior: 'smooth' });
+        }
+    }
+};
 
 window.handleVotiSubjectsScroll = function(el) {
     if (!el) return;

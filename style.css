@@ -289,9 +289,16 @@ body {
   scrollbar-width: none !important;
   scroll-snap-type: x mandatory !important;
   -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-x: contain !important;
+  width: 100% !important;
 }
 
 .voti-subjects-slide {
+  flex: 0 0 100% !important;
+  min-width: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
   scroll-snap-align: start !important;
   scroll-snap-stop: always !important;
 }
@@ -1091,13 +1098,20 @@ body {
   scrollbar-width: none !important;
   scroll-snap-type: x mandatory !important;
   -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-x: contain !important;
   padding-top: 10px !important;
   padding-bottom: 14px !important;
   margin-top: -10px !important;
   margin-bottom: -14px !important;
+  width: 100% !important;
 }
 
 .planner-week-slide {
+  flex: 0 0 100% !important;
+  min-width: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
   scroll-snap-align: start !important;
   scroll-snap-stop: always !important;
   padding-top: 4px !important;
