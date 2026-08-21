@@ -8124,12 +8124,12 @@ function renderGradesView() {
         const gridCardsHtml = gridItems.map((item, gIdx) => {
             const itemFormattedName = formatSubjectTitle(item.name);
             return `
-            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;height:112px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;height:112px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="width:36px;height:36px;border-radius:12px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.15);display:flex;align-items:center;justify-content:center;color:#b6c4ff;">
+                    <div style="width:36px;height:36px;border-radius:12px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.15);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
                         <span class="material-symbols-outlined" style="font-size:18px;">${getSubjectIcon(item.name)}</span>
                     </div>
-                    <span style="font-size:20px;font-weight:800;color:#dae2fd;letter-spacing:-0.02em;">${item.media.toFixed(1)}</span>
+                    <span style="font-size:20px;font-weight:800;color:#dae2fd;letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
                 </div>
                 <h3 style="font-size:13px;font-weight:700;color:#dae2fd;line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
             </div>`;
@@ -8157,7 +8157,7 @@ function renderGradesView() {
     }
 
     return `
-    <div class="view-fullbleed min-h-screen pb-40" style="padding:0;background:#0b1326;font-family:'Inter',sans-serif;">
+    <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:#0b1326;font-family:'Inter',sans-serif;">
 
         <!-- ══ HEADER ══ -->
         <header style="display:flex;justify-content:space-between;align-items:center;padding:max(env(safe-area-inset-top,0px),28px) 20px 16px;">
@@ -8187,25 +8187,19 @@ function renderGradesView() {
                     </button>
                 </div>
 
-                <!-- Smooth Bezier Blue Trend Graph SVG -->
+                <!-- Clean Green Trend Graph SVG -->
                 <div style="margin-top:20px;height:84px;width:100%;position:relative;">
-                    <svg style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none" viewBox="0 0 100 100">
+                    <svg style="width:100%;height:100%;" preserveAspectRatio="none" viewBox="0 0 100 100">
                         <defs>
                             <linearGradient id="voti-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#2f58cd" stop-opacity="0.35"></stop>
-                                <stop offset="100%" stop-color="#2f58cd" stop-opacity="0"></stop>
+                                <stop offset="0%" stop-color="#34d399" stop-opacity="0.2"></stop>
+                                <stop offset="100%" stop-color="#34d399" stop-opacity="0"></stop>
                             </linearGradient>
-                            <filter id="voti-blue-glow" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur stdDeviation="2" result="blur"></feGaussianBlur>
-                                <feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
-                            </filter>
                         </defs>
                         <path d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
-                        <path d="${linePathD}" fill="none" stroke="#7c9aff" stroke-width="2.5" stroke-linecap="round" filter="url(#voti-blue-glow)"></path>
-                        <g>
-                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#b6c4ff" opacity="0.3"></circle>
-                            <circle cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff"></circle>
-                        </g>
+                        <path d="${linePathD}" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="3" fill="#34d399"></circle>
+                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="1.5" fill="#ffffff"></circle>
                     </svg>
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;font-weight:600;color:rgba(196,197,214,0.5);">
