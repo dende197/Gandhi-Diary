@@ -764,6 +764,62 @@ function averageFromNumeric(values) {
     return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
 
+function getGradeMonthlyTrendSummary(votiData = null) {
+    const data = votiData || (typeof getVotiData === 'function' ? getVotiData() : (state.voti || []));
+    const numericVotes = (data || []).map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const media = averageFromNumeric(numericVotes) || 0;
+
+    const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    function voteYearMonth(v) {
+        const raw = v.data || v.date || '';
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
+        return (d && !isNaN(d)) ? { y: d.getFullYear(), m: d.getMonth(), key: d.getFullYear() * 100 + d.getMonth() } : null;
+    }
+
+    const monthMap = {};
+    (data || []).forEach(v => {
+        const ym = voteYearMonth(v);
+        const val = getNumericGradeValue(v);
+        if (!ym || !Number.isFinite(val)) return;
+        if (!monthMap[ym.key]) monthMap[ym.key] = { key: ym.key, label: MONTHS_IT[ym.m], nums: [] };
+        monthMap[ym.key].nums.push(val);
+    });
+
+    const monthList = Object.values(monthMap)
+        .sort((a, b) => a.key - b.key)
+        .map(m => ({ ...m, avg: averageFromNumeric(m.nums) }));
+
+    const mediaCurMese = monthList.length >= 1 ? monthList[monthList.length - 1].avg : null;
+    const mediaPrevMese = monthList.length >= 2 ? monthList[monthList.length - 2].avg : null;
+    let diffStr = '+0.00';
+    let diffVal = 0;
+    let isPositive = true;
+    let hasComparison = false;
+
+    if (mediaCurMese !== null && mediaPrevMese !== null) {
+        diffVal = mediaCurMese - mediaPrevMese;
+        isPositive = diffVal >= 0;
+        diffStr = (isPositive ? '+' : '') + diffVal.toFixed(2);
+        hasComparison = true;
+    } else if (numericVotes.length >= 2) {
+        diffStr = `${numericVotes.length} voti`;
+        isPositive = true;
+    }
+
+    return {
+        media,
+        monthList,
+        mediaCurMese,
+        mediaPrevMese,
+        diffVal,
+        diffStr,
+        isPositive,
+        hasComparison,
+        numericVotes
+    };
+}
+
+
 function getNextGradeSimulatorValue() {
     const inState = Number(state.nextGradeSimulator);
     if (Number.isFinite(inState)) return Math.max(1, Math.min(10, Math.round(inState)));
@@ -2013,7 +2069,10 @@ function renderHome() {
 
     // 1. Recupero dei dati reali dal backend/stato globale
     const isInitialLoad = !state.lastSync && (!state.tasks || state.tasks.length === 0) && (!state.voti || state.voti.length === 0);
-    const media = parseFloat(calcolaMedia(getVotiData())) || 0;
+    const trendSummary = getGradeMonthlyTrendSummary();
+    const media = trendSummary.media || parseFloat(calcolaMedia(getVotiData())) || 0;
+    const diffStr = trendSummary.diffStr;
+    const isPositive = trendSummary.isPositive;
     const assenze = state.assenzeData || {};
     const verifiche = state.manualVerifiche || [];
     
@@ -2270,7 +2329,7 @@ function renderHome() {
                             <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
                                 <div style="display:flex;align-items:center;gap:10px;">
                                     <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:50px;font-weight:800;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:rgba(48,209,88,0.18);color:#30d158;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(48,209,88,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);"><i class="ph-fill ph-trend-up" style="font-size:13px;"></i> +0.15</span>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};color:${isPositive ? '#30d158' : '#ff453a'};font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid ${isPositive ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);"><i class="ph-fill ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:13px;"></i> ${diffStr}</span>
                                 </div>
                             </div>
                             <div style="display:flex;align-items:end;gap:10px;height:40px;width:100%;padding-top:4px;">
@@ -8390,48 +8449,18 @@ function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
     const votiData = getVotiData();
-    const numericVotes = votiData.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const media = averageFromNumeric(numericVotes) || 7.85;
+    const trendSummary = getGradeMonthlyTrendSummary(votiData);
+    const media = trendSummary.media || 7.85;
+    const monthList = trendSummary.monthList;
+    const diffStr = trendSummary.diffStr;
+    const isPositive = trendSummary.isPositive;
 
     const MN_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const now = new Date();
     const monthYearLabel = `${MN_FULL[now.getMonth()]} ${now.getFullYear()}`;
 
-    // ── Monthly aggregation: group votes by month ────────────────────────────
-    const MONTHS_IT = ['Nov','Dic','Gen','Feb','Mar','Apr','Mag','Giu'];
-    function voteYearMonth(v) {
-        const raw = v.data || v.date || '';
-        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
-        return (d && !isNaN(d)) ? { y: d.getFullYear(), m: d.getMonth(), key: d.getFullYear() * 100 + d.getMonth() } : null;
-    }
-
-    const monthMap = {};
-    votiData.forEach(v => {
-        const ym = voteYearMonth(v);
-        const val = getNumericGradeValue(v);
-        if (!ym || !Number.isFinite(val)) return;
-        if (!monthMap[ym.key]) monthMap[ym.key] = { key: ym.key, label: MONTHS_IT[ym.m % 8], nums: [] };
-        monthMap[ym.key].nums.push(val);
-    });
-    const monthList = Object.values(monthMap)
-        .sort((a, b) => a.key - b.key)
-        .map(m => ({ ...m, avg: averageFromNumeric(m.nums) }));
-
-    const mediaCurMese  = monthList.length >= 1 ? monthList[monthList.length - 1].avg  : null;
-    const mediaPrevMese = monthList.length >= 2 ? monthList[monthList.length - 2].avg  : null;
-    let diffStr = '+0.15';
-    let isPositive = true;
-
-    if (mediaCurMese !== null && mediaPrevMese !== null) {
-        const diff = mediaCurMese - mediaPrevMese;
-        isPositive = diff >= 0;
-        diffStr = (isPositive ? '+' : '') + diff.toFixed(2);
-    } else if (numericVotes.length >= 2) {
-        diffStr = `${numericVotes.length} voti`;
-    }
-
-    // ── Build Geometrically Clean Trend Line Graph ──────────────────────────
+    // ── Build Geometrically Clean Straight Line Graph (Pure geometric segments, no curves) ──
     const defaultAvgs = [6.8, 7.0, 7.2, 7.1, 7.4, 7.5, 7.7, media];
     const rawVals = defaultAvgs.map((defVal, i) => {
         if (monthList.length > 0) {
@@ -8448,28 +8477,16 @@ function renderGradesView() {
     const span = (maxV - minV) || 1.0;
 
     // ViewBox is 340 x 70. X spans 14 to 326 (safe padding of 14px on sides so dot never clips)
-    // Y spans from 12 (top/high grade) to 54 (bottom/low grade)
+    // Y spans from 14 (top/high grade) to 54 (bottom/low grade)
     const pts = rawVals.map((val, i) => {
         const x = Math.round(14 + (i / 7) * 312);
         const norm = (val - minV) / span;
-        const y = Math.round(54 - norm * 42); // 12 .. 54
+        const y = Math.round(54 - norm * 40); // 14 .. 54
         return { x, y };
     });
 
-    let linePathD = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = i > 0 ? pts[i - 1] : pts[i];
-        const p1 = pts[i];
-        const p2 = pts[i + 1];
-        const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
-
-        const cp1x = +(p1.x + (p2.x - p0.x) * 0.28).toFixed(1);
-        const cp1y = +(p1.y + (p2.y - p0.y) * 0.28).toFixed(1);
-        const cp2x = +(p2.x - (p3.x - p1.x) * 0.28).toFixed(1);
-        const cp2y = +(p2.y - (p3.y - p1.y) * 0.28).toFixed(1);
-
-        linePathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-    }
+    // Straight geometric line segments (retta / segmenti lineari puliti senza curve Bézier)
+    const linePathD = pts.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
     const areaPathD = `${linePathD} L ${pts[pts.length - 1].x} 70 L ${pts[0].x} 70 Z`;
     const lastPt = pts[pts.length - 1];
 
@@ -8585,9 +8602,9 @@ function renderGradesView() {
                         <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin:0 0 6px;">Media Generale</p>
                         <div style="display:flex;align-items:baseline;gap:10px;">
                             <span style="font-size:48px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;line-height:1;">${media.toFixed(2)}</span>
-                            <div style="background:rgba(48,209,88,0.18);padding:4px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(48,209,88,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-                                <i class="ph-fill ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:14px;color:#30d158;"></i>
-                                <span style="font-size:12px;font-weight:700;color:#30d158;letter-spacing:0.01em;">${diffStr}</span>
+                            <div style="background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};padding:4px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid ${isPositive ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                                <i class="ph-fill ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:14px;color:${isPositive ? '#30d158' : '#ff453a'};"></i>
+                                <span style="font-size:12px;font-weight:700;color:${isPositive ? '#30d158' : '#ff453a'};letter-spacing:0.01em;">${diffStr}</span>
                             </div>
                         </div>
                     </div>
@@ -8596,29 +8613,24 @@ function renderGradesView() {
                     </button>
                 </div>
 
-                <!-- Clean Green Trend Graph SVG (Animated & Geometric) -->
+                <!-- Clean Green Straight Trend Graph SVG (Pure geometric line, no glow, crisp endpoint) -->
                 <div style="margin-top:16px;height:74px;width:100%;position:relative;">
                     <svg viewBox="0 0 340 70" style="width:100%;height:100%;display:block;overflow:visible;" preserveAspectRatio="none">
                         <defs>
                             <linearGradient id="voti-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#30d158" stop-opacity="0.25"></stop>
-                                <stop offset="85%" stop-color="#30d158" stop-opacity="0.03"></stop>
+                                <stop offset="0%" stop-color="#30d158" stop-opacity="0.18"></stop>
+                                <stop offset="85%" stop-color="#30d158" stop-opacity="0.02"></stop>
                                 <stop offset="100%" stop-color="#30d158" stop-opacity="0"></stop>
                             </linearGradient>
-                            <filter id="voti-glow-green" x="-20%" y="-20%" width="140%" height="140%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#30d158" flood-opacity="0.45" />
-                            </filter>
                         </defs>
-                        <!-- Animated Area -->
+                        <!-- Subtle Translucent Area Fill -->
                         <path class="grade-chart-area" d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
                         
-                        <!-- Animated Green Stroke -->
-                        <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#voti-glow-green)"></path>
+                        <!-- Clean Sharp Straight Green Line (No glow, no blur) -->
+                        <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
                         
-                        <!-- Animated Glowing Endpoint Dot -->
-                        <circle class="grade-chart-dot grade-chart-dot-pulse" cx="${lastPt.x}" cy="${lastPt.y}" r="7" fill="#30d158"></circle>
-                        <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#30d158"></circle>
-                        <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff"></circle>
+                        <!-- Sharp Geometric Endpoint Dot (No halo/glow) -->
+                        <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="4.5" fill="#30d158" stroke="#ffffff" stroke-width="2"></circle>
                     </svg>
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:8px;padding:0 4px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);">

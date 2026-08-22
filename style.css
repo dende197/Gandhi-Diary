@@ -1765,25 +1765,19 @@ div[style*="rgba(254,242,242,0.9)"] {
 .grade-chart-line {
   stroke-dasharray: 600;
   stroke-dashoffset: 600;
-  animation: gradeLineDraw 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: gradeLineDraw 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .grade-chart-area {
   opacity: 0;
-  animation: gradeAreaFade 0.8s ease 0.35s forwards;
+  animation: gradeAreaFade 0.6s ease 0.25s forwards;
 }
 
 .grade-chart-dot {
   transform-box: fill-box;
   transform-origin: center;
   opacity: 0;
-  animation: gradeDotPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s forwards;
-}
-
-.grade-chart-dot-pulse {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: gradeDotPulse 2.2s ease-in-out infinite 1.4s;
+  animation: gradeDotPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s forwards;
 }
 
 @keyframes gradeLineDraw {
@@ -1806,17 +1800,6 @@ div[style*="rgba(254,242,242,0.9)"] {
   100% {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@keyframes gradeDotPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.45;
-  }
-  50% {
-    transform: scale(2.2);
-    opacity: 0;
   }
 }
 
