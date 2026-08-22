@@ -8050,13 +8050,15 @@ function renderGradesView() {
 
     let linePathD = `M ${pts[0].x} ${pts[0].y}`;
     for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i];
-        const p1 = pts[i + 1];
-        const cp1x = Math.round(p0.x + (p1.x - p0.x) / 2);
-        const cp1y = p0.y;
-        const cp2x = Math.round(p0.x + (p1.x - p0.x) / 2);
-        const cp2y = p1.y;
-        linePathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y}`;
+        const p0 = i > 0 ? pts[i - 1] : pts[i];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
+        const cp1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2);
+        const cp1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2);
+        const cp2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2);
+        const cp2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2);
+        linePathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     }
     const areaPathD = `${linePathD} L 100 100 L 0 100 Z`;
     const lastPt = pts[pts.length - 1];
@@ -8189,17 +8191,17 @@ function renderGradesView() {
 
                 <!-- Clean Green Trend Graph SVG -->
                 <div style="margin-top:20px;height:84px;width:100%;position:relative;">
-                    <svg style="width:100%;height:100%;" preserveAspectRatio="none" viewBox="0 0 100 100">
+                    <svg style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none" viewBox="0 0 100 100">
                         <defs>
                             <linearGradient id="voti-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#34d399" stop-opacity="0.2"></stop>
+                                <stop offset="0%" stop-color="#34d399" stop-opacity="0.18"></stop>
                                 <stop offset="100%" stop-color="#34d399" stop-opacity="0"></stop>
                             </linearGradient>
                         </defs>
                         <path d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
-                        <path d="${linePathD}" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="3" fill="#34d399"></circle>
-                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="1.5" fill="#ffffff"></circle>
+                        <path d="${linePathD}" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#34d399" vector-effect="non-scaling-stroke"></circle>
+                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff" vector-effect="non-scaling-stroke"></circle>
                     </svg>
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;font-weight:600;color:rgba(196,197,214,0.5);">
@@ -8248,13 +8250,6 @@ function renderGradesView() {
                 </div>
             </section>
         </main>
-
-        <!-- Floating Action Button -->
-        <div style="position:fixed;bottom:calc(110px + env(safe-area-inset-bottom,0px));right:24px;display:flex;flex-direction:column;gap:16px;z-index:40;">
-            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal()" class="liquid-glass-v8 squircle-full rim-light shadow-lg" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform 0.15s ease;color:#dae2fd;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:20px;color:rgba(218,226,253,0.8);">history</span>
-            </button>
-        </div>
     </div>`;
 }
 
