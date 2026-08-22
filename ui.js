@@ -3096,58 +3096,50 @@ function renderSubjectDetailView(subjectName) {
             const cx = (pts[i-1][0] + pts[i][0]) / 2;
             d += ` C${cx},${pts[i-1][1]} ${cx},${pts[i][1]} ${pts[i][0]},${pts[i][1]}`;
         }
-        svgPath = `<path d="${d}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>`;
+        svgPath = `<path d="${d}" fill="none" stroke="#2997ff" stroke-width="2.5" stroke-linecap="round"/>`;
         svgArea = `<path d="${d} L${pts[pts.length-1][0]},100 L${pts[0][0]},100 Z" fill="url(#bG${uid})" opacity="0.7"/>`;
-        svgDots = pts.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2563eb"/>`).join('');
+        svgDots = pts.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2997ff"/>`).join('');
         xLabels = subMonthList.map(m => m.label);
     }
 
-    // ── Date formatting ───────────────────────────────────────────────────────
-    function fmtDate(raw) {
-        if (!raw) return '';
-        const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
-        if (!d || isNaN(d)) return raw;
-        return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-    }
-
     // ── Voti list rows ────────────────────────────────────────────────────────
-    const votiRows = votiData.map((v, i) => {
+    const votiListHtml = votiData.map((v, i) => {
         const val = getNumericGradeValue(v);
         const isSuff = val >= 6;
-        const color = isSuff ? '#34d399' : '#ffb4ab';
-        const bgBadge = isSuff ? 'rgba(52,211,153,0.15)' : 'rgba(239,68,68,0.2)';
-        const borderBadge = isSuff ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.35)';
-        const sep = i < votiData.length - 1 ? '<div style="height:1px;background:rgba(255,255,255,0.06);margin:12px 0;"></div>' : '';
+        const color = isSuff ? '#30d158' : '#ff453a';
+        const bgBadge = isSuff ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)';
+        const borderBadge = isSuff ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)';
+        const date = (v.data || v.date || '').split('T')[0].split('-').reverse().join('/');
         return `
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;${i < votiData.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.05);' : ''}">
             <div>
-                <h4 style="font-size:14px;font-weight:700;color:#dae2fd;margin:0 0 3px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
-                <span style="font-size:11px;font-weight:500;color:rgba(196,197,214,0.6);">${fmtDate(v.data || v.date)}</span>
+                <h4 style="font-size:14px;font-weight:600;color:#ffffff;margin:0 0 2px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
+                <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);">${date}</span>
             </div>
-            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:15px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};">${v.valore || v.value}</span>
-        </div>${sep}`;
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:14px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};">${v.valore || v.value}</span>
+        </div>`;
     }).join('');
 
     const CARD_CLASS = 'liquid-glass-v8 squircle-lg rim-light';
-    const CARD = 'padding:20px;margin-bottom:16px;position:relative;';
+    const CARD = 'padding:20px;margin-bottom:16px;position:relative;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;';
 
     return `
-    <div class="view-fullbleed min-h-screen pb-40" style="padding:0;background:#0b1326;font-family:'Inter',sans-serif;">
-        <div style="padding:max(env(safe-area-inset-top,0px),28px) 20px 0;">
+    <div class="view-fullbleed min-h-screen pb-40" style="padding:0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
+        <div style="padding:max(env(safe-area-inset-top,0px),24px) 20px 0;">
 
             <!-- Header -->
             <header style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-                <button onclick="window.closeSubject()" class="liquid-glass-v8 squircle-md rim-light shadow-md" style="width:40px;height:40px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#dae2fd;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:20px;color:#dae2fd;">arrow_back</span>
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.closeSubject()" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                    <i class="ph ph-arrow-left text-[20px] text-[#2997ff]"></i>
                 </button>
-                <h1 style="font-size:22px;font-weight:700;color:#dae2fd;letter-spacing:-0.01em;margin:0;line-height:1.2;">${escapeHtml(subjectName)}</h1>
+                <h1 style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;margin:0;line-height:1.2;">${escapeHtml(subjectName)}</h1>
             </header>
 
             <!-- CARD 1: Media + grafico area -->
-            <div class="${CARD_CLASS}" style="${CARD}background:linear-gradient(135deg, rgba(47,88,205,0.25) 0%, rgba(255,255,255,0.03) 100%);">
-                <p style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Media Materia</p>
+            <div class="${CARD_CLASS}" style="${CARD}">
+                <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Media Materia</p>
                 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;">
-                    <span style="font-size:52px;font-weight:800;color:#dae2fd;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
+                    <span style="font-size:52px;font-weight:800;color:#ffffff;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
                     ${ (() => {
                         // Delta: media con tutti i voti - media senza l'ultimo voto
                         const sortedByDate = [...votiData].sort((a,b) => (a.data||a.date||'').localeCompare(b.data||b.date||''));
@@ -3158,14 +3150,13 @@ function renderSubjectDetailView(subjectName) {
                             const diff = mediaConTutti - mediaSenzaUltimo;
                             const fmt  = diff.toFixed(2).replace('.', ',');
                             const isP  = diff >= 0;
-                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(47,88,205,0.3);border:1px solid rgba(182,196,255,0.35);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
-                                <span class="material-symbols-outlined" style="font-size:13px;color:#b6c4ff;">${isP ? 'trending_up' : 'trending_down'}</span>
-                                <span style="font-size:11px;font-weight:700;color:#b6c4ff;letter-spacing:0.02em;">${isP ? '+' : ''}${fmt}</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.4);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
+                                <i class="ph-fill ${isP ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:13px;color:#30d158;"></i>
+                                <span style="font-size:11px;font-weight:700;color:#30d158;letter-spacing:0.02em;">${isP ? '+' : ''}${fmt}</span>
                             </div>`;
                         } else if (n >= 2) {
-                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(47,88,205,0.3);border:1px solid rgba(182,196,255,0.35);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
-                                <span class="material-symbols-outlined" style="font-size:13px;color:#b6c4ff;">trending_up</span>
-                                <span style="font-size:11px;font-weight:700;color:#b6c4ff;letter-spacing:0.02em;text-transform:uppercase;">${n} voti</span>
+                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.4);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
+                                <span style="font-size:11px;font-weight:700;color:#2997ff;letter-spacing:0.02em;text-transform:uppercase;">${n} voti</span>
                             </div>`;
                         }
                         return '';
@@ -3176,43 +3167,43 @@ function renderSubjectDetailView(subjectName) {
                     <svg viewBox="0 0 300 100" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
                         <defs>
                             <linearGradient id="bG${uid}" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#2f58cd" stop-opacity="0.35"/>
-                                <stop offset="100%" stop-color="#2f58cd" stop-opacity="0"/>
+                                <stop offset="0%" stop-color="#2997ff" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="#2997ff" stop-opacity="0"/>
                             </linearGradient>
                         </defs>
                         ${svgArea}${svgPath}${svgDots}
                     </svg>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:0 2px;">
-                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
+                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
                 </div>` : ''}
             </div>
 
             <!-- CARD 2: Predictive Hub -->
             <div class="${CARD_CLASS}" style="${CARD}">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div style="width:38px;height:38px;border-radius:12px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:20px;">bolt</span>
+                    <div style="width:38px;height:38px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
+                        <i class="ph-fill ph-lightning text-[20px]"></i>
                     </div>
-                    <h2 style="font-size:17px;font-weight:700;color:#dae2fd;margin:0;">Predictive Hub</h2>
+                    <h2 style="font-size:17px;font-weight:700;color:#ffffff;margin:0;">Predictive Hub</h2>
                 </div>
-                <p style="font-size:13px;color:rgba(196,197,214,0.75);line-height:1.5;margin:0 0 18px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
+                <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0 0 18px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
                 <div style="margin-bottom:18px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;">
-                        <span style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.06em;">Voto simulato</span>
-                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:#b6c4ff;line-height:1;">7.5</span>
+                        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.06em;">Voto simulato</span>
+                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:#2997ff;line-height:1;">7.5</span>
                     </div>
                     <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
-                        style="width:100%;height:6px;border-radius:9999px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2f58cd 72.22%,rgba(255,255,255,0.1) 72.22%);"
-                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2f58cd '+pct+'%,rgba(255,255,255,0.1) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
+                        style="width:100%;height:6px;border-radius:9999px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2997ff 72.22%,rgba(255,255,255,0.1) 72.22%);"
+                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2997ff '+pct+'%,rgba(255,255,255,0.1) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:14px 16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:14px 16px;">
                     <div>
-                        <p style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Media stimata</p>
-                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:#dae2fd;line-height:1;">${simDefault}</span>
+                        <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Media stimata</p>
+                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:#ffffff;line-height:1;">${simDefault}</span>
                     </div>
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.15);display:flex;align-items:center;justify-content:center;color:#b6c4ff;">
-                        <span class="material-symbols-outlined" style="font-size:20px;">auto_fix_high</span>
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;">
+                        <i class="ph-fill ph-magic-wand text-[20px]"></i>
                     </div>
                 </div>
             </div>
@@ -3220,70 +3211,70 @@ function renderSubjectDetailView(subjectName) {
             <!-- CARD 3: Confronto Semestri -->
             ${hasSemesters ? `
             <div class="${CARD_CLASS}" style="${CARD}">
-                <p style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 16px;">Confronto Semestri</p>
+                <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 16px;">Confronto Semestri</p>
                 <div style="margin-bottom:16px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span style="font-size:14px;font-weight:700;color:#dae2fd;">1° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:rgba(196,197,214,0.8);">${media1.toFixed(1)}</span>
+                        <span style="font-size:14px;font-weight:700;color:#ffffff;">1° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:rgba(255,255,255,0.7);">${media1.toFixed(1)}</span>
                     </div>
                     <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
-                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:rgba(196,197,214,0.5);border-radius:9999px;"></div>
+                        <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:rgba(255,255,255,0.4);border-radius:9999px;"></div>
                     </div>
                 </div>
                 <div style="margin-bottom:18px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span style="font-size:14px;font-weight:700;color:#dae2fd;">2° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:#b6c4ff;">${media2.toFixed(1)}</span>
+                        <span style="font-size:14px;font-weight:700;color:#ffffff;">2° Semestre</span>
+                        <span style="font-size:15px;font-weight:700;color:#2997ff;">${media2.toFixed(1)}</span>
                     </div>
                     <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
-                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2f58cd;border-radius:9999px;"></div>
+                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2997ff;border-radius:9999px;"></div>
                     </div>
                 </div>
                 ${media2 > media1 ? `
-                <div style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(52,211,153,0.2);display:flex;align-items:center;justify-content:center;color:#34d399;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;">keyboard_double_arrow_up</span>
+                <div style="background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.28);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(48,209,88,0.2);display:flex;align-items:center;justify-content:center;color:#30d158;flex-shrink:0;">
+                        <i class="ph-bold ph-caret-double-up text-[18px]"></i>
                     </div>
-                    <p style="font-size:13px;color:rgba(218,226,253,0.9);line-height:1.4;margin:0;">Stai andando <b style="color:#34d399;">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
+                    <p style="font-size:13px;color:rgba(255,255,255,0.9);line-height:1.4;margin:0;">Stai andando <b style="color:#30d158;">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
                 </div>` : `
-                <div style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(251,191,36,0.2);display:flex;align-items:center;justify-content:center;color:#fbbf24;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;">keyboard_double_arrow_down</span>
+                <div style="background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.28);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,159,10,0.2);display:flex;align-items:center;justify-content:center;color:#ff9f0a;flex-shrink:0;">
+                        <i class="ph-bold ph-caret-double-down text-[18px]"></i>
                     </div>
-                    <p style="font-size:13px;color:rgba(218,226,253,0.9);line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
+                    <p style="font-size:13px;color:rgba(255,255,255,0.9);line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
                 </div>`}
             </div>` : ''}
 
             <!-- CARD 4: Voti Ricevuti -->
             <div class="${CARD_CLASS}" style="${CARD}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <p style="font-size:11px;font-weight:700;color:rgba(196,197,214,0.7);text-transform:uppercase;letter-spacing:0.08em;margin:0;">Voti Ricevuti</p>
-                    <span class="material-symbols-outlined" style="font-size:16px;color:#b6c4ff;">history</span>
+                    <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0;">Voti Ricevuti</p>
+                    <span style="font-size:12px;font-weight:700;color:#2997ff;">${votiData.length} totali</span>
                 </div>
-                ${votiRows}
+                ${votiListHtml || `<p style="font-size:13px;color:rgba(255,255,255,0.5);font-style:italic;margin:0;">Nessun voto registrato per questa materia.</p>`}
             </div>
 
             <!-- CARD 5: Obiettivo Accademico -->
             <div class="${CARD_CLASS}" style="${CARD}margin-bottom:0;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:38px;height:38px;border-radius:12px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:18px;">flag</span>
+                        <div style="width:38px;height:38px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
+                            <i class="ph-fill ph-flag-banner text-[18px]"></i>
                         </div>
-                        <h2 style="font-size:17px;font-weight:700;color:#dae2fd;margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
+                        <h2 style="font-size:17px;font-weight:700;color:#ffffff;margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
                     </div>
                     <div style="text-align:right;cursor:pointer;" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
-                        <p style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px;">Target</p>
+                        <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px;">Target</p>
                         <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
-                            <span style="font-size:24px;font-weight:800;color:#fbbf24;line-height:1;">${goal.toFixed(1)}</span>
-                            <span class="material-symbols-outlined" style="font-size:14px;color:rgba(196,197,214,0.7);">edit</span>
+                            <span style="font-size:24px;font-weight:800;color:#ff9f0a;line-height:1;">${goal.toFixed(1)}</span>
+                            <i class="ph ph-pencil-simple text-[14px] text-[rgba(255,255,255,0.6)]"></i>
                         </div>
                     </div>
                 </div>
-                <p style="font-size:13px;color:rgba(196,197,214,0.85);line-height:1.6;margin:0 0 12px;">${goalText}</p>
+                <p style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 12px;">${goalText}</p>
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:13px;color:rgba(196,197,214,0.5);">info</span>
-                    <span style="font-size:11px;color:rgba(196,197,214,0.5);font-weight:500;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
+                    <i class="ph ph-info text-[13px] text-[rgba(255,255,255,0.45)]"></i>
+                    <span style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
                 </div>
             </div>
 
@@ -8372,33 +8363,33 @@ function renderGradesView() {
         const featureDateFormatted = formatFriendlyDate(featureItem ? featureItem.lastVoteDate : '');
 
         const featureHtml = featureItem ? `
-        <div class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="padding:16px 18px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
-                <div style="width:44px;height:44px;border-radius:14px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
+                <div style="width:44px;height:44px;border-radius:14px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
                     <span class="material-symbols-outlined" style="font-size:22px;">${getSubjectIcon(featureItem.name)}</span>
                 </div>
                 <div style="min-width:0;flex:1;">
-                    <h3 style="font-size:15px;font-weight:700;color:#dae2fd;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(featureNameFormatted)}</h3>
-                    <p style="font-size:12px;color:rgba(196,197,214,0.7);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
+                    <h3 style="font-size:15px;font-weight:700;color:#ffffff;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(featureNameFormatted)}</h3>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
                 </div>
             </div>
             <div style="text-align:right;flex-shrink:0;margin-left:12px;">
-                <span style="font-size:22px;font-weight:800;color:#dae2fd;letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
-                <div style="width:36px;height:3px;background:linear-gradient(90deg, #2f58cd, #b6c4ff);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
+                <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
+                <div style="width:36px;height:3px;background:linear-gradient(90deg, #2997ff, #30d158);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
             </div>
         </div>` : '';
 
         const gridCardsHtml = gridItems.map((item, gIdx) => {
             const itemFormattedName = formatSubjectTitle(item.name);
             return `
-            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;height:112px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+            <div style="padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.18);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:112px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="width:36px;height:36px;border-radius:12px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.15);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
+                    <div style="width:36px;height:36px;border-radius:12px;background:rgba(41,151,255,0.12);border:1px solid rgba(41,151,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
                         <span class="material-symbols-outlined" style="font-size:18px;">${getSubjectIcon(item.name)}</span>
                     </div>
-                    <span style="font-size:20px;font-weight:800;color:#dae2fd;letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
+                    <span style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
                 </div>
-                <h3 style="font-size:13px;font-weight:700;color:#dae2fd;line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
+                <h3 style="font-size:13px;font-weight:700;color:#ffffff;line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
             </div>`;
         }).join('');
 
@@ -8412,7 +8403,7 @@ function renderGradesView() {
     }).join('');
 
     const dotsHtml = subjectSlides.map((_, i) => `
-        <div class="voti-subjects-dot" data-idx="${i}" onclick="window.votiJumpToSlide(${i})" style="width:${i===0?'20px':'6px'};height:6px;border-radius:9999px;background:${i===0?'rgba(47,88,205,0.8)':'rgba(255,255,255,0.2)'};transition:all 0.3s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
+        <div class="voti-subjects-dot" data-idx="${i}" onclick="window.votiJumpToSlide(${i})" style="width:${i===0?'20px':'6px'};height:6px;border-radius:9999px;background:${i===0?'#2997ff':'rgba(255,255,255,0.25)'};transition:all 0.3s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
     `).join('');
 
     let aiInsightText = "Il tuo rendimento in materie umanistiche è eccellente. Ti suggeriamo di dedicare 30m extra a Fisica per equilibrare la media.";
@@ -8424,7 +8415,7 @@ function renderGradesView() {
     }
 
     return `
-    <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:var(--bg-base, #050811);font-family:'Inter',sans-serif;">
+    <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
 
         <!-- ══ HEADER (iOS HIG Large Title) ══ -->
         <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
@@ -8432,28 +8423,28 @@ function renderGradesView() {
                 <div class="ios-sub-title">VALUTAZIONI & MEDIE</div>
                 <h1 class="ios-large-title">Voti</h1>
             </div>
-            <div class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);">
-                <i class="ph ph-calendar-blank text-[18px] text-[rgba(218,226,253,0.8)]"></i>
-                <span style="font-size:14px;font-weight:600;color:var(--text-primary);letter-spacing:0.02em;">${monthYearLabel}</span>
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:0.5px solid rgba(255,255,255,0.12);border-radius:9999px;">
+                <i class="ph ph-calendar-blank text-[18px] text-[rgba(255,255,255,0.7)]"></i>
+                <span style="font-size:14px;font-weight:600;color:#ffffff;letter-spacing:0.02em;">${monthYearLabel}</span>
             </div>
         </header>
 
         <main style="padding:0 20px;display:flex;flex-direction:column;gap:18px;">
-            <!-- Hero Card: Media Generale (Liquid Glass v8) -->
-            <section class="liquid-glass-v8 squircle-lg rim-light" style="padding:22px 20px;background:linear-gradient(135deg, rgba(47,88,205,0.25) 0%, rgba(255,255,255,0.03) 100%);position:relative;overflow:hidden;">
+            <!-- Hero Card: Media Generale (Apple Material) -->
+            <section style="padding:22px 20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:28px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);position:relative;overflow:hidden;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;">
                     <div>
-                        <p style="font-size:13px;font-weight:500;color:rgba(196,197,214,0.7);margin:0 0 6px;">Media Generale</p>
+                        <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin:0 0 6px;">Media Generale</p>
                         <div style="display:flex;align-items:baseline;gap:10px;">
-                            <span style="font-size:46px;font-weight:800;color:#dae2fd;letter-spacing:-0.03em;line-height:1;">${media.toFixed(2)}</span>
-                            <div style="background:rgba(47,88,205,0.3);padding:4px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(182,196,255,0.35);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-                                <span class="material-symbols-outlined" style="font-size:13px;color:#b6c4ff;">${isPositive ? 'trending_up' : 'trending_down'}</span>
-                                <span style="font-size:11px;font-weight:700;color:#b6c4ff;letter-spacing:0.02em;">${diffStr}</span>
+                            <span style="font-size:48px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;line-height:1;">${media.toFixed(2)}</span>
+                            <div style="background:rgba(48,209,88,0.18);padding:4px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(48,209,88,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                                <i class="ph-fill ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:14px;color:#30d158;"></i>
+                                <span style="font-size:12px;font-weight:700;color:#30d158;letter-spacing:0.01em;">${diffStr}</span>
                             </div>
                         </div>
                     </div>
-                    <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;color:#dae2fd;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:#b6c4ff;">share</span>
+                    <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                        <i class="ph ph-share-network text-[18px] text-[#ffffff]"></i>
                     </button>
                 </div>
 
@@ -8462,26 +8453,26 @@ function renderGradesView() {
                     <svg style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none" viewBox="0 0 100 100">
                         <defs>
                             <linearGradient id="voti-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#34d399" stop-opacity="0.18"></stop>
-                                <stop offset="100%" stop-color="#34d399" stop-opacity="0"></stop>
+                                <stop offset="0%" stop-color="#30d158" stop-opacity="0.22"></stop>
+                                <stop offset="100%" stop-color="#30d158" stop-opacity="0"></stop>
                             </linearGradient>
                         </defs>
                         <path d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
-                        <path d="${linePathD}" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#34d399" vector-effect="non-scaling-stroke"></circle>
+                        <path d="${linePathD}" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#30d158" vector-effect="non-scaling-stroke"></circle>
                         <circle cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff" vector-effect="non-scaling-stroke"></circle>
                     </svg>
                 </div>
-                <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;font-weight:600;color:rgba(196,197,214,0.5);">
-                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#b6c4ff;font-weight:700;">Giu</span>
+                <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);">
+                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#2997ff;font-weight:700;">Giu</span>
                 </div>
             </section>
 
             <!-- Subjects Bento Section -->
             <section style="display:flex;flex-direction:column;gap:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px;">
-                    <h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">Materie</h2>
-                    <span style="font-size:12px;font-weight:600;color:#b6c4ff;cursor:pointer;opacity:0.85;transition:opacity 0.15s ease;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'" onclick="if(typeof openAllGradesModal==='function')openAllGradesModal();">Tutti i voti</span>
+                    <h2 style="font-size:20px;font-weight:700;color:#ffffff;margin:0;line-height:1.2;letter-spacing:-0.01em;">Materie</h2>
+                    <span style="font-size:13px;font-weight:600;color:#2997ff;cursor:pointer;opacity:0.9;transition:opacity 0.15s ease;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.9'" onclick="if(typeof openAllGradesModal==='function')openAllGradesModal();">Tutti i voti</span>
                 </div>
 
                 <div id="voti-subjects-carousel" style="
@@ -8507,14 +8498,14 @@ function renderGradesView() {
                 </div>` : ''}
             </section>
 
-            <!-- AI Insight Card -->
-            <section class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;background:linear-gradient(135deg, rgba(47,88,205,0.2) 0%, rgba(255,255,255,0.02) 100%);display:flex;align-items:center;gap:14px;">
-                <div style="width:40px;height:40px;border-radius:50%;background:#2f58cd;display:flex;align-items:center;justify-content:center;color:#ffffff;box-shadow:0 4px 14px rgba(47,88,205,0.4);flex-shrink:0;">
-                    <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
+            <!-- AI Insight Card (Apple Material) -->
+            <section style="padding:16px 18px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;display:flex;align-items:center;gap:14px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#2997ff 0%,#0058bc 100%);display:flex;align-items:center;justify-content:center;color:#ffffff;box-shadow:0 4px 14px rgba(41,151,255,0.35);flex-shrink:0;">
+                    <i class="ph-fill ph-sparkle text-[20px]"></i>
                 </div>
                 <div style="flex:1;min-width:0;">
-                    <h4 style="font-size:11px;font-weight:700;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px;">AI Insight</h4>
-                    <p style="font-size:13px;color:rgba(196,197,214,0.85);line-height:1.45;margin:0;">${aiInsightText}</p>
+                    <h4 style="font-size:11px;font-weight:700;color:#2997ff;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px;">AI Insight</h4>
+                    <p style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.45;margin:0;">${aiInsightText}</p>
                 </div>
             </section>
         </main>
@@ -8542,7 +8533,54 @@ window.handleVotiSubjectsScroll = function(el) {
     const idx = Math.round(el.scrollLeft / slideWidth);
     document.querySelectorAll('.voti-subjects-dot').forEach(function(dot, i) {
         dot.style.width = i === idx ? '20px' : '6px';
-        dot.style.background = i === idx ? 'rgba(47, 88, 205, 0.8)' : 'rgba(255, 255, 255, 0.2)';
+        dot.style.background = i === idx ? '#2997ff' : 'rgba(255, 255, 255, 0.25)';
         dot.style.borderRadius = '9999px';
     });
+};
+
+window.openAllGradesModal = function() {
+    const rawVoti = getVotiData();
+    if (!rawVoti || rawVoti.length === 0) {
+        if (typeof window.showToast === 'function') {
+            window.showToast({ message: 'Nessuna valutazione registrata', type: 'info' });
+        }
+        return;
+    }
+
+    const sortedVoti = [...rawVoti].sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
+
+    const html = `
+        <div style="display:flex;flex-direction:column;gap:10px;padding-bottom:20px;">
+            ${sortedVoti.map((v, i) => {
+                const val = getNumericGradeValue(v);
+                const isSuff = val >= 6;
+                const color = isSuff ? '#30d158' : '#ff453a';
+                const bgBadge = isSuff ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)';
+                const borderBadge = isSuff ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)';
+                const date = (v.data || v.date || '').split('T')[0].split('-').reverse().join('/');
+                const subj = formatSubjectTitle(v.materia || v.subject || 'Materia');
+                const tipo = normalizeTipoVerifica(v.tipo, false);
+                const desc = v.descrizione || v.comment || '';
+
+                return `
+                <div style="padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.1);border-top:1px solid rgba(255,255,255,0.18);border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                            <span style="font-size:14px;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(subj)}</span>
+                            <span style="font-size:11px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-weight:600;">${escapeHtml(tipo)}</span>
+                        </div>
+                        <p style="font-size:12px;color:rgba(255,255,255,0.5);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${date}${desc ? ` · ${escapeHtml(desc)}` : ''}</p>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:16px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};flex-shrink:0;">${v.valore || v.value}</span>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+
+    if (typeof window.openBottomSheet === 'function') {
+        window.openBottomSheet({
+            title: `Tutti i Voti (${sortedVoti.length})`,
+            html: html
+        });
+    }
 };

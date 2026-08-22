@@ -3,43 +3,49 @@
    ============================================ */
 
 :root {
-  /* 4K Ultra HD OLED Surfaces & Elevations (iOS Dark Mode) */
-  --bg-base: #050811;
-  --bg-surface: #0c1322;
-  --bg-elevated: #141e33;
-  --bg-glass-card: rgba(20, 30, 51, 0.55);
-  --bg-glass-overlay: rgba(5, 8, 17, 0.78);
+  /* Dynamic Backgrounds & Elevation (Apple HIG Dark System Hierarchy) */
+  --bg-base: #0c1424;
+  --bg-surface: rgba(20, 31, 54, 0.78);
+  --bg-elevated: rgba(28, 42, 70, 0.90);
+  --bg-glass-card: rgba(20, 31, 54, 0.72);
+  --bg-glass-overlay: rgba(12, 20, 36, 0.82);
 
-  --surface: #050811;
-  --surface-dim: #050811;
-  --surface-bright: #26334d;
-  --surface-container-lowest: #03050a;
-  --surface-container-low: #090e1a;
-  --surface-container: #0c1322;
-  --surface-container-high: #141e33;
-  --surface-container-highest: #1f2c47;
-  --background: #050811;
-  --on-background: #f1f5f9;
+  --surface: #0c1424;
+  --surface-dim: #0c1424;
+  --surface-bright: #223456;
+  --surface-container-lowest: #070d1a;
+  --surface-container-low: #0e182b;
+  --surface-container: #14223c;
+  --surface-container-high: #1c2e50;
+  --surface-container-highest: #283e6a;
+  --background: #0c1424;
+  --on-background: #ffffff;
 
-  /* Crisp Typography & Soft Contrast (High Legibility, Anti-Glare) */
-  --text-primary: rgba(255, 255, 255, 0.94);
-  --text-secondary: rgba(218, 226, 253, 0.72);
-  --text-muted: rgba(148, 163, 184, 0.55);
-  --on-surface: #dae2fd;
-  --on-surface-variant: #c4c5d6;
-  --inverse-surface: #dae2fd;
-  --inverse-on-surface: #1e293b;
-  --outline: #64748b;
-  --outline-variant: #334155;
-  --surface-tint: #70a1ff;
+  /* Semantic Labels & Vibrancy (Apple Scale) */
+  --label: #ffffff;
+  --secondary-label: rgba(255, 255, 255, 0.60);
+  --tertiary-label: rgba(255, 255, 255, 0.30);
+  --quaternary-label: rgba(255, 255, 255, 0.18);
 
-  /* Hairline Borders & 3D Light Simulation */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-highlight: rgba(255, 255, 255, 0.18);
-  --border-glass: rgba(255, 255, 255, 0.12);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.38);
+  --on-surface: #ffffff;
+  --on-surface-variant: rgba(255, 255, 255, 0.65);
+  --inverse-surface: #ffffff;
+  --inverse-on-surface: #14223c;
+  --outline: rgba(255, 255, 255, 0.35);
+  --outline-variant: rgba(255, 255, 255, 0.12);
+  --surface-tint: #2997ff;
 
-  /* Apple iOS Vivid Accents (4K Pure Spectrum) */
-  --accent-blue: #2997ff;
+  /* Hairline Borders & Top-Down Light Simulation */
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-highlight: rgba(255, 255, 255, 0.20);
+  --border-glass: rgba(255, 255, 255, 0.14);
+
+  /* Apple iOS Vivid Accents (Standard HIG Palette) */
+  --accent-blue: #007aff;
+  --accent-blue-vivid: #2997ff;
   --accent-green: #30d158;
   --accent-red: #ff453a;
   --accent-amber: #ff9f0a;
@@ -48,10 +54,10 @@
 
   /* System Color Mappings */
   --primary: #2997ff;
-  --on-primary: #00184a;
+  --on-primary: #ffffff;
   --primary-container: #1d4ed8;
   --on-primary-container: #dbeafe;
-  --inverse-primary: #3b82f6;
+  --inverse-primary: #007aff;
   --primary-fixed: #dbeafe;
   --primary-fixed-dim: #93c5fd;
 
@@ -66,7 +72,7 @@
   --on-tertiary-container: #e0f2fe;
 
   --error: #ff453a;
-  --on-error: #450a0a;
+  --on-error: #ffffff;
   --error-container: #7f1d1d;
   --on-error-container: #fee2e2;
 
@@ -86,7 +92,7 @@
   --on-info-container: #e0f2fe;
 
   --violet: #bf5af2;
-  --on-violet: #3b0764;
+  --on-violet: #ffffff;
   --violet-container: #6b21a8;
   --on-violet-container: #f3e8ff;
 
@@ -95,11 +101,11 @@
 
   /* Navigation Bar Tokens */
   --nav-active-color: #2997ff;
-  --nav-inactive-color: rgba(255, 255, 255, 0.38);
-  --nav-bg: rgba(12, 19, 34, 0.85);
-  --nav-border: rgba(255, 255, 255, 0.1);
-  --nav-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
-  --nav-glow: rgba(41, 151, 255, 0.15);
+  --nav-inactive-color: rgba(255, 255, 255, 0.45);
+  --nav-bg: rgba(14, 23, 42, 0.88);
+  --nav-border: rgba(255, 255, 255, 0.12);
+  --nav-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.6);
+  --nav-glow: rgba(41, 151, 255, 0.2);
 
   /* iOS Radii System */
   --radius-xs: 6px;
