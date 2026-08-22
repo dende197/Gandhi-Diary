@@ -20,9 +20,63 @@
 
   // Exposed so app-bootstrap.js can force the next render to replay the
   // entrance animation (e.g. after a fresh login or forced boot render).
-  // Previously app-bootstrap.js wrote to window._fluidityLastAnimatedView,
-  // a global this engine never read — that reset was a silent no-op.
   window._fluidityResetAnimatedView = () => { _lastAnimatedViewRender = null; };
+
+  // ─── iOS Native Haptics Engine ────────────────────────────────
+  window.triggerHaptic = function (type = 'light') {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        if (type === 'selection' || type === 'light') {
+          navigator.vibrate(10);
+        } else if (type === 'medium') {
+          navigator.vibrate(22);
+        } else if (type === 'heavy') {
+          navigator.vibrate(35);
+        } else if (type === 'success') {
+          navigator.vibrate([10, 30, 15]);
+        } else if (type === 'error') {
+          navigator.vibrate([25, 40, 25]);
+        }
+      } catch (e) {}
+    }
+  };
+
+  // ─── iOS Swipe-Back Gesture Recognizer ────────────────────────
+  let _touchStartX = 0;
+  let _touchStartY = 0;
+  let _isEdgeSwipe = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length === 1) {
+      const touch = e.touches[0];
+      _touchStartX = touch.clientX;
+      _touchStartY = touch.clientY;
+      // Trigger if swipe starts from the left 28px edge
+      _isEdgeSwipe = _touchStartX <= 28;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!_isEdgeSwipe || !e.changedTouches || e.changedTouches.length === 0) return;
+    const touch = e.changedTouches[0];
+    const diffX = touch.clientX - _touchStartX;
+    const diffY = Math.abs(touch.clientY - _touchStartY);
+    
+    // Valid horizontal swipe to the right (> 75px and mostly horizontal)
+    if (diffX > 75 && diffY < 60) {
+      window.triggerHaptic('light');
+      // If we are on a subview, navigate back
+      if (typeof state !== 'undefined') {
+        if (state.selectedSubject) {
+          state.selectedSubject = null;
+          if (typeof navigate === 'function') navigate('voti');
+        } else if (state.view === 'profile' || state.view === 'academic_profile') {
+          if (typeof navigate === 'function') navigate('home');
+        }
+      }
+    }
+    _isEdgeSwipe = false;
+  }, { passive: true });
 
   // ─── Helpers ──────────────────────────────────────────────────
   function _setWillChange(el, on) {

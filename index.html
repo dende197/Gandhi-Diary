@@ -154,41 +154,42 @@
            now has a single visual style (Liquid Glass / navy) — there is no
            theme to resolve on boot anymore. */
         html, body {
-            background-color: #0b1326;
-            font-family: 'Inter', 'Hanken Grotesk', sans-serif;
+            background-color: #050811;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+            color: #f1f5f9;
         }
 
         .liquid-glass {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 100%);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.25);
-            border-left: 1px solid rgba(255, 255, 255, 0.15);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
         
         .liquid-pill {
             background-color: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 0.5px solid rgba(255, 255, 255, 0.15);
         }
 
         .deep-shadow {
-            box-shadow: 0 10px 30px -10px rgba(0, 6, 20, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(0, 4, 16, 0.6);
         }
 
         .liquid-shadow {
             box-shadow: 
-                0 8px 24px -6px rgba(0, 6, 20, 0.35), 
+                0 8px 24px -6px rgba(0, 4, 16, 0.45), 
                 inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .active-liquid-shadow {
             box-shadow: 
-                0 15px 30px -8px rgba(47, 88, 205, 0.35), 
-                0 4px 8px -2px rgba(47, 88, 205, 0.25);
+                0 15px 30px -8px rgba(41, 151, 255, 0.35), 
+                0 4px 8px -2px rgba(41, 151, 255, 0.25);
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -199,10 +200,10 @@
             scrollbar-width: none;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:var(--surface, #0b1326);z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
+        #app-loader { position:fixed;top:0;left:0;right:0;bottom:0;background:#050811;z-index:99999;display:flex;align-items:center;justify-content:center;transition:opacity 0.22s ease-out; }
         .app-loader-ring{
             width:42px;height:42px;border-radius:50%;
-            background:conic-gradient(from 0deg, #2f58cd 0%, #6d93f0 50%, #b6c4ff 100%);
+            background:conic-gradient(from 0deg, #2997ff 0%, #60a5fa 50%, #93c5fd 100%);
             -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
             mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
             animation:spin 0.85s cubic-bezier(.4,0,.2,1) infinite;
@@ -211,7 +212,7 @@
     </style>
 </head>
 
-<body class="text-on-background min-h-screen relative pb-28" style="margin:0; padding:0; overflow-x:hidden;">
+<body class="text-on-background min-h-screen relative pb-28" style="margin:0; padding:0; overflow-x:hidden; background-color:#050811;">
 
     <!-- APP LOADER -->
     <div id="app-loader">
@@ -220,13 +221,10 @@
             <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;"></div>
         </div>
     </div>
-
-    <!-- BOOT OVERLAY REMOVED (Native Boot Flow) -->
     
     <div id="pull-refresh-indicator" aria-hidden="true">
         <div class="pull-refresh-indicator__bar"></div>
     </div>
-
 
     <div id="nav-container"></div>
     <div class="main-container">
@@ -235,5 +233,9 @@
 
     <div id="modals"></div>
     <div id="toasts"></div>
+    <!-- iOS HIG Component Overlays -->
+    <div id="toast-stack-container"></div>
+    <div id="ios-bottom-sheet-root"></div>
+    <div id="ios-context-root"></div>
 </body>
 </html>

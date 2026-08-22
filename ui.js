@@ -905,32 +905,292 @@ function showModal(html, className = '') {
         `;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// iOS HIG STACKED GLASS TOASTS SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+window._activeToasts = [];
+
 function showToast(message, type = 'success', customBackground = '') {
-    const existing = document.getElementById('g-toast');
-    if (existing) existing.remove();
+    if (typeof window.triggerHaptic === 'function') {
+        window.triggerHaptic(type === 'error' ? 'error' : 'light');
+    }
 
-    const typeValue = typeof type === 'string' ? type.toLowerCase() : '';
-    const color = typeValue === 'warning' ? '#FF9500' : typeValue === 'error' ? '#FF3B30' : '#0058bc';
+    let stack = document.getElementById('toast-stack-container');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toast-stack-container';
+        document.body.appendChild(stack);
+    }
 
-    const toast = document.createElement('div');
-    toast.id = 'g-toast';
-    toast.className = 'liquid-glass rounded-full px-6 py-3 fixed bottom-24 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-3 deep-shadow';
-    toast.style.border = `1px solid ${color}40`;
+    const typeValue = typeof type === 'string' ? type.toLowerCase() : 'success';
+    const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-    toast.innerHTML = `
-        <span class="material-symbols-outlined text-[20px]" style="color: ${color}">${typeValue === 'error' ? 'error' : typeValue === 'warning' ? 'warning' : 'check_circle'}</span>
-        <span class="text-[14px] font-bold text-on-surface">${message}</span>
-    `;
+    let iconName = 'ph-check-circle';
+    let iconClass = 'text-[#30d158]';
+    let toastTypeClass = 'toast-success';
+    if (typeValue === 'error') {
+        iconName = 'ph-x-circle';
+        iconClass = 'text-[#ff453a]';
+        toastTypeClass = 'toast-error';
+    } else if (typeValue === 'warning') {
+        iconName = 'ph-warning-circle';
+        iconClass = 'text-[#ff9f0a]';
+        toastTypeClass = 'toast-warning';
+    } else if (typeValue === 'info') {
+        iconName = 'ph-info';
+        iconClass = 'text-[#2997ff]';
+        toastTypeClass = 'toast-info';
+    }
 
-    document.body.appendChild(toast);
+    const toastObj = {
+        id,
+        message,
+        typeValue,
+        iconName,
+        iconClass,
+        toastTypeClass,
+        created: Date.now()
+    };
+
+    window._activeToasts.unshift(toastObj);
+    if (window._activeToasts.length > 3) {
+        window._activeToasts.pop();
+    }
+
+    _renderToastStack();
 
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(20px)';
-        toast.style.transition = 'all 0.4s ease-in';
-        setTimeout(() => toast.remove(), 400);
-    }, 2500);
+        _dismissToast(id);
+    }, 3200);
 }
+
+window._dismissToast = function(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(16px) scale(0.9)';
+        el.style.transition = 'all 0.25s cubic-bezier(0.16,1,0.3,1)';
+    }
+    setTimeout(() => {
+        window._activeToasts = window._activeToasts.filter(t => t.id !== id);
+        _renderToastStack();
+    }, 250);
+};
+
+function _renderToastStack() {
+    const stack = document.getElementById('toast-stack-container');
+    if (!stack) return;
+
+    if (window._activeToasts.length === 0) {
+        stack.innerHTML = '';
+        return;
+    }
+
+    stack.innerHTML = window._activeToasts.map((t, idx) => {
+        const tierClass = `toast-tier-${idx}`;
+        return `
+        <div id="${t.id}" class="ios-glass-toast ${t.toastTypeClass} ${tierClass}" data-id="${t.id}">
+            <i class="ph-fill ${t.iconName} ${t.iconClass} text-[22px] flex-shrink-0"></i>
+            <span class="text-[14px] font-semibold text-[#f1f5f9] tracking-tight leading-snug flex-1">${escapeHtml(t.message)}</span>
+            <button onclick="_dismissToast('${t.id}')" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;">
+                <i class="ph ph-x text-[14px]"></i>
+            </button>
+        </div>
+        `;
+    }).join('');
+
+    const topToastEl = stack.querySelector('.toast-tier-0');
+    if (topToastEl) {
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+
+        topToastEl.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+            }
+        }, { passive: true });
+
+        topToastEl.addEventListener('touchmove', (e) => {
+            if (!isDragging || !e.touches) return;
+            currentX = e.touches[0].clientX - startX;
+            topToastEl.style.transform = `translateX(${currentX}px) scale(1)`;
+            topToastEl.style.opacity = `${Math.max(0.2, 1 - Math.abs(currentX) / 180)}`;
+        }, { passive: true });
+
+        topToastEl.addEventListener('touchend', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (Math.abs(currentX) > 75) {
+                if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+                const id = topToastEl.getAttribute('data-id');
+                window._dismissToast(id);
+            } else {
+                topToastEl.style.transform = 'translateY(0) scale(1)';
+                topToastEl.style.opacity = '1';
+                topToastEl.style.transition = 'transform 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.25s ease';
+            }
+        }, { passive: true });
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// iOS HIG BOTTOM SHEET ENGINE (SNAP POINTS & DRAG GESTURE)
+// ══════════════════════════════════════════════════════════════════════════════
+window.openBottomSheet = function(opts = {}) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+    const { title = '', html = '', onClose = null } = opts;
+    let root = document.getElementById('ios-bottom-sheet-root');
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'ios-bottom-sheet-root';
+        document.body.appendChild(root);
+    }
+
+    root.innerHTML = `
+        <div id="ios-sheet-backdrop" class="ios-sheet-backdrop" onclick="window.closeBottomSheet()"></div>
+        <div id="ios-bottom-sheet" class="ios-bottom-sheet">
+            <div class="ios-sheet-handle-bar" id="ios-sheet-drag-handle"></div>
+            ${title ? `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid rgba(255,255,255,0.08);">
+                <h3 style="font-size:18px;font-weight:700;color:var(--text-primary);margin:0;">${escapeHtml(title)}</h3>
+                <button onclick="window.closeBottomSheet()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <i class="ph ph-x text-[16px]"></i>
+                </button>
+            </div>` : ''}
+            <div id="ios-sheet-content" style="overflow-y:auto;max-height:75vh;-webkit-overflow-scrolling:touch;">
+                ${html}
+            </div>
+        </div>
+    `;
+
+    window._bottomSheetOnClose = onClose;
+
+    requestAnimationFrame(() => {
+        const backdrop = document.getElementById('ios-sheet-backdrop');
+        const sheet = document.getElementById('ios-bottom-sheet');
+        if (backdrop) backdrop.classList.add('active');
+        if (sheet) sheet.classList.add('open');
+
+        // Attach drag-down gesture
+        const handle = document.getElementById('ios-sheet-drag-handle');
+        if (handle && sheet) {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            handle.addEventListener('touchstart', (e) => {
+                if (e.touches && e.touches.length === 1) {
+                    startY = e.touches[0].clientY;
+                    isDragging = true;
+                }
+            }, { passive: true });
+
+            handle.addEventListener('touchmove', (e) => {
+                if (!isDragging || !e.touches) return;
+                currentY = Math.max(0, e.touches[0].clientY - startY);
+                sheet.style.transform = `translateY(${currentY}px)`;
+            }, { passive: true });
+
+            handle.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                if (currentY > 110) {
+                    window.closeBottomSheet();
+                } else {
+                    sheet.style.transform = 'translateY(0)';
+                    sheet.style.transition = 'transform 0.3s cubic-bezier(0.16,1,0.3,1)';
+                }
+            }, { passive: true });
+        }
+    });
+};
+
+window.closeBottomSheet = function() {
+    const backdrop = document.getElementById('ios-sheet-backdrop');
+    const sheet = document.getElementById('ios-bottom-sheet');
+    if (sheet) sheet.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    setTimeout(() => {
+        const root = document.getElementById('ios-bottom-sheet-root');
+        if (root) root.innerHTML = '';
+        if (typeof window._bottomSheetOnClose === 'function') {
+            window._bottomSheetOnClose();
+            window._bottomSheetOnClose = null;
+        }
+    }, 350);
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// iOS HIG CONTEXT MENU (LONG PRESS ACTION SHEET)
+// ══════════════════════════════════════════════════════════════════════════════
+window.openContextMenu = function(e, items = []) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+    let root = document.getElementById('ios-context-root');
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'ios-context-root';
+        document.body.appendChild(root);
+    }
+
+    const x = Math.min(window.innerWidth - 220, Math.max(16, (e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 40))));
+    const y = Math.min(window.innerHeight - 200, Math.max(70, (e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 100))));
+
+    const itemsHtml = items.map((item, i) => {
+        if (item.separator) return `<div class="ios-context-separator"></div>`;
+        return `
+        <button class="ios-context-item ${item.danger ? 'danger' : ''}" onclick="window.closeContextMenu();${item.action || ''}">
+            <span>${escapeHtml(item.label)}</span>
+            <i class="ph ${item.icon || 'ph-dots-three'} text-[18px]"></i>
+        </button>
+        `;
+    }).join('');
+
+    root.innerHTML = `
+        <div class="ios-context-overlay active" onclick="window.closeContextMenu()"></div>
+        <div id="ios-context-menu-box" class="ios-context-menu open" style="top:${y}px;left:${x}px;">
+            ${itemsHtml}
+        </div>
+    `;
+};
+
+window.closeContextMenu = function() {
+    const root = document.getElementById('ios-context-root');
+    if (root) root.innerHTML = '';
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// iOS LARGE TITLE SCROLL CONTROLLER
+// ══════════════════════════════════════════════════════════════════════════════
+window.setupLargeHeaderScroll = function(container) {
+    if (!container) return;
+    const largeTitle = container.querySelector('.ios-large-title');
+    const compactNav = container.querySelector('.ios-compact-nav');
+    if (!largeTitle && !compactNav) return;
+
+    container.addEventListener('scroll', () => {
+        const scrollY = container.scrollTop || window.scrollY || 0;
+        if (scrollY > 35) {
+            if (compactNav) compactNav.classList.add('visible');
+            if (largeTitle) {
+                largeTitle.style.opacity = '0';
+                largeTitle.style.transform = 'scale(0.96)';
+            }
+        } else {
+            if (compactNav) compactNav.classList.remove('visible');
+            if (largeTitle) {
+                largeTitle.style.opacity = '1';
+                largeTitle.style.transform = 'scale(1)';
+            }
+        }
+    }, { passive: true });
+};
+
 function showBoot(text) {
 window.showBoot = showBoot; // expose globally for app-bootstrap.js
     const el = document.getElementById('boot-overlay');
@@ -985,42 +1245,39 @@ function isValidName(name) {
 function renderNav() {
     const currentView = state.view;
 
-    // Helper to generate a nav item link matching screenshot aesthetics
+    // Helper to generate an iOS HIG nav item link with filled/outline icon states
     const renderNavItem = (view, iconBase, label) => {
         const isActive = currentView === view;
-        const color    = isActive ? '#3b82f6' : 'rgba(255, 255, 255, 0.35)';
-        const opacity  = isActive ? '1' : '0.85';
-        const fontStyle = isActive ? 'font-semibold' : 'font-medium';
+        const color    = isActive ? '#2997ff' : 'rgba(255, 255, 255, 0.45)';
+        const fontStyle = isActive ? 'font-bold' : 'font-medium';
         const iconClass = isActive ? `ph-fill ${iconBase}` : `ph ${iconBase}`;
 
         return `
-        <button onclick="navigate('${view}')" 
-           class="nav-item relative flex flex-col items-center justify-center gap-1 w-[68px] h-[52px] transition-all bg-transparent border-none outline-none cursor-pointer p-0"
-           style="color:${color};opacity:${opacity};-webkit-tap-highlight-color:transparent;">
-            <i class="${iconClass} text-[20px] relative z-10"></i>
-            <span class="text-[11px] ${fontStyle} tracking-tight relative z-10">${label}</span>
+        <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('selection');navigate('${view}')" 
+           class="nav-item relative flex flex-col items-center justify-center gap-1 min-w-[56px] min-h-[48px] px-2 py-1 transition-transform active:scale-95 bg-transparent border-none outline-none cursor-pointer"
+           style="color:${color};-webkit-tap-highlight-color:transparent;">
+            <i class="${iconClass} text-[22px] relative z-10 transition-transform ${isActive ? 'scale-110' : ''}"></i>
+            <span class="text-[10px] ${fontStyle} tracking-tight relative z-10">${label}</span>
+            ${isActive ? `<div style="position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:#2997ff;box-shadow:0 0 8px #2997ff;"></div>` : ''}
         </button>
         `;
     };
 
     return `
-        <!-- ══ BOTTOM NAV — Screenshot high fidelity floating pill (mobile / < 768px only) ══ -->
-        <nav class="liquid-navbar fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center justify-around px-3 rounded-[36px] z-[1000] w-[90%] max-w-[360px] h-[64px] md:hidden" style="background:rgba(14,20,36,0.9)!important;backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;border:1px solid rgba(255,255,255,0.08)!important;box-shadow:0 16px 36px -10px rgba(0,0,0,0.6)!important;">
+        <!-- ══ BOTTOM NAV — 4K Ultra HD Liquid Glass Floating Pill (iOS HIG) ══ -->
+        <nav class="liquid-navbar fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center justify-around px-3 rounded-[36px] z-[1000] w-[90%] max-w-[360px] h-[64px] md:hidden" style="background:rgba(12,19,34,0.86)!important;backdrop-filter:blur(32px) saturate(190%)!important;-webkit-backdrop-filter:blur(32px) saturate(190%)!important;border:0.5px solid rgba(255,255,255,0.14)!important;box-shadow:0 20px 48px -10px rgba(0,0,0,0.7),inset 0 1px 1px rgba(255,255,255,0.12)!important;">
             ${renderNavItem('home', 'ph-squares-four', 'Overview')}
             ${renderNavItem('planner', 'ph-calendar-blank', 'Planner')}
             ${renderNavItem('voti', 'ph-star', 'Grades')}
             ${renderNavItem('circolari', 'ph-file-text', 'Circulars')}
         </nav>
 
-        <!-- ══ TOP NAV — Tablet & Desktop only (≥ 768px). Attached flush to
-             the top edge of the page (not a floating pill) — 4 buttons
-             don't need a whole side column, and a pill felt disconnected
-             floating in space. ══ -->
-        <nav class="top-bar-nav fixed top-0 left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center gap-2 z-[1000]">
+        <!-- ══ TOP NAV — Tablet & Desktop only (≥ 768px) ══ -->
+        <nav class="top-bar-nav fixed top-0 left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center gap-4 z-[1000]" style="background:rgba(12,19,34,0.9);backdrop-filter:blur(24px);border:0.5px solid rgba(255,255,255,0.1);">
             ${renderNavItem('home', 'ph-squares-four', 'Overview')}
             ${renderNavItem('planner', 'ph-calendar-blank', 'Planner')}
-            ${renderNavItem('voti', 'ph-exam', 'Grades')}
-            ${renderNavItem('circolari', 'ph-newspaper', 'Circulars')}
+            ${renderNavItem('voti', 'ph-star', 'Grades')}
+            ${renderNavItem('circolari', 'ph-file-text', 'Circulars')}
         </nav>
 
         <!-- Drawer overlay -->
@@ -1982,15 +2239,18 @@ function renderHome() {
 
     // 7. Ritorno dell'HTML strutturale della Dashboard (Screenshot High Fidelity)
     return `
-    <main class="view-fullbleed min-h-screen pb-32 pt-6 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:#0b1326;">
+    <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:var(--bg-base, #050811);">
 
         <div style="padding:0;">
 
-            <!-- HEADER: Overview + Avatar -->
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:0 24px 20px;">
-                <h1 style="font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;margin:0;line-height:1;">Overview</h1>
+            <!-- HEADER (iOS HIG Large Title): Overview + Avatar -->
+            <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 24px 16px 24px;">
+                <div>
+                    <div class="ios-sub-title">PANORAMICA</div>
+                    <h1 class="ios-large-title">Overview</h1>
+                </div>
                 ${avatarHtml}
-            </div>
+            </header>
 
             <div style="margin-bottom: 20px; padding: 0 24px;">
                 <!-- WIDGET PRINCIPALE — carosello a 3 slide senza bordo, testo bianco e layout perfetto -->
@@ -5792,6 +6052,11 @@ window._renderCore = function () {
     if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
 
     requestAnimationFrame(() => {
+        const viewEl = root.firstElementChild || root;
+        if (typeof window.setupLargeHeaderScroll === 'function') {
+            window.setupLargeHeaderScroll(viewEl);
+        }
+
         if (state.view === 'home') {
             const mediaVal = parseFloat(calcolaMedia(state.voti)) || 0;
 
@@ -6932,19 +7197,19 @@ function renderCircolariView() {
         </div>` : '';
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--surface-container-low);background-image:radial-gradient(circle at 10% 0%,rgba(224,231,255,0.3) 0%,transparent 40%),radial-gradient(circle at 90% 80%,rgba(240,230,255,0.2) 0%,transparent 40%);background-attachment:fixed;">
-        <div style="padding:max(env(safe-area-inset-top,0px),32px) 24px 0;font-family:Hanken Grotesk,sans-serif;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--bg-base, #050811);font-family:'Inter',sans-serif;">
+        <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
+            <div>
+                <div class="ios-sub-title">COMUNICAZIONI SCUOLA</div>
+                <h1 class="ios-large-title">Circolari</h1>
+            </div>
+        </header>
 
-            <!-- Header -->
-            <header style="margin-bottom:24px;">
-                <h1 style="font-size:30px;font-weight:800;color:var(--on-surface);letter-spacing:-0.025em;margin:0 0 4px;line-height:1;">In Evidenza</h1>
-            </header>
-
+        <div style="padding:0 20px;">
             ${featuredHtml}
             ${gridHtml}
             ${recentHtml}
             ${emptyHtml}
-
         </div>
     </div>`;
 }
@@ -7178,14 +7443,17 @@ function renderPlanner() {
 
     window._plannerInitialSlide = activeSlide; // per post-render scroll
     return `
-    <div class="view-fullbleed planner-view min-h-screen pb-40" style="padding:0;background:#0b1326;">
+    <div class="view-fullbleed planner-view min-h-screen pb-40" style="padding:0;background:var(--bg-base, #050811);">
 
-        <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:center;padding:max(env(safe-area-inset-top,0px),28px) 20px 16px;">
-            <h1 style="font-size:22px;font-weight:600;color:#dae2fd;opacity:0.9;margin:0;line-height:1.2;" class="sentence-case">Planner</h1>
-            <button onclick="window.openPlannerMonthPicker()" class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;cursor:pointer;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:18px;color:rgba(218,226,253,0.7);">calendar_today</span>
-                <span style="font-size:14px;font-weight:500;color:#dae2fd;letter-spacing:0.02em;">${monthLabel}</span>
+        <!-- ══ HEADER (iOS HIG Large Title) ══ -->
+        <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
+            <div>
+                <div class="ios-sub-title">AGENDA SCOLASTICA</div>
+                <h1 class="ios-large-title">Planner</h1>
+            </div>
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openPlannerMonthPicker()" class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;cursor:pointer;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);" ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph ph-calendar-blank text-[18px] text-[rgba(218,226,253,0.8)]"></i>
+                <span style="font-size:14px;font-weight:600;color:var(--text-primary);letter-spacing:0.02em;">${monthLabel}</span>
             </button>
         </header>
 
@@ -7725,27 +7993,24 @@ function renderProfile() {
 
     return `
     <div class="view-fullbleed profile-view hide-scrollbar"
-         style="padding:0 24px;height:100dvh;overflow-y:scroll;-webkit-overflow-scrolling:touch;">
+         style="padding:0 20px;height:100dvh;overflow-y:scroll;-webkit-overflow-scrolling:touch;background:var(--bg-base, #050811);">
 
-        <!-- ── HEADER ── -->
-        <div style="display:flex;align-items:center;gap:14px;
-                    padding:max(env(safe-area-inset-top,0px),28px) 0 20px;">
-            <button onclick="navigate('home')"
-                style="width:44px;height:44px;border-radius:50%;
-                       background:rgba(var(--glass-rgb),0.7);backdrop-filter:blur(12px);
-                       -webkit-backdrop-filter:blur(12px);border:1px solid rgba(var(--glass-rgb),0.6);
+        <!-- ── HEADER (iOS HIG) ── -->
+        <header class="ios-header-wrapper" style="display:flex;align-items:center;gap:14px;padding:max(env(safe-area-inset-top,0px),24px) 0 20px 0;">
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('home')"
+                style="width:40px;height:40px;border-radius:50%;
+                       background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);
+                       -webkit-backdrop-filter:blur(16px);border:0.5px solid rgba(255,255,255,0.15);
                        display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"
                 ontouchstart="this.style.transform='scale(0.92)'"
                 ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);">arrow_back</span>
+                <i class="ph ph-arrow-left text-[20px] text-[#2997ff]"></i>
             </button>
             <div>
-                <h1 style="font-size:26px;font-weight:800;color:var(--on-surface);
-                            letter-spacing:-0.02em;margin:0;line-height:1.1;">Profilo</h1>
-                <p style="font-size:13px;color:var(--outline);font-weight:600;margin:2px 0 0;">
-                    Gestione account e impostazioni</p>
+                <div class="ios-sub-title">IMPOSTAZIONI & ACCOUNT</div>
+                <h1 class="ios-large-title">Profilo</h1>
             </div>
-        </div>
+        </header>
 
         <!-- ── CARTA UTENTE ── -->
         <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
@@ -8159,14 +8424,17 @@ function renderGradesView() {
     }
 
     return `
-    <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:#0b1326;font-family:'Inter',sans-serif;">
+    <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:var(--bg-base, #050811);font-family:'Inter',sans-serif;">
 
-        <!-- ══ HEADER ══ -->
-        <header style="display:flex;justify-content:space-between;align-items:center;padding:max(env(safe-area-inset-top,0px),28px) 20px 16px;">
-            <h1 style="font-size:22px;font-weight:600;color:#dae2fd;opacity:0.9;margin:0;line-height:1.2;" class="sentence-case">Voti</h1>
-            <div class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-                <span class="material-symbols-outlined" style="font-size:18px;color:rgba(218,226,253,0.7);">calendar_today</span>
-                <span style="font-size:14px;font-weight:500;color:#dae2fd;letter-spacing:0.02em;">${monthYearLabel}</span>
+        <!-- ══ HEADER (iOS HIG Large Title) ══ -->
+        <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
+            <div>
+                <div class="ios-sub-title">VALUTAZIONI & MEDIE</div>
+                <h1 class="ios-large-title">Voti</h1>
+            </div>
+            <div class="liquid-glass-v8 rim-light squircle-full shadow-lg" style="display:flex;align-items:center;gap:6px;padding:8px 16px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);">
+                <i class="ph ph-calendar-blank text-[18px] text-[rgba(218,226,253,0.8)]"></i>
+                <span style="font-size:14px;font-weight:600;color:var(--text-primary);letter-spacing:0.02em;">${monthYearLabel}</span>
             </div>
         </header>
 

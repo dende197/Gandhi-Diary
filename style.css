@@ -1,129 +1,125 @@
 /* ============================================
-   G-CONNECT — LIQUID GLASS PREMIUM DESIGN SYSTEM
+   G-CONNECT — 4K ULTRA HD LIQUID GLASS & iOS HIG DESIGN SYSTEM
    ============================================ */
 
 :root {
-  /* Surface & Background — Liquid Glass (Midnight Navy) */
-  --surface: #0b1326;
-  --surface-dim: #0b1326;
-  --surface-bright: #31394d;
-  --surface-container-lowest: #060e20;
-  --surface-container-low: #131b2e;
-  --surface-container: #171f33;
-  --surface-container-high: #222a3d;
-  --surface-container-highest: #2d3449;
+  /* 4K Ultra HD OLED Surfaces & Elevations (iOS Dark Mode) */
+  --bg-base: #050811;
+  --bg-surface: #0c1322;
+  --bg-elevated: #141e33;
+  --bg-glass-card: rgba(20, 30, 51, 0.55);
+  --bg-glass-overlay: rgba(5, 8, 17, 0.78);
+
+  --surface: #050811;
+  --surface-dim: #050811;
+  --surface-bright: #26334d;
+  --surface-container-lowest: #03050a;
+  --surface-container-low: #090e1a;
+  --surface-container: #0c1322;
+  --surface-container-high: #141e33;
+  --surface-container-highest: #1f2c47;
+  --background: #050811;
+  --on-background: #f1f5f9;
+
+  /* Crisp Typography & Soft Contrast (High Legibility, Anti-Glare) */
+  --text-primary: rgba(255, 255, 255, 0.94);
+  --text-secondary: rgba(218, 226, 253, 0.72);
+  --text-muted: rgba(148, 163, 184, 0.55);
   --on-surface: #dae2fd;
   --on-surface-variant: #c4c5d6;
   --inverse-surface: #dae2fd;
-  --inverse-on-surface: #283044;
-  --outline: #8e909f;
-  --outline-variant: #434653;
-  --surface-tint: #b6c4ff;
-  --background: #0b1326;
-  --on-background: #dae2fd;
-  --surface-variant: #2d3449;
+  --inverse-on-surface: #1e293b;
+  --outline: #64748b;
+  --outline-variant: #334155;
+  --surface-tint: #70a1ff;
 
-  /* Primary */
-  --primary: #3b82f6;
+  /* Hairline Borders & 3D Light Simulation */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(255, 255, 255, 0.18);
+  --border-glass: rgba(255, 255, 255, 0.12);
+
+  /* Apple iOS Vivid Accents (4K Pure Spectrum) */
+  --accent-blue: #2997ff;
+  --accent-green: #30d158;
+  --accent-red: #ff453a;
+  --accent-amber: #ff9f0a;
+  --accent-purple: #bf5af2;
+  --accent-cyan: #64d2ff;
+
+  /* System Color Mappings */
+  --primary: #2997ff;
   --on-primary: #00184a;
-  --primary-container: #2f58cd;
-  --on-primary-container: #d5dcff;
-  --inverse-primary: #2b55ca;
-  --primary-fixed: #dce1ff;
-  --primary-fixed-dim: #b6c4ff;
-  --on-primary-fixed: #00164f;
-  --on-primary-fixed-variant: #003baf;
+  --primary-container: #1d4ed8;
+  --on-primary-container: #dbeafe;
+  --inverse-primary: #3b82f6;
+  --primary-fixed: #dbeafe;
+  --primary-fixed-dim: #93c5fd;
 
-  /* Secondary */
-  --secondary: #bcc7de;
-  --on-secondary: #263143;
-  --secondary-container: #3e495d;
-  --on-secondary-container: #aeb9d0;
-  --secondary-fixed: #d8e3fb;
-  --secondary-fixed-dim: #bcc7de;
-  --on-secondary-fixed: #111c2d;
-  --on-secondary-fixed-variant: #3c475a;
+  --secondary: #94a3b8;
+  --on-secondary: #0f172a;
+  --secondary-container: #1e293b;
+  --on-secondary-container: #cbd5e1;
 
-  /* Tertiary */
-  --tertiary: #a4c9ff;
-  --on-tertiary: #00315d;
-  --tertiary-container: #0062b0;
-  --on-tertiary-container: #cadeff;
-  --tertiary-fixed: #d4e3ff;
-  --tertiary-fixed-dim: #a4c9ff;
-  --on-tertiary-fixed: #001c39;
-  --on-tertiary-fixed-variant: #004883;
+  --tertiary: #64d2ff;
+  --on-tertiary: #002b4d;
+  --tertiary-container: #0284c7;
+  --on-tertiary-container: #e0f2fe;
 
-  /* Error */
-  --error: #ffb4ab;
-  --on-error: #690005;
-  --error-container: #3a0a0a;
-  --on-error-container: #ffdad6;
+  --error: #ff453a;
+  --on-error: #450a0a;
+  --error-container: #7f1d1d;
+  --on-error-container: #fee2e2;
 
-  /* Success (voti/verifiche positivi, presenze) */
-  --success: #34d399;
-  --on-success: #052e1f;
-  --success-container: #0f2e22;
-  --on-success-container: #a7f3d0;
+  --success: #30d158;
+  --on-success: #052e16;
+  --success-container: #14532d;
+  --on-success-container: #dcfce7;
 
-  /* Warning (voti medi, avvisi) */
-  --warning: #fdba74;
-  --on-warning: #4a1d05;
-  --warning-container: #3a2410;
-  --on-warning-container: #fed7aa;
+  --warning: #ff9f0a;
+  --on-warning: #451a03;
+  --warning-container: #78350f;
+  --on-warning-container: #fef3c7;
 
-  /* Info (badge/chip azzurri, media) */
-  --info: #93c5fd;
-  --on-info: #0d2a5c;
-  --info-container: #16233f;
-  --on-info-container: #dbeafe;
+  --info: #38bdf8;
+  --on-info: #082f49;
+  --info-container: #0369a1;
+  --on-info-container: #e0f2fe;
 
-  /* Violet (circolari "Evento" accent) */
-  --violet: #c4b5fd;
-  --on-violet: #2e1065;
-  --violet-container: #241a3d;
-  --on-violet-container: #ede9fe;
+  --violet: #bf5af2;
+  --on-violet: #3b0764;
+  --violet-container: #6b21a8;
+  --on-violet-container: #f3e8ff;
 
-  /* Circolari featured-card gradient stops */
-  --circ-blue-mid: #142647;
-  --circ-blue-end: #1e3a8a;
-  --circ-violet-mid: #241a3d;
-  --circ-violet-end: #4c1d95;
-  --circ-green-mid: #12261c;
-  --circ-green-end: #14532d;
-
-  /* Glass tint base — white glass floating over the navy canvas */
+  /* Glass tint base */
   --glass-rgb: 255, 255, 255;
 
-  /* Navigation Bar Styles — Screenshot high fidelity */
-  --nav-active-color: #3b82f6;
-  --nav-inactive-color: rgba(255, 255, 255, 0.35);
-  --nav-bg: rgba(14, 20, 36, 0.9);
-  --nav-border: rgba(255, 255, 255, 0.08);
-  --nav-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.6);
-  --nav-glow: transparent;
+  /* Navigation Bar Tokens */
+  --nav-active-color: #2997ff;
+  --nav-inactive-color: rgba(255, 255, 255, 0.38);
+  --nav-bg: rgba(12, 19, 34, 0.85);
+  --nav-border: rgba(255, 255, 255, 0.1);
+  --nav-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+  --nav-glow: rgba(41, 151, 255, 0.15);
 
-  /* Radii — Squircle system */
-  --radius-sm: 0.25rem;
-  --radius-default: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
-  --radius-4xl: 2rem;
-  --radius-hero: 32px;
-  --radius-card: 24px;
+  /* iOS Radii System */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-default: 14px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 28px;
+  --radius-2xl: 32px;
+  --radius-3xl: 36px;
   --radius-full: 9999px;
 
-  /* Typography */
-  --font-main: 'Inter', 'Hanken Grotesk', sans-serif;
+  /* Typography Scale */
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
 
   /* Layout */
   --margin-desktop: 64px;
   --margin-mobile: 20px;
-  --gutter: 24px;
-  --section-gap: 80px;
+  --gutter: 20px;
+  --section-gap: 40px;
   --stack-sm: 8px;
   --stack-md: 16px;
 }
@@ -1411,3 +1407,351 @@ div[style*="rgba(254,242,242,0.9)"] {
 .home-card-item {
   border-radius: 24px !important;
 }
+
+/* ============================================================
+   iOS HUMAN INTERFACE GUIDELINES (HIG) COMPONENTS & MICRO-INTERACTIONS
+   ============================================================ */
+
+/* ── 1. iOS Large Header & Sticky Bar ── */
+.ios-header-wrapper {
+  position: relative;
+  width: 100%;
+  padding: max(env(safe-area-inset-top, 0px), 16px) 20px 12px 20px;
+}
+
+.ios-large-title {
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.15 !important;
+  margin: 0 !important;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-sub-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  margin-bottom: 2px !important;
+}
+
+.ios-compact-nav {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: rgba(5, 8, 17, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease-out;
+}
+
+.ios-compact-nav.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ios-compact-nav__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  text-align: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* ── 2. Stacked Glass Toasts System ── */
+#toast-stack-container {
+  position: fixed;
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 10000;
+  gap: 0;
+}
+
+.ios-glass-toast {
+  pointer-events: auto;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 22px;
+  background: rgba(14, 22, 38, 0.88);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 0.5px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, filter 0.3s ease;
+  transform-origin: center bottom;
+}
+
+.ios-glass-toast.toast-tier-0 {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  z-index: 3;
+}
+
+.ios-glass-toast.toast-tier-1 {
+  transform: translateY(-12px) scale(0.94);
+  opacity: 0.78;
+  z-index: 2;
+  filter: brightness(0.85);
+}
+
+.ios-glass-toast.toast-tier-2 {
+  transform: translateY(-22px) scale(0.88);
+  opacity: 0.5;
+  z-index: 1;
+  filter: brightness(0.7);
+}
+
+.ios-glass-toast.toast-success {
+  border-color: rgba(48, 209, 88, 0.35);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(14, 22, 38, 0.92) 100%);
+}
+
+.ios-glass-toast.toast-error {
+  border-color: rgba(255, 69, 58, 0.35);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(14, 22, 38, 0.92) 100%);
+}
+
+.ios-glass-toast.toast-warning {
+  border-color: rgba(255, 159, 10, 0.35);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(14, 22, 38, 0.92) 100%);
+}
+
+.ios-glass-toast.toast-info {
+  border-color: rgba(41, 151, 255, 0.35);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(14, 22, 38, 0.92) 100%);
+}
+
+/* ── 3. Native Bottom Sheet with Snap Points ── */
+.ios-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-sheet-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ios-bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(16, 25, 42, 0.94);
+  backdrop-filter: blur(36px) saturate(190%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  border-radius: 28px 28px 0 0;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.6);
+  padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px;
+  transform: translateY(100%);
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10000;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ios-bottom-sheet.open {
+  transform: translateY(0);
+}
+
+.ios-sheet-handle-bar {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  margin: 0 auto 16px auto;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+/* ── 4. iOS Context Menu (Long-Press) ── */
+.ios-context-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10005;
+  transition: opacity 0.25s ease;
+}
+
+.ios-context-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ios-context-menu {
+  position: fixed;
+  background: rgba(24, 34, 56, 0.92);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 0.5px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+  padding: 6px;
+  min-width: 210px;
+  z-index: 10010;
+  transform: scale(0.9) opacity(0);
+  transform-origin: top left;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-context-menu.open {
+  transform: scale(1) opacity(1);
+}
+
+.ios-context-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  transition: background 0.15s ease;
+}
+
+.ios-context-item:active, .ios-context-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ios-context-item.danger {
+  color: #ff453a;
+}
+
+.ios-context-separator {
+  height: 0.5px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 6px;
+}
+
+/* ── 5. Native iOS Switches ── */
+.ios-switch {
+  position: relative;
+  display: inline-block;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+}
+
+.ios-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ios-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.16);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 31px;
+}
+
+.ios-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 27px;
+  width: 27px;
+  left: 2px;
+  bottom: 1.5px;
+  background-color: #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+}
+
+.ios-switch input:checked + .ios-switch-slider {
+  background-color: #30d158;
+  border-color: rgba(48, 209, 88, 0.4);
+}
+
+.ios-switch input:checked + .ios-switch-slider:before {
+  transform: translateX(20px);
+}
+
+/* ── 6. iOS Grouped List & Surface Containers ── */
+.ios-grouped-list {
+  background: var(--bg-surface);
+  border-radius: 20px;
+  border: 0.5px solid var(--border-subtle);
+  overflow: hidden;
+  position: relative;
+}
+
+.ios-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  min-height: 48px;
+}
+
+.ios-list-row:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 54px;
+  right: 0;
+  height: 0.5px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ios-list-row:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
