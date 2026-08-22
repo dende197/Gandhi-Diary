@@ -8279,10 +8279,8 @@ function renderGradesView() {
         diffStr = `${numericVotes.length} voti`;
     }
 
-    // ── Build Organic Bezier Curve SVG Graph ────────────────────────────────
-    const xCoords = [0, 14, 28, 42, 57, 71, 85, 100];
+    // ── Build Geometrically Clean Trend Line Graph ──────────────────────────
     const defaultAvgs = [6.8, 7.0, 7.2, 7.1, 7.4, 7.5, 7.7, media];
-
     const rawVals = defaultAvgs.map((defVal, i) => {
         if (monthList.length > 0) {
             const mIdx = monthList.length - 8 + i;
@@ -8297,10 +8295,12 @@ function renderGradesView() {
     const maxV = Math.max(...rawVals);
     const span = (maxV - minV) || 1.0;
 
-    const pts = xCoords.map((x, i) => {
-        const val = rawVals[i];
+    // ViewBox is 340 x 70. X spans 14 to 326 (safe padding of 14px on sides so dot never clips)
+    // Y spans from 12 (top/high grade) to 54 (bottom/low grade)
+    const pts = rawVals.map((val, i) => {
+        const x = Math.round(14 + (i / 7) * 312);
         const norm = (val - minV) / span;
-        const y = Math.round(75 - norm * 50); // Map to middle float (25..75)
+        const y = Math.round(54 - norm * 42); // 12 .. 54
         return { x, y };
     });
 
@@ -8310,13 +8310,15 @@ function renderGradesView() {
         const p1 = pts[i];
         const p2 = pts[i + 1];
         const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
-        const cp1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2);
-        const cp1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2);
-        const cp2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2);
-        const cp2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2);
+
+        const cp1x = +(p1.x + (p2.x - p0.x) * 0.28).toFixed(1);
+        const cp1y = +(p1.y + (p2.y - p0.y) * 0.28).toFixed(1);
+        const cp2x = +(p2.x - (p3.x - p1.x) * 0.28).toFixed(1);
+        const cp2y = +(p2.y - (p3.y - p1.y) * 0.28).toFixed(1);
+
         linePathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     }
-    const areaPathD = `${linePathD} L 100 100 L 0 100 Z`;
+    const areaPathD = `${linePathD} L ${pts[pts.length - 1].x} 70 L ${pts[0].x} 70 Z`;
     const lastPt = pts[pts.length - 1];
 
     // ── Per-subject stats ────────────────────────────────────────────────────
@@ -8418,20 +8420,14 @@ function renderGradesView() {
     <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
 
         <!-- ══ HEADER (iOS HIG Large Title) ══ -->
-        <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
-            <div>
-                <div class="ios-sub-title">VALUTAZIONI & MEDIE</div>
-                <h1 class="ios-large-title">Voti</h1>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:0.5px solid rgba(255,255,255,0.12);border-radius:9999px;">
-                <i class="ph ph-calendar-blank text-[18px] text-[rgba(255,255,255,0.7)]"></i>
-                <span style="font-size:14px;font-weight:600;color:#ffffff;letter-spacing:0.02em;">${monthYearLabel}</span>
-            </div>
+        <header class="ios-header-wrapper" style="padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
+            <div class="ios-sub-title">VALUTAZIONI & MEDIE</div>
+            <h1 class="ios-large-title">Voti</h1>
         </header>
 
         <main style="padding:0 20px;display:flex;flex-direction:column;gap:18px;">
             <!-- Hero Card: Media Generale (Apple Material) -->
-            <section style="padding:22px 20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:28px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);position:relative;overflow:hidden;">
+            <section style="padding:22px 20px 18px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:28px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);position:relative;overflow:hidden;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;">
                     <div>
                         <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin:0 0 6px;">Media Generale</p>
@@ -8448,23 +8444,33 @@ function renderGradesView() {
                     </button>
                 </div>
 
-                <!-- Clean Green Trend Graph SVG -->
-                <div style="margin-top:20px;height:84px;width:100%;position:relative;">
-                    <svg style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <!-- Clean Green Trend Graph SVG (Animated & Geometric) -->
+                <div style="margin-top:16px;height:74px;width:100%;position:relative;">
+                    <svg viewBox="0 0 340 70" style="width:100%;height:100%;display:block;overflow:visible;" preserveAspectRatio="none">
                         <defs>
-                            <linearGradient id="voti-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#30d158" stop-opacity="0.22"></stop>
+                            <linearGradient id="voti-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#30d158" stop-opacity="0.25"></stop>
+                                <stop offset="85%" stop-color="#30d158" stop-opacity="0.03"></stop>
                                 <stop offset="100%" stop-color="#30d158" stop-opacity="0"></stop>
                             </linearGradient>
+                            <filter id="voti-glow-green" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#30d158" flood-opacity="0.45" />
+                            </filter>
                         </defs>
-                        <path d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
-                        <path d="${linePathD}" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#30d158" vector-effect="non-scaling-stroke"></circle>
-                        <circle cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff" vector-effect="non-scaling-stroke"></circle>
+                        <!-- Animated Area -->
+                        <path class="grade-chart-area" d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
+                        
+                        <!-- Animated Green Stroke -->
+                        <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#voti-glow-green)"></path>
+                        
+                        <!-- Animated Glowing Endpoint Dot -->
+                        <circle class="grade-chart-dot grade-chart-dot-pulse" cx="${lastPt.x}" cy="${lastPt.y}" r="7" fill="#30d158"></circle>
+                        <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#30d158"></circle>
+                        <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="2" fill="#ffffff"></circle>
                     </svg>
                 </div>
-                <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);">
-                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#2997ff;font-weight:700;">Giu</span>
+                <div style="display:flex;justify-content:space-between;margin-top:8px;padding:0 4px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);">
+                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#30d158;font-weight:700;">Giu</span>
                 </div>
             </section>
 
