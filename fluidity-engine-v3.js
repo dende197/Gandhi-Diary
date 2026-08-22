@@ -252,6 +252,10 @@
     if (typeof window.navigate !== 'function' || window.navigate._isV3) return;
 
     window.navigate = function navigate(v, force = false, skipExit = false) {
+      if (v === 'assenze') {
+        if (typeof window.mostraAssenzeModal === 'function') window.mostraAssenzeModal();
+        return;
+      }
       const allowed = ['login', 'home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
       if (!allowed.includes(v) || (!state.isLoggedIn && v !== 'login')) v = state.isLoggedIn ? 'home' : 'login';
       if (v !== 'login' && state.isLoggedIn && state._loggedOut) state._loggedOut = false;

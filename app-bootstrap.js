@@ -216,6 +216,10 @@
         // --- NAVIGATE (defined early so fluidity-engine can upgrade it to v3) ---
         const _allowedViews = ['home', 'planner', 'voti', 'academic_profile', 'profile', 'circolari'];
         window.navigate = function navigate(v) {
+            if (v === 'assenze') {
+                if (typeof window.mostraAssenzeModal === 'function') window.mostraAssenzeModal();
+                return;
+            }
             if (!_allowedViews.includes(v)) v = 'home';
             if (v === 'planner') {
                 if (typeof getLocalDateString === 'function') {

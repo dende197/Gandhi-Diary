@@ -1914,11 +1914,11 @@ function gcInitMediaWidgetSwipe() {
             const dot = document.getElementById(`home-media-dot${i}`);
             if (!dot) continue;
             if (i === currentSlide) {
-                dot.style.width = '24px';
-                dot.style.background = '#ffffff';
+                dot.style.width = '22px';
+                dot.style.background = '#2997ff';
             } else {
                 dot.style.width = '6px';
-                dot.style.background = 'rgba(255,255,255,0.3)';
+                dot.style.background = 'rgba(255,255,255,0.25)';
             }
         }
     }
@@ -2116,50 +2116,57 @@ function renderHome() {
         return { bg: 'var(--secondary-container)', text: 'var(--on-secondary-container)', border: 'var(--outline-variant)' };
     };
 
-    // 5. Card compatte per sezione "Domani" — border-radius ridotto, padding ridotto, icone più piccole
+    // 5. Card compatte per sezione "Domani" — Apple HIG Frosted Glass
     const htmlDomani = isInitialLoad
         ? [1, 2].map(() => `
-            <div class="tomorrow-card skeleton" style="border-radius:22px; padding:16px 18px; margin-bottom:10px; height:90px;">
+            <div class="tomorrow-card skeleton" style="border-radius:22px; padding:16px 18px; margin-bottom:10px; height:90px; background:rgba(20,31,54,0.78);">
                 SKELETON DATA
             </div>`).join('')
         : allTomorrowItems.length > 0
         ? allTomorrowItems.map(item => {
             const icon = getSubjectLucideIcon(item.title);
-            const colors = getSubjectInlineColors(item.title, item.isExam);
+            const isExam = item.isExam;
+            const badgeBg = isExam ? 'rgba(255,69,58,0.15)' : 'rgba(41,151,255,0.15)';
+            const badgeText = isExam ? '#ff453a' : '#2997ff';
+            const badgeBorder = isExam ? 'rgba(255,69,58,0.35)' : 'rgba(41,151,255,0.35)';
+
             return `
             <div class="tomorrow-card" style="
+                background:rgba(20,31,54,0.78);
+                backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);
+                border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
                 border-radius:22px; padding:16px 18px;
                 margin-bottom:10px;
                 position:relative; overflow:hidden; cursor:pointer;
-                transition:transform 0.2s ease;
+                transition:transform 0.15s ease;
             " onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}"
-               onmouseenter="this.style.transform='scale(1.01)'" onmouseleave="this.style.transform='scale(1)'">
-                <!-- Accento laterale rosso -->
-                <div style="position:absolute;left:0;top:12%;height:76%;width:4px;background:#E5A7A7;border-radius:0 4px 4px 0;"></div>
+               ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                <!-- Accento laterale iOS -->
+                <div style="position:absolute;left:0;top:15%;height:70%;width:3.5px;background:${badgeText};border-radius:0 4px 4px 0;"></div>
 
-                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;padding-left:10px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:${colors.bg};display:flex;align-items:center;justify-content:center;color:${colors.text};">
-                        <i data-lucide="${icon}" style="width:18px;height:18px;stroke-width:1.5;"></i>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-left:8px;">
+                    <div style="width:38px;height:38px;border-radius:12px;background:${badgeBg};border:0.5px solid ${badgeBorder};display:flex;align-items:center;justify-content:center;color:${badgeText};">
+                        <i data-lucide="${icon}" style="width:18px;height:18px;stroke-width:2;"></i>
                     </div>
                     <span style="
-                        display:inline-block; background:${colors.bg}; color:${colors.text};
+                        display:inline-flex; align-items:center; background:${badgeBg}; color:${badgeText};
                         font-size:10px; font-weight:700; letter-spacing:0.06em;
                         text-transform:uppercase; padding:4px 10px; border-radius:999px;
-                        border:1px solid ${colors.border};
+                        border:0.5px solid ${badgeBorder};
                     ">${item.isExam ? 'Verifica' : 'Compito'}</span>
                 </div>
                 
-                <h4 style="font-size:1rem;font-weight:700;color:var(--on-surface);margin:0 0 4px 10px;">${escapeHtml(item.title || 'Generico')}</h4>
+                <h4 style="font-size:15px;font-weight:700;color:#ffffff;margin:0 0 4px 8px;line-height:1.3;">${escapeHtml(item.title || 'Generico')}</h4>
                 
-                <div style="display:flex;align-items:center;color:var(--on-surface-variant);font-size:12px;margin-left:10px;">
-                    <i data-lucide="clock" style="width:13px;height:13px;margin-right:6px;stroke-width:2;"></i>
+                <div style="display:flex;align-items:center;color:rgba(255,255,255,0.55);font-size:12px;margin-left:8px;">
+                    <i class="ph ph-clock" style="font-size:14px;margin-right:6px;"></i>
                     <span style="font-weight:500;">${item.isExam ? '09:00 - 12:00' : 'Scadenza domani'}</span>
                 </div>
 
-                ${item.desc ? `<p style="font-size:12px;color:var(--outline);font-style:italic;margin:8px 0 0 10px;border-top:1px solid var(--outline-variant);padding-top:8px;">"${escapeHtml(truncateWithEllipsis(item.desc, 100))}"</p>` : ''}
+                ${item.desc ? `<p style="font-size:12px;color:rgba(255,255,255,0.7);font-style:italic;margin:10px 0 0 8px;border-top:0.5px solid rgba(255,255,255,0.08);padding-top:8px;">"${escapeHtml(truncateWithEllipsis(item.desc, 100))}"</p>` : ''}
             </div>`;
         }).join('')
-        : `<div class="empty-state-card" style="text-align:center;padding:32px 16px;border-radius:22px;font-style:italic;">Nessun impegno programmato per domani.</div>`;
+        : `<div class="empty-state-card" style="text-align:center;padding:28px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px);border:0.5px solid rgba(255,255,255,0.12);border-radius:22px;color:rgba(255,255,255,0.5);font-size:13px;font-style:italic;">Nessun impegno programmato per domani.</div>`;
 
     // Inizializzazione icone Lucide subito dopo l'inserimento nel DOM
     setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 80);
@@ -2168,10 +2175,11 @@ function renderHome() {
     // Avatar utente — screenshot style
     const userPhoto = state.userPhoto || '';
     const avatarHtml = userPhoto
-        ? `<img src="${escapeHtml(userPhoto)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;cursor:pointer;border:1px solid rgba(255,255,255,0.15);" onclick="navigate('profile')" alt="Profilo">`
-        : `<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="navigate('profile')">
-            <i class="ph ph-user" style="font-size:22px;color:rgba(255,255,255,0.7);"></i>
+        ? `<img src="${escapeHtml(userPhoto)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;cursor:pointer;border:1px solid rgba(255,255,255,0.2);" onclick="navigate('profile')" alt="Profilo">`
+        : `<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="navigate('profile')">
+            <i class="ph ph-user" style="font-size:22px;color:#ffffff;"></i>
            </div>`;
+
     // 6a. Conteggio novità giornaliere per widget Notifiche
     const _todayTasks = (state.tasks || []).filter(t => t.due_date === todayISO && t.subject !== 'QUEST');
     const _todayVoti  = getVotiData().filter(v => {
@@ -2220,11 +2228,7 @@ function renderHome() {
     }
     const _votiTotali = _votiValidi.length;
 
-    // 6d. SLIDE 3 (Obiettivo Media) — euristica: nessun obiettivo è ancora
-    // salvato da nessuna parte (né in Supabase né in state), quindi qui
-    // calcolo solo un target "suggerito" (prossimo mezzo punto sopra la
-    // media attuale) e quanti voti ipotetici da +0.5 servirebbero per
-    // arrivarci. Non è un vero obiettivo impostato dall'utente.
+    // 6d. SLIDE 3 (Obiettivo Media)
     const _obiettivoTarget = isInitialLoad ? 8.00 : Math.min(10, Math.ceil(media * 2) / 2 + 0.5);
     const _obiettivoVotoIpotetico = Math.min(10, _obiettivoTarget + 0.5);
     const _obiettivoVotiCount = _votiValidi.length;
@@ -2237,14 +2241,14 @@ function renderHome() {
     }
     const _obiettivoProgress = media > 0 ? Math.min(100, Math.round((media / _obiettivoTarget) * 100)) : 0;
 
-    // 7. Ritorno dell'HTML strutturale della Dashboard (Screenshot High Fidelity)
+    // 7. Ritorno dell'HTML strutturale della Dashboard (Apple HIG Native Design)
     return `
-    <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:var(--bg-base, #050811);">
+    <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#ffffff] antialiased overflow-y-auto hide-scrollbar" style="background:var(--bg-base, #0c1424);">
 
         <div style="padding:0;">
 
             <!-- HEADER (iOS HIG Large Title): Overview + Avatar -->
-            <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 24px 16px 24px;">
+            <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px 20px;">
                 <div>
                     <div class="ios-sub-title">PANORAMICA</div>
                     <h1 class="ios-large-title">Overview</h1>
@@ -2252,149 +2256,153 @@ function renderHome() {
                 ${avatarHtml}
             </header>
 
-            <div style="margin-bottom: 20px; padding: 0 24px;">
-                <!-- WIDGET PRINCIPALE — carosello a 3 slide senza bordo, testo bianco e layout perfetto -->
-                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;">
+            <div style="margin-bottom: 20px; padding: 0 20px;">
+                <!-- WIDGET PRINCIPALE — Apple Frosted Glass Carousel a 3 slide -->
+                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:28px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.38s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
                         <!-- SLIDE 1: MEDIA GENERALE -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div>
-                                <h2 style="font-size:21px;font-weight:700;color:#ffffff !important;letter-spacing:-0.025em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
-                                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5) !important;margin:2px 0 0;">Media generale attiva</p>
+                                <h2 style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1.2;margin:0;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
+                                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.6);margin:3px 0 0;">Media generale attiva</p>
                             </div>
                             <div style="display:flex;align-items:baseline;justify-content:space-between;margin:auto 0;padding-top:4px;">
                                 <div style="display:flex;align-items:center;gap:10px;">
-                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:52px;font-weight:800;letter-spacing:-0.025em;color:#ffffff !important;line-height:1;text-shadow:0 0 20px rgba(255,255,255,0.15);">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.35);color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;padding:4px 10px;border-radius:9999px;border:1px solid rgba(52,211,153,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 0 12px rgba(52,211,153,0.3);">+0.15</span>
+                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:50px;font-weight:800;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:rgba(48,209,88,0.18);color:#30d158;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid rgba(48,209,88,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);"><i class="ph-fill ph-trend-up" style="font-size:13px;"></i> +0.15</span>
                                 </div>
                             </div>
                             <div style="display:flex;align-items:end;gap:10px;height:40px;width:100%;padding-top:4px;">
-                                <div style="flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
-                                <div style="flex:1;height:16px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
-                                <div style="flex:1;height:12px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
-                                <div style="flex:1;height:24px;background:rgba(255,255,255,0.05);border-radius:9999px;"></div>
-                                <div style="flex:1;height:32px;background:rgba(255,255,255,0.1);border-radius:9999px;"></div>
-                                <div style="flex:1;height:40px;background:rgba(255,255,255,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:16px;border:1.5px solid rgba(255,255,255,0.6);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                                    <span style="position:absolute;top:-22px;font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap;">Adesso</span>
+                                <div style="flex:1;height:8px;background:rgba(255,255,255,0.06);border-radius:9999px;"></div>
+                                <div style="flex:1;height:16px;background:rgba(255,255,255,0.06);border-radius:9999px;"></div>
+                                <div style="flex:1;height:12px;background:rgba(255,255,255,0.06);border-radius:9999px;"></div>
+                                <div style="flex:1;height:24px;background:rgba(255,255,255,0.06);border-radius:9999px;"></div>
+                                <div style="flex:1;height:32px;background:rgba(255,255,255,0.12);border-radius:9999px;"></div>
+                                <div style="flex:1;height:40px;background:linear-gradient(180deg,#2997ff 0%,#007aff 100%);border-radius:14px;border:1px solid rgba(255,255,255,0.4);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(41,151,255,0.4);">
+                                    <span style="position:absolute;top:-20px;font-size:11px;font-weight:700;color:#2997ff;white-space:nowrap;">Adesso</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- SLIDE 2: DETTAGLIO VOTI (dati reali da state.voti) -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:8px;">
-                                <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#38bdf8;">Dettaglio Voti</span>
-                                <span style="font-size:12px;font-weight:500;color:#7182a3;">${typeof currentTerm !== 'undefined' && currentTerm === 'second' ? '2° Quadrimestre' : '1° Quadrimestre'}</span>
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:8px;">
+                                <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2997ff;">DETTAGLIO VALUTAZIONI</span>
+                                <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);">${typeof currentTerm !== 'undefined' && currentTerm === 'second' ? '2° Quadrimestre' : '1° Quadrimestre'}</span>
                             </div>
                             ${_votiTotali > 0 ? `
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:auto 0;">
-                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
-                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Voto più alto</span>
-                                    <span style="font-size:16px;font-weight:700;color:#34d399;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:400;color:#cbd5e1;">${_votoAltoSubj}</span></span>
+                                <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.08);">
+                                    <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Miglior Voto</span>
+                                    <span style="font-size:17px;font-weight:800;color:#30d158;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);">${_votoAltoSubj}</span></span>
                                 </div>
-                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
-                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Voti Totali</span>
-                                    <span style="font-size:16px;font-weight:700;color:#ffffff;">${_votiTotali} <span style="font-size:10px;font-weight:400;color:#cbd5e1;">valut.</span></span>
+                                <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.08);">
+                                    <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Valutazioni</span>
+                                    <span style="font-size:17px;font-weight:800;color:#ffffff;">${_votiTotali} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);">totali</span></span>
                                 </div>
-                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
-                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Ultimo Voto</span>
-                                    <span style="font-size:16px;font-weight:700;color:#38bdf8;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:400;color:#cbd5e1;">${_ultimoVotoSubj}</span></span>
+                                <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.08);">
+                                    <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Ultimo Voto</span>
+                                    <span style="font-size:17px;font-weight:800;color:#2997ff;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);">${_ultimoVotoSubj}</span></span>
                                 </div>
-                                <div style="background:rgba(17,25,43,0.8);padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,0.06);">
-                                    <span style="font-size:11px;color:#7182a3;font-weight:500;display:block;">Trend</span>
-                                    <span style="font-size:16px;font-weight:700;color:${_trendPct === null ? '#7182a3' : (_trendPct >= 0 ? '#34d399' : '#f87171')};display:flex;align-items:center;gap:4px;">
+                                <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.08);">
+                                    <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Trend</span>
+                                    <span style="font-size:17px;font-weight:800;color:${_trendPct === null ? 'rgba(255,255,255,0.5)' : (_trendPct >= 0 ? '#30d158' : '#ff453a')};display:flex;align-items:center;gap:4px;">
                                         ${_trendPct === null ? '—' : `${_trendPct >= 0 ? '↑' : '↓'} ${Math.abs(_trendPct).toFixed(1)}%`}
                                     </span>
                                 </div>
                             </div>
                             ` : `
                             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
-                                <p style="font-size:13px;font-weight:600;color:#7182a3;margin:0;">Ancora nessun voto</p>
+                                <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);margin:0;">Ancora nessun voto</p>
                             </div>
                             `}
                         </div>
 
-                        <!-- SLIDE 3: OBIETTIVO MEDIA (target suggerito — nessun obiettivo salvato dall'utente ancora) -->
+                        <!-- SLIDE 3: OBIETTIVO MEDIA -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:22px 20px 14px 20px;height:215px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:8px;">
-                                <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#fbbf24;">Obiettivo Anno</span>
-                                <i class="ph ph-target" style="font-size:14px;color:#fbbf24;"></i>
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:8px;">
+                                <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#ff9f0a;">OBIETTIVO MEDIA</span>
+                                <i class="ph-fill ph-target" style="font-size:16px;color:#ff9f0a;"></i>
                             </div>
                             <div style="margin:auto 0;display:flex;flex-direction:column;gap:10px;">
                                 <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
-                                    <span style="color:#cbd5e1;font-weight:500;">Target suggerito:</span>
-                                    <span style="font-size:16px;font-weight:700;color:#fbbf24;">${_obiettivoTarget.toFixed(2)}</span>
+                                    <span style="color:rgba(255,255,255,0.6);font-weight:600;">Target suggerito:</span>
+                                    <span style="font-size:18px;font-weight:800;color:#ff9f0a;">${_obiettivoTarget.toFixed(2)}</span>
                                 </div>
-                                <div style="width:100%;background:#0a0e1c;height:10px;border-radius:9999px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);padding:2px;">
-                                    <div style="background:#fbbf24;height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.5s ease-out;"></div>
+                                <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
+                                    <div style="background:linear-gradient(90deg, #ff9f0a, #30d158);height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.5s ease-out;"></div>
                                 </div>
-                                <p style="font-size:11px;line-height:1.5;color:#cbd5e1;background:rgba(17,25,43,0.9);padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin:0;">
-                                    ${_obiettivoMancanti > 0
-                                        ? `💡 Mancano circa <strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> per raggiungere il target di ${_obiettivoTarget.toFixed(2)}.`
-                                        : `🎉 Hai già raggiunto il target suggerito di ${_obiettivoTarget.toFixed(2)}!`}
-                                </p>
+                                <div style="padding:10px 12px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;">
+                                    <p style="font-size:11px;line-height:1.45;color:rgba(255,255,255,0.8);margin:0;">
+                                        ${_obiettivoMancanti > 0
+                                            ? `💡 Mancano circa <strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> per raggiungere il target di ${_obiettivoTarget.toFixed(2)}.`
+                                            : `🎉 Hai già raggiunto il target suggerito di ${_obiettivoTarget.toFixed(2)}!`}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
                     </div>
 
                     <!-- Indicatori pagina -->
-                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:2px 0 14px;">
-                        <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:4px;width:24px;background:#ffffff;border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
-                        <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:4px;width:6px;background:rgba(255,255,255,0.3);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
-                        <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:4px;width:6px;background:rgba(255,255,255,0.3);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0 14px;">
+                        <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:5px;width:22px;background:#2997ff;border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
+                        <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:5px;width:6px;background:rgba(255,255,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
+                        <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:5px;width:6px;background:rgba(255,255,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s;"></button>
                     </div>
                 </div>
             </div>
 
-            <!-- SEZIONE DOMANI (PROPRIO COME NELLA FOTO) -->
-            <div style="padding:0 24px;margin-top:20px;">
+            <!-- SEZIONE DOMANI -->
+            <div style="padding:0 20px;margin-top:20px;">
                 <div style="margin-bottom:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 2px;">
-                        <h3 style="font-size:22px;font-weight:600;color:#ffffff;margin:0;letter-spacing:-0.01em;">Domani</h3>
-                        <a href="#" style="color:var(--primary);font-weight:600;font-size:14px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
+                        <h3 style="font-size:20px;font-weight:700;color:#ffffff;margin:0;letter-spacing:-0.01em;">Domani</h3>
+                        <a href="#" style="color:#2997ff;font-weight:600;font-size:13px;text-decoration:none;" onclick="navigate('planner')">Vedi tutto</a>
                     </div>
                     ${htmlDomani.includes('empty-state-card') ? `
-                    <div style="background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);border:1px solid rgba(255,255,255,0.07);border-radius:24px;min-height:88px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px 20px;">
-                        <p style="font-size:13px;font-style:italic;color:#64748b;margin:0;">Nessun impegno programmato per domani.</p>
+                    <div style="background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;min-height:84px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px 20px;">
+                        <p style="font-size:13px;color:rgba(255,255,255,0.5);margin:0;font-style:italic;">Nessun impegno programmato per domani.</p>
                     </div>` : htmlDomani}
                 </div>
             </div>
 
-            <!-- WIDGETS NOTIFICHE & ASSENZE (fedeli alla foto, dimensioni compatte) -->
-            <div style="padding:0 24px;margin-top:14px;">
+            <!-- WIDGETS NOTIFICHE & ASSENZE -->
+            <div style="padding:0 20px;margin-top:14px;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <!-- NOTIFICHE -->
                     <div onclick="openTodayNotifications()" style="
-                        background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-                        backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-                        border:1px solid rgba(255,255,255,0.08);
-                        border-radius:24px;padding:16px 18px;cursor:pointer;
-                        transition:transform 0.15s ease,box-shadow 0.15s ease;
+                        background:rgba(20,31,54,0.78);
+                        backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);
+                        border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                        border-radius:22px;padding:16px 18px;cursor:pointer;
+                        transition:transform 0.15s ease;
                         position:relative;overflow:hidden;
-                    " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
+                    " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'" onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
                         <div style="position:relative;display:inline-block;">
-                            <i class="ph ph-bell" style="font-size:22px;color:rgba(255,255,255,0.7);"></i>
-                            <div style="position:absolute;top:0;right:-2px;width:7px;height:7px;background:var(--primary);border-radius:50%;"></div>
+                            <div style="width:38px;height:38px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;">
+                                <i class="ph-fill ph-bell text-[20px]"></i>
+                            </div>
+                            <div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#2997ff;border-radius:50%;box-shadow:0 0 8px #2997ff;"></div>
                         </div>
-                        <h4 style="font-size:15px;font-weight:600;color:#ffffff;margin:10px 0 2px;">Notifiche</h4>
-                        <p style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' nuovi messaggi' : '3 nuovi messaggi'}</p>
+                        <h4 style="font-size:15px;font-weight:700;color:#ffffff;margin:12px 0 2px;">Notifiche</h4>
+                        <p style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55);margin:0;">${_homeNotifCount > 0 ? _homeNotifCount + ' novità oggi' : '3 novità oggi'}</p>
                     </div>
                     <!-- ASSENZE -->
-                    <div onclick="navigate('assenze')" style="
-                        background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-                        backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-                        border:1px solid rgba(255,255,255,0.08);
-                        border-radius:24px;padding:16px 18px;cursor:pointer;
-                        transition:transform 0.15s ease,box-shadow 0.15s ease;
+                    <div onclick="mostraAssenzeModal()" style="
+                        background:rgba(20,31,54,0.78);
+                        backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);
+                        border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                        border-radius:22px;padding:16px 18px;cursor:pointer;
+                        transition:transform 0.15s ease;
                         position:relative;overflow:hidden;
-                    " onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
-                        <div>
-                            <i class="ph ph-calendar-check" style="font-size:22px;color:rgba(255,255,255,0.7);"></i>
+                    " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'" onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'">
+                        <div style="width:38px;height:38px;border-radius:12px;background:rgba(48,209,88,0.15);border:1px solid rgba(48,209,88,0.3);display:flex;align-items:center;justify-content:center;color:#30d158;">
+                            <i class="ph-fill ph-calendar-check text-[20px]"></i>
                         </div>
-                        <h4 style="font-size:15px;font-weight:600;color:#ffffff;margin:10px 0 2px;">Assenze</h4>
-                        <p style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin:0;">${_homeAssenzeLabel}</p>
+                        <h4 style="font-size:15px;font-weight:700;color:#ffffff;margin:12px 0 2px;">Assenze</h4>
+                        <p style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55);margin:0;">${_homeAssenzeLabel}</p>
                     </div>
                 </div>
             </div>
@@ -3283,51 +3291,195 @@ function renderSubjectDetailView(subjectName) {
 }
 
 function mostraAssenzeModal() {
-    const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0 };
-    const all = [...ad.assenze.map(x => ({ ...x, icon: 'event_busy', color: 'error' })),
-    ...ad.ritardi.map(x => ({ ...x, icon: 'schedule', color: 'orange' })),
-    ...ad.uscite.map(x => ({ ...x, icon: 'logout', color: 'primary' }))];
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
 
-    all.sort((a, b) => new Date(b.data) - new Date(a.data));
+    const ad = state.assenzeData || { assenze: [], ritardi: [], uscite: [], note: [], totaleAssenze: 0, totaleRitardi: 0, totaleUscite: 0, oreAssenzaTotali: 0, daGiustificare: 0 };
+    
+    // Normalizziamo tutti gli eventi
+    const rawAssenze = (ad.assenze || []).map(x => ({
+        ...x,
+        tipo: 'assenza',
+        label: 'Assenza Giornaliera',
+        icon: 'ph-calendar-x',
+        iconColor: '#ff453a',
+        iconBg: 'rgba(255,69,58,0.15)',
+        hoursStr: x.numOre ? `${x.numOre} ore` : (x.oraInizio ? `${x.oraInizio}ª - ${x.oraFine || 5}ª ora` : 'Giornata intera')
+    }));
 
-    showModal(`
-        <div class="flex flex-col gap-6">
-            <header>
-                <h2 class="title-md text-primary mb-1">Riepilogo Assenze</h2>
-                <p class="body-md text-on-surface-variant/60">Totale ore assenza: <b>${ad.oreAssenzaTotali.toFixed(1)}h</b></p>
-            </header>
+    const rawRitardi = (ad.ritardi || []).map(x => ({
+        ...x,
+        tipo: 'ritardo',
+        label: 'Ingresso in Ritardo',
+        icon: 'ph-clock-countdown',
+        iconColor: '#ff9f0a',
+        iconBg: 'rgba(255,159,10,0.15)',
+        hoursStr: x.oraInizio ? `Entrata ore ${x.oraInizio}` : (x.numOre ? `${x.numOre}ª ora` : 'Ritardo breve')
+    }));
 
-            <div class="grid grid-cols-2 gap-4">
-                <div class="p-4 rounded-2xl bg-error/10 text-error border border-error/10">
-                    <div class="label-sm opacity-60 mb-1">Assenze</div>
-                    <div class="text-2xl font-bold">${ad.totaleAssenze}</div>
-                </div>
-                <div class="p-4 rounded-2xl bg-orange/10 text-orange border border-orange/10">
-                    <div class="label-sm opacity-60 mb-1">Ritardi/Uscite</div>
-                    <div class="text-2xl font-bold">${ad.totaleRitardi + ad.totaleUscite}</div>
-                </div>
-            </div>
+    const rawUscite = (ad.uscite || []).map(x => ({
+        ...x,
+        tipo: 'uscita',
+        label: 'Uscita Anticipata',
+        icon: 'ph-sign-out',
+        iconColor: '#2997ff',
+        iconBg: 'rgba(41,151,255,0.15)',
+        hoursStr: x.oraFine || x.oraInizio ? `Uscita ore ${x.oraFine || x.oraInizio}` : (x.numOre ? `${x.numOre}ª ora` : 'Uscita')
+    }));
 
-            <div class="flex flex-col gap-3 max-h-[300px] overflow-y-auto no-scrollbar">
-                ${all.map(a => `
-                    <div class="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low border border-white/40">
-                        <div class="w-10 h-10 rounded-full bg-${a.color}/10 flex items-center justify-center text-${a.color}">
-                            <span class="material-symbols-outlined text-[20px]">${a.icon}</span>
-                        </div>
-                        <div class="flex-1">
-                            <div class="font-bold text-sm">${new Date(a.data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</div>
-                            <div class="text-[11px] text-on-surface-variant/60 uppercase font-bold">${a.tipo || 'Evento'}</div>
-                        </div>
-                        <div class="text-right">
-                             <div class="label-sm ${a.giustificata ? 'text-green' : 'text-error'}">${a.giustificata ? 'OK' : 'DA GIUST.'}</div>
-                        </div>
+    const rawNote = (ad.note || []).map(x => ({
+        ...x,
+        tipo: 'nota',
+        label: 'Nota Disciplinare',
+        icon: 'ph-warning',
+        iconColor: '#bf5af2',
+        iconBg: 'rgba(191,90,242,0.15)',
+        hoursStr: x.autore || 'Docente',
+        giustificata: true
+    }));
+
+    const all = [...rawAssenze, ...rawRitardi, ...rawUscite, ...rawNote];
+    all.sort((a, b) => {
+        const da = a.data ? new Date(a.data) : new Date(0);
+        const db = b.data ? new Date(b.data) : new Date(0);
+        return db - da;
+    });
+
+    const daGiustificareList = all.filter(a => a.tipo !== 'nota' && (!a.giustificata || a.daGiustificare));
+    const giustificateList = all.filter(a => a.giustificata && !a.daGiustificare);
+    
+    const countDaGiustificare = daGiustificareList.length;
+    const countGiustificate = giustificateList.length;
+    const oreTotali = typeof ad.oreAssenzaTotali === 'number' && ad.oreAssenzaTotali > 0
+        ? ad.oreAssenzaTotali
+        : (rawAssenze.length * 5 + rawRitardi.length * 1 + rawUscite.length * 2);
+
+    window._assenzeFilter = 'tutte';
+
+    window.filterAssenzeView = function(filterType) {
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('selection');
+        window._assenzeFilter = filterType;
+        
+        // Update segmented control buttons
+        document.querySelectorAll('.assenze-tab-btn').forEach(btn => {
+            const isSelected = btn.getAttribute('data-filter') === filterType;
+            btn.style.background = isSelected ? '#2997ff' : 'transparent';
+            btn.style.color = isSelected ? '#ffffff' : 'rgba(255,255,255,0.6)';
+            btn.style.fontWeight = isSelected ? '700' : '600';
+            btn.style.boxShadow = isSelected ? '0 2px 8px rgba(41,151,255,0.4)' : 'none';
+        });
+
+        // Filter cards in list
+        document.querySelectorAll('.assenze-card-item').forEach(card => {
+            const isPending = card.getAttribute('data-pending') === 'true';
+            if (filterType === 'tutte') {
+                card.style.display = 'flex';
+            } else if (filterType === 'pending') {
+                card.style.display = isPending ? 'flex' : 'none';
+            } else if (filterType === 'justified') {
+                card.style.display = !isPending ? 'flex' : 'none';
+            }
+        });
+
+        // Show empty message if needed
+        const listEl = document.getElementById('assenze-items-list');
+        const emptyEl = document.getElementById('assenze-empty-msg');
+        if (listEl && emptyEl) {
+            const visibleCards = Array.from(listEl.querySelectorAll('.assenze-card-item')).filter(c => c.style.display !== 'none');
+            emptyEl.style.display = visibleCards.length === 0 ? 'block' : 'none';
+        }
+    };
+
+    const renderCardHtml = (a) => {
+        const isPending = a.tipo !== 'nota' && (!a.giustificata || a.daGiustificare);
+        const d = a.data ? new Date(a.data) : new Date();
+        const dateFormatted = !isNaN(d.getTime()) 
+            ? d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+            : (a.data || 'Data N/D');
+        const capitalizedDate = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+
+        const statusBadge = a.tipo === 'nota' 
+            ? `<span style="background:rgba(191,90,242,0.15);border:0.5px solid rgba(191,90,242,0.35);color:#bf5af2;font-size:11px;font-weight:700;padding:3px 8px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;"><i class="ph-fill ph-chat-circle-dots"></i> NOTA</span>`
+            : isPending
+            ? `<span style="background:rgba(255,69,58,0.18);border:0.5px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11px;font-weight:700;padding:3px 8px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;"><i class="ph-fill ph-warning-circle"></i> DA GIUSTIFICARE</span>`
+            : `<span style="background:rgba(48,209,88,0.15);border:0.5px solid rgba(48,209,88,0.35);color:#30d158;font-size:11px;font-weight:700;padding:3px 8px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;"><i class="ph-fill ph-check-circle"></i> GIUSTIFICATA</span>`;
+
+        return `
+        <div class="assenze-card-item" data-pending="${isPending}" style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.1);border-top:1px solid rgba(255,255,255,0.18);border-radius:20px;transition:all 0.2s ease;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:12px;background:${a.iconBg};display:flex;align-items:center;justify-content:center;color:${a.iconColor};flex-shrink:0;">
+                        <i class="ph-fill ${a.icon}" style="font-size:18px;"></i>
                     </div>
-                `).join('')}
+                    <div>
+                        <h4 style="font-size:14px;font-weight:700;color:#ffffff;margin:0 0 2px;">${escapeHtml(a.label)}</h4>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.55);font-weight:500;">${capitalizedDate} · ${escapeHtml(a.hoursStr)}</span>
+                    </div>
+                </div>
+                <div>
+                    ${statusBadge}
+                </div>
+            </div>
+            ${(a.nota || a.testo || a.motivo) ? `
+            <div style="padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,0.75);line-height:1.4;margin-top:2px;">
+                "${escapeHtml(a.nota || a.testo || a.motivo)}"
+            </div>` : ''}
+        </div>`;
+    };
+
+    const sheetHtml = `
+        <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:16px;">
+            
+            <!-- Summary Metrics Cards (3 Colonne) -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                <!-- Da Giustificare -->
+                <div style="padding:12px 8px;background:${countDaGiustificare > 0 ? 'rgba(255,69,58,0.15)' : 'rgba(255,255,255,0.05)'};border:0.5px solid ${countDaGiustificare > 0 ? 'rgba(255,69,58,0.35)' : 'rgba(255,255,255,0.1)'};border-radius:18px;text-align:center;">
+                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:${countDaGiustificare > 0 ? '#ff453a' : 'rgba(255,255,255,0.5)'};display:block;margin-bottom:4px;letter-spacing:0.04em;">Da Giustif.</span>
+                    <span style="font-size:22px;font-weight:800;color:${countDaGiustificare > 0 ? '#ff453a' : '#ffffff'};line-height:1;">${countDaGiustificare}</span>
+                </div>
+                <!-- Giustificate -->
+                <div style="padding:12px 8px;background:rgba(48,209,88,0.12);border:0.5px solid rgba(48,209,88,0.28);border-radius:18px;text-align:center;">
+                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#30d158;display:block;margin-bottom:4px;letter-spacing:0.04em;">Giustificate</span>
+                    <span style="font-size:22px;font-weight:800;color:#30d158;line-height:1;">${countGiustificate}</span>
+                </div>
+                <!-- Ore Assenza Totali -->
+                <div style="padding:12px 8px;background:rgba(41,151,255,0.12);border:0.5px solid rgba(41,151,255,0.28);border-radius:18px;text-align:center;">
+                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#2997ff;display:block;margin-bottom:4px;letter-spacing:0.04em;">Ore Totali</span>
+                    <span style="font-size:22px;font-weight:800;color:#2997ff;line-height:1;">${typeof oreTotali === 'number' ? oreTotali.toFixed(0) + 'h' : oreTotali}</span>
+                </div>
             </div>
 
-            <button class="btn btn-primary w-full" onclick="closeModal()">Chiudi</button>
+            <!-- Apple Segmented Control Filter -->
+            <div style="display:flex;background:rgba(255,255,255,0.06);padding:3px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.1);">
+                <button class="assenze-tab-btn" data-filter="tutte" onclick="window.filterAssenzeView('tutte')" style="flex:1;padding:8px 4px;border-radius:11px;border:none;background:#2997ff;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s ease;box-shadow:0 2px 8px rgba(41,151,255,0.4);">
+                    Tutte (${all.length})
+                </button>
+                <button class="assenze-tab-btn" data-filter="pending" onclick="window.filterAssenzeView('pending')" style="flex:1;padding:8px 4px;border-radius:11px;border:none;background:transparent;color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">
+                    Da Giustif. (${countDaGiustificare})
+                </button>
+                <button class="assenze-tab-btn" data-filter="justified" onclick="window.filterAssenzeView('justified')" style="flex:1;padding:8px 4px;border-radius:11px;border:none;background:transparent;color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">
+                    Giustificate (${countGiustificate})
+                </button>
+            </div>
+
+            <!-- List of Items -->
+            <div id="assenze-items-list" style="display:flex;flex-direction:column;gap:10px;max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px;">
+                ${all.length > 0 ? all.map(renderCardHtml).join('') : ''}
+            </div>
+
+            <!-- Empty State -->
+            <div id="assenze-empty-msg" style="display:${all.length === 0 ? 'block' : 'none'};text-align:center;padding:32px 16px;color:rgba(255,255,255,0.5);font-size:14px;font-style:italic;">
+                Nessun evento o assenza da visualizzare in questa categoria.
+            </div>
+
         </div>
-    `);
+    `;
+
+    if (typeof window.openBottomSheet === 'function') {
+        window.openBottomSheet({
+            title: 'Registro Presenze & Assenze',
+            html: sheetHtml
+        });
+    }
 }
 window.mostraAssenzeModal = mostraAssenzeModal;
 
