@@ -1275,17 +1275,18 @@ function normalizeClassUi(cls) {
     if (!cls) return null;
     const txt = String(cls).toUpperCase().trim();
 
-    // Estrai numero + sezione base (es. "5E")
-    const baseMatch = txt.match(/\b([1-5])\s*([A-Z]{1,2})\b/);
-    if (!baseMatch) return null;
+    // Canonical Italian class format: Year (1-5) + Section (A-Z), e.g. "4D", "5A"
+    const baseMatch = txt.match(/\b([1-5])[\^°]?\s*([A-Z]{1,2})\b/);
+    if (baseMatch) {
+        return (baseMatch[1] + baseMatch[2]).toUpperCase();
+    }
 
-    const base = baseMatch[1] + baseMatch[2]; // "5E"
+    const fallbackMatch = txt.match(/([1-5])\s*([A-Z]{1,2})/);
+    if (fallbackMatch) {
+        return (fallbackMatch[1] + fallbackMatch[2]).toUpperCase();
+    }
 
-    // Estrai indirizzo se presente (es. "SA", "SU", "LS")
-    const indirizzoMatch = txt.match(/\(([A-Z]{2,4})\)|\b(SA|SU|LS|LC|LL|LA|LM|AFM|ITI|CAT)\b/i);
-    const indirizzo = indirizzoMatch ? (indirizzoMatch[1] || indirizzoMatch[2]).toUpperCase() : null;
-
-    return indirizzo ? `${base} ${indirizzo}` : base; // "5E SA" o "5E"
+    return txt.length <= 10 ? txt : null;
 }
 function isValidClass(cls) {
     if (!cls) return false;
@@ -7936,14 +7937,14 @@ window._classRealtimeChannel = null;
 window._classRealtimeSubscribedClass = null;
 window._isFetchingClassData = false;
 
-// Silent fetch: updates localStorage only, never re-opens the notification modal
 window._fetchClassDataSilent = async function(className) {
     const targetClass = className || getEffectiveUserClass();
     if (!targetClass) return;
     if (window._isFetchingClassDataSilent) return;
     window._isFetchingClassDataSilent = true;
     try {
-        const res = await fetch(`${API_BASE_URL}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
+        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
         const json = await res.json();
         if (json && json.success) {
             if (Array.isArray(json.representatives)) {
@@ -7967,7 +7968,8 @@ window.fetchRemoteClassData = async function(className, forceRender = false) {
     window._isFetchingClassData = true;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
+        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
         const json = await res.json();
         if (json && json.success) {
             if (Array.isArray(json.representatives)) {
@@ -8081,7 +8083,8 @@ window.toggleClassRepresentative = async function(enable) {
 
     // Sync with remote database and handle backend limit validation
     try {
-        const res = await fetch(`${API_BASE_URL}/api/class-representative`, {
+        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        const res = await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -8582,20 +8585,32 @@ window.submitClassProposal = async function(proposalData) {
 
     // Sync in background with backend
     try {
-        const res = await fetch(`${API_BASE_URL}/api/class-representative`, {
+        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        const res = await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'create_proposal',
                 ...proposalData,
-                authorId,
-                authorName
+                class: userClass,
+                authorId: userId,
+                authorName: userName
             })
         });
         const json = await res.json();
         if (json && json.success && json.proposal) {
-            // Realtime subscription will handle the sync automatically.
-            // Only fetch silently to ensure local cache is fresh.
+            // Replace temporary optimistic proposal with real persisted database proposal
+            const current = getStoredClassProposals(userClass);
+            const idx = current.findIndex(p => p.id === newProp.id);
+            if (idx >= 0) {
+                current[idx] = json.proposal;
+            } else if (!current.some(p => p.id === json.proposal.id)) {
+                current.unshift(json.proposal);
+            }
+            saveStoredClassProposals(userClass, current);
+            if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
+                window.openTodayNotifications();
+            }
             window._fetchClassDataSilent(userClass);
         }
     } catch (e) {
@@ -8647,7 +8662,8 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
 
     // Sync in background with backend
     try {
-        await fetch(`${API_BASE_URL}/api/class-representative`, {
+        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -8690,7 +8706,8 @@ window.manageClassProposal = async function(proposalId, newStatus) {
 
     // Sync in background with backend
     try {
-        await fetch(`${API_BASE_URL}/api/class-representative`, {
+        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+        await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

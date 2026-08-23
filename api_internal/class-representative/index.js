@@ -11,8 +11,9 @@ module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
 
     const supabase = getSupabase();
-    const action = req.query.action || (req.body && req.body.action) || 'get';
-    const rawClass = req.query.class || (req.body && req.body.class) || '';
+    const body = getRequestBody(req);
+    const action = req.query.action || body.action || (req.method === 'POST' ? 'get' : 'get');
+    const rawClass = req.query.class || body.class || '';
     const className = String(rawClass).trim().toUpperCase();
 
     // ── 1. GET REPRESENTATIVES & PROPOSALS ───────────────────────────────────
