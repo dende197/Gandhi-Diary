@@ -8001,7 +8001,9 @@ window.setupClassRealtimeSubscription = async function() {
     if (window._classRealtimeSubscribedClass === userClass && window._classRealtimeChannel) return;
 
     try {
-        const client = typeof getSupabaseClient === 'function' ? await getSupabaseClient() : null;
+        const client = typeof getSupabaseClient === 'function' 
+            ? await getSupabaseClient() 
+            : (typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null);
         if (!client) return;
 
         if (window._classRealtimeChannel) {

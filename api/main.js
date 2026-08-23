@@ -9,8 +9,8 @@ module.exports = async function handler(req, res) {
         // Public config endpoint: avoid proxy/browser persistence of env-derived values.
         res.setHeader('Cache-Control', 'no-store, max-age=0');
         return res.json({
-            supabaseUrl: process.env.SUPABASE_URL || '',
-            supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ''
+            supabaseUrl: process.env.SUPABASE_URL || 'https://mlcutgkfunbpmrnbeznd.supabase.co',
+            supabaseAnonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sY3V0Z2tmdW5icG1ybmJlem5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTg2NDgsImV4cCI6MjA4NDc3NDY0OH0.eWR7PxNsJjSGAM1WoaNseVkeQDpEqaUvO8xvXoDKLQg'
         });
     }
     

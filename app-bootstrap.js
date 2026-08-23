@@ -42,15 +42,24 @@
         async function getSupabaseClient() {
             if (supabaseClient) return supabaseClient;
             try {
-                const cfg = await fetch(`${API_BASE_URL}/api/config`).then(r => r.json());
-                if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
-                    supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+                let sbUrl = '';
+                let sbKey = '';
+                try {
+                    const cfg = await fetch(`${API_BASE_URL}/api/config`).then(r => r.json());
+                    sbUrl = cfg.supabaseUrl;
+                    sbKey = cfg.supabaseAnonKey;
+                } catch (_) {}
+                sbUrl = sbUrl || 'https://mlcutgkfunbpmrnbeznd.supabase.co';
+                sbKey = sbKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sY3V0Z2tmdW5icG1ybmJlem5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTg2NDgsImV4cCI6MjA4NDc3NDY0OH0.eWR7PxNsJjSGAM1WoaNseVkeQDpEqaUvO8xvXoDKLQg';
+                if (window.supabase && typeof window.supabase.createClient === 'function') {
+                    supabaseClient = window.supabase.createClient(sbUrl, sbKey);
                 }
             } catch (e) {
                 console.warn('[Config] Could not load Supabase config:', e.message);
             }
             return supabaseClient;
         }
+        window.getSupabaseClient = getSupabaseClient;
 
         // Global Variable Shims for ui.js
         let calendarState = { weekOffset: 0 };
@@ -677,6 +686,15 @@
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
                     
+                    // Sync remote class data & initialize realtime listeners
+                    if (typeof window.setupClassRealtimeSubscription === 'function') {
+                        window.setupClassRealtimeSubscription();
+                    }
+                    if (typeof window.fetchRemoteClassData === 'function') {
+                        const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : (state.user?.class || '');
+                        if (effClass) window.fetchRemoteClassData(effClass, false);
+                    }
+                    
                     const nextAccessToken = String(data?.new_tokens?.accessToken || '').trim();
                     const nextAuthToken = String(data?.new_tokens?.authToken || '').trim();
                     if (nextAccessToken && nextAuthToken) {
@@ -1099,6 +1117,13 @@
                             if (typeof window.warmWeeklyAgendaCache === 'function') {
                                 setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
                             }
+                            if (typeof window.setupClassRealtimeSubscription === 'function') {
+                                window.setupClassRealtimeSubscription();
+                            }
+                            if (typeof window.fetchRemoteClassData === 'function') {
+                                const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : (state.user?.class || '');
+                                if (effClass) window.fetchRemoteClassData(effClass, false);
+                            }
                         })
                         .catch((e) => {
                             console.warn('Background sync failed:', e);
@@ -1467,6 +1492,13 @@
             alert(`✅ Benvenuto ${state.user.name}!`);
             window._bootRenderedOnce = false;
             state._animateOnNextRender = true;
+            if (typeof window.setupClassRealtimeSubscription === 'function') {
+                window.setupClassRealtimeSubscription();
+            }
+            if (typeof window.fetchRemoteClassData === 'function') {
+                const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : (state.user?.class || '');
+                if (effClass) window.fetchRemoteClassData(effClass, false);
+            }
             navigate('home');
             // navigate() already triggers a render — no extra scheduleRender needed
         }
