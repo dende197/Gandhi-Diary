@@ -2500,6 +2500,14 @@ function openTodayNotifications() {
     });
 
     const effClass = getEffectiveUserClass();
+    if (effClass) {
+        if (typeof window.setupClassRealtimeSubscription === 'function') {
+            window.setupClassRealtimeSubscription();
+        }
+        if (typeof window.fetchRemoteClassData === 'function') {
+            window.fetchRemoteClassData(effClass, false);
+        }
+    }
     const isRep = isCurrentUserRepresentative();
     const userId = String(state.user?.id || 'utente');
     const classProposals = effClass ? getStoredClassProposals(effClass) : [];
@@ -7857,7 +7865,8 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CLASS REPRESENTATIVE & PROPOSALS SYSTEM (Apple HIG & Liquid Glass)
+// ══════════════════════════════════════════════════════════════════════════════
+// CLASS REPRESENTATIVE & PROPOSALS SYSTEM (Supabase Realtime & Backend Sync)
 // ══════════════════════════════════════════════════════════════════════════════
 
 function getEffectiveUserClass() {
@@ -7911,6 +7920,82 @@ function isCurrentUserRepresentative() {
     return reps.some(r => String(r.userId || r.user_id) === userId);
 }
 
+// ── Remote Database Fetching & Realtime Synchronization ──
+window._classRealtimeChannel = null;
+window._classRealtimeSubscribedClass = null;
+window._isFetchingClassData = false;
+
+window.fetchRemoteClassData = async function(className, forceRender = false) {
+    const targetClass = className || getEffectiveUserClass();
+    if (!targetClass) return;
+    if (window._isFetchingClassData) return;
+    window._isFetchingClassData = true;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
+        const json = await res.json();
+        if (json && json.success) {
+            if (Array.isArray(json.representatives)) {
+                saveStoredClassRepresentatives(targetClass, json.representatives);
+            }
+            if (Array.isArray(json.proposals)) {
+                saveStoredClassProposals(targetClass, json.proposals);
+            }
+            if (forceRender || document.getElementById('today-notif-overlay')) {
+                state._forceRender = true;
+                scheduleRender(0);
+                if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
+                    // Refresh notifications modal without closing
+                    const currentScroll = document.getElementById('today-notif-overlay')?.scrollTop || 0;
+                    window.openTodayNotifications();
+                    const updated = document.getElementById('today-notif-overlay');
+                    if (updated && currentScroll > 0) updated.scrollTop = currentScroll;
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('[ClassDataSync] Remote fetch failed:', err.message);
+    } finally {
+        window._isFetchingClassData = false;
+    }
+};
+
+window.setupClassRealtimeSubscription = async function() {
+    const userClass = getEffectiveUserClass();
+    if (!userClass) return;
+    if (window._classRealtimeSubscribedClass === userClass && window._classRealtimeChannel) return;
+
+    try {
+        const client = typeof getSupabaseClient === 'function' ? await getSupabaseClient() : null;
+        if (!client) return;
+
+        if (window._classRealtimeChannel) {
+            try { client.removeChannel(window._classRealtimeChannel); } catch (_) {}
+            window._classRealtimeChannel = null;
+        }
+
+        window._classRealtimeSubscribedClass = userClass;
+        window._classRealtimeChannel = client
+            .channel('realtime:class:' + userClass)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals', filter: `class_id=eq.${userClass}` }, () => {
+                window.fetchRemoteClassData(userClass, true);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, () => {
+                window.fetchRemoteClassData(userClass, true);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'class_representatives', filter: `class=eq.${userClass}` }, () => {
+                window.fetchRemoteClassData(userClass, true);
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log(`[Supabase Realtime] Connected to class room: ${userClass}`);
+                }
+            });
+    } catch (e) {
+        console.warn('[ClassRealtime] Subscription error:', e.message);
+    }
+};
+
 window.toggleClassRepresentative = async function(enable) {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
 
@@ -7954,9 +8039,9 @@ window.toggleClassRepresentative = async function(enable) {
         showToast('Ruolo Rappresentante disattivato', 'info');
     }
 
-    // Sync in background with backend
+    // Sync with remote database and handle backend limit validation
     try {
-        fetch(`${API_BASE_URL}/api/class-representative`, {
+        const res = await fetch(`${API_BASE_URL}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -7966,8 +8051,19 @@ window.toggleClassRepresentative = async function(enable) {
                 userName,
                 enable
             })
-        }).catch(() => {});
-    } catch (e) {}
+        });
+        const json = await res.json();
+        if (json.limitReached) {
+            if (typeof window.triggerHaptic === 'function') window.triggerHaptic('error');
+            alert(json.error || "Limite massimo raggiunto (2/2 Rappresentanti attivi per questa classe).");
+            const reverted = currentReps.filter(r => String(r.userId || r.user_id) !== userId);
+            saveStoredClassRepresentatives(userClass, reverted);
+        } else if (json.success && Array.isArray(json.representatives)) {
+            saveStoredClassRepresentatives(userClass, json.representatives);
+        }
+    } catch (e) {
+        console.warn('[ClassRep] Sync error:', e.message);
+    }
 
     state._forceRender = true;
     scheduleRender(0);
@@ -8406,7 +8502,7 @@ window.openRescheduleExamModal = function() {
     };
 };
 
-window.submitClassProposal = function(proposalData) {
+window.submitClassProposal = async function(proposalData) {
     const userClass = proposalData.class || getEffectiveUserClass();
     const userId = String(state.user?.id || 'utente');
     const userName = state.user?.name || 'Studente';
@@ -8415,6 +8511,7 @@ window.submitClassProposal = function(proposalData) {
         id: 'prop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
         type: proposalData.type,
         class: userClass,
+        class_id: userClass,
         subject: proposalData.subject || null,
         originalDate: proposalData.originalDate || null,
         targetDate: proposalData.targetDate,
@@ -8435,9 +8532,12 @@ window.submitClassProposal = function(proposalData) {
     currentProps.unshift(newProp);
     saveStoredClassProposals(userClass, currentProps);
 
-    // Sync in background
+    state._forceRender = true;
+    scheduleRender(0);
+
+    // Sync in background with backend
     try {
-        fetch(`${API_BASE_URL}/api/class-representative`, {
+        const res = await fetch(`${API_BASE_URL}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -8446,18 +8546,22 @@ window.submitClassProposal = function(proposalData) {
                 authorId,
                 authorName
             })
-        }).catch(() => {});
-    } catch (e) {}
-
-    state._forceRender = true;
-    scheduleRender(0);
+        });
+        const json = await res.json();
+        if (json && json.success && json.proposal) {
+            window.fetchRemoteClassData(userClass, true);
+        }
+    } catch (e) {
+        console.warn('[ClassProposal] Create sync failed:', e.message);
+    }
 };
 
-window.voteClassProposal = function(proposalId, voteType, alternativeDate, note) {
+window.voteClassProposal = async function(proposalId, voteType, alternativeDate, note) {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
 
     const userClass = getEffectiveUserClass();
     const userId = String(state.user?.id || 'utente');
+    const userName = state.user?.name || 'Studente';
     const currentProps = getStoredClassProposals(userClass);
     const prop = currentProps.find(p => p.id === proposalId);
     if (!prop) return;
@@ -8488,9 +8592,14 @@ window.voteClassProposal = function(proposalId, voteType, alternativeDate, note)
 
     saveStoredClassProposals(userClass, currentProps);
 
-    // Sync in background
+    // Refresh notifications panel if open
+    if (document.getElementById('today-notif-overlay')) {
+        openTodayNotifications();
+    }
+
+    // Sync in background with backend
     try {
-        fetch(`${API_BASE_URL}/api/class-representative`, {
+        await fetch(`${API_BASE_URL}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -8498,20 +8607,19 @@ window.voteClassProposal = function(proposalId, voteType, alternativeDate, note)
                 class: userClass,
                 proposalId,
                 userId,
+                userName,
                 voteType,
                 alternativeDate,
                 note
             })
-        }).catch(() => {});
-    } catch (e) {}
-
-    // Refresh notifications panel if open
-    if (document.getElementById('today-notif-overlay')) {
-        openTodayNotifications();
+        });
+        window.fetchRemoteClassData(userClass, true);
+    } catch (e) {
+        console.warn('[ClassProposal] Vote sync failed:', e.message);
     }
 };
 
-window.manageClassProposal = function(proposalId, newStatus) {
+window.manageClassProposal = async function(proposalId, newStatus) {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
 
     const userClass = getEffectiveUserClass();
@@ -8525,9 +8633,14 @@ window.manageClassProposal = function(proposalId, newStatus) {
 
     showToast(newStatus === 'approved' ? 'Proposta approvata ufficialmente!' : 'Proposta archiviata', 'success');
 
-    // Sync in background
+    // Refresh notifications panel if open
+    if (document.getElementById('today-notif-overlay')) {
+        openTodayNotifications();
+    }
+
+    // Sync in background with backend
     try {
-        fetch(`${API_BASE_URL}/api/class-representative`, {
+        await fetch(`${API_BASE_URL}/api/class-representative`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -8536,12 +8649,10 @@ window.manageClassProposal = function(proposalId, newStatus) {
                 proposalId,
                 status: prop.status
             })
-        }).catch(() => {});
-    } catch (e) {}
-
-    // Refresh notifications panel if open
-    if (document.getElementById('today-notif-overlay')) {
-        openTodayNotifications();
+        });
+        window.fetchRemoteClassData(userClass, true);
+    } catch (e) {
+        console.warn('[ClassProposal] Manage sync failed:', e.message);
     }
 };
 

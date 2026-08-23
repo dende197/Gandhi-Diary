@@ -102,6 +102,14 @@
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
                 localStorage.removeItem('argo_password');
+                localStorage.removeItem('gc_user_class_override');
+                try {
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('gc_class_') || k.startsWith('gc_cached_')) {
+                            localStorage.removeItem(k);
+                        }
+                    });
+                } catch (_) {}
                 console.log("Session cleared");
             }
         };
