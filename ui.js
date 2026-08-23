@@ -2499,7 +2499,12 @@ function openTodayNotifications() {
         return d && getLocalDateString(d) === todayISO;
     });
 
-    const totalItems = todayTasks.length + todayVoti.length + todayVerifiche.length + todayPromemoria.length + todayClassAct.length;
+    const effClass = getEffectiveUserClass();
+    const isRep = isCurrentUserRepresentative();
+    const userId = String(state.user?.id || 'utente');
+    const classProposals = effClass ? getStoredClassProposals(effClass) : [];
+
+    const totalItems = todayTasks.length + todayVoti.length + todayVerifiche.length + todayPromemoria.length + todayClassAct.length + classProposals.length;
 
     // Build sections HTML
     function sectionBlock(icon, title, items) {
@@ -2514,6 +2519,85 @@ function openTodayNotifications() {
             ${items.join('')}
         </div>`;
     }
+
+    const proposalItems = classProposals.map(prop => {
+        const isAssembly = prop.type === 'assembly';
+        const title = isAssembly ? 'Richiesta Assemblea di Classe' : `Sposta Verifica: ${escapeHtml(prop.subject || 'Verifica')}`;
+        const icon = isAssembly ? 'groups' : 'event_repeat';
+        const iconBg = isAssembly ? 'rgba(48,209,88,0.15)' : 'rgba(255,159,10,0.15)';
+        const iconColor = isAssembly ? '#30d158' : '#ff9f0a';
+        const borderColor = isAssembly ? 'rgba(48,209,88,0.3)' : 'rgba(255,159,10,0.3)';
+        
+        const acceptVotes = Array.isArray(prop.votes?.accept) ? prop.votes.accept : [];
+        const declineVotes = Array.isArray(prop.votes?.decline) ? prop.votes.decline : [];
+        const altVotes = Array.isArray(prop.votes?.alternatives) ? prop.votes.alternatives : [];
+
+        const hasAccepted = acceptVotes.includes(userId);
+        const hasDeclined = declineVotes.includes(userId);
+        const hasAlt = altVotes.some(a => a.userId === userId);
+
+        const statusBadge = prop.status === 'approved' 
+            ? '<span style="background:rgba(48,209,88,0.2);color:#30d158;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(48,209,88,0.4);">APPROVATA</span>'
+            : prop.status === 'rejected'
+            ? '<span style="background:rgba(255,69,58,0.2);color:#ff453a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,69,58,0.4);">RIFIUTATA</span>'
+            : '<span style="background:rgba(41,151,255,0.2);color:#2997ff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(41,151,255,0.4);">IN VOTAZIONE</span>';
+
+        return `
+        <div style="background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;padding:16px 18px;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:38px;height:38px;border-radius:12px;background:${iconBg};border:1px solid ${borderColor};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span>
+                    </div>
+                    <div>
+                        <div style="font-size:15px;font-weight:700;color:#ffffff;line-height:1.2;">${title}</div>
+                        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:2px;">
+                            ${isAssembly ? `Proposta per: <strong>${prop.targetDate}</strong> (${prop.duration || '2 ore'})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong>${prop.targetDate}</strong>`}
+                        </div>
+                    </div>
+                </div>
+                <div>${statusBadge}</div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Motivazione (${escapeHtml(prop.authorName || 'Compagno')})</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.9);line-height:1.4;">${escapeHtml(prop.reason)}</div>
+            </div>
+
+            <!-- Voti & Tally -->
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:0 2px;">
+                <span>Voti: <strong style="color:#30d158;">${acceptVotes.length}</strong> Favorevoli · <strong style="color:#ff453a;">${declineVotes.length}</strong> Contrari</span>
+                ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:600;">${altVotes.length} date alternative</span>` : ''}
+            </div>
+
+            <!-- Action Buttons for Classmates -->
+            ${prop.status === 'pending' ? `
+            <div style="display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px;padding-top:4px;">
+                <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:44px;border-radius:12px;border:none;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.15)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(48,209,88,0.3);">
+                    <i class="ph-bold ph-check text-[14px]"></i> Accetta
+                </button>
+                <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:44px;border-radius:12px;border:none;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.15)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(255,69,58,0.3);">
+                    <i class="ph-bold ph-x text-[14px]"></i> Rifiuta
+                </button>
+                <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:44px;border-radius:12px;border:none;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.15)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid rgba(255,159,10,0.3);">
+                    <i class="ph-bold ph-calendar text-[13px]"></i> Altra Data
+                </button>
+            </div>
+            ` : ''}
+
+            <!-- Representative Management Panel -->
+            ${isRep && prop.status === 'pending' ? `
+            <div style="margin-top:6px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:11px;font-weight:700;color:#2997ff;text-transform:uppercase;letter-spacing:0.05em;">Gestione Rappresentante</span>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="min-height:36px;padding:6px 12px;border-radius:10px;background:#30d158;border:none;color:#ffffff;font-size:11px;font-weight:700;cursor:pointer;">Approva</button>
+                    <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="min-height:36px;padding:6px 12px;border-radius:10px;background:rgba(255,69,58,0.2);border:1px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11px;font-weight:700;cursor:pointer;">Archivia</button>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+        `;
+    });
 
     const votiItems = todayVoti.map(v => {
         const val = v.valore || v.voto || v.value || '';
@@ -2564,6 +2648,7 @@ function openTodayNotifications() {
     });
 
     const sectionsHtml =
+        sectionBlock('groups', 'Proposte e Assemblee di Classe', proposalItems) +
         sectionBlock('grade', 'Nuovi Voti', votiItems) +
         sectionBlock('warning', 'Verifiche Oggi', verificheItems) +
         sectionBlock('assignment', 'Compiti', taskItems) +
@@ -7772,18 +7857,538 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// CLASS REPRESENTATIVE & PROPOSALS SYSTEM (Apple HIG & Liquid Glass)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function getEffectiveUserClass() {
+    const rawClass = state.user?.class || state.userData?.class || localStorage.getItem('gc_user_class_override') || '';
+    const norm = (typeof normalizeClassUi === 'function') ? normalizeClassUi(rawClass) : rawClass;
+    return (norm && norm !== 'N/D' && norm !== 'Studente') ? norm.trim().toUpperCase() : '';
+}
+
+function getClassRepresentativeStorageKey(className) {
+    return 'gc_class_reps_' + (className || 'DEFAULT').toUpperCase();
+}
+
+function getClassProposalsStorageKey(className) {
+    return 'gc_class_proposals_' + (className || 'DEFAULT').toUpperCase();
+}
+
+function getStoredClassRepresentatives(className) {
+    const key = getClassRepresentativeStorageKey(className);
+    try {
+        const data = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(data) ? data : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveStoredClassRepresentatives(className, reps) {
+    const key = getClassRepresentativeStorageKey(className);
+    localStorage.setItem(key, JSON.stringify(reps || []));
+}
+
+function getStoredClassProposals(className) {
+    const key = getClassProposalsStorageKey(className);
+    try {
+        const data = JSON.parse(localStorage.getItem(key));
+        if (Array.isArray(data)) return data;
+    } catch (e) {}
+    return [];
+}
+
+function saveStoredClassProposals(className, props) {
+    const key = getClassProposalsStorageKey(className);
+    localStorage.setItem(key, JSON.stringify(props || []));
+}
+
+function isCurrentUserRepresentative() {
+    const userClass = getEffectiveUserClass();
+    if (!userClass) return false;
+    const userId = String(state.user?.id || 'utente');
+    const reps = getStoredClassRepresentatives(userClass);
+    return reps.some(r => String(r.userId || r.user_id) === userId);
+}
+
+window.toggleClassRepresentative = async function(enable) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    let userClass = getEffectiveUserClass();
+    if (!userClass) {
+        window.promptSetUserClass((enteredClass) => {
+            if (enteredClass) {
+                window.toggleClassRepresentative(enable);
+            }
+        });
+        return;
+    }
+
+    const userId = String(state.user?.id || 'utente');
+    const userName = state.user?.name || 'Studente';
+    const currentReps = getStoredClassRepresentatives(userClass);
+
+    if (enable) {
+        const isAlreadyRep = currentReps.some(r => String(r.userId || r.user_id) === userId);
+        if (!isAlreadyRep) {
+            // Rule: Maximum 2 active representatives per class
+            if (currentReps.length >= 2) {
+                if (typeof window.triggerHaptic === 'function') window.triggerHaptic('error');
+                alert("Limite massimo raggiunto (2/2 Rappresentanti attivi per questa classe). Uno dei rappresentanti attuali deve prima disattivare il proprio ruolo.");
+                state._forceRender = true;
+                scheduleRender(0);
+                return;
+            }
+            currentReps.push({
+                userId,
+                name: userName,
+                class: userClass,
+                updatedAt: new Date().toISOString()
+            });
+            saveStoredClassRepresentatives(userClass, currentReps);
+            showToast('Ruolo Rappresentante di Classe attivato!', 'success');
+        }
+    } else {
+        const updated = currentReps.filter(r => String(r.userId || r.user_id) !== userId);
+        saveStoredClassRepresentatives(userClass, updated);
+        showToast('Ruolo Rappresentante disattivato', 'info');
+    }
+
+    // Sync in background with backend
+    try {
+        fetch(`${API_BASE_URL}/api/class-representative`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'set_representative',
+                class: userClass,
+                userId,
+                userName,
+                enable
+            })
+        }).catch(() => {});
+    } catch (e) {}
+
+    state._forceRender = true;
+    scheduleRender(0);
+};
+
+window.promptSetUserClass = function(callback) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'set-class-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity 0.2s ease;';
+
+    const currentCls = getEffectiveUserClass();
+
+    overlay.innerHTML = `
+    <div style="width:100%;max-width:380px;background:rgba(20,31,54,0.88);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border:0.5px solid rgba(255,255,255,0.15);border-top:1px solid rgba(255,255,255,0.25);border-radius:28px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:38px;height:38px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;">
+                    <i class="ph-fill ph-graduation-cap text-[20px]"></i>
+                </div>
+                <h3 style="font-size:18px;font-weight:700;color:#ffffff;margin:0;">Seleziona Classe</h3>
+            </div>
+            <button onclick="document.getElementById('set-class-modal-overlay')?.remove();" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+            </button>
+        </div>
+        <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.45;margin:0;">
+            Non siamo riusciti a rilevare automaticamente la tua sezione dal registro. Inserisci la tua classe (es. <strong>5A</strong>, <strong>3B</strong>, <strong>4INF</strong>) per attivare le funzioni di classe.
+        </p>
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Nome Classe / Sezione</label>
+            <input id="user-manual-class-input" type="text" placeholder="Es. 5A" value="${escapeHtml(currentCls)}" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:16px;font-weight:700;outline:none;box-sizing:border-box;text-transform:uppercase;" />
+        </div>
+        <div style="display:flex;gap:10px;margin-top:6px;">
+            <button onclick="document.getElementById('set-class-modal-overlay')?.remove();" style="flex:1;height:46px;border-radius:14px;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.8);font-size:14px;font-weight:600;cursor:pointer;">Annulla</button>
+            <button id="save-manual-class-btn" style="flex:1;height:46px;border-radius:14px;background:#2997ff;border:none;color:#ffffff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(41,151,255,0.4);">Salva</button>
+        </div>
+    </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+    document.getElementById('save-manual-class-btn').onclick = function() {
+        const inp = document.getElementById('user-manual-class-input');
+        const val = (inp?.value || '').trim().toUpperCase();
+        if (!val) {
+            alert('Inserisci una classe valida (es. 5A)');
+            return;
+        }
+        if (!state.user) state.user = {};
+        state.user.class = val;
+        localStorage.setItem('gc_user_class_override', val);
+        showToast(`Classe impostata: ${val}`, 'success');
+        overlay.remove();
+        if (typeof callback === 'function') callback(val);
+        state._forceRender = true;
+        scheduleRender(0);
+    };
+};
+
+window.openRequestAssemblyModal = function() {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    let userClass = getEffectiveUserClass();
+    if (!userClass) {
+        window.promptSetUserClass((cls) => {
+            if (cls) window.openRequestAssemblyModal();
+        });
+        return;
+    }
+
+    const defaultDate = state.selectedDate || getLocalDateString(new Date());
+
+    const overlay = document.createElement('div');
+    overlay.id = 'request-assembly-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.2s ease;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+    <div style="width:100%;max-width:440px;background:rgba(20,31,54,0.92);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
+        <div data-drag-handle style="display:flex;justify-content:center;padding:4px 0 8px;cursor:grab;">
+            <div style="width:40px;height:4px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:rgba(48,209,88,0.15);border:1px solid rgba(48,209,88,0.3);display:flex;align-items:center;justify-content:center;color:#30d158;">
+                    <i class="ph-fill ph-users-three text-[22px]"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:18px;font-weight:700;color:#ffffff;margin:0;">Richiedi Assemblea</h3>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:2px 0 0;">Classe ${escapeHtml(userClass)}</p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('request-assembly-modal')?.remove();" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+            </button>
+        </div>
+
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Data Proposta</label>
+            <input id="assembly-date-input" type="date" value="${defaultDate}" style="width:100%;height:48px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:15px;font-weight:600;outline:none;box-sizing:border-box;" />
+        </div>
+
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Durata / Ore Richieste</label>
+            <select id="assembly-duration-select" style="width:100%;height:48px;background:rgba(20,31,54,0.95);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:15px;font-weight:600;outline:none;box-sizing:border-box;">
+                <option value="1 ora (ultima ora)">1 ora (ultima ora)</option>
+                <option value="2 ore (ultime ore)" selected>2 ore (ultime ore)</option>
+                <option value="3 ore">3 ore</option>
+                <option value="Intera mattinata">Intera mattinata</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Ordine del Giorno / Motivazione</label>
+            <textarea id="assembly-reason-input" placeholder="Es. Discussione gita scolastica, problematiche orario, organizzazione eventi..." rows="3" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 14px;color:#ffffff;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;resize:none;line-height:1.4;"></textarea>
+        </div>
+
+        <button id="submit-assembly-btn" style="width:100%;height:50px;border-radius:16px;background:linear-gradient(180deg,#30d158 0%,#28b84d 100%);border:none;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(48,209,88,0.35);margin-top:4px;">
+            <i class="ph-bold ph-paper-plane-tilt text-[18px]"></i>
+            Invia Richiesta alla Classe
+        </button>
+    </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+    document.getElementById('submit-assembly-btn').onclick = function() {
+        const targetDate = document.getElementById('assembly-date-input')?.value;
+        const duration = document.getElementById('assembly-duration-select')?.value;
+        const reason = (document.getElementById('assembly-reason-input')?.value || '').trim();
+
+        if (!targetDate) { alert('Seleziona una data per l\'assemblea'); return; }
+        if (!reason) { alert('Inserisci l\'ordine del giorno o la motivazione'); return; }
+
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+        window.submitClassProposal({
+            type: 'assembly',
+            class: userClass,
+            targetDate,
+            duration,
+            reason
+        });
+
+        overlay.remove();
+        showToast('Richiesta assemblea inviata ai compagni e rappresentanti!', 'success');
+    };
+};
+
+window.openRescheduleExamModal = function() {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    let userClass = getEffectiveUserClass();
+    if (!userClass) {
+        window.promptSetUserClass((cls) => {
+            if (cls) window.openRescheduleExamModal();
+        });
+        return;
+    }
+
+    const defaultDate = state.selectedDate || getLocalDateString(new Date());
+
+    const upcomingVerifiche = (state.verifiche || []).concat(state.manualVerifiche || [])
+        .filter(v => (v.data || v.date || '') >= getLocalDateString(new Date()))
+        .map(v => ({
+            id: v.id,
+            subject: v.materia || v.subject || 'Verifica',
+            date: v.data || v.date || '',
+            desc: v.text || v.descrizione || v.args || ''
+        }));
+
+    const subjectOptions = upcomingVerifiche.map(v => 
+        `<option value="${escapeHtml(v.subject)}||${escapeHtml(v.date)}">${escapeHtml(v.subject)} (${v.date})</option>`
+    ).join('');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'reschedule-exam-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.2s ease;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+    <div style="width:100%;max-width:440px;background:rgba(20,31,54,0.92);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
+        <div data-drag-handle style="display:flex;justify-content:center;padding:4px 0 8px;cursor:grab;">
+            <div style="width:40px;height:4px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,159,10,0.15);border:1px solid rgba(255,159,10,0.3);display:flex;align-items:center;justify-content:center;color:#ff9f0a;">
+                    <i class="ph-fill ph-calendar-plus text-[22px]"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:18px;font-weight:700;color:#ffffff;margin:0;">Sposta Verifica</h3>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:2px 0 0;">Classe ${escapeHtml(userClass)}</p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('reschedule-exam-modal')?.remove();" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+            </button>
+        </div>
+
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Materia / Verifica da Spostare</label>
+            ${subjectOptions ? `
+            <select id="exam-select-picker" onchange="const p=this.value.split('||');if(p[1])document.getElementById('exam-orig-date-input').value=p[1];if(p[0])document.getElementById('exam-subject-input').value=p[0];" style="width:100%;height:48px;background:rgba(20,31,54,0.95);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:8px;">
+                <option value="">-- Seleziona Verifica Esistente --</option>
+                ${subjectOptions}
+                <option value="Altro||">Altra materia (inserimento manuale)</option>
+            </select>` : ''}
+            <input id="exam-subject-input" type="text" placeholder="Nome Materia (es. Matematica)" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:15px;font-weight:600;outline:none;box-sizing:border-box;" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+                <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Data Attuale</label>
+                <input id="exam-orig-date-input" type="date" value="${defaultDate}" style="width:100%;height:48px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 12px;color:#ffffff;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;" />
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Nuova Data</label>
+                <input id="exam-new-date-input" type="date" value="${defaultDate}" style="width:100%;height:48px;background:rgba(255,255,255,0.07);border:1px solid rgba(41,151,255,0.4);border-radius:14px;padding:0 12px;color:#2997ff;font-size:14px;font-weight:700;outline:none;box-sizing:border-box;" />
+            </div>
+        </div>
+
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Motivazione dello Spostamento</label>
+            <textarea id="exam-reason-input" placeholder="Es. Sovrapposizione con altra verifica, richiesta tempo per ripasso..." rows="3" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 14px;color:#ffffff;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;resize:none;line-height:1.4;"></textarea>
+        </div>
+
+        <button id="submit-reschedule-btn" style="width:100%;height:50px;border-radius:16px;background:linear-gradient(180deg,#ff9f0a 0%,#e08b00 100%);border:none;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,159,10,0.35);margin-top:4px;">
+            <i class="ph-bold ph-calendar-plus text-[18px]"></i>
+            Proponi Spostamento alla Classe
+        </button>
+    </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+    document.getElementById('submit-reschedule-btn').onclick = function() {
+        let subject = (document.getElementById('exam-subject-input')?.value || '').trim();
+        const pickerVal = document.getElementById('exam-select-picker')?.value;
+        if (!subject && pickerVal && !pickerVal.startsWith('Altro')) {
+            subject = pickerVal.split('||')[0];
+        }
+        const originalDate = document.getElementById('exam-orig-date-input')?.value;
+        const targetDate = document.getElementById('exam-new-date-input')?.value;
+        const reason = (document.getElementById('exam-reason-input')?.value || '').trim();
+
+        if (!subject) { alert('Inserisci la materia della verifica'); return; }
+        if (!targetDate) { alert('Seleziona la nuova data proposta'); return; }
+        if (!reason) { alert('Inserisci la motivazione dello spostamento'); return; }
+
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+        window.submitClassProposal({
+            type: 'exam_reschedule',
+            class: userClass,
+            subject,
+            originalDate,
+            targetDate,
+            reason
+        });
+
+        overlay.remove();
+        showToast('Proposta di spostamento verifica inviata!', 'success');
+    };
+};
+
+window.submitClassProposal = function(proposalData) {
+    const userClass = proposalData.class || getEffectiveUserClass();
+    const userId = String(state.user?.id || 'utente');
+    const userName = state.user?.name || 'Studente';
+
+    const newProp = {
+        id: 'prop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        type: proposalData.type,
+        class: userClass,
+        subject: proposalData.subject || null,
+        originalDate: proposalData.originalDate || null,
+        targetDate: proposalData.targetDate,
+        duration: proposalData.duration || null,
+        reason: proposalData.reason,
+        authorId: userId,
+        authorName: userName,
+        status: 'pending',
+        votes: {
+            accept: [userId],
+            decline: [],
+            alternatives: []
+        },
+        createdAt: new Date().toISOString()
+    };
+
+    const currentProps = getStoredClassProposals(userClass);
+    currentProps.unshift(newProp);
+    saveStoredClassProposals(userClass, currentProps);
+
+    // Sync in background
+    try {
+        fetch(`${API_BASE_URL}/api/class-representative`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'create_proposal',
+                ...proposalData,
+                authorId,
+                authorName
+            })
+        }).catch(() => {});
+    } catch (e) {}
+
+    state._forceRender = true;
+    scheduleRender(0);
+};
+
+window.voteClassProposal = function(proposalId, voteType, alternativeDate, note) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    const userClass = getEffectiveUserClass();
+    const userId = String(state.user?.id || 'utente');
+    const currentProps = getStoredClassProposals(userClass);
+    const prop = currentProps.find(p => p.id === proposalId);
+    if (!prop) return;
+
+    if (!prop.votes) prop.votes = { accept: [], decline: [], alternatives: [] };
+    if (!Array.isArray(prop.votes.accept)) prop.votes.accept = [];
+    if (!Array.isArray(prop.votes.decline)) prop.votes.decline = [];
+    if (!Array.isArray(prop.votes.alternatives)) prop.votes.alternatives = [];
+
+    prop.votes.accept = prop.votes.accept.filter(id => id !== userId);
+    prop.votes.decline = prop.votes.decline.filter(id => id !== userId);
+    prop.votes.alternatives = prop.votes.alternatives.filter(a => a.userId !== userId);
+
+    if (voteType === 'accept') {
+        prop.votes.accept.push(userId);
+        showToast('Hai votato a favore', 'success');
+    } else if (voteType === 'decline') {
+        prop.votes.decline.push(userId);
+        showToast('Hai votato contro', 'info');
+    } else if (voteType === 'alternative') {
+        prop.votes.alternatives.push({
+            userId,
+            date: alternativeDate || prop.targetDate,
+            note: note || ''
+        });
+        showToast('Proposta data alternativa inviata', 'success');
+    }
+
+    saveStoredClassProposals(userClass, currentProps);
+
+    // Sync in background
+    try {
+        fetch(`${API_BASE_URL}/api/class-representative`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'vote',
+                class: userClass,
+                proposalId,
+                userId,
+                voteType,
+                alternativeDate,
+                note
+            })
+        }).catch(() => {});
+    } catch (e) {}
+
+    // Refresh notifications panel if open
+    if (document.getElementById('today-notif-overlay')) {
+        openTodayNotifications();
+    }
+};
+
+window.manageClassProposal = function(proposalId, newStatus) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+    const userClass = getEffectiveUserClass();
+    const currentProps = getStoredClassProposals(userClass);
+    const prop = currentProps.find(p => p.id === proposalId);
+    if (!prop) return;
+
+    prop.status = newStatus === 'approved' ? 'approved' : 'rejected';
+    prop.managedAt = new Date().toISOString();
+    saveStoredClassProposals(userClass, currentProps);
+
+    showToast(newStatus === 'approved' ? 'Proposta approvata ufficialmente!' : 'Proposta archiviata', 'success');
+
+    // Sync in background
+    try {
+        fetch(`${API_BASE_URL}/api/class-representative`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'manage_proposal',
+                class: userClass,
+                proposalId,
+                status: prop.status
+            })
+        }).catch(() => {});
+    } catch (e) {}
+
+    // Refresh notifications panel if open
+    if (document.getElementById('today-notif-overlay')) {
+        openTodayNotifications();
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // MONTH PICKER — bottom-sheet overlay per navigare all'anno scolastico
 // Aperto dal badge mese nella header del planner.
 // Gestisce il proprio DOM separatamente dal ciclo di render principale.
 // ══════════════════════════════════════════════════════════════════════════════
 
 window.openPlannerMonthPicker = function() {
-    // Toggle: se già aperto, chiudi
     if (document.getElementById('month-picker-overlay')) {
         window.closePlannerMonthPicker();
         return;
     }
-    // Inizializza sul mese della data selezionata
     const sel = new Date((state.selectedDate || getLocalDateString(new Date())) + 'T00:00:00');
     window._pk = { year: sel.getFullYear(), month: sel.getMonth() };
     window._renderMonthPicker();
@@ -7818,14 +8423,14 @@ window._renderMonthPicker = function() {
         const isSel     = iso === selectedISO;
         const hasVerif  = (state.verifiche  || []).some(function(v){ return (v.data||v.date||'') === iso; });
         const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
-        const dotColor  = hasVerif ? '#ffb4ab' : '#b6c4ff';
+        const dotColor  = hasVerif ? '#ff453a' : '#2997ff';
 
-        let bg = 'transparent', color = '#dae2fd', fw = '500', ring = 'none', shadow = 'none';
-        if (isSel)   { bg = '#2f58cd'; color = '#ffffff'; fw = '700'; shadow = '0 4px 14px rgba(47,88,205,0.5)'; }
-        else if (isToday) { bg = 'rgba(47,88,205,0.2)'; color = '#b6c4ff'; fw = '700'; ring = '1px solid rgba(182,196,255,0.3)'; }
+        let bg = 'transparent', color = '#ffffff', fw = '500', ring = 'none', shadow = 'none';
+        if (isSel)   { bg = '#2997ff'; color = '#ffffff'; fw = '700'; shadow = '0 4px 14px rgba(41,151,255,0.5)'; }
+        else if (isToday) { bg = 'rgba(41,151,255,0.18)'; color = '#2997ff'; fw = '700'; ring = '1px solid rgba(41,151,255,0.35)'; }
 
         const dot = (hasTask || hasVerif) && !isSel
-            ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
+            ? '<span style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
             : '';
 
         cells.push(
@@ -7845,27 +8450,41 @@ window._renderMonthPicker = function() {
     const schoolYear = (month >= 8) ? year + '\u2013' + (year + 1) : (year - 1) + '\u2013' + year;
 
     const innerHTML = 
-        '<div data-drag-handle style="display:flex;justify-content:center;padding:16px 0 8px;cursor:grab;touch-action:none;">' +
-            '<div style="width:40px;height:4px;border-radius:999px;background:rgba(196,197,214,0.3);"></div>' +
+        '<div data-drag-handle style="display:flex;justify-content:center;padding:16px 0 6px;cursor:grab;touch-action:none;">' +
+            '<div style="width:40px;height:4px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;">' +
-            '<button onclick="window._pkPrev()" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#dae2fd;">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:#b6c4ff;">chevron_left</span>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 20px 8px;">' +
+            '<button onclick="window._pkPrev()" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ffffff;background:rgba(255,255,255,0.08);">' +
+                '<span class="material-symbols-outlined" style="font-size:20px;color:#2997ff;">chevron_left</span>' +
             '</button>' +
             '<div style="text-align:center;">' +
-                '<div style="font-size:18px;font-weight:700;color:#dae2fd;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
-                '<div style="font-size:10px;font-weight:700;color:rgba(196,197,214,0.6);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
+                '<div style="font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">' + MN_FULL[month] + ' ' + year + '</div>' +
+                '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:0.06em;text-transform:uppercase;margin-top:1px;">A.S.\u00a0' + schoolYear + '</div>' +
             '</div>' +
-            '<button onclick="window._pkNext()" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#dae2fd;">' +
-                '<span class="material-symbols-outlined" style="font-size:20px;color:#b6c4ff;">chevron_right</span>' +
-            '</button>' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+                '<button onclick="window._pkNext()" class="liquid-glass-v8 squircle-full rim-light" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ffffff;background:rgba(255,255,255,0.08);">' +
+                    '<span class="material-symbols-outlined" style="font-size:20px;color:#2997ff;">chevron_right</span>' +
+                '</button>' +
+                '<button onclick="window.closePlannerMonthPicker()" style="padding:6px 14px;border-radius:9999px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.35);color:#2997ff;font-size:12px;font-weight:700;cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center;">Fine</button>' +
+            '</div>' +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:14px 16px 6px;">' +
-            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:rgba(196,197,214,0.5);">' + l + '</div>'; }).join('') +
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);padding:10px 16px 4px;">' +
+            ['L','M','M','G','V','S','D'].map(function(l){ return '<div style="text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);">' + l + '</div>'; }).join('') +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px;">' + cells.join('') + '</div>' +
-        '<div style="padding:16px 20px 0;display:flex;justify-content:center;">' +
-            '<button onclick="window._pkSelectDay(\'' + todayISO + '\')" class="liquid-glass-v8 rim-light squircle-full" style="padding:10px 28px;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#b6c4ff;font-family:\'Inter\',sans-serif;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.25);">Vai a Oggi</button>' +
+        
+        // ── Interactive Action Triggers in Calendar (Apple Liquid Glass) ──
+        '<div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:8px;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+                '<button onclick="window.openRequestAssemblyModal()" style="min-height:48px;padding:10px 12px;background:rgba(48,209,88,0.14);border:1px solid rgba(48,209,88,0.35);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#30d158;font-size:13px;font-weight:700;font-family:\'Inter\',sans-serif;-webkit-tap-highlight-color:transparent;" ontouchstart="this.style.transform=\'scale(0.96)\'" ontouchend="this.style.transform=\'scale(1)\'">' +
+                    '<i class="ph-fill ph-users-three text-[18px]"></i>' +
+                    '<span>Assemblea</span>' +
+                '</button>' +
+                '<button onclick="window.openRescheduleExamModal()" style="min-height:48px;padding:10px 12px;background:rgba(255,159,10,0.14);border:1px solid rgba(255,159,10,0.35);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#ff9f0a;font-size:13px;font-weight:700;font-family:\'Inter\',sans-serif;-webkit-tap-highlight-color:transparent;" ontouchstart="this.style.transform=\'scale(0.96)\'" ontouchend="this.style.transform=\'scale(1)\'">' +
+                    '<i class="ph-fill ph-calendar-plus text-[18px]"></i>' +
+                    '<span>Sposta Verifica</span>' +
+                '</button>' +
+            '</div>' +
         '</div>';
 
     // FIX SCATTO MESE: Aggiorniamo solo il contenuto senza rimuovere l'overlay!
@@ -7878,12 +8497,12 @@ window._renderMonthPicker = function() {
 
     const overlay = document.createElement('div');
     overlay.id = 'month-picker-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(7,13,27,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.18s ease;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(7,13,27,0.7);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.18s ease;';
     overlay.onclick = function(e) { if (e.target === overlay) window.closePlannerMonthPicker(); };
 
     const card = document.createElement('div');
     card.className = 'month-picker-card';
-    card.style.cssText = 'width:100%;max-width:430px;background:linear-gradient(180deg, #131c35 0%, #0b1326 100%);border-top:1px solid rgba(182,196,255,0.2);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -8px 32px rgba(0,0,0,0.4);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
+    card.style.cssText = 'width:100%;max-width:430px;background:rgba(20,31,54,0.85);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:0 0 calc(24px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -8px 36px rgba(0,0,0,0.5);overflow:hidden;transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.2,0.8,0.2,1);';
     card.innerHTML = innerHTML;
 
     overlay.appendChild(card);
@@ -7940,9 +8559,10 @@ window._pkNext = function() {
 window._pkSelectDay = function(iso) {
     state.selectedDate = iso;
     window._plannerDayContentCache = null;
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    window._renderMonthPicker(); // Highlights the tapped date and keeps modal open!
     state._forceRender = true;
-    window.closePlannerMonthPicker();
-    scheduleRender(0);
+    scheduleRender(0); // Updates background planner
 };
 
 
@@ -8190,8 +8810,10 @@ function formatFullDate(dateInput) {
 function renderProfile() {
     const isGoogleConnected = !!(state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1');
     const userName  = escapeHtml(state.user?.name  || 'Utente');
-    const userClass = escapeHtml(normalizeClassUi(state.user?.class || '') || 'Studente');
+    const effClass  = getEffectiveUserClass();
+    const userClass = escapeHtml(effClass || normalizeClassUi(state.user?.class || '') || 'Studente');
     const initials  = (state.user?.name || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
+    const isRep     = isCurrentUserRepresentative();
 
     return `
     <div class="view-fullbleed profile-view hide-scrollbar"
@@ -8235,6 +8857,54 @@ function renderProfile() {
                                 box-shadow:0 0 0 2px rgba(34,197,94,0.2);"></div>
                     <span style="font-size:11px;font-weight:700;color:var(--success);">DidUP Collegato</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- ── RAPPRESENTANTE DI CLASSE (Apple HIG Card con iOS Toggle Switch) ── -->
+        <div style="margin-bottom:20px;">
+            <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
+                      text-transform:uppercase;margin:0 0 12px 2px;">Ruolo di Classe</p>
+            <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
+                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
+                        border-radius:28px;overflow:hidden;padding:18px 20px;
+                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                    <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
+                        <div style="width:44px;height:44px;border-radius:14px;
+                                    background:rgba(41,151,255,0.12);border:1px solid rgba(41,151,255,0.25);
+                                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:#2997ff;font-variation-settings:'FILL' 1;">
+                                badge</span>
+                        </div>
+                        <div style="min-width:0;">
+                            <div style="font-size:16px;font-weight:700;color:var(--on-surface);line-height:1.2;">
+                                Rappresentante di Classe
+                            </div>
+                            <div style="font-size:12px;font-weight:600;color:${isRep ? '#30d158' : 'var(--outline)'};margin-top:3px;">
+                                ${isRep ? `Attivo · Classe ${escapeHtml(effClass)}` : `Non attivo · Classe: ${escapeHtml(effClass || 'Non rilevata')}`}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- iOS HIG Switch Toggle (Min 44pt touch area) -->
+                    <label style="position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:54px;min-height:44px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+                        <input type="checkbox" ${isRep ? 'checked' : ''} onchange="window.toggleClassRepresentative(this.checked)" style="opacity:0;width:0;height:0;position:absolute;" />
+                        <span style="position:relative;display:inline-block;width:51px;height:31px;background:${isRep ? '#30d158' : 'rgba(120,120,128,0.32)'};border-radius:34px;transition:all 0.25s cubic-bezier(0.16,1,0.3,1);">
+                            <span style="position:absolute;content:'';height:27px;width:27px;left:2px;bottom:2px;background:#ffffff;border-radius:50%;transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);box-shadow:0 3px 8px rgba(0,0,0,0.25);transform:${isRep ? 'translateX(20px)' : 'translateX(0)'};"></span>
+                        </span>
+                    </label>
+                </div>
+                ${!effClass ? `
+                <div style="margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.25);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                    <div style="min-width:0;">
+                        <div style="font-size:12px;color:#ff9f0a;font-weight:700;">Classe non rilevata</div>
+                        <div style="font-size:11px;color:rgba(255,159,10,0.85);margin-top:1px;">Imposta la tua sezione per abilitare il ruolo</div>
+                    </div>
+                    <button onclick="window.promptSetUserClass()" style="min-height:36px;padding:6px 14px;border-radius:10px;background:#ff9f0a;border:none;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Imposta</button>
+                </div>` : `
+                <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+                    <button onclick="window.promptSetUserClass()" style="background:none;border:none;color:#2997ff;font-size:12px;font-weight:600;cursor:pointer;padding:4px 0;">Modifica classe (${escapeHtml(effClass)})</button>
+                </div>`}
             </div>
         </div>
 
