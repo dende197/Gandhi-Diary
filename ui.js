@@ -2504,8 +2504,9 @@ function openTodayNotifications() {
         if (typeof window.setupClassRealtimeSubscription === 'function') {
             window.setupClassRealtimeSubscription();
         }
-        if (typeof window.fetchRemoteClassData === 'function') {
-            window.fetchRemoteClassData(effClass, false);
+        // Background-only fetch: update localStorage but do NOT re-call openTodayNotifications
+        if (typeof window._fetchClassDataSilent === 'function') {
+            window._fetchClassDataSilent(effClass);
         }
     }
     const isRep = isCurrentUserRepresentative();
@@ -2673,6 +2674,16 @@ function openTodayNotifications() {
     const modals = document.getElementById('modals');
     if (!modals) return;
 
+    // If the overlay already exists, do an in-place content update (no animation replay)
+    const existingOverlay = document.getElementById('today-notif-overlay');
+    if (existingOverlay) {
+        const contentDiv = existingOverlay.querySelector('[data-notif-content]');
+        if (contentDiv) {
+            contentDiv.innerHTML = `${sectionsHtml}${emptyHtml}`;
+        }
+        return; // Don't recreate the entire modal
+    }
+
     modals.innerHTML = `
     <div id="today-notif-overlay" style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeTodayNotifications()">
         <div style="
@@ -2698,7 +2709,7 @@ function openTodayNotifications() {
                 </button>
             </div>
             <!-- Content -->
-            <div style="padding:0 24px 32px;">
+            <div data-notif-content style="padding:0 24px 32px;">
                 ${sectionsHtml}
                 ${emptyHtml}
             </div>
@@ -7925,6 +7936,30 @@ window._classRealtimeChannel = null;
 window._classRealtimeSubscribedClass = null;
 window._isFetchingClassData = false;
 
+// Silent fetch: updates localStorage only, never re-opens the notification modal
+window._fetchClassDataSilent = async function(className) {
+    const targetClass = className || getEffectiveUserClass();
+    if (!targetClass) return;
+    if (window._isFetchingClassDataSilent) return;
+    window._isFetchingClassDataSilent = true;
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
+        const json = await res.json();
+        if (json && json.success) {
+            if (Array.isArray(json.representatives)) {
+                saveStoredClassRepresentatives(targetClass, json.representatives);
+            }
+            if (Array.isArray(json.proposals)) {
+                saveStoredClassProposals(targetClass, json.proposals);
+            }
+        }
+    } catch (err) {
+        console.warn('[ClassDataSync] Silent fetch failed:', err.message);
+    } finally {
+        window._isFetchingClassDataSilent = false;
+    }
+};
+
 window.fetchRemoteClassData = async function(className, forceRender = false) {
     const targetClass = className || getEffectiveUserClass();
     if (!targetClass) return;
@@ -7941,16 +7976,16 @@ window.fetchRemoteClassData = async function(className, forceRender = false) {
             if (Array.isArray(json.proposals)) {
                 saveStoredClassProposals(targetClass, json.proposals);
             }
-            if (forceRender || document.getElementById('today-notif-overlay')) {
+            // If the notification overlay is open, do a soft in-place content refresh
+            if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
+                const scrollContainer = document.getElementById('today-notif-overlay')?.querySelector('[style*="overflow-y"]');
+                const currentScroll = scrollContainer?.scrollTop || 0;
+                window.openTodayNotifications(); // Will do in-place update since overlay exists
+                const updatedScroll = document.getElementById('today-notif-overlay')?.querySelector('[style*="overflow-y"]');
+                if (updatedScroll && currentScroll > 0) updatedScroll.scrollTop = currentScroll;
+            } else if (forceRender) {
                 state._forceRender = true;
                 scheduleRender(0);
-                if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
-                    // Refresh notifications modal without closing
-                    const currentScroll = document.getElementById('today-notif-overlay')?.scrollTop || 0;
-                    window.openTodayNotifications();
-                    const updated = document.getElementById('today-notif-overlay');
-                    if (updated && currentScroll > 0) updated.scrollTop = currentScroll;
-                }
             }
         }
     } catch (err) {
@@ -7975,17 +8010,20 @@ window.setupClassRealtimeSubscription = async function() {
         }
 
         window._classRealtimeSubscribedClass = userClass;
+
+        // Debounced handler: coalesce rapid-fire Realtime events
+        const debouncedFetch = () => {
+            clearTimeout(window._classRealtimeDebounce);
+            window._classRealtimeDebounce = setTimeout(() => {
+                window.fetchRemoteClassData(userClass, true);
+            }, 500);
+        };
+
         window._classRealtimeChannel = client
             .channel('realtime:class:' + userClass)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals', filter: `class_id=eq.${userClass}` }, () => {
-                window.fetchRemoteClassData(userClass, true);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, () => {
-                window.fetchRemoteClassData(userClass, true);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'class_representatives', filter: `class=eq.${userClass}` }, () => {
-                window.fetchRemoteClassData(userClass, true);
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals', filter: `class_id=eq.${userClass}` }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'class_representatives', filter: `class=eq.${userClass}` }, debouncedFetch)
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
                     console.log(`[Supabase Realtime] Connected to class room: ${userClass}`);
@@ -8532,8 +8570,13 @@ window.submitClassProposal = async function(proposalData) {
     currentProps.unshift(newProp);
     saveStoredClassProposals(userClass, currentProps);
 
-    state._forceRender = true;
-    scheduleRender(0);
+    // Soft refresh: update notification overlay in-place if open
+    if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
+        window.openTodayNotifications(); // In-place update, no re-creation
+    } else {
+        state._forceRender = true;
+        scheduleRender(0);
+    }
 
     // Sync in background with backend
     try {
@@ -8549,7 +8592,9 @@ window.submitClassProposal = async function(proposalData) {
         });
         const json = await res.json();
         if (json && json.success && json.proposal) {
-            window.fetchRemoteClassData(userClass, true);
+            // Realtime subscription will handle the sync automatically.
+            // Only fetch silently to ensure local cache is fresh.
+            window._fetchClassDataSilent(userClass);
         }
     } catch (e) {
         console.warn('[ClassProposal] Create sync failed:', e.message);
@@ -8593,8 +8638,9 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
     saveStoredClassProposals(userClass, currentProps);
 
     // Refresh notifications panel if open
-    if (document.getElementById('today-notif-overlay')) {
-        openTodayNotifications();
+    // Soft refresh: update notification overlay in-place if open
+    if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
+        openTodayNotifications(); // In-place update, no re-creation
     }
 
     // Sync in background with backend
@@ -8613,7 +8659,8 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
                 note
             })
         });
-        window.fetchRemoteClassData(userClass, true);
+        // Realtime subscription handles sync. Silent fetch to keep cache fresh.
+        window._fetchClassDataSilent(userClass);
     } catch (e) {
         console.warn('[ClassProposal] Vote sync failed:', e.message);
     }
@@ -8634,8 +8681,9 @@ window.manageClassProposal = async function(proposalId, newStatus) {
     showToast(newStatus === 'approved' ? 'Proposta approvata ufficialmente!' : 'Proposta archiviata', 'success');
 
     // Refresh notifications panel if open
-    if (document.getElementById('today-notif-overlay')) {
-        openTodayNotifications();
+    // Soft refresh: update notification overlay in-place if open
+    if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
+        openTodayNotifications(); // In-place update, no re-creation
     }
 
     // Sync in background with backend
@@ -8650,7 +8698,8 @@ window.manageClassProposal = async function(proposalId, newStatus) {
                 status: prop.status
             })
         });
-        window.fetchRemoteClassData(userClass, true);
+        // Realtime subscription handles sync. Silent fetch to keep cache fresh.
+        window._fetchClassDataSilent(userClass);
     } catch (e) {
         console.warn('[ClassProposal] Manage sync failed:', e.message);
     }
