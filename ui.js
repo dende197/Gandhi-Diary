@@ -2537,26 +2537,26 @@ function openTodayNotifications() {
         const hasAlt = altVotes.some(a => a.userId === userId);
 
         const statusBadge = prop.status === 'approved' 
-            ? '<span style="background:rgba(48,209,88,0.2);color:#30d158;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(48,209,88,0.4);">APPROVATA</span>'
+            ? '<span style="background:rgba(48,209,88,0.2);color:#30d158;font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;border:1px solid rgba(48,209,88,0.4);white-space:nowrap;flex-shrink:0;letter-spacing:0.04em;">APPROVATA</span>'
             : prop.status === 'rejected'
-            ? '<span style="background:rgba(255,69,58,0.2);color:#ff453a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,69,58,0.4);">RIFIUTATA</span>'
-            : '<span style="background:rgba(41,151,255,0.2);color:#2997ff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(41,151,255,0.4);">IN VOTAZIONE</span>';
+            ? '<span style="background:rgba(255,69,58,0.2);color:#ff453a;font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,69,58,0.4);white-space:nowrap;flex-shrink:0;letter-spacing:0.04em;">RIFIUTATA</span>'
+            : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;border:1px solid rgba(41,151,255,0.35);white-space:nowrap;flex-shrink:0;letter-spacing:0.04em;">IN VOTAZIONE</span>';
 
         return `
         <div style="background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;padding:16px 18px;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-                <div style="display:flex;align-items:center;gap:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
                     <div style="width:38px;height:38px;border-radius:12px;background:${iconBg};border:1px solid ${borderColor};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;">
                         <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span>
                     </div>
-                    <div>
-                        <div style="font-size:15px;font-weight:700;color:#ffffff;line-height:1.2;">${title}</div>
-                        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:2px;">
-                            ${isAssembly ? `Proposta per: <strong>${prop.targetDate}</strong> (${prop.duration || '2 ore'})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong>${prop.targetDate}</strong>`}
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                        <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);margin-top:2px;line-height:1.3;">
+                            ${isAssembly ? `Proposta per: <strong style="color:#2997ff;">${prop.targetDate}</strong> (${escapeHtml(prop.duration || '2 ore')})` : `Da: <strong style="color:rgba(255,255,255,0.85);">${prop.originalDate || '—'}</strong> ➔ A: <strong style="color:#ff9f0a;">${prop.targetDate}</strong>`}
                         </div>
                     </div>
                 </div>
-                <div>${statusBadge}</div>
+                <div style="flex-shrink:0;">${statusBadge}</div>
             </div>
 
             <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 12px;">
@@ -8030,6 +8030,160 @@ window.promptSetUserClass = function(callback) {
     };
 };
 
+// ── Inline Modal Calendar & Hour Picker Support ──
+window._modalCalStates = {};
+
+window._createModalCalendarState = function(initialIso) {
+    const sel = new Date((initialIso || getLocalDateString(new Date())) + 'T00:00:00');
+    return {
+        selectedIso: initialIso || getLocalDateString(new Date()),
+        year: sel.getFullYear(),
+        month: sel.getMonth()
+    };
+};
+
+window._renderInlineCalendarHTML = function(containerId) {
+    const calState = window._modalCalStates[containerId];
+    if (!calState) return '';
+
+    const MN_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                     'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const { year, month, selectedIso } = calState;
+    const todayISO = getLocalDateString(new Date());
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7; 
+
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push('<div></div>');
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const iso       = year + '-' + String(month + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        const isToday   = iso === todayISO;
+        const isSel     = iso === selectedIso;
+        const hasVerif  = (state.verifiche  || []).some(function(v){ return (v.data||v.date||'') === iso; });
+        const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
+        const dotColor  = hasVerif ? '#ff453a' : '#2997ff';
+
+        let bg = 'transparent', color = '#ffffff', fw = '500', ring = 'none', shadow = 'none';
+        if (isSel)   { bg = '#2997ff'; color = '#ffffff'; fw = '700'; shadow = '0 4px 12px rgba(41,151,255,0.45)'; }
+        else if (isToday) { bg = 'rgba(41,151,255,0.15)'; color = '#2997ff'; fw = '700'; ring = '1px solid rgba(41,151,255,0.3)'; }
+
+        const dot = (hasTask || hasVerif) && !isSel
+            ? '<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
+            : '';
+
+        cells.push(
+            '<button type="button" onclick="window._onModalCalSelect(\'' + containerId + '\',\'' + iso + '\')" ' +
+            'style="position:relative;width:100%;aspect-ratio:1/1;border-radius:50%;border:' + ring + ';' +
+            'cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+            'background:' + bg + ';' +
+            'box-shadow:' + shadow + ';' +
+            'font-size:13px;font-weight:' + fw + ';color:' + color + ';' +
+            'font-family:\'Inter\',sans-serif;transition:transform 0.1s ease;' +
+            '-webkit-tap-highlight-color:transparent;" ' +
+            'ontouchstart="this.style.transform=\'scale(0.88)\'" ontouchend="this.style.transform=\'scale(1)\'">' +
+            d + dot + '</button>'
+        );
+    }
+
+    const dayVerifiche = (state.verifiche || []).concat(state.manualVerifiche || [])
+        .filter(v => (v.data || v.date || '') === selectedIso);
+    const dayTasks = (state.tasks || []).filter(t => t.due_date === selectedIso && t.subject !== 'QUEST' && !t.done);
+
+    let eventsInfo = '';
+    if (dayVerifiche.length > 0) {
+        eventsInfo = `<div style="display:flex;align-items:center;gap:6px;color:#ff453a;font-size:11px;font-weight:600;"><span class="material-symbols-outlined" style="font-size:15px;">warning</span> Verifica: ${escapeHtml(dayVerifiche.map(v => v.materia || v.subject).join(', '))}</div>`;
+    } else if (dayTasks.length > 0) {
+        eventsInfo = `<div style="display:flex;align-items:center;gap:6px;color:#2997ff;font-size:11px;font-weight:600;"><span class="material-symbols-outlined" style="font-size:15px;">assignment</span> ${dayTasks.length} compiti</div>`;
+    } else {
+        eventsInfo = `<div style="display:flex;align-items:center;gap:6px;color:#30d158;font-size:11px;font-weight:600;"><span class="material-symbols-outlined" style="font-size:15px;">check_circle</span> Nessun impegno</div>`;
+    }
+
+    return `
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:12px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <button type="button" onclick="window._onModalCalNav('${containerId}', -1)" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#2997ff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
+            </button>
+            <div style="font-size:14px;font-weight:700;color:#ffffff;">${MN_FULL[month]} ${year}</div>
+            <button type="button" onclick="window._onModalCalNav('${containerId}', 1)" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#2997ff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
+            </button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:6px;">
+            ${['L','M','M','G','V','S','D'].map(l => `<div>${l}</div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:10px;">
+            ${cells.join('')}
+        </div>
+        <div style="padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:rgba(255,255,255,0.7);">Data: <strong style="color:#2997ff;">${selectedIso}</strong></span>
+            ${eventsInfo}
+        </div>
+    </div>
+    `;
+};
+
+window._onModalCalNav = function(containerId, delta) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    const calState = window._modalCalStates[containerId];
+    if (!calState) return;
+    calState.month += delta;
+    if (calState.month < 0) { calState.month = 11; calState.year--; }
+    if (calState.month > 11) { calState.month = 0; calState.year++; }
+    const el = document.getElementById(containerId);
+    if (el) el.innerHTML = window._renderInlineCalendarHTML(containerId);
+};
+
+window._onModalCalSelect = function(containerId, iso) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    const calState = window._modalCalStates[containerId];
+    if (!calState) return;
+    calState.selectedIso = iso;
+    const el = document.getElementById(containerId);
+    if (el) el.innerHTML = window._renderInlineCalendarHTML(containerId);
+};
+
+window._selectedAssemblyHours = ['4ª Ora', '5ª Ora'];
+
+window._toggleAssemblyHour = function(hour) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    if (!Array.isArray(window._selectedAssemblyHours)) window._selectedAssemblyHours = [];
+
+    const idx = window._selectedAssemblyHours.indexOf(hour);
+    if (idx >= 0) {
+        window._selectedAssemblyHours.splice(idx, 1);
+    } else {
+        if (window._selectedAssemblyHours.length >= 2) {
+            window._selectedAssemblyHours.shift(); // remove oldest to keep max 2
+        }
+        window._selectedAssemblyHours.push(hour);
+    }
+    window._updateAssemblyHoursUI();
+};
+
+window._updateAssemblyHoursUI = function() {
+    const allHours = ['1ª Ora', '2ª Ora', '3ª Ora', '4ª Ora', '5ª Ora'];
+    allHours.forEach(h => {
+        const btn = document.getElementById('ashour-btn-' + h.replace(/\s/g, ''));
+        if (btn) {
+            const isSel = (window._selectedAssemblyHours || []).includes(h);
+            btn.style.background = isSel ? '#30d158' : 'rgba(255,255,255,0.08)';
+            btn.style.color = isSel ? '#ffffff' : 'rgba(255,255,255,0.8)';
+            btn.style.borderColor = isSel ? '#30d158' : 'rgba(255,255,255,0.15)';
+        }
+    });
+    const label = document.getElementById('ashour-selected-label');
+    if (label) {
+        const count = (window._selectedAssemblyHours || []).length;
+        label.textContent = count > 0 
+            ? `Selezionate: ${window._selectedAssemblyHours.join(', ')} (${count}/2 ore)`
+            : `Nessuna ora selezionata (seleziona max 2)`;
+    }
+};
+
 window.openRequestAssemblyModal = function() {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
 
@@ -8042,15 +8196,22 @@ window.openRequestAssemblyModal = function() {
     }
 
     const defaultDate = state.selectedDate || getLocalDateString(new Date());
+    window._modalCalStates['assembly-cal-container'] = window._createModalCalendarState(defaultDate);
+    window._selectedAssemblyHours = ['4ª Ora', '5ª Ora'];
 
     const overlay = document.createElement('div');
     overlay.id = 'request-assembly-modal';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:0;opacity:0;transition:opacity 0.2s ease;';
     overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
+    const hoursChips = ['1ª Ora', '2ª Ora', '3ª Ora', '4ª Ora', '5ª Ora'].map(h => {
+        const isSel = window._selectedAssemblyHours.includes(h);
+        return `<button type="button" id="ashour-btn-${h.replace(/\s/g, '')}" onclick="window._toggleAssemblyHour('${h}')" style="flex:1;min-height:44px;border-radius:12px;border:1px solid ${isSel ? '#30d158' : 'rgba(255,255,255,0.15)'};background:${isSel ? '#30d158' : 'rgba(255,255,255,0.08)'};color:${isSel ? '#ffffff' : 'rgba(255,255,255,0.8)'};font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s ease;-webkit-tap-highlight-color:transparent;">${h}</button>`;
+    }).join('');
+
     overlay.innerHTML = `
-    <div style="width:100%;max-width:440px;background:rgba(20,31,54,0.92);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
-        <div data-drag-handle style="display:flex;justify-content:center;padding:4px 0 8px;cursor:grab;">
+    <div style="width:100%;max-width:440px;max-height:88dvh;overflow-y:auto;background:rgba(20,31,54,0.92);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
+        <div data-drag-handle style="display:flex;justify-content:center;padding:4px 0 6px;cursor:grab;">
             <div style="width:40px;height:4px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -8068,27 +8229,31 @@ window.openRequestAssemblyModal = function() {
             </button>
         </div>
 
+        <!-- Selettore Data con Calendario e Indicatori Verifiche/Compiti -->
         <div>
-            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Data Proposta</label>
-            <input id="assembly-date-input" type="date" value="${defaultDate}" style="width:100%;height:48px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:15px;font-weight:600;outline:none;box-sizing:border-box;" />
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Scegli Data Assemblea</label>
+            <div id="assembly-cal-container">
+                ${window._renderInlineCalendarHTML('assembly-cal-container')}
+            </div>
         </div>
 
+        <!-- Selettore 5 Ore Scolastiche (Max 2 ore) -->
         <div>
-            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Durata / Ore Richieste</label>
-            <select id="assembly-duration-select" style="width:100%;height:48px;background:rgba(20,31,54,0.95);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:15px;font-weight:600;outline:none;box-sizing:border-box;">
-                <option value="1 ora (ultima ora)">1 ora (ultima ora)</option>
-                <option value="2 ore (ultime ore)" selected>2 ore (ultime ore)</option>
-                <option value="3 ore">3 ore</option>
-                <option value="Intera mattinata">Intera mattinata</option>
-            </select>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;margin:0;">Ore Assemblea (Max 2 ore)</label>
+                <span id="ashour-selected-label" style="font-size:11px;color:#30d158;font-weight:600;">Selezionate: 4ª Ora, 5ª Ora (2/2)</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+                ${hoursChips}
+            </div>
         </div>
 
         <div>
             <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Ordine del Giorno / Motivazione</label>
-            <textarea id="assembly-reason-input" placeholder="Es. Discussione gita scolastica, problematiche orario, organizzazione eventi..." rows="3" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 14px;color:#ffffff;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;resize:none;line-height:1.4;"></textarea>
+            <textarea id="assembly-reason-input" placeholder="Es. Discussione gita scolastica, organizzazione eventi..." rows="3" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 14px;color:#ffffff;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;resize:none;line-height:1.4;"></textarea>
         </div>
 
-        <button id="submit-assembly-btn" style="width:100%;height:50px;border-radius:16px;background:linear-gradient(180deg,#30d158 0%,#28b84d 100%);border:none;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(48,209,88,0.35);margin-top:4px;">
+        <button id="submit-assembly-btn" style="width:100%;min-height:50px;border-radius:16px;background:linear-gradient(180deg,#30d158 0%,#28b84d 100%);border:none;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(48,209,88,0.35);margin-top:4px;">
             <i class="ph-bold ph-paper-plane-tilt text-[18px]"></i>
             Invia Richiesta alla Classe
         </button>
@@ -8099,11 +8264,12 @@ window.openRequestAssemblyModal = function() {
     requestAnimationFrame(() => { overlay.style.opacity = '1'; });
 
     document.getElementById('submit-assembly-btn').onclick = function() {
-        const targetDate = document.getElementById('assembly-date-input')?.value;
-        const duration = document.getElementById('assembly-duration-select')?.value;
+        const targetDate = window._modalCalStates['assembly-cal-container']?.selectedIso || defaultDate;
+        const selectedHours = window._selectedAssemblyHours || [];
         const reason = (document.getElementById('assembly-reason-input')?.value || '').trim();
 
         if (!targetDate) { alert('Seleziona una data per l\'assemblea'); return; }
+        if (!selectedHours.length) { alert('Seleziona almeno 1 ora scolastica (max 2)'); return; }
         if (!reason) { alert('Inserisci l\'ordine del giorno o la motivazione'); return; }
 
         if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
@@ -8112,7 +8278,7 @@ window.openRequestAssemblyModal = function() {
             type: 'assembly',
             class: userClass,
             targetDate,
-            duration,
+            duration: selectedHours.join(', '),
             reason
         });
 
@@ -8133,6 +8299,7 @@ window.openRescheduleExamModal = function() {
     }
 
     const defaultDate = state.selectedDate || getLocalDateString(new Date());
+    window._modalCalStates['reschedule-cal-container'] = window._createModalCalendarState(defaultDate);
 
     const upcomingVerifiche = (state.verifiche || []).concat(state.manualVerifiche || [])
         .filter(v => (v.data || v.date || '') >= getLocalDateString(new Date()))
@@ -8153,8 +8320,8 @@ window.openRescheduleExamModal = function() {
     overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
     overlay.innerHTML = `
-    <div style="width:100%;max-width:440px;background:rgba(20,31,54,0.92);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
-        <div data-drag-handle style="display:flex;justify-content:center;padding:4px 0 8px;cursor:grab;">
+    <div style="width:100%;max-width:440px;max-height:88dvh;overflow-y:auto;background:rgba(20,31,54,0.92);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border-top:1px solid rgba(255,255,255,0.22);border-radius:32px 32px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:16px;box-sizing:border-box;">
+        <div data-drag-handle style="display:flex;justify-content:center;padding:4px 0 6px;cursor:grab;">
             <div style="width:40px;height:4px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -8180,17 +8347,17 @@ window.openRescheduleExamModal = function() {
                 ${subjectOptions}
                 <option value="Altro||">Altra materia (inserimento manuale)</option>
             </select>` : ''}
-            <input id="exam-subject-input" type="text" placeholder="Nome Materia (es. Matematica)" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:15px;font-weight:600;outline:none;box-sizing:border-box;" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <input id="exam-subject-input" type="text" placeholder="Nome Materia (es. Matematica)" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;" />
+                <input id="exam-orig-date-input" type="date" value="${defaultDate}" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 12px;color:#ffffff;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;" />
+            </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div>
-                <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Data Attuale</label>
-                <input id="exam-orig-date-input" type="date" value="${defaultDate}" style="width:100%;height:48px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 12px;color:#ffffff;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;" />
-            </div>
-            <div>
-                <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Nuova Data</label>
-                <input id="exam-new-date-input" type="date" value="${defaultDate}" style="width:100%;height:48px;background:rgba(255,255,255,0.07);border:1px solid rgba(41,151,255,0.4);border-radius:14px;padding:0 12px;color:#2997ff;font-size:14px;font-weight:700;outline:none;box-sizing:border-box;" />
+        <!-- Selettore Nuova Data con Calendario e Indicatori Verifiche/Compiti -->
+        <div>
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Nuova Data Proposta</label>
+            <div id="reschedule-cal-container">
+                ${window._renderInlineCalendarHTML('reschedule-cal-container')}
             </div>
         </div>
 
@@ -8199,7 +8366,7 @@ window.openRescheduleExamModal = function() {
             <textarea id="exam-reason-input" placeholder="Es. Sovrapposizione con altra verifica, richiesta tempo per ripasso..." rows="3" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 14px;color:#ffffff;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;resize:none;line-height:1.4;"></textarea>
         </div>
 
-        <button id="submit-reschedule-btn" style="width:100%;height:50px;border-radius:16px;background:linear-gradient(180deg,#ff9f0a 0%,#e08b00 100%);border:none;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,159,10,0.35);margin-top:4px;">
+        <button id="submit-reschedule-btn" style="width:100%;min-height:50px;border-radius:16px;background:linear-gradient(180deg,#ff9f0a 0%,#e08b00 100%);border:none;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,159,10,0.35);margin-top:4px;">
             <i class="ph-bold ph-calendar-plus text-[18px]"></i>
             Proponi Spostamento alla Classe
         </button>
@@ -8216,7 +8383,7 @@ window.openRescheduleExamModal = function() {
             subject = pickerVal.split('||')[0];
         }
         const originalDate = document.getElementById('exam-orig-date-input')?.value;
-        const targetDate = document.getElementById('exam-new-date-input')?.value;
+        const targetDate = window._modalCalStates['reschedule-cal-container']?.selectedIso || defaultDate;
         const reason = (document.getElementById('exam-reason-input')?.value || '').trim();
 
         if (!subject) { alert('Inserisci la materia della verifica'); return; }
