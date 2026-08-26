@@ -2370,43 +2370,43 @@ function renderHome() {
 
             <div style="margin-bottom: 16px; padding: 0 20px;">
                 <!-- WIDGET PRINCIPALE — Stitch Liquid Glass Compact Apple-Style Carousel a 3 slide -->
-                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;background:linear-gradient(135deg, rgba(47, 88, 205, 0.32) 0%, rgba(23, 31, 51, 0.88) 100%);backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.30);border-radius:24px;box-shadow:0 24px 48px -12px rgba(6,14,32,0.75), inset 0 1px 1px rgba(255,255,255,0.30);">
+                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;background:linear-gradient(135deg, rgba(47, 88, 205, 0.32) 0%, rgba(23, 31, 51, 0.90) 100%);backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.30);border-radius:26px;box-shadow:0 24px 48px -12px rgba(6,14,32,0.75), inset 0 1px 1px rgba(255,255,255,0.30);">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
                         <!-- SLIDE 1: MEDIA GENERALE & REAL SPARKLINE -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:15px 18px 8px 18px;height:178px;display:flex;flex-direction:column;justify-content:space-between;">
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:18px 20px 10px 20px;height:208px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                                 <div>
                                     <div style="display:flex;align-items:center;gap:5px;">
                                         <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b6c4ff;">MEDIA GENERALE</span>
                                         <span style="width:4px;height:4px;border-radius:50%;background:#b6c4ff;box-shadow:0 0 6px #b6c4ff;"></span>
                                     </div>
-                                    <h2 style="font-size:15px;font-weight:700;color:#dae2fd;letter-spacing:-0.02em;line-height:1.2;margin:1px 0 0;font-family:'Inter',sans-serif;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
+                                    <h2 style="font-size:16px;font-weight:700;color:#dae2fd;letter-spacing:-0.02em;line-height:1.2;margin:2px 0 0;font-family:'Inter',sans-serif;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
                                 </div>
-                                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;background:rgba(47,88,205,0.22);border:1px solid rgba(182,196,255,0.25);font-size:10px;font-weight:700;color:#b6c4ff;backdrop-filter:blur(12px);">
-                                    <i class="ph-bold ph-graduation-cap" style="font-size:11px;color:#b6c4ff;"></i> Anno Scolastico
+                                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;background:rgba(47,88,205,0.22);border:1px solid rgba(182,196,255,0.25);font-size:10px;font-weight:700;color:#b6c4ff;backdrop-filter:blur(12px);">
+                                    <i class="ph-bold ph-graduation-cap" style="font-size:12px;color:#b6c4ff;"></i> Anno Scolastico
                                 </span>
                             </div>
 
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin:0;">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:40px;font-weight:800;letter-spacing:-0.04em;color:#dae2fd;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(182,196,255,0.35);">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                    <div style="display:flex;flex-direction:column;gap:2px;">
-                                        <span style="display:inline-flex;align-items:center;justify-content:center;gap:3px;background:${isPositive ? 'rgba(110,231,183,0.15)' : 'rgba(255,180,171,0.15)'};color:${isPositive ? '#6ee7b7' : '#ffb4ab'};font-size:11px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid ${isPositive ? 'rgba(110,231,183,0.35)' : 'rgba(255,180,171,0.35)'};box-shadow:0 2px 6px ${isPositive ? 'rgba(110,231,183,0.12)' : 'rgba(255,180,171,0.12)'};"><i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:11px;"></i> ${diffStr}</span>
-                                        <span style="font-size:10px;font-weight:500;color:#c4c5d6;">${_votiTotali > 0 ? `${_votiTotali} voti registrati` : 'In attesa voti'}</span>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0;">
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:42px;font-weight:800;letter-spacing:-0.04em;color:#dae2fd;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(182,196,255,0.35);">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                    <div style="display:flex;flex-direction:column;gap:3px;">
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:${isPositive ? 'rgba(110,231,183,0.15)' : 'rgba(255,180,171,0.15)'};color:${isPositive ? '#6ee7b7' : '#ffb4ab'};font-size:11px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid ${isPositive ? 'rgba(110,231,183,0.35)' : 'rgba(255,180,171,0.35)'};box-shadow:0 2px 6px ${isPositive ? 'rgba(110,231,183,0.12)' : 'rgba(255,180,171,0.12)'};"><i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:11px;"></i> ${diffStr}</span>
+                                        <span style="font-size:11px;font-weight:500;color:#c4c5d6;">${_votiTotali > 0 ? `${_votiTotali} voti registrati` : 'In attesa voti'}</span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Dynamic Mini Trend Bars (Stitch Liquid Glass Compact) -->
-                            <div style="display:flex;align-items:end;gap:6px;height:38px;width:100%;padding:3px 6px;background:rgba(6,14,32,0.45);border-radius:12px;border:1px solid rgba(182,196,255,0.12);box-sizing:border-box;">
+                            <div style="display:flex;align-items:end;gap:6px;height:44px;width:100%;padding:4px 8px;background:rgba(6,14,32,0.45);border-radius:14px;border:1px solid rgba(182,196,255,0.12);box-sizing:border-box;">
                                 ${performanceBarsHtml}
                             </div>
                         </div>
 
                         <!-- SLIDE 2: DETTAGLIO VALUTAZIONI (Stitch Floating Glass Metrics) -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:15px 18px 8px 18px;height:178px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:5px;">
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:18px 20px 10px 20px;height:208px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:6px;">
                                 <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b6c4ff;display:flex;align-items:center;gap:5px;">
                                     <i class="ph-bold ph-chart-polar" style="font-size:12px;"></i> ANALISI RENDIMENTO
                                 </span>
@@ -2414,38 +2414,38 @@ function renderHome() {
                             </div>
 
                             ${_votiTotali > 0 ? `
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:auto 0;">
-                                <div style="background:linear-gradient(135deg, rgba(110,231,183,0.12) 0%, rgba(23,31,51,0.85) 100%);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(110,231,183,0.3);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:auto 0;">
+                                <div style="background:linear-gradient(135deg, rgba(110,231,183,0.12) 0%, rgba(23,31,51,0.85) 100%);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(110,231,183,0.3);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
                                         <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Migliore</span>
-                                        <i class="ph-fill ph-trophy" style="font-size:11px;color:#6ee7b7;"></i>
+                                        <i class="ph-fill ph-trophy" style="font-size:12px;color:#6ee7b7;"></i>
                                     </div>
-                                    <span style="font-size:16px;font-weight:800;color:#6ee7b7;font-variant-numeric:tabular-nums;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:700;color:#dae2fd;">${_votoAltoSubj}</span></span>
+                                    <span style="font-size:17px;font-weight:800;color:#6ee7b7;font-variant-numeric:tabular-nums;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:700;color:#dae2fd;">${_votoAltoSubj}</span></span>
                                 </div>
-                                <div style="background:linear-gradient(135deg, rgba(182,196,255,0.14) 0%, rgba(23,31,51,0.85) 100%);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(182,196,255,0.3);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                <div style="background:linear-gradient(135deg, rgba(182,196,255,0.14) 0%, rgba(23,31,51,0.85) 100%);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(182,196,255,0.3);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
                                         <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Ultimo</span>
-                                        <i class="ph-fill ph-clock" style="font-size:11px;color:#b6c4ff;"></i>
+                                        <i class="ph-fill ph-clock" style="font-size:12px;color:#b6c4ff;"></i>
                                     </div>
-                                    <span style="font-size:16px;font-weight:800;color:#b6c4ff;font-variant-numeric:tabular-nums;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:700;color:#dae2fd;">${_ultimoVotoSubj}</span></span>
+                                    <span style="font-size:17px;font-weight:800;color:#b6c4ff;font-variant-numeric:tabular-nums;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:700;color:#dae2fd;">${_ultimoVotoSubj}</span></span>
                                 </div>
-                                <div style="background:rgba(23,31,51,0.85);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(182,196,255,0.14);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                <div style="background:rgba(23,31,51,0.85);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(182,196,255,0.14);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
                                         <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Bilancio</span>
                                         <span style="font-size:9px;font-weight:700;color:#8e909f;">${_votiTotali} tot</span>
                                     </div>
-                                    <div style="font-size:13px;font-weight:800;display:flex;align-items:center;gap:4px;">
+                                    <div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:4px;">
                                         <span style="color:#6ee7b7;">${_votiSuff} ≥6</span>
                                         <span style="color:#8e909f;">·</span>
                                         <span style="color:${_votiInsuff > 0 ? '#ffb4ab' : '#8e909f'};">${_votiInsuff} &lt;6</span>
                                     </div>
                                 </div>
-                                <div style="background:rgba(23,31,51,0.85);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(182,196,255,0.14);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                <div style="background:rgba(23,31,51,0.85);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(182,196,255,0.14);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
                                         <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Variazione</span>
-                                        <i class="ph-bold ph-trend-up" style="font-size:11px;color:${_trendPct === null ? '#8e909f' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};"></i>
+                                        <i class="ph-bold ph-trend-up" style="font-size:12px;color:${_trendPct === null ? '#8e909f' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};"></i>
                                     </div>
-                                    <span style="font-size:13px;font-weight:800;color:${_trendPct === null ? '#c4c5d6' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};display:flex;align-items:center;gap:2px;">
+                                    <span style="font-size:14px;font-weight:800;color:${_trendPct === null ? '#c4c5d6' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};display:flex;align-items:center;gap:2px;">
                                         ${_trendPct === null ? 'Stabile' : `${_trendPct >= 0 ? '↑ +' : '↓ '}${Math.abs(_trendPct).toFixed(1)}%`}
                                     </span>
                                 </div>
@@ -2459,8 +2459,8 @@ function renderHome() {
                         </div>
 
                         <!-- SLIDE 3: OBIETTIVO MEDIA & SIMULATORE (Warm Target Palette) -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:15px 18px 8px 18px;height:178px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:5px;">
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:18px 20px 10px 20px;height:208px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:6px;">
                                 <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd49c;display:flex;align-items:center;gap:5px;">
                                     <i class="ph-fill ph-target" style="font-size:12px;color:#ffd49c;"></i> OBIETTIVO MEDIA
                                 </span>
@@ -2469,25 +2469,25 @@ function renderHome() {
                                 </span>
                             </div>
 
-                            <div style="margin:auto 0;display:flex;flex-direction:column;gap:7px;">
+                            <div style="margin:auto 0;display:flex;flex-direction:column;gap:8px;">
                                 <div style="display:flex;align-items:baseline;justify-content:space-between;">
                                     <div style="display:flex;align-items:baseline;gap:5px;">
                                         <span style="font-size:11px;font-weight:600;color:#c4c5d6;">Attuale:</span>
-                                        <span style="font-size:14px;font-weight:800;color:#dae2fd;">${media.toFixed(2)}</span>
+                                        <span style="font-size:15px;font-weight:800;color:#dae2fd;">${media.toFixed(2)}</span>
                                     </div>
                                     <div style="display:flex;align-items:baseline;gap:5px;">
                                         <span style="font-size:11px;font-weight:600;color:#c4c5d6;">Target:</span>
-                                        <span style="font-size:16px;font-weight:800;color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</span>
+                                        <span style="font-size:17px;font-weight:800;color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</span>
                                     </div>
                                 </div>
 
                                 <!-- Glowing Dual-Gradient Progress Bar -->
-                                <div style="width:100%;background:rgba(6,14,32,0.6);height:6px;border-radius:9999px;overflow:hidden;position:relative;border:0.5px solid rgba(182,196,255,0.15);">
+                                <div style="width:100%;background:rgba(6,14,32,0.6);height:7px;border-radius:9999px;overflow:hidden;position:relative;border:0.5px solid rgba(182,196,255,0.15);">
                                     <div style="background:linear-gradient(90deg, #2f58cd 0%, #b6c4ff 50%, #6ee7b7 100%);height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.5s cubic-bezier(0.16,1,0.3,1);box-shadow:0 0 10px rgba(182,196,255,0.5);"></div>
                                 </div>
 
                                 <div style="padding:6px 10px;background:rgba(23,31,51,0.8);border:0.5px solid rgba(182,196,255,0.15);border-radius:10px;">
-                                    <p style="font-size:10.5px;line-height:1.35;color:#dae2fd;margin:0;">
+                                    <p style="font-size:11px;line-height:1.35;color:#dae2fd;margin:0;">
                                         ${_obiettivoMancanti > 0
                                             ? `💡 Con ~<strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> raggiungi <strong style="color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</strong>.`
                                             : `🎉 Superata la soglia target di <strong style="color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</strong>.`}
@@ -2496,16 +2496,16 @@ function renderHome() {
                             </div>
 
                             <!-- Quick action to open grades / simulator -->
-                            <div onclick="navigate('voti')" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;font-weight:700;color:#b6c4ff;cursor:pointer;padding:2px 0;">
+                            <div onclick="navigate('voti')" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:700;color:#b6c4ff;cursor:pointer;padding:2px 0;">
                                 <span>Apri Registro Voti</span>
-                                <i class="ph-bold ph-arrow-right" style="font-size:11px;"></i>
+                                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
                             </div>
                         </div>
 
                     </div>
 
                     <!-- Indicatori pagina (Stitch Periwinkle Capsules) -->
-                    <div style="display:flex;align-items:center;justify-content:center;gap:5px;padding:2px 0 8px;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:5px;padding:0 0 8px;">
                         <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:4px;width:18px;background:#b6c4ff;box-shadow:0 0 10px rgba(182,196,255,0.7);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
                         <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:4px;width:5px;background:rgba(182,196,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
                         <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:4px;width:5px;background:rgba(182,196,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
@@ -7983,9 +7983,10 @@ function renderPlanner() {
     const todayISO = getLocalDateString(today);
 
     const selectedDate = state.selectedDate || todayISO;
-    const showSearchPanel = !!(state.plannerSearchOpen||(state.agendaSearchQuery||'').trim());
-    const query = (state.agendaSearchQuery||'').toLowerCase().trim();
-    const filterSubject = state.agendaSearchSubject||'all';
+
+    const showSearchPanel = !!(state.plannerSearchOpen || (state.agendaSearchQuery || '').trim() || (state.agendaSearchSubject && state.agendaSearchSubject !== 'all'));
+    const query = (state.agendaSearchQuery || '').toLowerCase().trim();
+    const filterSubject = state.agendaSearchSubject || 'all';
 
     const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                 'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -8032,14 +8033,14 @@ function renderPlanner() {
         return (d-today)/86400000>0 && (d-today)/86400000<=7;
     }).length;
 
-    // searchResults: attivo quando c'è query o filtro materia (nearest deadline first)
-    const searchResults = (query || filterSubject !== 'all') ? allTasks.filter(t=>{
+    // searchResults: attivo quando c'è query, filtro materia o search aperto
+    const searchResults = showSearchPanel ? allTasks.filter(t=>{
         if(filterSubject!=='all'&&(t.subject||t.materia||'')!==filterSubject) return false;
         if(!query) return true;
         return (t.subject||'').toLowerCase().includes(query)
             || (t.materia||'').toLowerCase().includes(query)
             || (t.text||'').toLowerCase().includes(query);
-    }).sort((a,b)=>(b.due_date||'').localeCompare(a.due_date||'')) : [];
+    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
 
     // ── Month label derived from selected date ───────────────────
     const monthLabel = `${MN[selDate.getMonth()]} ${selDate.getFullYear()}`;
@@ -8178,13 +8179,19 @@ function renderPlanner() {
         <div style="padding:0 20px 20px;">
             <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all 0.3s ease;position:relative;">
                 <span class="material-symbols-outlined" style="font-size:20px;color:rgba(196,197,214,0.6);flex-shrink:0;">search</span>
-                <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche..."
+                <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche o filtra per materia..."
                     value="${escapeHtml(query)}"
-                    oninput="window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    onfocus="window._psfocused=true;if(this.parentElement)this.parentElement.style.background='rgba(255,255,255,0.1)';"
-                    onblur="setTimeout(()=>{window._psfocused=false;if(this.parentElement)this.parentElement.style.background='rgba(255,255,255,0.04)';},200);"
-                    style="width:100%;background:transparent;border:none;outline:none;font-size:16px;color:#dae2fd;padding:0;font-family:'Inter',sans-serif;" />
-${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElementById('planner-search-input');if(si)si.value='';window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(218,226,253,0.7);padding:0;"><span class="material-symbols-outlined" style="font-size:14px;">close</span></button>` : ''}            </div>
+                    oninput="state.plannerSearchOpen=true;window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
+                    onfocus="state.plannerSearchOpen=true;window._psfocused=true;if(this.parentElement)this.parentElement.style.background='rgba(255,255,255,0.1)';window.refreshPlannerSearch&&window.refreshPlannerSearch();"
+                    onclick="state.plannerSearchOpen=true;window._psfocused=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
+                    style="width:100%;background:transparent;border:none;outline:none;font-size:15px;color:#dae2fd;padding:0;font-family:'Inter',sans-serif;" />
+                ${showSearchPanel ? `
+                    <button onclick="window.closePlannerSearch();" style="background:rgba(255,255,255,0.12);border:none;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:#b6c4ff;cursor:pointer;display:flex;align-items:center;gap:3px;flex-shrink:0;font-family:'Inter',sans-serif;">
+                        <span>Chiudi</span>
+                        <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                    </button>
+                ` : ''}
+            </div>
         </div>
 
         <!-- ══ WEEK CAROUSEL (Liquid Glass Capsules) ══ -->
@@ -8211,16 +8218,19 @@ ${query ? `<button onclick="state.agendaSearchQuery='';const si=document.getElem
 
         <!-- ══ RISULTATI RICERCA / CONTENUTO GIORNO ══ -->
         <div id="planner-content-area" style="padding:0 20px;">
-        ${(query || filterSubject !== 'all') ? `
+        ${showSearchPanel ? `
         <div>
             <!-- Subject chips -->
             <div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:${filterSubject===s?'#2f58cd':'rgba(255,255,255,0.04)'};color:${filterSubject===s?'#ffffff':'#c4c5d6'};">${escapeHtml(l)}</button>`).join('')}
+                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:${filterSubject===s?'#2f58cd':'rgba(255,255,255,0.04)'};color:${filterSubject===s?'#ffffff':'#c4c5d6'};">${escapeHtml(l)}</button>`).join('')}
             </div>
-            <div style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);margin-bottom:12px;">${searchResults.length} risultati${query?` per "${escapeHtml(query)}"`:''}</div>
+            <div style="font-size:12px;font-weight:600;color:rgba(196,197,214,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+                <span>${searchResults.length} ${searchResults.length === 1 ? 'compito' : 'compiti'}${query ? ` per "${escapeHtml(query)}"` : (filterSubject !== 'all' ? ` · ${escapeHtml(filterSubject)}` : ' in totale')}</span>
+                <button onclick="window.closePlannerSearch()" style="background:none;border:none;color:#b6c4ff;font-size:11px;font-weight:700;cursor:pointer;padding:0;">Torna al giorno</button>
+            </div>
             <div style="display:flex;flex-direction:column;gap:12px;">
-                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;"><span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span><p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p></div>`}
+                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;"><span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span><p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun compito trovato</p></div>`}
             </div>
         </div>` : `
 
@@ -9372,6 +9382,15 @@ window._buildPlannerDayContentHTML = function() {
         '</div>';
 };
 
+window.closePlannerSearch = function() {
+    state.plannerSearchOpen = false;
+    state.agendaSearchQuery = '';
+    state.agendaSearchSubject = 'all';
+    const si = document.getElementById('planner-search-input');
+    if (si) { si.value = ''; si.blur(); }
+    window.refreshPlannerSearch && window.refreshPlannerSearch();
+};
+
 window.refreshPlannerSearch = function() {
     const area = document.getElementById('planner-content-area');
     if (!area) {
@@ -9382,8 +9401,9 @@ window.refreshPlannerSearch = function() {
 
     const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || 'all';
+    const isSearchActive = !!(state.plannerSearchOpen || query || filterSubject !== 'all');
 
-    if (!query && filterSubject === 'all') {
+    if (!isSearchActive) {
         if (window._buildPlannerDayContentHTML) {
             const freshHtml = window._buildPlannerDayContentHTML();
             if (area.innerHTML !== freshHtml) {
@@ -9408,7 +9428,7 @@ window.refreshPlannerSearch = function() {
             || (t.materia  || '').toLowerCase().includes(query)
             || (t.text     || '').toLowerCase().includes(query);
     }).sort(function(a, b) {
-        return (b.due_date || '').localeCompare(a.due_date || '');
+        return (a.due_date || '').localeCompare(b.due_date || '');
     });
 
     const chipsHtml = [{l: 'Tutte', s: 'all'}]
@@ -9416,7 +9436,7 @@ window.refreshPlannerSearch = function() {
         .map(function(item) {
             const active = filterSubject === item.s;
             const safeS = escapeJsSingleQuote(item.s);
-            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" ' +
+            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" ' +
                 'style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap;' +
                 'background:' + (active ? '#2f58cd' : 'rgba(255,255,255,0.04)') + ';' +
                 'color:' + (active ? '#ffffff' : '#c4c5d6') + ';">' +
@@ -9425,18 +9445,21 @@ window.refreshPlannerSearch = function() {
 
     const emptyHtml = '<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;">' +
         '<span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span>' +
-        '<p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun risultato</p>' +
+        '<p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun compito trovato</p>' +
         '</div>';
 
-    const countLabel = results.length + ' risultat' + (results.length === 1 ? 'o' : 'i') +
-        (query ? ' per "' + escapeHtml(query) + '"' : '');
+    const countLabel = results.length + (results.length === 1 ? ' compito' : ' compiti') +
+        (query ? ' per "' + escapeHtml(query) + '"' : (filterSubject !== 'all' ? ' · ' + escapeHtml(filterSubject) : ' in totale'));
 
     area.innerHTML =
         '<div style="padding:0;">' +
             '<div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
                 chipsHtml +
             '</div>' +
-            '<div style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);margin-bottom:12px;">' + countLabel + '</div>' +
+            '<div style="font-size:12px;font-weight:600;color:rgba(196,197,214,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
+                '<span>' + countLabel + '</span>' +
+                '<button onclick="window.closePlannerSearch()" style="background:none;border:none;color:#b6c4ff;font-size:11px;font-weight:700;cursor:pointer;padding:0;">Torna al giorno</button>' +
+            '</div>' +
             '<div style="display:flex;flex-direction:column;gap:12px;">' +
                 (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
             '</div>' +
@@ -9958,12 +9981,13 @@ function renderGradesView() {
 
         const featureNameFormatted = formatSubjectTitle(featureItem ? featureItem.name : '');
         const featureDateFormatted = formatFriendlyDate(featureItem ? featureItem.lastVoteDate : '');
+        const featureTheme = featureItem ? getSubjectTheme(featureItem.name) : getSubjectTheme('');
 
         const featureHtml = featureItem ? `
-        <div style="padding:16px 18px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="padding:16px 18px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${featureTheme.border};border-top:1px solid rgba(255,255,255,0.25);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
-                <div style="width:44px;height:44px;border-radius:14px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
-                    <span class="material-symbols-outlined" style="font-size:22px;">${getSubjectIcon(featureItem.name)}</span>
+                <div style="width:44px;height:44px;border-radius:14px;background:${featureTheme.iconBg};border:1px solid ${featureTheme.border};display:flex;align-items:center;justify-content:center;color:${featureTheme.color};flex-shrink:0;">
+                    <i class="ph-fill ${featureTheme.icon}" style="font-size:22px;"></i>
                 </div>
                 <div style="min-width:0;flex:1;">
                     <h3 style="font-size:15px;font-weight:700;color:#ffffff;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(featureNameFormatted)}</h3>
@@ -9971,22 +9995,23 @@ function renderGradesView() {
                 </div>
             </div>
             <div style="text-align:right;flex-shrink:0;margin-left:12px;">
-                <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
-                <div style="width:36px;height:3px;background:linear-gradient(90deg, #2997ff, #30d158);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
+                <span style="font-size:22px;font-weight:800;color:${featureItem.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
+                <div style="width:36px;height:3px;background:linear-gradient(90deg, ${featureTheme.color}, #30d158);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
             </div>
         </div>` : '';
 
         const gridCardsHtml = gridItems.map((item, gIdx) => {
             const itemFormattedName = formatSubjectTitle(item.name);
+            const itemTheme = getSubjectTheme(item.name);
             return `
-            <div style="padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.18);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:112px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+            <div style="padding:14px 16px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${itemTheme.border};border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:114px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div style="width:36px;height:36px;border-radius:12px;background:rgba(41,151,255,0.12);border:1px solid rgba(41,151,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;">${getSubjectIcon(item.name)}</span>
+                    <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;">
+                        <i class="ph-fill ${itemTheme.icon}" style="font-size:18px;"></i>
                     </div>
-                    <span style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
+                    <span style="font-size:20px;font-weight:800;color:${item.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
                 </div>
-                <h3 style="font-size:13px;font-weight:700;color:#ffffff;line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
+                <h3 style="font-size:13px;font-weight:700;color:${itemTheme.color};line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
             </div>`;
         }).join('');
 
@@ -10155,11 +10180,15 @@ window.openAllGradesModal = function() {
                 const borderBadge = isSuff ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)';
                 const date = (v.data || v.date || '').split('T')[0].split('-').reverse().join('/');
                 const subj = formatSubjectTitle(v.materia || v.subject || 'Materia');
+                const itemTheme = getSubjectTheme(v.materia || v.subject || '');
                 const tipo = normalizeTipoVerifica(v.tipo, false);
                 const desc = v.descrizione || v.comment || '';
 
                 return `
                 <div style="padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.1);border-top:1px solid rgba(255,255,255,0.18);border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;">
+                        <i class="ph-fill ${itemTheme.icon}" style="font-size:18px;"></i>
+                    </div>
                     <div style="min-width:0;flex:1;">
                         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
                             <span style="font-size:14px;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(subj)}</span>
