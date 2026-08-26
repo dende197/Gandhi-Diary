@@ -927,8 +927,8 @@ body {
   border-left: 1px solid rgba(182, 196, 255, 0.18) !important;
   border-right: 1px solid rgba(182, 196, 255, 0.08) !important;
   border-bottom: 1px solid rgba(182, 196, 255, 0.08) !important;
-  box-shadow: 0 32px 64px -16px rgba(6, 14, 32, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.30) !important;
-  border-radius: 28px !important;
+  box-shadow: 0 24px 48px -12px rgba(6, 14, 32, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.30) !important;
+  border-radius: 24px !important;
   overflow: hidden !important;
   outline: none !important;
   position: relative !important;

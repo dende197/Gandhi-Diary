@@ -1971,11 +1971,11 @@ function gcInitMediaWidgetSwipe() {
             const dot = document.getElementById(`home-media-dot${i}`);
             if (!dot) continue;
             if (i === currentSlide) {
-                dot.style.width = '26px';
+                dot.style.width = '18px';
                 dot.style.background = '#b6c4ff';
-                dot.style.boxShadow = '0 0 14px rgba(182,196,255,0.75)';
+                dot.style.boxShadow = '0 0 10px rgba(182,196,255,0.7)';
             } else {
-                dot.style.width = '6px';
+                dot.style.width = '5px';
                 dot.style.background = 'rgba(182,196,255,0.25)';
                 dot.style.boxShadow = 'none';
             }
@@ -2302,40 +2302,40 @@ function renderHome() {
         const currentMonthKey = months[months.length - 1]?.key;
         performanceBarsHtml = months.slice(-6).map(m => {
             const isCur = m.key === currentMonthKey;
-            const normalizedHeight = Math.max(20, Math.min(100, ((m.avg - minAvg) / (maxAvg - minAvg)) * 100));
+            const normalizedHeight = Math.max(18, Math.min(100, ((m.avg - minAvg) / (maxAvg - minAvg)) * 100));
             const barBg = isCur 
                 ? 'linear-gradient(180deg, #b6c4ff 0%, #2f58cd 100%)' 
                 : (m.avg >= 6 ? 'rgba(182, 196, 255, 0.20)' : 'rgba(255, 180, 171, 0.25)');
             const barBorder = isCur ? 'rgba(255, 255, 255, 0.6)' : (m.avg >= 6 ? 'rgba(182, 196, 255, 0.25)' : 'rgba(255, 180, 171, 0.4)');
-            const barShadow = isCur ? 'box-shadow:0 0 16px rgba(182,196,255,0.65);' : '';
+            const barShadow = isCur ? 'box-shadow:0 0 12px rgba(182,196,255,0.6);' : '';
             return `
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
-                <span style="font-size:10px;font-weight:800;color:${isCur ? '#b6c4ff' : (m.avg >= 6 ? '#dae2fd' : '#ffb4ab')};letter-spacing:-0.02em;">${m.avg.toFixed(1)}</span>
-                <div style="width:100%;max-width:32px;height:${normalizedHeight}%;background:${barBg};border-radius:8px 8px 3px 3px;border:0.5px solid ${barBorder};${barShadow}transition:height 0.4s ease;"></div>
-                <span style="font-size:9px;font-weight:700;color:${isCur ? '#dae2fd' : '#8e909f'};text-transform:uppercase;letter-spacing:0.04em;">${m.label}</span>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end;">
+                <span style="font-size:9px;font-weight:800;color:${isCur ? '#b6c4ff' : (m.avg >= 6 ? '#dae2fd' : '#ffb4ab')};letter-spacing:-0.02em;">${m.avg.toFixed(1)}</span>
+                <div style="width:100%;max-width:28px;height:${normalizedHeight}%;background:${barBg};border-radius:6px 6px 2px 2px;border:0.5px solid ${barBorder};${barShadow}transition:height 0.4s ease;"></div>
+                <span style="font-size:8px;font-weight:700;color:${isCur ? '#dae2fd' : '#8e909f'};text-transform:uppercase;letter-spacing:0.04em;">${m.label}</span>
             </div>`;
         }).join('');
     } else if (_votiValidi.length > 0) {
         const recent = _votiValidi.slice(-6);
         performanceBarsHtml = recent.map((v, i) => {
             const isLast = i === recent.length - 1;
-            const h = Math.max(22, Math.min(100, (v.val / 10) * 100));
+            const h = Math.max(18, Math.min(100, (v.val / 10) * 100));
             const isPass = v.val >= 6;
             const barBg = isLast
                 ? 'linear-gradient(180deg, #b6c4ff 0%, #2f58cd 100%)'
                 : (isPass ? 'rgba(110,231,183,0.22)' : 'rgba(255,180,171,0.25)');
             const barBorder = isLast ? 'rgba(255,255,255,0.6)' : (isPass ? 'rgba(110,231,183,0.35)' : 'rgba(255,180,171,0.4)');
-            const barShadow = isLast ? 'box-shadow:0 0 14px rgba(182,196,255,0.6);' : '';
+            const barShadow = isLast ? 'box-shadow:0 0 10px rgba(182,196,255,0.55);' : '';
             return `
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
-                <span style="font-size:10px;font-weight:800;color:${isLast ? '#b6c4ff' : (isPass ? '#6ee7b7' : '#ffb4ab')};">${v.val.toFixed(1).replace(/\.0$/, '')}</span>
-                <div style="width:100%;max-width:28px;height:${h}%;background:${barBg};border-radius:8px 8px 3px 3px;border:0.5px solid ${barBorder};${barShadow}"></div>
-                <span style="font-size:9px;font-weight:700;color:#c4c5d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34px;">${getSubjectAbbrev(v.materia)}</span>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end;">
+                <span style="font-size:9px;font-weight:800;color:${isLast ? '#b6c4ff' : (isPass ? '#6ee7b7' : '#ffb4ab')};">${v.val.toFixed(1).replace(/\.0$/, '')}</span>
+                <div style="width:100%;max-width:24px;height:${h}%;background:${barBg};border-radius:6px 6px 2px 2px;border:0.5px solid ${barBorder};${barShadow}"></div>
+                <span style="font-size:8px;font-weight:700;color:#c4c5d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:30px;">${getSubjectAbbrev(v.materia)}</span>
             </div>`;
         }).join('');
     } else {
         performanceBarsHtml = `
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#8e909f;font-size:12px;font-style:italic;">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#8e909f;font-size:11px;font-style:italic;">
             Nessuna valutazione registrata
         </div>`;
     }
@@ -2360,7 +2360,7 @@ function renderHome() {
         <div style="padding:0;">
 
             <!-- HEADER (iOS HIG Large Title): Overview + Avatar -->
-            <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px 20px;">
+            <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 14px 20px;">
                 <div>
                     <div class="ios-sub-title" style="color:#b6c4ff;font-weight:800;letter-spacing:0.08em;font-size:11px;">PANORAMICA</div>
                     <h1 class="ios-large-title" style="color:#dae2fd;font-weight:800;font-size:32px;letter-spacing:-0.03em;margin:2px 0 0;">Overview</h1>
@@ -2368,147 +2368,147 @@ function renderHome() {
                 ${avatarHtml}
             </header>
 
-            <div style="margin-bottom: 20px; padding: 0 20px;">
-                <!-- WIDGET PRINCIPALE — Stitch Liquid Glass Carousel a 3 slide -->
-                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;background:linear-gradient(135deg, rgba(47, 88, 205, 0.32) 0%, rgba(23, 31, 51, 0.88) 100%);backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.30);border-radius:28px;box-shadow:0 32px 64px -16px rgba(6,14,32,0.75), inset 0 1px 1px rgba(255,255,255,0.30);">
+            <div style="margin-bottom: 16px; padding: 0 20px;">
+                <!-- WIDGET PRINCIPALE — Stitch Liquid Glass Compact Apple-Style Carousel a 3 slide -->
+                <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;background:linear-gradient(135deg, rgba(47, 88, 205, 0.32) 0%, rgba(23, 31, 51, 0.88) 100%);backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.30);border-radius:24px;box-shadow:0 24px 48px -12px rgba(6,14,32,0.75), inset 0 1px 1px rgba(255,255,255,0.30);">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
                         <!-- SLIDE 1: MEDIA GENERALE & REAL SPARKLINE -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:20px 20px 14px 20px;height:232px;display:flex;flex-direction:column;justify-content:space-between;">
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:15px 18px 8px 18px;height:178px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                                 <div>
-                                    <div style="display:flex;align-items:center;gap:6px;">
-                                        <span style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b6c4ff;">MEDIA GENERALE</span>
-                                        <span style="width:5px;height:5px;border-radius:50%;background:#b6c4ff;box-shadow:0 0 8px #b6c4ff;"></span>
+                                    <div style="display:flex;align-items:center;gap:5px;">
+                                        <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b6c4ff;">MEDIA GENERALE</span>
+                                        <span style="width:4px;height:4px;border-radius:50%;background:#b6c4ff;box-shadow:0 0 6px #b6c4ff;"></span>
                                     </div>
-                                    <h2 style="font-size:18px;font-weight:700;color:#dae2fd;letter-spacing:-0.02em;line-height:1.2;margin:2px 0 0;font-family:'Inter',sans-serif;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
+                                    <h2 style="font-size:15px;font-weight:700;color:#dae2fd;letter-spacing:-0.02em;line-height:1.2;margin:1px 0 0;font-family:'Inter',sans-serif;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
                                 </div>
-                                <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:9999px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.22);font-size:11px;font-weight:700;color:#b6c4ff;backdrop-filter:blur(12px);">
-                                    <i class="ph-bold ph-calendar-blank" style="font-size:12px;color:#b6c4ff;"></i> ${typeof currentTerm !== 'undefined' && currentTerm === 'second' ? '2° Quad.' : '1° Quad.'}
+                                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;background:rgba(47,88,205,0.22);border:1px solid rgba(182,196,255,0.25);font-size:10px;font-weight:700;color:#b6c4ff;backdrop-filter:blur(12px);">
+                                    <i class="ph-bold ph-graduation-cap" style="font-size:11px;color:#b6c4ff;"></i> Anno Scolastico
                                 </span>
                             </div>
 
-                            <div style="display:flex;align-items:baseline;justify-content:space-between;margin:2px 0;">
-                                <div style="display:flex;align-items:center;gap:12px;">
-                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:54px;font-weight:800;letter-spacing:-0.04em;color:#dae2fd;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 28px rgba(182,196,255,0.35);">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
-                                    <div style="display:flex;flex-direction:column;gap:3px;">
-                                        <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:${isPositive ? 'rgba(110,231,183,0.15)' : 'rgba(255,180,171,0.15)'};color:${isPositive ? '#6ee7b7' : '#ffb4ab'};font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;border:1px solid ${isPositive ? 'rgba(110,231,183,0.35)' : 'rgba(255,180,171,0.35)'};box-shadow:0 2px 8px ${isPositive ? 'rgba(110,231,183,0.15)' : 'rgba(255,180,171,0.15)'};backdrop-filter:blur(12px);"><i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:13px;"></i> ${diffStr}</span>
-                                        <span style="font-size:11px;font-weight:500;color:#c4c5d6;">${_votiTotali > 0 ? `${_votiTotali} voti registrati` : 'In attesa voti'}</span>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin:0;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:40px;font-weight:800;letter-spacing:-0.04em;color:#dae2fd;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(182,196,255,0.35);">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
+                                    <div style="display:flex;flex-direction:column;gap:2px;">
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;gap:3px;background:${isPositive ? 'rgba(110,231,183,0.15)' : 'rgba(255,180,171,0.15)'};color:${isPositive ? '#6ee7b7' : '#ffb4ab'};font-size:11px;font-weight:700;padding:2px 8px;border-radius:9999px;border:1px solid ${isPositive ? 'rgba(110,231,183,0.35)' : 'rgba(255,180,171,0.35)'};box-shadow:0 2px 6px ${isPositive ? 'rgba(110,231,183,0.12)' : 'rgba(255,180,171,0.12)'};"><i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:11px;"></i> ${diffStr}</span>
+                                        <span style="font-size:10px;font-weight:500;color:#c4c5d6;">${_votiTotali > 0 ? `${_votiTotali} voti registrati` : 'In attesa voti'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Dynamic Mini Trend Bars (Stitch Liquid Glass) -->
-                            <div style="display:flex;align-items:end;gap:8px;height:52px;width:100%;padding:4px 8px;background:rgba(6,14,32,0.5);border-radius:16px;border:1px solid rgba(182,196,255,0.12);box-sizing:border-box;">
+                            <!-- Dynamic Mini Trend Bars (Stitch Liquid Glass Compact) -->
+                            <div style="display:flex;align-items:end;gap:6px;height:38px;width:100%;padding:3px 6px;background:rgba(6,14,32,0.45);border-radius:12px;border:1px solid rgba(182,196,255,0.12);box-sizing:border-box;">
                                 ${performanceBarsHtml}
                             </div>
                         </div>
 
                         <!-- SLIDE 2: DETTAGLIO VALUTAZIONI (Stitch Floating Glass Metrics) -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:20px 20px 14px 20px;height:232px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:8px;">
-                                <span style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b6c4ff;display:flex;align-items:center;gap:6px;">
-                                    <i class="ph-bold ph-chart-polar" style="font-size:13px;"></i> ANALISI RENDIMENTO
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:15px 18px 8px 18px;height:178px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:5px;">
+                                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b6c4ff;display:flex;align-items:center;gap:5px;">
+                                    <i class="ph-bold ph-chart-polar" style="font-size:12px;"></i> ANALISI RENDIMENTO
                                 </span>
-                                <span style="font-size:11px;font-weight:600;color:#8e909f;">${typeof currentTerm !== 'undefined' && currentTerm === 'second' ? '2° Quadrimestre' : '1° Quadrimestre'}</span>
+                                <span style="font-size:10px;font-weight:700;color:#8e909f;background:rgba(23,31,51,0.8);border:0.5px solid rgba(182,196,255,0.15);padding:2px 8px;border-radius:999px;">Anno Scolastico</span>
                             </div>
 
                             ${_votiTotali > 0 ? `
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:auto 0;">
-                                <div style="background:linear-gradient(135deg, rgba(110,231,183,0.12) 0%, rgba(23,31,51,0.85) 100%);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(110,231,183,0.3);box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:10px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Miglior Voto</span>
-                                        <i class="ph-fill ph-trophy" style="font-size:13px;color:#6ee7b7;"></i>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:auto 0;">
+                                <div style="background:linear-gradient(135deg, rgba(110,231,183,0.12) 0%, rgba(23,31,51,0.85) 100%);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(110,231,183,0.3);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                        <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Migliore</span>
+                                        <i class="ph-fill ph-trophy" style="font-size:11px;color:#6ee7b7;"></i>
                                     </div>
-                                    <span style="font-size:19px;font-weight:800;color:#6ee7b7;font-variant-numeric:tabular-nums;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:700;color:#dae2fd;">${_votoAltoSubj}</span></span>
+                                    <span style="font-size:16px;font-weight:800;color:#6ee7b7;font-variant-numeric:tabular-nums;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:700;color:#dae2fd;">${_votoAltoSubj}</span></span>
                                 </div>
-                                <div style="background:linear-gradient(135deg, rgba(182,196,255,0.14) 0%, rgba(23,31,51,0.85) 100%);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(182,196,255,0.3);box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:10px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Ultimo Voto</span>
-                                        <i class="ph-fill ph-clock" style="font-size:13px;color:#b6c4ff;"></i>
+                                <div style="background:linear-gradient(135deg, rgba(182,196,255,0.14) 0%, rgba(23,31,51,0.85) 100%);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(182,196,255,0.3);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                        <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Ultimo</span>
+                                        <i class="ph-fill ph-clock" style="font-size:11px;color:#b6c4ff;"></i>
                                     </div>
-                                    <span style="font-size:19px;font-weight:800;color:#b6c4ff;font-variant-numeric:tabular-nums;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:700;color:#dae2fd;">${_ultimoVotoSubj}</span></span>
+                                    <span style="font-size:16px;font-weight:800;color:#b6c4ff;font-variant-numeric:tabular-nums;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:10px;font-weight:700;color:#dae2fd;">${_ultimoVotoSubj}</span></span>
                                 </div>
-                                <div style="background:rgba(23,31,51,0.85);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(182,196,255,0.14);box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:10px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Bilancio</span>
-                                        <span style="font-size:10px;font-weight:700;color:#8e909f;">${_votiTotali} totali</span>
+                                <div style="background:rgba(23,31,51,0.85);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(182,196,255,0.14);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                        <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Bilancio</span>
+                                        <span style="font-size:9px;font-weight:700;color:#8e909f;">${_votiTotali} tot</span>
                                     </div>
-                                    <div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px;">
+                                    <div style="font-size:13px;font-weight:800;display:flex;align-items:center;gap:4px;">
                                         <span style="color:#6ee7b7;">${_votiSuff} ≥6</span>
                                         <span style="color:#8e909f;">·</span>
                                         <span style="color:${_votiInsuff > 0 ? '#ffb4ab' : '#8e909f'};">${_votiInsuff} &lt;6</span>
                                     </div>
                                 </div>
-                                <div style="background:rgba(23,31,51,0.85);padding:10px 12px;border-radius:16px;border:0.5px solid rgba(182,196,255,0.14);box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:10px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Variazione</span>
-                                        <i class="ph-bold ph-trend-up" style="font-size:13px;color:${_trendPct === null ? '#8e909f' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};"></i>
+                                <div style="background:rgba(23,31,51,0.85);padding:6px 10px;border-radius:12px;border:0.5px solid rgba(182,196,255,0.14);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
+                                        <span style="font-size:9px;color:#aeb9d0;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Variazione</span>
+                                        <i class="ph-bold ph-trend-up" style="font-size:11px;color:${_trendPct === null ? '#8e909f' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};"></i>
                                     </div>
-                                    <span style="font-size:16px;font-weight:800;color:${_trendPct === null ? '#c4c5d6' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};display:flex;align-items:center;gap:3px;">
+                                    <span style="font-size:13px;font-weight:800;color:${_trendPct === null ? '#c4c5d6' : (_trendPct >= 0 ? '#6ee7b7' : '#ffb4ab')};display:flex;align-items:center;gap:2px;">
                                         ${_trendPct === null ? 'Stabile' : `${_trendPct >= 0 ? '↑ +' : '↓ '}${Math.abs(_trendPct).toFixed(1)}%`}
                                     </span>
                                 </div>
                             </div>
                             ` : `
                             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto 0;text-align:center;">
-                                <span class="material-symbols-outlined" style="font-size:32px;color:rgba(182,196,255,0.3);margin-bottom:6px;">analytics</span>
-                                <p style="font-size:13px;font-weight:600;color:#8e909f;margin:0;">Nessun voto registrato in questo quadrimestre</p>
+                                <span class="material-symbols-outlined" style="font-size:26px;color:rgba(182,196,255,0.3);margin-bottom:4px;">analytics</span>
+                                <p style="font-size:12px;font-weight:600;color:#8e909f;margin:0;">Nessun voto registrato per l'anno scolastico</p>
                             </div>
                             `}
                         </div>
 
                         <!-- SLIDE 3: OBIETTIVO MEDIA & SIMULATORE (Warm Target Palette) -->
-                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:20px 20px 14px 20px;height:232px;display:flex;flex-direction:column;justify-content:space-between;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:8px;">
-                                <span style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd49c;display:flex;align-items:center;gap:6px;">
-                                    <i class="ph-fill ph-target" style="font-size:14px;color:#ffd49c;"></i> OBIETTIVO MEDIA
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:15px 18px 8px 18px;height:178px;display:flex;flex-direction:column;justify-content:space-between;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(182,196,255,0.12);padding-bottom:5px;">
+                                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd49c;display:flex;align-items:center;gap:5px;">
+                                    <i class="ph-fill ph-target" style="font-size:12px;color:#ffd49c;"></i> OBIETTIVO MEDIA
                                 </span>
-                                <span style="font-size:11px;font-weight:700;color:#ffd49c;background:rgba(255,212,156,0.12);border:1px solid rgba(255,212,156,0.3);padding:2px 8px;border-radius:999px;">
-                                    ${_obiettivoProgress}% Completato
+                                <span style="font-size:10px;font-weight:700;color:#ffd49c;background:rgba(255,212,156,0.12);border:1px solid rgba(255,212,156,0.3);padding:1px 7px;border-radius:999px;">
+                                    ${_obiettivoProgress}% Target
                                 </span>
                             </div>
 
-                            <div style="margin:auto 0;display:flex;flex-direction:column;gap:10px;">
+                            <div style="margin:auto 0;display:flex;flex-direction:column;gap:7px;">
                                 <div style="display:flex;align-items:baseline;justify-content:space-between;">
-                                    <div style="display:flex;align-items:baseline;gap:6px;">
-                                        <span style="font-size:12px;font-weight:600;color:#c4c5d6;">Attuale:</span>
-                                        <span style="font-size:16px;font-weight:800;color:#dae2fd;">${media.toFixed(2)}</span>
+                                    <div style="display:flex;align-items:baseline;gap:5px;">
+                                        <span style="font-size:11px;font-weight:600;color:#c4c5d6;">Attuale:</span>
+                                        <span style="font-size:14px;font-weight:800;color:#dae2fd;">${media.toFixed(2)}</span>
                                     </div>
-                                    <div style="display:flex;align-items:baseline;gap:6px;">
-                                        <span style="font-size:12px;font-weight:600;color:#c4c5d6;">Target:</span>
-                                        <span style="font-size:20px;font-weight:800;color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</span>
+                                    <div style="display:flex;align-items:baseline;gap:5px;">
+                                        <span style="font-size:11px;font-weight:600;color:#c4c5d6;">Target:</span>
+                                        <span style="font-size:16px;font-weight:800;color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</span>
                                     </div>
                                 </div>
 
                                 <!-- Glowing Dual-Gradient Progress Bar -->
-                                <div style="width:100%;background:rgba(6,14,32,0.6);height:8px;border-radius:9999px;overflow:hidden;position:relative;border:0.5px solid rgba(182,196,255,0.15);">
-                                    <div style="background:linear-gradient(90deg, #2f58cd 0%, #b6c4ff 50%, #6ee7b7 100%);height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.5s cubic-bezier(0.16,1,0.3,1);box-shadow:0 0 14px rgba(182,196,255,0.6);"></div>
+                                <div style="width:100%;background:rgba(6,14,32,0.6);height:6px;border-radius:9999px;overflow:hidden;position:relative;border:0.5px solid rgba(182,196,255,0.15);">
+                                    <div style="background:linear-gradient(90deg, #2f58cd 0%, #b6c4ff 50%, #6ee7b7 100%);height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.5s cubic-bezier(0.16,1,0.3,1);box-shadow:0 0 10px rgba(182,196,255,0.5);"></div>
                                 </div>
 
-                                <div style="padding:10px 12px;background:rgba(23,31,51,0.8);border:0.5px solid rgba(182,196,255,0.15);border-radius:14px;">
-                                    <p style="font-size:11px;line-height:1.45;color:#dae2fd;margin:0;">
+                                <div style="padding:6px 10px;background:rgba(23,31,51,0.8);border:0.5px solid rgba(182,196,255,0.15);border-radius:10px;">
+                                    <p style="font-size:10.5px;line-height:1.35;color:#dae2fd;margin:0;">
                                         ${_obiettivoMancanti > 0
-                                            ? `💡 Con circa <strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> raggiungi la media target di <strong style="color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</strong>.`
-                                            : `🎉 Ottimo lavoro! Hai già superato la soglia target di <strong style="color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</strong>.`}
+                                            ? `💡 Con ~<strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> raggiungi <strong style="color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</strong>.`
+                                            : `🎉 Superata la soglia target di <strong style="color:#ffd49c;">${_obiettivoTarget.toFixed(2)}</strong>.`}
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Quick action to open grades / simulator -->
-                            <div onclick="navigate('voti')" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:700;color:#b6c4ff;cursor:pointer;padding:4px 0;">
+                            <div onclick="navigate('voti')" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;font-weight:700;color:#b6c4ff;cursor:pointer;padding:2px 0;">
                                 <span>Apri Registro Voti</span>
-                                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+                                <i class="ph-bold ph-arrow-right" style="font-size:11px;"></i>
                             </div>
                         </div>
 
                     </div>
 
                     <!-- Indicatori pagina (Stitch Periwinkle Capsules) -->
-                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 0 12px;">
-                        <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:5px;width:26px;background:#b6c4ff;box-shadow:0 0 14px rgba(182,196,255,0.75);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
-                        <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:5px;width:6px;background:rgba(182,196,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
-                        <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:5px;width:6px;background:rgba(182,196,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:5px;padding:2px 0 8px;">
+                        <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:4px;width:18px;background:#b6c4ff;box-shadow:0 0 10px rgba(182,196,255,0.7);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
+                        <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:4px;width:5px;background:rgba(182,196,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
+                        <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:4px;width:5px;background:rgba(182,196,255,0.25);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);"></button>
                     </div>
                 </div>
             </div>
