@@ -2201,7 +2201,7 @@ function renderHome() {
                 margin-bottom:10px;
                 position:relative; overflow:hidden; cursor:pointer;
                 transition:transform 0.15s ease;
-            " onclick="${item.isExam ? '' : `toggleTask('${item.id}')`}"
+            " onclick="openTaskDetailModal('${item.id}')"
                ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
                 <!-- Accento laterale iOS -->
                 <div style="position:absolute;left:0;top:15%;height:70%;width:3.5px;background:${badgeText};border-radius:0 4px 4px 0;"></div>
@@ -7673,15 +7673,247 @@ window.filterCircolari = function(query) {
     }
 };
 
-function getSubjectIcon(subject) {
-    const s = normalizeSubjectName(subject);
-    if (s.includes('matem')) return 'functions';
-    if (s.includes('fisic')) return 'science';
-    if (s.includes('storia')) return 'history_edu';
-    if (s.includes('arte') || s.includes('disegno')) return 'palette';
-    if (s.includes('lingua') || s.includes('inglese') || s.includes('italiano')) return 'menu_book';
-    return 'school';
+function getSubjectTheme(rawSubject) {
+    const s = (typeof normalizeSubjectName === 'function' ? normalizeSubjectName(rawSubject) : String(rawSubject || '')).toLowerCase();
+    
+    if (s.includes('matem') || s.includes('algeb') || s.includes('geom') || s.includes('trigon')) {
+        return {
+            color: '#60a5fa',
+            gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(96, 165, 250, 0.32)',
+            icon: 'ph-calculator',
+            iconBg: 'rgba(59, 130, 246, 0.22)',
+            glow: 'rgba(59, 130, 246, 0.35)'
+        };
+    }
+    if (s.includes('ital') || s.includes('letter') || s.includes('epic') || s.includes('antol') || s.includes('narrat') || s.includes('gramm')) {
+        return {
+            color: '#f87171',
+            gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(248, 113, 113, 0.32)',
+            icon: 'ph-book-open-text',
+            iconBg: 'rgba(239, 68, 68, 0.22)',
+            glow: 'rgba(239, 68, 68, 0.35)'
+        };
+    }
+    if (s.includes('storia') || s.includes('cittadin') || s.includes('civic') || s.includes('geogr')) {
+        return {
+            color: '#fbbf24',
+            gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(251, 191, 36, 0.32)',
+            icon: 'ph-scroll',
+            iconBg: 'rgba(245, 158, 11, 0.22)',
+            glow: 'rgba(245, 158, 11, 0.35)'
+        };
+    }
+    if (s.includes('filos')) {
+        return {
+            color: '#c084fc',
+            gradient: 'linear-gradient(135deg, rgba(168, 85, 247, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(192, 132, 252, 0.32)',
+            icon: 'ph-brain',
+            iconBg: 'rgba(168, 85, 247, 0.22)',
+            glow: 'rgba(168, 85, 247, 0.35)'
+        };
+    }
+    if (s.includes('ingl') || s.includes('franc') || s.includes('spag') || s.includes('tedes') || s.includes('lingua')) {
+        return {
+            color: '#2dd4bf',
+            gradient: 'linear-gradient(135deg, rgba(45, 212, 191, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(45, 212, 191, 0.32)',
+            icon: 'ph-globe',
+            iconBg: 'rgba(45, 212, 191, 0.22)',
+            glow: 'rgba(45, 212, 191, 0.35)'
+        };
+    }
+    if (s.includes('fisic') && !s.includes('educazione') && !s.includes('motor')) {
+        return {
+            color: '#818cf8',
+            gradient: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(129, 140, 248, 0.32)',
+            icon: 'ph-atom',
+            iconBg: 'rgba(99, 102, 241, 0.22)',
+            glow: 'rgba(99, 102, 241, 0.35)'
+        };
+    }
+    if (s.includes('scienz') || s.includes('chimic') || s.includes('biol') || s.includes('geol') || s.includes('natura')) {
+        return {
+            color: '#34d399',
+            gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(52, 211, 153, 0.32)',
+            icon: 'ph-flask',
+            iconBg: 'rgba(16, 185, 129, 0.22)',
+            glow: 'rgba(16, 185, 129, 0.35)'
+        };
+    }
+    if (s.includes('arte') || s.includes('disegn')) {
+        return {
+            color: '#f472b6',
+            gradient: 'linear-gradient(135deg, rgba(236, 72, 153, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(244, 114, 182, 0.32)',
+            icon: 'ph-palette',
+            iconBg: 'rgba(236, 72, 153, 0.22)',
+            glow: 'rgba(236, 72, 153, 0.35)'
+        };
+    }
+    if (s.includes('motor') || s.includes('ed. fis') || s.includes('sport') || s.includes('ginnas')) {
+        return {
+            color: '#fb923c',
+            gradient: 'linear-gradient(135deg, rgba(249, 115, 22, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(251, 146, 60, 0.32)',
+            icon: 'ph-barbell',
+            iconBg: 'rgba(249, 115, 22, 0.22)',
+            glow: 'rgba(249, 115, 22, 0.35)'
+        };
+    }
+    if (s.includes('inform') || s.includes('sistemi') || s.includes('tps') || s.includes('telecom') || s.includes('tecnol')) {
+        return {
+            color: '#38bdf8',
+            gradient: 'linear-gradient(135deg, rgba(14, 165, 233, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(56, 189, 248, 0.32)',
+            icon: 'ph-code',
+            iconBg: 'rgba(14, 165, 233, 0.22)',
+            glow: 'rgba(14, 165, 233, 0.35)'
+        };
+    }
+    if (s.includes('diritto') || s.includes('econ')) {
+        return {
+            color: '#cbd5e1',
+            gradient: 'linear-gradient(135deg, rgba(148, 163, 184, 0.18) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(203, 213, 225, 0.32)',
+            icon: 'ph-scales',
+            iconBg: 'rgba(148, 163, 184, 0.22)',
+            glow: 'rgba(148, 163, 184, 0.35)'
+        };
+    }
+    if (s.includes('relig') || s.includes('rc')) {
+        return {
+            color: '#e2e8f0',
+            gradient: 'linear-gradient(135deg, rgba(226, 232, 240, 0.15) 0%, rgba(23, 31, 51, 0.92) 100%)',
+            border: 'rgba(226, 232, 240, 0.28)',
+            icon: 'ph-hands-praying',
+            iconBg: 'rgba(226, 232, 240, 0.18)',
+            glow: 'rgba(226, 232, 240, 0.25)'
+        };
+    }
+    // Default Stitch Periwinkle
+    return {
+        color: '#b6c4ff',
+        gradient: 'linear-gradient(135deg, rgba(47, 88, 205, 0.2) 0%, rgba(23, 31, 51, 0.92) 100%)',
+        border: 'rgba(182, 196, 255, 0.25)',
+        icon: 'ph-book-bookmark',
+        iconBg: 'rgba(47, 88, 205, 0.25)',
+        glow: 'rgba(182, 196, 255, 0.3)'
+    };
 }
+window.getSubjectTheme = getSubjectTheme;
+
+function getSubjectIcon(subject) {
+    const t = getSubjectTheme(subject);
+    return t.icon ? t.icon.replace('ph-', '') : 'book';
+}
+
+window.openTaskDetailModal = function(taskId) {
+    const t = (state.tasks || []).find(x => String(x.id) === String(taskId))
+           || (state.verifiche || []).find(x => String(x.id) === String(taskId))
+           || (state.manualVerifiche || []).find(x => String(x.id) === String(taskId));
+    if (!t) return;
+    
+    const isExam = t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text || '');
+    const subj = t.subject || t.materia || 'Attività';
+    const txt = t.text || t.args || t.descrizione || 'Nessuna descrizione specificata.';
+    const dueDate = t.due_date || t.data || t.date || '';
+    const theme = getSubjectTheme(subj);
+    
+    let formattedDate = dueDate;
+    if (dueDate) {
+        const d = (typeof parseLocalDate === 'function') ? parseLocalDate(dueDate) : new Date(dueDate + 'T00:00:00');
+        if (!isNaN(d.getTime())) {
+            formattedDate = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+        }
+    }
+
+    const canDel = typeof isUserGeneratedTaskId === 'function' ? isUserGeneratedTaskId(t.id) : false;
+
+    // Remove existing overlay if present
+    const existing = document.getElementById('task-detail-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'task-detail-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(6,14,32,0.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:flex-end;justify-content:center;';
+
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'width:100%;max-width:540px;background:rgba(18,29,50,0.96);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:90vh;box-shadow:0 -12px 48px rgba(6,14,32,0.85);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);font-family:\'Inter\',sans-serif;color:#dae2fd;';
+
+    sheet.innerHTML = `
+        <!-- Drag handle -->
+        <div style="display:flex;justify-content:center;padding:14px 0 8px;flex-shrink:0;">
+            <div style="width:44px;height:5px;border-radius:999px;background:rgba(182,196,255,0.3);"></div>
+        </div>
+
+        <!-- Header -->
+        <div style="padding:8px 22px 14px;flex-shrink:0;border-bottom:1px solid rgba(182,196,255,0.12);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:${theme.iconBg};border:1px solid ${theme.border};color:${theme.color};font-size:12px;font-weight:800;letter-spacing:0.03em;">
+                    <i class="ph-fill ${theme.icon}" style="font-size:14px;"></i>
+                    <span>${escapeHtml(subj)}</span>
+                </div>
+                ${isExam ? `
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.35);color:#ffb4ab;font-size:11px;font-weight:800;letter-spacing:0.04em;">
+                        <i class="ph-bold ph-warning" style="font-size:13px;"></i> VERIFICA
+                    </span>
+                ` : `
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:${t.done ? 'rgba(110,231,183,0.18)' : 'rgba(47,88,205,0.22)'};border:1px solid ${t.done ? 'rgba(110,231,183,0.35)' : 'rgba(182,196,255,0.25)'};color:${t.done ? '#6ee7b7' : '#b6c4ff'};font-size:11px;font-weight:700;">
+                        <i class="ph-bold ${t.done ? 'ph-check-circle' : 'ph-clock'}" style="font-size:13px;"></i> ${t.done ? 'Completato' : 'Da svolgere'}
+                    </span>
+                `}
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;color:#8e909f;font-size:13px;font-weight:500;">
+                <i class="ph-bold ph-calendar-blank" style="color:${theme.color};font-size:15px;"></i>
+                <span>${escapeHtml(formattedDate)}</span>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 22px;">
+            <div style="background:rgba(23,31,51,0.85);border:1px solid rgba(182,196,255,0.14);border-radius:20px;padding:18px 20px;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);">
+                <h3 style="font-size:11px;font-weight:800;color:${theme.color};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Dettaglio Assegnazione</h3>
+                <p style="font-size:15px;line-height:1.65;color:#dae2fd;margin:0;white-space:pre-wrap;word-break:break-word;user-select:text;-webkit-user-select:text;">${escapeHtml(txt)}</p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="padding:14px 22px calc(24px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(182,196,255,0.12);">
+            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); openTaskDetailModal('${escapeJsSingleQuote(t.id)}'); if(typeof refreshPlannerSearch==='function')refreshPlannerSearch(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:48px;border-radius:15px;background:${t.done ? 'rgba(110,231,183,0.18)' : 'linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%)'};border:${t.done ? '1px solid rgba(110,231,183,0.35)' : 'none'};color:${t.done ? '#6ee7b7' : '#ffffff'};font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:${t.done ? 'none' : '0 4px 16px rgba(47,88,205,0.45)'};">
+                <i class="ph-bold ${t.done ? 'ph-arrow-counter-clockwise' : 'ph-check'}" style="font-size:18px;"></i>
+                <span>${t.done ? 'Riapri (Segna come Da Svolgere)' : 'Segna come Completato'}</span>
+            </button>
+
+            ${canDel ? `
+            <button onclick="deleteCalendarTask('${escapeJsSingleQuote(t.id)}'); window.closeTaskDetailModal(); if(typeof refreshPlannerSearch==='function')refreshPlannerSearch(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:44px;border-radius:14px;background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.25);color:#ffb4ab;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;">
+                <i class="ph-bold ph-trash" style="font-size:16px;"></i> Elimina Attività
+            </button>
+            ` : ''}
+
+            <button onclick="window.closeTaskDetailModal()" style="width:100%;height:38px;background:none;border:none;color:#b6c4ff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">Chiudi</button>
+        </div>
+    `;
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+
+    window.closeTaskDetailModal = function() {
+        sheet.style.transform = 'translateY(100%)';
+        setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 320);
+    };
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) window.closeTaskDetailModal(); });
+};
+
 window._plannerGetDayContentHTML = function() {
     // Usa la cache se disponibile (invalidata da ogni render completo o cambio giorno)
     if (window._plannerDayContentCache) return window._plannerDayContentCache;
@@ -7814,43 +8046,69 @@ function renderPlanner() {
 
     // ── Task card renderer ───────────────────────────────────────
     function TC(t, showDate) {
-        const isExam = t.isExam||t.type==='verifica'||/verifica|interrogazione|test|esame|simulazione/i.test(t.text);
+        const isExam = t.isExam||t.type==='verifica'||/verifica|interrogazione|test|esame|simulazione/i.test(t.text||'');
         const subj = escapeHtml(t.subject||t.materia||'');
         const txt  = escapeHtml(t.text||'');
         const tid  = escapeJsSingleQuote(t.id);
-        const icon = (typeof getSubjectIcon==='function') ? getSubjectIcon(t.subject||t.materia||'') : 'book';
+        const theme = getSubjectTheme(t.subject||t.materia||'');
         const canDel = typeof isUserGeneratedTaskId==='function' ? isUserGeneratedTaskId(t.id) : false;
         const dLabel = showDate&&t.due_date ? (()=>{
             const d=new Date(t.due_date+'T00:00:00');
             return `<span style="font-size:10px;font-weight:700;color:rgba(218,226,253,0.6);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
         })() : '';
-        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:rgba(255,59,48,0.2);border:1px solid rgba(255,59,48,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ffb4ab;">delete</span></button>` : '';
-        const rerender = "state._forceRender=true;scheduleRender(0);";
+        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');if(typeof refreshPlannerSearch==='function')refreshPlannerSearch();state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:rgba(255,59,48,0.2);border:1px solid rgba(255,59,48,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ffb4ab;">delete</span></button>` : '';
+        const rerender = "if(typeof refreshPlannerSearch==='function')refreshPlannerSearch();state._forceRender=true;scheduleRender(0);";
 
         if (isExam) return `
-        <div class="planner-task-exam squircle-md" onclick="toggleTask('${tid}');${rerender}" style="background:linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(182,196,255,0.05) 100%);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(239,68,68,0.35);padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 0 20px rgba(239,68,68,0.25);">
+        <div class="planner-task-exam" onclick="openTaskDetailModal('${tid}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'" style="background:linear-gradient(135deg, rgba(239,68,68,0.22) 0%, rgba(23,31,51,0.9) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(239,68,68,0.4);border-top:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 0 20px rgba(239,68,68,0.25);transition:transform 0.12s ease;">
             <div style="position:absolute;top:-24px;right:-24px;width:80px;height:80px;background:rgba(239,68,68,0.25);border-radius:50%;filter:blur(16px);pointer-events:none;"></div>
             ${dLabel}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1;">
                 <div style="flex:1;min-width:0;">
-                    <h3 style="font-size:15px;font-weight:700;color:#dae2fd;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${subj}</h3>
-                    <p style="font-size:13px;color:rgba(196,197,214,0.8);margin:0 0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</p>
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                        <span style="font-size:10px;font-weight:800;color:${theme.color};text-transform:uppercase;letter-spacing:0.04em;">${subj}</span>
+                    </div>
+                    <p style="font-size:13px;font-weight:600;color:#dae2fd;margin:0 0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;':''}">${txt}</p>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${delBtn}<span class="material-symbols-outlined" style="font-size:22px;color:#ffb4ab;">warning</span></div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                    ${delBtn}
+                    <div onclick="event.stopPropagation();toggleTask('${tid}');${rerender}" style="width:36px;height:36px;border-radius:12px;background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;color:#ffb4ab;cursor:pointer;" title="Segna come completato">
+                        <i class="ph-bold ${t.done ? 'ph-check-circle' : 'ph-warning'}" style="font-size:18px;"></i>
+                    </div>
+                </div>
             </div>
-            <div style="display:inline-flex;background:rgba(239,68,68,0.3);color:#ffb4ab;font-size:9px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;border:1px solid rgba(239,68,68,0.4);">VERIFICA${t.done?' · ✓':''}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;">
+                <div style="display:inline-flex;background:rgba(239,68,68,0.3);color:#ffb4ab;font-size:9px;font-weight:800;padding:3px 8px;border-radius:999px;letter-spacing:0.05em;border:1px solid rgba(239,68,68,0.45);">VERIFICA${t.done?' · COMPLETATA':''}</div>
+                <span style="font-size:11px;font-weight:600;color:rgba(182,196,255,0.7);display:flex;align-items:center;gap:2px;">Dettagli <i class="ph-bold ph-caret-right" style="font-size:12px;"></i></span>
+            </div>
         </div>`;
 
         if (t.done) return `
-        <div class="planner-task-done liquid-glass-v8 squircle-md rim-light" onclick="toggleTask('${tid}');${rerender}" style="padding:14px 16px;display:flex;align-items:center;gap:13px;opacity:0.5;cursor:pointer;">
-            <div style="width:44px;height:44px;flex-shrink:0;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#34d399;"><span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">task_alt</span></div>
-            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:rgba(218,226,253,0.6);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:rgba(196,197,214,0.5);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
+        <div class="planner-task-done" onclick="openTaskDetailModal('${tid}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'" style="background:rgba(23,31,51,0.7);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(182,196,255,0.1);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;opacity:0.55;cursor:pointer;transition:transform 0.12s ease;">
+            <div onclick="event.stopPropagation();toggleTask('${tid}');${rerender}" style="width:40px;height:40px;flex-shrink:0;background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.35);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#34d399;cursor:pointer;" title="Riapri compito">
+                <i class="ph-fill ph-check-circle" style="font-size:20px;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                ${dLabel}
+                <h3 style="font-size:13px;font-weight:800;color:${theme.color};text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 0 2px;">${subj}</h3>
+                <p style="font-size:12px;color:rgba(196,197,214,0.6);text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;">${txt}</p>
+            </div>
+            ${delBtn}
+            <i class="ph-bold ph-caret-right" style="font-size:16px;color:rgba(182,196,255,0.3);flex-shrink:0;"></i>
         </div>`;
 
         return `
-        <div class="planner-task-todo liquid-glass-v8 squircle-md rim-light" onclick="toggleTask('${tid}');${rerender}" style="padding:14px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;">
-            <div style="width:44px;height:44px;flex-shrink:0;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#b6c4ff;"><span class="material-symbols-outlined" style="font-size:20px;">${icon}</span></div>
-            <div style="flex:1;min-width:0;">${dLabel}<h3 style="font-size:14px;font-weight:700;color:#dae2fd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${subj}</h3><p style="font-size:12px;color:rgba(196,197,214,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${txt}</p></div>${delBtn}
+        <div class="planner-task-todo" onclick="openTaskDetailModal('${tid}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'" style="background:${theme.gradient};backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid ${theme.border};border-top:1px solid rgba(255,255,255,0.25);box-shadow:0 8px 24px -8px rgba(6,14,32,0.6), inset 0 1px 0 rgba(255,255,255,0.15);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.12s ease;">
+            <div onclick="event.stopPropagation();toggleTask('${tid}');${rerender}" style="width:40px;height:40px;flex-shrink:0;background:${theme.iconBg};border:1px solid ${theme.border};border-radius:12px;display:flex;align-items:center;justify-content:center;color:${theme.color};cursor:pointer;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'" title="Segna come completato">
+                <i class="ph-fill ${theme.icon}" style="font-size:20px;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                ${dLabel}
+                <h3 style="font-size:13px;font-weight:800;color:${theme.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 0 2px;letter-spacing:0.02em;">${subj}</h3>
+                <p style="font-size:13px;font-weight:500;color:#dae2fd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;line-height:1.35;">${txt}</p>
+            </div>
+            ${delBtn}
+            <i class="ph-bold ph-caret-right" style="font-size:16px;color:rgba(182,196,255,0.4);flex-shrink:0;"></i>
         </div>`;
     }
 
