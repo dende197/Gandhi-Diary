@@ -490,18 +490,8 @@
         let _pullToRefreshBound = false;
 
         function setPullRefreshIndicator(progress = 0, options = {}) {
-            const indicator = document.getElementById('pull-refresh-indicator');
-            if (!indicator) return;
-            const bar = indicator.querySelector('.pull-refresh-indicator__bar');
-            const clamped = Math.max(0, Math.min(1, Number(progress) || 0));
-            const active = !!options.active || clamped > 0;
-            const loading = !!options.loading;
-            indicator.classList.toggle('active', active || loading);
-            indicator.classList.toggle('loading', loading);
-            if (bar) {
-                const scale = loading ? 1 : Math.max(0.08, clamped);
-                bar.style.transform = `scaleX(${scale})`;
-            }
+            // Disabled per user request (pull-refresh bar removed)
+            return;
         }
 
         async function triggerPullToRefresh() {
@@ -509,7 +499,6 @@
             const session = sessionManager.load();
             if (!session) return false;
             _pullRefreshInFlight = true;
-            setPullRefreshIndicator(1, { active: true, loading: true });
             try {
                 await performSync(session, {
                     suppressRender: false,
@@ -522,59 +511,12 @@
                 return true;
             } finally {
                 _pullRefreshInFlight = false;
-                setPullRefreshIndicator(0, { active: false, loading: false });
             }
         }
 
         function initPullToRefresh() {
-            if (_pullToRefreshBound) return;
-            _pullToRefreshBound = true;
-            let isPulling = false;
-            let startY = 0;
-            let distance = 0;
-
-            const isAtTop = () => {
-                const scrollingEl = document.scrollingElement || document.documentElement;
-                return (scrollingEl?.scrollTop || window.scrollY || 0) <= 0;
-            };
-
-            const resetGesture = () => {
-                isPulling = false;
-                startY = 0;
-                distance = 0;
-                if (!_pullRefreshInFlight) setPullRefreshIndicator(0, { active: false, loading: false });
-            };
-
-            document.addEventListener('touchstart', (event) => {
-                if (!state.isLoggedIn || state._loggedOut || _pullRefreshInFlight || state.syncing) return;
-                if (event.touches.length !== 1 || !isAtTop()) return;
-                isPulling = true;
-                startY = event.touches[0].clientY;
-                distance = 0;
-            }, { passive: true });
-
-            document.addEventListener('touchmove', (event) => {
-                if (!isPulling) return;
-                const delta = event.touches[0].clientY - startY;
-                if (delta <= 0 || !isAtTop()) {
-                    resetGesture();
-                    return;
-                }
-                distance = Math.min(PULL_REFRESH_MAX_PX, delta * 0.5);
-                const progress = Math.min(1, distance / PULL_REFRESH_TRIGGER_PX);
-                setPullRefreshIndicator(progress, { active: true, loading: false });
-                if (delta > 8) event.preventDefault();
-            }, { passive: false });
-
-            const finishPull = () => {
-                if (!isPulling) return;
-                const shouldRefresh = distance >= PULL_REFRESH_TRIGGER_PX;
-                resetGesture();
-                if (shouldRefresh) triggerPullToRefresh();
-            };
-
-            document.addEventListener('touchend', finishPull, { passive: true });
-            document.addEventListener('touchcancel', finishPull, { passive: true });
+            // Disabled per user request (pull-refresh bar removed)
+            return;
         }
         window.triggerPullToRefresh = triggerPullToRefresh;
 

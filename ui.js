@@ -3839,46 +3839,45 @@ async function mostraCircolare(id) {
     const c = state.circolari.find(x => x.id === id);
     if (!c) return;
 
-    if (c.sintesi && typeof marked === 'undefined') {
+    if (c.sintesi && typeof marked === 'undefined' && typeof window.ensureMarked === 'function') {
         await window.ensureMarked();
     }
 
-    // ── Build overlay inline — zero CSS class dependencies ──────────────────
+    // Overlay with deep atmospheric frosted blur
     const overlay = document.createElement('div');
     overlay.id = 'circ-overlay-' + id;
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(6,14,32,0.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:flex-end;justify-content:center;';
 
     const sheet = document.createElement('div');
-    sheet.style.cssText = 'width:100%;max-width:520px;background:var(--surface-container-lowest);border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 -4px 32px rgba(0,0,0,0.12);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);font-family:Hanken Grotesk,sans-serif;';
+    sheet.style.cssText = 'width:100%;max-width:540px;background:rgba(18,29,50,0.96);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 -12px 48px rgba(6,14,32,0.85);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);font-family:\'Inter\',sans-serif;color:#dae2fd;';
 
     const sintesiContent = c.sintesi
-        ? `<div style="font-size:15px;line-height:1.7;color:var(--on-surface-variant);">${typeof marked !== 'undefined' ? marked.parse(c.sintesi) : escapeHtml(c.sintesi)}</div>`
-        : `<div id="sintesi-placeholder-${c.id}" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 0;gap:12px;">
-               <div style="width:56px;height:56px;border-radius:20px;background:var(--info-container);display:flex;align-items:center;justify-content:center;">
-                   <span class="material-symbols-outlined" style="font-size:28px;color:var(--info);font-variation-settings:'FILL' 1;">auto_awesome</span>
+        ? `<div style="font-size:14px;line-height:1.75;color:#dae2fd;">${typeof marked !== 'undefined' ? marked.parse(c.sintesi) : escapeHtml(c.sintesi)}</div>`
+        : `<div id="sintesi-placeholder-${c.id}" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 16px;gap:12px;background:rgba(23,31,51,0.8);border:1px solid rgba(182,196,255,0.14);border-radius:22px;">
+               <div style="width:52px;height:52px;border-radius:18px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.3);display:flex;align-items:center;justify-content:center;color:#b6c4ff;">
+                   <i class="ph-fill ph-sparkle" style="font-size:26px;"></i>
                </div>
-               <p style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0;">Analisi AI disponibile</p>
-               <p style="font-size:13px;color:var(--outline);font-weight:500;margin:0;max-width:220px;">Ottieni una sintesi intelligente dei punti chiave della circolare.</p>
-               <button id="btn-sintesi-${c.id}" onclick="window._circ_startSintesi('${escapeJsSingleQuote(c.id)}','${escapeJsSingleQuote(c.link || '')}')" style="width:100%;height:48px;border-radius:14px;background:#2563eb;color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:Hanken Grotesk,sans-serif;margin-top:4px;">
-                   <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">psychology</span>
-                   Elabora Sintesi
+               <p style="font-size:16px;font-weight:800;color:#dae2fd;margin:0;">Analisi & Sintesi AI</p>
+               <p style="font-size:13px;color:#c4c5d6;font-weight:500;margin:0;max-width:280px;line-height:1.5;">Ottieni una sintesi intelligente con estrazione automatica dei punti chiave e delle date importanti.</p>
+               <button id="btn-sintesi-${c.id}" onclick="window._circ_startSintesi('${escapeJsSingleQuote(c.id)}','${escapeJsSingleQuote(c.link || '')}')" style="width:100%;height:48px;border-radius:14px;background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;border:none;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;margin-top:6px;box-shadow:0 4px 16px rgba(47,88,205,0.4);">
+                   <i class="ph-bold ph-lightning" style="font-size:17px;"></i>
+                   Elabora Sintesi con AI
                </button>
            </div>`;
 
     sheet.innerHTML = `
         <!-- Drag handle -->
-        <div style="display:flex;justify-content:center;padding:14px 0 6px;flex-shrink:0;">
-            <div style="width:40px;height:4px;border-radius:999px;background:var(--surface-container-high);"></div>
+        <div style="display:flex;justify-content:center;padding:14px 0 8px;flex-shrink:0;">
+            <div style="width:44px;height:5px;border-radius:999px;background:rgba(182,196,255,0.3);"></div>
         </div>
 
         <!-- Header -->
-        <div style="padding:8px 22px 16px;flex-shrink:0;border-bottom:1px solid var(--outline-variant);">
-            <p style="font-size:10px;font-weight:800;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px;">Circolare N. ${escapeHtml(String(c.numero || ''))}</p>
-            <h2 style="font-size:20px;font-weight:800;color:var(--on-surface);line-height:1.25;margin:0 0 8px;letter-spacing:-0.01em;">${escapeHtml(c.titolo)}</h2>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <span class="material-symbols-outlined" style="font-size:14px;color:var(--outline);">calendar_today</span>
-                <span style="font-size:13px;font-weight:500;color:var(--on-surface-variant);">${escapeHtml(c.data || '')}</span>
+        <div style="padding:6px 22px 16px;flex-shrink:0;border-bottom:1px solid rgba(182,196,255,0.12);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:11px;font-weight:800;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.08em;background:rgba(47,88,205,0.22);border:1px solid rgba(182,196,255,0.25);padding:3px 10px;border-radius:999px;">Circolare N. ${escapeHtml(String(c.numero || '—'))}</span>
+                <span style="font-size:12px;font-weight:600;color:#8e909f;display:flex;align-items:center;gap:4px;"><i class="ph-bold ph-calendar" style="color:#b6c4ff;"></i> ${escapeHtml(c.data || '')}</span>
             </div>
+            <h2 style="font-size:19px;font-weight:800;color:#dae2fd;line-height:1.3;margin:0;letter-spacing:-0.02em;">${escapeHtml(c.titolo)}</h2>
         </div>
 
         <!-- Scrollable body -->
@@ -3887,11 +3886,11 @@ async function mostraCircolare(id) {
         </div>
 
         <!-- Actions -->
-        <div style="padding:16px 22px calc(28px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--outline-variant);">
-            ${c.link ? `<button onclick="window.open('${escapeJsSingleQuote(c.link)}','_blank')" style="width:100%;height:52px;border-radius:15px;background:#2563eb;color:white;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.35);">
-                <span class="material-symbols-outlined" style="font-size:19px;">open_in_new</span>Apri Documento
+        <div style="padding:14px 22px calc(24px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(182,196,255,0.12);">
+            ${c.link ? `<button onclick="window.open('${escapeJsSingleQuote(c.link)}','_blank')" style="width:100%;height:50px;border-radius:15px;background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:0 6px 20px -4px rgba(47,88,205,0.5);">
+                <i class="ph-bold ph-file-arrow-up" style="font-size:18px;"></i> Apri Documento PDF Ufficiale
             </button>` : ''}
-            <button id="circ-close-btn-${id}" style="width:100%;height:44px;background:none;border:none;color:var(--info);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Chiudi</button>
+            <button id="circ-close-btn-${id}" style="width:100%;height:42px;background:none;border:none;color:#b6c4ff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">Chiudi</button>
         </div>
     `;
 
@@ -3915,27 +3914,27 @@ async function mostraCircolare(id) {
 
         // Replace placeholder with progress UI
         placeholder.innerHTML = `
-            <div style="width:100%;padding:8px 0;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-                    <div style="width:36px;height:36px;border-radius:50%;background:var(--info-container);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--info);font-variation-settings:'FILL' 1;">psychology</span>
+            <div style="width:100%;padding:12px 0;">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                    <div style="width:40px;height:40px;border-radius:14px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#b6c4ff;">
+                        <i class="ph-fill ph-brain" style="font-size:22px;"></i>
                     </div>
                     <div style="flex:1;">
-                        <p id="sintesi-stage-${cid}" style="font-size:11px;font-weight:800;color:var(--info);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Avvio analisi…</p>
-                        <div style="width:100%;height:6px;background:var(--surface-container-low);border-radius:999px;overflow:hidden;">
-                            <div id="sintesi-bar-${cid}" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:999px;transition:width 0.4s ease;"></div>
+                        <p id="sintesi-stage-${cid}" style="font-size:11px;font-weight:800;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Avvio analisi…</p>
+                        <div style="width:100%;height:6px;background:rgba(6,14,32,0.6);border:0.5px solid rgba(182,196,255,0.15);border-radius:999px;overflow:hidden;">
+                            <div id="sintesi-bar-${cid}" style="height:100%;width:0%;background:linear-gradient(90deg,#2f58cd,#b6c4ff);border-radius:999px;transition:width 0.4s ease;box-shadow:0 0 10px rgba(182,196,255,0.5);"></div>
                         </div>
                     </div>
                 </div>
-                <p id="sintesi-sub-${cid}" style="font-size:12px;color:var(--outline);font-weight:500;margin:0;">Lettura del documento in corso…</p>
+                <p id="sintesi-sub-${cid}" style="font-size:12px;color:#c4c5d6;font-weight:500;margin:0;">Lettura del documento in corso…</p>
             </div>`;
 
         const stages = [
-            { pct: 15, label: 'Scansione metadati…',       sub: 'Identificazione del documento' },
-            { pct: 35, label: 'Recupero PDF…',             sub: 'Download del file circolare' },
-            { pct: 60, label: 'Estrazione testo…',         sub: 'Analisi del contenuto' },
-            { pct: 80, label: 'Sintesi neurale in corso…', sub: 'Il modello AI sta elaborando' },
-            { pct: 92, label: 'Quasi pronto…',             sub: 'Finalizzazione della risposta' },
+            { pct: 18, label: 'Scansione metadati…',       sub: 'Identificazione del documento' },
+            { pct: 40, label: 'Recupero PDF…',             sub: 'Download del file circolare' },
+            { pct: 65, label: 'Estrazione testo…',         sub: 'Analisi del contenuto' },
+            { pct: 85, label: 'Sintesi neurale in corso…', sub: 'Elaborazione dei punti chiave' },
+            { pct: 95, label: 'Quasi pronto…',             sub: 'Finalizzazione del riassunto' },
         ];
         let si = 0;
         const bar = document.getElementById('sintesi-bar-' + cid);
@@ -7527,16 +7526,9 @@ console.log('✅ GSAP Animations consolidated into ui.js');
 function renderCircolariView() {
     const list = state.circolari || [];
 
-    // ── Gradient palettes for featured cards ─────────────────────────────────
-    const palettes = [
-        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-blue-mid) 50%,var(--circ-blue-end) 100%)', shadow: '0 10px 40px -10px rgba(37,99,235,0.15)', icon: 'campaign',       iconColor: 'var(--info)', iconBg: 'var(--info-container)', badgeText: 'In evidenza' },
-        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-violet-mid) 70%,var(--circ-violet-end) 100%)', shadow: '0 8px 30px -12px rgba(147,51,234,0.15)', icon: 'calendar_month', iconColor: 'var(--violet)', iconBg: 'var(--violet-container)', badgeText: 'Evento'       },
-        { bg: 'linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-green-mid) 70%,var(--circ-green-end) 100%)', shadow: '0 8px 30px -12px rgba(22,163,74,0.12)',  icon: 'school',         iconColor: 'var(--success)', iconBg: 'var(--success-container)', badgeText: 'Comunicato'    },
-    ];
-
     function fmtDate(raw) {
         if (!raw) return '';
-        const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
         if (!d || isNaN(d)) return raw;
         const diff = Math.round((new Date() - d) / 86400000);
         if (diff === 0) return 'Oggi';
@@ -7544,74 +7536,113 @@ function renderCircolariView() {
         return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
     }
 
-    // First card: full-width featured
-    const featured   = list[0] || null;
-    // Next 2: small grid
-    const gridCards  = list.slice(1, 3);
+    const q = (state.circolariSearchQuery || '').toLowerCase().trim();
+    const filteredList = q
+        ? list.filter(c => ((c.titolo || '') + ' ' + (c.numero || '') + ' ' + (c.data || '')).toLowerCase().includes(q))
+        : list;
+
+    // First card: full-width featured (when not searching)
+    const featured = (!q && list.length > 0) ? list[0] : null;
+    // Next 2: small grid (when not searching)
+    const gridCards = (!q && list.length > 1) ? list.slice(1, 3) : [];
     // Rest: list rows
-    const recentList = list.slice(3);
+    const recentList = !q ? list.slice(3) : filteredList;
 
     const featuredHtml = featured ? `
-        <div style="border-radius:36px;padding:24px;margin-bottom:16px;box-shadow:0 10px 40px -10px rgba(37,99,235,0.15);border:1px solid rgba(var(--glass-rgb),0.6);background:linear-gradient(135deg,var(--surface-container-lowest) 0%,var(--circ-blue-mid) 50%,var(--circ-blue-end) 100%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                <div style="background:var(--info-container);border:1px solid var(--outline-variant);color:var(--info);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;font-family:Hanken Grotesk,sans-serif;">In evidenza</div>
-                <span class="material-symbols-outlined" style="font-size:20px;color:var(--info);font-variation-settings:'FILL' 1;">campaign</span>
+        <div style="border-radius:28px;padding:22px 20px;margin-bottom:20px;box-shadow:0 28px 56px -14px rgba(6,14,32,0.75), inset 0 1px 1px rgba(255,255,255,0.3);border:1px solid rgba(182,196,255,0.2);border-top:1px solid rgba(255,255,255,0.35);background:linear-gradient(135deg,rgba(47,88,205,0.35) 0%,rgba(23,31,51,0.9) 100%);backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);cursor:pointer;position:relative;overflow:hidden;" onclick="mostraCircolare('${escapeJsSingleQuote(featured.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <span style="background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.3);color:#b6c4ff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.04em;">
+                    <i class="ph-fill ph-sparkle" style="font-size:13px;"></i> IN EVIDENZA ${featured.numero ? '· N. ' + escapeHtml(featured.numero) : ''}
+                </span>
+                <span style="font-size:12px;font-weight:600;color:#c4c5d6;display:flex;align-items:center;gap:4px;">
+                    <i class="ph-bold ph-calendar" style="color:#b6c4ff;"></i> ${fmtDate(featured.data)}
+                </span>
             </div>
-            <h2 style="font-size:24px;font-weight:800;color:var(--on-surface);line-height:1.2;margin:0 0 28px;letter-spacing:-0.01em;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(featured.titolo)}</h2>
-            <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-                <span style="font-size:13px;font-weight:600;color:var(--on-surface-variant);font-family:Hanken Grotesk,sans-serif;">${fmtDate(featured.data)}</span>
-                <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -4px rgba(0,88,188,0.4);" ontouchstart="this.style.transform='scale(0.93)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-primary);">arrow_forward</span>
+            <h2 style="font-size:19px;font-weight:800;color:#dae2fd;line-height:1.35;margin:0 0 20px;letter-spacing:-0.02em;">${escapeHtml(featured.titolo)}</h2>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:12px;font-weight:600;color:#8e909f;">Tocca per consultare</span>
+                <div style="background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:14px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(47,88,205,0.45);">
+                    <i class="ph-bold ph-file-text"></i> Leggi e Sintesi AI →
                 </div>
             </div>
         </div>` : '';
 
     const gridHtml = gridCards.length ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
             ${gridCards.map((c, i) => {
-                const p = palettes[i + 1] || palettes[0];
-                return `<div style="border-radius:32px;padding:22px;background:${p.bg};box-shadow:${p.shadow};border:1px solid rgba(var(--glass-rgb),0.6);display:flex;flex-direction:column;cursor:pointer;min-height:160px;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:24px;color:${p.iconColor};margin-bottom:10px;font-variation-settings:'FILL' 1;">${p.icon}</span>
-                    <h3 style="font-size:16px;font-weight:700;color:var(--on-surface);line-height:1.25;margin:0 0 auto;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</h3>
-                    <span style="font-size:12px;font-weight:500;color:var(--on-surface-variant);margin-top:14px;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</span>
+                const isFirst = i === 0;
+                const accentColor = isFirst ? '#b6c4ff' : '#6ee7b7';
+                const bgAccent = isFirst ? 'rgba(47,88,205,0.25)' : 'rgba(110,231,183,0.15)';
+                const iconName = isFirst ? 'ph-calendar-star' : 'ph-file-text';
+                return `<div style="border-radius:22px;padding:18px 16px;background:rgba(23,31,51,0.85);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 12px 28px -10px rgba(6,14,32,0.6);border:1px solid rgba(182,196,255,0.14);border-top:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;cursor:pointer;min-height:150px;justify-content:space-between;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                    <div>
+                        <div style="width:36px;height:36px;border-radius:12px;background:${bgAccent};border:1px solid ${accentColor}44;display:flex;align-items:center;justify-content:center;color:${accentColor};margin-bottom:12px;">
+                            <i class="ph-fill ${iconName}" style="font-size:18px;"></i>
+                        </div>
+                        <h3 style="font-size:14px;font-weight:700;color:#dae2fd;line-height:1.3;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(c.titolo)}</h3>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:11px;font-weight:600;color:#8e909f;">
+                        <span>${c.numero ? 'N. ' + escapeHtml(c.numero) : ''}</span>
+                        <span>${fmtDate(c.data)}</span>
+                    </div>
                 </div>`;
             }).join('')}
         </div>` : '';
 
     const recentHtml = recentList.length ? `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h2 style="font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;margin:0;font-family:Hanken Grotesk,sans-serif;">Circolari recenti</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 14px;">
+            <h2 style="font-size:18px;font-weight:800;color:#dae2fd;letter-spacing:-0.01em;margin:0;">${q ? 'Risultati ricerca' : 'Tutte le Circolari'}</h2>
+            <span style="font-size:11px;font-weight:700;color:#8e909f;background:rgba(23,31,51,0.85);border:1px solid rgba(182,196,255,0.14);padding:3px 10px;border-radius:999px;">${recentList.length} ${recentList.length === 1 ? 'comunicazione' : 'comunicazioni'}</span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
+        <div id="circolari-list-container" style="display:flex;flex-direction:column;gap:10px;">
             ${recentList.map(c => `
-                <div style="background:rgba(var(--glass-rgb),0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(var(--glass-rgb),0.9);box-shadow:0 4px 20px -8px rgba(0,0,0,0.05);border-radius:28px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.12s ease;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-                    <div style="width:48px;height:48px;border-radius:50%;background:var(--surface-container-low);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-surface-variant);font-variation-settings:'FILL' 1;">description</span>
+                <div data-circ-item data-circ-search="${escapeHtml(((c.titolo || '') + ' ' + (c.numero || '') + ' ' + (c.data || '')).toLowerCase())}" style="background:rgba(23,31,51,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(182,196,255,0.12);border-top:1px solid rgba(255,255,255,0.22);box-shadow:0 6px 20px -8px rgba(6,14,32,0.6);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.12s ease;" onclick="mostraCircolare('${escapeJsSingleQuote(c.id)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                    <div style="width:42px;height:42px;border-radius:14px;background:rgba(47,88,205,0.2);border:1px solid rgba(182,196,255,0.25);display:flex;align-items:center;justify-content:center;color:#b6c4ff;flex-shrink:0;">
+                        <i class="ph-fill ph-file-text" style="font-size:20px;"></i>
                     </div>
                     <div style="flex:1;min-width:0;">
-                        <p style="font-size:15px;font-weight:700;color:var(--on-surface);margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Hanken Grotesk,sans-serif;">${escapeHtml(c.titolo)}</p>
-                        <p style="font-size:12px;font-weight:500;color:var(--outline);margin:0;font-family:Hanken Grotesk,sans-serif;">${fmtDate(c.data)}</p>
+                        <p style="font-size:14px;font-weight:700;color:#dae2fd;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">${escapeHtml(c.titolo)}</p>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#8e909f;font-weight:600;">
+                            ${c.numero ? `<span style="background:rgba(182,196,255,0.1);padding:1px 6px;border-radius:6px;color:#b6c4ff;">N. ${escapeHtml(c.numero)}</span>` : ''}
+                            <span>${fmtDate(c.data)}</span>
+                            ${c.sintesi ? '<span style="color:#b6c4ff;font-weight:700;display:flex;align-items:center;gap:3px;"><i class="ph-bold ph-sparkle"></i> AI</span>' : ''}
+                        </div>
                     </div>
-                    <span class="material-symbols-outlined" style="font-size:18px;color:var(--outline-variant);flex-shrink:0;">chevron_right</span>
+                    <i class="ph-bold ph-caret-right" style="font-size:16px;color:rgba(182,196,255,0.4);flex-shrink:0;"></i>
                 </div>`).join('')}
         </div>` : '';
 
-    const emptyHtml = !list.length ? `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
-            <span class="material-symbols-outlined" style="font-size:48px;color:var(--outline-variant);margin-bottom:12px;">inbox</span>
-            <p style="font-size:16px;font-weight:600;color:var(--outline);margin:0;font-family:Hanken Grotesk,sans-serif;">Nessuna circolare disponibile</p>
+    const emptyHtml = (!list.length || (q && !filteredList.length)) ? `
+        <div id="circ-search-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
+            <div style="width:56px;height:56px;border-radius:20px;background:rgba(23,31,51,0.85);border:1px solid rgba(182,196,255,0.16);display:flex;align-items:center;justify-content:center;color:#8e909f;margin-bottom:14px;">
+                <i class="ph-bold ph-tray" style="font-size:28px;"></i>
+            </div>
+            <p style="font-size:16px;font-weight:700;color:#dae2fd;margin:0 0 4px;">Nessuna circolare trovata</p>
+            <p style="font-size:13px;font-weight:500;color:#8e909f;margin:0;">${q ? 'Nessun elemento corrisponde ai criteri di ricerca' : 'Non ci sono comunicazioni pubblicate al momento'}</p>
         </div>` : '';
 
     return `
-    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--bg-base, #050811);font-family:'Inter',sans-serif;">
+    <div class="view-fullbleed min-h-screen pb-32" style="background:var(--background, #0b1326);font-family:'Inter',sans-serif;color:#dae2fd;">
         <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
             <div>
-                <div class="ios-sub-title">COMUNICAZIONI SCUOLA</div>
-                <h1 class="ios-large-title">Circolari</h1>
+                <div class="ios-sub-title" style="color:#b6c4ff;font-weight:800;letter-spacing:0.08em;font-size:11px;">COMUNICAZIONI SCUOLA</div>
+                <h1 class="ios-large-title" style="color:#dae2fd;font-weight:800;font-size:32px;letter-spacing:-0.03em;margin:2px 0 0;">Circolari</h1>
             </div>
+            <button onclick="if(typeof loadCircolari==='function'){loadCircolari().then(()=>render());}" style="width:38px;height:38px;border-radius:12px;background:rgba(23,31,51,0.85);border:1px solid rgba(182,196,255,0.16);color:#b6c4ff;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="Aggiorna circolari">
+                <i class="ph-bold ph-arrows-clockwise" style="font-size:18px;"></i>
+            </button>
         </header>
 
         <div style="padding:0 20px;">
+            <!-- Search Bar -->
+            <div style="margin-bottom:18px;position:relative;">
+                <div style="display:flex;align-items:center;background:rgba(23,31,51,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(182,196,255,0.16);border-radius:18px;padding:12px 16px;gap:10px;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);">
+                    <i class="ph-bold ph-magnifying-glass" style="color:#b6c4ff;font-size:18px;flex-shrink:0;"></i>
+                    <input id="circ-search-input" type="text" placeholder="Cerca per titolo, numero o data..." oninput="window.filterCircolari(this.value)" value="${escapeHtml(state.circolariSearchQuery || '')}" style="background:none;border:none;color:#dae2fd;font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;" />
+                    ${state.circolariSearchQuery ? `<i class="ph-bold ph-x-circle" style="color:#8e909f;cursor:pointer;font-size:18px;" onclick="const si=document.getElementById('circ-search-input');if(si){si.value='';window.filterCircolari('');}"></i>` : ''}
+                </div>
+            </div>
+
             ${featuredHtml}
             ${gridHtml}
             ${recentHtml}
@@ -7619,6 +7650,28 @@ function renderCircolariView() {
         </div>
     </div>`;
 }
+
+window.filterCircolari = function(query) {
+    state.circolariSearchQuery = query;
+    const container = document.getElementById('circolari-list-container');
+    if (!container) {
+        if (typeof render === 'function') render();
+        return;
+    }
+    const items = container.querySelectorAll('[data-circ-item]');
+    const q = (query || '').toLowerCase().trim();
+    let visibleCount = 0;
+    items.forEach(el => {
+        const text = el.getAttribute('data-circ-search') || '';
+        const match = !q || text.includes(q);
+        el.style.display = match ? 'flex' : 'none';
+        if (match) visibleCount++;
+    });
+    const emptyEl = document.getElementById('circ-search-empty');
+    if (emptyEl) {
+        emptyEl.style.display = (visibleCount === 0 && q) ? 'flex' : 'none';
+    }
+};
 
 function getSubjectIcon(subject) {
     const s = normalizeSubjectName(subject);
