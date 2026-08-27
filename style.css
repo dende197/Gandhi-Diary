@@ -1,9 +1,70 @@
-/* ============================================
-   G-CONNECT — 4K ULTRA HD LIQUID GLASS & iOS HIG DESIGN SYSTEM
-   ============================================ */
+/* ==========================================================================
+   G-CONNECT — DESIGN TOKENS ARCHITECTURE (Apple HIG & Material 3 / OKLCH & HSL)
+   ========================================================================== */
 
 :root {
-  /* Dynamic Backgrounds & Elevation (Apple HIG Dark System Hierarchy) */
+  /* --- HSL / OKLCH CHROMATIC PALETTE (Lightness-Modulated) --- */
+  /* Primary Tint: Apple Azure (Hue: 212° / OKLCH H: 250) */
+  --color-primary-h: 212;
+  --color-primary-s: 100%;
+  --color-primary-50:  hsl(var(--color-primary-h), var(--color-primary-s), 95%);
+  --color-primary-100: hsl(var(--color-primary-h), var(--color-primary-s), 88%);
+  --color-primary-200: hsl(var(--color-primary-h), var(--color-primary-s), 76%);
+  --color-primary-300: hsl(var(--color-primary-h), var(--color-primary-s), 64%);
+  --color-primary-400: hsl(var(--color-primary-h), var(--color-primary-s), 58%); /* #2997ff */
+  --color-primary-500: hsl(var(--color-primary-h), var(--color-primary-s), 50%); /* #007aff */
+  --color-primary-600: hsl(var(--color-primary-h), var(--color-primary-s), 42%);
+  --color-primary-700: hsl(var(--color-primary-h), var(--color-primary-s), 32%);
+  --color-primary-800: hsl(var(--color-primary-h), var(--color-primary-s), 22%);
+  --color-primary-900: hsl(var(--color-primary-h), var(--color-primary-s), 14%);
+
+  /* Success: Apple Emerald (Hue: 135° / OKLCH H: 145) */
+  --color-success-h: 135;
+  --color-success-s: 65%;
+  --color-success-50:  hsl(var(--color-success-h), var(--color-success-s), 94%);
+  --color-success-400: hsl(var(--color-success-h), var(--color-success-s), 51%); /* #30d158 */
+  --color-success-500: hsl(var(--color-success-h), var(--color-success-s), 45%); /* #34c759 */
+  --color-success-700: hsl(var(--color-success-h), var(--color-success-s), 28%);
+  --color-success-900: hsl(var(--color-success-h), var(--color-success-s), 12%);
+
+  /* Warning: Apple Amber / Gold (Hue: 36° / OKLCH H: 75) */
+  --color-warning-h: 36;
+  --color-warning-s: 100%;
+  --color-warning-50:  hsl(var(--color-warning-h), var(--color-warning-s), 95%);
+  --color-warning-400: hsl(var(--color-warning-h), var(--color-warning-s), 52%); /* #ff9f0a */
+  --color-warning-500: hsl(var(--color-warning-h), var(--color-warning-s), 50%); /* #ff9500 */
+  --color-warning-700: hsl(var(--color-warning-h), var(--color-warning-s), 30%);
+  --color-warning-900: hsl(var(--color-warning-h), var(--color-warning-s), 14%);
+
+  /* Destructive / Error: Apple Red (Hue: 4° / OKLCH H: 25) */
+  --color-error-h: 4;
+  --color-error-s: 100%;
+  --color-error-50:  hsl(var(--color-error-h), var(--color-error-s), 95%);
+  --color-error-400: hsl(var(--color-error-h), var(--color-error-s), 61%); /* #ff453a */
+  --color-error-500: hsl(var(--color-error-h), var(--color-error-s), 58%); /* #ff3b30 */
+  --color-error-700: hsl(var(--color-error-h), var(--color-error-s), 32%);
+  --color-error-900: hsl(var(--color-error-h), var(--color-error-s), 14%);
+
+  /* Info: Apple Cyan (Hue: 198° / OKLCH H: 215) */
+  --color-info-h: 198;
+  --color-info-s: 93%;
+  --color-info-400: hsl(var(--color-info-h), var(--color-info-s), 60%); /* #64d2ff */
+  --color-info-500: hsl(var(--color-info-h), var(--color-info-s), 48%); /* #0091ff */
+
+  /* Purple / Creative: Apple Violet (Hue: 280° / OKLCH H: 300) */
+  --color-purple-h: 280;
+  --color-purple-s: 87%;
+  --color-purple-400: hsl(var(--color-purple-h), var(--color-purple-s), 65%); /* #bf5af2 */
+  --color-purple-500: hsl(var(--color-purple-h), var(--color-purple-s), 58%); /* #af52de */
+
+  /* --- 3-TIER SURFACE & ELEVATION TOKENS (Dark Mode Default) --- */
+  --surface-base: hsl(222, 47%, 9%);              /* Level 0: Base Canvas #0c1424 */
+  --surface-container: hsla(220, 46%, 15%, 0.75); /* Level 1: Liquid Glass Surface */
+  --surface-elevated: hsla(220, 43%, 22%, 0.88);  /* Level 2: Elevated Interactive Tiles */
+  --surface-glass-blur: blur(25px) saturate(180%);
+  --border-highlight: hsla(0, 0%, 100%, 0.15);     /* 1px top rim-light */
+  --border-subtle: hsla(0, 0%, 100%, 0.08);
+
   --bg-base: #0c1424;
   --bg-surface: rgba(20, 31, 54, 0.78);
   --bg-elevated: rgba(28, 42, 70, 0.90);
@@ -15,89 +76,38 @@
   --surface-bright: #223456;
   --surface-container-lowest: #070d1a;
   --surface-container-low: #0e182b;
-  --surface-container: #14223c;
   --surface-container-high: #1c2e50;
   --surface-container-highest: #283e6a;
   --background: #0c1424;
   --on-background: #ffffff;
 
-  /* Semantic Labels & Vibrancy (Apple Scale) */
-  --label: #ffffff;
-  --secondary-label: rgba(255, 255, 255, 0.60);
-  --tertiary-label: rgba(255, 255, 255, 0.30);
-  --quaternary-label: rgba(255, 255, 255, 0.18);
-
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.65);
-  --text-muted: rgba(255, 255, 255, 0.38);
+  /* --- SEMANTIC TYPOGRAPHY & CONTRAST LABELS --- */
+  --text-primary: hsla(0, 0%, 100%, 0.92);
+  --text-secondary: hsla(0, 0%, 100%, 0.60);
+  --text-tertiary: hsla(0, 0%, 100%, 0.35);
+  --text-disabled: hsla(0, 0%, 100%, 0.20);
   --on-surface: #ffffff;
   --on-surface-variant: rgba(255, 255, 255, 0.65);
-  --inverse-surface: #ffffff;
-  --inverse-on-surface: #14223c;
-  --outline: rgba(255, 255, 255, 0.35);
-  --outline-variant: rgba(255, 255, 255, 0.12);
-  --surface-tint: #2997ff;
 
-  /* Hairline Borders & Top-Down Light Simulation */
-  --border-subtle: rgba(255, 255, 255, 0.10);
-  --border-highlight: rgba(255, 255, 255, 0.20);
-  --border-glass: rgba(255, 255, 255, 0.14);
+  /* --- SEMANTIC ACCENTS --- */
+  --tint-primary: var(--color-primary-400);   /* #2997ff */
+  --tint-success: var(--color-success-400);   /* #30d158 */
+  --tint-warning: var(--color-warning-400);   /* #ff9f0a */
+  --tint-error:   var(--color-error-400);     /* #ff453a */
+  --tint-info:    var(--color-info-400);      /* #64d2ff */
+  --tint-purple:  var(--color-purple-400);    /* #bf5af2 */
 
-  /* Apple iOS Vivid Accents (Standard HIG Palette) */
+  --primary: #2997ff;
+  --success: #30d158;
+  --warning: #ff9f0a;
+  --error: #ff453a;
+  --info: #38bdf8;
   --accent-blue: #007aff;
-  --accent-blue-vivid: #2997ff;
   --accent-green: #30d158;
   --accent-red: #ff453a;
   --accent-amber: #ff9f0a;
   --accent-purple: #bf5af2;
   --accent-cyan: #64d2ff;
-
-  /* System Color Mappings */
-  --primary: #2997ff;
-  --on-primary: #ffffff;
-  --primary-container: #1d4ed8;
-  --on-primary-container: #dbeafe;
-  --inverse-primary: #007aff;
-  --primary-fixed: #dbeafe;
-  --primary-fixed-dim: #93c5fd;
-
-  --secondary: #94a3b8;
-  --on-secondary: #0f172a;
-  --secondary-container: #1e293b;
-  --on-secondary-container: #cbd5e1;
-
-  --tertiary: #64d2ff;
-  --on-tertiary: #002b4d;
-  --tertiary-container: #0284c7;
-  --on-tertiary-container: #e0f2fe;
-
-  --error: #ff453a;
-  --on-error: #ffffff;
-  --error-container: #7f1d1d;
-  --on-error-container: #fee2e2;
-
-  --success: #30d158;
-  --on-success: #052e16;
-  --success-container: #14532d;
-  --on-success-container: #dcfce7;
-
-  --warning: #ff9f0a;
-  --on-warning: #451a03;
-  --warning-container: #78350f;
-  --on-warning-container: #fef3c7;
-
-  --info: #38bdf8;
-  --on-info: #082f49;
-  --info-container: #0369a1;
-  --on-info-container: #e0f2fe;
-
-  --violet: #bf5af2;
-  --on-violet: #ffffff;
-  --violet-container: #6b21a8;
-  --on-violet-container: #f3e8ff;
-
-  /* Glass tint base */
-  --glass-rgb: 255, 255, 255;
 
   /* Navigation Bar Tokens */
   --nav-active-color: #2997ff;
@@ -128,6 +138,29 @@
   --section-gap: 40px;
   --stack-sm: 8px;
   --stack-md: 16px;
+}
+
+/* Light Mode Support */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"], :root[data-theme="light"] {
+    --surface-base: hsl(220, 20%, 97%);
+    --surface-container: hsla(0, 0%, 100%, 0.78);
+    --surface-elevated: hsla(0, 0%, 100%, 0.95);
+    --border-highlight: hsla(0, 0%, 100%, 0.85);
+    --border-subtle: hsla(220, 20%, 80%, 0.50);
+
+    --text-primary: hsl(222, 47%, 11%);
+    --text-secondary: hsla(222, 47%, 11%, 0.65);
+    --text-tertiary: hsla(222, 47%, 11%, 0.40);
+    --text-disabled: hsla(222, 47%, 11%, 0.25);
+
+    --tint-primary: var(--color-primary-500); /* #007aff */
+    --tint-success: var(--color-success-500); /* #34c759 */
+    --tint-warning: var(--color-warning-500); /* #ff9500 */
+    --tint-error:   var(--color-error-500);   /* #ff3b30 */
+    --tint-info:    var(--color-info-500);    /* #0091ff */
+    --tint-purple:  var(--color-purple-500);  /* #af52de */
+  }
 }
 
 /* === RESET === */

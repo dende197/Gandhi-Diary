@@ -2303,12 +2303,18 @@ function renderHome() {
         performanceBarsHtml = months.slice(-6).map(m => {
             const isCur = m.key === currentMonthKey;
             const normalizedHeight = Math.max(16, Math.min(100, ((m.avg - minAvg) / (maxAvg - minAvg)) * 100));
-            const barBg = isCur ? '#2997ff' : (m.avg >= 6 ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 69, 58, 0.35)');
+            const barColor = isCur 
+                ? '#2997ff' 
+                : (m.avg >= 8 ? '#30d158' : (m.avg >= 7 ? '#64d2ff' : (m.avg >= 6 ? 'rgba(182,196,255,0.7)' : '#ff453a')));
+            const barBg = isCur 
+                ? 'linear-gradient(180deg, #64d2ff 0%, #2997ff 100%)' 
+                : (m.avg >= 8 ? 'rgba(48,209,88,0.45)' : (m.avg >= 7 ? 'rgba(100,210,255,0.45)' : (m.avg >= 6 ? 'rgba(182,196,255,0.30)' : 'rgba(255,69,58,0.50)')));
+            const barShadow = isCur ? 'box-shadow:0 0 10px rgba(41,151,255,0.45);' : '';
             return `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;">
-                <span style="font-size:9px;font-weight:700;color:${isCur ? '#2997ff' : 'rgba(255,255,255,0.7)'};font-variant-numeric:tabular-nums;">${m.avg.toFixed(1)}</span>
-                <div style="width:100%;max-width:26px;height:${normalizedHeight}%;background:${barBg};border-radius:4px 4px 2px 2px;transition:height 0.3s ease;"></div>
-                <span style="font-size:8px;font-weight:600;color:${isCur ? '#ffffff' : 'rgba(255,255,255,0.45)'};text-transform:uppercase;">${m.label}</span>
+                <span style="font-size:9px;font-weight:700;color:${barColor};font-variant-numeric:tabular-nums;">${m.avg.toFixed(1)}</span>
+                <div style="width:100%;max-width:26px;height:${normalizedHeight}%;background:${barBg};border-radius:4px 4px 2px 2px;${barShadow}transition:height 0.3s ease;"></div>
+                <span style="font-size:8px;font-weight:600;color:${isCur ? '#ffffff' : 'rgba(255,255,255,0.55)'};text-transform:uppercase;">${m.label}</span>
             </div>`;
         }).join('');
     } else if (_votiValidi.length > 0) {
@@ -2317,12 +2323,14 @@ function renderHome() {
             const isLast = i === recent.length - 1;
             const h = Math.max(16, Math.min(100, (v.val / 10) * 100));
             const isPass = v.val >= 6;
-            const barBg = isLast ? '#2997ff' : (isPass ? 'rgba(48, 209, 88, 0.35)' : 'rgba(255, 69, 58, 0.35)');
+            const barColor = isLast ? '#2997ff' : (v.val >= 8 ? '#30d158' : (isPass ? '#64d2ff' : '#ff453a'));
+            const barBg = isLast ? 'linear-gradient(180deg, #64d2ff 0%, #2997ff 100%)' : (isPass ? 'rgba(48, 209, 88, 0.4)' : 'rgba(255, 69, 58, 0.45)');
+            const barShadow = isLast ? 'box-shadow:0 0 8px rgba(41,151,255,0.4);' : '';
             return `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;">
-                <span style="font-size:9px;font-weight:700;color:${isLast ? '#2997ff' : 'rgba(255,255,255,0.7)'};">${v.val.toFixed(1).replace(/\.0$/, '')}</span>
-                <div style="width:100%;max-width:24px;height:${h}%;background:${barBg};border-radius:4px 4px 2px 2px;"></div>
-                <span style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:32px;">${getSubjectAbbrev(v.materia)}</span>
+                <span style="font-size:9px;font-weight:700;color:${barColor};">${v.val.toFixed(1).replace(/\.0$/, '')}</span>
+                <div style="width:100%;max-width:24px;height:${h}%;background:${barBg};border-radius:4px 4px 2px 2px;${barShadow}"></div>
+                <span style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:32px;">${getSubjectAbbrev(v.materia)}</span>
             </div>`;
         }).join('');
     } else {
@@ -2361,19 +2369,22 @@ function renderHome() {
             </header>
 
             <div style="margin-bottom: 16px; padding: 0 20px;">
-                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Carousel a 3 slide -->
+                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Carousel a 3 slide con accenti cromatici -->
                 <div id="home-media-widget" style="position:relative;overflow:hidden;user-select:none;cursor:grab;width:100%;box-sizing:border-box;">
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
-                        <!-- SLIDE 1: MEDIA GENERALE & SPARKLINE -->
+                        <!-- SLIDE 1: MEDIA GENERALE & SPARKLINE CROMATICO -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:18px 20px 14px 20px;height:210px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                                 <div>
-                                    <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);">MEDIA GENERALE</span>
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <span style="width:6px;height:6px;border-radius:50%;background:#2997ff;box-shadow:0 0 8px rgba(41,151,255,0.7);"></span>
+                                        <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2997ff;">MEDIA GENERALE</span>
+                                    </div>
                                     <h2 style="font-size:16px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1.2;margin:2px 0 0;font-family:'Inter',sans-serif;">Buongiorno, ${toDisplayName(getSafeUserName())}</h2>
                                 </div>
-                                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);font-size:10px;font-weight:600;color:rgba(255,255,255,0.85);backdrop-filter:blur(12px);">
-                                    <i class="ph ph-graduation-cap" style="font-size:12px;color:rgba(255,255,255,0.85);"></i> Anno Scolastico
+                                <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9999px;background:rgba(41,151,255,0.14);border:0.5px solid rgba(41,151,255,0.35);font-size:10px;font-weight:700;color:#2997ff;backdrop-filter:blur(12px);">
+                                    <i class="ph-bold ph-graduation-cap" style="font-size:12px;color:#2997ff;"></i> Anno Scolastico
                                 </span>
                             </div>
 
@@ -2381,62 +2392,63 @@ function renderHome() {
                                 <div style="display:flex;align-items:center;gap:12px;">
                                     <span class="card-media-val ${isInitialLoad ? 'skeleton' : ''}" style="font-size:44px;font-weight:800;letter-spacing:-0.03em;color:#ffffff;line-height:1;font-variant-numeric:tabular-nums;">${isInitialLoad ? '0.00' : media.toFixed(2)}</span>
                                     <div style="display:flex;flex-direction:column;gap:3px;">
-                                        <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};color:${isPositive ? '#30d158' : '#ff453a'};font-size:11px;font-weight:700;padding:2px 8px;border-radius:9999px;border:0.5px solid ${isPositive ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'};">
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};color:${isPositive ? '#30d158' : '#ff453a'};font-size:11px;font-weight:700;padding:2px 9px;border-radius:9999px;border:0.5px solid ${isPositive ? 'rgba(48,209,88,0.35)' : 'rgba(255,69,58,0.35)'};box-shadow:0 2px 6px ${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};">
                                             <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:11px;"></i> ${diffStr}
                                         </span>
-                                        <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.5);">${_votiTotali > 0 ? `${_votiTotali} voti registrati` : 'In attesa voti'}</span>
+                                        <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.6);">${_votiTotali > 0 ? `${_votiTotali} voti registrati` : 'In attesa voti'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Geometric Apple Bar Graph -->
+                            <!-- Geometric Apple Chromatic Bar Graph -->
                             <div style="display:flex;align-items:end;gap:6px;height:48px;width:100%;padding:4px 10px;background:rgba(255,255,255,0.03);border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);box-sizing:border-box;">
                                 ${performanceBarsHtml}
                             </div>
                         </div>
 
-                        <!-- SLIDE 2: DETTAGLIO VALUTAZIONI (2x2 Apple Glass Bento Tiles) -->
+                        <!-- SLIDE 2: DETTAGLIO VALUTAZIONI (Vibrant Apple Bento Tiles) -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:18px 20px 14px 20px;height:210px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:6px;">
-                                <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:5px;">
-                                    <i class="ph-bold ph-chart-polar" style="font-size:12px;"></i> RENDIMENTO & STATISTICHE
-                                </span>
-                                <span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);padding:2px 8px;border-radius:999px;">Anno Scolastico</span>
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="width:6px;height:6px;border-radius:50%;background:#bf5af2;box-shadow:0 0 8px rgba(191,90,242,0.7);"></span>
+                                    <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#bf5af2;">RENDIMENTO & STATISTICHE</span>
+                                </div>
+                                <span style="font-size:10px;font-weight:700;color:#bf5af2;background:rgba(191,90,242,0.12);border:0.5px solid rgba(191,90,242,0.3);padding:2px 9px;border-radius:999px;">Anno Scolastico</span>
                             </div>
 
                             ${_votiTotali > 0 ? `
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:auto 0;">
-                                <div style="background:rgba(255,255,255,0.04);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);">
+                                <div style="background:rgba(48,209,88,0.08);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(48,209,88,0.25);">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Migliore</span>
-                                        <i class="ph-fill ph-trophy" style="font-size:12px;color:#30d158;"></i>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Migliore</span>
+                                        <i class="ph-fill ph-trophy" style="font-size:13px;color:#30d158;"></i>
                                     </div>
-                                    <span style="font-size:17px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.8);">${_votoAltoSubj}</span></span>
+                                    <span style="font-size:17px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;">${_votoAlto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.85);">${_votoAltoSubj}</span></span>
                                 </div>
-                                <div style="background:rgba(255,255,255,0.04);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);">
+                                <div style="background:rgba(41,151,255,0.08);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(41,151,255,0.25);">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Ultimo</span>
-                                        <i class="ph-fill ph-clock" style="font-size:12px;color:#2997ff;"></i>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Ultimo</span>
+                                        <i class="ph-fill ph-clock" style="font-size:13px;color:#2997ff;"></i>
                                     </div>
-                                    <span style="font-size:17px;font-weight:800;color:#2997ff;font-variant-numeric:tabular-nums;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.8);">${_ultimoVotoSubj}</span></span>
+                                    <span style="font-size:17px;font-weight:800;color:#2997ff;font-variant-numeric:tabular-nums;">${_ultimoVoto.toFixed(2).replace(/\.?0+$/, '')} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.85);">${_ultimoVotoSubj}</span></span>
                                 </div>
-                                <div style="background:rgba(255,255,255,0.04);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);">
+                                <div style="background:rgba(255,255,255,0.04);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.10);">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Bilancio</span>
-                                        <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);">${_votiTotali} tot</span>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Bilancio</span>
+                                        <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.5);">${_votiTotali} tot</span>
                                     </div>
-                                    <div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:4px;">
-                                        <span style="color:#30d158;">${_votiSuff} ≥6</span>
+                                    <div style="font-size:13px;font-weight:800;display:flex;align-items:center;gap:4px;">
+                                        <span style="color:#30d158;background:rgba(48,209,88,0.15);padding:1px 5px;border-radius:5px;">${_votiSuff} ≥6</span>
                                         <span style="color:rgba(255,255,255,0.3);">·</span>
-                                        <span style="color:${_votiInsuff > 0 ? '#ff453a' : 'rgba(255,255,255,0.4)'};">${_votiInsuff} &lt;6</span>
+                                        <span style="color:${_votiInsuff > 0 ? '#ff453a' : 'rgba(255,255,255,0.4)'};background:${_votiInsuff > 0 ? 'rgba(255,69,58,0.15)' : 'rgba(255,255,255,0.06)'};padding:1px 5px;border-radius:5px;">${_votiInsuff} &lt;6</span>
                                     </div>
                                 </div>
-                                <div style="background:rgba(255,255,255,0.04);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);">
+                                <div style="background:rgba(191,90,242,0.08);padding:8px 12px;border-radius:14px;border:0.5px solid rgba(191,90,242,0.25);">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Variazione</span>
-                                        <i class="ph-bold ph-trend-up" style="font-size:12px;color:${_trendPct === null ? 'rgba(255,255,255,0.4)' : (_trendPct >= 0 ? '#30d158' : '#ff453a')};"></i>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Variazione</span>
+                                        <i class="ph-bold ph-trend-up" style="font-size:13px;color:#bf5af2;"></i>
                                     </div>
-                                    <span style="font-size:14px;font-weight:800;color:${_trendPct === null ? 'rgba(255,255,255,0.7)' : (_trendPct >= 0 ? '#30d158' : '#ff453a')};display:flex;align-items:center;gap:2px;">
+                                    <span style="font-size:14px;font-weight:800;color:#bf5af2;display:flex;align-items:center;gap:2px;">
                                         ${_trendPct === null ? 'Stabile' : `${_trendPct >= 0 ? '↑ +' : '↓ '}${Math.abs(_trendPct).toFixed(1)}%`}
                                     </span>
                                 </div>
@@ -2452,10 +2464,11 @@ function renderHome() {
                         <!-- SLIDE 3: OBIETTIVO MEDIA & TARGET SIMULATOR -->
                         <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;overflow:hidden;position:relative;padding:18px 20px 14px 20px;height:210px;display:flex;flex-direction:column;justify-content:space-between;">
                             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:6px;">
-                                <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:5px;">
-                                    <i class="ph-fill ph-target" style="font-size:12px;color:#2997ff;"></i> OBIETTIVO MEDIA
-                                </span>
-                                <span style="font-size:10px;font-weight:700;color:#2997ff;background:rgba(41,151,255,0.12);border:0.5px solid rgba(41,151,255,0.3);padding:2px 8px;border-radius:999px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="width:6px;height:6px;border-radius:50%;background:#ff9f0a;box-shadow:0 0 8px rgba(255,159,10,0.7);"></span>
+                                    <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#ff9f0a;">OBIETTIVO MEDIA</span>
+                                </div>
+                                <span style="font-size:10px;font-weight:700;color:#ff9f0a;background:rgba(255,159,10,0.14);border:0.5px solid rgba(255,159,10,0.35);padding:2px 9px;border-radius:999px;">
                                     Target ${_obiettivoTarget.toFixed(2)}
                                 </span>
                             </div>
@@ -2463,28 +2476,28 @@ function renderHome() {
                             <div style="margin:auto 0;display:flex;flex-direction:column;gap:8px;">
                                 <div style="display:flex;align-items:baseline;justify-content:space-between;">
                                     <div style="display:flex;align-items:baseline;gap:5px;">
-                                        <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);">Attuale:</span>
+                                        <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);">Attuale:</span>
                                         <span style="font-size:15px;font-weight:800;color:#ffffff;">${media.toFixed(2)}</span>
                                     </div>
-                                    <span style="font-size:11px;font-weight:700;color:#2997ff;">${_obiettivoProgress}% completato</span>
+                                    <span style="font-size:11px;font-weight:700;color:#ff9f0a;">${_obiettivoProgress}% completato</span>
                                 </div>
 
-                                <!-- Minimalist Progress Bar -->
+                                <!-- Dual Gradient Progress Bar -->
                                 <div style="width:100%;background:rgba(255,255,255,0.08);height:6px;border-radius:9999px;overflow:hidden;position:relative;">
-                                    <div style="background:#2997ff;height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.4s ease;"></div>
+                                    <div style="background:linear-gradient(90deg, #2997ff 0%, #30d158 100%);height:100%;border-radius:9999px;width:${_obiettivoProgress}%;transition:width 0.4s ease;box-shadow:0 0 8px rgba(41,151,255,0.4);"></div>
                                 </div>
 
-                                <div style="padding:7px 12px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;">
-                                    <p style="font-size:11px;line-height:1.4;color:rgba(255,255,255,0.85);margin:0;">
+                                <div style="padding:7px 12px;background:rgba(255,159,10,0.08);border:0.5px solid rgba(255,159,10,0.22);border-radius:12px;">
+                                    <p style="font-size:11px;line-height:1.4;color:rgba(255,255,255,0.9);margin:0;">
                                         ${_obiettivoMancanti > 0
-                                            ? `💡 Con circa <strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> raggiungi <strong style="color:#ffffff;">${_obiettivoTarget.toFixed(2)}</strong>.`
-                                            : `🎉 Hai raggiunto la soglia target di <strong style="color:#ffffff;">${_obiettivoTarget.toFixed(2)}</strong>.`}
+                                            ? `💡 Con circa <strong>${_obiettivoMancanti} voti da ${_obiettivoVotoIpotetico.toFixed(1)}</strong> raggiungi <strong style="color:#ff9f0a;">${_obiettivoTarget.toFixed(2)}</strong>.`
+                                            : `🎉 Hai raggiunto la soglia target di <strong style="color:#ff9f0a;">${_obiettivoTarget.toFixed(2)}</strong>.`}
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Quick action to open grades / simulator -->
-                            <div onclick="navigate('voti')" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:600;color:#2997ff;cursor:pointer;padding:2px 0;">
+                            <div onclick="navigate('voti')" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;color:#2997ff;cursor:pointer;padding:2px 0;">
                                 <span>Apri Registro Voti</span>
                                 <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
                             </div>
