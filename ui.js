@@ -9985,8 +9985,11 @@ function renderGradesView() {
         const featureTheme = featureItem ? getSubjectTheme(featureItem.name) : getSubjectTheme('');
 
         const featureHtml = featureItem ? `
-        <div style="padding:16px 18px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${featureTheme.border};border-top:1px solid rgba(255,255,255,0.25);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-            <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
+        <div style="position:relative;padding:16px 18px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${featureTheme.border};border-top:1px solid rgba(255,255,255,0.25);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+            <!-- Sfumatura cromatica in angolo del colore della materia -->
+            <div style="position:absolute;top:-28px;right:-28px;width:100px;height:100px;background:${featureTheme.color};opacity:0.22;border-radius:50%;filter:blur(26px);pointer-events:none;"></div>
+
+            <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;position:relative;z-index:1;">
                 <div style="width:44px;height:44px;border-radius:14px;background:${featureTheme.iconBg};border:1px solid ${featureTheme.border};display:flex;align-items:center;justify-content:center;color:${featureTheme.color};flex-shrink:0;">
                     <i class="ph-fill ${featureTheme.icon}" style="font-size:22px;"></i>
                 </div>
@@ -9995,7 +9998,7 @@ function renderGradesView() {
                     <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
                 </div>
             </div>
-            <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+            <div style="text-align:right;flex-shrink:0;margin-left:12px;position:relative;z-index:1;">
                 <span style="font-size:22px;font-weight:800;color:${featureItem.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
                 <div style="width:36px;height:3px;background:linear-gradient(90deg, ${featureTheme.color}, #30d158);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
             </div>
@@ -10005,14 +10008,17 @@ function renderGradesView() {
             const itemFormattedName = formatSubjectTitle(item.name);
             const itemTheme = getSubjectTheme(item.name);
             return `
-            <div style="padding:14px 16px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${itemTheme.border};border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:114px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="position:relative;padding:14px 16px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${itemTheme.border};border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:114px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                <!-- Sfumatura cromatica in angolo del colore della materia -->
+                <div style="position:absolute;top:-22px;right:-22px;width:76px;height:76px;background:${itemTheme.color};opacity:0.20;border-radius:50%;filter:blur(20px);pointer-events:none;"></div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
                     <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;">
                         <i class="ph-fill ${itemTheme.icon}" style="font-size:18px;"></i>
                     </div>
                     <span style="font-size:20px;font-weight:800;color:${item.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
                 </div>
-                <h3 style="font-size:13px;font-weight:700;color:${itemTheme.color};line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemFormattedName)}</h3>
+                <h3 style="font-size:13px;font-weight:700;color:${itemTheme.color};line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative;z-index:1;">${escapeHtml(itemFormattedName)}</h3>
             </div>`;
         }).join('');
 
@@ -10186,18 +10192,21 @@ window.openAllGradesModal = function() {
                 const desc = v.descrizione || v.comment || '';
 
                 return `
-                <div style="padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.1);border-top:1px solid rgba(255,255,255,0.18);border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                    <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;">
+                <div style="position:relative;overflow:hidden;padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.1);border-top:1px solid rgba(255,255,255,0.18);border-radius:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <!-- Sfumatura cromatica in angolo del colore della materia -->
+                    <div style="position:absolute;top:-20px;right:-20px;width:64px;height:64px;background:${itemTheme.color};opacity:0.18;border-radius:50%;filter:blur(18px);pointer-events:none;"></div>
+
+                    <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;position:relative;z-index:1;">
                         <i class="ph-fill ${itemTheme.icon}" style="font-size:18px;"></i>
                     </div>
-                    <div style="min-width:0;flex:1;">
+                    <div style="min-width:0;flex:1;position:relative;z-index:1;">
                         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
                             <span style="font-size:14px;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(subj)}</span>
                             <span style="font-size:11px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-weight:600;">${escapeHtml(tipo)}</span>
                         </div>
                         <p style="font-size:12px;color:rgba(255,255,255,0.5);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${date}${desc ? ` · ${escapeHtml(desc)}` : ''}</p>
                     </div>
-                    <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:16px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};flex-shrink:0;">${v.valore || v.value}</span>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:16px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};flex-shrink:0;position:relative;z-index:1;">${v.valore || v.value}</span>
                 </div>`;
             }).join('')}
         </div>
