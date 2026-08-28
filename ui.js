@@ -3270,8 +3270,39 @@ function renderSubjectDetailView(subjectName) {
     const media = parseFloat(calcolaMedia(votiData)) || 0;
     const goal = state.goals?.[subjectName] || 8.0;
     const n = votiData.length;
+    const theme = getSubjectTheme(subjectName);
+    const formattedTitle = formatSubjectTitle(subjectName);
 
-    // ── Semester split ────────────────────────────────────────────────────────
+    // ── Trend calculation: current average vs average without the latest grade ──
+    const sortedByDate = [...votiData].sort((a, b) => (a.data || a.date || '').localeCompare(b.data || b.date || ''));
+    const allNums = sortedByDate.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+    const mediaConTutti = allNums.length > 0 ? allNums.reduce((s, x) => s + x, 0) / allNums.length : null;
+    const mediaSenzaUltimo = allNums.length > 1 ? allNums.slice(0, -1).reduce((s, x) => s + x, 0) / (allNums.length - 1) : null;
+    let diffStr = '';
+    let isPosTrend = true;
+    if (mediaConTutti !== null && mediaSenzaUltimo !== null) {
+        const diff = mediaConTutti - mediaSenzaUltimo;
+        isPosTrend = diff >= 0;
+        diffStr = (isPosTrend ? '+' : '') + diff.toFixed(2);
+    }
+
+    // ── Performance Status Badge ──
+    let statusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check-circle' };
+    if (media >= 8.5) {
+        statusBadge = { label: 'Eccellente', color: '#30d158', bg: 'rgba(48,209,88,0.18)', border: 'rgba(48,209,88,0.38)', icon: 'ph-star' };
+    } else if (media >= 7.5) {
+        statusBadge = { label: 'Ottimo', color: '#30d158', bg: 'rgba(48,209,88,0.15)', border: 'rgba(48,209,88,0.35)', icon: 'ph-trend-up' };
+    } else if (media >= 6.5) {
+        statusBadge = { label: 'Discreto', color: '#64d2ff', bg: 'rgba(100,210,255,0.15)', border: 'rgba(100,210,255,0.35)', icon: 'ph-thumbs-up' };
+    } else if (media >= 6.0) {
+        statusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check' };
+    } else if (media > 0) {
+        statusBadge = { label: 'Insufficiente', color: '#ff453a', bg: 'rgba(255,69,58,0.18)', border: 'rgba(255,69,58,0.38)', icon: 'ph-warning' };
+    } else {
+        statusBadge = { label: 'Nessun Voto', color: 'rgba(255,255,255,0.5)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', icon: 'ph-info' };
+    }
+
+    // ── Semester split ──
     function semesterOf(v) {
         const raw = v.data || v.date || '';
         const d = parseArgoDate ? parseArgoDate(raw) : new Date(raw);
@@ -3285,60 +3316,49 @@ function renderSubjectDetailView(subjectName) {
     const media2 = parseFloat(calcolaMedia(s2)) || 0;
     const hasSemesters = s1.length > 0 && s2.length > 0;
 
-    // ── Predictive Hub IDs ────────────────────────────────────────────────────
+    // ── Predictive Hub IDs ──
     const uid = Math.random().toString(36).slice(2, 7);
     const simLblId = 'sL' + uid;
     const simResId = 'sR' + uid;
+    const simDiffId = 'sD' + uid;
     const simDefault = ((media * n + 7.5) / (n + 1)).toFixed(2);
+    const simDeltaInit = (parseFloat(simDefault) - media).toFixed(2);
 
-    // ── Goal text: realistic multi-scenario breakdown ───────────────────────
+    // ── Goal text: realistic multi-scenario breakdown ──
     let goalText;
     if (n > 0 && goal > media) {
         const gap = goal - media;
         const sumNow = media * n;
-
-        // Impossibility check: even all 10s can't reach goal
-        // Max achievable with k perfect grades: (sumNow + k*10)/(n+k)
-        // As k→∞ this tends to 10. If goal > 10 it's impossible (shouldn't happen).
-        // Sanity: if gap > 4 (e.g. media 4, goal 9) → "feet on the ground"
         if (gap >= 4) {
-            goalText = `Obiettivo di <b style="color:var(--info)">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)}: resta con i piedi per terra! La distanza è troppo grande per essere colmata in tempi ragionevoli.`;
+            goalText = `Obiettivo di <strong style="color:#ff9f0a;">${goal.toFixed(1)}</strong> con media attuale di ${media.toFixed(2)}: la distanza è significativa, procedi per gradi puntando a un target intermedio.`;
         } else {
-            // Build scenarios for grade values 7, 8, 9, 10 (all above goal, capped at 10)
             const gradeValues = [7, 8, 9, 10].filter(g => g > goal);
             const scenarios = [];
-
             for (const gradeVal of gradeValues) {
-                // k = ceil((goal*(n+k) - sumNow) / gradeVal)  solved:
-                // k >= (goal*n - sumNow) / (gradeVal - goal)
                 const raw = (goal * n - sumNow) / (gradeVal - goal);
                 const k = Math.ceil(raw);
                 if (k >= 1 && k <= 30 && Number.isFinite(k)) {
                     scenarios.push({ gradeVal, k });
                 }
             }
-
             if (scenarios.length === 0) {
-                // Even 10s not enough in reasonable count — very high goal
-                goalText = `Per raggiungere <b style="color:var(--info)">${goal.toFixed(1)}</b> con media attuale ${media.toFixed(2)} servirebbero troppi voti perfetti. Considera un obiettivo più vicino alla tua media attuale.`;
+                goalText = `Per raggiungere <strong style="color:#ff9f0a;">${goal.toFixed(1)}</strong> con media attuale ${media.toFixed(2)} servirebbero voti massimi costanti. Considera un obiettivo ravvicinato.`;
             } else {
-                // Pick 2-3 most readable scenarios (prefer fewest votes needed)
                 const picked = scenarios.slice(0, 3);
                 const lines = picked.map(s =>
-                    `<b style="color:var(--info)">${s.k} ${s.k===1?'voto':'voti'} da ${s.gradeVal}</b>`
+                    `<strong style="color:${theme.color};">${s.k} ${s.k === 1 ? 'voto' : 'voti'} da ${s.gradeVal}</strong>`
                 ).join(' &nbsp;·&nbsp; ');
-                goalText = `Per raggiungere <b style="color:var(--info)">${goal.toFixed(1)}</b> ti bastano: ${lines}.`;
+                goalText = `Per raggiungere <strong style="color:#ff9f0a;">${goal.toFixed(1)}</strong> ti occorrono: ${lines}.`;
             }
         }
-    } else if (media >= goal) {
-        goalText = `Hai già raggiunto il tuo obiettivo di <b style="color:var(--info)">${goal.toFixed(1)}</b>. Continua così!`;
+    } else if (media >= goal && media > 0) {
+        goalText = `🎉 Complimenti! Hai già raggiunto e superato il tuo obiettivo di <strong style="color:#30d158;">${goal.toFixed(1)}</strong>. Mantieni questa media!`;
     } else {
-        goalText = `Imposta un obiettivo per ricevere suggerimenti personalizzati.`;
+        goalText = `Imposta un obiettivo personalizzato per visualizzare le simulazioni e i suggerimenti accademici.`;
     }
 
-    // ── SVG area chart: aggregated by month, last 6 months ──────────────────
+    // ── SVG Sparkline Curve ──
     const MN = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-    // Build monthly averages for this subject
     const subMonthMap = {};
     votiData.forEach(v => {
         const raw = v.data || v.date || '';
@@ -3357,7 +3377,7 @@ function renderSubjectDetailView(subjectName) {
     let svgArea = '', svgPath = '', svgDots = '';
     let xLabels = [];
     if (subMonthList.length >= 2) {
-        const W = 300, H = 100, PAD = 10;
+        const W = 320, H = 80, PAD = 10;
         const pts = subMonthList.map((m, i) => {
             const x = PAD + (i / (subMonthList.length - 1)) * (W - PAD * 2);
             const y = H - PAD - ((m.avg - 1) / 9) * (H - PAD * 2);
@@ -3365,192 +3385,270 @@ function renderSubjectDetailView(subjectName) {
         });
         let d = `M${pts[0][0]},${pts[0][1]}`;
         for (let i = 1; i < pts.length; i++) {
-            const cx = (pts[i-1][0] + pts[i][0]) / 2;
-            d += ` C${cx},${pts[i-1][1]} ${cx},${pts[i][1]} ${pts[i][0]},${pts[i][1]}`;
+            const cx = (pts[i - 1][0] + pts[i][0]) / 2;
+            d += ` C${cx},${pts[i - 1][1]} ${cx},${pts[i][1]} ${pts[i][0]},${pts[i][1]}`;
         }
-        svgPath = `<path d="${d}" fill="none" stroke="#2997ff" stroke-width="2.5" stroke-linecap="round"/>`;
-        svgArea = `<path d="${d} L${pts[pts.length-1][0]},100 L${pts[0][0]},100 Z" fill="url(#bG${uid})" opacity="0.7"/>`;
-        svgDots = pts.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2997ff"/>`).join('');
+        svgPath = `<path d="${d}" fill="none" stroke="${theme.color}" stroke-width="2.5" stroke-linecap="round" class="grade-chart-line"/>`;
+        svgArea = `<path d="${d} L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z" fill="url(#bG${uid})" class="grade-chart-area"/>`;
+        const lastP = pts[pts.length - 1];
+        svgDots = `<circle cx="${lastP[0]}" cy="${lastP[1]}" r="4.5" fill="${theme.color}" stroke="#ffffff" stroke-width="2" class="grade-chart-dot"/>`;
         xLabels = subMonthList.map(m => m.label);
     }
 
-    // ── Voti list rows ────────────────────────────────────────────────────────
+    // ── Voti List HTML ──
     const votiListHtml = votiData.map((v, i) => {
         const val = getNumericGradeValue(v);
         const isSuff = val >= 6;
         const color = isSuff ? '#30d158' : '#ff453a';
-        const bgBadge = isSuff ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)';
-        const borderBadge = isSuff ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)';
-        const date = (v.data || v.date || '').split('T')[0].split('-').reverse().join('/');
+        const bgBadge = isSuff ? 'rgba(48,209,88,0.16)' : 'rgba(255,69,58,0.16)';
+        const borderBadge = isSuff ? 'rgba(48,209,88,0.35)' : 'rgba(255,69,58,0.35)';
+        const dateStr = (v.data || v.date || '').split('T')[0].split('-').reverse().join('/');
+        const tipoStr = normalizeTipoVerifica(v.tipo, false);
+        const descStr = v.descrizione || v.comment || '';
+
         return `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;${i < votiData.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.05);' : ''}">
-            <div>
-                <h4 style="font-size:14px;font-weight:600;color:#ffffff;margin:0 0 2px;">${escapeHtml(normalizeTipoVerifica(v.tipo, false))}</h4>
-                <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);">${date}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.06);border-radius:16px;margin-bottom:8px;transition:all 0.2s ease;">
+            <div style="min-width:0;flex:1;padding-right:12px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                    <span style="font-size:13px;font-weight:700;color:#ffffff;">${escapeHtml(tipoStr)}</span>
+                    <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-weight:600;">${dateStr}</span>
+                </div>
+                ${descStr ? `<p style="font-size:11px;color:rgba(255,255,255,0.5);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(descStr)}</p>` : ''}
             </div>
-            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:4px 10px;border-radius:9999px;font-size:14px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};">${v.valore || v.value}</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:32px;padding:0 10px;border-radius:9999px;font-size:16px;font-weight:800;background:${bgBadge};border:1px solid ${borderBadge};color:${color};flex-shrink:0;box-shadow:0 2px 6px ${isSuff ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};">${v.valore || v.value}</span>
         </div>`;
     }).join('');
 
-    const CARD_CLASS = 'liquid-glass-v8 squircle-lg rim-light';
-    const CARD = 'padding:20px;margin-bottom:16px;position:relative;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;';
+    const goalProgress = media > 0 ? Math.min(100, Math.round((media / goal) * 100)) : 0;
 
     return `
-    <div class="view-fullbleed min-h-screen pb-40" style="padding:0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
-        <div style="padding:max(env(safe-area-inset-top,0px),24px) 20px 0;">
+    <div class="view-fullbleed min-h-screen subject-detail-container" style="padding:0 0 calc(140px + env(safe-area-inset-bottom, 24px)) 0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
 
-            <!-- Header -->
-            <header style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.closeSubject()" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+        <!-- ══ STICKY FROSTED HEADER ══ -->
+        <header style="display:flex;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top,0px),24px) 20px 14px;background:rgba(12,20,36,0.88);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);position:sticky;top:0;z-index:40;border-bottom:0.5px solid rgba(255,255,255,0.08);">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.closeSubject()" style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ffffff;transition:transform 0.15s ease;flex-shrink:0;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
                     <i class="ph ph-arrow-left text-[20px] text-[#2997ff]"></i>
                 </button>
-                <h1 style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;margin:0;line-height:1.2;">${escapeHtml(subjectName)}</h1>
-            </header>
-
-            <!-- CARD 1: Media + grafico area -->
-            <div class="${CARD_CLASS}" style="${CARD}">
-                <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Media Materia</p>
-                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;">
-                    <span style="font-size:52px;font-weight:800;color:#ffffff;line-height:1;letter-spacing:-0.03em;">${media.toFixed(2)}</span>
-                    ${ (() => {
-                        // Delta: media con tutti i voti - media senza l'ultimo voto
-                        const sortedByDate = [...votiData].sort((a,b) => (a.data||a.date||'').localeCompare(b.data||b.date||''));
-                        const allNums = sortedByDate.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-                        const mediaConTutti = allNums.length > 0 ? allNums.reduce((s,x)=>s+x,0)/allNums.length : null;
-                        const mediaSenzaUltimo = allNums.length > 1 ? allNums.slice(0,-1).reduce((s,x)=>s+x,0)/(allNums.length-1) : null;
-                        if (mediaConTutti !== null && mediaSenzaUltimo !== null) {
-                            const diff = mediaConTutti - mediaSenzaUltimo;
-                            const fmt  = diff.toFixed(2).replace('.', ',');
-                            const isP  = diff >= 0;
-                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.4);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
-                                <i class="ph-fill ${isP ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:13px;color:#30d158;"></i>
-                                <span style="font-size:11px;font-weight:700;color:#30d158;letter-spacing:0.02em;">${isP ? '+' : ''}${fmt}</span>
-                            </div>`;
-                        } else if (n >= 2) {
-                            return `<div style="display:flex;align-items:center;gap:5px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.4);padding:4px 10px;border-radius:9999px;margin-bottom:4px;backdrop-filter:blur(12px);">
-                                <span style="font-size:11px;font-weight:700;color:#2997ff;letter-spacing:0.02em;text-transform:uppercase;">${n} voti</span>
-                            </div>`;
-                        }
-                        return '';
-                    })() }
+                <div style="min-width:0;flex:1;">
+                    <h1 style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin:0;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(formattedTitle)}</h1>
+                    <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);">${n} valutazioni · Anno Scolastico</span>
                 </div>
+            </div>
+            <div style="width:38px;height:38px;border-radius:12px;background:${theme.iconBg};border:1px solid ${theme.border};display:flex;align-items:center;justify-content:center;color:${theme.color};flex-shrink:0;margin-left:12px;">
+                <i class="ph-fill ${theme.icon}" style="font-size:20px;"></i>
+            </div>
+        </header>
+
+        <!-- ══ CONTENT CONTAINER ══ -->
+        <main style="padding:16px 20px 0;display:flex;flex-direction:column;gap:16px;">
+
+            <!-- ── CARD 1: HERO MEDIA & ANDAMENTO ── -->
+            <section style="position:relative;padding:20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:26px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);overflow:hidden;">
+                <!-- Sfumatura cromatica in angolo -->
+                <div style="position:absolute;top:-28px;right:-28px;width:110px;height:110px;background:${theme.color};opacity:0.24;border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;">
+                    <div>
+                        <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${theme.color};display:flex;align-items:center;gap:5px;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:${theme.color};box-shadow:0 0 8px ${theme.color};"></span>
+                            MEDIA MATERIA
+                        </span>
+                        <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;">
+                            <span style="font-size:48px;font-weight:800;color:#ffffff;line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;">${media.toFixed(2)}</span>
+                            ${diffStr ? `
+                            <div style="background:${isPosTrend ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid ${isPosTrend ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};">
+                                <i class="ph-bold ${isPosTrend ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:12px;color:${isPosTrend ? '#30d158' : '#ff453a'};"></i>
+                                <span style="font-size:11px;font-weight:700;color:${isPosTrend ? '#30d158' : '#ff453a'};">${diffStr}</span>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;background:${statusBadge.bg};border:1px solid ${statusBadge.border};font-size:11px;font-weight:700;color:${statusBadge.color};">
+                        <i class="ph-fill ${statusBadge.icon}" style="font-size:13px;"></i> ${statusBadge.label}
+                    </span>
+                </div>
+
                 ${subMonthList.length >= 2 ? `
-                <div style="width:100%;height:84px;margin-bottom:8px;">
-                    <svg viewBox="0 0 300 100" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
+                <!-- Smooth Subject Sparkline SVG -->
+                <div style="width:100%;height:78px;margin-top:14px;position:relative;z-index:1;">
+                    <svg viewBox="0 0 320 80" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
                         <defs>
-                            <linearGradient id="bG${uid}" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#2997ff" stop-opacity="0.35"/>
-                                <stop offset="100%" stop-color="#2997ff" stop-opacity="0"/>
+                            <linearGradient id="bG${uid}" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="${theme.color}" stop-opacity="0.30"/>
+                                <stop offset="100%" stop-color="${theme.color}" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
                         ${svgArea}${svgPath}${svgDots}
                     </svg>
                 </div>
-                <div style="display:flex;justify-content:space-between;padding:0 2px;">
-                    ${xLabels.map(l => `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;">${l}</span>`).join('')}
-                </div>` : ''}
-            </div>
+                <div style="display:flex;justify-content:space-between;padding:0 2px;margin-top:6px;position:relative;z-index:1;">
+                    ${xLabels.map((l, i) => `<span style="font-size:10px;font-weight:700;color:${i === xLabels.length - 1 ? theme.color : 'rgba(255,255,255,0.45)'};text-transform:uppercase;letter-spacing:0.06em;">${l}</span>`).join('')}
+                </div>` : `
+                <div style="margin-top:14px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:12px;font-size:11px;color:rgba(255,255,255,0.5);font-style:italic;">
+                    Andamento temporale disponibile a partire da 2 mesi di valutazioni.
+                </div>`}
+            </section>
 
-            <!-- CARD 2: Predictive Hub -->
-            <div class="${CARD_CLASS}" style="${CARD}">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div style="width:38px;height:38px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
-                        <i class="ph-fill ph-lightning text-[20px]"></i>
-                    </div>
-                    <h2 style="font-size:17px;font-weight:700;color:#ffffff;margin:0;">Predictive Hub</h2>
+            <!-- ── CARD 2: VOTI RICEVUTI ── -->
+            <section style="position:relative;padding:20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:26px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);overflow:hidden;">
+                <!-- Sfumatura cromatica in angolo -->
+                <div style="position:absolute;top:-28px;right:-28px;width:90px;height:90px;background:${theme.color};opacity:0.18;border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;position:relative;z-index:1;">
+                    <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.55);display:flex;align-items:center;gap:6px;">
+                        <i class="ph-bold ph-list-numbers" style="font-size:13px;color:${theme.color};"></i>
+                        VOTI RICEVUTI
+                    </span>
+                    <span style="font-size:11px;font-weight:700;color:${theme.color};background:${theme.iconBg};border:0.5px solid ${theme.border};padding:2px 8px;border-radius:999px;">
+                        ${votiData.length} registrati
+                    </span>
                 </div>
-                <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0 0 18px;">Simula il tuo prossimo voto per vedere come influisce sulla media in tempo reale.</p>
-                <div style="margin-bottom:18px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;">
-                        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.06em;">Voto simulato</span>
-                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:#2997ff;line-height:1;">7.5</span>
+
+                <div style="position:relative;z-index:1;">
+                    ${votiListHtml || `
+                    <div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,0.45);">
+                        <i class="ph ph-tray" style="font-size:28px;margin-bottom:6px;display:block;"></i>
+                        <p style="font-size:12px;margin:0;font-style:italic;">Nessuna valutazione registrata per ${escapeHtml(formattedTitle)}.</p>
+                    </div>`}
+                </div>
+            </section>
+
+            <!-- ── CARD 3: SIMULATORE & PREDICTIVE HUB ── -->
+            <section style="position:relative;padding:20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:26px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);overflow:hidden;">
+                <!-- Sfumatura cromatica in angolo -->
+                <div style="position:absolute;top:-28px;right:-28px;width:90px;height:90px;background:${theme.color};opacity:0.20;border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
+
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;position:relative;z-index:1;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:${theme.iconBg};border:1px solid ${theme.border};display:flex;align-items:center;justify-content:center;color:${theme.color};flex-shrink:0;">
+                        <i class="ph-fill ph-lightning text-[18px]"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size:15px;font-weight:700;color:#ffffff;margin:0;">Simulatore Prossimo Voto</h2>
+                        <p style="font-size:11px;color:rgba(255,255,255,0.55);margin:0;">Calcola l'impatto istantaneo sulla media</p>
+                    </div>
+                </div>
+
+                <div style="margin:14px 0 16px;position:relative;z-index:1;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;">
+                        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Voto ipotetico</span>
+                        <span id="${simLblId}" style="font-size:22px;font-weight:800;color:${theme.color};line-height:1;font-variant-numeric:tabular-nums;">7.5</span>
                     </div>
                     <input id="${uid}-range" type="range" min="1" max="10" step="0.5" value="7.5"
-                        style="width:100%;height:6px;border-radius:9999px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right,#2997ff 72.22%,rgba(255,255,255,0.1) 72.22%);"
-                        oninput="(function(el){var pct=(el.value-1)/9*100;el.style.background='linear-gradient(to right,#2997ff '+pct+'%,rgba(255,255,255,0.1) '+pct+'%)';document.getElementById('${simLblId}').textContent=parseFloat(el.value).toFixed(1);var nm=((${media}*${n})+parseFloat(el.value))/(${n}+1);document.getElementById('${simResId}').textContent=nm.toFixed(2);})(this)">
+                        style="width:100%;height:6px;border-radius:9999px;outline:none;cursor:pointer;-webkit-appearance:none;background:linear-gradient(to right, ${theme.color} 72.22%, rgba(255,255,255,0.1) 72.22%);"
+                        oninput="(function(el){
+                            var pct = (el.value - 1) / 9 * 100;
+                            el.style.background = 'linear-gradient(to right, ${theme.color} ' + pct + '%, rgba(255,255,255,0.1) ' + pct + '%)';
+                            document.getElementById('${simLblId}').textContent = parseFloat(el.value).toFixed(1);
+                            var nm = ((${media} * ${n}) + parseFloat(el.value)) / (${n} + 1);
+                            var diff = nm - ${media};
+                            document.getElementById('${simResId}').textContent = nm.toFixed(2);
+                            var diffEl = document.getElementById('${simDiffId}');
+                            if(diffEl){
+                                diffEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(2);
+                                diffEl.style.color = diff >= 0 ? '#30d158' : '#ff453a';
+                            }
+                        })(this)">
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:14px 16px;">
-                    <div>
-                        <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Media stimata</p>
-                        <span id="${simResId}" style="font-size:24px;font-weight:800;color:#ffffff;line-height:1;">${simDefault}</span>
-                    </div>
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;">
-                        <i class="ph-fill ph-magic-wand text-[20px]"></i>
-                    </div>
-                </div>
-            </div>
 
-            <!-- CARD 3: Confronto Semestri -->
-            ${hasSemesters ? `
-            <div class="${CARD_CLASS}" style="${CARD}">
-                <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 16px;">Confronto Semestri</p>
-                <div style="margin-bottom:16px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span style="font-size:14px;font-weight:700;color:#ffffff;">1° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:rgba(255,255,255,0.7);">${media1.toFixed(1)}</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:12px 16px;position:relative;z-index:1;">
+                    <div>
+                        <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px;">Nuova Media Prevista</p>
+                        <div style="display:flex;align-items:baseline;gap:8px;">
+                            <span id="${simResId}" style="font-size:24px;font-weight:800;color:#ffffff;line-height:1;font-variant-numeric:tabular-nums;">${simDefault}</span>
+                            <span id="${simDiffId}" style="font-size:12px;font-weight:700;color:${parseFloat(simDeltaInit) >= 0 ? '#30d158' : '#ff453a'};">
+                                ${parseFloat(simDeltaInit) >= 0 ? '+' : ''}${simDeltaInit}
+                            </span>
+                        </div>
                     </div>
-                    <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:${theme.iconBg};border:1px solid ${theme.border};display:flex;align-items:center;justify-content:center;color:${theme.color};">
+                        <i class="ph-fill ph-magic-wand text-[18px]"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── CARD 4: CONFRONTO SEMESTRI ── -->
+            ${hasSemesters ? `
+            <section style="position:relative;padding:20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:26px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);overflow:hidden;">
+                <!-- Sfumatura cromatica in angolo -->
+                <div style="position:absolute;top:-28px;right:-28px;width:90px;height:90px;background:${theme.color};opacity:0.18;border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
+
+                <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.06em;margin:0 0 14px;position:relative;z-index:1;">Confronto Quadrimestri</p>
+                <div style="margin-bottom:14px;position:relative;z-index:1;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:13px;font-weight:700;color:#ffffff;">1° Quadrimestre</span>
+                        <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">${media1.toFixed(1)}</span>
+                    </div>
+                    <div style="width:100%;background:rgba(255,255,255,0.06);height:6px;border-radius:9999px;overflow:hidden;">
                         <div style="width:${(media1/10*100).toFixed(0)}%;height:100%;background:rgba(255,255,255,0.4);border-radius:9999px;"></div>
                     </div>
                 </div>
-                <div style="margin-bottom:18px;">
+                <div style="margin-bottom:14px;position:relative;z-index:1;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span style="font-size:14px;font-weight:700;color:#ffffff;">2° Semestre</span>
-                        <span style="font-size:15px;font-weight:700;color:#2997ff;">${media2.toFixed(1)}</span>
+                        <span style="font-size:13px;font-weight:700;color:#ffffff;">2° Quadrimestre</span>
+                        <span style="font-size:14px;font-weight:700;color:${theme.color};">${media2.toFixed(1)}</span>
                     </div>
-                    <div style="width:100%;background:rgba(255,255,255,0.06);height:8px;border-radius:9999px;overflow:hidden;">
-                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:#2997ff;border-radius:9999px;"></div>
+                    <div style="width:100%;background:rgba(255,255,255,0.06);height:6px;border-radius:9999px;overflow:hidden;">
+                        <div style="width:${(media2/10*100).toFixed(0)}%;height:100%;background:${theme.color};border-radius:9999px;"></div>
                     </div>
                 </div>
-                ${media2 > media1 ? `
-                <div style="background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.28);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(48,209,88,0.2);display:flex;align-items:center;justify-content:center;color:#30d158;flex-shrink:0;">
-                        <i class="ph-bold ph-caret-double-up text-[18px]"></i>
+                ${media2 >= media1 ? `
+                <div style="background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.28);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
+                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(48,209,88,0.2);display:flex;align-items:center;justify-content:center;color:#30d158;flex-shrink:0;">
+                        <i class="ph-bold ph-caret-double-up text-[16px]"></i>
                     </div>
-                    <p style="font-size:13px;color:rgba(255,255,255,0.9);line-height:1.4;margin:0;">Stai andando <b style="color:#30d158;">${((media2-media1)/media1*100).toFixed(0)}% meglio</b> rispetto al primo semestre.</p>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.9);line-height:1.35;margin:0;">Stai registrando un miglioramento del <strong style="color:#30d158;">+${((media2-media1)/media1*100).toFixed(0)}%</strong> rispetto al primo periodo.</p>
                 </div>` : `
-                <div style="background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.28);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,159,10,0.2);display:flex;align-items:center;justify-content:center;color:#ff9f0a;flex-shrink:0;">
-                        <i class="ph-bold ph-caret-double-down text-[18px]"></i>
+                <div style="background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.28);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;position:relative;z-index:1;">
+                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(255,159,10,0.2);display:flex;align-items:center;justify-content:center;color:#ff9f0a;flex-shrink:0;">
+                        <i class="ph-bold ph-caret-double-down text-[16px]"></i>
                     </div>
-                    <p style="font-size:13px;color:rgba(255,255,255,0.9);line-height:1.4;margin:0;">La media del 2° semestre è inferiore al primo. Puoi migliorare!</p>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.9);line-height:1.35;margin:0;">La media del 2° periodo è inferiore al primo. Mantieni la concentrazione!</p>
                 </div>`}
-            </div>` : ''}
+            </section>` : ''}
 
-            <!-- CARD 4: Voti Ricevuti -->
-            <div class="${CARD_CLASS}" style="${CARD}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;margin:0;">Voti Ricevuti</p>
-                    <span style="font-size:12px;font-weight:700;color:#2997ff;">${votiData.length} totali</span>
-                </div>
-                ${votiListHtml || `<p style="font-size:13px;color:rgba(255,255,255,0.5);font-style:italic;margin:0;">Nessun voto registrato per questa materia.</p>`}
-            </div>
+            <!-- ── CARD 5: OBIETTIVO ACCADEMICO ── -->
+            <section style="position:relative;padding:20px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:26px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);overflow:hidden;">
+                <!-- Sfumatura cromatica in angolo -->
+                <div style="position:absolute;top:-28px;right:-28px;width:90px;height:90px;background:#ff9f0a;opacity:0.20;border-radius:50%;filter:blur(24px);pointer-events:none;"></div>
 
-            <!-- CARD 5: Obiettivo Accademico -->
-            <div class="${CARD_CLASS}" style="${CARD}margin-bottom:0;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:38px;height:38px;border-radius:12px;background:rgba(41,151,255,0.15);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;position:relative;z-index:1;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,159,10,0.15);border:1px solid rgba(255,159,10,0.3);display:flex;align-items:center;justify-content:center;color:#ff9f0a;flex-shrink:0;">
                             <i class="ph-fill ph-flag-banner text-[18px]"></i>
                         </div>
-                        <h2 style="font-size:17px;font-weight:700;color:#ffffff;margin:0;line-height:1.3;">Obiettivo<br>Accademico</h2>
+                        <div>
+                            <h2 style="font-size:15px;font-weight:700;color:#ffffff;margin:0;">Obiettivo Accademico</h2>
+                            <p style="font-size:11px;color:rgba(255,255,255,0.55);margin:0;">${goalProgress}% completato</p>
+                        </div>
                     </div>
                     <div style="text-align:right;cursor:pointer;" onclick="promptSetGoal('${escapeJsSingleQuote(subjectName)}')">
-                        <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px;">Target</p>
-                        <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
-                            <span style="font-size:24px;font-weight:800;color:#ff9f0a;line-height:1;">${goal.toFixed(1)}</span>
+                        <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.04em;">Target</span>
+                        <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                            <span style="font-size:22px;font-weight:800;color:#ff9f0a;line-height:1;">${goal.toFixed(1)}</span>
                             <i class="ph ph-pencil-simple text-[14px] text-[rgba(255,255,255,0.6)]"></i>
                         </div>
                     </div>
                 </div>
-                <p style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 12px;">${goalText}</p>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <i class="ph ph-info text-[13px] text-[rgba(255,255,255,0.45)]"></i>
-                    <span style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;">Calcolato in base alla tua media attuale di ${media.toFixed(1)}</span>
-                </div>
-            </div>
 
-        </div>
+                <!-- Dual Gradient Target Progress Bar -->
+                <div style="width:100%;background:rgba(255,255,255,0.08);height:6px;border-radius:9999px;overflow:hidden;position:relative;margin-bottom:12px;z-index:1;">
+                    <div style="background:linear-gradient(90deg, ${theme.color} 0%, #30d158 100%);height:100%;border-radius:9999px;width:${goalProgress}%;transition:width 0.4s ease;box-shadow:0 0 8px ${theme.color};"></div>
+                </div>
+
+                <div style="padding:10px 14px;background:rgba(255,159,10,0.08);border:0.5px solid rgba(255,159,10,0.22);border-radius:14px;margin-bottom:10px;position:relative;z-index:1;">
+                    <p style="font-size:12px;line-height:1.45;color:rgba(255,255,255,0.9);margin:0;">${goalText}</p>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:6px;position:relative;z-index:1;">
+                    <i class="ph ph-info text-[12px] text-[rgba(255,255,255,0.45)]"></i>
+                    <span style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;">Calcolato sulla media attuale di ${media.toFixed(1)}</span>
+                </div>
+            </section>
+
+            <!-- Bottom Safe Area Spacer to guarantee content is never clipped by navbar -->
+            <div style="height:120px;" aria-hidden="true"></div>
+
+        </main>
     </div>`;
 }
 
