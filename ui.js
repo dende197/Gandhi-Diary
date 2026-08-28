@@ -8274,22 +8274,18 @@ function renderPlanner() {
             </button>
         </header>
 
-        <!-- ══ SEARCH BAR (Refined Integrated Style) ══ -->
-        <div style="padding:0 20px 20px;">
-            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all 0.3s ease;position:relative;">
-                <span class="material-symbols-outlined" style="font-size:20px;color:rgba(196,197,214,0.6);flex-shrink:0;">search</span>
+        <!-- ══ SEARCH BAR (Refined Apple Liquid Glass) ══ -->
+        <div style="padding:0 20px 16px;">
+            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:12px 16px;display:flex;align-items:center;gap:10px;transition:all 0.3s ease;position:relative;background:rgba(20,31,54,0.75);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;box-shadow:0 4px 20px -6px rgba(0,0,0,0.3);">
+                <i class="ph ph-magnifying-glass" style="font-size:18px;color:#2997ff;flex-shrink:0;"></i>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche o filtra per materia..."
                     value="${escapeHtml(query)}"
-                    oninput="state.plannerSearchOpen=true;window._psfocused=true;window._pscursor=this.selectionStart;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    onfocus="state.plannerSearchOpen=true;window._psfocused=true;if(this.parentElement)this.parentElement.style.background='rgba(255,255,255,0.1)';window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    onclick="state.plannerSearchOpen=true;window._psfocused=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    style="width:100%;background:transparent;border:none;outline:none;font-size:15px;color:#dae2fd;padding:0;font-family:'Inter',sans-serif;" />
-                ${showSearchPanel ? `
-                    <button onclick="window.closePlannerSearch();" style="background:rgba(255,255,255,0.12);border:none;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:#b6c4ff;cursor:pointer;display:flex;align-items:center;gap:3px;flex-shrink:0;font-family:'Inter',sans-serif;">
-                        <span>Chiudi</span>
-                        <span class="material-symbols-outlined" style="font-size:14px;">close</span>
-                    </button>
-                ` : ''}
+                    oninput="state.plannerSearchOpen=true;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
+                    onfocus="if(!state.plannerSearchOpen){state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();}"
+                    style="width:100%;background:transparent;border:none;outline:none;font-size:14px;color:#ffffff;padding:0;font-family:'Inter',sans-serif;" />
+                <button id="planner-search-clear-btn" onclick="window.clearPlannerSearchInput();" style="display:${query ? 'flex' : 'none'};background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;align-items:center;justify-content:center;flex-shrink:0;" title="Cancella ricerca">
+                    <i class="ph-fill ph-x-circle" style="font-size:18px;"></i>
+                </button>
             </div>
         </div>
 
@@ -8319,17 +8315,25 @@ function renderPlanner() {
         <div id="planner-content-area" style="padding:0 20px;">
         ${showSearchPanel ? `
         <div>
-            <!-- Subject chips -->
-            <div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;">
-                ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>`
-                <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:${filterSubject===s?'#2f58cd':'rgba(255,255,255,0.04)'};color:${filterSubject===s?'#ffffff':'#c4c5d6'};">${escapeHtml(l)}</button>`).join('')}
+            <!-- Subject chips with Apple Liquid Glass -->
+            <div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+                ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>{
+                    const isAll = s === 'all';
+                    const active = filterSubject === s;
+                    const theme = isAll ? { color: '#2997ff', icon: 'ph-squares-four' } : getSubjectTheme(s);
+                    return `
+                    <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:8px 14px;border-radius:9999px;font-size:12px;font-weight:${active ? '700' : '600'};cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s ease;background:${active ? '#2997ff' : 'rgba(20,31,54,0.75)'};border:${active ? '1px solid rgba(41,151,255,0.6)' : '0.5px solid rgba(255,255,255,0.12)'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.8)'};box-shadow:${active ? '0 4px 14px rgba(41,151,255,0.35)' : 'none'};">
+                        <i class="ph-fill ${theme.icon || 'ph-bookmark'}" style="font-size:14px;color:${active ? '#ffffff' : theme.color};"></i>
+                        <span>${escapeHtml(formatSubjectTitle(l))}</span>
+                    </button>`;
+                }).join('')}
             </div>
-            <div style="font-size:12px;font-weight:600;color:rgba(196,197,214,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
-                <span>${searchResults.length} ${searchResults.length === 1 ? 'compito' : 'compiti'}${query ? ` per "${escapeHtml(query)}"` : (filterSubject !== 'all' ? ` · ${escapeHtml(filterSubject)}` : ' in totale')}</span>
-                <button onclick="window.closePlannerSearch()" style="background:none;border:none;color:#b6c4ff;font-size:11px;font-weight:700;cursor:pointer;padding:0;">Torna al giorno</button>
+            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 2px;">
+                <span style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-funnel" style="color:#2997ff;"></i> ${searchResults.length} ${searchResults.length === 1 ? 'compito' : 'compiti'}${query ? ` per "${escapeHtml(query)}"` : (filterSubject !== 'all' ? ` · ${escapeHtml(formatSubjectTitle(filterSubject))}` : ' in totale')}</span>
+                <button onclick="window.closePlannerSearch()" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);color:#2997ff;font-size:11px;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:999px;"><i class="ph-bold ph-calendar"></i> Torna al giorno</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:12px;">
-                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;"><span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span><p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun compito trovato</p></div>`}
+                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;background:rgba(20,31,54,0.7);border-radius:24px;border:0.5px solid rgba(255,255,255,0.12);"><i class="ph ph-magnifying-glass" style="font-size:36px;color:rgba(255,255,255,0.3);"></i><p style="color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;margin:10px 0 0;">Nessun compito o verifica trovato</p></div>`}
             </div>
         </div>` : `
 
@@ -9481,12 +9485,23 @@ window._buildPlannerDayContentHTML = function() {
         '</div>';
 };
 
+window.clearPlannerSearchInput = function() {
+    state.agendaSearchQuery = '';
+    const si = document.getElementById('planner-search-input');
+    if (si) { si.value = ''; }
+    const clearBtn = document.getElementById('planner-search-clear-btn');
+    if (clearBtn) clearBtn.style.display = 'none';
+    window.refreshPlannerSearch && window.refreshPlannerSearch();
+};
+
 window.closePlannerSearch = function() {
     state.plannerSearchOpen = false;
     state.agendaSearchQuery = '';
     state.agendaSearchSubject = 'all';
     const si = document.getElementById('planner-search-input');
     if (si) { si.value = ''; si.blur(); }
+    const clearBtn = document.getElementById('planner-search-clear-btn');
+    if (clearBtn) clearBtn.style.display = 'none';
     window.refreshPlannerSearch && window.refreshPlannerSearch();
 };
 
@@ -9501,6 +9516,11 @@ window.refreshPlannerSearch = function() {
     const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || 'all';
     const isSearchActive = !!(state.plannerSearchOpen || query || filterSubject !== 'all');
+
+    const clearBtn = document.getElementById('planner-search-clear-btn');
+    if (clearBtn) {
+        clearBtn.style.display = query ? 'flex' : 'none';
+    }
 
     if (!isSearchActive) {
         if (window._buildPlannerDayContentHTML) {
@@ -9533,31 +9553,38 @@ window.refreshPlannerSearch = function() {
     const chipsHtml = [{l: 'Tutte', s: 'all'}]
         .concat(subjects.map(function(s) { return {l: s, s: s}; }))
         .map(function(item) {
+            const isAll = item.s === 'all';
             const active = filterSubject === item.s;
             const safeS = escapeJsSingleQuote(item.s);
-            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" class="liquid-glass-v8 squircle-full rim-light" ' +
-                'style="flex-shrink:0;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap;' +
-                'background:' + (active ? '#2f58cd' : 'rgba(255,255,255,0.04)') + ';' +
-                'color:' + (active ? '#ffffff' : '#c4c5d6') + ';">' +
-                escapeHtml(item.l) + '</button>';
+            const theme = isAll ? { color: '#2997ff', icon: 'ph-squares-four' } : (typeof getSubjectTheme === 'function' ? getSubjectTheme(item.s) : { color: '#2997ff', icon: 'ph-bookmark' });
+            const titleFormatted = typeof formatSubjectTitle === 'function' ? formatSubjectTitle(item.l) : item.l;
+            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
+                'style="flex-shrink:0;padding:8px 14px;border-radius:9999px;font-size:12px;font-weight:' + (active ? '700' : '600') + ';cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s ease;' +
+                'background:' + (active ? '#2997ff' : 'rgba(20,31,54,0.75)') + ';' +
+                'border:' + (active ? '1px solid rgba(41,151,255,0.6)' : '0.5px solid rgba(255,255,255,0.12)') + ';' +
+                'color:' + (active ? '#ffffff' : 'rgba(255,255,255,0.8)') + ';' +
+                'box-shadow:' + (active ? '0 4px 14px rgba(41,151,255,0.35)' : 'none') + ';">' +
+                '<i class="ph-fill ' + (theme.icon || 'ph-bookmark') + '" style="font-size:14px;color:' + (active ? '#ffffff' : theme.color) + ';"></i>' +
+                '<span>' + escapeHtml(titleFormatted) + '</span></button>';
         }).join('');
 
-    const emptyHtml = '<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;">' +
-        '<span class="material-symbols-outlined" style="font-size:40px;color:rgba(196,197,214,0.4);">search_off</span>' +
-        '<p style="color:rgba(218,226,253,0.6);font-size:14px;font-weight:600;margin:8px 0 0;">Nessun compito trovato</p>' +
+    const emptyHtml = '<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;background:rgba(20,31,54,0.7);border-radius:24px;border:0.5px solid rgba(255,255,255,0.12);">' +
+        '<i class="ph ph-magnifying-glass" style="font-size:36px;color:rgba(255,255,255,0.3);"></i>' +
+        '<p style="color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;margin:10px 0 0;">Nessun compito o verifica trovato</p>' +
         '</div>';
 
+    const subjectLabel = filterSubject !== 'all' ? (typeof formatSubjectTitle === 'function' ? formatSubjectTitle(filterSubject) : filterSubject) : 'in totale';
     const countLabel = results.length + (results.length === 1 ? ' compito' : ' compiti') +
-        (query ? ' per "' + escapeHtml(query) + '"' : (filterSubject !== 'all' ? ' · ' + escapeHtml(filterSubject) : ' in totale'));
+        (query ? ' per "' + escapeHtml(query) + '"' : (filterSubject !== 'all' ? ' · ' + escapeHtml(subjectLabel) : ' in totale'));
 
     area.innerHTML =
         '<div style="padding:0;">' +
-            '<div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">' +
+            '<div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;">' +
                 chipsHtml +
             '</div>' +
-            '<div style="font-size:12px;font-weight:600;color:rgba(196,197,214,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
-                '<span>' + countLabel + '</span>' +
-                '<button onclick="window.closePlannerSearch()" style="background:none;border:none;color:#b6c4ff;font-size:11px;font-weight:700;cursor:pointer;padding:0;">Torna al giorno</button>' +
+            '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 2px;">' +
+                '<span style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-funnel" style="color:#2997ff;"></i> ' + countLabel + '</span>' +
+                '<button onclick="window.closePlannerSearch()" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);color:#2997ff;font-size:11px;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:999px;"><i class="ph-bold ph-calendar"></i> Torna al giorno</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;gap:12px;">' +
                 (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
