@@ -6511,7 +6511,7 @@ window._renderCore = function () {
     const _plannerStateKey = state.view === 'planner'
         ? [state.selectedDate||'',state.plannerWeekOffset||0,state.plannerMonthView||false,
            state.plannerMonthViewYear||0,state.plannerMonthViewMonth||0,
-           state.agendaSearchQuery||'',state.agendaSearchSubject||''].join('|')
+           state.plannerSearchOpen?'1':'0',state.agendaSearchQuery||'',state.agendaSearchSubject||''].join('|')
         : '';
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
@@ -6585,11 +6585,12 @@ window._renderCore = function () {
             setTimeout(doScroll, 30);
             setTimeout(doScroll, 120);
 
-            if (window._psfocused) {
+            // Restore search input focus after full re-render if search panel is open
+            if (state.plannerSearchOpen && (state.agendaSearchQuery || '').length > 0) {
                 const _si = document.getElementById('planner-search-input');
                 if (_si) {
                     _si.focus();
-                    const _pos = window._pscursor !== undefined ? window._pscursor : _si.value.length;
+                    const _pos = _si.value.length;
                     try { _si.setSelectionRange(_pos, _pos); } catch(e) {}
                 }
             }
@@ -8280,8 +8281,8 @@ function renderPlanner() {
                 <i class="ph ph-magnifying-glass" style="font-size:18px;color:#2997ff;flex-shrink:0;"></i>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche o filtra per materia..."
                     value="${escapeHtml(query)}"
-                    oninput="state.plannerSearchOpen=true;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    onfocus="if(!state.plannerSearchOpen){state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();}"
+                    oninput="state.agendaSearchQuery=this.value;if(state.plannerSearchOpen){window.refreshPlannerSearch&&window.refreshPlannerSearch();}else{state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);}"
+                    onfocus="if(!state.plannerSearchOpen){state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);}"
                     style="width:100%;background:transparent;border:none;outline:none;font-size:14px;color:#ffffff;padding:0;font-family:'Inter',sans-serif;" />
                 <button id="planner-search-clear-btn" onclick="window.clearPlannerSearchInput();" style="display:${query ? 'flex' : 'none'};background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;align-items:center;justify-content:center;flex-shrink:0;" title="Cancella ricerca">
                     <i class="ph-fill ph-x-circle" style="font-size:18px;"></i>
@@ -9488,9 +9489,10 @@ window._buildPlannerDayContentHTML = function() {
 window.clearPlannerSearchInput = function() {
     state.agendaSearchQuery = '';
     const si = document.getElementById('planner-search-input');
-    if (si) { si.value = ''; }
+    if (si) { si.value = ''; si.focus(); }
     const clearBtn = document.getElementById('planner-search-clear-btn');
     if (clearBtn) clearBtn.style.display = 'none';
+    // Chirurgical update only of content area, no full re-render
     window.refreshPlannerSearch && window.refreshPlannerSearch();
 };
 
@@ -9500,9 +9502,9 @@ window.closePlannerSearch = function() {
     state.agendaSearchSubject = 'all';
     const si = document.getElementById('planner-search-input');
     if (si) { si.value = ''; si.blur(); }
-    const clearBtn = document.getElementById('planner-search-clear-btn');
-    if (clearBtn) clearBtn.style.display = 'none';
-    window.refreshPlannerSearch && window.refreshPlannerSearch();
+    // Force a clean full re-render to reset the entire UI state
+    state._forceRender = true;
+    scheduleRender(0);
 };
 
 window.refreshPlannerSearch = function() {
