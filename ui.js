@@ -10141,6 +10141,30 @@ function renderGradesView() {
         aiInsightText = "Rendimento straordinario in tutte le materie! Mantieni questo ritmo costante per il prossimo trimestre.";
     }
 
+    // ── Global Stats & Highlights ──
+    const totVoti = votiData.length;
+    const suffCount = votiData.filter(v => getNumericGradeValue(v) >= 6).length;
+    const insuffCount = totVoti - suffCount;
+    const suffPct = totVoti > 0 ? Math.round((suffCount / totVoti) * 100) : 100;
+    const bestSubject = subjects.length > 0 ? subjects[0] : null;
+    const minSubject = subjects.length > 0 ? [...subjects].sort((a, b) => a.media - b.media)[0] : null;
+
+    // Status Badge
+    let globalStatusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check-circle' };
+    if (media >= 8.5) {
+        globalStatusBadge = { label: 'Eccellente', color: '#30d158', bg: 'rgba(48,209,88,0.18)', border: 'rgba(48,209,88,0.38)', icon: 'ph-star' };
+    } else if (media >= 7.5) {
+        globalStatusBadge = { label: 'Ottimo', color: '#30d158', bg: 'rgba(48,209,88,0.15)', border: 'rgba(48,209,88,0.35)', icon: 'ph-trend-up' };
+    } else if (media >= 6.5) {
+        globalStatusBadge = { label: 'Discreto', color: '#64d2ff', bg: 'rgba(100,210,255,0.15)', border: 'rgba(100,210,255,0.35)', icon: 'ph-thumbs-up' };
+    } else if (media >= 6.0) {
+        globalStatusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check' };
+    } else if (media > 0) {
+        globalStatusBadge = { label: 'Critico', color: '#ff453a', bg: 'rgba(255,69,58,0.18)', border: 'rgba(255,69,58,0.38)', icon: 'ph-warning' };
+    } else {
+        globalStatusBadge = { label: 'In attesa', color: 'rgba(255,255,255,0.5)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', icon: 'ph-info' };
+    }
+
     return `
     <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
 
@@ -10151,46 +10175,115 @@ function renderGradesView() {
         </header>
 
         <main style="padding:0 20px;display:flex;flex-direction:column;gap:18px;">
-            <!-- Hero Card: Media Generale (Apple Material) -->
-            <section style="padding:22px 20px 18px;background:rgba(20,31,54,0.78);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:28px;box-shadow:0 16px 36px -10px rgba(0,0,0,0.5);position:relative;overflow:hidden;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;">
-                    <div>
-                        <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin:0 0 6px;">Media Generale</p>
-                        <div style="display:flex;align-items:baseline;gap:10px;">
-                            <span style="font-size:48px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;line-height:1;">${media.toFixed(2)}</span>
-                            <div style="background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};padding:4px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid ${isPositive ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-                                <i class="ph-fill ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:14px;color:${isPositive ? '#30d158' : '#ff453a'};"></i>
-                                <span style="font-size:12px;font-weight:700;color:${isPositive ? '#30d158' : '#ff453a'};letter-spacing:0.01em;">${diffStr}</span>
-                            </div>
-                        </div>
+            <!-- ══ HERO CARD: MEDIA GENERALE & STATISTICHE ══ -->
+            <section style="position:relative;padding:22px 20px 20px;background:rgba(18,26,44,0.76);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.24);border-radius:28px;box-shadow:0 20px 48px -12px rgba(0,0,0,0.65);overflow:hidden;">
+                <!-- Dual Corner Chromatic Glows (Azure top-right, Emerald bottom-left) -->
+                <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:#2997ff;opacity:0.22;border-radius:50%;filter:blur(30px);pointer-events:none;"></div>
+                <div style="position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;background:#30d158;opacity:0.14;border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+
+                <!-- Header Row -->
+                <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="width:7px;height:7px;border-radius:50%;background:#2997ff;box-shadow:0 0 8px rgba(41,151,255,0.8);"></span>
+                        <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2997ff;">MEDIA GENERALE</span>
                     </div>
-                    <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-                        <i class="ph ph-share-network text-[18px] text-[#ffffff]"></i>
-                    </button>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9999px;background:rgba(41,151,255,0.14);border:0.5px solid rgba(41,151,255,0.35);font-size:10px;font-weight:700;color:#2997ff;backdrop-filter:blur(12px);">
+                            <i class="ph-bold ph-graduation-cap" style="font-size:12px;"></i> Anno Scolastico
+                        </span>
+                        <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                            <i class="ph ph-share-network text-[16px] text-[#ffffff]"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Clean Green Straight Trend Graph SVG (Pure geometric line, no glow, crisp endpoint) -->
-                <div style="margin-top:16px;height:74px;width:100%;position:relative;">
+                <!-- Primary Number & Badges -->
+                <div style="display:flex;align-items:baseline;justify-content:space-between;position:relative;z-index:1;margin-bottom:16px;">
+                    <div style="display:flex;align-items:baseline;gap:12px;">
+                        <span style="font-size:52px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;">${media.toFixed(2)}</span>
+                        ${diffStr ? `
+                        <div style="background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid ${isPositive ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};box-shadow:0 2px 6px ${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};">
+                            <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:12px;color:${isPositive ? '#30d158' : '#ff453a'};"></i>
+                            <span style="font-size:11px;font-weight:700;color:${isPositive ? '#30d158' : '#ff453a'};">${diffStr}</span>
+                        </div>` : ''}
+                    </div>
+                    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:9999px;background:${globalStatusBadge.bg};border:1px solid ${globalStatusBadge.border};font-size:11px;font-weight:700;color:${globalStatusBadge.color};">
+                        <i class="ph-fill ${globalStatusBadge.icon}" style="font-size:13px;"></i> ${globalStatusBadge.label}
+                    </span>
+                </div>
+
+                <!-- 4 Bento Metric Pills (2x2 Grid) -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;position:relative;z-index:1;margin-bottom:16px;">
+                    <!-- Bento 1: Totale Voti -->
+                    <div style="background:rgba(41,151,255,0.08);padding:9px 12px;border-radius:14px;border:0.5px solid rgba(41,151,255,0.22);display:flex;flex-direction:column;gap:2px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Valutazioni</span>
+                            <i class="ph-fill ph-list-numbers" style="font-size:13px;color:#2997ff;"></i>
+                        </div>
+                        <span style="font-size:16px;font-weight:800;color:#2997ff;font-variant-numeric:tabular-nums;">${totVoti} <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.7);">totali</span></span>
+                    </div>
+
+                    <!-- Bento 2: Tasso Sufficienze -->
+                    <div style="background:rgba(48,209,88,0.08);padding:9px 12px;border-radius:14px;border:0.5px solid rgba(48,209,88,0.22);display:flex;flex-direction:column;gap:2px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Sufficienze</span>
+                            <i class="ph-fill ph-check-circle" style="font-size:13px;color:#30d158;"></i>
+                        </div>
+                        <span style="font-size:16px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;">${suffPct}% <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.7);">(${suffCount}/${totVoti})</span></span>
+                    </div>
+
+                    <!-- Bento 3: Materia Top -->
+                    <div style="background:rgba(255,159,10,0.08);padding:9px 12px;border-radius:14px;border:0.5px solid rgba(255,159,10,0.22);display:flex;flex-direction:column;gap:2px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Materia Top</span>
+                            <i class="ph-fill ph-trophy" style="font-size:13px;color:#ff9f0a;"></i>
+                        </div>
+                        <span style="font-size:14px;font-weight:800;color:#ff9f0a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bestSubject ? `${bestSubject.media.toFixed(1)} ${formatSubjectTitle(bestSubject.name)}` : '—'}</span>
+                    </div>
+
+                    <!-- Bento 4: Da Monitorare -->
+                    <div style="background:rgba(191,90,242,0.08);padding:9px 12px;border-radius:14px;border:0.5px solid rgba(191,90,242,0.22);display:flex;flex-direction:column;gap:2px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Da Monitorare</span>
+                            <i class="ph-fill ph-crosshair" style="font-size:13px;color:#bf5af2;"></i>
+                        </div>
+                        <span style="font-size:14px;font-weight:800;color:#bf5af2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${minSubject ? `${minSubject.media.toFixed(1)} ${formatSubjectTitle(minSubject.name)}` : '—'}</span>
+                    </div>
+                </div>
+
+                <!-- Bilancio Sufficienze vs Insufficienze Ratio Bar -->
+                <div style="position:relative;z-index:1;margin-bottom:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:10px;font-weight:700;">
+                        <span style="color:#30d158;display:flex;align-items:center;gap:3px;"><i class="ph-bold ph-check" style="font-size:10px;"></i> ${suffCount} Sufficienze</span>
+                        <span style="color:${insuffCount > 0 ? '#ff453a' : 'rgba(255,255,255,0.4)'};display:flex;align-items:center;gap:3px;">${insuffCount} Insufficienze <i class="ph-bold ph-x" style="font-size:10px;"></i></span>
+                    </div>
+                    <div style="width:100%;height:5px;background:rgba(255,255,255,0.06);border-radius:9999px;overflow:hidden;display:flex;">
+                        <div style="width:${suffPct}%;height:100%;background:#30d158;border-radius:9999px 0 0 9999px;transition:width 0.4s ease;"></div>
+                        <div style="width:${100 - suffPct}%;height:100%;background:#ff453a;border-radius:0 9999px 9999px 0;transition:width 0.4s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- Trend Graph SVG (Dual Gradient) -->
+                <div style="height:70px;width:100%;position:relative;z-index:1;">
                     <svg viewBox="0 0 340 70" style="width:100%;height:100%;display:block;overflow:visible;" preserveAspectRatio="none">
                         <defs>
                             <linearGradient id="voti-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#30d158" stop-opacity="0.18"></stop>
-                                <stop offset="85%" stop-color="#30d158" stop-opacity="0.02"></stop>
+                                <stop offset="0%" stop-color="#2997ff" stop-opacity="0.25"></stop>
+                                <stop offset="50%" stop-color="#30d158" stop-opacity="0.08"></stop>
                                 <stop offset="100%" stop-color="#30d158" stop-opacity="0"></stop>
                             </linearGradient>
+                            <linearGradient id="voti-line-gradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#2997ff"></stop>
+                                <stop offset="100%" stop-color="#30d158"></stop>
+                            </linearGradient>
                         </defs>
-                        <!-- Subtle Translucent Area Fill -->
                         <path class="grade-chart-area" d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
-                        
-                        <!-- Clean Sharp Straight Green Line (No glow, no blur) -->
-                        <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                        
-                        <!-- Sharp Geometric Endpoint Dot (No halo/glow) -->
+                        <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="url(#voti-line-gradient)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path>
                         <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="4.5" fill="#30d158" stroke="#ffffff" stroke-width="2"></circle>
                     </svg>
                 </div>
-                <div style="display:flex;justify-content:space-between;margin-top:8px;padding:0 4px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);">
-                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#30d158;font-weight:700;">Giu</span>
+                <div style="display:flex;justify-content:space-between;margin-top:6px;padding:0 4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);position:relative;z-index:1;">
+                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#30d158;font-weight:800;">Giu</span>
                 </div>
             </section>
 
