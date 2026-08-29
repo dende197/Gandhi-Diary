@@ -2266,38 +2266,95 @@ function renderHome() {
         ? `${assenzeGiorni}g, ${ritardiTotali}r, ${usciteTotali}u`
         : 'Nessuna recente';
 
-    // 6c. Dati sintetici per il WIDGET OVERVIEW compatto
-    const _votiValidi = getVotiData()
+    // 6c. Dati completi e avanzati per il nuovo WIDGET QUADRO ACCADEMICO OVERVIEW
+    const votiData = getVotiData();
+    const _votiValidi = votiData
         .map(v => ({ val: getNumericGradeValue(v), materia: v.materia || v.subject || '', date: getVoteDate(v) }))
         .filter(v => v.val !== null);
     const _votiTotali = _votiValidi.length;
 
-    // Pending tasks (non completati, futuri o oggi)
-    const _pendingTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST' && !t.done && t.due_date && t.due_date >= todayISO);
-    const _pendingCount = _pendingTasks.length;
-    const _completedToday = (state.tasks || []).filter(t => t.subject !== 'QUEST' && t.done && t.due_date === todayISO).length;
+    // Raggruppamento avanzato per materia
+    const _subjectsMap = {};
+    votiData.forEach(v => {
+        const sub = (v.materia || v.subject || 'Altro').trim();
+        const key = (typeof getSubjectGroupKey === 'function') ? getSubjectGroupKey(sub) : sub.toLowerCase();
+        if (!_subjectsMap[key]) _subjectsMap[key] = { name: sub, list: [] };
+        _subjectsMap[key].list.push(v);
+    });
 
-    // Prossima verifica countdown
-    const _nextExamDisplay = nextVerifica ? (() => {
-        const subj = nextVerifica.materia || 'Verifica';
-        const dParts = nextVerifica.data.split('-');
-        const dateLabel = dParts.length === 3 ? `${parseInt(dParts[2])}/${parseInt(dParts[1])}` : nextVerifica.data;
-        return { subject: subj, date: dateLabel, days: daysDiff, countdown: countdownText };
-    })() : null;
+    const _subjectsSummary = Object.values(_subjectsMap).map(({ name, list }) => {
+        const nums = list.map(getNumericGradeValue).filter(v => Number.isFinite(v));
+        const subAvg = (typeof averageFromNumeric === 'function')
+            ? averageFromNumeric(nums)
+            : (nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : 0);
+        return {
+            name,
+            abbrev: (typeof getSubjectAbbrev === 'function') ? getSubjectAbbrev(name) : name.substring(0, 4).toUpperCase(),
+            avg: subAvg,
+            count: nums.length,
+            isUnder: subAvg < 6,
+            isTop: subAvg >= 8
+        };
+    }).filter(s => s.avg > 0 && s.count > 0);
 
-    // Greeting time-aware
-    const _hour = today.getHours();
-    const _greetWord = _hour < 6 ? 'Buonanotte' : _hour < 12 ? 'Buongiorno' : _hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+    // Ordina materie per media decrescente
+    _subjectsSummary.sort((a, b) => b.avg - a.avg);
 
-    // Media color
-    const _mediaColor = media >= 8 ? '#30d158' : media >= 7 ? '#64d2ff' : media >= 6 ? '#ff9f0a' : media > 0 ? '#ff453a' : 'rgba(255,255,255,0.4)';
+    const _topSubject = _subjectsSummary.length > 0 ? _subjectsSummary[0] : null;
+    const _lowestSubject = _subjectsSummary.length > 1 ? _subjectsSummary[_subjectsSummary.length - 1] : null;
+    const _materieUnder = _subjectsSummary.filter(s => s.isUnder);
+    const _debitiCount = _materieUnder.length;
+    const _materieTotali = _subjectsSummary.length;
+    const _materieOk = _materieTotali - _debitiCount;
+    const _votiSuff = _votiValidi.filter(v => v.val >= 6).length;
+    const _pctSuff = _votiTotali > 0 ? Math.round((_votiSuff / _votiTotali) * 100) : 100;
 
-    // Assenze ring SVG
-    const _assenzeTotal = assenzeGiorni + ritardiTotali + usciteTotali;
-    const _assenzeRingPct = Math.min(100, (oreAssenzaTotali / 100) * 100);
-    const _assenzeRingColor = _assenzeRingPct > 60 ? '#ff453a' : _assenzeRingPct > 30 ? '#ff9f0a' : '#30d158';
+    // Stima Fascia Credito Scolastico (Standard Ministero Istruzione per medie triennio)
+    let _fasciaCredito = 'N.D.';
+    let _fasciaDettaglio = 'In attesa valutazioni';
+    if (media >= 9) {
+        _fasciaCredito = '11 - 12 pt';
+        _fasciaDettaglio = 'Fascia Massima 🌟';
+    } else if (media >= 8) {
+        _fasciaCredito = '9 - 10 pt';
+        _fasciaDettaglio = 'Fascia Alta ✨';
+    } else if (media >= 7) {
+        _fasciaCredito = '8 - 9 pt';
+        _fasciaDettaglio = 'Fascia Media 🎯';
+    } else if (media >= 6) {
+        _fasciaCredito = '7 - 8 pt';
+        _fasciaDettaglio = 'Fascia Base 📌';
+    } else if (media > 0) {
+        _fasciaCredito = 'A Rischio';
+        _fasciaDettaglio = 'Debito formativo ⚠️';
+    }
 
-    // 7. WIDGET OVERVIEW — Apple Liquid Glass Single-Card Dashboard
+    // Status Badge & Colors
+    let _statusBadgeText = 'In Sicurezza';
+    let _statusBadgeIcon = 'ph-check-circle';
+    let _statusBadgeColor = '#30d158';
+    let _statusBadgeBg = 'rgba(48,209,88,0.15)';
+    let _statusBadgeBorder = 'rgba(48,209,88,0.35)';
+
+    if (_debitiCount > 0) {
+        _statusBadgeText = `${_debitiCount} ${_debitiCount === 1 ? 'Materia sotto il 6' : 'Materie sotto il 6'}`;
+        _statusBadgeIcon = 'ph-warning-circle';
+        _statusBadgeColor = _debitiCount >= 3 ? '#ff453a' : '#ff9f0a';
+        _statusBadgeBg = _debitiCount >= 3 ? 'rgba(255,69,58,0.15)' : 'rgba(255,159,10,0.15)';
+        _statusBadgeBorder = _debitiCount >= 3 ? 'rgba(255,69,58,0.35)' : 'rgba(255,159,10,0.35)';
+    } else if (media >= 8) {
+        _statusBadgeText = 'Eccellente · 0 Debiti';
+        _statusBadgeIcon = 'ph-crown';
+        _statusBadgeColor = '#ffd60a';
+        _statusBadgeBg = 'rgba(255,214,10,0.15)';
+        _statusBadgeBorder = 'rgba(255,214,10,0.35)';
+    }
+
+    // Indice di salute accademica complessivo (0-100)
+    const _healthScore = media > 0 ? Math.min(100, Math.round((media / 10) * 100)) : 0;
+    const _mediaColor = media >= 8 ? '#30d158' : media >= 7 ? '#64d2ff' : media >= 6 ? '#ff9f0a' : media > 0 ? '#ff453a' : '#8e909f';
+
+    // 7. WIDGET OVERVIEW — Apple Liquid Glass Quadro Accademico Deluxe
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#dae2fd] antialiased overflow-y-auto hide-scrollbar" style="background:var(--background, #0b1326);">
 
@@ -2313,122 +2370,208 @@ function renderHome() {
             </header>
 
             <div style="margin-bottom: 16px; padding: 0 20px;">
-                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Single Card -->
-                <div id="home-media-widget" style="
-                    background:rgba(20,31,54,0.82);
-                    backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);
-                    border:0.5px solid rgba(255,255,255,0.12);
-                    border-top:1px solid rgba(255,255,255,0.22);
-                    border-radius:26px;
-                    padding:20px;
-                    position:relative;overflow:hidden;
+                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Quadro Accademico Deluxe -->
+                <div id="home-academic-hero-widget" style="
+                    background: linear-gradient(145deg, rgba(22,34,58,0.90) 0%, rgba(10,16,30,0.95) 100%);
+                    backdrop-filter: blur(40px) saturate(210%);-webkit-backdrop-filter: blur(40px) saturate(210%);
+                    border: 0.5px solid rgba(255,255,255,0.14);
+                    border-top: 1px solid rgba(255,255,255,0.30);
+                    border-radius: 28px;
+                    padding: 20px;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 16px 40px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
                 ">
-                    <!-- Subtle gradient orb decoration -->
-                    <div style="position:absolute;top:-40px;right:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(41,151,255,0.12) 0%,transparent 70%);pointer-events:none;"></div>
-                    <div style="position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(48,209,88,0.08) 0%,transparent 70%);pointer-events:none;"></div>
+                    <!-- Glow Spheres d'atmosfera Liquid Glass -->
+                    <div style="position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(41,151,255,0.22) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
+                    <div style="position:absolute;bottom:-40px;left:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(191,90,242,0.16) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
+                    <div style="position:absolute;top:40%;left:30%;width:120px;height:120px;background:radial-gradient(circle,rgba(48,209,88,0.12) 0%,transparent 70%);pointer-events:none;filter:blur(25px);"></div>
 
-                    <!-- Row 1: Greeting + Quick Status Badge -->
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                        <div>
-                            <h2 style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin:0;line-height:1.2;font-family:'Inter',sans-serif;">${_greetWord}, ${toDisplayName(getSafeUserName())}</h2>
-                            <p style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);margin:3px 0 0;">${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                        </div>
-                        <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;background:${_pendingCount > 0 ? 'rgba(255,159,10,0.14)' : 'rgba(48,209,88,0.14)'};border:0.5px solid ${_pendingCount > 0 ? 'rgba(255,159,10,0.35)' : 'rgba(48,209,88,0.35)'};font-size:10px;font-weight:700;color:${_pendingCount > 0 ? '#ff9f0a' : '#30d158'};white-space:nowrap;">
-                            <i class="ph-bold ${_pendingCount > 0 ? 'ph-clock-countdown' : 'ph-check-circle'}" style="font-size:12px;"></i>
-                            ${_pendingCount > 0 ? `${_pendingCount} in scadenza` : 'Tutto ok'}
-                        </span>
-                    </div>
-
-                    <!-- Row 2: 3 Key Metrics (Media, Compiti Oggi, Assenze) in Bento Tiles -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
-                        
-                        <!-- TILE: Media Generale -->
-                        <div onclick="navigate('voti')" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.10);border-radius:18px;padding:12px;cursor:pointer;position:relative;overflow:hidden;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${_mediaColor},transparent);border-radius:18px 18px 0 0;"></div>
-                            <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
-                                <i class="ph-bold ph-chart-line-up" style="font-size:12px;color:${_mediaColor};"></i>
-                                <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.55);">Media</span>
-                            </div>
-                            <div style="font-size:24px;font-weight:800;color:${_mediaColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;">${isInitialLoad ? '—' : media.toFixed(1)}</div>
-                            <div style="display:flex;align-items:center;gap:3px;margin-top:4px;">
-                                <span style="display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;color:${isPositive ? '#30d158' : '#ff453a'};background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};padding:1px 6px;border-radius:999px;">
-                                    <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
-                                </span>
+                    <!-- Top Bar: Header Titolo & Status Badge -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;position:relative;z-index:1;">
+                        <div style="display:flex;align-items:center;gap:7px;">
+                            <span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:12px;">
+                                <i class="ph-fill ph-sparkle"></i>
+                            </span>
+                            <div>
+                                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">QUADRO ACCADEMICO</span>
+                                <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);line-height:1;">${_greetWord}, ${toDisplayName(getSafeUserName())}</div>
                             </div>
                         </div>
 
-                        <!-- TILE: Compiti da Fare -->
-                        <div onclick="navigate('planner')" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.10);border-radius:18px;padding:12px;cursor:pointer;position:relative;overflow:hidden;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2997ff,transparent);border-radius:18px 18px 0 0;"></div>
-                            <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
-                                <i class="ph-bold ph-checks" style="font-size:12px;color:#2997ff;"></i>
-                                <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.55);">Da fare</span>
-                            </div>
-                            <div style="font-size:24px;font-weight:800;color:#2997ff;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;">${_pendingCount}</div>
-                            <div style="margin-top:4px;">
-                                <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);">${_completedToday > 0 ? `${_completedToday} fatti oggi` : 'compiti attivi'}</span>
-                            </div>
-                        </div>
-
-                        <!-- TILE: Assenze -->
-                        <div onclick="mostraAssenzeModal()" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.10);border-radius:18px;padding:12px;cursor:pointer;position:relative;overflow:hidden;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${_assenzeRingColor},transparent);border-radius:18px 18px 0 0;"></div>
-                            <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
-                                <i class="ph-bold ph-calendar-x" style="font-size:12px;color:${_assenzeRingColor};"></i>
-                                <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.55);">Assenze</span>
-                            </div>
-                            <div style="font-size:24px;font-weight:800;color:${_assenzeRingColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;">${oreAssenzaTotali}<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.45);margin-left:2px;">h</span></div>
-                            <div style="margin-top:4px;">
-                                <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);">${assenzeGiorni}g · ${ritardiTotali}r · ${usciteTotali}u</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Row 3: Next Exam Alert Banner -->
-                    ${_nextExamDisplay ? `
-                    <div onclick="navigate('planner')" style="
-                        display:flex;align-items:center;gap:12px;
-                        background:${_nextExamDisplay.days <= 2 ? 'rgba(255,69,58,0.10)' : _nextExamDisplay.days <= 5 ? 'rgba(255,159,10,0.10)' : 'rgba(48,209,88,0.08)'};
-                        border:0.5px solid ${_nextExamDisplay.days <= 2 ? 'rgba(255,69,58,0.25)' : _nextExamDisplay.days <= 5 ? 'rgba(255,159,10,0.25)' : 'rgba(48,209,88,0.20)'};
-                        border-radius:16px;padding:12px 14px;cursor:pointer;
-                        transition:transform 0.15s ease;
-                    " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                        <!-- Dynamic Status Pill -->
                         <div style="
-                            width:42px;height:42px;border-radius:14px;flex-shrink:0;
-                            background:${_nextExamDisplay.days <= 2 ? 'rgba(255,69,58,0.18)' : _nextExamDisplay.days <= 5 ? 'rgba(255,159,10,0.18)' : 'rgba(48,209,88,0.15)'};
-                            display:flex;align-items:center;justify-content:center;
-                            color:${_nextExamDisplay.days <= 2 ? '#ff453a' : _nextExamDisplay.days <= 5 ? '#ff9f0a' : '#30d158'};
+                            display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;
+                            background:${_statusBadgeBg};border:0.5px solid ${_statusBadgeBorder};
+                            font-size:10.5px;font-weight:700;color:${_statusBadgeColor};
+                            box-shadow:0 2px 8px -2px ${_statusBadgeBg};white-space:nowrap;
                         ">
-                            <i class="ph-bold ph-exam" style="font-size:20px;"></i>
+                            <i class="ph-bold ${_statusBadgeIcon}" style="font-size:12px;"></i>
+                            <span>${_statusBadgeText}</span>
                         </div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                                <span style="font-size:13px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(_nextExamDisplay.subject)}</span>
+                    </div>
+
+                    <!-- Main Grid: Hero Media & Smart Insights Bento -->
+                    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-bottom:16px;position:relative;z-index:1;">
+
+                        <!-- Hero Media Box -->
+                        <div onclick="navigate('voti')" style="
+                            background:rgba(255,255,255,0.04);
+                            border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                            border-radius:20px;padding:14px 16px;cursor:pointer;
+                            display:flex;flex-direction:column;justify-content:space-between;
+                            position:relative;overflow:hidden;
+                            box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
+                            transition:transform 0.15s ease;
+                        " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                            <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#2997ff,${_mediaColor});"></div>
+                            
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA GENERALE</span>
+                                <i class="ph-bold ph-caret-right" style="font-size:12px;color:rgba(255,255,255,0.35);"></i>
+                            </div>
+
+                            <div style="display:flex;align-items:baseline;gap:8px;margin:6px 0 4px;">
+                                <span class="card-media-val" style="
+                                    font-size:38px;font-weight:900;letter-spacing:-0.03em;
+                                    color:#ffffff;line-height:1;font-variant-numeric:tabular-nums;
+                                    text-shadow:0 0 24px rgba(41,151,255,0.4);
+                                ">${isInitialLoad ? '—' : media.toFixed(2)}</span>
+                                
                                 <span style="
                                     display:inline-flex;align-items:center;gap:3px;
-                                    font-size:10px;font-weight:800;white-space:nowrap;flex-shrink:0;
-                                    padding:3px 8px;border-radius:999px;
-                                    background:${_nextExamDisplay.days <= 2 ? 'rgba(255,69,58,0.22)' : _nextExamDisplay.days <= 5 ? 'rgba(255,159,10,0.22)' : 'rgba(48,209,88,0.18)'};
-                                    color:${_nextExamDisplay.days <= 2 ? '#ff453a' : _nextExamDisplay.days <= 5 ? '#ff9f0a' : '#30d158'};
+                                    font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;
+                                    background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};
+                                    color:${isPositive ? '#30d158' : '#ff453a'};
+                                    border:0.5px solid ${isPositive ? 'rgba(48,209,88,0.35)' : 'rgba(255,69,58,0.35)'};
                                 ">
-                                    <i class="ph-bold ph-timer" style="font-size:10px;"></i>
-                                    ${_nextExamDisplay.countdown}
+                                    <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:9px;"></i>${diffStr}
                                 </span>
                             </div>
-                            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
-                                <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.5);">Prossima verifica · ${_nextExamDisplay.date}</span>
+
+                            <!-- Credito Scolastico Indicator -->
+                            <div style="margin-top:6px;padding-top:8px;border-top:0.5px solid rgba(255,255,255,0.08);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                                    <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;">CREDITO STIMATO</span>
+                                    <span style="font-size:10px;font-weight:800;color:#ffd60a;">${_fasciaCredito}</span>
+                                </div>
+                                <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+                                    <div style="width:${_healthScore}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
+                                </div>
                             </div>
                         </div>
-                        <i class="ph ph-caret-right" style="font-size:16px;color:rgba(255,255,255,0.3);flex-shrink:0;"></i>
-                    </div>
-                    ` : `
-                    <div style="display:flex;align-items:center;gap:10px;background:rgba(48,209,88,0.08);border:0.5px solid rgba(48,209,88,0.18);border-radius:16px;padding:12px 14px;">
-                        <div style="width:36px;height:36px;border-radius:12px;background:rgba(48,209,88,0.15);display:flex;align-items:center;justify-content:center;color:#30d158;flex-shrink:0;">
-                            <i class="ph-bold ph-sun-horizon" style="font-size:18px;"></i>
+
+                        <!-- Right Smart Insights Bento Column -->
+                        <div style="display:flex;flex-direction:column;gap:8px;justify-content:space-between;">
+                            
+                            <!-- 1. Top Performer Tile -->
+                            <div onclick="navigate('voti')" style="
+                                background:rgba(48,209,88,0.08);
+                                border:0.5px solid rgba(48,209,88,0.22);
+                                border-radius:16px;padding:9px 12px;cursor:pointer;
+                                display:flex;align-items:center;justify-content:space-between;
+                                transition:transform 0.15s ease;
+                            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                                    <div style="width:26px;height:26px;border-radius:8px;background:rgba(48,209,88,0.18);display:flex;align-items:center;justify-content:center;color:#30d158;font-size:13px;flex-shrink:0;">
+                                        <i class="ph-fill ph-crown"></i>
+                                    </div>
+                                    <div style="min-width:0;">
+                                        <div style="font-size:8.5px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">PUNTA DI DIAMANTE</div>
+                                        <div style="font-size:12px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            ${_topSubject ? escapeHtml(_topSubject.name) : 'In attesa voti'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span style="font-size:13px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:4px;">
+                                    ${_topSubject ? _topSubject.avg.toFixed(1) : '—'}
+                                </span>
+                            </div>
+
+                            <!-- 2. Focus / Attention Tile -->
+                            <div onclick="navigate('voti')" style="
+                                background:${_debitiCount > 0 ? 'rgba(255,69,58,0.08)' : 'rgba(41,151,255,0.08)'};
+                                border:0.5px solid ${_debitiCount > 0 ? 'rgba(255,69,58,0.22)' : 'rgba(41,151,255,0.22)'};
+                                border-radius:16px;padding:9px 12px;cursor:pointer;
+                                display:flex;align-items:center;justify-content:space-between;
+                                transition:transform 0.15s ease;
+                            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                                    <div style="width:26px;height:26px;border-radius:8px;background:${_debitiCount > 0 ? 'rgba(255,69,58,0.18)' : 'rgba(41,151,255,0.18)'};display:flex;align-items:center;justify-content:center;color:${_debitiCount > 0 ? '#ff453a' : '#2997ff'};font-size:13px;flex-shrink:0;">
+                                        <i class="ph-fill ${_debitiCount > 0 ? 'ph-crosshair' : 'ph-shield-check'}"></i>
+                                    </div>
+                                    <div style="min-width:0;">
+                                        <div style="font-size:8.5px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">
+                                            ${_debitiCount > 0 ? 'DA RECUPERARE' : 'MATERIA FOCUS'}
+                                        </div>
+                                        <div style="font-size:12px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            ${_lowestSubject ? escapeHtml(_lowestSubject.name) : (_topSubject ? escapeHtml(_topSubject.name) : 'In attesa')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span style="font-size:13px;font-weight:800;color:${_lowestSubject && _lowestSubject.avg < 6 ? '#ff453a' : '#2997ff'};font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:4px;">
+                                    ${_lowestSubject ? _lowestSubject.avg.toFixed(1) : (_topSubject ? _topSubject.avg.toFixed(1) : '—')}
+                                </span>
+                            </div>
+
+                            <!-- 3. Bilancio Valutazioni Tile -->
+                            <div onclick="navigate('voti')" style="
+                                background:rgba(255,255,255,0.03);
+                                border:0.5px solid rgba(255,255,255,0.09);
+                                border-radius:16px;padding:9px 12px;cursor:pointer;
+                                display:flex;align-items:center;justify-content:space-between;
+                                transition:transform 0.15s ease;
+                            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                                <div>
+                                    <div style="font-size:8.5px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">BILANCIO GENERALE</div>
+                                    <div style="font-size:11.5px;font-weight:700;color:rgba(255,255,255,0.9);margin-top:1px;">
+                                        ${_materieOk}/${_materieTotali || 1} Materie in regola
+                                    </div>
+                                </div>
+                                <span style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(48,209,88,0.15);color:#30d158;">
+                                    ${_pctSuff}% OK
+                                </span>
+                            </div>
+
                         </div>
-                        <p style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);margin:0;">Nessuna verifica imminente — rilassati!</p>
+
                     </div>
-                    `}
+
+                    <!-- Bottom Bar: Spettro Cromatico Medie per Materia -->
+                    ${_subjectsSummary.length > 0 ? `
+                    <div style="position:relative;z-index:1;padding-top:12px;border-top:0.5px solid rgba(255,255,255,0.08);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.55);display:flex;align-items:center;gap:4px;">
+                                <i class="ph-bold ph-chart-bar" style="color:#2997ff;"></i>
+                                SPETTRO MATERIE
+                            </span>
+                            <span onclick="navigate('voti')" style="font-size:10.5px;font-weight:700;color:#2997ff;cursor:pointer;">
+                                Registro Voti →
+                            </span>
+                        </div>
+
+                        <!-- Horizontal Scrollable Subject Spectrum Chips -->
+                        <div class="hide-scrollbar" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scroll-snap-type:x mandatory;">
+                            ${_subjectsSummary.map(s => {
+                                const chipColor = s.avg >= 8 ? '#30d158' : s.avg >= 7 ? '#64d2ff' : s.avg >= 6 ? '#ff9f0a' : '#ff453a';
+                                const chipBg = s.avg >= 8 ? 'rgba(48,209,88,0.12)' : s.avg >= 7 ? 'rgba(100,210,255,0.12)' : s.avg >= 6 ? 'rgba(255,159,10,0.12)' : 'rgba(255,69,58,0.14)';
+                                const chipBorder = s.avg >= 8 ? 'rgba(48,209,88,0.3)' : s.avg >= 7 ? 'rgba(100,210,255,0.3)' : s.avg >= 6 ? 'rgba(255,159,10,0.3)' : 'rgba(255,69,58,0.35)';
+                                return `
+                                <div onclick="navigate('voti')" style="
+                                    scroll-snap-align:start;flex-shrink:0;
+                                    display:flex;align-items:center;gap:6px;
+                                    padding:5px 10px;border-radius:12px;
+                                    background:${chipBg};border:0.5px solid ${chipBorder};
+                                    cursor:pointer;transition:transform 0.15s ease;
+                                " ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
+                                    <span style="font-size:10.5px;font-weight:700;color:#ffffff;">${escapeHtml(s.abbrev)}</span>
+                                    <span style="font-size:10.5px;font-weight:800;color:${chipColor};font-variant-numeric:tabular-nums;">${s.avg.toFixed(1)}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
                 </div>
             </div>
 
