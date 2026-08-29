@@ -6529,8 +6529,7 @@ window._renderCore = function () {
     const votiCount = (state.voti || []).length;
     const _plannerStateKey = state.view === 'planner'
         ? [state.selectedDate||'',state.plannerWeekOffset||0,state.plannerMonthView||false,
-           state.plannerMonthViewYear||0,state.plannerMonthViewMonth||0,
-           state.plannerSearchOpen?'1':'0',state.agendaSearchQuery||'',state.agendaSearchSubject||''].join('|')
+           state.plannerMonthViewYear||0,state.plannerMonthViewMonth||0].join('|')
         : '';
     if (_lastRenderedLoggedIn === true &&
         _lastRenderedView === state.view &&
@@ -6603,16 +6602,6 @@ window._renderCore = function () {
             requestAnimationFrame(doScroll);
             setTimeout(doScroll, 30);
             setTimeout(doScroll, 120);
-
-            // Restore search input focus after full re-render if search panel is open
-            if (state.plannerSearchOpen && (state.agendaSearchQuery || '').length > 0) {
-                const _si = document.getElementById('planner-search-input');
-                if (_si) {
-                    _si.focus();
-                    const _pos = _si.value.length;
-                    try { _si.setSelectionRange(_pos, _pos); } catch(e) {}
-                }
-            }
         }
         if (state.view === 'voti' && typeof initGradesCharts === 'function') {
             initGradesCharts();
@@ -8006,13 +7995,13 @@ window.openTaskDetailModal = function(taskId) {
 
         <!-- Actions -->
         <div style="padding:14px 22px calc(24px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(182,196,255,0.12);">
-            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); openTaskDetailModal('${escapeJsSingleQuote(t.id)}'); if(typeof refreshPlannerSearch==='function')refreshPlannerSearch(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:48px;border-radius:15px;background:${t.done ? 'rgba(110,231,183,0.18)' : 'linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%)'};border:${t.done ? '1px solid rgba(110,231,183,0.35)' : 'none'};color:${t.done ? '#6ee7b7' : '#ffffff'};font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:${t.done ? 'none' : '0 4px 16px rgba(47,88,205,0.45)'};">
+            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); openTaskDetailModal('${escapeJsSingleQuote(t.id)}'); if(typeof window.updatePlannerSearchModalResults==='function')window.updatePlannerSearchModalResults(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:48px;border-radius:15px;background:${t.done ? 'rgba(110,231,183,0.18)' : 'linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%)'};border:${t.done ? '1px solid rgba(110,231,183,0.35)' : 'none'};color:${t.done ? '#6ee7b7' : '#ffffff'};font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:${t.done ? 'none' : '0 4px 16px rgba(47,88,205,0.45)'};">
                 <i class="ph-bold ${t.done ? 'ph-arrow-counter-clockwise' : 'ph-check'}" style="font-size:18px;"></i>
                 <span>${t.done ? 'Riapri (Segna come Da Svolgere)' : 'Segna come Completato'}</span>
             </button>
 
             ${canDel ? `
-            <button onclick="deleteCalendarTask('${escapeJsSingleQuote(t.id)}'); window.closeTaskDetailModal(); if(typeof refreshPlannerSearch==='function')refreshPlannerSearch(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:44px;border-radius:14px;background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.25);color:#ffb4ab;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;">
+            <button onclick="deleteCalendarTask('${escapeJsSingleQuote(t.id)}'); window.closeTaskDetailModal(); if(typeof window.updatePlannerSearchModalResults==='function')window.updatePlannerSearchModalResults(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:44px;border-radius:14px;background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.25);color:#ffb4ab;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;">
                 <i class="ph-bold ph-trash" style="font-size:16px;"></i> Elimina Attività
             </button>
             ` : ''}
@@ -8176,8 +8165,8 @@ function renderPlanner() {
             const d=new Date(t.due_date+'T00:00:00');
             return `<span style="font-size:10px;font-weight:700;color:rgba(218,226,253,0.6);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${d.getDate()} ${MN[d.getMonth()]}</span>`;
         })() : '';
-        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');if(typeof refreshPlannerSearch==='function')refreshPlannerSearch();state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:rgba(255,59,48,0.2);border:1px solid rgba(255,59,48,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ffb4ab;">delete</span></button>` : '';
-        const rerender = "if(typeof refreshPlannerSearch==='function')refreshPlannerSearch();state._forceRender=true;scheduleRender(0);";
+        const delBtn = canDel ? `<button onclick="event.stopPropagation();deleteCalendarTask('${tid}');if(typeof window.updatePlannerSearchModalResults==='function')window.updatePlannerSearchModalResults();state._forceRender=true;scheduleRender(0);" style="width:30px;height:30px;border-radius:50%;background:rgba(255,59,48,0.2);border:1px solid rgba(255,59,48,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:14px;color:#ffb4ab;">delete</span></button>` : '';
+        const rerender = "if(typeof window.updatePlannerSearchModalResults==='function')window.updatePlannerSearchModalResults();state._forceRender=true;scheduleRender(0);";
 
         if (isExam) return `
         <div class="planner-task-exam" onclick="openTaskDetailModal('${tid}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'" style="background:linear-gradient(135deg, rgba(239,68,68,0.22) 0%, rgba(23,31,51,0.9) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(239,68,68,0.4);border-top:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;${t.done?'opacity:0.5;':''}box-shadow:0 0 20px rgba(239,68,68,0.25);transition:transform 0.12s ease;">
@@ -8232,7 +8221,7 @@ function renderPlanner() {
         </div>`;
     }
 
-    // Salva TC e MN su window per refreshPlannerSearch() (aggiornamento chirurgico)
+    // Salva TC e MN su window per openPlannerSearchModal()
     window._plannerTC = TC;
     window._plannerMN = MN;
     window._plannerDayContentCache = null; // invalidata ad ogni render completo
@@ -8294,18 +8283,20 @@ function renderPlanner() {
             </button>
         </header>
 
-        <!-- ══ SEARCH BAR (Refined Apple Liquid Glass) ══ -->
+        <!-- ══ SEARCH TRIGGER (Apple Liquid Glass Spotlight Button) ══ -->
         <div style="padding:0 20px 16px;">
-            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:12px 16px;display:flex;align-items:center;gap:10px;transition:all 0.3s ease;position:relative;background:rgba(20,31,54,0.75);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;box-shadow:0 4px 20px -6px rgba(0,0,0,0.3);">
-                <i class="ph ph-magnifying-glass" style="font-size:18px;color:#2997ff;flex-shrink:0;"></i>
-                <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche o filtra per materia..."
-                    value="${escapeHtml(query)}"
-                    oninput="state.plannerSearchOpen=true;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
-                    onfocus="if(!state.plannerSearchOpen){state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();}"
-                    style="width:100%;background:transparent;border:none;outline:none;font-size:14px;color:#ffffff;padding:0;font-family:'Inter',sans-serif;" />
-                <button id="planner-search-clear-btn" onclick="window.clearPlannerSearchInput();" style="display:${query ? 'flex' : 'none'};background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;align-items:center;justify-content:center;flex-shrink:0;" title="Cancella ricerca">
-                    <i class="ph-fill ph-x-circle" style="font-size:18px;"></i>
-                </button>
+            <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openPlannerSearchModal&&window.openPlannerSearchModal();"
+                class="liquid-glass-v8 squircle-md rim-light"
+                style="padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;background:rgba(20,31,54,0.75);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;box-shadow:0 4px 20px -6px rgba(0,0,0,0.3);transition:transform 0.15s ease;"
+                ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                    <i class="ph ph-magnifying-glass" style="font-size:18px;color:#2997ff;flex-shrink:0;"></i>
+                    <span style="font-size:14px;color:rgba(255,255,255,0.55);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Inter',sans-serif;">Cerca compiti, verifiche o filtra per materia...</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;background:rgba(41,151,255,0.12);border:0.5px solid rgba(41,151,255,0.25);border-radius:999px;padding:4px 10px;flex-shrink:0;">
+                    <i class="ph-bold ph-funnel" style="font-size:12px;color:#2997ff;"></i>
+                    <span style="font-size:11px;font-weight:700;color:#2997ff;">Filtri</span>
+                </div>
             </div>
         </div>
 
@@ -8331,77 +8322,51 @@ function renderPlanner() {
             ${dotsHtml}
         </div>
 
-        <!-- ══ RISULTATI RICERCA / CONTENUTO GIORNO ══ -->
-        <div id="planner-content-area" style="padding:0 20px 140px 20px;">
-        ${showSearchPanel ? `
-        <div>
-            <!-- Subject chips with Apple Liquid Glass (with preserved scroll ID) -->
-            <div id="planner-search-chips-bar" style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
-                ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>{
-                    const isAll = s === 'all';
-                    const active = filterSubject === s;
-                    const theme = isAll ? { color: '#2997ff', icon: 'ph-squares-four' } : getSubjectTheme(s);
-                    return `
-                    <button onclick="state.agendaSearchSubject='${escapeJsSingleQuote(s)}';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" style="flex-shrink:0;padding:8px 14px;border-radius:9999px;font-size:12px;font-weight:${active ? '700' : '600'};cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s ease;background:${active ? '#2997ff' : 'rgba(20,31,54,0.75)'};border:${active ? '1px solid rgba(41,151,255,0.6)' : '0.5px solid rgba(255,255,255,0.12)'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.8)'};box-shadow:${active ? '0 4px 14px rgba(41,151,255,0.35)' : 'none'};">
-                        <i class="ph-fill ${theme.icon || 'ph-bookmark'}" style="font-size:14px;color:${active ? '#ffffff' : theme.color};"></i>
-                        <span>${escapeHtml(formatSubjectTitle(l))}</span>
-                    </button>`;
-                }).join('')}
-            </div>
-            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 2px;">
-                <span style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-funnel" style="color:#2997ff;"></i> ${searchResults.length} ${searchResults.length === 1 ? 'compito' : 'compiti'}${query ? ` per "${escapeHtml(query)}"` : (filterSubject !== 'all' ? ` · ${escapeHtml(formatSubjectTitle(filterSubject))}` : ' in totale')}</span>
-                <button onclick="window.closePlannerSearch()" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);color:#2997ff;font-size:11px;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:999px;"><i class="ph-bold ph-calendar"></i> Torna al giorno</button>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:12px;padding-bottom:140px;">
-                ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;background:rgba(20,31,54,0.7);border-radius:24px;border:0.5px solid rgba(255,255,255,0.12);"><i class="ph ph-magnifying-glass" style="font-size:36px;color:rgba(255,255,255,0.3);"></i><p style="color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;margin:10px 0 0;">Nessun compito o verifica trovato</p></div>`}
-            </div>
-        </div>` : `
-
         <!-- ══ DAY CONTENT ══ -->
-        <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:140px;">
+        <div id="planner-content-area" style="padding:0 20px 140px 20px;">
+            <div style="display:flex;flex-direction:column;gap:16px;">
 
-            <!-- Selected day header -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
-                <h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">
-                    ${(()=>{
-                        const d=new Date(selectedDate+'T00:00:00');
-                        const diff=Math.round((d-today)/86400000);
-                        const base=`${dayLabels[d.getDay()]} ${d.getDate()} ${MN[d.getMonth()]}`;
-                        if(diff===0) return `Oggi · ${base}`;
-                        if(diff===1) return `Domani · ${base}`;
-                        if(diff===-1) return `Ieri · ${base}`;
-                        return base;
-                    })()}
-                </h2>
-                <span style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
-            </div>
-
-            ${upcomingCount>0 && selectedDate===todayISO ? `
-            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;background:linear-gradient(135deg, rgba(47,88,205,0.2) 0%, rgba(255,255,255,0.02) 100%);">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <div style="width:32px;height:32px;border-radius:50%;background:#2f58cd;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:16px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
-                    <span style="font-size:14px;font-weight:700;color:#dae2fd;">Smart Planner</span>
+                <!-- Selected day header -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
+                    <h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">
+                        ${(()=>{
+                            const d=new Date(selectedDate+'T00:00:00');
+                            const diff=Math.round((d-today)/86400000);
+                            const base=`${dayLabels[d.getDay()]} ${d.getDate()} ${MN[d.getMonth()]}`;
+                            if(diff===0) return `Oggi · ${base}`;
+                            if(diff===1) return `Domani · ${base}`;
+                            if(diff===-1) return `Ieri · ${base}`;
+                            return base;
+                        })()}
+                    </h2>
+                    <span style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);">${dayTasks.length} ${dayTasks.length===1?'evento':'eventi'}</span>
                 </div>
-                <p style="font-size:13px;color:rgba(196,197,214,0.8);line-height:1.5;margin:0 0 8px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
-                <button onclick="const si=document.getElementById('planner-search-input');if(si){si.focus();si.select();}" style="color:#b6c4ff;font-weight:600;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Inter',sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>
-            </div>` : ''}
 
-            ${dayTasks.length ? `<div style="display:flex;flex-direction:column;gap:12px;">${dayTasks.map(t=>TC(t,false)).join('')}</div>` : `
-            <!-- Empty State Bento Card (Apple Liquid Glass) -->
-            <div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:280px;background:rgba(20,31,54,0.6);border-radius:28px;border:0.5px solid rgba(255,255,255,0.1);">
-                <div style="position:relative;margin-bottom:20px;">
-                    <div style="position:absolute;inset:0;background:rgba(41,151,255,0.2);filter:blur(24px);border-radius:9999px;"></div>
-                    <div style="position:relative;width:72px;height:72px;border-radius:22px;background:rgba(41,151,255,0.1);border:1px solid rgba(41,151,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;">
-                        <i class="ph ph-calendar-x" style="font-size:36px;"></i>
+                ${upcomingCount>0 && selectedDate===todayISO ? `
+                <div class="liquid-glass-v8 squircle-md rim-light" style="padding:16px 18px;background:linear-gradient(135deg, rgba(47,88,205,0.2) 0%, rgba(255,255,255,0.02) 100%);">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:#2f58cd;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:16px;color:white;font-variation-settings:'FILL' 1;">lightbulb</span></div>
+                        <span style="font-size:14px;font-weight:700;color:#dae2fd;">Smart Planner</span>
                     </div>
-                </div>
-                <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 4px;">Nessuna attività</h4>
-                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);max-width:240px;line-height:1.5;margin:0;">
-                    Nessun compito o verifica programmata per questo giorno.
-                </p>
-            </div>`}
-        </div>`}
+                    <p style="font-size:13px;color:rgba(196,197,214,0.8);line-height:1.5;margin:0 0 8px;">Hai <strong>${upcomingCount}</strong> compiti nei prossimi 7 giorni.</p>
+                    <button onclick="window.openPlannerSearchModal&&window.openPlannerSearchModal();" style="color:#b6c4ff;font-weight:600;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Inter',sans-serif;padding:0;">Cerca & Filtra tutti <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>
+                </div>` : ''}
 
+                ${dayTasks.length ? `<div style="display:flex;flex-direction:column;gap:12px;">${dayTasks.map(t=>TC(t,false)).join('')}</div>` : `
+                <!-- Empty State Bento Card (Apple Liquid Glass) -->
+                <div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:280px;background:rgba(20,31,54,0.6);border-radius:28px;border:0.5px solid rgba(255,255,255,0.1);">
+                    <div style="position:relative;margin-bottom:20px;">
+                        <div style="position:absolute;inset:0;background:rgba(41,151,255,0.2);filter:blur(24px);border-radius:9999px;"></div>
+                        <div style="position:relative;width:72px;height:72px;border-radius:22px;background:rgba(41,151,255,0.1);border:1px solid rgba(41,151,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;">
+                            <i class="ph ph-calendar-x" style="font-size:36px;"></i>
+                        </div>
+                    </div>
+                    <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 4px;">Nessuna attività</h4>
+                    <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);max-width:240px;line-height:1.5;margin:0;">
+                        Nessun compito o verifica programmata per questo giorno.
+                    </p>
+                </div>`}
+            </div>
         </div><!-- /planner-content-area -->
 
         <!-- ══ FLOATING ACTIONS (Apple Liquid Glass Aligned Dock) ══ -->
@@ -9506,134 +9471,226 @@ window._buildPlannerDayContentHTML = function() {
         '</div>';
 };
 
-window.clearPlannerSearchInput = function() {
-    state.agendaSearchQuery = '';
-    const si = document.getElementById('planner-search-input');
-    if (si) { si.value = ''; si.focus(); }
-    const clearBtn = document.getElementById('planner-search-clear-btn');
-    if (clearBtn) clearBtn.style.display = 'none';
-    // Chirurgical update only of content area, no full re-render
-    window.refreshPlannerSearch && window.refreshPlannerSearch();
-};
+// ══════════════════════════════════════════════════════════════════════════════
+// PLANNER SEARCH & DISCOVERY MODAL (Dedicated Apple Liquid Glass Layer)
+// ══════════════════════════════════════════════════════════════════════════════
 
-window.closePlannerSearch = function() {
-    state.plannerSearchOpen = false;
-    state.agendaSearchQuery = '';
-    state.agendaSearchSubject = 'all';
-    const si = document.getElementById('planner-search-input');
-    if (si) { si.value = ''; si.blur(); }
-    // Force a clean full re-render to reset the entire UI state
-    state._forceRender = true;
-    scheduleRender(0);
-};
+window.openPlannerSearchModal = function(initialQuery, initialSubject) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
 
-window.refreshPlannerSearch = function() {
-    const area = document.getElementById('planner-content-area');
-    if (!area) {
-        state._forceRender = true;
-        scheduleRender(60);
-        return;
-    }
+    if (initialQuery !== undefined) state.plannerSearchModalQuery = initialQuery;
+    if (initialSubject !== undefined) state.plannerSearchModalSubject = initialSubject;
+    if (!state.plannerSearchModalCategory) state.plannerSearchModalCategory = 'all';
 
-    const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
-    const filterSubject = state.agendaSearchSubject || 'all';
-    const isSearchActive = !!(state.plannerSearchOpen || query || filterSubject !== 'all');
+    // Remove existing if any
+    const existing = document.getElementById('planner-search-modal-overlay');
+    if (existing) existing.remove();
 
-    // Keep planner state key in sync to prevent full re-render drift
-    window.__lastPlannerKey = [
-        state.selectedDate || '', state.plannerWeekOffset || 0, state.plannerMonthView || false,
-        state.plannerMonthViewYear || 0, state.plannerMonthViewMonth || 0,
-        state.plannerSearchOpen ? '1' : '0', state.agendaSearchQuery || '', state.agendaSearchSubject || ''
-    ].join('|');
+    const overlay = document.createElement('div');
+    overlay.id = 'planner-search-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(5,8,17,0.75);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);display:flex;flex-direction:column;justify-content:flex-end;opacity:0;transition:opacity 0.25s ease;font-family:\'Inter\',sans-serif;';
 
-    const clearBtn = document.getElementById('planner-search-clear-btn');
-    if (clearBtn) {
-        clearBtn.style.display = query ? 'flex' : 'none';
-    }
+    const sheet = document.createElement('div');
+    sheet.id = 'planner-search-modal-sheet';
+    sheet.style.cssText = 'width:100%;max-width:640px;margin:0 auto;height:92vh;max-height:92vh;background:rgba(12,20,36,0.96);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.25);border-radius:32px 32px 0 0;display:flex;flex-direction:column;box-shadow:0 -12px 48px rgba(0,0,0,0.75);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);overflow:hidden;';
 
-    if (!isSearchActive) {
-        if (window._buildPlannerDayContentHTML) {
-            const freshHtml = window._buildPlannerDayContentHTML();
-            if (area.innerHTML !== freshHtml) {
-                area.innerHTML = freshHtml;
-            }
-        }
-        return;
-    }
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
 
-    const TC = window._plannerTC;
-    if (!TC) { state._forceRender = true; scheduleRender(60); return; }
+    window.renderPlannerSearchModalContent(sheet);
 
-    // Preserve filter chips bar scroll position before DOM update
-    const oldChipsBar = document.getElementById('planner-search-chips-bar');
-    const savedChipsScroll = oldChipsBar ? oldChipsBar.scrollLeft : 0;
-
-    const allTasks = (state.tasks || []).filter(function(t) { return t.subject !== 'QUEST'; });
-    const subjects = [...new Set(allTasks.map(function(t) {
-        return t.subject || t.materia || '';
-    }).filter(Boolean))].sort();
-
-    // Sort tasks descending (most recent first)
-    const results = allTasks.filter(function(t) {
-        if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
-        if (!query) return true;
-        return (t.subject  || '').toLowerCase().includes(query)
-            || (t.materia  || '').toLowerCase().includes(query)
-            || (t.text     || '').toLowerCase().includes(query);
-    }).sort(function(a, b) {
-        return (b.due_date || '').localeCompare(a.due_date || '');
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        sheet.style.transform = 'translateY(0)';
     });
 
-    const chipsHtml = [{l: 'Tutte', s: 'all'}]
-        .concat(subjects.map(function(s) { return {l: s, s: s}; }))
-        .map(function(item) {
-            const isAll = item.s === 'all';
-            const active = filterSubject === item.s;
-            const safeS = escapeJsSingleQuote(item.s);
-            const theme = isAll ? { color: '#2997ff', icon: 'ph-squares-four' } : (typeof getSubjectTheme === 'function' ? getSubjectTheme(item.s) : { color: '#2997ff', icon: 'ph-bookmark' });
-            const titleFormatted = typeof formatSubjectTitle === 'function' ? formatSubjectTitle(item.l) : item.l;
-            return '<button onclick="state.agendaSearchSubject=\'' + safeS + '\';state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();" ' +
-                'style="flex-shrink:0;padding:8px 14px;border-radius:9999px;font-size:12px;font-weight:' + (active ? '700' : '600') + ';cursor:pointer;font-family:\'Inter\',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s ease;' +
-                'background:' + (active ? '#2997ff' : 'rgba(20,31,54,0.75)') + ';' +
-                'border:' + (active ? '1px solid rgba(41,151,255,0.6)' : '0.5px solid rgba(255,255,255,0.12)') + ';' +
-                'color:' + (active ? '#ffffff' : 'rgba(255,255,255,0.8)') + ';' +
-                'box-shadow:' + (active ? '0 4px 14px rgba(41,151,255,0.35)' : 'none') + ';">' +
-                '<i class="ph-fill ' + (theme.icon || 'ph-bookmark') + '" style="font-size:14px;color:' + (active ? '#ffffff' : theme.color) + ';"></i>' +
-                '<span>' + escapeHtml(titleFormatted) + '</span></button>';
-        }).join('');
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) window.closePlannerSearchModal();
+    });
+};
 
-    const emptyHtml = '<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;background:rgba(20,31,54,0.7);border-radius:24px;border:0.5px solid rgba(255,255,255,0.12);">' +
-        '<i class="ph ph-magnifying-glass" style="font-size:36px;color:rgba(255,255,255,0.3);"></i>' +
-        '<p style="color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;margin:10px 0 0;">Nessun compito o verifica trovato</p>' +
-        '</div>';
+window.closePlannerSearchModal = function() {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    const overlay = document.getElementById('planner-search-modal-overlay');
+    const sheet = document.getElementById('planner-search-modal-sheet');
+    if (!overlay) return;
+    if (sheet) sheet.style.transform = 'translateY(100%)';
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+        if (overlay && overlay.parentNode) overlay.remove();
+    }, 320);
+};
 
-    const subjectLabel = filterSubject !== 'all' ? (typeof formatSubjectTitle === 'function' ? formatSubjectTitle(filterSubject) : filterSubject) : 'in totale';
-    const countLabel = results.length + (results.length === 1 ? ' compito' : ' compiti') +
-        (query ? ' per "' + escapeHtml(query) + '"' : (filterSubject !== 'all' ? ' · ' + escapeHtml(subjectLabel) : ' in totale'));
+window.clearPlannerModalSearchInput = function() {
+    state.plannerSearchModalQuery = '';
+    const inp = document.getElementById('planner-modal-search-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+    const btn = document.getElementById('planner-modal-search-clear-btn');
+    if (btn) btn.style.display = 'none';
+    window.updatePlannerSearchModalResults && window.updatePlannerSearchModalResults();
+};
 
-    area.innerHTML =
-        '<div style="padding:0 0 140px 0;">' +
-            '<div id="planner-search-chips-bar" style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;">' +
-                chipsHtml +
-            '</div>' +
-            '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 2px;">' +
-                '<span style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-funnel" style="color:#2997ff;"></i> ' + countLabel + '</span>' +
-                '<button onclick="window.closePlannerSearch()" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);color:#2997ff;font-size:11px;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:999px;"><i class="ph-bold ph-calendar"></i> Torna al giorno</button>' +
-            '</div>' +
-            '<div style="display:flex;flex-direction:column;gap:12px;">' +
-                (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
-            '</div>' +
-        '</div>';
+window.renderPlannerSearchModalContent = function(sheet) {
+    if (!sheet) sheet = document.getElementById('planner-search-modal-sheet');
+    if (!sheet) return;
 
-    // Restore chips bar scroll position smoothly
-    if (savedChipsScroll > 0) {
-        const newChipsBar = document.getElementById('planner-search-chips-bar');
-        if (newChipsBar) newChipsBar.scrollLeft = savedChipsScroll;
-        requestAnimationFrame(function() {
-            const b = document.getElementById('planner-search-chips-bar');
-            if (b && savedChipsScroll > 0) b.scrollLeft = savedChipsScroll;
+    const allTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST');
+    const subjects = [...new Set(allTasks.map(t => t.subject || t.materia || '').filter(Boolean))].sort();
+
+    const allCount = allTasks.length;
+    const tasksOnlyCount = allTasks.filter(t => !t.done && !(t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text || ''))).length;
+    const examsOnlyCount = allTasks.filter(t => !t.done && (t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text || ''))).length;
+    const doneCount = allTasks.filter(t => t.done).length;
+
+    const curCategory = state.plannerSearchModalCategory || 'all';
+    const curSubject = state.plannerSearchModalSubject || 'all';
+    const curQuery = state.plannerSearchModalQuery || '';
+
+    sheet.innerHTML = `
+        <!-- Drag Handle -->
+        <div style="display:flex;justify-content:center;padding:12px 0 6px;flex-shrink:0;">
+            <div style="width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
+        </div>
+
+        <!-- Header Bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 20px 14px;flex-shrink:0;">
+            <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">ARCHIVIO COMPITI & VERIFICHE</div>
+                <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:2px 0 0;letter-spacing:-0.02em;">Cerca & Filtri</h2>
+            </div>
+            <button onclick="window.closePlannerSearchModal()" class="liquid-glass-v8 rim-light squircle-full" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:#ffffff;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;">
+                <i class="ph ph-x" style="font-size:14px;"></i>
+                <span>Chiudi</span>
+            </button>
+        </div>
+
+        <!-- Search Bar (Apple Spotlight Input) -->
+        <div style="padding:0 20px 12px;flex-shrink:0;">
+            <div class="liquid-glass-v8 squircle-md rim-light" style="padding:11px 15px;display:flex;align-items:center;gap:10px;background:rgba(20,31,54,0.85);border:0.5px solid rgba(255,255,255,0.15);border-top:1px solid rgba(255,255,255,0.25);border-radius:18px;box-shadow:0 4px 16px -4px rgba(0,0,0,0.4);">
+                <i class="ph ph-magnifying-glass" style="font-size:18px;color:#2997ff;flex-shrink:0;"></i>
+                <input id="planner-modal-search-input" type="text"
+                    placeholder="Cerca per titolo, materia o argomento..."
+                    value="${escapeHtml(curQuery)}"
+                    oninput="state.plannerSearchModalQuery=this.value;const clr=document.getElementById('planner-modal-search-clear-btn');if(clr)clr.style.display=this.value?'flex':'none';window.updatePlannerSearchModalResults&&window.updatePlannerSearchModalResults();"
+                    style="width:100%;background:transparent;border:none;outline:none;font-size:14px;color:#ffffff;padding:0;font-family:'Inter',sans-serif;" />
+                <button id="planner-modal-search-clear-btn" onclick="window.clearPlannerModalSearchInput()" style="display:${curQuery ? 'flex' : 'none'};background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;align-items:center;justify-content:center;flex-shrink:0;" title="Cancella">
+                    <i class="ph-fill ph-x-circle" style="font-size:18px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Category Filter Segments -->
+        <div style="padding:0 20px 10px;flex-shrink:0;">
+            <div style="display:flex;gap:6px;background:rgba(10,16,28,0.7);padding:4px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);">
+                ${[
+                    { id: 'all', label: 'Tutti', icon: 'ph-squares-four', count: allCount },
+                    { id: 'tasks', label: 'Compiti', icon: 'ph-book-open', count: tasksOnlyCount },
+                    { id: 'exams', label: 'Verifiche', icon: 'ph-pencil-simple', count: examsOnlyCount },
+                    { id: 'done', label: 'Fatti', icon: 'ph-check-circle', count: doneCount }
+                ].map(cat => {
+                    const active = curCategory === cat.id;
+                    return `
+                    <button onclick="state.plannerSearchModalCategory='${cat.id}';window.renderPlannerSearchModalContent();" style="flex:1;padding:7px 4px;border-radius:10px;font-size:11px;font-weight:${active ? '700' : '600'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:'Inter',sans-serif;transition:all 0.2s ease;background:${active ? '#2997ff' : 'transparent'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.6)'};box-shadow:${active ? '0 2px 8px rgba(41,151,255,0.35)' : 'none'};">
+                        <i class="ph-bold ${cat.icon}" style="font-size:13px;"></i>
+                        <span>${cat.label}</span>
+                        <span style="font-size:9px;opacity:0.85;padding:1px 5px;border-radius:999px;background:${active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'};">${cat.count}</span>
+                    </button>`;
+                }).join('')}
+            </div>
+        </div>
+
+        <!-- Subject Chips Filter Bar -->
+        <div style="padding:0 20px 12px;flex-shrink:0;">
+            <div id="planner-modal-chips-bar" style="display:flex;overflow-x:auto;gap:8px;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+                ${[{l:'Tutte le materie', s:'all', count: allCount}, ...subjects.map(s => ({l:s, s:s, count: allTasks.filter(t => (t.subject||t.materia||'') === s).length}))].map(item => {
+                    const isAll = item.s === 'all';
+                    const active = curSubject === item.s;
+                    const theme = isAll ? { color: '#2997ff', icon: 'ph-squares-four' } : getSubjectTheme(item.s);
+                    const safeS = escapeJsSingleQuote(item.s);
+                    return `
+                    <button onclick="state.plannerSearchModalSubject='${safeS}';window.updatePlannerSearchModalResults&&window.updatePlannerSearchModalResults();" style="flex-shrink:0;padding:6px 12px;border-radius:9999px;font-size:11px;font-weight:${active ? '700' : '600'};cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s ease;background:${active ? '#2997ff' : 'rgba(20,31,54,0.75)'};border:${active ? '1px solid rgba(41,151,255,0.6)' : '0.5px solid rgba(255,255,255,0.12)'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.8)'};box-shadow:${active ? '0 4px 12px rgba(41,151,255,0.3)' : 'none'};">
+                        <i class="ph-fill ${theme.icon || 'ph-bookmark'}" style="font-size:13px;color:${active ? '#ffffff' : theme.color};"></i>
+                        <span>${escapeHtml(formatSubjectTitle(item.l))}</span>
+                        <span style="font-size:9px;opacity:0.8;background:${active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'};padding:1px 5px;border-radius:999px;">${item.count}</span>
+                    </button>`;
+                }).join('')}
+            </div>
+        </div>
+
+        <!-- Scrollable Results Container -->
+        <div id="planner-modal-results-container" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 80px 20px;">
+        </div>
+    `;
+
+    window.updatePlannerSearchModalResults();
+};
+
+window.updatePlannerSearchModalResults = function() {
+    const container = document.getElementById('planner-modal-results-container');
+    if (!container) return;
+
+    const allTasks = (state.tasks || []).filter(t => t.subject !== 'QUEST');
+    const query = (state.plannerSearchModalQuery || '').toLowerCase().trim();
+    const filterSubject = state.plannerSearchModalSubject || 'all';
+    const filterCategory = state.plannerSearchModalCategory || 'all';
+
+    // Update chips bar active state smoothly
+    const chipsBar = document.getElementById('planner-modal-chips-bar');
+    if (chipsBar) {
+        chipsBar.querySelectorAll('button').forEach(btn => {
+            const onclickAttr = btn.getAttribute('onclick') || '';
+            const m = onclickAttr.match(/plannerSearchModalSubject='([^']+)'/);
+            const s = m ? m[1] : '';
+            const active = filterSubject === s;
+            btn.style.background = active ? '#2997ff' : 'rgba(20,31,54,0.75)';
+            btn.style.border = active ? '1px solid rgba(41,151,255,0.6)' : '0.5px solid rgba(255,255,255,0.12)';
+            btn.style.color = active ? '#ffffff' : 'rgba(255,255,255,0.8)';
+            btn.style.boxShadow = active ? '0 4px 12px rgba(41,151,255,0.3)' : 'none';
         });
     }
+
+    const filtered = allTasks.filter(t => {
+        const isExam = t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text || '');
+        if (filterCategory === 'tasks' && (isExam || t.done)) return false;
+        if (filterCategory === 'exams' && (!isExam || t.done)) return false;
+        if (filterCategory === 'done' && !t.done) return false;
+
+        if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
+
+        if (!query) return true;
+        return (t.subject || '').toLowerCase().includes(query)
+            || (t.materia || '').toLowerCase().includes(query)
+            || (t.text || '').toLowerCase().includes(query);
+    }).sort((a, b) => (b.due_date || '').localeCompare(a.due_date || ''));
+
+    const TC = window._plannerTC;
+    if (!TC) return;
+
+    const countLabel = filtered.length + (filtered.length === 1 ? ' attività trovata' : ' attività trovate');
+
+    container.innerHTML = `
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 2px;">
+            <span style="display:flex;align-items:center;gap:6px;">
+                <i class="ph-bold ph-funnel" style="color:#2997ff;"></i> ${countLabel}
+            </span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+            ${filtered.length ? filtered.map(t => TC(t, true)).join('') : `
+            <div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:44px 20px;background:rgba(20,31,54,0.7);border-radius:24px;border:0.5px solid rgba(255,255,255,0.12);">
+                <i class="ph ph-magnifying-glass" style="font-size:40px;color:rgba(255,255,255,0.25);"></i>
+                <h4 style="color:#ffffff;font-size:15px;font-weight:700;margin:12px 0 4px;">Nessuna attività trovata</h4>
+                <p style="color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;margin:0;">Prova a modificare i termini di ricerca o i filtri selezionati.</p>
+            </div>`}
+        </div>
+    `;
+};
+
+// Aliases for compatibility
+window.refreshPlannerSearch = function() {
+    window.updatePlannerSearchModalResults && window.updatePlannerSearchModalResults();
+};
+window.closePlannerSearch = function() {
+    window.closePlannerSearchModal && window.closePlannerSearchModal();
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
