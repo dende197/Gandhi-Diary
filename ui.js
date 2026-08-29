@@ -8300,8 +8300,8 @@ function renderPlanner() {
                 <i class="ph ph-magnifying-glass" style="font-size:18px;color:#2997ff;flex-shrink:0;"></i>
                 <input id="planner-search-input" type="text" placeholder="Cerca compiti, verifiche o filtra per materia..."
                     value="${escapeHtml(query)}"
-                    oninput="state.agendaSearchQuery=this.value;if(state.plannerSearchOpen){window.refreshPlannerSearch&&window.refreshPlannerSearch();}else{state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);}"
-                    onfocus="if(!state.plannerSearchOpen){state.plannerSearchOpen=true;state._forceRender=true;scheduleRender(0);}"
+                    oninput="state.plannerSearchOpen=true;state.agendaSearchQuery=this.value;window.refreshPlannerSearch&&window.refreshPlannerSearch();"
+                    onfocus="if(!state.plannerSearchOpen){state.plannerSearchOpen=true;window.refreshPlannerSearch&&window.refreshPlannerSearch();}"
                     style="width:100%;background:transparent;border:none;outline:none;font-size:14px;color:#ffffff;padding:0;font-family:'Inter',sans-serif;" />
                 <button id="planner-search-clear-btn" onclick="window.clearPlannerSearchInput();" style="display:${query ? 'flex' : 'none'};background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;align-items:center;justify-content:center;flex-shrink:0;" title="Cancella ricerca">
                     <i class="ph-fill ph-x-circle" style="font-size:18px;"></i>
@@ -8332,7 +8332,7 @@ function renderPlanner() {
         </div>
 
         <!-- ══ RISULTATI RICERCA / CONTENUTO GIORNO ══ -->
-        <div id="planner-content-area" style="padding:0 20px;">
+        <div id="planner-content-area" style="padding:0 20px 140px 20px;">
         ${showSearchPanel ? `
         <div>
             <!-- Subject chips with Apple Liquid Glass (with preserved scroll ID) -->
@@ -8352,13 +8352,13 @@ function renderPlanner() {
                 <span style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-funnel" style="color:#2997ff;"></i> ${searchResults.length} ${searchResults.length === 1 ? 'compito' : 'compiti'}${query ? ` per "${escapeHtml(query)}"` : (filterSubject !== 'all' ? ` · ${escapeHtml(formatSubjectTitle(filterSubject))}` : ' in totale')}</span>
                 <button onclick="window.closePlannerSearch()" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);color:#2997ff;font-size:11px;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:999px;"><i class="ph-bold ph-calendar"></i> Torna al giorno</button>
             </div>
-            <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:12px;padding-bottom:140px;">
                 ${searchResults.length ? searchResults.map(t=>TC(t,true)).join('') : `<div class="liquid-glass-v8 squircle-lg rim-light" style="text-align:center;padding:40px 20px;background:rgba(20,31,54,0.7);border-radius:24px;border:0.5px solid rgba(255,255,255,0.12);"><i class="ph ph-magnifying-glass" style="font-size:36px;color:rgba(255,255,255,0.3);"></i><p style="color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;margin:10px 0 0;">Nessun compito o verifica trovato</p></div>`}
             </div>
         </div>` : `
 
         <!-- ══ DAY CONTENT ══ -->
-        <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:140px;">
 
             <!-- Selected day header -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
@@ -9489,15 +9489,16 @@ window._buildPlannerDayContentHTML = function() {
           '<p style="font-size:13px;color:rgba(196,197,214,0.8);line-height:1.5;margin:0 0 8px;">Hai <strong>' + upcoming + '</strong> compiti nei prossimi 7 giorni.</p>' +
           '<button onclick="const si=document.getElementById(\'planner-search-input\');if(si){si.focus();si.select();}" style="color:#b6c4ff;font-weight:600;font-size:12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:\'Inter\',sans-serif;padding:0;">Cerca <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span></button>' +
           '</div>' : '';
-    var empty = '<div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:320px;">' +
-        '<div style="position:relative;margin-bottom:24px;">' +
-        '<div style="position:absolute;inset:0;background:rgba(47,88,205,0.2);filter:blur(24px);border-radius:9999px;"></div>' +
-        '<div class="liquid-glass-v8 squircle-md" style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px -10px rgba(0,0,0,0.3);">' +
-        '<span class="material-symbols-outlined" style="font-size:42px;color:rgba(196,197,214,0.3);" style="font-variation-settings:\'wght\' 200;">event_busy</span>' +
+    var empty = '<div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:280px;background:rgba(20,31,54,0.6);border-radius:28px;border:0.5px solid rgba(255,255,255,0.1);">' +
+        '<div style="position:relative;margin-bottom:20px;">' +
+        '<div style="position:absolute;inset:0;background:rgba(41,151,255,0.2);filter:blur(24px);border-radius:9999px;"></div>' +
+        '<div style="position:relative;width:72px;height:72px;border-radius:22px;background:rgba(41,151,255,0.1);border:1px solid rgba(41,151,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;">' +
+        '<i class="ph ph-calendar-x" style="font-size:36px;"></i>' +
         '</div></div>' +
-        '<p style="font-size:15px;font-weight:500;font-style:italic;color:rgba(218,226,253,0.4);max-width:200px;line-height:1.6;margin:0;" class="sentence-case">Nessuna attività per questo giorno</p>' +
+        '<h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 4px;">Nessuna attività</h4>' +
+        '<p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);max-width:240px;line-height:1.5;margin:0;">Nessun compito o verifica programmata per questo giorno.</p>' +
         '</div>';
-    return '<div style="display:flex;flex-direction:column;gap:16px;">' +
+    return '<div style="display:flex;flex-direction:column;gap:16px;padding-bottom:140px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">' +
         '<h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">' + dayLabel + '</h2>' +
         '<span style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
@@ -9537,6 +9538,13 @@ window.refreshPlannerSearch = function() {
     const query         = (state.agendaSearchQuery || '').toLowerCase().trim();
     const filterSubject = state.agendaSearchSubject || 'all';
     const isSearchActive = !!(state.plannerSearchOpen || query || filterSubject !== 'all');
+
+    // Keep planner state key in sync to prevent full re-render drift
+    window.__lastPlannerKey = [
+        state.selectedDate || '', state.plannerWeekOffset || 0, state.plannerMonthView || false,
+        state.plannerMonthViewYear || 0, state.plannerMonthViewMonth || 0,
+        state.plannerSearchOpen ? '1' : '0', state.agendaSearchQuery || '', state.agendaSearchSubject || ''
+    ].join('|');
 
     const clearBtn = document.getElementById('planner-search-clear-btn');
     if (clearBtn) {
@@ -9604,7 +9612,7 @@ window.refreshPlannerSearch = function() {
         (query ? ' per "' + escapeHtml(query) + '"' : (filterSubject !== 'all' ? ' · ' + escapeHtml(subjectLabel) : ' in totale'));
 
     area.innerHTML =
-        '<div style="padding:0;">' +
+        '<div style="padding:0 0 140px 0;">' +
             '<div id="planner-search-chips-bar" style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;">' +
                 chipsHtml +
             '</div>' +
