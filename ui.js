@@ -9581,19 +9581,18 @@ window.renderPlannerSearchModalContent = function(sheet) {
 
         <!-- Category Filter Segments -->
         <div style="padding:0 20px 10px;flex-shrink:0;">
-            <div style="display:flex;gap:6px;background:rgba(10,16,28,0.7);padding:4px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.08);">
+            <div style="display:flex;gap:8px;background:rgba(10,16,28,0.7);padding:5px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.08);">
                 ${[
                     { id: 'all', label: 'Tutti', icon: 'ph-squares-four', count: allCount },
                     { id: 'tasks', label: 'Compiti', icon: 'ph-book-open', count: tasksOnlyCount },
-                    { id: 'exams', label: 'Verifiche', icon: 'ph-pencil-simple', count: examsOnlyCount },
-                    { id: 'done', label: 'Fatti', icon: 'ph-check-circle', count: doneCount }
+                    { id: 'exams', label: 'Verifiche', icon: 'ph-pencil-simple', count: examsOnlyCount }
                 ].map(cat => {
                     const active = curCategory === cat.id;
                     return `
-                    <button onclick="state.plannerSearchModalCategory='${cat.id}';window.renderPlannerSearchModalContent();" style="flex:1;padding:7px 4px;border-radius:10px;font-size:11px;font-weight:${active ? '700' : '600'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:'Inter',sans-serif;transition:all 0.2s ease;background:${active ? '#2997ff' : 'transparent'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.6)'};box-shadow:${active ? '0 2px 8px rgba(41,151,255,0.35)' : 'none'};">
-                        <i class="ph-bold ${cat.icon}" style="font-size:13px;"></i>
+                    <button onclick="state.plannerSearchModalCategory='${cat.id}';window.renderPlannerSearchModalContent();" style="flex:1;padding:8px 6px;border-radius:12px;font-size:12px;font-weight:${active ? '700' : '600'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;transition:all 0.2s ease;background:${active ? '#2997ff' : 'transparent'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.6)'};box-shadow:${active ? '0 2px 8px rgba(41,151,255,0.35)' : 'none'};">
+                        <i class="ph-bold ${cat.icon}" style="font-size:14px;"></i>
                         <span>${cat.label}</span>
-                        <span style="font-size:9px;opacity:0.85;padding:1px 5px;border-radius:999px;background:${active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'};">${cat.count}</span>
+                        <span style="font-size:10px;opacity:0.85;padding:1px 6px;border-radius:999px;background:${active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'};">${cat.count}</span>
                     </button>`;
                 }).join('')}
             </div>
@@ -9653,7 +9652,6 @@ window.updatePlannerSearchModalResults = function() {
         const isExam = t.isExam || t.type === 'verifica' || /verifica|interrogazione|test|esame|simulazione/i.test(t.text || '');
         if (filterCategory === 'tasks' && (isExam || t.done)) return false;
         if (filterCategory === 'exams' && (!isExam || t.done)) return false;
-        if (filterCategory === 'done' && !t.done) return false;
 
         if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
 
