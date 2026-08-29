@@ -4749,70 +4749,79 @@ function renderClassActivitiesExportModalContent() {
     const years = [...new Set(getSortedCompletedClassActivities().map(a => getSchoolYearLabelForDate(a._parsedDate)))].sort((a, b) => b.localeCompare(a));
     if (!years.length) years.push(getCurrentSchoolYearLabel());
 
-
-    // ── Period controls — tutto inline, zero dipendenze CSS esterne ─────────
-    const S = 'width:100%;padding:12px 14px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface);font-size:14px;font-weight:500;font-family:Hanken Grotesk,sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';;
+    // ── Period controls — Apple Liquid Glass Style ─────────
+    const S = 'width:100%;padding:14px 16px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#ffffff;font-size:14px;font-weight:600;font-family:\'Inter\',sans-serif;outline:none;box-sizing:border-box;-webkit-appearance:none;';
 
     const periodControls = selection.period === 'month'
         ? `<input type="month" value="${escapeHtml(selection.monthValue)}" onchange="updateClassActivitiesExportPeriodValue('month', this.value)" style="${S}">`
         : selection.period === 'week'
-            ? `<div style="display:flex;flex-direction:column;gap:6px;">
+            ? `<div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <button type="button" onclick="shiftClassActivitiesExportWeek(-1)" style="width:38px;height:38px;border-radius:50%;background:var(--surface-container-low);border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant);">chevron_left</span>
+                    <button type="button" onclick="shiftClassActivitiesExportWeek(-1)" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                        <i class="ph-bold ph-caret-left" style="font-size:18px;"></i>
                     </button>
                     <select onchange="updateClassActivitiesExportPeriodValue('week', this.value)" style="${S}flex:1;">
                         ${weekOptions.map((weekValue) => `<option value="${escapeHtml(weekValue)}" ${selection.weekValue === weekValue ? 'selected' : ''}>${escapeHtml(getWeekSelectionOptionLabel(weekValue, compactWeekLabels ? { compact: true } : {}))}</option>`).join('')}
                     </select>
-                    <button type="button" onclick="shiftClassActivitiesExportWeek(1)" style="width:38px;height:38px;border-radius:50%;background:var(--surface-container-low);border:1.5px solid rgba(226,232,240,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant);">chevron_right</span>
+                    <button type="button" onclick="shiftClassActivitiesExportWeek(1)" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                        <i class="ph-bold ph-caret-right" style="font-size:18px;"></i>
                     </button>
                 </div>
-                ${weekDetailLabel ? `<p style="font-size:11px;color:var(--outline);font-weight:700;text-align:center;margin:0;">${escapeHtml(weekDetailLabel)}</p>` : ''}
+                ${weekDetailLabel ? `<p style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:600;text-align:center;margin:0;">${escapeHtml(weekDetailLabel)}</p>` : ''}
               </div>`
             : `<select onchange="updateClassActivitiesExportPeriodValue('school_year', this.value)" style="${S}">
                 ${years.map(y => `<option value="${escapeHtml(y)}" ${selection.schoolYearValue === y ? 'selected' : ''}>${escapeHtml(y.replace('-', '/'))}</option>`).join('')}
               </select>`;
 
-    const mkTab = (period, label) => {
+    const mkTab = (period, label, icon) => {
         const act = selection.period === period;
-        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 4px;border-radius:13px;font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;border:none;background:${act?'var(--primary)':'var(--surface-container-low)'};color:${act?'var(--on-primary)':'var(--on-surface-variant)'};">${label}</button>`;
+        return `<button onclick="setClassActivitiesExportPeriod('${period}')" style="padding:10px 6px;border-radius:12px;font-size:12px;font-weight:${act?'700':'600'};cursor:pointer;font-family:'Inter',sans-serif;border:${act?'1px solid rgba(41,151,255,0.6)':'none'};background:${act?'#2997ff':'transparent'};color:${act?'#ffffff':'rgba(255,255,255,0.7)'};box-shadow:${act?'0 4px 14px rgba(41,151,255,0.35)':'none'};display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;">
+            <i class="ph-fill ${icon}" style="font-size:14px;color:${act?'#ffffff':'#2997ff'};"></i>
+            <span>${label}</span>
+        </button>`;
     };
 
     modalContent.innerHTML = `
-        <div style="font-family:Hanken Grotesk,sans-serif;">
+        <div style="font-family:'Inter',sans-serif;color:#ffffff;position:relative;">
+            <!-- Ambient Top Glow -->
+            <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:#2997ff;opacity:0.2;border-radius:50%;filter:blur(30px);pointer-events:none;"></div>
+
             <!-- Header -->
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:18px 22px 16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:24px 24px 18px;position:relative;z-index:1;">
                 <div>
-                    <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Esporta attività</h2>
-                    <p style="margin:4px 0 0;font-size:12px;color:var(--outline);font-weight:500;">Solo attività svolte in classe</p>
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#2997ff;box-shadow:0 0 8px #2997ff;"></span>
+                        <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2997ff;">REPORT ACCADEMICO</span>
+                    </div>
+                    <h2 style="margin:0;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">Esporta Attività</h2>
+                    <p style="margin:3px 0 0;font-size:12px;color:rgba(255,255,255,0.6);font-weight:500;">Attività e lezioni registrate sul diario</p>
                 </div>
-                <button onclick="(function(){var o=document.querySelector('.modal-overlay.active');if(o)o.remove();else{var mc=document.getElementById('class-activities-export-modal-content');if(mc&&mc.parentNode)mc.parentNode.remove();}})()" style="width:36px;height:36px;border-radius:50%;background:var(--surface-container-low);border:none;color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
+                <button onclick="(function(){var o=document.querySelector('.modal-overlay.active');if(o)o.remove();else{var mc=document.getElementById('class-activities-export-modal-content');if(mc&&mc.parentNode)mc.parentNode.remove();}})()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                    <i class="ph ph-x" style="font-size:18px;"></i>
                 </button>
             </div>
 
             <!-- Period tabs + controls -->
-            <div style="padding:0 22px 16px;display:flex;flex-direction:column;gap:12px;">
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-                    ${mkTab('week','Settimana')}
-                    ${mkTab('month','Mese')}
-                    ${mkTab('school_year','Anno scol.')}
+            <div style="padding:0 24px 16px;display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:rgba(255,255,255,0.05);padding:4px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.1);">
+                    ${mkTab('week','Settimana','ph-calendar')}
+                    ${mkTab('month','Mese','ph-calendar-blank')}
+                    ${mkTab('school_year','Anno','ph-graduation-cap')}
                 </div>
                 <div>${periodControls}</div>
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container-low);border-radius:14px;border:none;">
-                    <span style="font-size:12px;color:var(--on-surface-variant);font-weight:500;">${escapeHtml(selection.periodLabel)}</span>
-                    <span style="font-size:13px;font-weight:800;color:var(--info);">${selection.items.length} attività trovate</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(20,31,54,0.75);border-radius:16px;border:0.5px solid rgba(255,255,255,0.12);">
+                    <span style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:500;">${escapeHtml(selection.periodLabel)}</span>
+                    <span style="font-size:12px;font-weight:800;color:#2997ff;background:rgba(41,151,255,0.15);padding:4px 12px;border-radius:999px;border:0.5px solid rgba(41,151,255,0.3);">${selection.items.length} trovate</span>
                 </div>
             </div>
 
             <!-- PDF button -->
-            <div style="padding:0 22px 8px;">
-                <button onclick="downloadClassActivitiesPdf()" style="width:100%;height:52px;border-radius:15px;border:none;background:#2563eb;color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.30);display:flex;align-items:center;justify-content:center;gap:8px;" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">picture_as_pdf</span>
-                    Genera PDF
+            <div style="padding:0 24px 8px;position:relative;z-index:1;">
+                <button onclick="downloadClassActivitiesPdf()" style="width:100%;height:52px;border-radius:18px;border:1px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#2997ff 0%,#0058bc 100%);color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 8px 24px rgba(41,151,255,0.4);display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                    <i class="ph-bold ph-file-pdf" style="font-size:20px;"></i>
+                    Genera PDF Ufficiale
                 </button>
-                <p style="text-align:center;font-size:11px;color:var(--outline);margin:8px 0 0;line-height:1.4;">Si aprirà l'anteprima di stampa: scegli "Salva come PDF".</p>
+                <p style="text-align:center;font-size:11px;color:rgba(255,255,255,0.45);margin:10px 0 0;line-height:1.4;">Si aprirà l'anteprima di stampa Apple/sistema: seleziona "Salva come PDF".</p>
             </div>
         </div>
     `;
@@ -4830,8 +4839,8 @@ window.openClassActivitiesExportModal = function () {
         };
     }
     modalContainer.innerHTML = `
-        <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,0.35);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
-            <div id="class-activities-export-modal-content" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:var(--surface-container-lowest);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -4px 24px rgba(0,0,0,0.10);overflow:hidden;max-height:90vh;overflow-y:auto;font-family:Hanken Grotesk,sans-serif;"></div>
+        <div class="modal-overlay active" onclick="closeModal(event)" style="position:fixed;inset:0;z-index:99990;background:rgba(5,8,17,0.75);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);">
+            <div id="class-activities-export-modal-content" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:rgba(18,26,44,0.95);border:0.5px solid rgba(255,255,255,0.15);border-top:1px solid rgba(255,255,255,0.25);border-radius:32px 32px 0 0;padding:0 0 calc(28px + env(safe-area-inset-bottom,0px)) 0;box-shadow:0 -12px 40px rgba(0,0,0,0.6);overflow:hidden;max-height:90vh;overflow-y:auto;font-family:'Inter',sans-serif;"></div>
         </div>
     `;
     renderClassActivitiesExportModalContent();
@@ -5889,79 +5898,87 @@ function showQuickAddTaskModal() {
     const allTasks  = (state.tasks||[]).filter(t=>t.subject!=='QUEST');
     const subjects  = [...new Set(allTasks.map(t=>t.subject||t.materia||'').filter(Boolean))].sort();
     const subjectOptions = subjects.length
-        ? subjects.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
+        ? subjects.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(formatSubjectTitle(s))}</option>`).join('')
         : '<option value="Generale">Generale</option>';
     const pendingTasks = allTasks.filter(t=>!t.done && (t.due_date||'')>=getLocalDateString());
     const pendingSubjs = [...new Set(pendingTasks.map(t=>t.subject||t.materia||'Generale'))].sort();
 
-    const INP = 'width:100%;padding:13px 16px;border-radius:14px;border:none;background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);font-size:15px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Hanken Grotesk\',sans-serif;';
-    const LBL = 'font-size:11px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px;display:block;';
+    const INP = 'width:100%;padding:13px 16px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#ffffff;font-size:14px;font-weight:500;outline:none;box-sizing:border-box;font-family:\'Inter\',sans-serif;';
+    const LBL = 'font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px;display:block;';
 
-    // Full-screen-style bottom sheet
+    // Full-screen-style bottom sheet in Apple Liquid Glass
     showModal(`
-<div style="padding:24px 20px 32px;background:var(--surface-container-lowest);border-radius:32px;font-family:Hanken Grotesk,sans-serif;width:100%;box-sizing:border-box;">
+<div style="padding:24px 22px 32px;background:rgba(18,26,44,0.96);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:0.5px solid rgba(255,255,255,0.15);border-top:1px solid rgba(255,255,255,0.25);border-radius:32px 32px 0 0;font-family:'Inter',sans-serif;width:100%;box-sizing:border-box;position:relative;overflow:hidden;">
+    <!-- Ambient top glow -->
+    <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:#2997ff;opacity:0.2;border-radius:50%;filter:blur(30px);pointer-events:none;"></div>
 
-    <!-- Header — X uses document.getElementById approach to avoid scope issues -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;position:relative;z-index:1;">
         <div>
-            <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Aggiungi</h2>
-            <p style="margin:2px 0 0;font-size:12px;color:var(--outline);font-weight:500;">Compito, verifica o impegno</p>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#2997ff;box-shadow:0 0 8px #2997ff;"></span>
+                <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2997ff;">NUOVA ATTIVITÀ</span>
+            </div>
+            <h2 style="margin:0;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;">Aggiungi</h2>
+            <p style="margin:2px 0 0;font-size:12px;color:rgba(255,255,255,0.6);font-weight:500;">Compito, verifica o impegno sul calendario</p>
         </div>
-        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(var(--glass-rgb),0.9);border:none;color:var(--on-surface-variant);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">close</span>
+        <button id="qs-close-btn" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+            <i class="ph ph-x" style="font-size:18px;"></i>
         </button>
     </div>
 
     <!-- 3 tabs -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:20px;">
-        <button id="qs-tab-new"      style="padding:11px 4px;border-radius:13px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;" id="qs-tab-new">📚 Nuovo</button>
-        <button id="qs-tab-existing" style="padding:11px 4px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">📋 Assegnati</button>
-        <button id="qs-tab-verifica" style="padding:11px 4px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">✏️ Verifica</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:rgba(255,255,255,0.05);padding:4px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.1);margin-bottom:20px;position:relative;z-index:1;">
+        <button id="qs-tab-new"      style="padding:10px 4px;border-radius:12px;border:1px solid rgba(41,151,255,0.6);background:#2997ff;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 4px 14px rgba(41,151,255,0.35);display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;"><i class="ph-fill ph-book-open" style="font-size:14px;"></i> Compito</button>
+        <button id="qs-tab-existing" style="padding:10px 4px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;"><i class="ph-fill ph-list-checks" style="font-size:14px;"></i> Assegnati</button>
+        <button id="qs-tab-verifica" style="padding:10px 4px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;"><i class="ph-fill ph-pencil-simple-line" style="font-size:14px;"></i> Verifica</button>
     </div>
 
     <!-- PANEL: Nuovo compito -->
-    <div id="qs-panel-new" style="display:flex;flex-direction:column;gap:14px;">
+    <div id="qs-panel-new" style="display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;">
         <div><label style="${LBL}">Materia</label><select id="qs-subject" style="${INP}-webkit-appearance:none;">${subjectOptions}</select></div>
-        <div><label style="${LBL}">Descrizione</label><textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49..." rows="3" style="${INP}resize:none;line-height:1.5;"></textarea></div>
+        <div><label style="${LBL}">Descrizione</label><textarea id="qs-text" placeholder="Es. Esercizi pag. 47-49, studio cap. 3..." rows="3" style="${INP}resize:none;line-height:1.5;"></textarea></div>
         <div><label style="${LBL}">Data di consegna</label><input id="qs-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
-        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:15px;border:none;background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);display:flex;align-items:center;justify-content:center;gap:7px;">
-            <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;">check_circle</span>Aggiungi compito
+        <button id="qs-submit-new" style="width:100%;height:52px;border-radius:18px;border:1px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#2997ff 0%,#0058bc 100%);color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 8px 24px rgba(41,151,255,0.4);display:flex;align-items:center;justify-content:center;gap:7px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+            <i class="ph-bold ph-plus-circle" style="font-size:20px;"></i> Aggiungi Compito
         </button>
     </div>
 
     <!-- PANEL: Assegnati -->
-    <div id="qs-panel-existing" style="display:none;flex-direction:column;gap:10px;">
-        <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 6px;">Seleziona un compito già assegnato, poi scegli quando studiarlo.</p>
-        <div style="max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px;">
+    <div id="qs-panel-existing" style="display:none;flex-direction:column;gap:12px;position:relative;z-index:1;">
+        <p style="font-size:12px;color:rgba(255,255,255,0.65);margin:0 0 4px;">Seleziona un compito già assegnato dai docenti, poi scegli quando inserirlo nel diario.</p>
+        <div style="max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;">
         ${pendingSubjs.length>0 ? pendingSubjs.map(s=>`
-            <p style="font-size:10px;font-weight:700;color:var(--outline);text-transform:uppercase;letter-spacing:0.1em;margin:6px 0 3px;">${escapeHtml(s)}</p>
+            <p style="font-size:10px;font-weight:700;color:#2997ff;text-transform:uppercase;letter-spacing:0.08em;margin:6px 0 2px;">${escapeHtml(formatSubjectTitle(s))}</p>
             ${pendingTasks.filter(t=>(t.subject||t.materia||'Generale')===s).map(t=>`
-            <div id="qs-ex-${escapeHtml(t.id)}" style="background:var(--surface-container-lowest);border-radius:14px;padding:12px 14px;border:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:border-color 0.15s;">
-                <span style="font-size:13px;font-weight:600;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
-                <span style="font-size:11px;color:var(--outline);">Scadenza: ${t.due_date||'—'}</span>
-            </div>`).join('')}`).join('') : '<p style="text-align:center;color:var(--outline);font-size:13px;padding:20px 0;">Nessun compito pendente</p>'}
+            <div id="qs-ex-${escapeHtml(t.id)}" style="background:rgba(20,31,54,0.75);border-radius:16px;padding:12px 14px;border:0.5px solid rgba(255,255,255,0.12);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:all 0.15s ease;">
+                <span style="font-size:13px;font-weight:600;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.text||'')}</span>
+                <span style="font-size:11px;color:rgba(255,255,255,0.5);">Scadenza: ${t.due_date||'—'}</span>
+            </div>`).join('')}`).join('') : '<p style="text-align:center;color:rgba(255,255,255,0.4);font-size:13px;padding:24px 0;">Nessun compito pendente trovato</p>'}
         </div>
-        <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:8px;padding-top:10px;border-top:none;">
-            <label style="${LBL}">Quando lo studi?</label>
+        <div id="qs-existing-date-row" style="display:none;flex-direction:column;gap:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.1);">
+            <label style="${LBL}">Quando vuoi studiarlo?</label>
             <input id="qs-existing-date" type="date" value="${preselectedDate}" style="${INP}" />
-            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:15px;border:none;background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(37,99,235,0.3);">Aggiungi alla Agenda</button>
+            <button id="qs-submit-existing" style="width:100%;height:50px;border-radius:18px;border:1px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#30d158 0%,#1e8e3e 100%);color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 8px 24px rgba(48,209,88,0.35);display:flex;align-items:center;justify-content:center;gap:7px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph-bold ph-calendar-plus" style="font-size:19px;"></i> Aggiungi al Planner
+            </button>
         </div>
     </div>
 
     <!-- PANEL: Verifica -->
-    <div id="qs-panel-verifica" style="display:none;flex-direction:column;gap:14px;">
+    <div id="qs-panel-verifica" style="display:none;flex-direction:column;gap:14px;position:relative;z-index:1;">
         <div><label style="${LBL}">Materia</label><select id="qs-v-subject" style="${INP}-webkit-appearance:none;">${subjectOptions}</select></div>
-        <div><label style="${LBL}">Argomenti</label><textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate..." rows="2" style="${INP}resize:none;line-height:1.5;"></textarea></div>
-        <div><label style="${LBL}">Tipo</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
-                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Scritta</button>
-                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Orale</button>
-                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;">Pratica</button>
+        <div><label style="${LBL}">Argomenti</label><textarea id="qs-v-text" placeholder="Es. Capitoli 3-5, derivate, sintassi..." rows="2" style="${INP}resize:none;line-height:1.5;"></textarea></div>
+        <div><label style="${LBL}">Tipologia Prova</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:rgba(255,255,255,0.05);padding:4px;border-radius:16px;border:0.5px solid rgba(255,255,255,0.1);">
+                <button id="qs-vt-scritta" style="padding:10px 4px;border-radius:12px;border:1px solid rgba(255,69,58,0.6);background:#ff453a;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 4px 14px rgba(255,69,58,0.35);transition:all 0.2s ease;">Scritta</button>
+                <button id="qs-vt-orale"   style="padding:10px 4px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s ease;">Orale</button>
+                <button id="qs-vt-pratica" style="padding:10px 4px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s ease;">Pratica</button>
             </div>
         </div>
         <div><label style="${LBL}">Data</label><input id="qs-v-date" type="date" value="${preselectedDate}" style="${INP}" /></div>
-        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:15px;border:none;background:var(--error);color:var(--on-error);font-size:15px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;box-shadow:0 6px 18px -4px rgba(220,38,38,0.28);display:flex;align-items:center;justify-content:center;gap:7px;">
-            <span class="material-symbols-outlined" style="font-size:19px;">warning</span>Aggiungi verifica
+        <button id="qs-submit-verifica" style="width:100%;height:52px;border-radius:18px;border:1px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#ff453a 0%,#b91c1c 100%);color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 8px 24px rgba(255,69,58,0.4);display:flex;align-items:center;justify-content:center;gap:7px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+            <i class="ph-bold ph-warning" style="font-size:19px;"></i> Aggiungi Verifica
         </button>
     </div>
 </div>
@@ -5970,11 +5987,12 @@ function showQuickAddTaskModal() {
     // ── Wire up all interactivity after DOM is ready ────────────────────────────
     requestAnimationFrame(() => {
         // Styles for tabs
-        const ACTIVE_BLUE = 'padding:11px 4px;border-radius:13px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const ACTIVE_RED  = 'padding:11px 4px;border-radius:13px;border:none;background:var(--error);color:var(--on-error);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const INACTIVE    = 'padding:11px 4px;border-radius:13px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
-        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:none;background:var(--surface-container-lowest);color:var(--on-surface-variant);font-size:12px;font-weight:700;cursor:pointer;font-family:Hanken Grotesk,sans-serif;';
+        const ACTIVE_BLUE = 'padding:10px 4px;border-radius:12px;border:1px solid rgba(41,151,255,0.6);background:#2997ff;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;box-shadow:0 4px 14px rgba(41,151,255,0.35);display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;';
+        const ACTIVE_GREEN= 'padding:10px 4px;border-radius:12px;border:1px solid rgba(48,209,88,0.6);background:#30d158;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;box-shadow:0 4px 14px rgba(48,209,88,0.35);display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;';
+        const ACTIVE_RED  = 'padding:10px 4px;border-radius:12px;border:1px solid rgba(255,69,58,0.6);background:#ff453a;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;box-shadow:0 4px 14px rgba(255,69,58,0.35);display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;';
+        const INACTIVE    = 'padding:10px 4px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s ease;';
+        const CHIP_ACT = 'padding:10px 4px;border-radius:12px;border:1px solid rgba(255,69,58,0.6);background:#ff453a;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;box-shadow:0 4px 14px rgba(255,69,58,0.35);transition:all 0.2s ease;';
+        const CHIP_IN  = 'padding:10px 4px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif;transition:all 0.2s ease;';
 
         let currentTab = 'new';
         let pickedTaskId = null;
@@ -5986,7 +6004,8 @@ function showQuickAddTaskModal() {
                 const btn = document.getElementById('qs-tab-'+t);
                 const panel = document.getElementById('qs-panel-'+t);
                 if (!btn || !panel) return;
-                btn.style.cssText = t===tab ? (t==='verifica' ? ACTIVE_RED : ACTIVE_BLUE) : INACTIVE;
+                const actStyle = t==='verifica' ? ACTIVE_RED : (t==='existing' ? ACTIVE_GREEN : ACTIVE_BLUE);
+                btn.style.cssText = t===tab ? actStyle : INACTIVE;
                 panel.style.display = t===tab ? 'flex' : 'none';
             });
         }
@@ -6011,11 +6030,11 @@ function showQuickAddTaskModal() {
             el.onclick = () => {
                 pickedTaskId = el.id.replace('qs-ex-','');
                 document.querySelectorAll('[id^="qs-ex-"]').forEach(e => {
-                    e.style.border = 'none';
-                    e.style.background = 'var(--surface-container-lowest)';
+                    e.style.border = '0.5px solid rgba(255,255,255,0.12)';
+                    e.style.background = 'rgba(20,31,54,0.75)';
                 });
-                el.style.border = '2px solid var(--primary)';
-                el.style.background = 'var(--info-container)';
+                el.style.border = '1px solid #30d158';
+                el.style.background = 'rgba(48,209,88,0.15)';
                 const row = document.getElementById('qs-existing-date-row');
                 if (row) row.style.display = 'flex';
             };
@@ -8133,14 +8152,14 @@ function renderPlanner() {
         return (d-today)/86400000>0 && (d-today)/86400000<=7;
     }).length;
 
-    // searchResults: attivo quando c'è query, filtro materia o search aperto
+    // searchResults: attivo quando c'è query, filtro materia o search aperto (ordinato dal più recente al meno recente)
     const searchResults = showSearchPanel ? allTasks.filter(t=>{
         if(filterSubject!=='all'&&(t.subject||t.materia||'')!==filterSubject) return false;
         if(!query) return true;
         return (t.subject||'').toLowerCase().includes(query)
             || (t.materia||'').toLowerCase().includes(query)
             || (t.text||'').toLowerCase().includes(query);
-    }).sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||'')) : [];
+    }).sort((a,b)=>(b.due_date||'').localeCompare(a.due_date||'')) : [];
 
     // ── Month label derived from selected date ───────────────────
     const monthLabel = `${MN[selDate.getMonth()]} ${selDate.getFullYear()}`;
@@ -8316,8 +8335,8 @@ function renderPlanner() {
         <div id="planner-content-area" style="padding:0 20px;">
         ${showSearchPanel ? `
         <div>
-            <!-- Subject chips with Apple Liquid Glass -->
-            <div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+            <!-- Subject chips with Apple Liquid Glass (with preserved scroll ID) -->
+            <div id="planner-search-chips-bar" style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
                 ${[{l:'Tutte',s:'all'},...subjects.map(s=>({l:s,s}))].map(({l,s})=>{
                     const isAll = s === 'all';
                     const active = filterSubject === s;
@@ -8368,30 +8387,30 @@ function renderPlanner() {
             </div>` : ''}
 
             ${dayTasks.length ? `<div style="display:flex;flex-direction:column;gap:12px;">${dayTasks.map(t=>TC(t,false)).join('')}</div>` : `
-            <!-- Empty State Bento Card (matches code.html) -->
-            <div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:320px;">
-                <div style="position:relative;margin-bottom:24px;">
-                    <!-- Inner Glow for Icon -->
-                    <div style="position:absolute;inset:0;background:rgba(47,88,205,0.2);filter:blur(24px);border-radius:9999px;"></div>
-                    <div class="liquid-glass-v8 squircle-md" style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px -10px rgba(0,0,0,0.3);">
-                        <span class="material-symbols-outlined" style="font-size:42px;color:rgba(196,197,214,0.3);" style="font-variation-settings:'wght' 200;">event_busy</span>
+            <!-- Empty State Bento Card (Apple Liquid Glass) -->
+            <div class="liquid-glass-v8 squircle-lg rim-light" style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:280px;background:rgba(20,31,54,0.6);border-radius:28px;border:0.5px solid rgba(255,255,255,0.1);">
+                <div style="position:relative;margin-bottom:20px;">
+                    <div style="position:absolute;inset:0;background:rgba(41,151,255,0.2);filter:blur(24px);border-radius:9999px;"></div>
+                    <div style="position:relative;width:72px;height:72px;border-radius:22px;background:rgba(41,151,255,0.1);border:1px solid rgba(41,151,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;">
+                        <i class="ph ph-calendar-x" style="font-size:36px;"></i>
                     </div>
                 </div>
-                <p style="font-size:15px;font-weight:500;font-style:italic;color:rgba(218,226,253,0.4);max-width:200px;line-height:1.6;margin:0;" class="sentence-case">
-                    Nessuna attività per questo giorno
+                <h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 4px;">Nessuna attività</h4>
+                <p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);max-width:240px;line-height:1.5;margin:0;">
+                    Nessun compito o verifica programmata per questo giorno.
                 </p>
             </div>`}
         </div>`}
 
         </div><!-- /planner-content-area -->
 
-        <!-- ══ FLOATING ACTIONS (matches code.html) ══ -->
-        <div style="position:fixed;bottom:calc(110px + env(safe-area-inset-bottom,0px));right:24px;display:flex;flex-direction:column;gap:16px;z-index:40;">
-            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" class="liquid-glass-v8 squircle-full rim-light shadow-lg" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:20px;color:rgba(218,226,253,0.7);">history</span>
+        <!-- ══ FLOATING ACTIONS (Apple Liquid Glass Aligned Dock) ══ -->
+        <div style="position:fixed;bottom:calc(110px + env(safe-area-inset-bottom,0px));right:20px;display:flex;flex-direction:column;align-items:center;gap:12px;z-index:40;">
+            <button onclick="window.openClassActivitiesExportModal&&openClassActivitiesExportModal();" title="Esporta attività" class="liquid-glass-v8 rim-light shadow-lg" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:0.5px solid rgba(255,255,255,0.18);border-top:1px solid rgba(255,255,255,0.3);background:rgba(20,31,54,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);color:#2997ff;cursor:pointer;transition:transform 0.15s ease;box-shadow:0 8px 24px -4px rgba(0,0,0,0.5);" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph-bold ph-export" style="font-size:20px;"></i>
             </button>
-            <button onclick="showQuickAddTaskModal()" class="fab-luminous squircle-full shadow-2xl" style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:transform 0.15s ease;color:#ffffff;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-                <span class="material-symbols-outlined" style="font-size:32px;font-variation-settings:'wght' 500;">add</span>
+            <button onclick="showQuickAddTaskModal()" title="Aggiungi attività" class="shadow-2xl" style="width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.35);background:linear-gradient(135deg,#2997ff 0%,#0058bc 100%);color:#ffffff;cursor:pointer;transition:transform 0.15s ease;box-shadow:0 8px 28px rgba(41,151,255,0.5);" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph-bold ph-plus" style="font-size:26px;"></i>
             </button>
         </div>
 
@@ -9537,11 +9556,16 @@ window.refreshPlannerSearch = function() {
     const TC = window._plannerTC;
     if (!TC) { state._forceRender = true; scheduleRender(60); return; }
 
+    // Preserve filter chips bar scroll position before DOM update
+    const oldChipsBar = document.getElementById('planner-search-chips-bar');
+    const savedChipsScroll = oldChipsBar ? oldChipsBar.scrollLeft : 0;
+
     const allTasks = (state.tasks || []).filter(function(t) { return t.subject !== 'QUEST'; });
     const subjects = [...new Set(allTasks.map(function(t) {
         return t.subject || t.materia || '';
     }).filter(Boolean))].sort();
 
+    // Sort tasks descending (most recent first)
     const results = allTasks.filter(function(t) {
         if (filterSubject !== 'all' && (t.subject || t.materia || '') !== filterSubject) return false;
         if (!query) return true;
@@ -9549,7 +9573,7 @@ window.refreshPlannerSearch = function() {
             || (t.materia  || '').toLowerCase().includes(query)
             || (t.text     || '').toLowerCase().includes(query);
     }).sort(function(a, b) {
-        return (a.due_date || '').localeCompare(b.due_date || '');
+        return (b.due_date || '').localeCompare(a.due_date || '');
     });
 
     const chipsHtml = [{l: 'Tutte', s: 'all'}]
@@ -9581,7 +9605,7 @@ window.refreshPlannerSearch = function() {
 
     area.innerHTML =
         '<div style="padding:0;">' +
-            '<div style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;">' +
+            '<div id="planner-search-chips-bar" style="display:flex;overflow-x:auto;gap:8px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;">' +
                 chipsHtml +
             '</div>' +
             '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 2px;">' +
@@ -9592,6 +9616,16 @@ window.refreshPlannerSearch = function() {
                 (results.length ? results.map(function(t) { return TC(t, true); }).join('') : emptyHtml) +
             '</div>' +
         '</div>';
+
+    // Restore chips bar scroll position smoothly
+    if (savedChipsScroll > 0) {
+        const newChipsBar = document.getElementById('planner-search-chips-bar');
+        if (newChipsBar) newChipsBar.scrollLeft = savedChipsScroll;
+        requestAnimationFrame(function() {
+            const b = document.getElementById('planner-search-chips-bar');
+            if (b && savedChipsScroll > 0) b.scrollLeft = savedChipsScroll;
+        });
+    }
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
