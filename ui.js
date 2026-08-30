@@ -1753,13 +1753,14 @@ function renderCustomCalendar() {
         const dayTasks = getCalendarTasksForDate(dateStr);
 
         const dayVerifiche = verificheByDate[dateStr] || [];
+        const dayMood = (typeof window.getDailyMoodForDate === 'function') ? window.getDailyMoodForDate(dateStr) : null;
 
         html += `
                     <div class="calendar-day ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" 
                          onclick="${isPast ? '' : `handleDayClick('${dateStr}')`}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
                             <div class="day-number">${tempDate.getDate()}</div>
-                            ${isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : ''}
+                            ${dayMood ? `<span style="font-size:12px;line-height:1;">${dayMood.emoji}</span>` : (isToday ? `<div style="width:5px; height:5px; border-radius:50%; background:#007AFF; margin-top:4px;"></div>` : '')}
                         </div>
                         <div class="day-events">
                             ${dayVerifiche.slice(0, 2).map(v => {
@@ -2266,99 +2267,35 @@ function renderHome() {
         ? `${assenzeGiorni}g, ${ritardiTotali}r, ${usciteTotali}u`
         : 'Nessuna recente';
 
-    // 6c. Dati completi e avanzati per il nuovo WIDGET QUADRO ACCADEMICO OVERVIEW
-    const votiData = getVotiData();
-    const _votiValidi = votiData
-        .map(v => ({ val: getNumericGradeValue(v), materia: v.materia || v.subject || '', date: getVoteDate(v) }))
-        .filter(v => v.val !== null);
-    const _votiTotali = _votiValidi.length;
-
-    // Raggruppamento avanzato per materia
-    const _subjectsMap = {};
-    votiData.forEach(v => {
-        const sub = (v.materia || v.subject || 'Altro').trim();
-        const key = (typeof getSubjectGroupKey === 'function') ? getSubjectGroupKey(sub) : sub.toLowerCase();
-        if (!_subjectsMap[key]) _subjectsMap[key] = { name: sub, list: [] };
-        _subjectsMap[key].list.push(v);
-    });
-
-    const _subjectsSummary = Object.values(_subjectsMap).map(({ name, list }) => {
-        const nums = list.map(getNumericGradeValue).filter(v => Number.isFinite(v));
-        const subAvg = (typeof averageFromNumeric === 'function')
-            ? averageFromNumeric(nums)
-            : (nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : 0);
-        return {
-            name,
-            abbrev: (typeof getSubjectAbbrev === 'function') ? getSubjectAbbrev(name) : name.substring(0, 4).toUpperCase(),
-            avg: subAvg,
-            count: nums.length,
-            isUnder: subAvg < 6,
-            isTop: subAvg >= 8
-        };
-    }).filter(s => s.avg > 0 && s.count > 0);
-
-    // Ordina materie per media decrescente
-    _subjectsSummary.sort((a, b) => b.avg - a.avg);
-
-    const _topSubject = _subjectsSummary.length > 0 ? _subjectsSummary[0] : null;
-    const _lowestSubject = _subjectsSummary.length > 1 ? _subjectsSummary[_subjectsSummary.length - 1] : null;
-    const _materieUnder = _subjectsSummary.filter(s => s.isUnder);
-    const _debitiCount = _materieUnder.length;
-    const _materieTotali = _subjectsSummary.length;
-    const _materieOk = _materieTotali - _debitiCount;
-    const _votiSuff = _votiValidi.filter(v => v.val >= 6).length;
-    const _pctSuff = _votiTotali > 0 ? Math.round((_votiSuff / _votiTotali) * 100) : 100;
-
-    // Stima Fascia Credito Scolastico (Standard Ministero Istruzione per medie triennio)
-    let _fasciaCredito = 'N.D.';
-    let _fasciaDettaglio = 'In attesa valutazioni';
-    if (media >= 9) {
-        _fasciaCredito = '11 - 12 pt';
-        _fasciaDettaglio = 'Fascia Massima 🌟';
-    } else if (media >= 8) {
-        _fasciaCredito = '9 - 10 pt';
-        _fasciaDettaglio = 'Fascia Alta ✨';
-    } else if (media >= 7) {
-        _fasciaCredito = '8 - 9 pt';
-        _fasciaDettaglio = 'Fascia Media 🎯';
-    } else if (media >= 6) {
-        _fasciaCredito = '7 - 8 pt';
-        _fasciaDettaglio = 'Fascia Base 📌';
-    } else if (media > 0) {
-        _fasciaCredito = 'A Rischio';
-        _fasciaDettaglio = 'Debito formativo ⚠️';
-    }
-
-    // Status Badge & Colors
-    let _statusBadgeText = 'In Sicurezza';
-    let _statusBadgeIcon = 'ph-check-circle';
-    let _statusBadgeColor = '#30d158';
-    let _statusBadgeBg = 'rgba(48,209,88,0.15)';
-    let _statusBadgeBorder = 'rgba(48,209,88,0.35)';
-
-    if (_debitiCount > 0) {
-        _statusBadgeText = `${_debitiCount} ${_debitiCount === 1 ? 'Materia sotto il 6' : 'Materie sotto il 6'}`;
-        _statusBadgeIcon = 'ph-warning-circle';
-        _statusBadgeColor = _debitiCount >= 3 ? '#ff453a' : '#ff9f0a';
-        _statusBadgeBg = _debitiCount >= 3 ? 'rgba(255,69,58,0.15)' : 'rgba(255,159,10,0.15)';
-        _statusBadgeBorder = _debitiCount >= 3 ? 'rgba(255,69,58,0.35)' : 'rgba(255,159,10,0.35)';
-    } else if (media >= 8) {
-        _statusBadgeText = 'Eccellente · 0 Debiti';
-        _statusBadgeIcon = 'ph-crown';
-        _statusBadgeColor = '#ffd60a';
-        _statusBadgeBg = 'rgba(255,214,10,0.15)';
-        _statusBadgeBorder = 'rgba(255,214,10,0.35)';
-    }
-
-    // Indice di salute accademica complessivo (0-100)
-    const _healthScore = media > 0 ? Math.min(100, Math.round((media / 10) * 100)) : 0;
+    // 6c. Dati sintetici e precisi per il nuovo WIDGET STUDENT HUB (Overview)
     const _mediaColor = media >= 8 ? '#30d158' : media >= 7 ? '#64d2ff' : media >= 6 ? '#ff9f0a' : media > 0 ? '#ff453a' : '#8e909f';
+
+    // Calcolo % Ore di Assenza rispetto al monte ore totale annuale (~1000h, limite max 25% = 250h)
+    const _monteOreTotale = 1000;
+    const _limiteOreMax = 250; // 25% del monte ore per validità anno scolastico
+    const _assenzePctTotale = ((oreAssenzaTotali / _monteOreTotale) * 100).toFixed(1);
+    const _assenzePctLimite = Math.min(100, Math.round((oreAssenzaTotali / _limiteOreMax) * 100));
+    const _assenzeStatusColor = oreAssenzaTotali > 180 ? '#ff453a' : (oreAssenzaTotali > 100 ? '#ff9f0a' : '#30d158');
+    const _assenzeStatusBg = oreAssenzaTotali > 180 ? 'rgba(255,69,58,0.15)' : (oreAssenzaTotali > 100 ? 'rgba(255,159,10,0.15)' : 'rgba(48,209,88,0.15)');
+
+    // Dati per "Quanto Manca A..."
+    const _countdownsData = (typeof window.getSchoolCountdowns === 'function') ? window.getSchoolCountdowns() : null;
+    const _nearestMilestone = _countdownsData ? _countdownsData.nearest : {
+        title: 'Vacanze di Natale',
+        emoji: '🎄',
+        daysLeft: 115,
+        badgeText: '115 giorni'
+    };
+
+    // Dati per Mood Giornaliero (5 faccine)
+    const _dailyMoodsMap = (typeof window.getDailyMoods === 'function') ? window.getDailyMoods() : {};
+    const _todayMoodEntry = _dailyMoodsMap[todayISO] || null;
 
     // Saluto time-aware
     const _hour = today.getHours();
     const _greetWord = _hour < 6 ? 'Buonanotte' : _hour < 12 ? 'Buongiorno' : _hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
 
-    // 7. WIDGET OVERVIEW — Apple Liquid Glass Quadro Accademico Deluxe
+    // 7. WIDGET OVERVIEW — Apple Liquid Glass Student Life Hub
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#dae2fd] antialiased overflow-y-auto hide-scrollbar" style="background:var(--background, #0b1326);">
 
@@ -2374,9 +2311,9 @@ function renderHome() {
             </header>
 
             <div style="margin-bottom: 16px; padding: 0 20px;">
-                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Quadro Accademico Deluxe -->
-                <div id="home-academic-hero-widget" style="
-                    background: linear-gradient(145deg, rgba(22,34,58,0.90) 0%, rgba(10,16,30,0.95) 100%);
+                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Student Life Hub -->
+                <div id="home-student-hub-widget" style="
+                    background: linear-gradient(150deg, rgba(22,34,58,0.92) 0%, rgba(10,16,30,0.96) 100%);
                     backdrop-filter: blur(40px) saturate(210%);-webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 0.5px solid rgba(255,255,255,0.14);
                     border-top: 1px solid rgba(255,255,255,0.30);
@@ -2386,195 +2323,211 @@ function renderHome() {
                     overflow: hidden;
                     box-shadow: 0 16px 40px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
                 ">
-                    <!-- Glow Spheres d'atmosfera Liquid Glass -->
-                    <div style="position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(41,151,255,0.22) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
-                    <div style="position:absolute;bottom:-40px;left:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(191,90,242,0.16) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
-                    <div style="position:absolute;top:40%;left:30%;width:120px;height:120px;background:radial-gradient(circle,rgba(48,209,88,0.12) 0%,transparent 70%);pointer-events:none;filter:blur(25px);"></div>
+                    <!-- Glow Spheres Liquid Glass -->
+                    <div style="position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(41,151,255,0.20) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
+                    <div style="position:absolute;bottom:-40px;left:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,159,10,0.15) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
 
-                    <!-- Top Bar: Header Titolo & Status Badge -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;position:relative;z-index:1;">
+                    <!-- Top Bar: Header & Data Odierna -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:relative;z-index:1;">
                         <div style="display:flex;align-items:center;gap:7px;">
-                            <span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:12px;">
-                                <i class="ph-fill ph-sparkle"></i>
+                            <span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:13px;">
+                                <i class="ph-fill ph-student"></i>
                             </span>
                             <div>
-                                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">QUADRO ACCADEMICO</span>
-                                <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);line-height:1;">${_greetWord}, ${toDisplayName(getSafeUserName())}</div>
+                                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">STUDENT HUB</span>
+                                <div style="font-size:13px;font-weight:700;color:#ffffff;line-height:1.1;">${_greetWord}, ${toDisplayName(getSafeUserName())}</div>
                             </div>
                         </div>
 
-                        <!-- Dynamic Status Pill -->
-                        <div style="
-                            display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;
-                            background:${_statusBadgeBg};border:0.5px solid ${_statusBadgeBorder};
-                            font-size:10.5px;font-weight:700;color:${_statusBadgeColor};
-                            box-shadow:0 2px 8px -2px ${_statusBadgeBg};white-space:nowrap;
+                        <span style="
+                            font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);
+                            background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);
+                            padding:4px 10px;border-radius:999px;backdrop-filter:blur(10px);
                         ">
-                            <i class="ph-bold ${_statusBadgeIcon}" style="font-size:12px;"></i>
-                            <span>${_statusBadgeText}</span>
-                        </div>
+                            ${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                        </span>
                     </div>
 
-                    <!-- Main Grid: Hero Media & Smart Insights Bento -->
-                    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-bottom:16px;position:relative;z-index:1;">
-
-                        <!-- Hero Media Box -->
+                    <!-- ROW 1: 3 BENTO BADGES GENERALI (Media, Assenze, Prossima Verifica) -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;position:relative;z-index:1;">
+                        
+                        <!-- 1. BADGE: Media Generale -->
                         <div onclick="navigate('voti')" style="
                             background:rgba(255,255,255,0.04);
                             border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
-                            border-radius:20px;padding:14px 16px;cursor:pointer;
-                            display:flex;flex-direction:column;justify-content:space-between;
-                            position:relative;overflow:hidden;
-                            box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
-                            transition:transform 0.15s ease;
-                        " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                            border-radius:18px;padding:12px 10px;cursor:pointer;
+                            position:relative;overflow:hidden;transition:transform 0.15s ease;
+                            display:flex;flex-direction:column;justify-content:space-between;min-height:92px;
+                        " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
                             <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#2997ff,${_mediaColor});"></div>
                             
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA GENERALE</span>
-                                <i class="ph-bold ph-caret-right" style="font-size:12px;color:rgba(255,255,255,0.35);"></i>
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA</span>
+                                <i class="ph-bold ph-chart-line-up" style="font-size:12px;color:${_mediaColor};"></i>
                             </div>
 
-                            <div style="display:flex;align-items:baseline;gap:8px;margin:6px 0 4px;">
-                                <span class="card-media-val" style="
-                                    font-size:38px;font-weight:900;letter-spacing:-0.03em;
-                                    color:#ffffff;line-height:1;font-variant-numeric:tabular-nums;
-                                    text-shadow:0 0 24px rgba(41,151,255,0.4);
-                                ">${isInitialLoad ? '—' : media.toFixed(2)}</span>
-                                
+                            <div style="font-size:24px;font-weight:900;color:${_mediaColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:4px 0 2px;">
+                                ${isInitialLoad ? '—' : media.toFixed(2)}
+                            </div>
+
+                            <div style="display:flex;align-items:center;gap:2px;">
                                 <span style="
-                                    display:inline-flex;align-items:center;gap:3px;
-                                    font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;
-                                    background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};
-                                    color:${isPositive ? '#30d158' : '#ff453a'};
-                                    border:0.5px solid ${isPositive ? 'rgba(48,209,88,0.35)' : 'rgba(255,69,58,0.35)'};
+                                    display:inline-flex;align-items:center;gap:2px;
+                                    font-size:9px;font-weight:800;color:${isPositive ? '#30d158' : '#ff453a'};
+                                    background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};
+                                    padding:1px 6px;border-radius:999px;
                                 ">
-                                    <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:9px;"></i>${diffStr}
+                                    <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
                                 </span>
-                            </div>
-
-                            <!-- Credito Scolastico Indicator -->
-                            <div style="margin-top:6px;padding-top:8px;border-top:0.5px solid rgba(255,255,255,0.08);">
-                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                                    <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;">CREDITO STIMATO</span>
-                                    <span style="font-size:10px;font-weight:800;color:#ffd60a;">${_fasciaCredito}</span>
-                                </div>
-                                <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
-                                    <div style="width:${_healthScore}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
-                                </div>
                             </div>
                         </div>
 
-                        <!-- Right Smart Insights Bento Column -->
-                        <div style="display:flex;flex-direction:column;gap:8px;justify-content:space-between;">
+                        <!-- 2. BADGE: Percentuale Assenze su Totale Ore -->
+                        <div onclick="mostraAssenzeModal()" style="
+                            background:rgba(255,255,255,0.04);
+                            border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                            border-radius:18px;padding:12px 10px;cursor:pointer;
+                            position:relative;overflow:hidden;transition:transform 0.15s ease;
+                            display:flex;flex-direction:column;justify-content:space-between;min-height:92px;
+                        " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                            <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#ff9f0a,${_assenzeStatusColor});"></div>
                             
-                            <!-- 1. Top Performer Tile -->
-                            <div onclick="navigate('voti')" style="
-                                background:rgba(48,209,88,0.08);
-                                border:0.5px solid rgba(48,209,88,0.22);
-                                border-radius:16px;padding:9px 12px;cursor:pointer;
-                                display:flex;align-items:center;justify-content:space-between;
-                                transition:transform 0.15s ease;
-                            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-                                    <div style="width:26px;height:26px;border-radius:8px;background:rgba(48,209,88,0.18);display:flex;align-items:center;justify-content:center;color:#30d158;font-size:13px;flex-shrink:0;">
-                                        <i class="ph-fill ph-crown"></i>
-                                    </div>
-                                    <div style="min-width:0;">
-                                        <div style="font-size:8.5px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">PUNTA DI DIAMANTE</div>
-                                        <div style="font-size:12px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            ${_topSubject ? escapeHtml(_topSubject.name) : 'In attesa voti'}
-                                        </div>
-                                    </div>
-                                </div>
-                                <span style="font-size:13px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:4px;">
-                                    ${_topSubject ? _topSubject.avg.toFixed(1) : '—'}
-                                </span>
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">ASSENZE</span>
+                                <i class="ph-bold ph-calendar-x" style="font-size:12px;color:${_assenzeStatusColor};"></i>
                             </div>
 
-                            <!-- 2. Focus / Attention Tile -->
-                            <div onclick="navigate('voti')" style="
-                                background:${_debitiCount > 0 ? 'rgba(255,69,58,0.08)' : 'rgba(41,151,255,0.08)'};
-                                border:0.5px solid ${_debitiCount > 0 ? 'rgba(255,69,58,0.22)' : 'rgba(41,151,255,0.22)'};
-                                border-radius:16px;padding:9px 12px;cursor:pointer;
-                                display:flex;align-items:center;justify-content:space-between;
-                                transition:transform 0.15s ease;
-                            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-                                    <div style="width:26px;height:26px;border-radius:8px;background:${_debitiCount > 0 ? 'rgba(255,69,58,0.18)' : 'rgba(41,151,255,0.18)'};display:flex;align-items:center;justify-content:center;color:${_debitiCount > 0 ? '#ff453a' : '#2997ff'};font-size:13px;flex-shrink:0;">
-                                        <i class="ph-fill ${_debitiCount > 0 ? 'ph-crosshair' : 'ph-shield-check'}"></i>
-                                    </div>
-                                    <div style="min-width:0;">
-                                        <div style="font-size:8.5px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">
-                                            ${_debitiCount > 0 ? 'DA RECUPERARE' : 'MATERIA FOCUS'}
-                                        </div>
-                                        <div style="font-size:12px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            ${_lowestSubject ? escapeHtml(_lowestSubject.name) : (_topSubject ? escapeHtml(_topSubject.name) : 'In attesa')}
-                                        </div>
-                                    </div>
-                                </div>
-                                <span style="font-size:13px;font-weight:800;color:${_lowestSubject && _lowestSubject.avg < 6 ? '#ff453a' : '#2997ff'};font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:4px;">
-                                    ${_lowestSubject ? _lowestSubject.avg.toFixed(1) : (_topSubject ? _topSubject.avg.toFixed(1) : '—')}
-                                </span>
+                            <div style="font-size:22px;font-weight:900;color:${_assenzeStatusColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:4px 0 2px;">
+                                ${_assenzePctTotale}%
                             </div>
 
-                            <!-- 3. Bilancio Valutazioni Tile -->
-                            <div onclick="navigate('voti')" style="
-                                background:rgba(255,255,255,0.03);
-                                border:0.5px solid rgba(255,255,255,0.09);
-                                border-radius:16px;padding:9px 12px;cursor:pointer;
-                                display:flex;align-items:center;justify-content:space-between;
-                                transition:transform 0.15s ease;
-                            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                                <div>
-                                    <div style="font-size:8.5px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">BILANCIO GENERALE</div>
-                                    <div style="font-size:11.5px;font-weight:700;color:rgba(255,255,255,0.9);margin-top:1px;">
-                                        ${_materieOk}/${_materieTotali || 1} Materie in regola
-                                    </div>
-                                </div>
-                                <span style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(48,209,88,0.15);color:#30d158;">
-                                    ${_pctSuff}% OK
+                            <div style="display:flex;align-items:center;gap:2px;">
+                                <span style="
+                                    font-size:9px;font-weight:700;color:${_assenzeStatusColor};
+                                    background:${_assenzeStatusBg};
+                                    padding:1px 6px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                                ">
+                                    ${oreAssenzaTotali}h / 250h max
                                 </span>
                             </div>
+                        </div>
 
+                        <!-- 3. BADGE: Prossime Verifiche -->
+                        <div onclick="navigate('planner')" style="
+                            background:rgba(255,255,255,0.04);
+                            border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                            border-radius:18px;padding:12px 10px;cursor:pointer;
+                            position:relative;overflow:hidden;transition:transform 0.15s ease;
+                            display:flex;flex-direction:column;justify-content:space-between;min-height:92px;
+                        " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                            <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#ff453a,#bf5af2);"></div>
+                            
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">VERIFICHE</span>
+                                <i class="ph-bold ph-exam" style="font-size:12px;color:#ff453a;"></i>
+                            </div>
+
+                            <div style="font-size:12.5px;font-weight:800;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:4px 0 2px;">
+                                ${nextVerifica ? escapeHtml(nextVerifica.materia) : 'Nessuna 🎉'}
+                            </div>
+
+                            <div style="display:flex;align-items:center;gap:2px;">
+                                <span style="
+                                    font-size:9px;font-weight:800;
+                                    color:${nextVerifica ? (daysDiff <= 2 ? '#ff453a' : '#ff9f0a') : '#30d158'};
+                                    background:${nextVerifica ? (daysDiff <= 2 ? 'rgba(255,69,58,0.18)' : 'rgba(255,159,10,0.18)') : 'rgba(48,209,88,0.15)'};
+                                    padding:1px 6px;border-radius:999px;white-space:nowrap;
+                                ">
+                                    ${nextVerifica ? countdownText : 'Tutto ok'}
+                                </span>
+                            </div>
                         </div>
 
                     </div>
 
-                    <!-- Bottom Bar: Spettro Cromatico Medie per Materia -->
-                    ${_subjectsSummary.length > 0 ? `
-                    <div style="position:relative;z-index:1;padding-top:12px;border-top:0.5px solid rgba(255,255,255,0.08);">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                            <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.55);display:flex;align-items:center;gap:4px;">
-                                <i class="ph-bold ph-chart-bar" style="color:#2997ff;"></i>
-                                SPETTRO MATERIE
+                    <!-- ROW 2: TASTO "QUANTO MANCA A..." (Countdown Traguardi Scolastici) -->
+                    <div onclick="window.openSchoolCountdownsModal()" style="
+                        background: linear-gradient(135deg, rgba(255,159,10,0.12) 0%, rgba(20,31,54,0.7) 100%);
+                        border: 0.5px solid rgba(255,159,10,0.28);
+                        border-top: 1px solid rgba(255,255,255,0.22);
+                        border-radius: 20px; padding: 12px 14px;
+                        cursor: pointer; position: relative; overflow: hidden;
+                        margin-bottom: 14px; transition: transform 0.15s ease;
+                    " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                                <div style="
+                                    width:38px;height:38px;border-radius:12px;
+                                    background:rgba(255,159,10,0.20);border:0.5px solid rgba(255,159,10,0.4);
+                                    display:flex;align-items:center;justify-content:center;
+                                    font-size:20px;flex-shrink:0;box-shadow:0 0 12px rgba(255,159,10,0.3);
+                                ">
+                                    ${_nearestMilestone.emoji}
+                                </div>
+                                <div style="min-width:0;">
+                                    <div style="font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;">QUANTO MANCA A...</div>
+                                    <div style="font-size:13.5px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                        ${_nearestMilestone.title}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                <span style="
+                                    font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums;
+                                    color:#ff9f0a;background:rgba(255,159,10,0.18);border:0.5px solid rgba(255,159,10,0.35);
+                                    padding:3px 10px;border-radius:999px;
+                                ">
+                                    ${_nearestMilestone.badgeText}
+                                </span>
+                                <i class="ph-bold ph-caret-right" style="font-size:14px;color:rgba(255,255,255,0.4);"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ROW 3: MOOD TRACKER GIORNALIERO (5 Faccine & Sync Planner) -->
+                    <div style="
+                        background: rgba(255,255,255,0.03);
+                        border: 0.5px solid rgba(255,255,255,0.09);
+                        border-radius: 20px; padding: 12px 14px;
+                        position: relative; z-index: 1;
+                    ">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:4px;">
+                                <i class="ph-fill ph-smiley" style="color:#ffd60a;"></i>
+                                COM'È ANDATA OGGI?
                             </span>
-                            <span onclick="navigate('voti')" style="font-size:10.5px;font-weight:700;color:#2997ff;cursor:pointer;">
-                                Registro Voti →
+                            <span id="home-daily-mood-label" style="font-size:10.5px;color:rgba(255,255,255,0.5);">
+                                ${_todayMoodEntry ? `✨ Mood: <strong style="color:${_todayMoodEntry.color};">${_todayMoodEntry.emoji} ${_todayMoodEntry.label}</strong>` : 'Seleziona per il diario'}
                             </span>
                         </div>
 
-                        <!-- Horizontal Scrollable Subject Spectrum Chips -->
-                        <div class="hide-scrollbar" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scroll-snap-type:x mandatory;">
-                            ${_subjectsSummary.map(s => {
-                                const chipColor = s.avg >= 8 ? '#30d158' : s.avg >= 7 ? '#64d2ff' : s.avg >= 6 ? '#ff9f0a' : '#ff453a';
-                                const chipBg = s.avg >= 8 ? 'rgba(48,209,88,0.12)' : s.avg >= 7 ? 'rgba(100,210,255,0.12)' : s.avg >= 6 ? 'rgba(255,159,10,0.12)' : 'rgba(255,69,58,0.14)';
-                                const chipBorder = s.avg >= 8 ? 'rgba(48,209,88,0.3)' : s.avg >= 7 ? 'rgba(100,210,255,0.3)' : s.avg >= 6 ? 'rgba(255,159,10,0.3)' : 'rgba(255,69,58,0.35)';
+                        <!-- 5 Faccine Interactive Emoji Buttons -->
+                        <div id="home-daily-mood-buttons" style="display:flex;justify-content:space-between;gap:8px;">
+                            ${[
+                                { idx: 0, emoji: '😫', label: 'Pessima', color: '#ff453a', bg: 'rgba(255,69,58,0.22)' },
+                                { idx: 1, emoji: '🥱', label: 'Faticosa', color: '#ff9f0a', bg: 'rgba(255,159,10,0.22)' },
+                                { idx: 2, emoji: '😐', label: 'Normale', color: '#ffd60a', bg: 'rgba(255,214,10,0.22)' },
+                                { idx: 3, emoji: '😊', label: 'Buona', color: '#64d2ff', bg: 'rgba(100,210,255,0.22)' },
+                                { idx: 4, emoji: '🤩', label: 'Top!', color: '#30d158', bg: 'rgba(48,209,88,0.22)' }
+                            ].map(item => {
+                                const isSelected = _todayMoodEntry && _todayMoodEntry.index === item.idx;
                                 return `
-                                <div onclick="navigate('voti')" style="
-                                    scroll-snap-align:start;flex-shrink:0;
-                                    display:flex;align-items:center;gap:6px;
-                                    padding:5px 10px;border-radius:12px;
-                                    background:${chipBg};border:0.5px solid ${chipBorder};
-                                    cursor:pointer;transition:transform 0.15s ease;
-                                " ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
-                                    <span style="font-size:10.5px;font-weight:700;color:#ffffff;">${escapeHtml(s.abbrev)}</span>
-                                    <span style="font-size:10.5px;font-weight:800;color:${chipColor};font-variant-numeric:tabular-nums;">${s.avg.toFixed(1)}</span>
-                                </div>`;
+                                <button type="button" data-mood-idx="${item.idx}" onclick="window.setDailyMood(${item.idx})" style="
+                                    flex: 1; height: 42px; border-radius: 14px;
+                                    background: ${isSelected ? item.bg : 'rgba(255,255,255,0.06)'};
+                                    border: ${isSelected ? `1.5px solid ${item.color}` : '0.5px solid rgba(255,255,255,0.12)'};
+                                    box-shadow: ${isSelected ? `0 0 16px ${item.color}50, 0 4px 12px rgba(0,0,0,0.3)` : 'none'};
+                                    transform: ${isSelected ? 'scale(1.12)' : 'scale(1)'};
+                                    font-size: 20px; display: flex; align-items: center; justify-content: center;
+                                    cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+                                    -webkit-tap-highlight-color: transparent;
+                                " title="${item.label}" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='${isSelected ? 'scale(1.12)' : 'scale(1)'}'">
+                                    ${item.emoji}
+                                </button>`;
                             }).join('')}
                         </div>
                     </div>
-                    ` : ''}
 
                 </div>
             </div>
@@ -8297,6 +8250,13 @@ function renderPlanner() {
         return `<div class="planner-week-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;display:flex;justify-content:space-between;gap:6px;padding:16px 20px 24px 20px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;">
             ${days.map(d => {
                 const isSel = d.iso === selectedDate;
+                const dayMood = (typeof window.getDailyMoodForDate === 'function') ? window.getDailyMoodForDate(d.iso) : null;
+                const indicatorHtml = dayMood
+                    ? `<span style="font-size:14px;line-height:1;margin-top:5px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">${dayMood.emoji}</span>`
+                    : (isSel
+                        ? `<div style="width:6px;height:6px;border-radius:9999px;background:#ffffff;margin-top:8px;box-shadow:0 0 8px rgba(255,255,255,0.8);"></div>`
+                        : `<div style="width:5px;height:5px;border-radius:9999px;background:${(d.isToday || d.hasTask) ? 'rgba(182,196,255,0.6)' : 'transparent'};margin-top:6px;"></div>`);
+
                 if (isSel) {
                     return `<div class="planner-day-pill active-blue-glow squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
                         flex:1 1 0%;min-width:0;height:96px;
@@ -8306,7 +8266,7 @@ function renderPlanner() {
                     " ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
                         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#ffffff;margin-bottom:4px;opacity:0.8;">${d.label}</span>
                         <span style="font-size:22px;font-weight:700;color:#ffffff;line-height:1;">${d.dayNum}</span>
-                        <div style="width:6px;height:6px;border-radius:9999px;background:#ffffff;margin-top:8px;box-shadow:0 0 8px rgba(255,255,255,0.8);"></div>
+                        ${indicatorHtml}
                     </div>`;
                 } else {
                     return `<div class="planner-day-pill liquid-glass-v8 rim-light squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
@@ -8317,7 +8277,7 @@ function renderPlanner() {
                     " ontouchstart="this.style.transform='scale(0.95)'" ontouchend="this.style.transform='scale(1)'">
                         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#c4c5d6;margin-bottom:4px;">${d.label}</span>
                         <span style="font-size:20px;font-weight:700;color:#dae2fd;line-height:1;">${d.dayNum}</span>
-                        <div style="width:5px;height:5px;border-radius:9999px;background:${(d.isToday || d.hasTask) ? 'rgba(182,196,255,0.6)' : 'transparent'};margin-top:6px;"></div>
+                        ${indicatorHtml}
                     </div>`;
                 }
             }).join('')}
@@ -9344,14 +9304,18 @@ window._renderMonthPicker = function() {
         const hasVerif  = (state.verifiche  || []).some(function(v){ return (v.data||v.date||'') === iso; });
         const hasTask   = (state.tasks      || []).some(function(t){ return t.due_date === iso && t.subject !== 'QUEST' && !t.done; });
         const dotColor  = hasVerif ? '#ff453a' : '#2997ff';
+        const dayMood   = (typeof window.getDailyMoodForDate === 'function') ? window.getDailyMoodForDate(iso) : null;
 
         let bg = 'transparent', color = '#ffffff', fw = '500', ring = 'none', shadow = 'none';
         if (isSel)   { bg = '#2997ff'; color = '#ffffff'; fw = '700'; shadow = '0 4px 14px rgba(41,151,255,0.5)'; }
         else if (isToday) { bg = 'rgba(41,151,255,0.18)'; color = '#2997ff'; fw = '700'; ring = '1px solid rgba(41,151,255,0.35)'; }
 
-        const dot = (hasTask || hasVerif) && !isSel
-            ? '<span style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>'
-            : '';
+        let indicator = '';
+        if (dayMood) {
+            indicator = '<span style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1;">' + dayMood.emoji + '</span>';
+        } else if ((hasTask || hasVerif) && !isSel) {
+            indicator = '<span style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;display:block;background:' + dotColor + ';"></span>';
+        }
 
         cells.push(
             '<button onclick="window._pkSelectDay(\'' + iso + '\')" ' +
@@ -9363,7 +9327,7 @@ window._renderMonthPicker = function() {
             'font-family:\'Inter\',sans-serif;transition:transform 0.1s ease;' +
             '-webkit-tap-highlight-color:transparent;" ' +
             'ontouchstart="this.style.transform=\'scale(0.88)\'" ontouchend="this.style.transform=\'scale(1)\'">' +
-            d + dot + '</button>'
+            d + indicator + '</button>'
         );
     }
 
@@ -9755,6 +9719,303 @@ window.refreshPlannerSearch = function() {
 };
 window.closePlannerSearch = function() {
     window.closePlannerSearchModal && window.closePlannerSearchModal();
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DAILY MOOD TRACKER (Faccine Giornaliere & Planner Integration)
+// ══════════════════════════════════════════════════════════════════════════════
+
+window.getDailyMoods = function() {
+    if (!state.dailyMoods) {
+        try {
+            state.dailyMoods = JSON.parse(localStorage.getItem('gc_daily_moods') || '{}');
+        } catch(e) {
+            state.dailyMoods = {};
+        }
+    }
+    return state.dailyMoods || {};
+};
+
+window.getDailyMoodForDate = function(isoDate) {
+    if (!isoDate) return null;
+    const moods = window.getDailyMoods();
+    return moods[isoDate] || null;
+};
+
+window.setDailyMood = function(moodIdx) {
+    const moodsList = [
+        { index: 0, emoji: '😫', label: 'Pessima', color: '#ff453a', bg: 'rgba(255,69,58,0.22)' },
+        { index: 1, emoji: '🥱', label: 'Faticosa', color: '#ff9f0a', bg: 'rgba(255,159,10,0.22)' },
+        { index: 2, emoji: '😐', label: 'Normale', color: '#ffd60a', bg: 'rgba(255,214,10,0.22)' },
+        { index: 3, emoji: '😊', label: 'Buona', color: '#64d2ff', bg: 'rgba(100,210,255,0.22)' },
+        { index: 4, emoji: '🤩', label: 'Top!', color: '#30d158', bg: 'rgba(48,209,88,0.22)' }
+    ];
+    const selected = moodsList[moodIdx];
+    if (!selected) return;
+
+    const todayISO = getLocalDateString(new Date());
+    const moods = window.getDailyMoods();
+    moods[todayISO] = {
+        index: selected.index,
+        emoji: selected.emoji,
+        label: selected.label,
+        color: selected.color,
+        date: todayISO,
+        updatedAt: new Date().toISOString()
+    };
+    state.dailyMoods = moods;
+    try {
+        localStorage.setItem('gc_daily_moods', JSON.stringify(moods));
+    } catch(e) {}
+
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+    // Aggiorna visivamente i pulsanti nella Home senza re-render distruttivo
+    const moodContainer = document.getElementById('home-daily-mood-buttons');
+    if (moodContainer) {
+        moodContainer.querySelectorAll('[data-mood-idx]').forEach(btn => {
+            const idx = parseInt(btn.getAttribute('data-mood-idx'));
+            const isCur = idx === selected.index;
+            btn.style.background = isCur ? selected.bg : 'rgba(255,255,255,0.06)';
+            btn.style.border = isCur ? `1.5px solid ${selected.color}` : '0.5px solid rgba(255,255,255,0.12)';
+            btn.style.boxShadow = isCur ? `0 0 16px ${selected.color}50, 0 4px 12px rgba(0,0,0,0.3)` : 'none';
+            btn.style.transform = isCur ? 'scale(1.15)' : 'scale(1)';
+        });
+        const labelEl = document.getElementById('home-daily-mood-label');
+        if (labelEl) {
+            labelEl.innerHTML = `✨ Mood registrato: <strong style="color:${selected.color};">${selected.emoji} ${selected.label}</strong>`;
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SCHOOL COUNTDOWNS ("Quanto Manca A..." Traguardi Scolastici)
+// ══════════════════════════════════════════════════════════════════════════════
+
+window.getSchoolCountdowns = function() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const curYear = today.getFullYear();
+    const curMonth = today.getMonth(); // 0..11
+
+    const startYear = curMonth >= 8 ? curYear : curYear - 1;
+    const endYear = startYear + 1;
+
+    const milestones = [
+        {
+            id: 'natale',
+            title: 'Vacanze di Natale',
+            desc: 'Pausa natalizia & Capodanno',
+            emoji: '🎄',
+            color: '#30d158',
+            bg: 'rgba(48,209,88,0.15)',
+            border: 'rgba(48,209,88,0.35)',
+            date: new Date(startYear, 11, 23) // 23 Dic
+        },
+        {
+            id: 'quadrimestre',
+            title: 'Fine 1° Quadrimestre',
+            desc: 'Chiusura pagelle e valutazioni',
+            emoji: '📑',
+            color: '#64d2ff',
+            bg: 'rgba(100,210,255,0.15)',
+            border: 'rgba(100,210,255,0.35)',
+            date: new Date(endYear, 0, 31) // 31 Gen
+        },
+        {
+            id: '100giorni',
+            title: '100 Giorni alla Fine',
+            desc: 'Tradizionale conto alla rovescia',
+            emoji: '💯',
+            color: '#bf5af2',
+            bg: 'rgba(191,90,242,0.15)',
+            border: 'rgba(191,90,242,0.35)',
+            date: new Date(endYear, 2, 10) // 10 Mar
+        },
+        {
+            id: 'pasqua',
+            title: 'Vacanze di Pasqua',
+            desc: 'Pausa pasquale di primavera',
+            emoji: '🕊️',
+            color: '#ffd60a',
+            bg: 'rgba(255,214,10,0.15)',
+            border: 'rgba(255,214,10,0.35)',
+            date: new Date(endYear, 3, 16) // ~16 Apr
+        },
+        {
+            id: 'fine_scuola',
+            title: 'Fine della Scuola',
+            desc: 'Inizio vacanze estive!',
+            emoji: '🏖️',
+            color: '#ff9f0a',
+            bg: 'rgba(255,159,10,0.15)',
+            border: 'rgba(255,159,10,0.35)',
+            date: new Date(endYear, 5, 8) // 8 Giu
+        },
+        {
+            id: 'maturita',
+            title: 'Esami di Stato / Maturità',
+            desc: 'Inizio prove d\'esame ufficiali',
+            emoji: '🎓',
+            color: '#2997ff',
+            bg: 'rgba(41,151,255,0.15)',
+            border: 'rgba(41,151,255,0.35)',
+            date: new Date(endYear, 5, 18) // 18 Giu
+        }
+    ];
+
+    const schoolStart = new Date(startYear, 8, 12);
+    const schoolEnd = new Date(endYear, 5, 8);
+    const totalSchoolDays = Math.max(1, (schoolEnd - schoolStart) / 86400000);
+    const daysPassed = Math.max(0, Math.min(totalSchoolDays, (today - schoolStart) / 86400000));
+    const schoolYearProgress = Math.min(100, Math.max(0, Math.round((daysPassed / totalSchoolDays) * 100)));
+
+    const result = milestones.map(m => {
+        const timeDiff = m.date.getTime() - today.getTime();
+        const daysLeft = Math.ceil(timeDiff / 86400000);
+        let badgeText = '';
+        let isPast = false;
+        let isToday = false;
+
+        if (daysLeft < 0) {
+            badgeText = 'Passato';
+            isPast = true;
+        } else if (daysLeft === 0) {
+            badgeText = 'Oggi!';
+            isToday = true;
+        } else if (daysLeft === 1) {
+            badgeText = 'Domani';
+        } else {
+            badgeText = `${daysLeft} giorni`;
+        }
+
+        const dateStr = `${m.date.getDate()} ${['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m.date.getMonth()]} ${m.date.getFullYear()}`;
+
+        return {
+            ...m,
+            daysLeft,
+            badgeText,
+            isPast,
+            isToday,
+            dateFormatted: dateStr
+        };
+    });
+
+    const upcoming = result.filter(m => !m.isPast);
+    const nearest = upcoming.length > 0 ? upcoming[0] : result[result.length - 1];
+
+    return {
+        milestones: result,
+        nearest,
+        schoolYearProgress,
+        schoolYearLabel: `${startYear}/${endYear}`
+    };
+};
+
+window.openSchoolCountdownsModal = function() {
+    if (document.getElementById('school-countdowns-modal-overlay')) return;
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
+    const data = window.getSchoolCountdowns();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'school-countdowns-modal-overlay';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(5,8,17,0.78);
+        backdrop-filter: blur(28px) saturate(190%);
+        -webkit-backdrop-filter: blur(28px) saturate(190%);
+        display: flex; flex-direction: column; justify-content: flex-end;
+        animation: fadeInOverlay 0.25s ease-out forwards;
+    `;
+
+    overlay.innerHTML = `
+        <div onclick="window.closeSchoolCountdownsModal()" style="flex:1;"></div>
+        <div id="school-countdowns-modal-sheet" style="
+            background: linear-gradient(160deg, rgba(22,34,58,0.96) 0%, rgba(10,16,30,0.98) 100%);
+            backdrop-filter: blur(40px) saturate(210%);
+            -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 0.5px solid rgba(255,255,255,0.15);
+            border-top: 1.5px solid rgba(255,255,255,0.30);
+            border-radius: 32px 32px 0 0;
+            padding: 12px 20px 40px 20px;
+            max-height: 85vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 -12px 40px rgba(0,0,0,0.7);
+            animation: slideUpModal 0.3s cubic-bezier(0.16,1,0.3,1) forwards;
+        ">
+            <!-- Drag Handle -->
+            <div style="display:flex;justify-content:center;padding:6px 0 12px;">
+                <div style="width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
+            </div>
+
+            <!-- Header -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ff9f0a;">CONTO ALLA ROVESCIA</div>
+                    <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:2px 0 0;letter-spacing:-0.02em;">Quanto Manca A...</h2>
+                </div>
+                <button onclick="window.closeSchoolCountdownsModal()" class="liquid-glass-v8 rim-light squircle-full" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:#ffffff;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;">
+                    <i class="ph ph-x" style="font-size:14px;"></i>
+                    <span>Chiudi</span>
+                </button>
+            </div>
+
+            <!-- School Year Progress Card -->
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:20px;padding:14px 16px;margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.05em;">ANNO SCOLASTICO ${data.schoolYearLabel}</span>
+                    <span style="font-size:12px;font-weight:800;color:#2997ff;">${data.schoolYearProgress}% completato</span>
+                </div>
+                <div style="width:100%;height:7px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+                    <div style="width:${data.schoolYearProgress}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
+                </div>
+            </div>
+
+            <!-- Milestones List -->
+            <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:10px;padding-bottom:10px;">
+                ${data.milestones.map(m => `
+                <div style="
+                    background: ${m.isToday ? 'rgba(255,214,10,0.12)' : 'rgba(255,255,255,0.03)'};
+                    border: 0.5px solid ${m.isToday ? 'rgba(255,214,10,0.4)' : 'rgba(255,255,255,0.09)'};
+                    border-radius: 18px; padding: 12px 14px;
+                    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                    opacity: ${m.isPast ? '0.5' : '1'};
+                ">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                        <div style="width:40px;height:40px;border-radius:14px;background:${m.bg};border:0.5px solid ${m.border};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+                            ${m.emoji}
+                        </div>
+                        <div style="min-width:0;">
+                            <h4 style="font-size:14px;font-weight:700;color:#ffffff;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.title}</h4>
+                            <p style="font-size:11.5px;color:rgba(255,255,255,0.5);margin:0;">${m.dateFormatted} · ${m.desc}</p>
+                        </div>
+                    </div>
+                    <span style="
+                        flex-shrink: 0; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+                        padding: 5px 12px; border-radius: 999px;
+                        background: ${m.isPast ? 'rgba(255,255,255,0.06)' : m.bg};
+                        color: ${m.isPast ? 'rgba(255,255,255,0.4)' : m.color};
+                        border: 0.5px solid ${m.isPast ? 'transparent' : m.border};
+                    ">
+                        ${m.badgeText}
+                    </span>
+                </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+};
+
+window.closeSchoolCountdownsModal = function() {
+    const overlay = document.getElementById('school-countdowns-modal-overlay');
+    if (!overlay) return;
+    const sheet = document.getElementById('school-countdowns-modal-sheet');
+    if (sheet) sheet.style.animation = 'slideDownModal 0.2s cubic-bezier(0.16,1,0.3,1) forwards';
+    overlay.style.animation = 'fadeOutOverlay 0.2s ease-in forwards';
+    setTimeout(() => overlay.remove(), 200);
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
