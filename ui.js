@@ -2029,9 +2029,9 @@ function renderLogin() {
             </div>
 
             <!-- Security Footer Note -->
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px;color:#8e909f;font-size:11.5px;font-weight:600;">
-                <i class="ph-fill ph-shield-check" style="font-size:14px;color:#30d158;"></i>
-                Crittografia end-to-end · Credenziali protette sul dispositivo
+            <div style="display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;color:#8e909f;font-size:11.5px;font-weight:600;line-height:1;text-align:center;">
+                <i class="ph-fill ph-shield-check" style="font-size:15px;color:#30d158;display:inline-block;vertical-align:middle;flex-shrink:0;"></i>
+                <span style="display:inline-block;vertical-align:middle;line-height:1.2;">Crittografia end-to-end · Credenziali protette sul dispositivo</span>
             </div>
 
         </div>
@@ -6136,8 +6136,8 @@ window.openArgoLogin = function openArgoLogin() {
                     <!-- Codice Scuola -->
                     <div style="position:relative;display:flex;align-items:center;">
                         <i class="ph-bold ph-buildings" style="position:absolute;left:14px;color:#8e909f;font-size:18px;pointer-events:none;"></i>
-                        <input id="argo-school" placeholder="Codice Scuola (es. SG28499)" autocomplete="organization"
-                               value="${localStorage.getItem('argo_school') || 'SG28499'}"
+                        <input id="argo-school" placeholder="Codice Scuola (es. SG20925)" autocomplete="organization"
+                               value="${localStorage.getItem('argo_school') || 'SG20925'}"
                                style="height:48px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
                                       padding:0 14px 0 42px;font-size:14.5px;font-weight:600;
                                       background:rgba(255,255,255,0.05);color:#ffffff;
@@ -11061,7 +11061,7 @@ function renderProfile() {
             <!-- ── FOOTER APP INFO ── -->
             <div style="text-align:center;padding-bottom:20px;">
                 <p style="font-size:12px;font-weight:700;color:#8e909f;letter-spacing:0.04em;margin:0 0 4px;">
-                    Gandhi Diary • v4.0.1
+                    Gandhi Diary • v4.0.2
                 </p>
                 <p style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);margin:0;">
                     Liceo Gandhi · Liquid Glass Interface
