@@ -2344,9 +2344,9 @@ function renderHome() {
                     box-shadow: 0 16px 40px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
                     user-select: none;
                 ">
-                    <!-- Glow Spheres Liquid Glass -->
-                    <div style="position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(41,151,255,0.20) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
-                    <div style="position:absolute;bottom:-40px;left:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,159,10,0.15) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
+                    <!-- Glow Spheres Liquid Glass (Corner Anchored - Deep Indigo & Azure) -->
+                    <div style="position:absolute;top:0;right:0;width:170px;height:170px;transform:translate(35%,-35%);background:radial-gradient(circle,rgba(41,151,255,0.24) 0%,rgba(56,189,248,0.10) 50%,transparent 70%);pointer-events:none;filter:blur(30px);border-radius:9999px;"></div>
+                    <div style="position:absolute;bottom:0;left:0;width:170px;height:170px;transform:translate(-35%,35%);background:radial-gradient(circle,rgba(99,102,241,0.22) 0%,rgba(41,151,255,0.12) 50%,transparent 70%);pointer-events:none;filter:blur(30px);border-radius:9999px;"></div>
 
                     <!-- Carousel Track -->
                     <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
@@ -2446,44 +2446,51 @@ function renderHome() {
                         <div onclick="window.openSchoolCountdownsModal()" style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;padding:20px 20px 16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-height:226px;cursor:pointer;">
                             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:10px;">
                                 <div style="display:flex;align-items:center;gap:6px;">
-                                    <span style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(255,159,10,0.2);color:#ff9f0a;font-size:11px;">
+                                    <span style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(99,102,241,0.22);color:#818cf8;font-size:11px;">
                                         <i class="ph-fill ph-hourglass-high"></i>
                                     </span>
-                                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;">QUANTO MANCA A...</span>
+                                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#818cf8;">QUANTO MANCA A...</span>
                                 </div>
-                                <span style="font-size:11px;font-weight:700;color:#ff9f0a;display:flex;align-items:center;gap:3px;">
-                                    Tutti i traguardi <i class="ph-bold ph-arrow-right" style="font-size:11px;"></i>
+                                <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);">
+                                    ✨ Prossima tappa
                                 </span>
                             </div>
 
-                            <!-- Central Hero Countdown Box -->
+                            <div style="text-align:center;margin:2px 0;">
+                                <h3 style="font-size:16px;font-weight:800;color:#ffffff;margin:0 0 2px;letter-spacing:-0.02em;">${_nearestMilestone.title}</h3>
+                                <p style="font-size:11.5px;color:rgba(255,255,255,0.5);margin:0;">${_nearestMilestone.dateFormatted} · Tocca per vedere tutti i traguardi</p>
+                            </div>
+
+                            <!-- Central Bento Capsule -->
                             <div style="
-                                background: linear-gradient(135deg, rgba(255,159,10,0.14) 0%, rgba(255,255,255,0.03) 100%);
-                                border: 0.5px solid rgba(255,159,10,0.32); border-radius: 18px;
-                                padding: 14px 16px; margin: auto 0;
+                                background: rgba(255,255,255,0.05);
+                                border: 0.5px solid rgba(255,255,255,0.12);
+                                border-top: 1px solid rgba(255,255,255,0.22);
+                                border-radius: 16px; padding: 10px 14px;
                                 display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                                box-shadow: 0 4px 16px rgba(0,0,0,0.25);
                             ">
-                                <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
                                     <div style="
-                                        width:44px;height:44px;border-radius:14px;
-                                        background:rgba(255,159,10,0.22);border:0.5px solid rgba(255,159,10,0.45);
+                                        width:38px;height:38px;border-radius:12px;
+                                        background:rgba(99,102,241,0.20);border:0.5px solid rgba(99,102,241,0.40);
                                         display:flex;align-items:center;justify-content:center;
-                                        font-size:22px;flex-shrink:0;box-shadow:0 0 16px rgba(255,159,10,0.35);
+                                        font-size:20px;flex-shrink:0;box-shadow:0 0 14px rgba(99,102,241,0.3);
                                     ">
                                         ${_nearestMilestone.emoji}
                                     </div>
                                     <div style="min-width:0;">
-                                        <div style="font-size:15px;font-weight:800;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            ${_nearestMilestone.title}
+                                        <div style="font-size:13.5px;font-weight:700;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            ${_nearestMilestone.desc || 'Traguardo imminente'}
                                         </div>
-                                        <div style="font-size:11.5px;color:rgba(255,255,255,0.6);margin-top:2px;">
-                                            ${_nearestMilestone.dateFormatted} · Prossima tappa
+                                        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px;">
+                                            ${_nearestMilestone.dateFormatted}
                                         </div>
                                     </div>
                                 </div>
                                 <span style="
                                     font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;
-                                    color:#ff9f0a;background:rgba(255,159,10,0.20);border:0.5px solid rgba(255,159,10,0.40);
+                                    color:#818cf8;background:rgba(99,102,241,0.18);border:0.5px solid rgba(99,102,241,0.35);
                                     padding:5px 12px;border-radius:999px;white-space:nowrap;
                                 ">
                                     ${_nearestMilestone.badgeText}
@@ -2491,13 +2498,13 @@ function renderHome() {
                             </div>
 
                             <!-- Bottom Progress Line -->
-                            <div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                                    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;">ANNO SCOLASTICO ${_countdownsData ? _countdownsData.schoolYearLabel : ''}</span>
-                                    <span style="font-size:10.5px;font-weight:800;color:#2997ff;">${_countdownsData ? _countdownsData.schoolYearProgress : 0}% completato</span>
+                            <div style="display:flex;flex-direction:column;gap:4px;margin-top:2px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.04em;">Progresso Anno Scolastico</span>
+                                    <span style="font-size:10px;font-weight:800;color:#818cf8;">${_countdownsData ? _countdownsData.schoolYearProgress : 0}%</span>
                                 </div>
-                                <div style="width:100%;height:5px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
-                                    <div style="width:${_countdownsData ? _countdownsData.schoolYearProgress : 0}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
+                                <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+                                    <div style="width:${_countdownsData ? _countdownsData.schoolYearProgress : 0}%;height:100%;background:linear-gradient(90deg,#818cf8,#2997ff);border-radius:999px;"></div>
                                 </div>
                             </div>
                         </div>
