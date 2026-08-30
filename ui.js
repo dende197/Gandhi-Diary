@@ -2973,7 +2973,7 @@ function openTodayNotifications(initialTab) {
                 : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(41,151,255,0.35);white-space:nowrap;">IN VOTAZIONE</span>';
 
             return `
-            <div style="background:rgba(23,33,58,0.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);border-radius:22px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);">
+            <div data-notif-card style="background:rgba(23,33,58,0.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);border-radius:22px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                     <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
                         <div style="width:42px;height:42px;border-radius:14px;background:${iconBg};border:1px solid ${borderGlow};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;box-shadow:0 0 14px ${iconColor}25;">
@@ -3038,7 +3038,7 @@ function openTodayNotifications(initialTab) {
             </div>` : '';
 
         return `
-        <div ${clickAttr} style="
+        <div data-notif-card ${clickAttr} style="
             background:rgba(23,33,58,0.75);
             backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
             border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);
@@ -3162,38 +3162,21 @@ function openTodayNotifications(initialTab) {
                     ${upcomingHtml}
                 </div>` : ''}
 
-                <!-- 3. SEZIONE: RECENTI (Collapsibile / Nascondibile) -->
+                <!-- 3. SEZIONE: RECENTI (Collapsibile con Animazione Fluida) -->
                 ${data.recentItems.length > 0 ? (() => {
                     const isHidden = localStorage.getItem('notif_recent_hidden') === '1';
                     return `
                     <div style="margin-bottom:10px;">
-                        <div onclick="(function(btn){
-                            var wrap = document.getElementById('notif-recent-items-wrap');
-                            var text = document.getElementById('notif-recent-btn-text');
-                            var icon = document.getElementById('notif-recent-btn-icon');
-                            if (!wrap) return;
-                            var isCurrentlyHidden = wrap.style.display === 'none';
-                            if (isCurrentlyHidden) {
-                                wrap.style.display = 'block';
-                                if (text) text.textContent = 'Nascondi';
-                                if (icon) icon.style.transform = 'rotate(180deg)';
-                                localStorage.setItem('notif_recent_hidden', '0');
-                            } else {
-                                wrap.style.display = 'none';
-                                if (text) text.textContent = 'Mostra';
-                                if (icon) icon.style.transform = 'rotate(0deg)';
-                                localStorage.setItem('notif_recent_hidden', '1');
-                            }
-                        })(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:12px;transition:background 0.2s ease;" ontouchstart="this.style.background='rgba(255,255,255,0.07)'" ontouchend="this.style.background='rgba(255,255,255,0.03)'">
+                        <div onclick="window.toggleRecentNotifications(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:11px 14px;background:rgba(255,255,255,0.035);border:0.5px solid rgba(255,255,255,0.09);border-radius:16px;margin-bottom:12px;transition:background 0.2s cubic-bezier(0.16,1,0.3,1),transform 0.15s ease;user-select:none;" ontouchstart="this.style.background='rgba(255,255,255,0.07)';this.style.transform='scale(0.99)'" ontouchend="this.style.background='rgba(255,255,255,0.035)';this.style.transform='scale(1)'">
                             <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#8e909f;display:flex;align-items:center;gap:6px;">
                                 <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${data.recentItems.length})
                             </span>
-                            <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:3px 9px;border-radius:999px;">
+                            <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:3px 10px;border-radius:999px;">
                                 <span id="notif-recent-btn-text" style="font-size:10.5px;font-weight:700;color:#c4c5d6;">${isHidden ? 'Mostra' : 'Nascondi'}</span>
-                                <i id="notif-recent-btn-icon" class="ph-bold ph-caret-down" style="font-size:11px;color:#c4c5d6;transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);transform:rotate(${isHidden ? '0' : '180'}deg);"></i>
+                                <i id="notif-recent-btn-icon" class="ph-bold ph-caret-down" style="font-size:11px;color:#c4c5d6;display:inline-block;transform:rotate(${isHidden ? '0' : '180'}deg);"></i>
                             </div>
                         </div>
-                        <div id="notif-recent-items-wrap" style="display:${isHidden ? 'none' : 'block'};">
+                        <div id="notif-recent-items-wrap" data-collapsed="${isHidden ? 'true' : 'false'}" style="display:${isHidden ? 'none' : 'block'};transform-origin:top center;">
                             ${recentHtml}
                         </div>
                     </div>`;
@@ -3210,6 +3193,90 @@ function openTodayNotifications(initialTab) {
     </style>`;
 }
 window.openTodayNotifications = openTodayNotifications;
+
+window.toggleRecentNotifications = function(btn) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    const wrap = document.getElementById('notif-recent-items-wrap');
+    const text = document.getElementById('notif-recent-btn-text');
+    const icon = document.getElementById('notif-recent-btn-icon');
+    if (!wrap) return;
+
+    const isHidden = wrap.style.display === 'none' || wrap.getAttribute('data-collapsed') === 'true';
+
+    if (typeof gsap !== 'undefined') {
+        if (isHidden) {
+            // EXPAND ANIMATION
+            wrap.style.display = 'block';
+            wrap.style.overflow = 'hidden';
+            wrap.setAttribute('data-collapsed', 'false');
+            if (text) text.textContent = 'Nascondi';
+            if (icon) gsap.to(icon, { rotation: 180, duration: 0.32, ease: 'back.out(1.7)' });
+            localStorage.setItem('notif_recent_hidden', '0');
+
+            const fullHeight = wrap.scrollHeight;
+            gsap.fromTo(wrap,
+                { height: 0, opacity: 0, y: -6, scale: 0.99 },
+                {
+                    height: fullHeight,
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.36,
+                    ease: 'power3.out',
+                    onComplete: () => {
+                        wrap.style.height = 'auto';
+                        wrap.style.overflow = 'visible';
+                    }
+                }
+            );
+            const cards = wrap.querySelectorAll('[data-notif-card]');
+            if (cards.length) {
+                gsap.fromTo(cards,
+                    { opacity: 0, y: 8, scale: 0.98 },
+                    { opacity: 1, y: 0, scale: 1, duration: 0.28, stagger: 0.025, ease: 'power2.out' }
+                );
+            }
+        } else {
+            // COLLAPSE ANIMATION
+            wrap.style.overflow = 'hidden';
+            wrap.setAttribute('data-collapsed', 'true');
+            if (text) text.textContent = 'Mostra';
+            if (icon) gsap.to(icon, { rotation: 0, duration: 0.3, ease: 'power2.out' });
+            localStorage.setItem('notif_recent_hidden', '1');
+
+            const cards = wrap.querySelectorAll('[data-notif-card]');
+            if (cards.length) {
+                gsap.to(cards, { opacity: 0, y: -4, duration: 0.16, stagger: 0.015, ease: 'power2.in' });
+            }
+
+            gsap.to(wrap, {
+                height: 0,
+                opacity: 0,
+                y: -6,
+                scale: 0.99,
+                duration: 0.28,
+                ease: 'power2.inOut',
+                onComplete: () => {
+                    wrap.style.display = 'none';
+                }
+            });
+        }
+    } else {
+        if (isHidden) {
+            wrap.style.display = 'block';
+            wrap.setAttribute('data-collapsed', 'false');
+            if (text) text.textContent = 'Nascondi';
+            if (icon) icon.style.transform = 'rotate(180deg)';
+            localStorage.setItem('notif_recent_hidden', '0');
+        } else {
+            wrap.style.display = 'none';
+            wrap.setAttribute('data-collapsed', 'true');
+            if (text) text.textContent = 'Mostra';
+            if (icon) icon.style.transform = 'rotate(0deg)';
+            localStorage.setItem('notif_recent_hidden', '1');
+        }
+    }
+};
 
 function closeTodayNotifications() {
     const overlay = document.getElementById('today-notif-overlay');
