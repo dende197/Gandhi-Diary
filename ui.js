@@ -10581,276 +10581,462 @@ function formatFullDate(dateInput) {
 
 function renderProfile() {
     const isGoogleConnected = !!(state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1');
-    const userName  = escapeHtml(state.user?.name  || 'Utente');
-    const effClass  = getEffectiveUserClass();
-    const userClass = escapeHtml(effClass || normalizeClassUi(state.user?.class || '') || 'Studente');
-    const initials  = (state.user?.name || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
-    const isRep     = isCurrentUserRepresentative();
+    const rawName = (typeof getSafeUserName === 'function') ? getSafeUserName() : (state.user?.name || 'Utente');
+    const userName = escapeHtml((typeof toDisplayName === 'function') ? toDisplayName(rawName) : rawName);
+    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
+    const userClass = escapeHtml(effClass || (typeof normalizeClassUi === 'function' ? normalizeClassUi(state.user?.class || '') : (state.user?.class || '')) || 'Studente');
+    const initials = (rawName || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase() || 'U';
+    const isRep = (typeof isCurrentUserRepresentative === 'function') ? isCurrentUserRepresentative() : false;
+    const schoolCode = escapeHtml(state.user?.schoolCode || 'SG28499');
+
+    // Metrics for Hero Bento Badges
+    const votiData = (typeof getVotiData === 'function') ? getVotiData() : (state.voti || []);
+    const trendSummary = (typeof getGradeMonthlyTrendSummary === 'function') ? getGradeMonthlyTrendSummary(votiData) : { media: 0, diffStr: '0.0', isPositive: true };
+    const media = trendSummary.media || 0;
+    const isPositive = trendSummary.isPositive;
+    const diffStr = trendSummary.diffStr || '0.0';
+    const mediaColor = media >= 6.0 ? '#30d158' : (media > 0 ? '#ff453a' : '#b6c4ff');
+
+    // Assenze
+    const assenzeData = state.assenzeData || {};
+    const oreAssenzaTotali = typeof assenzeData.oreTotali === 'number'
+        ? assenzeData.oreTotali
+        : (typeof assenzeData.totaleOre === 'number' ? assenzeData.totaleOre : 0);
+    const assenzePctTotale = (typeof calcolaPercentualeAssenzeSu1000Ore === 'function')
+        ? calcolaPercentualeAssenzeSu1000Ore(oreAssenzaTotali)
+        : Math.min(100, Math.round((oreAssenzaTotali / 1000) * 1000) / 10).toFixed(1);
+    const assenzeStatusColor = Number(assenzePctTotale) > 20 ? '#ff453a' : (Number(assenzePctTotale) > 15 ? '#ff9f0a' : '#30d158');
+
+    // Last Sync timestamp
+    const lastSyncTs = (typeof getPersistedLastSyncAt === 'function') ? getPersistedLastSyncAt() : (state.didup?.lastSuccessTs || null);
+    let lastSyncLabel = 'Recentemente';
+    if (lastSyncTs) {
+        const syncD = new Date(lastSyncTs);
+        if (!isNaN(syncD.getTime())) {
+            const isToday = syncD.toDateString() === new Date().toDateString();
+            const timeStr = syncD.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            lastSyncLabel = isToday ? `Oggi, ${timeStr}` : `${syncD.getDate()}/${syncD.getMonth()+1}, ${timeStr}`;
+        }
+    }
 
     return `
-    <div class="view-fullbleed profile-view hide-scrollbar"
-         style="padding:0 20px;height:100dvh;overflow-y:scroll;-webkit-overflow-scrolling:touch;background:var(--bg-base, #050811);">
+    <div class="view-fullbleed profile-view hide-scrollbar min-h-screen pb-36"
+         style="padding:0 20px;min-height:100vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--background, #0b1326);font-family:'Inter',sans-serif;color:#dae2fd;">
 
-        <!-- ── HEADER (iOS HIG) ── -->
-        <header class="ios-header-wrapper" style="display:flex;align-items:center;gap:14px;padding:max(env(safe-area-inset-top,0px),24px) 0 20px 0;">
-            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('home')"
-                style="width:40px;height:40px;border-radius:50%;
-                       background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);
-                       -webkit-backdrop-filter:blur(16px);border:0.5px solid rgba(255,255,255,0.15);
-                       display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"
-                ontouchstart="this.style.transform='scale(0.92)'"
-                ontouchend="this.style.transform='scale(1)'">
-                <i class="ph ph-arrow-left text-[20px] text-[#2997ff]"></i>
-            </button>
-            <div>
-                <div class="ios-sub-title">IMPOSTAZIONI & ACCOUNT</div>
-                <h1 class="ios-large-title">Profilo</h1>
-            </div>
-        </header>
+        <!-- ── AMBIENT GLOW SPHERES ── -->
+        <div style="position:fixed;top:0;right:0;width:300px;height:300px;background:radial-gradient(circle,rgba(47,88,205,0.18) 0%,rgba(168,85,247,0.08) 50%,transparent 70%);filter:blur(60px);pointer-events:none;z-index:0;"></div>
+        <div style="position:fixed;bottom:100px;left:0;width:280px;height:280px;background:radial-gradient(circle,rgba(41,151,255,0.14) 0%,transparent 70%);filter:blur(50px);pointer-events:none;z-index:0;"></div>
 
-        <!-- ── CARTA UTENTE ── -->
-        <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
-                    -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
-                    border-radius:28px;padding:20px;display:flex;align-items:center;gap:16px;
-                    margin-bottom:20px;
-                    box-shadow:0 4px 20px -8px rgba(0,0,0,0.08),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
-            <div style="width:56px;height:56px;border-radius:50%;
-                        background:linear-gradient(135deg,#2563eb,#4f46e5);
-                        display:flex;align-items:center;justify-content:center;flex-shrink:0;
-                        box-shadow:0 6px 16px -4px rgba(37,99,235,0.38);">
-                <span style="font-size:22px;font-weight:800;color:white;">${initials}</span>
-            </div>
-            <div style="min-width:0;flex:1;">
-                <div style="font-size:18px;font-weight:800;color:var(--on-surface);
-                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${userName}</div>
-                <div style="font-size:13px;font-weight:600;color:var(--on-surface-variant);margin-top:2px;">${userClass}</div>
-                <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
-                    <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;
-                                box-shadow:0 0 0 2px rgba(34,197,94,0.2);"></div>
-                    <span style="font-size:11px;font-weight:700;color:var(--success);">DidUP Collegato</span>
-                </div>
-            </div>
-        </div>
+        <div style="position:relative;z-index:1;max-width:540px;margin:0 auto;">
 
-        <!-- ── RAPPRESENTANTE DI CLASSE (Apple HIG Card con iOS Toggle Switch) ── -->
-        <div style="margin-bottom:20px;">
-            <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
-                      text-transform:uppercase;margin:0 0 12px 2px;">Ruolo di Classe</p>
-            <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
-                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
-                        border-radius:28px;overflow:hidden;padding:18px 20px;
-                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
-                    <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
-                        <div style="width:44px;height:44px;border-radius:14px;
-                                    background:rgba(41,151,255,0.12);border:1px solid rgba(41,151,255,0.25);
-                                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:22px;color:#2997ff;font-variation-settings:'FILL' 1;">
-                                badge</span>
-                        </div>
-                        <div style="min-width:0;">
-                            <div style="font-size:16px;font-weight:700;color:var(--on-surface);line-height:1.2;">
-                                Rappresentante di Classe
-                            </div>
-                            <div style="font-size:12px;font-weight:600;color:${isRep ? '#30d158' : 'var(--outline)'};margin-top:3px;">
-                                ${isRep ? `Attivo · Classe ${escapeHtml(effClass)}` : `Non attivo · Classe: ${escapeHtml(effClass || 'Non rilevata')}`}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- iOS HIG Switch Toggle (Min 44pt touch area) -->
-                    <label style="position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:54px;min-height:44px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
-                        <input type="checkbox" ${isRep ? 'checked' : ''} onchange="window.toggleClassRepresentative(this.checked)" style="opacity:0;width:0;height:0;position:absolute;" />
-                        <span style="position:relative;display:inline-block;width:51px;height:31px;background:${isRep ? '#30d158' : 'rgba(120,120,128,0.32)'};border-radius:34px;transition:all 0.25s cubic-bezier(0.16,1,0.3,1);">
-                            <span style="position:absolute;content:'';height:27px;width:27px;left:2px;bottom:2px;background:#ffffff;border-radius:50%;transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);box-shadow:0 3px 8px rgba(0,0,0,0.25);transform:${isRep ? 'translateX(20px)' : 'translateX(0)'};"></span>
-                        </span>
-                    </label>
-                </div>
-                ${!effClass ? `
-                <div style="margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.25);display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                    <div style="min-width:0;">
-                        <div style="font-size:12px;color:#ff9f0a;font-weight:700;">Classe non rilevata</div>
-                        <div style="font-size:11px;color:rgba(255,159,10,0.85);margin-top:1px;">Imposta la tua sezione per abilitare il ruolo</div>
-                    </div>
-                    <button onclick="window.promptSetUserClass()" style="min-height:36px;padding:6px 14px;border-radius:10px;background:#ff9f0a;border:none;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Imposta</button>
-                </div>` : `
-                <div style="margin-top:12px;display:flex;justify-content:flex-end;">
-                    <button onclick="window.promptSetUserClass()" style="background:none;border:none;color:#2997ff;font-size:12px;font-weight:600;cursor:pointer;padding:4px 0;">Modifica classe (${escapeHtml(effClass)})</button>
-                </div>`}
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════════════════════════════ -->
-        <!-- ── LOGOUT — visibile subito, nessun modal complesso ── -->
-        <!-- ══════════════════════════════════════════════════════ -->
-        <button onclick="if(confirm('Sei sicuro di voler uscire dall\\'account?')){if(typeof logout==='function')logout();}"
-            style="width:100%;height:52px;border-radius:18px;
-                   background:rgba(239,68,68,0.07);
-                   border:1.5px solid rgba(239,68,68,0.18);
-                   display:flex;align-items:center;justify-content:center;gap:10px;
-                   color:var(--error);font-size:15px;font-weight:700;cursor:pointer;
-                   font-family:Hanken Grotesk,sans-serif;
-                   margin-bottom:28px;
-                   box-shadow:0 2px 12px -4px rgba(239,68,68,0.12);"
-            ontouchstart="this.style.background='rgba(239,68,68,0.13)'"
-            ontouchend="this.style.background='rgba(239,68,68,0.07)'">
-            <span class="material-symbols-outlined" style="font-size:20px;">logout</span>
-            Esci dall'Account
-        </button>
-
-        <!-- ── GOOGLE CALENDAR ── -->
-        <div style="margin-bottom:28px;">
-            <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
-                      text-transform:uppercase;margin:0 0 12px 2px;">Google Calendar</p>
-            <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
-                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
-                        border-radius:28px;overflow:hidden;
-                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
-                ${isGoogleConnected ? `
-                <div style="padding:20px;">
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                        <div style="width:42px;height:42px;border-radius:14px;
-                                    background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);
-                                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <span class="material-symbols-outlined"
-                                  style="font-size:22px;color:var(--success);font-variation-settings:'FILL' 1;">
-                                calendar_month</span>
-                        </div>
-                        <div>
-                            <div style="font-size:15px;font-weight:700;color:var(--on-surface);">Google Calendar</div>
-                            <div style="font-size:12px;font-weight:600;color:var(--success);
-                                        display:flex;align-items:center;gap:4px;">
-                                <span style="width:6px;height:6px;border-radius:50%;
-                                             background:#22c55e;display:inline-block;"></span>
-                                Account collegato
-                            </div>
-                        </div>
-                    </div>
-                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.5;margin:0 0 14px;">
-                        Verifiche e compiti sincronizzati automaticamente con Google Calendar.
-                    </p>
-                    <div style="display:flex;gap:10px;">
-                        <button onclick="window.syncGoogleCalendar&&syncGoogleCalendar()"
-                            style="flex:1;height:44px;border-radius:14px;border:none;cursor:pointer;
-                                   background:#2563eb;color:white;font-size:13px;font-weight:700;
-                                   font-family:Hanken Grotesk,sans-serif;
-                                   display:flex;align-items:center;justify-content:center;gap:7px;"
-                            ontouchstart="this.style.opacity='0.8'"
-                            ontouchend="this.style.opacity='1'">
-                            <span class="material-symbols-outlined" style="font-size:17px;">sync</span>
-                            Sincronizza ora
-                        </button>
-                        <button onclick="if(confirm('Disconnettere Google Calendar?'))window.disconnectGoogle&&disconnectGoogle()"
-                            style="height:44px;padding:0 16px;border-radius:14px;cursor:pointer;
-                                   background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
-                                   color:var(--error);font-size:13px;font-weight:700;
-                                   font-family:Hanken Grotesk,sans-serif;white-space:nowrap;"
-                            ontouchstart="this.style.opacity='0.7'"
-                            ontouchend="this.style.opacity='1'">
-                            Disconnetti
-                        </button>
-                    </div>
-                </div>` : `
-                <div style="padding:20px;">
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                        <div style="width:42px;height:42px;border-radius:14px;
-                                    background:rgba(var(--glass-rgb),0.8);border:1px solid rgba(226,232,240,0.9);
-                                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <span class="material-symbols-outlined" style="font-size:22px;color:var(--on-surface-variant);">
-                                calendar_month</span>
-                        </div>
-                        <div>
-                            <div style="font-size:15px;font-weight:700;color:var(--on-surface);">Google Calendar</div>
-                            <div style="font-size:12px;font-weight:600;color:var(--outline);">Non collegato</div>
-                        </div>
-                    </div>
-                    <p style="font-size:13px;color:var(--on-surface-variant);line-height:1.55;margin:0 0 14px;">
-                        Collega il tuo Google Calendar per sincronizzare automaticamente verifiche
-                        e compiti. Funziona in background senza dover aprire l'app.
-                    </p>
-                    <div style="background:rgba(239,246,255,0.7);border:1px solid rgba(191,219,254,0.5);
-                                border-radius:16px;padding:14px 16px;margin-bottom:16px;">
-                        <div style="font-size:11px;font-weight:700;color:var(--info);text-transform:uppercase;
-                                    letter-spacing:0.06em;margin-bottom:10px;">Come collegare</div>
-                        ${[
-                            'Tocca "Collega Google Calendar" qui sotto',
-                            'Scegli il tuo account Google scolastico o personale',
-                            'Autorizza Gandhi Diary ad accedere al calendario',
-                            'Verifiche e compiti appariranno in Google Calendar entro pochi secondi'
-                          ].map((s,i) => `
-                        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${i<3?'9px':'0'};">
-                            <div style="width:20px;height:20px;border-radius:50%;background:#2563eb;color:white;
-                                        font-size:10px;font-weight:800;display:flex;align-items:center;
-                                        justify-content:center;flex-shrink:0;margin-top:1px;">${i+1}</div>
-                            <span style="font-size:13px;color:var(--on-surface-variant);line-height:1.45;">${s}</span>
-                        </div>`).join('')}
-                    </div>
-                    <button onclick="window.connectGoogle&&connectGoogle()"
-                        style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;
-                               background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;
-                               font-size:15px;font-weight:700;font-family:Hanken Grotesk,sans-serif;
-                               display:flex;align-items:center;justify-content:center;gap:8px;
-                               box-shadow:0 6px 20px -6px rgba(37,99,235,0.45);"
-                        ontouchstart="this.style.transform='scale(0.97)'"
-                        ontouchend="this.style.transform='scale(1)'">
-                        <span class="material-symbols-outlined" style="font-size:19px;">link</span>
-                        Collega Google Calendar
+            <!-- ── HEADER (iOS HIG) ── -->
+            <header class="ios-header-wrapper" style="display:flex;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top,0px),24px) 0 20px 0;">
+                <div style="display:flex;align-items:center;gap:14px;">
+                    <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('home')"
+                        style="width:40px;height:40px;border-radius:14px;
+                               background:rgba(23,31,51,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+                               border:1px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.25);
+                               display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:#b6c4ff;
+                               box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.15s ease;"
+                        ontouchstart="this.style.transform='scale(0.92)'"
+                        ontouchend="this.style.transform='scale(1)'"
+                        aria-label="Torna alla Home">
+                        <i class="ph-bold ph-arrow-left" style="font-size:18px;"></i>
                     </button>
-                </div>`}
-            </div>
-        </div>
-
-        <!-- ── IMPOSTAZIONI ── -->
-        <div style="margin-bottom:28px;">
-            <p style="font-size:11px;font-weight:700;color:var(--outline);letter-spacing:0.08em;
-                      text-transform:uppercase;margin:0 0 12px 2px;">Impostazioni</p>
-            <div style="background:rgba(var(--glass-rgb),0.65);backdrop-filter:blur(40px);
-                        -webkit-backdrop-filter:blur(40px);border:1px solid rgba(var(--glass-rgb),0.55);
-                        border-radius:28px;overflow:hidden;
-                        box-shadow:0 4px 20px -8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(var(--glass-rgb),0.8);">
-                <div onclick="showToast('Notifiche in arrivo prossimamente','info')"
-                    style="display:flex;align-items:center;justify-content:space-between;
-                           padding:16px 20px;cursor:pointer;"
-                    ontouchstart="this.style.background='rgba(0,0,0,0.03)'"
-                    ontouchend="this.style.background='transparent'">
-                    <div style="display:flex;align-items:center;gap:13px;">
-                        <div style="width:34px;height:34px;border-radius:10px;
-                                    background:rgba(249,115,22,0.1);
-                                    display:flex;align-items:center;justify-content:center;">
-                            <span class="material-symbols-outlined"
-                                  style="font-size:18px;color:var(--warning);">notifications</span>
-                        </div>
-                        <span style="font-size:15px;font-weight:600;color:var(--on-surface);">Notifiche</span>
+                    <div>
+                        <div class="ios-sub-title" style="color:#b6c4ff;font-weight:800;letter-spacing:0.08em;font-size:11px;">ACCOUNT & SISTEMA</div>
+                        <h1 class="ios-large-title" style="color:#dae2fd;font-weight:800;font-size:32px;letter-spacing:-0.03em;margin:2px 0 0;">Profilo</h1>
                     </div>
-                    <span class="material-symbols-outlined"
-                          style="font-size:18px;color:var(--outline-variant);">chevron_right</span>
                 </div>
-                <div style="height:1px;background:rgba(226,232,240,0.5);margin:0 20px;"></div>
-                <div onclick="showToast('Privacy & Sicurezza in arrivo','info')"
-                    style="display:flex;align-items:center;justify-content:space-between;
-                           padding:16px 20px;cursor:pointer;"
-                    ontouchstart="this.style.background='rgba(0,0,0,0.03)'"
-                    ontouchend="this.style.background='transparent'">
-                    <div style="display:flex;align-items:center;gap:13px;">
-                        <div style="width:34px;height:34px;border-radius:10px;
-                                    background:rgba(20,184,166,0.1);
-                                    display:flex;align-items:center;justify-content:center;">
-                            <span class="material-symbols-outlined"
-                                  style="font-size:18px;color:var(--success);">lock</span>
-                        </div>
-                        <span style="font-size:15px;font-weight:600;color:var(--on-surface);">
-                            Privacy & Sicurezza</span>
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(typeof showToast==='function')showToast('Sincronizzazione DidUP in corso...','info');if(typeof runAutomaticSyncCycle==='function')runAutomaticSyncCycle('manual',{force:true});"
+                    style="width:40px;height:40px;border-radius:14px;
+                           background:rgba(23,31,51,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+                           border:1px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.25);
+                           display:flex;align-items:center;justify-content:center;cursor:pointer;color:#b6c4ff;
+                           box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:transform 0.15s ease;"
+                    ontouchstart="this.style.transform='scale(0.92)'"
+                    ontouchend="this.style.transform='scale(1)'"
+                    aria-label="Sincronizza">
+                    <i class="ph-bold ph-arrows-clockwise" style="font-size:18px;"></i>
+                </button>
+            </header>
+
+            <!-- ── HERO USER CARD (Apple Liquid Glass with Cosmic Avatar) ── -->
+            <div style="
+                background:linear-gradient(135deg, rgba(47,88,205,0.28) 0%, rgba(20,29,51,0.92) 100%);
+                backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);
+                border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);
+                border-radius:28px;padding:22px 20px 18px;margin-bottom:20px;
+                box-shadow:0 16px 40px -10px rgba(6,14,32,0.75), inset 0 1px 0 rgba(255,255,255,0.18);
+                position:relative;overflow:hidden;
+            ">
+                <!-- Ambient Top Right Glow -->
+                <div style="position:absolute;top:0;right:0;width:140px;height:140px;background:radial-gradient(circle,rgba(41,151,255,0.3) 0%,transparent 70%);filter:blur(24px);pointer-events:none;"></div>
+
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+                    <!-- Cosmic Gradient Avatar -->
+                    <div style="
+                        width:62px;height:62px;border-radius:20px;
+                        background:linear-gradient(135deg, #2f58cd 0%, #a855f7 50%, #3b82f6 100%);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                        box-shadow:0 8px 24px -4px rgba(47,88,205,0.6), inset 0 1px 1px rgba(255,255,255,0.4);
+                        border:1px solid rgba(255,255,255,0.25);
+                    ">
+                        <span style="font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.02em;">${initials}</span>
                     </div>
-                    <span class="material-symbols-outlined"
-                          style="font-size:18px;color:var(--outline-variant);">chevron_right</span>
+
+                    <div style="min-width:0;flex:1;">
+                        <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:0 0 4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.02em;">
+                            ${userName}
+                        </h2>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                            <span style="font-size:11.5px;font-weight:700;color:#b6c4ff;background:rgba(47,88,205,0.22);border:0.5px solid rgba(182,196,255,0.25);padding:2px 8px;border-radius:8px;">
+                                ${userClass}
+                            </span>
+                            <span style="font-size:11.5px;font-weight:600;color:#8e909f;">
+                                Cod. ${schoolCode}
+                            </span>
+                        </div>
+                        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.14);border:0.5px solid rgba(48,209,88,0.3);padding:2px 9px;border-radius:999px;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 8px #30d158;display:inline-block;"></span>
+                            <span style="font-size:10.5px;font-weight:800;color:#30d158;letter-spacing:0.02em;">DidUP Sincronizzato</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 Bento Pills inside Hero Card -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:14px;border-top:0.5px solid rgba(255,255,255,0.1);">
+                    <!-- 1. Media -->
+                    <div onclick="navigate('voti')" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:10px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;min-height:76px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA</span>
+                            <i class="ph-bold ph-chart-line-up" style="font-size:11px;color:${mediaColor};"></i>
+                        </div>
+                        <div style="font-size:19px;font-weight:900;color:${mediaColor};line-height:1;font-variant-numeric:tabular-nums;margin:2px 0;">
+                            ${media > 0 ? media.toFixed(2) : '—'}
+                        </div>
+                        <span style="font-size:8.5px;font-weight:800;color:${isPositive ? '#30d158' : '#ff453a'};background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};padding:1px 5px;border-radius:999px;width:fit-content;display:inline-flex;align-items:center;gap:2px;">
+                            <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
+                        </span>
+                    </div>
+
+                    <!-- 2. Assenze -->
+                    <div onclick="mostraAssenzeModal()" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:10px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;min-height:76px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">ASSENZE</span>
+                            <i class="ph-bold ph-calendar-x" style="font-size:11px;color:${assenzeStatusColor};"></i>
+                        </div>
+                        <div style="font-size:18px;font-weight:900;color:${assenzeStatusColor};line-height:1;font-variant-numeric:tabular-nums;margin:2px 0;">
+                            ${assenzePctTotale}%
+                        </div>
+                        <span style="font-size:8.5px;font-weight:700;color:${assenzeStatusColor};background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:999px;width:fit-content;">
+                            ${oreAssenzaTotali}h / 250h
+                        </span>
+                    </div>
+
+                    <!-- 3. Ruolo -->
+                    <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;min-height:76px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">RUOLO</span>
+                            <i class="ph-bold ${isRep ? 'ph-identification-badge' : 'ph-student'}" style="font-size:11px;color:${isRep ? '#30d158' : '#b6c4ff'};"></i>
+                        </div>
+                        <div style="font-size:13px;font-weight:800;color:#ffffff;line-height:1.2;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${isRep ? 'Rappresentante' : 'Studente'}
+                        </div>
+                        <span style="font-size:8.5px;font-weight:700;color:${isRep ? '#30d158' : '#b6c4ff'};background:${isRep ? 'rgba(48,209,88,0.15)' : 'rgba(47,88,205,0.18)'};padding:1px 5px;border-radius:999px;width:fit-content;">
+                            ${isRep ? 'Attivo' : 'Standard'}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- versione app + spacer navbar -->
-        <p style="text-align:center;font-size:11px;color:var(--outline-variant);font-weight:600;
-                  letter-spacing:0.04em;padding-bottom:12px;">Gandhi Diary • v3.3.8</p>
-        <div style="height:100px;"></div>
+            <!-- ── SEZIONE: RUOLO DI CLASSE (Rappresentante) ── -->
+            <div style="margin-bottom:20px;">
+                <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
+                    <i class="ph-fill ph-users-three" style="color:#2997ff;"></i> RUOLO DI CLASSE
+                </p>
+                <div style="
+                    background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+                    border:1px solid rgba(182,196,255,0.14);border-top:1px solid rgba(255,255,255,0.25);
+                    border-radius:26px;padding:18px 20px;
+                    box-shadow:0 12px 32px -8px rgba(6,14,32,0.6);
+                ">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
+                            <div style="
+                                width:46px;height:46px;border-radius:15px;
+                                background:${isRep ? 'rgba(48,209,88,0.16)' : 'rgba(41,151,255,0.14)'};
+                                border:1px solid ${isRep ? 'rgba(48,209,88,0.35)' : 'rgba(41,151,255,0.25)'};
+                                display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                                color:${isRep ? '#30d158' : '#2997ff'};
+                                box-shadow:0 0 14px ${isRep ? 'rgba(48,209,88,0.25)' : 'rgba(41,151,255,0.2)'};
+                            ">
+                                <i class="ph-fill ph-identification-badge" style="font-size:24px;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">
+                                    Rappresentante di Classe
+                                </div>
+                                <div style="font-size:12px;font-weight:600;color:${isRep ? '#30d158' : '#8e909f'};margin-top:3px;">
+                                    ${isRep ? `Attivo · Classe ${escapeHtml(effClass)}` : `Non attivo · Sezione: ${escapeHtml(effClass || 'Non impostata')}`}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Apple HIG Native Smooth Switch -->
+                        <label style="position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:54px;min-height:44px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+                            <input type="checkbox" ${isRep ? 'checked' : ''} onchange="window.toggleClassRepresentative(this.checked)" style="opacity:0;width:0;height:0;position:absolute;" />
+                            <span style="position:relative;display:inline-block;width:51px;height:31px;background:${isRep ? '#30d158' : 'rgba(120,120,128,0.32)'};border-radius:34px;transition:all 0.25s cubic-bezier(0.16,1,0.3,1);box-shadow:${isRep ? '0 0 12px rgba(48,209,88,0.4)' : 'none'};">
+                                <span style="position:absolute;content:'';height:27px;width:27px;left:2px;bottom:2px;background:#ffffff;border-radius:50%;transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);box-shadow:0 3px 8px rgba(0,0,0,0.3);transform:${isRep ? 'translateX(20px)' : 'translateX(0)'};"></span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div style="margin-top:14px;padding-top:14px;border-top:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;">
+                        <span style="font-size:12px;color:#8e909f;font-weight:500;">
+                            ${effClass ? `Sezione attiva: <strong style="color:#b6c4ff;">${escapeHtml(effClass)}</strong>` : 'Sezione di classe non definita'}
+                        </span>
+                        <button onclick="window.promptSetUserClass()" style="background:rgba(47,88,205,0.2);border:0.5px solid rgba(182,196,255,0.25);color:#b6c4ff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform 0.12s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                            <i class="ph-bold ph-pencil-simple"></i> ${effClass ? 'Modifica' : 'Imposta Sezione'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── SEZIONE: GOOGLE CALENDAR CLOUD ── -->
+            <div style="margin-bottom:20px;">
+                <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
+                    <i class="ph-fill ph-calendar-check" style="color:#30d158;"></i> GOOGLE CALENDAR SYNC
+                </p>
+                <div style="
+                    background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+                    border:1px solid rgba(182,196,255,0.14);border-top:1px solid rgba(255,255,255,0.25);
+                    border-radius:26px;overflow:hidden;
+                    box-shadow:0 12px 32px -8px rgba(6,14,32,0.6);
+                ">
+                    ${isGoogleConnected ? `
+                    <div style="padding:20px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:44px;height:44px;border-radius:14px;background:rgba(48,209,88,0.16);border:1px solid rgba(48,209,88,0.35);display:flex;align-items:center;justify-content:center;color:#30d158;flex-shrink:0;box-shadow:0 0 14px rgba(48,209,88,0.25);">
+                                    <i class="ph-fill ph-google-logo" style="font-size:22px;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">Google Calendar</div>
+                                    <div style="font-size:11.5px;font-weight:700;color:#30d158;display:flex;align-items:center;gap:5px;margin-top:2px;">
+                                        <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;"></span>
+                                        Sincronizzazione Cloud Attiva
+                                    </div>
+                                </div>
+                            </div>
+                            <span style="font-size:10.5px;font-weight:700;color:#8e909f;background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:8px;">
+                                Background 24/7
+                            </span>
+                        </div>
+                        <p style="font-size:12.5px;color:#c4c5d6;line-height:1.5;margin:0 0 16px;">
+                            Verifiche, compiti ed eventi sono sincronizzati automaticamente con il tuo calendario Google senza dover aprire l'app.
+                        </p>
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(typeof syncGoogleCalendar==='function')syncGoogleCalendar();"
+                                style="flex:1;height:46px;border-radius:14px;border:none;cursor:pointer;
+                                       background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;
+                                       font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;
+                                       box-shadow:0 4px 16px rgba(47,88,205,0.45);transition:transform 0.12s ease;"
+                                ontouchstart="this.style.transform='scale(0.97)'"
+                                ontouchend="this.style.transform='scale(1)'">
+                                <i class="ph-bold ph-arrows-clockwise" style="font-size:16px;"></i>
+                                Sincronizza Ora
+                            </button>
+                            <button onclick="if(confirm('Disconnettere Google Calendar?')){if(typeof disconnectGoogle==='function')disconnectGoogle();}"
+                                style="height:46px;padding:0 16px;border-radius:14px;cursor:pointer;
+                                       background:rgba(255,69,58,0.12);border:1px solid rgba(255,69,58,0.25);
+                                       color:#ff453a;font-size:13px;font-weight:700;white-space:nowrap;transition:transform 0.12s ease;"
+                                ontouchstart="this.style.transform='scale(0.97)'"
+                                ontouchend="this.style.transform='scale(1)'">
+                                Disconnetti
+                            </button>
+                        </div>
+                    </div>` : `
+                    <div style="padding:20px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                            <div style="width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;color:#8e909f;flex-shrink:0;">
+                                <i class="ph-fill ph-google-logo" style="font-size:22px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">Google Calendar</div>
+                                <div style="font-size:12px;font-weight:600;color:#8e909f;margin-top:2px;">Non collegato</div>
+                            </div>
+                        </div>
+                        <p style="font-size:12.5px;color:#c4c5d6;line-height:1.55;margin:0 0 14px;">
+                            Collega Google Calendar per avere tutte le tue verifiche, compiti ed eventi scolastici integrati direttamente su iPhone, Apple Watch e Android.
+                        </p>
+                        <div style="background:rgba(47,88,205,0.12);border:1px solid rgba(182,196,255,0.18);border-radius:16px;padding:12px 14px;margin-bottom:16px;">
+                            <div style="font-size:10px;font-weight:800;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">
+                                Come Funziona
+                            </div>
+                            ${[
+                                'Tocca "Collega Google Calendar" qui sotto',
+                                'Accedi con il tuo account Google scolastico o personale',
+                                'Sincronizzazione automatica bidirezionale in cloud'
+                              ].map((step, idx) => `
+                            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${idx < 2 ? '8px' : '0'};">
+                                <div style="width:18px;height:18px;border-radius:50%;background:#2f58cd;color:#ffffff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                                    ${idx + 1}
+                                </div>
+                                <span style="font-size:12px;color:#dae2fd;line-height:1.4;">${step}</span>
+                            </div>`).join('')}
+                        </div>
+                        <button onclick="if(typeof window.connectGoogle==='function')window.connectGoogle();"
+                            style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;
+                                   background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;
+                                   font-size:14.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;
+                                   box-shadow:0 6px 20px -4px rgba(47,88,205,0.5);transition:transform 0.12s ease;"
+                            ontouchstart="this.style.transform='scale(0.98)'"
+                            ontouchend="this.style.transform='scale(1)'">
+                            <i class="ph-bold ph-link" style="font-size:17px;"></i>
+                            Collega Google Calendar
+                        </button>
+                    </div>`}
+                </div>
+            </div>
+
+            <!-- ── SEZIONE: SERVIZI & APPLICAZIONE ── -->
+            <div style="margin-bottom:20px;">
+                <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
+                    <i class="ph-fill ph-squares-four" style="color:#b6c4ff;"></i> SERVIZI & FUNZIONALITÀ
+                </p>
+                <div style="
+                    background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+                    border:1px solid rgba(182,196,255,0.14);border-top:1px solid rgba(255,255,255,0.25);
+                    border-radius:26px;overflow:hidden;
+                    box-shadow:0 12px 32px -8px rgba(6,14,32,0.6);
+                ">
+                    <!-- 1. Centro Notifiche -->
+                    <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');if(typeof openTodayNotifications==='function')openTodayNotifications();"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;transition:background 0.15s ease;"
+                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
+                        ontouchend="this.style.background='transparent'">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:36px;height:36px;border-radius:12px;background:rgba(255,159,10,0.16);border:1px solid rgba(255,159,10,0.3);display:flex;align-items:center;justify-content:center;color:#ff9f0a;">
+                                <i class="ph-fill ph-bell" style="font-size:18px;"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:14.5px;font-weight:700;color:#ffffff;display:block;">Centro Notifiche & Novità</span>
+                                <span style="font-size:11.5px;font-weight:500;color:#8e909f;">Tutte le attività e comunicazioni di oggi</span>
+                            </div>
+                        </div>
+                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
+                    </div>
+
+                    <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
+
+                    <!-- 2. Circolari Scolastiche -->
+                    <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('circolari');"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;transition:background 0.15s ease;"
+                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
+                        ontouchend="this.style.background='transparent'">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:36px;height:36px;border-radius:12px;background:rgba(41,151,255,0.16);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;">
+                                <i class="ph-fill ph-file-text" style="font-size:18px;"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:14.5px;font-weight:700;color:#ffffff;display:block;">Circolari & Bacheca</span>
+                                <span style="font-size:11.5px;font-weight:500;color:#8e909f;">Consulta comunicati con sintesi AI</span>
+                            </div>
+                        </div>
+                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
+                    </div>
+
+                    <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
+
+                    <!-- 3. Profilo Accademico -->
+                    <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('academic_profile');"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;transition:background 0.15s ease;"
+                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
+                        ontouchend="this.style.background='transparent'">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:36px;height:36px;border-radius:12px;background:rgba(168,85,247,0.16);border:1px solid rgba(168,85,247,0.3);display:flex;align-items:center;justify-content:center;color:#c084fc;">
+                                <i class="ph-fill ph-chart-polar" style="font-size:18px;"></i>
+                            </div>
+                            <div>
+                                <span style="font-size:14.5px;font-weight:700;color:#ffffff;display:block;">Profilo Accademico & Obiettivi</span>
+                                <span style="font-size:11.5px;font-weight:500;color:#8e909f;">Statistiche materie e target studio</span>
+                            </div>
+                        </div>
+                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── SEZIONE: SISTEMA & DIAGNOSTICA ── -->
+            <div style="margin-bottom:24px;">
+                <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
+                    <i class="ph-fill ph-gear-six" style="color:#8e909f;"></i> SISTEMA & DIAGNOSTICA
+                </p>
+                <div style="
+                    background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+                    border:1px solid rgba(182,196,255,0.14);border-top:1px solid rgba(255,255,255,0.25);
+                    border-radius:26px;overflow:hidden;
+                    box-shadow:0 12px 32px -8px rgba(6,14,32,0.6);
+                ">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;">
+                        <span style="font-size:13.5px;font-weight:600;color:#c4c5d6;">Ultima Sincronizzazione</span>
+                        <span style="font-size:12.5px;font-weight:700;color:#b6c4ff;background:rgba(47,88,205,0.18);padding:3px 9px;border-radius:8px;">${lastSyncLabel}</span>
+                    </div>
+
+                    <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
+
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;">
+                        <span style="font-size:13.5px;font-weight:600;color:#c4c5d6;">Serverless Engine</span>
+                        <span style="font-size:12.5px;font-weight:700;color:#30d158;display:flex;align-items:center;gap:4px;">
+                            <i class="ph-fill ph-check-circle" style="font-size:14px;"></i> Attivo & Reattivo
+                        </span>
+                    </div>
+
+                    <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
+
+                    <div onclick="if(confirm('Svuotare la cache locale e ricaricare i dati?')){try{localStorage.clear();sessionStorage.clear();}catch(e){}location.reload();}"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;cursor:pointer;transition:background 0.15s ease;"
+                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
+                        ontouchend="this.style.background='transparent'">
+                        <span style="font-size:13.5px;font-weight:600;color:#ff9f0a;display:flex;align-items:center;gap:8px;">
+                            <i class="ph-bold ph-trash" style="font-size:16px;"></i> Svuota Cache & Reset Dati
+                        </span>
+                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── LOGOUT (Apple Frosted Danger Button) ── -->
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(confirm('Sei sicuro di voler uscire dall\'account?')){if(typeof logout==='function')logout();}"
+                style="
+                    width:100%;height:54px;border-radius:20px;
+                    background:rgba(255,69,58,0.12);
+                    border:1px solid rgba(255,69,58,0.28);border-top:1px solid rgba(255,255,255,0.2);
+                    display:flex;align-items:center;justify-content:center;gap:10px;
+                    color:#ff453a;font-size:15px;font-weight:800;cursor:pointer;
+                    font-family:'Inter',sans-serif;
+                    margin-bottom:28px;
+                    box-shadow:0 6px 20px -6px rgba(255,69,58,0.3);
+                    transition:transform 0.15s ease, background 0.15s ease;
+                "
+                ontouchstart="this.style.transform='scale(0.98)';this.style.background='rgba(255,69,58,0.2)'"
+                ontouchend="this.style.transform='scale(1)';this.style.background='rgba(255,69,58,0.12)'">
+                <i class="ph-bold ph-sign-out" style="font-size:20px;"></i>
+                Esci dall'Account
+            </button>
+
+            <!-- ── FOOTER APP INFO ── -->
+            <div style="text-align:center;padding-bottom:20px;">
+                <p style="font-size:12px;font-weight:700;color:#8e909f;letter-spacing:0.04em;margin:0 0 4px;">
+                    Gandhi Diary • v3.9.8
+                </p>
+                <p style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);margin:0;">
+                    Liceo Gandhi · Liquid Glass Interface
+                </p>
+            </div>
+
+        </div>
     </div>
     `;
 }
