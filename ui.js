@@ -3161,15 +3161,34 @@ function openTodayNotifications(initialTab) {
                     ${upcomingHtml}
                 </div>` : ''}
 
-                <!-- 3. SEZIONE: RECENTI -->
+                <!-- 3. SEZIONE: RECENTI (Collapsibile) -->
                 ${data.recentItems.length > 0 ? `
                 <div style="margin-bottom:10px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div onclick="(function(el){
+                        var wrap=el.parentElement.querySelector('[data-recent-items]');
+                        var chevron=el.querySelector('[data-recent-chevron]');
+                        var isOpen=wrap.style.maxHeight&&wrap.style.maxHeight!=='0px';
+                        if(isOpen){
+                            wrap.style.maxHeight='0px';wrap.style.opacity='0';wrap.style.marginTop='0px';
+                            chevron.style.transform='rotate(0deg)';
+                            localStorage.setItem('notif_recent_open','0');
+                        } else {
+                            wrap.style.maxHeight=wrap.scrollHeight+'px';wrap.style.opacity='1';wrap.style.marginTop='12px';
+                            chevron.style.transform='rotate(180deg)';
+                            localStorage.setItem('notif_recent_open','1');
+                        }
+                    })(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;transition:background 0.2s ease;" ontouchstart="this.style.background='rgba(255,255,255,0.07)'" ontouchend="this.style.background='rgba(255,255,255,0.03)'">
                         <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#8e909f;display:flex;align-items:center;gap:5px;">
                             <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${data.recentItems.length})
                         </span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:10px;font-weight:600;color:#636577;">Tocca per mostrare</span>
+                            <i data-recent-chevron class="ph-bold ph-caret-down" style="font-size:12px;color:#636577;transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);transform:rotate(${localStorage.getItem('notif_recent_open')==='1'?'180':'0'}deg);"></i>
+                        </div>
                     </div>
-                    ${recentHtml}
+                    <div data-recent-items style="overflow:hidden;transition:max-height 0.35s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease,margin-top 0.3s ease;max-height:${localStorage.getItem('notif_recent_open')==='1'?'4000px':'0px'};opacity:${localStorage.getItem('notif_recent_open')==='1'?'1':'0'};margin-top:${localStorage.getItem('notif_recent_open')==='1'?'12px':'0px'};">
+                        ${recentHtml}
+                    </div>
                 </div>` : ''}
 
             </div>
