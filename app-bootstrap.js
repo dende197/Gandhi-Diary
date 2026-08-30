@@ -316,13 +316,29 @@
             if (!dateStr) return new Date(0);
             if (dateStr instanceof Date) return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate(), 12, 0, 0);
             if (typeof dateStr === 'string') {
-                const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                const trimmed = dateStr.trim();
+                const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
                 if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]), 12, 0, 0);
-                const ita = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                const ita = trimmed.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
                 if (ita) return new Date(parseInt(ita[3]), parseInt(ita[2])-1, parseInt(ita[1]), 12, 0, 0);
+                
+                const textMatch = trimmed.match(/^(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/i);
+                if (textMatch) {
+                    const mKey = textMatch[2].toLowerCase();
+                    const monthMap = {
+                        'gen': 0, 'gennaio': 0, 'feb': 1, 'febbraio': 1, 'mar': 2, 'marzo': 2,
+                        'apr': 3, 'aprile': 3, 'mag': 4, 'maggio': 4, 'giu': 5, 'giugno': 5,
+                        'lug': 6, 'luglio': 6, 'ago': 7, 'agosto': 7, 'set': 8, 'sett': 8, 'settembre': 8,
+                        'ott': 9, 'ottobre': 9, 'nov': 10, 'novembre': 10, 'dic': 11, 'dicembre': 11
+                    };
+                    const m = monthMap[mKey] !== undefined ? monthMap[mKey] : monthMap[mKey.substring(0, 3)];
+                    if (m !== undefined) {
+                        return new Date(parseInt(textMatch[3]), m, parseInt(textMatch[1]), 12, 0, 0);
+                    }
+                }
             }
             const d = new Date(dateStr);
-            return isNaN(d.getTime()) ? new Date() : new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+            return (isNaN(d.getTime()) || d.getTime() <= 86400000) ? new Date(0) : new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
         }
 
         function djb2(str) {

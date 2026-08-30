@@ -29,6 +29,51 @@ function saveCache(data) {
     } catch (e) { }
 }
 
+const IT_MONTHS = {
+    'gen': '01', 'gennaio': '01',
+    'feb': '02', 'febbraio': '02',
+    'mar': '03', 'marzo': '03',
+    'apr': '04', 'aprile': '04',
+    'mag': '05', 'maggio': '05',
+    'giu': '06', 'giugno': '06',
+    'lug': '07', 'luglio': '07',
+    'ago': '08', 'agosto': '08',
+    'set': '09', 'sett': '09', 'settembre': '09',
+    'ott': '10', 'ottobre': '10',
+    'nov': '11', 'novembre': '11',
+    'dic': '12', 'dicembre': '12'
+};
+
+function parseDateToIso(raw) {
+    if (!raw) return null;
+    const str = String(raw).trim();
+    
+    // ISO format: YYYY-MM-DD
+    const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    
+    // Numeric format: DD/MM/YYYY or DD-MM-YYYY
+    const numMatch = str.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+    if (numMatch) {
+        const day = numMatch[1].padStart(2, '0');
+        const month = numMatch[2].padStart(2, '0');
+        const year = numMatch[3];
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Text format: "28 ago 2026" or "28 agosto 2026"
+    const textMatch = str.match(/^(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/i);
+    if (textMatch) {
+        const day = textMatch[1].padStart(2, '0');
+        const mKey = textMatch[2].toLowerCase();
+        const month = IT_MONTHS[mKey] || IT_MONTHS[mKey.substring(0, 3)];
+        const year = textMatch[3];
+        if (month) return `${year}-${month}-${day}`;
+    }
+    
+    return null;
+}
+
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -51,15 +96,18 @@ module.exports = async function handler(req, res) {
             const titleElem = $(el).find('.card-title a');
             const title = titleElem.text().trim();
             const link = titleElem.attr('href');
-            const date = $(el).find('.category-date').text().trim() || new Date().toLocaleDateString('it-IT');
+            const rawDate = $(el).find('.category-date').text().trim();
+            const isoDate = parseDateToIso(rawDate);
             const numeroMatch = title.match(/n\.?\s*(\d+)/i);
             const numero = numeroMatch ? numeroMatch[1] : (i + 1);
 
-            if (title && link && circolari.length < 15) {
+            if (title && link && circolari.length < 20) {
                 circolari.push({
                     id: generateStableId(link),
                     titolo: title,
-                    data: date,
+                    data: rawDate || (isoDate ? isoDate.split('-').reverse().join('/') : ''),
+                    dataPubblicazione: isoDate || '',
+                    date: isoDate || '',
                     link,
                     numero
                 });

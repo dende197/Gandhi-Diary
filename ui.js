@@ -2632,26 +2632,52 @@ window.getComprehensiveNotificationData = function() {
 
     function parseItemDateISO(raw) {
         if (!raw) return null;
-        if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) return raw.trim();
+        if (typeof raw === 'string') {
+            const trimmed = raw.trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+            const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+            const numMatch = trimmed.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+            if (numMatch) {
+                return `${numMatch[3]}-${numMatch[2].padStart(2, '0')}-${numMatch[1].padStart(2, '0')}`;
+            }
+            const textMatch = trimmed.match(/^(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/i);
+            if (textMatch) {
+                const mKey = textMatch[2].toLowerCase();
+                const monthMap = {
+                    'gen': '01', 'gennaio': '01', 'feb': '02', 'febbraio': '02', 'mar': '03', 'marzo': '03',
+                    'apr': '04', 'aprile': '04', 'mag': '05', 'maggio': '05', 'giu': '06', 'giugno': '06',
+                    'lug': '07', 'luglio': '07', 'ago': '08', 'agosto': '08', 'set': '09', 'sett': '09', 'settembre': '09',
+                    'ott': '10', 'ottobre': '10', 'nov': '11', 'novembre': '11', 'dic': '12', 'dicembre': '12'
+                };
+                const m = monthMap[mKey] || monthMap[mKey.substring(0, 3)];
+                if (m) {
+                    return `${textMatch[3]}-${m}-${textMatch[1].padStart(2, '0')}`;
+                }
+            }
+        }
         const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
-        if (d && !isNaN(d.getTime())) return getLocalDateString(d);
+        if (d && !isNaN(d.getTime()) && d.getTime() > 86400000) {
+            return getLocalDateString(d);
+        }
         return null;
     }
 
     // 1. Circolari
     const circolariList = (state.circolari || []).map(c => {
-        const iso = parseItemDateISO(c.data || c.date || c.dataPubblicazione || c.pubblDate || c.data_pubblicazione);
+        const iso = parseItemDateISO(c.dataPubblicazione || c.date || c.data || c.pubblDate || c.data_pubblicazione);
         return {
             category: 'circolari',
+            categoryLabel: 'Circolare',
             type: 'circolare',
             id: c.id,
             title: c.titolo || c.title || 'Circolare',
             desc: c.numero ? `Circolare n. ${c.numero}` : 'Comunicazione ufficiale',
             dateISO: iso,
-            rawDate: c.data || c.date,
+            rawDate: c.data || c.date || '',
             icon: 'ph-file-text',
             iconColor: '#2997ff',
-            iconBg: 'rgba(41,151,255,0.18)',
+            iconBg: 'rgba(41,151,255,0.16)',
             action: `mostraCircolare('${escapeJsSingleQuote(c.id)}')`
         };
     });
@@ -2663,19 +2689,23 @@ window.getComprehensiveNotificationData = function() {
         const val = v.valore || v.voto || v.value || '';
         const subj = v.materia || v.subject || 'Materia';
         const numVal = parseFloat(String(val).replace(',', '.'));
-        const valColor = !isNaN(numVal) ? (numVal >= 6 ? '#30d158' : '#ff453a') : '#2997ff';
+        const isGood = !isNaN(numVal) && numVal >= 6;
+        const valColor = !isNaN(numVal) ? (isGood ? '#30d158' : '#ff453a') : '#2997ff';
+        const valBg = !isNaN(numVal) ? (isGood ? 'rgba(48,209,88,0.16)' : 'rgba(255,69,58,0.16)') : 'rgba(41,151,255,0.16)';
         return {
             category: 'voti',
+            categoryLabel: 'Voto',
             type: 'voto',
             title: `Nuovo Voto: ${subj}`,
             desc: `${v.tipo || 'Valutazione'}${v.commento ? ' — ' + v.commento : ''}`,
             val: val,
             valColor: valColor,
+            valBg: valBg,
             dateISO: iso,
             rawDate: v.data || v.date,
             icon: 'ph-chart-line-up',
             iconColor: valColor,
-            iconBg: valColor === '#30d158' ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)',
+            iconBg: valBg,
             action: "navigate('voti')"
         };
     });
@@ -2684,6 +2714,7 @@ window.getComprehensiveNotificationData = function() {
     const ad = state.assenzeData || {};
     const assenzeRaw = (ad.assenze || []).map(a => ({
         category: 'assenze',
+        categoryLabel: 'Assenza',
         type: 'assenza',
         title: 'Assenza Scolastica',
         desc: a.numOre ? `Assenza di ${a.numOre} ore` : (a.oraInizio ? `${a.oraInizio}ª - ${a.oraFine || 5}ª ora` : 'Giornata intera'),
@@ -2691,11 +2722,12 @@ window.getComprehensiveNotificationData = function() {
         rawDate: a.data || a.date,
         icon: 'ph-calendar-x',
         iconColor: '#ff453a',
-        iconBg: 'rgba(255,69,58,0.18)',
+        iconBg: 'rgba(255,69,58,0.16)',
         action: "mostraAssenzeModal()"
     }));
     const ritardiRaw = (ad.ritardi || []).map(r => ({
         category: 'assenze',
+        categoryLabel: 'Ritardo',
         type: 'ritardo',
         title: 'Ingresso in Ritardo',
         desc: r.oraInizio ? `Entrata ore ${r.oraInizio}` : (r.numOre ? `${r.numOre}ª ora` : 'Ingresso posticipato'),
@@ -2703,11 +2735,12 @@ window.getComprehensiveNotificationData = function() {
         rawDate: r.data || r.date,
         icon: 'ph-clock-countdown',
         iconColor: '#ff9f0a',
-        iconBg: 'rgba(255,159,10,0.18)',
+        iconBg: 'rgba(255,159,10,0.16)',
         action: "mostraAssenzeModal()"
     }));
     const usciteRaw = (ad.uscite || []).map(u => ({
         category: 'assenze',
+        categoryLabel: 'Uscita',
         type: 'uscita',
         title: 'Uscita Anticipata',
         desc: u.oraFine || u.oraInizio ? `Uscita ore ${u.oraFine || u.oraInizio}` : 'Uscita anticipata',
@@ -2715,11 +2748,12 @@ window.getComprehensiveNotificationData = function() {
         rawDate: u.data || u.date,
         icon: 'ph-sign-out',
         iconColor: '#64d2ff',
-        iconBg: 'rgba(100,210,255,0.18)',
+        iconBg: 'rgba(100,210,255,0.16)',
         action: "mostraAssenzeModal()"
     }));
     const noteRaw = (ad.note || state.note || []).map(n => ({
         category: 'assenze',
+        categoryLabel: 'Nota',
         type: 'nota',
         title: 'Nota Disciplinare',
         desc: n.autore ? `Docente: ${n.autore} — ${n.testo || n.descrizione || ''}` : (n.testo || n.descrizione || 'Annotazione docente'),
@@ -2727,7 +2761,7 @@ window.getComprehensiveNotificationData = function() {
         rawDate: n.data || n.date,
         icon: 'ph-warning-octagon',
         iconColor: '#bf5af2',
-        iconBg: 'rgba(191,90,242,0.18)',
+        iconBg: 'rgba(191,90,242,0.16)',
         action: "mostraAssenzeModal()"
     }));
 
@@ -2736,6 +2770,7 @@ window.getComprehensiveNotificationData = function() {
         const iso = parseItemDateISO(t.due_date || t.assigned_date || t.created_at);
         return {
             category: 'compiti',
+            categoryLabel: 'Compito',
             type: 'compito',
             id: t.id,
             title: `Compito: ${t.subject || t.materia || 'Materia'}`,
@@ -2745,7 +2780,7 @@ window.getComprehensiveNotificationData = function() {
             rawDate: t.due_date,
             icon: 'ph-book-open',
             iconColor: '#2997ff',
-            iconBg: 'rgba(41,151,255,0.18)',
+            iconBg: 'rgba(41,151,255,0.16)',
             action: "navigate('planner')"
         };
     });
@@ -2755,6 +2790,7 @@ window.getComprehensiveNotificationData = function() {
         const iso = parseItemDateISO(v.data || v.date);
         return {
             category: 'verifiche',
+            categoryLabel: 'Verifica',
             type: 'verifica',
             id: v.id,
             title: `Verifica: ${v.materia || v.subject || 'Materia'}`,
@@ -2762,8 +2798,8 @@ window.getComprehensiveNotificationData = function() {
             dateISO: iso,
             rawDate: v.data || v.date,
             icon: 'ph-pencil-simple',
-            iconColor: '#ff453a',
-            iconBg: 'rgba(255,69,58,0.18)',
+            iconColor: '#ff9f0a',
+            iconBg: 'rgba(255,159,10,0.16)',
             action: "navigate('planner')"
         };
     });
@@ -2776,6 +2812,7 @@ window.getComprehensiveNotificationData = function() {
         const iso = parseItemDateISO(p.created_at || p.date || p.targetDate);
         return {
             category: 'proposte',
+            categoryLabel: isAssembly ? 'Assemblea' : 'Proposta',
             type: 'proposta',
             id: p.id,
             rawProp: p,
@@ -2785,7 +2822,7 @@ window.getComprehensiveNotificationData = function() {
             status: p.status,
             icon: isAssembly ? 'ph-users-three' : 'ph-calendar-plus',
             iconColor: isAssembly ? '#30d158' : '#ff9f0a',
-            iconBg: isAssembly ? 'rgba(48,209,88,0.18)' : 'rgba(255,159,10,0.18)',
+            iconBg: isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(255,159,10,0.16)',
             action: null
         };
     });
@@ -2796,13 +2833,14 @@ window.getComprehensiveNotificationData = function() {
         const iso = d ? getLocalDateString(d) : parseItemDateISO(a.data || a.date);
         return {
             category: 'lezioni',
+            categoryLabel: 'Lezione',
             type: 'lezione',
             title: `Lezione: ${a.materia || a.subject || 'Materia'}`,
             desc: a.argomento || a.attivita || a.description || 'Argomento svolto in classe',
             dateISO: iso,
             icon: 'ph-chalkboard-teacher',
             iconColor: '#64d2ff',
-            iconBg: 'rgba(100,210,255,0.18)',
+            iconBg: 'rgba(100,210,255,0.16)',
             action: null
         };
     });
@@ -2812,18 +2850,19 @@ window.getComprehensiveNotificationData = function() {
         const iso = parseItemDateISO(p.data || p.date || p.datePubbl || p.dataPubblicazione);
         return {
             category: 'comunicazioni',
+            categoryLabel: 'Avviso',
             type: 'comunicazione',
             title: p.titolo || p.title || p.oggetto || 'Comunicazione',
             desc: p.testo || p.text || p.descrizione || '',
             dateISO: iso,
             icon: 'ph-megaphone-simple',
             iconColor: '#ffd60a',
-            iconBg: 'rgba(255,214,10,0.18)',
+            iconBg: 'rgba(255,214,10,0.16)',
             action: null
         };
     });
 
-    // Unione
+    // Unione di tutte le novità
     const allItems = [
         ...circolariList,
         ...votiList,
@@ -2838,19 +2877,19 @@ window.getComprehensiveNotificationData = function() {
         ...promemoriaRaw
     ];
 
-    // Oggi (rigorosamente in data odierna)
-    const todayItems = allItems.filter(item => item.dateISO === todayISO);
+    // Oggi: rigorosamente se dateISO === todayISO
+    const todayItems = allItems.filter(item => item.dateISO && item.dateISO === todayISO);
 
-    // Prossimi giorni (date future)
+    // Prossimi giorni: date future
     const upcomingItems = allItems.filter(item => item.dateISO && item.dateISO > todayISO);
     upcomingItems.sort((a, b) => (a.dateISO || '').localeCompare(b.dateISO || ''));
 
-    // Recenti (ultimi 7 giorni prima di oggi)
+    // Recenti: date passate fino a 14 giorni fa
     const recentItems = allItems.filter(item => {
         if (!item.dateISO || item.dateISO >= todayISO) return false;
         const itemDate = new Date(item.dateISO);
         const diffDays = (today - itemDate) / (1000 * 60 * 60 * 24);
-        return diffDays >= 0 && diffDays <= 7;
+        return diffDays >= 0 && diffDays <= 14;
     });
     recentItems.sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || ''));
 
@@ -2865,13 +2904,14 @@ window.getComprehensiveNotificationData = function() {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// openTodayNotifications() — Centro Notifiche & Novità (Liquid Glass)
+// openTodayNotifications() — Centro Notifiche & Attività Apple Glass
 // ═══════════════════════════════════════════════════════════════
 
-function openTodayNotifications() {
+function openTodayNotifications(initialTab) {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
 
     const today = new Date();
+    const todayISO = getLocalDateString(today);
     const MN = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                 'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const dayLabel = `${today.getDate()} ${MN[today.getMonth()]} ${today.getFullYear()}`;
@@ -2889,6 +2929,24 @@ function openTodayNotifications() {
     const isRep = (typeof isCurrentUserRepresentative === 'function') ? isCurrentUserRepresentative() : false;
     const userId = String(state.user?.id || 'utente');
 
+    function formatItemDateBadge(iso, raw) {
+        if (!iso) return raw ? `<span style="font-size:11px;color:#8e909f;font-weight:600;">${escapeHtml(raw)}</span>` : '';
+        if (iso === todayISO) {
+            return `<span style="font-size:10px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.14);border:0.5px solid rgba(48,209,88,0.3);padding:2px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:3px;"><i class="ph-fill ph-circle" style="font-size:6px;"></i> OGGI</span>`;
+        }
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return `<span style="font-size:11px;color:#8e909f;font-weight:600;">${escapeHtml(raw || iso)}</span>`;
+        
+        const diffMs = d.getTime() - today.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) return `<span style="font-size:10px;font-weight:800;color:#ff9f0a;background:rgba(255,159,10,0.14);border:0.5px solid rgba(255,159,10,0.3);padding:2px 7px;border-radius:999px;">DOMANI</span>`;
+        if (diffDays === -1) return `<span style="font-size:10px;font-weight:700;color:#8e909f;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:2px 7px;border-radius:999px;">IERI</span>`;
+        
+        const day = d.getDate();
+        const mnShort = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][d.getMonth()];
+        return `<span style="font-size:10px;font-weight:700;color:#8e909f;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:2px 7px;border-radius:999px;">${day} ${mnShort}</span>`;
+    }
+
     function renderItemCard(item) {
         if (item.type === 'proposta') {
             const prop = item.rawProp;
@@ -2896,8 +2954,8 @@ function openTodayNotifications() {
             const title = isAssembly ? 'Richiesta Assemblea di Classe' : `Sposta Verifica: ${escapeHtml(prop.subject || 'Verifica')}`;
             const icon = isAssembly ? 'ph-users-three' : 'ph-calendar-plus';
             const iconColor = isAssembly ? '#30d158' : '#ff9f0a';
-            const iconBg = isAssembly ? 'rgba(48,209,88,0.18)' : 'rgba(255,159,10,0.18)';
-            const borderGlow = isAssembly ? 'rgba(48,209,88,0.35)' : 'rgba(255,159,10,0.35)';
+            const iconBg = isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(255,159,10,0.16)';
+            const borderGlow = isAssembly ? 'rgba(48,209,88,0.3)' : 'rgba(255,159,10,0.3)';
 
             const acceptVotes = Array.isArray(prop.votes?.accept) ? prop.votes.accept : [];
             const declineVotes = Array.isArray(prop.votes?.decline) ? prop.votes.decline : [];
@@ -2908,57 +2966,63 @@ function openTodayNotifications() {
             const hasAlt = altVotes.some(a => a.userId === userId);
 
             const statusBadge = prop.status === 'approved' 
-                ? '<span style="background:rgba(48,209,88,0.2);color:#30d158;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(48,209,88,0.4);white-space:nowrap;">APPROVATA</span>'
+                ? '<span style="background:rgba(48,209,88,0.2);color:#30d158;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(48,209,88,0.4);white-space:nowrap;">APPROVATA</span>'
                 : prop.status === 'rejected'
-                ? '<span style="background:rgba(255,69,58,0.2);color:#ff453a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,69,58,0.4);white-space:nowrap;">RIFIUTATA</span>'
-                : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid rgba(41,151,255,0.35);white-space:nowrap;">IN VOTAZIONE</span>';
+                ? '<span style="background:rgba(255,69,58,0.2);color:#ff453a;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(255,69,58,0.4);white-space:nowrap;">RIFIUTATA</span>'
+                : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(41,151,255,0.35);white-space:nowrap;">IN VOTAZIONE</span>';
 
             return `
-            <div style="background:rgba(20,31,54,0.78);backdrop-filter:blur(25px);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;padding:15px;margin-bottom:10px;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-                        <div style="width:36px;height:36px;border-radius:12px;background:${iconBg};border:1px solid ${borderGlow};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;">
-                            <i class="ph-bold ${icon}" style="font-size:18px;"></i>
+            <div style="background:rgba(23,33,58,0.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);border-radius:22px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                        <div style="width:42px;height:42px;border-radius:14px;background:${iconBg};border:1px solid ${borderGlow};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;box-shadow:0 0 14px ${iconColor}25;">
+                            <i class="ph-bold ${icon}" style="font-size:20px;"></i>
                         </div>
                         <div style="min-width:0;flex:1;">
-                            <div style="font-size:13.5px;font-weight:700;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-                            <div style="font-size:11.5px;font-weight:500;color:rgba(255,255,255,0.65);margin-top:2px;">
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                                <span style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${iconColor};background:${iconBg};border:0.5px solid ${borderGlow};padding:2px 7px;border-radius:999px;">
+                                    ${item.categoryLabel}
+                                </span>
+                                ${formatItemDateBadge(item.dateISO, item.rawDate)}
+                            </div>
+                            <div style="font-size:14.5px;font-weight:700;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                            <div style="font-size:12px;font-weight:500;color:#c4c5d6;margin-top:2px;">
                                 ${isAssembly ? `Proposta per: <strong style="color:#2997ff;">${prop.targetDate}</strong> (${escapeHtml(prop.duration || '2 ore')})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong style="color:#ff9f0a;">${prop.targetDate}</strong>`}
                             </div>
                         </div>
                     </div>
-                    ${statusBadge}
+                    <div style="flex-shrink:0;">${statusBadge}</div>
                 </div>
 
-                <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:8px 10px;margin-top:10px;">
-                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;">Motivazione (${escapeHtml(prop.authorName || 'Compagno')})</div>
-                    <div style="font-size:12px;color:rgba(255,255,255,0.9);margin-top:2px;">${escapeHtml(prop.reason)}</div>
+                <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 12px;margin-top:12px;">
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.04em;">Motivazione (${escapeHtml(prop.authorName || 'Compagno')})</div>
+                    <div style="font-size:12.5px;color:rgba(255,255,255,0.9);margin-top:3px;line-height:1.35;">${escapeHtml(prop.reason)}</div>
                 </div>
 
-                <div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,0.6);margin-top:8px;">
-                    <span>Voti: <strong style="color:#30d158;">${acceptVotes.length}</strong> Sì · <strong style="color:#ff453a;">${declineVotes.length}</strong> No</span>
-                    ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:600;">${altVotes.length} date alt.</span>` : ''}
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,0.65);margin-top:10px;padding:0 2px;">
+                    <span>Voti: <strong style="color:#30d158;">${acceptVotes.length}</strong> Favorevoli · <strong style="color:#ff453a;">${declineVotes.length}</strong> Contrari</span>
+                    ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:700;">${altVotes.length} date alt.</span>` : ''}
                 </div>
 
                 ${prop.status === 'pending' ? `
-                <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px;margin-top:8px;">
-                    <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:38px;border-radius:10px;border:none;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.15)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(48,209,88,0.3);">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:10px;">
+                    <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:40px;border-radius:12px;border:none;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.16)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:11.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:0.5px solid rgba(48,209,88,0.35);">
                         <i class="ph-bold ph-check"></i> Accetta
                     </button>
-                    <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:38px;border-radius:10px;border:none;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.15)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(255,69,58,0.3);">
+                    <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:40px;border-radius:12px;border:none;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.16)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:11.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:0.5px solid rgba(255,69,58,0.35);">
                         <i class="ph-bold ph-x"></i> Rifiuta
                     </button>
-                    <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:38px;border-radius:10px;border:none;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.15)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid rgba(255,159,10,0.3);">
+                    <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:40px;border-radius:12px;border:none;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.16)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:0.5px solid rgba(255,159,10,0.35);">
                         <i class="ph-bold ph-calendar"></i> Altra Data
                     </button>
                 </div>` : ''}
 
                 ${isRep && prop.status === 'pending' ? `
-                <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;">
-                    <span style="font-size:10px;font-weight:700;color:#2997ff;text-transform:uppercase;">Rappresentante</span>
+                <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:10px;font-weight:800;color:#2997ff;text-transform:uppercase;letter-spacing:0.04em;">Rappresentante</span>
                     <div style="display:flex;gap:6px;">
-                        <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="padding:4px 10px;border-radius:8px;background:#30d158;border:none;color:#ffffff;font-size:10px;font-weight:700;cursor:pointer;">Approva</button>
-                        <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="padding:4px 10px;border-radius:8px;background:rgba(255,69,58,0.2);border:1px solid rgba(255,69,58,0.4);color:#ff453a;font-size:10px;font-weight:700;cursor:pointer;">Archivia</button>
+                        <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="padding:6px 12px;border-radius:10px;background:#30d158;border:none;color:#ffffff;font-size:11px;font-weight:800;cursor:pointer;">Approva</button>
+                        <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="padding:6px 12px;border-radius:10px;background:rgba(255,69,58,0.2);border:0.5px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11px;font-weight:800;cursor:pointer;">Archivia</button>
                     </div>
                 </div>` : ''}
             </div>`;
@@ -2966,53 +3030,66 @@ function openTodayNotifications() {
 
         const clickAttr = item.action ? `onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');closeTodayNotifications();${item.action};" style="cursor:pointer;"` : '';
         const valuePill = item.val !== undefined ? `
-            <span style="font-size:18px;font-weight:900;color:${item.valColor || '#2997ff'};font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:10px;">
-                ${escapeHtml(String(item.val))}
-            </span>` : '';
+            <div style="background:${item.valBg || 'rgba(41,151,255,0.16)'};border:0.5px solid ${item.valColor || '#2997ff'}40;padding:6px 12px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px ${item.valColor || '#2997ff'}20;flex-shrink:0;">
+                <span style="font-size:17px;font-weight:900;color:${item.valColor || '#2997ff'};font-variant-numeric:tabular-nums;line-height:1;">
+                    ${escapeHtml(String(item.val))}
+                </span>
+            </div>` : '';
 
         return `
-        <div ${clickAttr} class="liquid-glass-v8" style="
-            background:rgba(20,31,54,0.70);
-            border:0.5px solid rgba(255,255,255,0.10);
-            border-top:1px solid rgba(255,255,255,0.20);
-            border-radius:18px;padding:12px 14px;margin-bottom:8px;
-            display:flex;align-items:center;justify-content:space-between;gap:12px;
+        <div ${clickAttr} style="
+            background:rgba(23,33,58,0.75);
+            backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+            border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);
+            border-radius:20px;padding:14px 16px;margin-bottom:10px;
+            display:flex;align-items:center;justify-content:space-between;gap:14px;
             transition:transform 0.15s ease;
+            box-shadow:0 4px 16px rgba(0,0,0,0.22);
         " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-            <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-                <div style="width:36px;height:36px;border-radius:12px;background:${item.iconBg};border:1px solid ${item.iconColor}40;display:flex;align-items:center;justify-content:center;color:${item.iconColor};flex-shrink:0;box-shadow:0 0 10px ${item.iconColor}25;">
-                    <i class="ph-bold ${item.icon}" style="font-size:18px;"></i>
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                <div style="width:40px;height:40px;border-radius:14px;background:${item.iconBg};border:1px solid ${item.iconColor}40;display:flex;align-items:center;justify-content:center;color:${item.iconColor};flex-shrink:0;box-shadow:0 0 12px ${item.iconColor}20;">
+                    <i class="ph-bold ${item.icon}" style="font-size:20px;"></i>
                 </div>
                 <div style="min-width:0;flex:1;">
-                    <div style="font-size:13.5px;font-weight:700;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${item.iconColor};background:${item.iconBg};border:0.5px solid ${item.iconColor}35;padding:2px 7px;border-radius:999px;">
+                            ${item.categoryLabel}
+                        </span>
+                        ${formatItemDateBadge(item.dateISO, item.rawDate)}
+                    </div>
+                    <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         ${escapeHtml(item.title)}
                     </div>
-                    <div style="font-size:11.5px;font-weight:500;color:rgba(255,255,255,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${escapeHtml(item.desc || '')}
-                    </div>
+                    ${item.desc ? `
+                    <div style="font-size:12px;font-weight:500;color:#c4c5d6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">
+                        ${escapeHtml(item.desc)}
+                    </div>` : ''}
                 </div>
             </div>
             ${valuePill}
-            ${item.action ? `<i class="ph-bold ph-caret-right" style="font-size:14px;color:rgba(255,255,255,0.35);flex-shrink:0;"></i>` : ''}
+            ${item.action ? `<i class="ph-bold ph-caret-right" style="font-size:15px;color:rgba(255,255,255,0.4);flex-shrink:0;"></i>` : ''}
         </div>`;
     }
 
-    // Build 3 sections: Oggi, In Arrivo, Recenti
+    // Build 3 sections HTML
     const todayHtml = data.todayItems.length > 0
         ? data.todayItems.map(renderItemCard).join('')
-        : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.5);font-size:13px;font-style:italic;">
+        : `<div style="text-align:center;padding:28px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:#8e909f;font-size:13px;font-style:italic;">
+            <i class="ph ph-sparkle" style="font-size:24px;display:block;margin-bottom:6px;opacity:0.4;"></i>
             Nessuna novità registrata in data odierna.
            </div>`;
 
     const upcomingHtml = data.upcomingItems.length > 0
         ? data.upcomingItems.slice(0, 10).map(renderItemCard).join('')
-        : `<div style="text-align:center;padding:18px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;font-style:italic;">
+        : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:#8e909f;font-size:12.5px;font-style:italic;">
+            <i class="ph ph-calendar" style="font-size:22px;display:block;margin-bottom:6px;opacity:0.4;"></i>
             Nessun impegno nei prossimi giorni.
            </div>`;
 
     const recentHtml = data.recentItems.length > 0
         ? data.recentItems.slice(0, 10).map(renderItemCard).join('')
-        : `<div style="text-align:center;padding:18px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;font-style:italic;">
+        : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:#8e909f;font-size:12.5px;font-style:italic;">
+            <i class="ph ph-clock" style="font-size:22px;display:block;margin-bottom:6px;opacity:0.4;"></i>
             Nessuna attività recente registrata.
            </div>`;
 
@@ -3020,17 +3097,17 @@ function openTodayNotifications() {
     if (!modals) return;
 
     modals.innerHTML = `
-    <div id="today-notif-overlay" style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.68);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeTodayNotifications()">
+    <div id="today-notif-overlay" style="position:fixed;inset:0;z-index:10000;background:rgba(6,10,20,0.78);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeTodayNotifications()">
         <div style="
             width:100%;max-width:500px;max-height:86vh;
-            background:linear-gradient(180deg, rgba(16,24,42,0.96) 0%, rgba(8,12,24,0.98) 100%);
+            background:linear-gradient(180deg, rgba(20,29,51,0.97) 0%, rgba(11,16,30,0.99) 100%);
             backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);
             border-radius:32px 32px 0 0;
-            border:0.5px solid rgba(255,255,255,0.12);
-            border-top:1px solid rgba(255,255,255,0.30);
+            border:0.5px solid rgba(182,196,255,0.16);
+            border-top:1px solid rgba(255,255,255,0.32);
             overflow-y:auto;
-            animation:notifSlideUp 0.3s cubic-bezier(0.16,1,0.3,1);
-            box-shadow:0 -12px 40px rgba(0,0,0,0.7);
+            animation:notifSlideUp 0.32s cubic-bezier(0.16,1,0.3,1);
+            box-shadow:0 -16px 48px rgba(0,0,0,0.7);
         ">
             <!-- Drag Handle -->
             <div style="display:flex;justify-content:center;padding:12px 0 4px;touch-action:none;">
@@ -3038,7 +3115,7 @@ function openTodayNotifications() {
             </div>
 
             <!-- Header -->
-            <div style="padding:14px 22px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);">
+            <div style="padding:14px 22px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);">
                 <div>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:11px;">
@@ -3046,37 +3123,37 @@ function openTodayNotifications() {
                         </span>
                         <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">CENTRO NOTIFICHE</span>
                     </div>
-                    <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:3px 0 0;letter-spacing:-0.02em;">Novità & Attività</h2>
-                    <p style="font-size:12px;color:rgba(255,255,255,0.55);margin:2px 0 0;">${dayLabel}</p>
+                    <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:4px 0 0;letter-spacing:-0.02em;">Novità & Attività</h2>
+                    <p style="font-size:12px;color:#8e909f;margin:2px 0 0;font-weight:500;">${dayLabel}</p>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:11px;font-weight:800;color:${data.todayCount > 0 ? '#2997ff' : 'rgba(255,255,255,0.6)'};background:${data.todayCount > 0 ? 'rgba(41,151,255,0.18)' : 'rgba(255,255,255,0.06)'};border:0.5px solid ${data.todayCount > 0 ? 'rgba(41,151,255,0.35)' : 'rgba(255,255,255,0.12)'};padding:4px 10px;border-radius:999px;">
+                    <span style="font-size:11.5px;font-weight:800;color:${data.todayCount > 0 ? '#2997ff' : '#8e909f'};background:${data.todayCount > 0 ? 'rgba(41,151,255,0.18)' : 'rgba(255,255,255,0.06)'};border:0.5px solid ${data.todayCount > 0 ? 'rgba(41,151,255,0.35)' : 'rgba(255,255,255,0.12)'};padding:5px 11px;border-radius:999px;">
                         ${data.todayCount > 0 ? `${data.todayCount} oggi` : '0 oggi'}
                     </span>
-                    <button onclick="closeTodayNotifications()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;">
+                    <button onclick="closeTodayNotifications()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
                         <i class="ph-bold ph-x" style="font-size:16px;"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Content Body with Grouped Sections -->
-            <div data-notif-content style="padding:16px 20px 36px;">
+            <div data-notif-content style="padding:18px 20px 36px;">
 
                 <!-- 1. SEZIONE: OGGI -->
-                <div style="margin-bottom:20px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="margin-bottom:22px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                         <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#2997ff;display:flex;align-items:center;gap:5px;">
                             <i class="ph-fill ph-sparkle"></i> IN DATA ODIERNA (${data.todayItems.length})
                         </span>
-                        <span style="font-size:11px;color:rgba(255,255,255,0.45);">${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+                        <span style="font-size:11px;color:#8e909f;font-weight:600;">${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
                     </div>
                     ${todayHtml}
                 </div>
 
                 <!-- 2. SEZIONE: IN ARRIVO -->
                 ${data.upcomingItems.length > 0 ? `
-                <div style="margin-bottom:20px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="margin-bottom:22px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                         <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;display:flex;align-items:center;gap:5px;">
                             <i class="ph-fill ph-calendar-plus"></i> PROSSIMI GIORNI & IN ARRIVO (${data.upcomingItems.length})
                         </span>
@@ -3087,9 +3164,9 @@ function openTodayNotifications() {
                 <!-- 3. SEZIONE: RECENTI -->
                 ${data.recentItems.length > 0 ? `
                 <div style="margin-bottom:10px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                        <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:5px;">
-                            <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI & ULTIMI GIORNI (${data.recentItems.length})
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#8e909f;display:flex;align-items:center;gap:5px;">
+                            <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${data.recentItems.length})
                         </span>
                     </div>
                     ${recentHtml}
@@ -3100,7 +3177,7 @@ function openTodayNotifications() {
     </div>
     <style>
         @keyframes notifSlideUp {
-            from { transform: translateY(100%); opacity: 0.5; }
+            from { transform: translateY(100%); opacity: 0.4; }
             to   { transform: translateY(0);    opacity: 1; }
         }
     </style>`;
