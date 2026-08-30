@@ -340,6 +340,7 @@
             const d = new Date(dateStr);
             return (isNaN(d.getTime()) || d.getTime() <= 86400000) ? new Date(0) : new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
         }
+        window.parseArgoDate = parseArgoDate;
 
         function djb2(str) {
             let hash = 5381;
@@ -874,13 +875,22 @@
 
         async function loadCircolari() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/circolari/index`);
+                const base = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : (window.API_BASE_URL || '');
+                let res = await fetch(`${base}/api/circolari/index`);
+                if (!res.ok) res = await fetch(`${base}/api/circolari`);
                 const data = await res.json();
-                if (data.success && data.circolari) {
+                if (data.success && Array.isArray(data.circolari)) {
                     state.circolari = data.circolari;
+                    try {
+                        localStorage.setItem(lsKey('circolari'), JSON.stringify(state.circolari));
+                    } catch (_) {}
+                    if (state.view === 'circolari' || state.view === 'home') {
+                        if (typeof render === 'function') render();
+                    }
                 }
             } catch (e) { console.warn("Circolari load failed", e); }
         }
+        window.loadCircolari = loadCircolari;
 
         const RENDER_AVAILABILITY_CHECK_INTERVAL_MS = 30;
         const RENDER_AVAILABILITY_TIMEOUT_MS = 1800;
@@ -1008,6 +1018,7 @@
                     state.manualVerifiche = JSON.parse(localStorage.getItem(lsKey('manual_verifiche')) || '[]');
                     state.syncing = false;
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
+                    state.circolari = JSON.parse(localStorage.getItem(lsKey('circolari')) || '[]');
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
                     state.plannedDetails = JSON.parse(localStorage.getItem(lsKey('planned_details'))) || {};

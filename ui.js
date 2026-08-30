@@ -2884,12 +2884,13 @@ window.getComprehensiveNotificationData = function() {
     const upcomingItems = allItems.filter(item => item.dateISO && item.dateISO > todayISO);
     upcomingItems.sort((a, b) => (a.dateISO || '').localeCompare(b.dateISO || ''));
 
-    // Recenti: date passate fino a 14 giorni fa
+    // Recenti: date passate fino a 90 giorni fa o elementi storici non odierni
     const recentItems = allItems.filter(item => {
-        if (!item.dateISO || item.dateISO >= todayISO) return false;
+        if (!item.dateISO) return true;
+        if (item.dateISO >= todayISO) return false;
         const itemDate = new Date(item.dateISO);
         const diffDays = (today - itemDate) / (1000 * 60 * 60 * 24);
-        return diffDays >= 0 && diffDays <= 14;
+        return diffDays >= 0 && diffDays <= 90;
     });
     recentItems.sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || ''));
 
@@ -3161,35 +3162,42 @@ function openTodayNotifications(initialTab) {
                     ${upcomingHtml}
                 </div>` : ''}
 
-                <!-- 3. SEZIONE: RECENTI (Collapsibile) -->
-                ${data.recentItems.length > 0 ? `
-                <div style="margin-bottom:10px;">
-                    <div onclick="(function(el){
-                        var wrap=el.parentElement.querySelector('[data-recent-items]');
-                        var chevron=el.querySelector('[data-recent-chevron]');
-                        var isOpen=wrap.style.maxHeight&&wrap.style.maxHeight!=='0px';
-                        if(isOpen){
-                            wrap.style.maxHeight='0px';wrap.style.opacity='0';wrap.style.marginTop='0px';
-                            chevron.style.transform='rotate(0deg)';
-                            localStorage.setItem('notif_recent_open','0');
-                        } else {
-                            wrap.style.maxHeight=wrap.scrollHeight+'px';wrap.style.opacity='1';wrap.style.marginTop='12px';
-                            chevron.style.transform='rotate(180deg)';
-                            localStorage.setItem('notif_recent_open','1');
-                        }
-                    })(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;transition:background 0.2s ease;" ontouchstart="this.style.background='rgba(255,255,255,0.07)'" ontouchend="this.style.background='rgba(255,255,255,0.03)'">
-                        <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#8e909f;display:flex;align-items:center;gap:5px;">
-                            <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${data.recentItems.length})
-                        </span>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <span style="font-size:10px;font-weight:600;color:#636577;">Tocca per mostrare</span>
-                            <i data-recent-chevron class="ph-bold ph-caret-down" style="font-size:12px;color:#636577;transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);transform:rotate(${localStorage.getItem('notif_recent_open')==='1'?'180':'0'}deg);"></i>
+                <!-- 3. SEZIONE: RECENTI (Collapsibile / Nascondibile) -->
+                ${data.recentItems.length > 0 ? (() => {
+                    const isHidden = localStorage.getItem('notif_recent_hidden') === '1';
+                    return `
+                    <div style="margin-bottom:10px;">
+                        <div onclick="(function(btn){
+                            var wrap = document.getElementById('notif-recent-items-wrap');
+                            var text = document.getElementById('notif-recent-btn-text');
+                            var icon = document.getElementById('notif-recent-btn-icon');
+                            if (!wrap) return;
+                            var isCurrentlyHidden = wrap.style.display === 'none';
+                            if (isCurrentlyHidden) {
+                                wrap.style.display = 'block';
+                                if (text) text.textContent = 'Nascondi';
+                                if (icon) icon.style.transform = 'rotate(180deg)';
+                                localStorage.setItem('notif_recent_hidden', '0');
+                            } else {
+                                wrap.style.display = 'none';
+                                if (text) text.textContent = 'Mostra';
+                                if (icon) icon.style.transform = 'rotate(0deg)';
+                                localStorage.setItem('notif_recent_hidden', '1');
+                            }
+                        })(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:12px;transition:background 0.2s ease;" ontouchstart="this.style.background='rgba(255,255,255,0.07)'" ontouchend="this.style.background='rgba(255,255,255,0.03)'">
+                            <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#8e909f;display:flex;align-items:center;gap:6px;">
+                                <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${data.recentItems.length})
+                            </span>
+                            <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:3px 9px;border-radius:999px;">
+                                <span id="notif-recent-btn-text" style="font-size:10.5px;font-weight:700;color:#c4c5d6;">${isHidden ? 'Mostra' : 'Nascondi'}</span>
+                                <i id="notif-recent-btn-icon" class="ph-bold ph-caret-down" style="font-size:11px;color:#c4c5d6;transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);transform:rotate(${isHidden ? '0' : '180'}deg);"></i>
+                            </div>
                         </div>
-                    </div>
-                    <div data-recent-items style="overflow:hidden;transition:max-height 0.35s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease,margin-top 0.3s ease;max-height:${localStorage.getItem('notif_recent_open')==='1'?'4000px':'0px'};opacity:${localStorage.getItem('notif_recent_open')==='1'?'1':'0'};margin-top:${localStorage.getItem('notif_recent_open')==='1'?'12px':'0px'};">
-                        ${recentHtml}
-                    </div>
-                </div>` : ''}
+                        <div id="notif-recent-items-wrap" style="display:${isHidden ? 'none' : 'block'};">
+                            ${recentHtml}
+                        </div>
+                    </div>`;
+                })() : ''}
 
             </div>
         </div>
@@ -8012,10 +8020,17 @@ console.log('✅ GSAP Animations consolidated into ui.js');
 function renderCircolariView() {
     const list = state.circolari || [];
 
+    if ((!list || list.length === 0) && typeof window.loadCircolari === 'function' && !window._loadingCircolariNow) {
+        window._loadingCircolariNow = true;
+        window.loadCircolari().finally(() => {
+            window._loadingCircolariNow = false;
+        });
+    }
+
     function fmtDate(raw) {
         if (!raw) return '';
-        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : new Date(raw);
-        if (!d || isNaN(d)) return raw;
+        const d = (typeof parseArgoDate === 'function') ? parseArgoDate(raw) : (typeof window.parseArgoDate === 'function' ? window.parseArgoDate(raw) : new Date(raw));
+        if (!d || isNaN(d) || d.getTime() <= 86400000) return raw;
         const diff = Math.round((new Date() - d) / 86400000);
         if (diff === 0) return 'Oggi';
         if (diff === 1) return 'Ieri';

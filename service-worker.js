@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.9.5';
+const CACHE_VERSION = '3.9.6';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
@@ -23,12 +23,12 @@ const EXTERNAL_ORIGINS = new Set([
 const APP_SHELL = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/style.css?v=3.9.5`,
-  `${BASE_PATH}/animations.css?v=3.9.5`,
-  `${BASE_PATH}/ui.js?v=3.9.5`,
-  `${BASE_PATH}/app-bootstrap.js?v=3.9.5`,
-  `${BASE_PATH}/fluidity-engine-v3.js?v=3.9.5`,
-  `${BASE_PATH}/fluidity-boot-patch.js?v=3.9.5`,
+  `${BASE_PATH}/style.css?v=3.9.6`,
+  `${BASE_PATH}/animations.css?v=3.9.6`,
+  `${BASE_PATH}/ui.js?v=3.9.6`,
+  `${BASE_PATH}/app-bootstrap.js?v=3.9.6`,
+  `${BASE_PATH}/fluidity-engine-v3.js?v=3.9.6`,
+  `${BASE_PATH}/fluidity-boot-patch.js?v=3.9.6`,
   `${BASE_PATH}/manifest.webmanifest`,
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
