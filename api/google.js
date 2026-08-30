@@ -12,8 +12,8 @@
 
 const crypto = require('crypto');
 const { google } = require('googleapis');
-const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard } = require('../lib/argo');
-const { syncTasksToCalendar } = require('../lib/googleCalendar');
+const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard } = require('../lib/argo');
+const { syncTasksToCalendar, syncVerificheToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
 const {
     createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword,
     handleCors, verifySessionToken, normalizeUserId, generatePid, SESSION_TOKEN_HEX_LENGTH,
@@ -393,56 +393,55 @@ module.exports = async function handler(req, res) {
             // ============= SYNC =============
             case 'sync': {
                 const body = getRequestBody(req);
-                const userId = body.userId;
-                const session = body.session; // Argo session
+                const { userId, schoolCode: bodySchoolCode, username: bodyUsername, password: bodyPassword, profileIndex: bodyProfileIndex, session } = body;
+                if (!userId) {
+                    return res.status(400).json({ success: false, error: 'userId richiesto' });
+                }
 
-                if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
-                const normalizedUserId = normalizeUserId(userId);
-
-                if (!verifySessionToken(req, normalizedUserId)) {
+                if (!verifySessionToken(req, normalizeUserId(userId))) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 
-                // 1. Load Google tokens
-                const tokenRow = await loadTokens(userId);
-                if (!tokenRow) {
-                    return res.status(401).json({
+                // 1. Get user's Google tokens from Supabase
+                const normalizedUserId = normalizeUserId(userId);
+                const { data: tokenRow, error: tokenError } = await getSupabase()
+                    .from('google_tokens')
+                    .select('*')
+                    .eq('user_id', normalizedUserId)
+                    .single();
+
+                if (tokenError || !tokenRow) {
+                    return res.status(404).json({
                         success: false,
-                        error: 'Google Calendar non collegato. Accedi con Google dal profilo.'
+                        error: 'Account Google non collegato'
                     });
                 }
 
-                // 2. Get Argo tasks
-                let tasks = body.tasks; // Client can send tasks directly
+                // 2. Fetch homework from Argo (or use tasks passed in body)
+                let tasks = body.tasks;
+                let lastDashboardData = null;
 
-                if (!tasks && session) {
-                    // Fetch fresh tasks from Argo
-                    let schoolCode = session.schoolCode;
-                    let userName = session.userName || session.username;
-                    let password = session.password;
-                    let resolvedProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? 0;
+                if (!tasks) {
+                    let schoolCode = bodySchoolCode || tokenRow.argo_school_code;
+                    let userName = bodyUsername || tokenRow.argo_username;
+                    let password = bodyPassword ? bodyPassword : (tokenRow.argo_password ? decryptArgoPassword(tokenRow.argo_password) : null);
+                    let resolvedProfileIndex = Number.isInteger(bodyProfileIndex)
+                        ? bodyProfileIndex
+                        : (Number.isInteger(tokenRow.profile_index) ? tokenRow.profile_index : 0);
 
-                    // Fallback: se la password non arriva dal client, usa le credenziali Argo salvate in Supabase
-                    if (!password && tokenRow) {
-                        schoolCode = schoolCode || tokenRow.argo_school_code;
-                        userName = userName || tokenRow.argo_username;
-                        password = decryptArgoPassword(tokenRow.argo_password);
-                        resolvedProfileIndex = session.profileIndex ?? tokenRow.profile_index ?? resolvedProfileIndex;
-                    }
-
-                    // Resilient fallback: use session vault when available (recently logged-in user).
+                    // If password is missing, attempt to retrieve it from the session vault.
                     if (!password) {
                         const credsFromVault = getVaultCredentialsFromContext({
                             userId: normalizedUserId,
-                            schoolCode: schoolCode || tokenRow.argo_school_code,
-                            username: userName || tokenRow.argo_username,
+                            schoolCode,
+                            username: userName,
                             profileIndex: resolvedProfileIndex
                         });
                         if (credsFromVault?.password) {
                             schoolCode = schoolCode || credsFromVault.schoolCode;
                             userName = userName || credsFromVault.username;
                             password = credsFromVault.password;
-                            resolvedProfileIndex = session.profileIndex ?? credsFromVault.profileIndex ?? resolvedProfileIndex;
+                            resolvedProfileIndex = session?.profileIndex ?? credsFromVault.profileIndex ?? resolvedProfileIndex;
                         }
                     }
 
@@ -456,13 +455,13 @@ module.exports = async function handler(req, res) {
                                 session.idSoggetto || session.subjectId || null
                             );
                             const dashboardData = await getDashboard(headersFromSession);
+                            lastDashboardData = dashboardData;
                             tasks = extractHomeworkFromDashboard(dashboardData);
                         } catch (sessionTokenErr) {
                             debugLog('[Google sync] Session token fallback failed', {
                                 userId: normalizedUserId,
                                 reason: sessionTokenErr?.message || 'unknown'
                             });
-                            // Se i token sessione non sono più validi si prosegue con i fallback tradizionali
                         }
                     }
                     
@@ -479,6 +478,7 @@ module.exports = async function handler(req, res) {
                                     session?.idSoggetto || tokenRow.argo_id_soggetto || null
                                 );
                                 const dashboardData = await getDashboard(cachedHeaders);
+                                lastDashboardData = dashboardData;
                                 tasks = extractHomeworkFromDashboard(dashboardData);
                                 debugLog('[Google sync] ✅ Used cached Argo tokens from Supabase');
                             } catch (cachedErr) {
@@ -486,7 +486,6 @@ module.exports = async function handler(req, res) {
                             }
                         }
                     }
-
 
                     if (!tasks && !password) {
                         return res.status(400).json({
@@ -520,25 +519,20 @@ module.exports = async function handler(req, res) {
                             const rawProfileIndex = resolvedProfileIndex;
                             const parsedProfileIndex = Number(rawProfileIndex);
                             const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
-                            // AdvancedArgo can expose the active profile either via profile fields (index/profileIndex)
-                            // or, in some responses, only by array position.
                             const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
                             const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
                                 ? profiles[profileIndex]
                                 : null;
-                            // Fallback order: explicit profile index field -> validated array index -> first available profile.
                             const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
                             const authToken = targetProfile.token;
                             const subjectId = targetProfile.idSoggetto;
                             const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
                             const dashboardData = await getDashboard(headers);
+                            lastDashboardData = dashboardData;
                             tasks = extractHomeworkFromDashboard(dashboardData);
 
                             try {
                                 const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                                // Use .update() (row is guaranteed to exist — tokenRow was verified above).
-                                // Only specify fields we actually have values for so we never
-                                // accidentally nullify existing credentials from the other service.
                                 const persistData = {
                                     argo_access_token: access_token,
                                     argo_auth_token: authToken,
@@ -555,7 +549,7 @@ module.exports = async function handler(req, res) {
                                     .update(persistData)
                                     .eq('user_id', normalizedUserId);
                                 if (persistError) throw persistError;
-                                console.log(`[Google sync] ✅ Persisted fresh Argo tokens for ${normalizedUserId}`);
+                                debugLog(`[Google sync] ✅ Persisted fresh Argo tokens for ${normalizedUserId}`);
                             } catch (persistErr) {
                                 console.error('[Google sync] ⚠️ Token persist failed:', persistErr.message);
                             }
@@ -563,21 +557,16 @@ module.exports = async function handler(req, res) {
                             console.error('Argo fetch failed:', argoErr.message);
                             return res.status(500).json({
                                 success: false,
-                                error: 'Impossibile recuperare i compiti da Argo: ' + argoErr.message
+                                error: 'Impossibile recuperare i dati da Argo: ' + argoErr.message
                             });
                         }
                     }
                 }
 
-                if (!tasks || tasks.length === 0) {
-                    return res.json({ success: true, added: 0, skipped: 0, message: 'Nessun compito trovato' });
-                }
-
-                // 3. Sync to user's Google Calendar
+                // 3. Sync tasks, verifiche, and unjustified attendance reminders to Google Calendar
                 const auth = getAuthenticatedClient(tokenRow);
                 const calendarId = tokenRow.calendar_id || 'primary';
 
-                // Resolve per-user class schedule: request body takes priority, then stored value
                 let classSchedule = null;
                 let usedScheduleFallback = false;
                 const hasClassScheduleInBody = Object.prototype.hasOwnProperty.call(body, 'classSchedule');
@@ -600,12 +589,50 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
-                const result = await syncTasksToCalendar(tasks, calendarId, auth, classSchedule);
+                let taskSyncResult = { success: true, added: 0, skipped: 0, errors: [] };
+                if (tasks && tasks.length > 0) {
+                    taskSyncResult = await syncTasksToCalendar(tasks, calendarId, auth, classSchedule);
+                }
 
-                debugLog(`Calendar sync result`, { userId, added: result.added, skipped: result.skipped });
+                let verificheSyncResult = { success: true, added: 0, skipped: 0, filtered: 0, errors: [] };
+                if (lastDashboardData) {
+                    try {
+                        const verifiche = extractVerificheFromDashboard(lastDashboardData);
+                        if (verifiche && verifiche.length > 0) {
+                            verificheSyncResult = await syncVerificheToCalendar(verifiche, calendarId, auth);
+                        }
+                    } catch (vErr) {
+                        console.warn('[Google sync] Verifiche sync error:', vErr.message);
+                    }
+                }
 
-                if (!result.success) {
-                    const has403 = result.errors.some(e =>
+                let attendanceSyncResult = { success: true, added: 0, skipped: 0, deleted: 0, pending: 0, errors: [] };
+                if (lastDashboardData) {
+                    try {
+                        const assenzeData = extractAssenzeFromDashboard(lastDashboardData);
+                        if (assenzeData) {
+                            attendanceSyncResult = await syncUnjustifiedAttendanceReminders(assenzeData, calendarId, auth);
+                        }
+                    } catch (attErr) {
+                        console.warn('[Google sync] Attendance sync error:', attErr.message);
+                    }
+                }
+
+                const allErrors = [
+                    ...(taskSyncResult.errors || []),
+                    ...(verificheSyncResult.errors || []),
+                    ...(attendanceSyncResult.errors || [])
+                ];
+
+                debugLog(`Calendar sync full result`, {
+                    userId,
+                    tasksAdded: taskSyncResult.added,
+                    verificheAdded: verificheSyncResult.added,
+                    attendancePending: attendanceSyncResult.pending
+                });
+
+                if (!taskSyncResult.success || !verificheSyncResult.success || !attendanceSyncResult.success) {
+                    const has403 = allErrors.some(e =>
                         e.includes('403') || e.includes('Forbidden') || e.includes('insufficient')
                     );
                     if (has403) {
@@ -613,16 +640,22 @@ module.exports = async function handler(req, res) {
                             success: false,
                             error: 'GOOGLE_AUTH_EXPIRED',
                             message: 'Reconnect Google account',
-                            details: result.errors
+                            details: allErrors
                         });
                     }
                 }
 
                 return res.json({
                     success: true,
-                    ...result,
-                    usedScheduleFallback: usedScheduleFallback || !!result.usedScheduleFallback,
-                    total_tasks: tasks.length
+                    tasks_added: taskSyncResult.added || 0,
+                    tasks_skipped: taskSyncResult.skipped || 0,
+                    verifiche_added: verificheSyncResult.added || 0,
+                    verifiche_skipped: verificheSyncResult.skipped || 0,
+                    attendance_pending: attendanceSyncResult.pending || 0,
+                    attendance_deleted: attendanceSyncResult.deleted || 0,
+                    errors: allErrors,
+                    usedScheduleFallback: usedScheduleFallback || !!taskSyncResult.usedScheduleFallback,
+                    total_tasks: (tasks || []).length
                 });
             }
 

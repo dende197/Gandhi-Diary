@@ -10587,25 +10587,6 @@ function renderProfile() {
     const userClass = escapeHtml(effClass || (typeof normalizeClassUi === 'function' ? normalizeClassUi(state.user?.class || '') : (state.user?.class || '')) || 'Studente');
     const initials = (rawName || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase() || 'U';
     const isRep = (typeof isCurrentUserRepresentative === 'function') ? isCurrentUserRepresentative() : false;
-    const schoolCode = escapeHtml(state.user?.schoolCode || 'SG28499');
-
-    // Metrics for Hero Bento Badges
-    const votiData = (typeof getVotiData === 'function') ? getVotiData() : (state.voti || []);
-    const trendSummary = (typeof getGradeMonthlyTrendSummary === 'function') ? getGradeMonthlyTrendSummary(votiData) : { media: 0, diffStr: '0.0', isPositive: true };
-    const media = trendSummary.media || 0;
-    const isPositive = trendSummary.isPositive;
-    const diffStr = trendSummary.diffStr || '0.0';
-    const mediaColor = media >= 6.0 ? '#30d158' : (media > 0 ? '#ff453a' : '#b6c4ff');
-
-    // Assenze
-    const assenzeData = state.assenzeData || {};
-    const oreAssenzaTotali = typeof assenzeData.oreTotali === 'number'
-        ? assenzeData.oreTotali
-        : (typeof assenzeData.totaleOre === 'number' ? assenzeData.totaleOre : 0);
-    const assenzePctTotale = (typeof calcolaPercentualeAssenzeSu1000Ore === 'function')
-        ? calcolaPercentualeAssenzeSu1000Ore(oreAssenzaTotali)
-        : Math.min(100, Math.round((oreAssenzaTotali / 1000) * 1000) / 10).toFixed(1);
-    const assenzeStatusColor = Number(assenzePctTotale) > 20 ? '#ff453a' : (Number(assenzePctTotale) > 15 ? '#ff9f0a' : '#30d158');
 
     // Last Sync timestamp
     const lastSyncTs = (typeof getPersistedLastSyncAt === 'function') ? getPersistedLastSyncAt() : (state.didup?.lastSuccessTs || null);
@@ -10620,12 +10601,12 @@ function renderProfile() {
     }
 
     return `
-    <div class="view-fullbleed profile-view hide-scrollbar min-h-screen pb-36"
-         style="padding:0 20px;min-height:100vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--background, #0b1326);font-family:'Inter',sans-serif;color:#dae2fd;">
+    <div class="view-fullbleed profile-view hide-scrollbar"
+         style="padding:0 20px 140px 20px;min-height:100vh;height:100dvh;overflow-y:scroll;-webkit-overflow-scrolling:touch;background:var(--background, #0b1326);font-family:'Inter',sans-serif;color:#dae2fd;">
 
-        <!-- ── AMBIENT GLOW SPHERES ── -->
-        <div style="position:fixed;top:0;right:0;width:300px;height:300px;background:radial-gradient(circle,rgba(47,88,205,0.18) 0%,rgba(168,85,247,0.08) 50%,transparent 70%);filter:blur(60px);pointer-events:none;z-index:0;"></div>
-        <div style="position:fixed;bottom:100px;left:0;width:280px;height:280px;background:radial-gradient(circle,rgba(41,151,255,0.14) 0%,transparent 70%);filter:blur(50px);pointer-events:none;z-index:0;"></div>
+        <!-- ── AMBIENT GLOW SPHERES (Classic Blue) ── -->
+        <div style="position:fixed;top:0;right:0;width:320px;height:320px;background:radial-gradient(circle,rgba(37,99,235,0.14) 0%,transparent 70%);filter:blur(60px);pointer-events:none;z-index:0;"></div>
+        <div style="position:fixed;bottom:100px;left:0;width:280px;height:280px;background:radial-gradient(circle,rgba(41,151,255,0.1) 0%,transparent 70%);filter:blur(50px);pointer-events:none;z-index:0;"></div>
 
         <div style="position:relative;z-index:1;max-width:540px;margin:0 auto;">
 
@@ -10661,26 +10642,26 @@ function renderProfile() {
                 </button>
             </header>
 
-            <!-- ── HERO USER CARD (Apple Liquid Glass with Cosmic Avatar) ── -->
+            <!-- ── HERO USER CARD (Clean Liquid Glass with Solid Blue Avatar) ── -->
             <div style="
-                background:linear-gradient(135deg, rgba(47,88,205,0.28) 0%, rgba(20,29,51,0.92) 100%);
+                background:linear-gradient(135deg, rgba(37,99,235,0.22) 0%, rgba(20,29,51,0.92) 100%);
                 backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);
                 border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);
-                border-radius:28px;padding:22px 20px 18px;margin-bottom:20px;
+                border-radius:28px;padding:22px 20px;margin-bottom:20px;
                 box-shadow:0 16px 40px -10px rgba(6,14,32,0.75), inset 0 1px 0 rgba(255,255,255,0.18);
                 position:relative;overflow:hidden;
             ">
-                <!-- Ambient Top Right Glow -->
-                <div style="position:absolute;top:0;right:0;width:140px;height:140px;background:radial-gradient(circle,rgba(41,151,255,0.3) 0%,transparent 70%);filter:blur(24px);pointer-events:none;"></div>
+                <!-- Ambient Blue Glow -->
+                <div style="position:absolute;top:0;right:0;width:140px;height:140px;background:radial-gradient(circle,rgba(37,99,235,0.25) 0%,transparent 70%);filter:blur(24px);pointer-events:none;"></div>
 
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
-                    <!-- Cosmic Gradient Avatar -->
+                <div style="display:flex;align-items:center;gap:16px;">
+                    <!-- Classic Blue Avatar -->
                     <div style="
-                        width:62px;height:62px;border-radius:20px;
-                        background:linear-gradient(135deg, #2f58cd 0%, #a855f7 50%, #3b82f6 100%);
+                        width:60px;height:60px;border-radius:18px;
+                        background:linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%);
                         display:flex;align-items:center;justify-content:center;flex-shrink:0;
-                        box-shadow:0 8px 24px -4px rgba(47,88,205,0.6), inset 0 1px 1px rgba(255,255,255,0.4);
-                        border:1px solid rgba(255,255,255,0.25);
+                        box-shadow:0 8px 24px -4px rgba(37,99,235,0.5), inset 0 1px 1px rgba(255,255,255,0.35);
+                        border:1px solid rgba(255,255,255,0.22);
                     ">
                         <span style="font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.02em;">${initials}</span>
                     </div>
@@ -10689,63 +10670,15 @@ function renderProfile() {
                         <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:0 0 4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.02em;">
                             ${userName}
                         </h2>
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                            <span style="font-size:11.5px;font-weight:700;color:#b6c4ff;background:rgba(47,88,205,0.22);border:0.5px solid rgba(182,196,255,0.25);padding:2px 8px;border-radius:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:11.5px;font-weight:700;color:#b6c4ff;background:rgba(37,99,235,0.22);border:0.5px solid rgba(182,196,255,0.25);padding:2px 8px;border-radius:8px;">
                                 ${userClass}
                             </span>
-                            <span style="font-size:11.5px;font-weight:600;color:#8e909f;">
-                                Cod. ${schoolCode}
-                            </span>
+                            <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(48,209,88,0.14);border:0.5px solid rgba(48,209,88,0.3);padding:2px 8px;border-radius:999px;">
+                                <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 8px #30d158;display:inline-block;"></span>
+                                <span style="font-size:10.5px;font-weight:800;color:#30d158;letter-spacing:0.02em;">DidUP Sincronizzato</span>
+                            </div>
                         </div>
-                        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.14);border:0.5px solid rgba(48,209,88,0.3);padding:2px 9px;border-radius:999px;">
-                            <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 8px #30d158;display:inline-block;"></span>
-                            <span style="font-size:10.5px;font-weight:800;color:#30d158;letter-spacing:0.02em;">DidUP Sincronizzato</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3 Bento Pills inside Hero Card -->
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:14px;border-top:0.5px solid rgba(255,255,255,0.1);">
-                    <!-- 1. Media -->
-                    <div onclick="navigate('voti')" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:10px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;min-height:76px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                        <div style="display:flex;align-items:center;justify-content:space-between;">
-                            <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA</span>
-                            <i class="ph-bold ph-chart-line-up" style="font-size:11px;color:${mediaColor};"></i>
-                        </div>
-                        <div style="font-size:19px;font-weight:900;color:${mediaColor};line-height:1;font-variant-numeric:tabular-nums;margin:2px 0;">
-                            ${media > 0 ? media.toFixed(2) : '—'}
-                        </div>
-                        <span style="font-size:8.5px;font-weight:800;color:${isPositive ? '#30d158' : '#ff453a'};background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};padding:1px 5px;border-radius:999px;width:fit-content;display:inline-flex;align-items:center;gap:2px;">
-                            <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
-                        </span>
-                    </div>
-
-                    <!-- 2. Assenze -->
-                    <div onclick="mostraAssenzeModal()" style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:10px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;min-height:76px;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                        <div style="display:flex;align-items:center;justify-content:space-between;">
-                            <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">ASSENZE</span>
-                            <i class="ph-bold ph-calendar-x" style="font-size:11px;color:${assenzeStatusColor};"></i>
-                        </div>
-                        <div style="font-size:18px;font-weight:900;color:${assenzeStatusColor};line-height:1;font-variant-numeric:tabular-nums;margin:2px 0;">
-                            ${assenzePctTotale}%
-                        </div>
-                        <span style="font-size:8.5px;font-weight:700;color:${assenzeStatusColor};background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:999px;width:fit-content;">
-                            ${oreAssenzaTotali}h / 250h
-                        </span>
-                    </div>
-
-                    <!-- 3. Ruolo -->
-                    <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;min-height:76px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;">
-                            <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">RUOLO</span>
-                            <i class="ph-bold ${isRep ? 'ph-identification-badge' : 'ph-student'}" style="font-size:11px;color:${isRep ? '#30d158' : '#b6c4ff'};"></i>
-                        </div>
-                        <div style="font-size:13px;font-weight:800;color:#ffffff;line-height:1.2;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                            ${isRep ? 'Rappresentante' : 'Studente'}
-                        </div>
-                        <span style="font-size:8.5px;font-weight:700;color:${isRep ? '#30d158' : '#b6c4ff'};background:${isRep ? 'rgba(48,209,88,0.15)' : 'rgba(47,88,205,0.18)'};padding:1px 5px;border-radius:999px;width:fit-content;">
-                            ${isRep ? 'Attivo' : 'Standard'}
-                        </span>
                     </div>
                 </div>
             </div>
@@ -10796,7 +10729,7 @@ function renderProfile() {
                         <span style="font-size:12px;color:#8e909f;font-weight:500;">
                             ${effClass ? `Sezione attiva: <strong style="color:#b6c4ff;">${escapeHtml(effClass)}</strong>` : 'Sezione di classe non definita'}
                         </span>
-                        <button onclick="window.promptSetUserClass()" style="background:rgba(47,88,205,0.2);border:0.5px solid rgba(182,196,255,0.25);color:#b6c4ff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform 0.12s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                        <button onclick="window.promptSetUserClass()" style="background:rgba(37,99,235,0.2);border:0.5px solid rgba(182,196,255,0.25);color:#b6c4ff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform 0.12s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
                             <i class="ph-bold ph-pencil-simple"></i> ${effClass ? 'Modifica' : 'Imposta Sezione'}
                         </button>
                     </div>
@@ -10830,18 +10763,32 @@ function renderProfile() {
                                 </div>
                             </div>
                             <span style="font-size:10.5px;font-weight:700;color:#8e909f;background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:8px;">
-                                Background 24/7
+                                Cloud 24/7
                             </span>
                         </div>
-                        <p style="font-size:12.5px;color:#c4c5d6;line-height:1.5;margin:0 0 16px;">
-                            Verifiche, compiti ed eventi sono sincronizzati automaticamente con il tuo calendario Google senza dover aprire l'app.
+                        <p style="font-size:12.5px;color:#c4c5d6;line-height:1.55;margin:0 0 12px;">
+                            Compiti, verifiche e <strong>assenze da giustificare</strong> vengono sincronizzati automaticamente con il tuo calendario Google. I promemoria per le assenze rimangono visibili nel calendario finché non vengono giustificate.
                         </p>
+
+                        <!-- Feature highlights -->
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+                            <span style="font-size:11px;font-weight:600;color:#b6c4ff;background:rgba(37,99,235,0.16);border:0.5px solid rgba(182,196,255,0.2);padding:3px 9px;border-radius:8px;">
+                                📝 Compiti ed esercizi
+                            </span>
+                            <span style="font-size:11px;font-weight:600;color:#30d158;background:rgba(48,209,88,0.14);border:0.5px solid rgba(48,209,88,0.25);padding:3px 9px;border-radius:8px;">
+                                🎯 Verifiche ed esami
+                            </span>
+                            <span style="font-size:11px;font-weight:600;color:#ff9f0a;background:rgba(255,159,10,0.14);border:0.5px solid rgba(255,159,10,0.25);padding:3px 9px;border-radius:8px;">
+                                ⚠️ Assenze da giustificare
+                            </span>
+                        </div>
+
                         <div style="display:flex;gap:10px;">
                             <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(typeof syncGoogleCalendar==='function')syncGoogleCalendar();"
                                 style="flex:1;height:46px;border-radius:14px;border:none;cursor:pointer;
-                                       background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;
+                                       background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#ffffff;
                                        font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;
-                                       box-shadow:0 4px 16px rgba(47,88,205,0.45);transition:transform 0.12s ease;"
+                                       box-shadow:0 4px 16px rgba(37,99,235,0.45);transition:transform 0.12s ease;"
                                 ontouchstart="this.style.transform='scale(0.97)'"
                                 ontouchend="this.style.transform='scale(1)'">
                                 <i class="ph-bold ph-arrows-clockwise" style="font-size:16px;"></i>
@@ -10868,19 +10815,19 @@ function renderProfile() {
                             </div>
                         </div>
                         <p style="font-size:12.5px;color:#c4c5d6;line-height:1.55;margin:0 0 14px;">
-                            Collega Google Calendar per avere tutte le tue verifiche, compiti ed eventi scolastici integrati direttamente su iPhone, Apple Watch e Android.
+                            Collega Google Calendar per sincronizzare automaticamente verifiche, compiti e i <strong>promemoria delle assenze/ritardi da giustificare</strong> (che rimarranno nel tuo calendario fino all'avvenuta giustificazione).
                         </p>
-                        <div style="background:rgba(47,88,205,0.12);border:1px solid rgba(182,196,255,0.18);border-radius:16px;padding:12px 14px;margin-bottom:16px;">
+                        <div style="background:rgba(37,99,235,0.12);border:1px solid rgba(182,196,255,0.18);border-radius:16px;padding:12px 14px;margin-bottom:16px;">
                             <div style="font-size:10px;font-weight:800;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">
                                 Come Funziona
                             </div>
                             ${[
                                 'Tocca "Collega Google Calendar" qui sotto',
                                 'Accedi con il tuo account Google scolastico o personale',
-                                'Sincronizzazione automatica bidirezionale in cloud'
+                                'Sincronizzazione automatica di compiti, verifiche e assenze da giustificare'
                               ].map((step, idx) => `
                             <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${idx < 2 ? '8px' : '0'};">
-                                <div style="width:18px;height:18px;border-radius:50%;background:#2f58cd;color:#ffffff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                                <div style="width:18px;height:18px;border-radius:50%;background:#2563eb;color:#ffffff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
                                     ${idx + 1}
                                 </div>
                                 <span style="font-size:12px;color:#dae2fd;line-height:1.4;">${step}</span>
@@ -10888,83 +10835,15 @@ function renderProfile() {
                         </div>
                         <button onclick="if(typeof window.connectGoogle==='function')window.connectGoogle();"
                             style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;
-                                   background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;
+                                   background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#ffffff;
                                    font-size:14.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;
-                                   box-shadow:0 6px 20px -4px rgba(47,88,205,0.5);transition:transform 0.12s ease;"
+                                   box-shadow:0 6px 20px -4px rgba(37,99,235,0.5);transition:transform 0.12s ease;"
                             ontouchstart="this.style.transform='scale(0.98)'"
                             ontouchend="this.style.transform='scale(1)'">
                             <i class="ph-bold ph-link" style="font-size:17px;"></i>
                             Collega Google Calendar
                         </button>
                     </div>`}
-                </div>
-            </div>
-
-            <!-- ── SEZIONE: SERVIZI & APPLICAZIONE ── -->
-            <div style="margin-bottom:20px;">
-                <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
-                    <i class="ph-fill ph-squares-four" style="color:#b6c4ff;"></i> SERVIZI & FUNZIONALITÀ
-                </p>
-                <div style="
-                    background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
-                    border:1px solid rgba(182,196,255,0.14);border-top:1px solid rgba(255,255,255,0.25);
-                    border-radius:26px;overflow:hidden;
-                    box-shadow:0 12px 32px -8px rgba(6,14,32,0.6);
-                ">
-                    <!-- 1. Centro Notifiche -->
-                    <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');if(typeof openTodayNotifications==='function')openTodayNotifications();"
-                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;transition:background 0.15s ease;"
-                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
-                        ontouchend="this.style.background='transparent'">
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <div style="width:36px;height:36px;border-radius:12px;background:rgba(255,159,10,0.16);border:1px solid rgba(255,159,10,0.3);display:flex;align-items:center;justify-content:center;color:#ff9f0a;">
-                                <i class="ph-fill ph-bell" style="font-size:18px;"></i>
-                            </div>
-                            <div>
-                                <span style="font-size:14.5px;font-weight:700;color:#ffffff;display:block;">Centro Notifiche & Novità</span>
-                                <span style="font-size:11.5px;font-weight:500;color:#8e909f;">Tutte le attività e comunicazioni di oggi</span>
-                            </div>
-                        </div>
-                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
-                    </div>
-
-                    <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
-
-                    <!-- 2. Circolari Scolastiche -->
-                    <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('circolari');"
-                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;transition:background 0.15s ease;"
-                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
-                        ontouchend="this.style.background='transparent'">
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <div style="width:36px;height:36px;border-radius:12px;background:rgba(41,151,255,0.16);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;color:#2997ff;">
-                                <i class="ph-fill ph-file-text" style="font-size:18px;"></i>
-                            </div>
-                            <div>
-                                <span style="font-size:14.5px;font-weight:700;color:#ffffff;display:block;">Circolari & Bacheca</span>
-                                <span style="font-size:11.5px;font-weight:500;color:#8e909f;">Consulta comunicati con sintesi AI</span>
-                            </div>
-                        </div>
-                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
-                    </div>
-
-                    <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
-
-                    <!-- 3. Profilo Accademico -->
-                    <div onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');navigate('academic_profile');"
-                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;transition:background 0.15s ease;"
-                        ontouchstart="this.style.background='rgba(255,255,255,0.06)'"
-                        ontouchend="this.style.background='transparent'">
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <div style="width:36px;height:36px;border-radius:12px;background:rgba(168,85,247,0.16);border:1px solid rgba(168,85,247,0.3);display:flex;align-items:center;justify-content:center;color:#c084fc;">
-                                <i class="ph-fill ph-chart-polar" style="font-size:18px;"></i>
-                            </div>
-                            <div>
-                                <span style="font-size:14.5px;font-weight:700;color:#ffffff;display:block;">Profilo Accademico & Obiettivi</span>
-                                <span style="font-size:11.5px;font-weight:500;color:#8e909f;">Statistiche materie e target studio</span>
-                            </div>
-                        </div>
-                        <i class="ph-bold ph-caret-right" style="font-size:16px;color:#8e909f;"></i>
-                    </div>
                 </div>
             </div>
 
@@ -10981,7 +10860,7 @@ function renderProfile() {
                 ">
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;">
                         <span style="font-size:13.5px;font-weight:600;color:#c4c5d6;">Ultima Sincronizzazione</span>
-                        <span style="font-size:12.5px;font-weight:700;color:#b6c4ff;background:rgba(47,88,205,0.18);padding:3px 9px;border-radius:8px;">${lastSyncLabel}</span>
+                        <span style="font-size:12.5px;font-weight:700;color:#b6c4ff;background:rgba(37,99,235,0.18);padding:3px 9px;border-radius:8px;">${lastSyncLabel}</span>
                     </div>
 
                     <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
@@ -11029,12 +10908,15 @@ function renderProfile() {
             <!-- ── FOOTER APP INFO ── -->
             <div style="text-align:center;padding-bottom:20px;">
                 <p style="font-size:12px;font-weight:700;color:#8e909f;letter-spacing:0.04em;margin:0 0 4px;">
-                    Gandhi Diary • v3.9.8
+                    Gandhi Diary • v3.9.9
                 </p>
                 <p style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);margin:0;">
                     Liceo Gandhi · Liquid Glass Interface
                 </p>
             </div>
+
+            <!-- ── DEDICATED BOTTOM SPACER FOR NAVBAR SCROLLING ── -->
+            <div style="height:140px;flex-shrink:0;"></div>
 
         </div>
     </div>
