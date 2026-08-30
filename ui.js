@@ -2354,6 +2354,10 @@ function renderHome() {
     const _healthScore = media > 0 ? Math.min(100, Math.round((media / 10) * 100)) : 0;
     const _mediaColor = media >= 8 ? '#30d158' : media >= 7 ? '#64d2ff' : media >= 6 ? '#ff9f0a' : media > 0 ? '#ff453a' : '#8e909f';
 
+    // Saluto time-aware
+    const _hour = today.getHours();
+    const _greetWord = _hour < 6 ? 'Buonanotte' : _hour < 12 ? 'Buongiorno' : _hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+
     // 7. WIDGET OVERVIEW — Apple Liquid Glass Quadro Accademico Deluxe
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#dae2fd] antialiased overflow-y-auto hide-scrollbar" style="background:var(--background, #0b1326);">
