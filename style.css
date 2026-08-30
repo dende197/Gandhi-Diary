@@ -935,7 +935,7 @@ body {
 }
 
 .login-view h1 {
-  color: var(--primary) !important;
+  color: #ffffff !important;
 }
 
 /* ── Views transparency to allow body background mesh to shine ── */

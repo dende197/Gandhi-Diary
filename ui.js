@@ -1909,50 +1909,137 @@ function handleDayClick(dateStr) {
     }
 }
 function renderLogin() {
-    const savedSession = sessionManager.load();
-    const hasSession = savedSession && sessionManager.isLoggedIn();
+    const savedSession = (typeof sessionManager !== 'undefined' && sessionManager.load) ? sessionManager.load() : null;
+    const hasSession = savedSession && (typeof sessionManager !== 'undefined' && sessionManager.isLoggedIn ? sessionManager.isLoggedIn() : !!savedSession.userName);
+    const rawName = (typeof getSafeUserName === 'function') ? getSafeUserName() : (state.user?.name || savedSession?.name || savedSession?.userName || 'Utente');
+    const userName = escapeHtml((typeof toDisplayName === 'function') ? toDisplayName(rawName) : rawName);
+    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : (state.user?.class || savedSession?.class || '');
+    const userClass = escapeHtml(effClass || 'Studente');
+    const initials = (rawName || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase() || 'U';
 
     return `
-        <div class="view login-view min-h-screen flex flex-col justify-center items-center p-8 text-center bg-background">
-            <div class="w-24 h-24 bg-primary/10 rounded-[32px] liquid-glass flex items-center justify-center mb-10 liquid-shadow">
-                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" class="w-16 h-16 rounded-2xl object-cover">
+    <div class="view login-view min-h-screen hide-scrollbar"
+         style="min-height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--background, #0b1326);font-family:'Inter',sans-serif;color:#dae2fd;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:max(env(safe-area-inset-top,0px),32px) 24px max(env(safe-area-inset-bottom,0px),32px);position:relative;">
+
+        <!-- Ambient Glow Spheres (Deep Royal Blue) -->
+        <div style="position:fixed;top:0;left:50%;transform:translateX(-50%);width:360px;height:360px;background:radial-gradient(circle,rgba(37,99,235,0.22) 0%,rgba(29,78,216,0.08) 50%,transparent 70%);filter:blur(60px);pointer-events:none;z-index:0;"></div>
+        <div style="position:fixed;bottom:0;right:0;width:280px;height:280px;background:radial-gradient(circle,rgba(41,151,255,0.12) 0%,transparent 70%);filter:blur(50px);pointer-events:none;z-index:0;"></div>
+
+        <div style="position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;text-align:center;">
+
+            <!-- App Icon Tile with Specular Rim & Glowing Shadow -->
+            <div style="width:84px;height:84px;border-radius:26px;
+                        background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+                        border:1px solid rgba(182,196,255,0.2);border-top:1px solid rgba(255,255,255,0.4);
+                        display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+                        box-shadow:0 16px 36px -8px rgba(6,14,32,0.8), 0 0 24px rgba(37,99,235,0.3);
+                        position:relative;overflow:hidden;">
+                <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary"
+                     onerror="this.src='gandhi-diary-icon-512.png'"
+                     style="width:58px;height:58px;border-radius:18px;object-fit:cover;">
             </div>
-            
-            <h1 class="headline-lg text-primary mb-2">G-Connect</h1>
-            <p class="body-lg text-on-surface-variant/60 mb-12 max-w-[280px]">Il compagno di studio definitivo per gli studenti del Gandhi.</p>
-            
-            <div class="w-full max-w-[320px] flex flex-col gap-4">
-                <button onclick="window.openArgoLogin()"
-                    style="width:100%;height:56px;border-radius:18px;border:none;cursor:pointer;
-                           background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;
-                           font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;
+
+            <!-- Header Titles -->
+            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(37,99,235,0.18);border:0.5px solid rgba(182,196,255,0.25);padding:3px 10px;border-radius:999px;margin-bottom:10px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;"></span>
+                <span style="font-size:11px;font-weight:800;color:#b6c4ff;letter-spacing:0.06em;text-transform:uppercase;">LICEO GANDHI · DIARIO DIGITALE</span>
+            </div>
+
+            <h1 style="font-size:32px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;margin:0 0 8px;line-height:1.15;">
+                Gandhi Diary
+            </h1>
+            <p style="font-size:14px;font-weight:500;color:#c4c5d6;line-height:1.5;margin:0 0 24px;max-width:320px;">
+                Il compagno di studio moderno, veloce e intelligente per gli studenti del Liceo Gandhi.
+            </p>
+
+            <!-- Feature Glass Bento Rows -->
+            <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-bottom:28px;">
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:rgba(23,31,51,0.65);backdrop-filter:blur(20px);border:1px solid rgba(182,196,255,0.12);text-align:left;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,0.18);border:1px solid rgba(182,196,255,0.25);display:flex;align-items:center;justify-content:center;color:#2997ff;flex-shrink:0;">
+                        <i class="ph-bold ph-lightning" style="font-size:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <div style="font-size:13px;font-weight:700;color:#ffffff;">Sincronizzazione DidUP Istantanea</div>
+                        <div style="font-size:11px;color:#8e909f;font-weight:500;">Voti, compiti, verifiche e assenze sempre aggiornati</div>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:rgba(23,31,51,0.65);backdrop-filter:blur(20px);border:1px solid rgba(182,196,255,0.12);text-align:left;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(48,209,88,0.16);border:1px solid rgba(48,209,88,0.3);display:flex;align-items:center;justify-content:center;color:#30d158;flex-shrink:0;">
+                        <i class="ph-bold ph-calendar-check" style="font-size:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <div style="font-size:13px;font-weight:700;color:#ffffff;">Google Calendar Cloud Sync</div>
+                        <div style="font-size:11px;color:#8e909f;font-weight:500;">Compiti, verifiche e assenze sincronizzati nel calendario</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Area -->
+            <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
+                ${hasSession ? `
+                <!-- Resume Session Card -->
+                <div style="background:rgba(23,31,51,0.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+                            border:1px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.3);
+                            border-radius:24px;padding:18px 18px 16px;box-shadow:0 12px 32px -8px rgba(6,14,32,0.6);margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;text-align:left;">
+                        <div style="width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#1d4ed8,#2563eb);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#ffffff;flex-shrink:0;box-shadow:0 4px 14px rgba(37,99,235,0.4);">
+                            ${initials}
+                        </div>
+                        <div style="min-width:0;flex:1;">
+                            <div style="font-size:11px;font-weight:700;color:#8e909f;text-transform:uppercase;letter-spacing:0.06em;">Sessione Salvata</div>
+                            <div style="font-size:16px;font-weight:800;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${userName}</div>
+                            <div style="font-size:11.5px;font-weight:600;color:#b6c4ff;">${userClass}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');navigate('home')"
+                            style="flex:1;height:46px;border-radius:14px;border:none;cursor:pointer;
+                                   background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#ffffff;
+                                   font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;
+                                   box-shadow:0 4px 16px rgba(37,99,235,0.45);transition:transform 0.12s ease;"
+                            ontouchstart="this.style.transform='scale(0.97)'"
+                            ontouchend="this.style.transform='scale(1)'">
+                            Continua <i class="ph-bold ph-arrow-right" style="font-size:16px;"></i>
+                        </button>
+                        <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openArgoLogin()"
+                            style="height:46px;padding:0 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.14);cursor:pointer;
+                                   background:rgba(255,255,255,0.06);color:#dae2fd;font-size:13px;font-weight:700;white-space:nowrap;transition:transform 0.12s ease;"
+                            ontouchstart="this.style.transform='scale(0.97)'"
+                            ontouchend="this.style.transform='scale(1)'">
+                            Altro Account
+                        </button>
+                    </div>
+                </div>
+                ` : `
+                <!-- Main Login Button -->
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openArgoLogin()"
+                    style="width:100%;height:54px;border-radius:18px;border:none;cursor:pointer;
+                           background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 60%,#3b82f6 100%);color:#ffffff;
+                           font-size:16px;font-weight:800;font-family:'Inter',sans-serif;
                            display:flex;align-items:center;justify-content:center;gap:10px;
-                           box-shadow:0 8px 24px -6px rgba(37,99,235,0.45);"
+                           box-shadow:0 8px 28px -6px rgba(37,99,235,0.6), inset 0 1px 1px rgba(255,255,255,0.35);
+                           transition:transform 0.15s ease;"
                     ontouchstart="this.style.transform='scale(0.97)'"
                     ontouchend="this.style.transform='scale(1)'">
-                    <span class="material-symbols-outlined" style="font-size:22px;">login</span>
+                    <i class="ph-bold ph-sign-in" style="font-size:20px;"></i>
                     Accedi con DidUP
                 </button>
-                
-                ${hasSession ? `
-                <div class="p-6 liquid-glass rounded-[28px] mt-4 liquid-shadow">
-                    <div class="label-sm text-on-surface-variant/40 mb-1">Sessione salvata</div>
-                    <div class="title-md mb-4">${escapeHtml(state.user?.name || 'Utente')}</div>
-                    <button onclick="logout()" class="w-full py-3 rounded-2xl bg-error/10 text-error font-bold text-[13px] hover:bg-error/20 transition-all">
-                        Usa altro account
-                    </button>
-                </div>
-                ` : ''}
+                `}
             </div>
-        </div>`;
+
+            <!-- Security Footer Note -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px;color:#8e909f;font-size:11.5px;font-weight:600;">
+                <i class="ph-fill ph-shield-check" style="font-size:14px;color:#30d158;"></i>
+                Crittografia end-to-end · Credenziali protette sul dispositivo
+            </div>
+
+        </div>
+    </div>
+    `;
 }
 // ================================================================
 // WIDGET PRINCIPALE — carosello a 3 slide (swipe touch/mouse)
-// Logica identica al mockup widget_media_generale.html: stessa soglia
-// di trascinamento (30px), stessa curva di transizione, stessi 3 dot.
-// Ri-eseguibile ad ogni render (root.innerHTML sostituisce il DOM,
-// quindi i vecchi listener vengono scartati automaticamente insieme
-// ai vecchi nodi — nessun listener duplicato tra un render e l'altro).
 // ================================================================
 function gcInitMediaWidgetSwipe() {
     const widget = document.getElementById('home-media-widget');
@@ -5999,196 +6086,250 @@ window.openArgoLogin = function openArgoLogin() {
     }
 
     modalContainer.innerHTML = `
-        <div onclick="(typeof closeModal==='function'?closeModal(event):document.getElementById('modal-container').innerHTML='')"
-             style="position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,0.35);
-                    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-                    display:flex;align-items:flex-end;justify-content:center;padding:0;">
-            <div onclick="event.stopPropagation()"
-                 style="width:100%;max-width:420px;background:rgba(var(--glass-rgb),0.82);
-                        backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
-                        border:1px solid rgba(var(--glass-rgb),0.6);
+        <div id="argo-login-backdrop"
+             onclick="(typeof closeModal==='function'?closeModal(event):document.getElementById('modal-container').innerHTML='')"
+             style="position:fixed;inset:0;z-index:99990;background:rgba(11,19,38,0.7);
+                    backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+                    display:flex;align-items:flex-end;justify-content:center;padding:0;
+                    opacity:0;transition:opacity 0.22s ease;">
+            <div onclick="event.stopPropagation()" id="argo-login-card"
+                 style="width:100%;max-width:440px;background:rgba(23,31,51,0.95);
+                        backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);
+                        border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);
                         border-radius:32px 32px 0 0;
                         padding:20px 24px calc(28px + env(safe-area-inset-bottom,0px));
-                        box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14);">
+                        box-shadow:0 -12px 48px -8px rgba(6,14,32,0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+                        transform:translateY(40px);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);font-family:'Inter',sans-serif;color:#dae2fd;">
 
-                <!-- Handle -->
+                <!-- Drag Handle -->
                 <div style="display:flex;justify-content:center;margin-bottom:16px;">
-                    <div style="width:36px;height:4px;border-radius:999px;background:var(--outline-variant);"></div>
+                    <div style="width:38px;height:4.5px;border-radius:999px;background:rgba(255,255,255,0.22);"></div>
                 </div>
 
-                <!-- Logo + titolo -->
-                <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-                    <div style="width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0;
-                                box-shadow:0 4px 12px rgba(0,0,0,0.12);">
+                <!-- Logo + Titolo -->
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+                    <div style="width:48px;height:48px;border-radius:15px;overflow:hidden;flex-shrink:0;
+                                background:rgba(37,99,235,0.2);border:1px solid rgba(182,196,255,0.25);
+                                display:flex;align-items:center;justify-content:center;
+                                box-shadow:0 6px 16px -4px rgba(37,99,235,0.4);">
                         <img src="gandhi-diary-icon-192.png" alt="Gandhi Diary"
                              onerror="this.src='gandhi-diary-icon-512.png'"
-                             style="width:100%;height:100%;object-fit:cover;">
+                             style="width:34px;height:34px;border-radius:10px;object-fit:cover;">
                     </div>
                     <div>
-                        <div style="font-size:18px;font-weight:800;color:var(--on-surface);letter-spacing:-0.01em;">Accedi con DidUP</div>
-                        <div style="font-size:12px;color:var(--outline);font-weight:600;">Inserisci le credenziali del registro</div>
+                        <div style="font-size:19px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;line-height:1.2;">Accedi con DidUP</div>
+                        <div style="font-size:12px;color:#8e909f;font-weight:500;margin-top:2px;">Inserisci le credenziali del registro Argo</div>
                     </div>
                 </div>
 
                 <!-- Status server -->
                 <div id="server-status"
-                     style="margin-bottom:16px;font-size:12px;color:var(--warning);
+                     style="margin-bottom:16px;font-size:11.5px;color:#30d158;font-weight:700;
                             display:flex;align-items:center;justify-content:center;gap:6px;
-                            background:var(--warning-container);border-radius:10px;padding:8px;">
-                    <span style="width:7px;height:7px;background:#f59e0b;border-radius:50%;flex-shrink:0;"></span>
-                    Verifica stato server in corso...
+                            background:rgba(48,209,88,0.12);border:0.5px solid rgba(48,209,88,0.28);border-radius:12px;padding:8px 12px;">
+                    <span style="width:6px;height:6px;background:#30d158;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px #30d158;"></span>
+                    Server DidUP online & pronto
                 </div>
 
-                <!-- Campi input -->
-                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-                    <input id="argo-school" placeholder="Codice Scuola (es. SS19014)" autocomplete="organization"
-                           value="${localStorage.getItem('argo_school') || ''}"
-                           style="height:48px;border-radius:14px;border:none;
-                                  padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
-                                  font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
-                    <input id="argo-user" placeholder="Nome Utente" autocomplete="username"
-                           style="height:48px;border-radius:14px;border:none;
-                                  padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
-                                  font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
-                    <input id="argo-pass" type="password" placeholder="Password" autocomplete="current-password"
-                           style="height:48px;border-radius:14px;border:none;
-                                  padding:0 16px;font-size:15px;font-weight:500;
-                                  background:rgba(var(--glass-rgb),0.9);color:var(--on-surface);
-                                  font-family:Hanken Grotesk,sans-serif;outline:none;width:100%;box-sizing:border-box;">
+                <!-- Form Inputs -->
+                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+                    <!-- Codice Scuola -->
+                    <div style="position:relative;display:flex;align-items:center;">
+                        <i class="ph-bold ph-buildings" style="position:absolute;left:14px;color:#8e909f;font-size:18px;pointer-events:none;"></i>
+                        <input id="argo-school" placeholder="Codice Scuola (es. SG28499)" autocomplete="organization"
+                               value="${localStorage.getItem('argo_school') || 'SG28499'}"
+                               style="height:48px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
+                                      padding:0 14px 0 42px;font-size:14.5px;font-weight:600;
+                                      background:rgba(255,255,255,0.05);color:#ffffff;
+                                      font-family:'Inter',sans-serif;outline:none;width:100%;box-sizing:border-box;
+                                      transition:border-color 0.15s ease, box-shadow 0.15s ease;"
+                               onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 12px rgba(37,99,235,0.35)';"
+                               onblur="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='none';">
+                    </div>
+
+                    <!-- Nome Utente -->
+                    <div style="position:relative;display:flex;align-items:center;">
+                        <i class="ph-bold ph-user" style="position:absolute;left:14px;color:#8e909f;font-size:18px;pointer-events:none;"></i>
+                        <input id="argo-user" placeholder="Nome Utente (es. s.cognome.1234)" autocomplete="username"
+                               style="height:48px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
+                                      padding:0 14px 0 42px;font-size:14.5px;font-weight:600;
+                                      background:rgba(255,255,255,0.05);color:#ffffff;
+                                      font-family:'Inter',sans-serif;outline:none;width:100%;box-sizing:border-box;
+                                      transition:border-color 0.15s ease, box-shadow 0.15s ease;"
+                               onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 12px rgba(37,99,235,0.35)';"
+                               onblur="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='none';">
+                    </div>
+
+                    <!-- Password + Eye toggle -->
+                    <div style="position:relative;display:flex;align-items:center;">
+                        <i class="ph-bold ph-lock-key" style="position:absolute;left:14px;color:#8e909f;font-size:18px;pointer-events:none;"></i>
+                        <input id="argo-pass" type="password" placeholder="Password DidUP" autocomplete="current-password"
+                               style="height:48px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
+                                      padding:0 42px 0 42px;font-size:14.5px;font-weight:600;
+                                      background:rgba(255,255,255,0.05);color:#ffffff;
+                                      font-family:'Inter',sans-serif;outline:none;width:100%;box-sizing:border-box;
+                                      transition:border-color 0.15s ease, box-shadow 0.15s ease;"
+                               onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 12px rgba(37,99,235,0.35)';"
+                               onblur="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='none';"
+                               onkeydown="if(event.key==='Enter'){if(typeof performArgoSync==='function')performArgoSync();}">
+                        <button type="button" onclick="var p=document.getElementById('argo-pass');var ic=this.querySelector('i');if(p){if(p.type==='password'){p.type='text';ic.className='ph-bold ph-eye-slash';}else{p.type='password';ic.className='ph-bold ph-eye';}}"
+                                style="position:absolute;right:10px;background:none;border:none;color:#8e909f;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;">
+                            <i class="ph-bold ph-eye" style="font-size:18px;"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Bottone accedi -->
+                <!-- Primary Submit Button -->
                 <button id="login-btn"
-                        onclick="if(typeof performArgoSync==='function')performArgoSync();else console.error('performArgoSync non definita')"
+                        onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(typeof performArgoSync==='function')performArgoSync();else console.error('performArgoSync non definita')"
                         style="width:100%;height:52px;border-radius:16px;border:none;cursor:pointer;
-                               background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;
-                               font-size:16px;font-weight:800;font-family:Hanken Grotesk,sans-serif;
-                               box-shadow:0 6px 20px -6px rgba(37,99,235,0.45);margin-bottom:10px;"
-                        ontouchstart="this.style.opacity='0.85'" ontouchend="this.style.opacity='1'">
+                               background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#ffffff;
+                               font-size:15.5px;font-weight:800;font-family:'Inter',sans-serif;
+                               box-shadow:0 6px 24px -4px rgba(37,99,235,0.55), inset 0 1px 1px rgba(255,255,255,0.3);margin-bottom:10px;
+                               display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.12s ease;"
+                        ontouchstart="this.style.transform='scale(0.98)'"
+                        ontouchend="this.style.transform='scale(1)'">
+                    <i class="ph-bold ph-sign-in" style="font-size:18px;"></i>
                     Accedi e Sincronizza
                 </button>
 
-                <!-- Annulla -->
+                <!-- Cancel Button -->
                 <button onclick="(typeof closeModal==='function'?closeModal():document.getElementById('modal-container').innerHTML='')"
-                        style="width:100%;height:44px;border-radius:14px;border:none;cursor:pointer;
-                               background:var(--surface-container-high);color:var(--on-surface-variant);
-                               font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">
+                        style="width:100%;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer;
+                               background:rgba(255,255,255,0.05);color:#8e909f;
+                               font-size:13.5px;font-weight:700;font-family:'Inter',sans-serif;transition:transform 0.12s ease;"
+                        ontouchstart="this.style.transform='scale(0.98)'"
+                        ontouchend="this.style.transform='scale(1)'">
                     Annulla
                 </button>
             </div>
         </div>`;
 
-    // checkServerHealth chiamata con guardia — non blocca il modal se non definita
+    requestAnimationFrame(function() {
+        var bd = document.getElementById('argo-login-backdrop');
+        var cd = document.getElementById('argo-login-card');
+        if (bd) bd.style.opacity = '1';
+        if (cd) cd.style.transform = 'translateY(0)';
+    });
+
     try {
         if (typeof checkServerHealth === 'function') checkServerHealth();
     } catch(err) {
         console.warn('[openArgoLogin] checkServerHealth non disponibile:', err.message);
         var ss = document.getElementById('server-status');
-        if (ss) { ss.style.color = 'var(--success)'; ss.style.background = 'var(--success-container)'; ss.innerHTML = '<span style="width:7px;height:7px;background:var(--success);border-radius:50%;flex-shrink:0;"></span> Server pronto'; }
+        if (ss) {
+            ss.style.color = '#30d158';
+            ss.style.background = 'rgba(48,209,88,0.12)';
+            ss.innerHTML = '<span style="width:6px;height:6px;background:#30d158;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px #30d158;"></span> Server pronto';
+        }
     }
 };
+
 function showProfileSelectionModal(profiles, credentials) {
     const container = getModalContainer();
     if (!container) return;
 
-    // ── Costruisce le card profilo ────────────────────────────────────────────
+    // Build profile cards with Apple Liquid Glass styling
     const profileCards = profiles.map(function(p) {
         const initial = escapeHtml((p.name || 'S')[0].toUpperCase());
         const name    = escapeHtml(p.name  || ('Studente ' + (p.index + 1)));
         const cls     = escapeHtml(p.class || p.school || '');
-        // Colore avatar basato sull'iniziale
-        const hue     = ((p.name || 'A').charCodeAt(0) * 37) % 360;
-        const avatarBg = 'hsl(' + hue + ',60%,48%)';
 
-        return '<button class="btn-profile" data-index="' + p.index + '" ' +
-            'style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;' +
-            'background:rgba(var(--glass-rgb),0.7);border:1px solid rgba(var(--glass-rgb),0.7);' +
-            'border-radius:20px;cursor:pointer;text-align:left;' +
-            '-webkit-tap-highlight-color:transparent;' +
-            'box-shadow:0 2px 12px -4px rgba(0,0,0,0.06);' +
-            'transition:transform 0.12s ease;" ' +
-            'ontouchstart="this.style.transform=\'scale(0.97)\'" ' +
-            'ontouchend="this.style.transform=\'scale(1)\'">' +
-                '<div style="width:48px;height:48px;border-radius:16px;flex-shrink:0;' +
-                'background:' + avatarBg + ';' +
-                'display:flex;align-items:center;justify-content:center;' +
-                'font-size:20px;font-weight:800;color:white;' +
-                'box-shadow:0 4px 12px -4px ' + avatarBg + ';">' +
-                    initial +
-                '</div>' +
-                '<div style="flex:1;min-width:0;">' +
-                    '<div class="profile-name" style="font-size:15px;font-weight:800;color:var(--on-surface);' +
-                    'font-family:Hanken Grotesk,sans-serif;letter-spacing:-0.01em;' +
-                    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>' +
-                    (cls ? '<div class="profile-class" style="font-size:12px;font-weight:600;color:var(--outline);' +
-                    'font-family:Hanken Grotesk,sans-serif;margin-top:2px;">' + cls + '</div>' : '') +
-                '</div>' +
-                '<span class="material-symbols-outlined" style="font-size:18px;color:var(--outline-variant);flex-shrink:0;">chevron_right</span>' +
-            '</button>';
+        return `
+        <button class="btn-profile" data-index="${p.index}"
+            style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;
+                   background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+                   border-radius:20px;cursor:pointer;text-align:left;
+                   -webkit-tap-highlight-color:transparent;
+                   box-shadow:0 4px 16px -4px rgba(0,0,0,0.3);
+                   transition:transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;"
+            ontouchstart="this.style.transform='scale(0.97)';this.style.background='rgba(37,99,235,0.15)';this.style.borderColor='rgba(37,99,235,0.4)';"
+            ontouchend="this.style.transform='scale(1)';this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='rgba(255,255,255,0.12)';">
+            <!-- Student Avatar -->
+            <div style="width:48px;height:48px;border-radius:15px;flex-shrink:0;
+                        background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);
+                        border:1px solid rgba(255,255,255,0.2);
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:20px;font-weight:900;color:#ffffff;
+                        box-shadow:0 4px 14px -2px rgba(37,99,235,0.5);">
+                ${initial}
+            </div>
+            <!-- Info -->
+            <div style="flex:1;min-width:0;">
+                <div class="profile-name" style="font-size:15.5px;font-weight:800;color:#ffffff;
+                            font-family:'Inter',sans-serif;letter-spacing:-0.01em;line-height:1.2;
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                ${cls ? `
+                <div class="profile-class" style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;
+                            font-size:11px;font-weight:700;color:#b6c4ff;
+                            background:rgba(37,99,235,0.2);border:0.5px solid rgba(182,196,255,0.25);
+                            padding:1px 7px;border-radius:6px;">
+                    <i class="ph-bold ph-graduation-cap" style="font-size:11px;"></i> ${cls}
+                </div>` : ''}
+            </div>
+            <i class="ph-bold ph-caret-right" style="font-size:18px;color:#8e909f;flex-shrink:0;"></i>
+        </button>`;
     }).join('');
 
-    // ── Overlay + bottom-sheet liquid glass ───────────────────────────────────
-    container.innerHTML =
-        '<div id="psel-overlay" ' +
-        'style="position:fixed;inset:0;z-index:9999;' +
-        'background:rgba(15,23,42,0.28);' +
-        'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);' +
-        'display:flex;align-items:flex-end;justify-content:center;' +
-        'opacity:0;transition:opacity 0.18s ease;">' +
+    // Overlay + sheet
+    container.innerHTML = `
+        <div id="psel-overlay"
+             style="position:fixed;inset:0;z-index:99990;
+                    background:rgba(11,19,38,0.7);
+                    backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+                    display:flex;align-items:flex-end;justify-content:center;
+                    opacity:0;transition:opacity 0.22s ease;">
 
-            '<div id="psel-card" ' +
-            'style="width:100%;max-width:480px;' +
-            'background:rgba(var(--glass-rgb),0.92);' +
-            'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);' +
-            'border:none;' +
-            'border-radius:32px 32px 0 0;' +
-            'padding:0 20px calc(24px + env(safe-area-inset-bottom,0px)) 20px;' +
-            'box-shadow:0 -8px 40px -8px rgba(0,0,0,0.14),inset 0 1px 0 rgba(var(--glass-rgb),0.9);' +
-            'transform:translateY(32px);' +
-            'transition:transform 0.24s cubic-bezier(0.2,0.8,0.2,1);">' +
+            <div id="psel-card"
+                 style="width:100%;max-width:460px;
+                        background:rgba(23,31,51,0.95);
+                        backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);
+                        border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);
+                        border-radius:32px 32px 0 0;
+                        padding:0 22px calc(24px + env(safe-area-inset-bottom,0px)) 22px;
+                        box-shadow:0 -12px 48px -8px rgba(6,14,32,0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+                        transform:translateY(40px);
+                        transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);font-family:'Inter',sans-serif;color:#dae2fd;">
 
-                // drag handle
-                '<div style="display:flex;justify-content:center;padding:14px 0 10px;">' +
-                    '<div style="width:36px;height:4px;border-radius:999px;background:var(--outline-variant);"></div>' +
-                '</div>' +
+                <!-- Drag Handle -->
+                <div style="display:flex;justify-content:center;padding:14px 0 12px;">
+                    <div style="width:38px;height:4.5px;border-radius:999px;background:rgba(255,255,255,0.22);"></div>
+                </div>
 
-                // header
-                '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">' +
-                    '<div style="width:46px;height:46px;border-radius:14px;overflow:hidden;flex-shrink:0;' +
-                    'box-shadow:0 4px 12px rgba(0,0,0,0.10);">' +
-                        '<img src="gandhi-diary-icon-192.png" alt="Gandhi Diary" ' +
-                        'onerror="this.src=\'gandhi-diary-icon-512.png\'" ' +
-                        'style="width:100%;height:100%;object-fit:cover;">' +
-                    '</div>' +
-                    '<div>' +
-                        '<div style="font-size:18px;font-weight:800;color:var(--on-surface);' +
-                        'letter-spacing:-0.02em;font-family:Hanken Grotesk,sans-serif;">' +
-                            'Seleziona Profilo' +
-                        '</div>' +
-                        '<div style="font-size:12px;font-weight:600;color:var(--outline);' +
-                        'font-family:Hanken Grotesk,sans-serif;margin-top:2px;">' +
-                            'Scegli quale studente visualizzare' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
+                <!-- Header -->
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+                    <div style="width:46px;height:46px;border-radius:15px;overflow:hidden;flex-shrink:0;
+                                background:rgba(37,99,235,0.2);border:1px solid rgba(182,196,255,0.25);
+                                display:flex;align-items:center;justify-content:center;
+                                box-shadow:0 4px 14px rgba(37,99,235,0.4);">
+                        <i class="ph-fill ph-users-three" style="font-size:24px;color:#2997ff;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:18px;font-weight:800;color:#ffffff;
+                                    letter-spacing:-0.02em;line-height:1.2;">
+                            Seleziona Profilo
+                        </div>
+                        <div style="font-size:12px;font-weight:500;color:#8e909f;margin-top:2px;">
+                            Scegli quale studente visualizzare
+                        </div>
+                    </div>
+                </div>
 
-                // lista profili
-                '<div class="profiles-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">' +
-                    profileCards +
-                '</div>' +
+                <!-- Profiles List -->
+                <div class="profiles-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:50vh;overflow-y:auto;">
+                    ${profileCards}
+                </div>
 
-                // annulla
-                '<button onclick="var mc=document.getElementById(\'modal-container\');if(typeof closeModal===\'function\')closeModal();else if(mc)mc.innerHTML=\'\';" ' +
-                'style="width:100%;height:48px;border-radius:16px;border:none;cursor:pointer;' +
-                'background:var(--surface-container-high);color:var(--on-surface-variant);' +
-                'font-size:14px;font-weight:700;font-family:Hanken Grotesk,sans-serif;">' +
-                    'Annulla' +
-                '</button>' +
+                <!-- Cancel Button -->
+                <button onclick="var mc=document.getElementById('modal-container');if(typeof closeModal==='function')closeModal();else if(mc)mc.innerHTML='';"
+                        style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer;
+                               background:rgba(255,255,255,0.05);color:#8e909f;
+                               font-size:13.5px;font-weight:700;font-family:'Inter',sans-serif;">
+                    Annulla
+                </button>
 
-            '</div>' +
-        '</div>';
+            </div>
+        </div>`;
 
     // Animazione entrata
     requestAnimationFrame(function() {
@@ -6209,7 +6350,7 @@ function showProfileSelectionModal(profiles, credentials) {
         });
     }
 
-    // ── Click su profilo ──────────────────────────────────────────────────────
+    // Click su profilo
     var list = container.querySelector('.profiles-list');
     if (!list) return;
 
@@ -6223,35 +6364,33 @@ function showProfileSelectionModal(profiles, credentials) {
         // Loading screen dentro la card
         var card = document.getElementById('psel-card');
         if (card) {
-            card.innerHTML =
-                '<div style="display:flex;flex-direction:column;align-items:center;' +
-                'justify-content:center;padding:52px 24px;gap:20px;text-align:center;">' +
-                    '<div style="width:52px;height:52px;border-radius:50%;' +
-                    'background:conic-gradient(from 0deg,#2563eb 0%,#4f46e5 50%,rgba(191,219,254,0.3) 100%);' +
-                    '-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));' +
-                    'mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));' +
-                    'animation:spin 0.85s cubic-bezier(.4,0,.2,1) infinite;"></div>' +
-                    '<div>' +
-                        '<div style="font-size:16px;font-weight:800;color:var(--on-surface);' +
-                        'font-family:Hanken Grotesk,sans-serif;letter-spacing:-0.01em;margin-bottom:4px;">' +
-                            'Caricamento profilo' +
-                        '</div>' +
-                        '<div style="font-size:13px;color:var(--on-surface-variant);font-family:Hanken Grotesk,sans-serif;">' +
-                            escapeHtml(selectedName) +
-                        '</div>' +
-                    '</div>' +
-                    '<div style="font-size:11px;font-weight:700;color:var(--outline-variant);' +
-                    'text-transform:uppercase;letter-spacing:0.08em;' +
-                    'font-family:Hanken Grotesk,sans-serif;">' +
-                        'Sincronizzazione in corso…' +
-                    '</div>' +
-                '</div>';
+            card.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;
+                            justify-content:center;padding:52px 24px;gap:18px;text-align:center;">
+                    <div style="width:54px;height:54px;border-radius:50%;
+                                border:3.5px solid rgba(37,99,235,0.2);
+                                border-top-color:#2563eb;
+                                animation:spin 0.8s cubic-bezier(0.4,0,0.2,1) infinite;
+                                box-shadow:0 0 16px rgba(37,99,235,0.4);"></div>
+                    <div>
+                        <div style="font-size:17px;font-weight:800;color:#ffffff;
+                                    letter-spacing:-0.01em;margin-bottom:4px;">
+                            Caricamento profilo
+                        </div>
+                        <div style="font-size:13.5px;color:#b6c4ff;font-weight:600;">
+                            ${escapeHtml(selectedName)}
+                        </div>
+                    </div>
+                    <div style="font-size:11.5px;font-weight:700;color:#8e909f;
+                                text-transform:uppercase;letter-spacing:0.08em;">
+                        Sincronizzazione in corso…
+                    </div>
+                </div>`;
         }
 
         await selectProfile(parseInt(btn.dataset.index, 10), credentials);
     }, { once: true });
 
-    // Risolvi nomi veri in background
     if (typeof resolveProfileNamesAsync === 'function') {
         resolveProfileNamesAsync(profiles, credentials, container);
     }
@@ -10908,7 +11047,7 @@ function renderProfile() {
             <!-- ── FOOTER APP INFO ── -->
             <div style="text-align:center;padding-bottom:20px;">
                 <p style="font-size:12px;font-weight:700;color:#8e909f;letter-spacing:0.04em;margin:0 0 4px;">
-                    Gandhi Diary • v3.9.9
+                    Gandhi Diary • v4.0.0
                 </p>
                 <p style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);margin:0;">
                     Liceo Gandhi · Liquid Glass Interface
