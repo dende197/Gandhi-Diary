@@ -1,3 +1,10 @@
+try {
+    const _curSchool = localStorage.getItem('argo_school');
+    if (!_curSchool || _curSchool === 'SG28499' || _curSchool === 'SS19014') {
+        localStorage.setItem('argo_school', 'SG20925');
+    }
+} catch (_) {}
+
 // --- XSS PROTECTION ---
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -1300,6 +1307,11 @@ function isValidName(name) {
     return /^[a-zA-ZÀ-ÿ0-9\s'.\-]+$/.test(trimmed);
 }
 function renderNav() {
+    if (!state.isLoggedIn || state.view === 'login' || state._loggedOut) {
+        const nc = document.getElementById('nav-container');
+        if (nc) nc.innerHTML = '';
+        return '';
+    }
     const currentView = state.view;
 
     // Helper to generate an iOS HIG nav item link with filled/outline icon states
@@ -2750,8 +2762,16 @@ window.getComprehensiveNotificationData = function() {
         return null;
     }
 
+    const _getStoredArr = (k) => {
+        try {
+            const key = (typeof lsKey === 'function') ? lsKey(k) : k;
+            return JSON.parse(localStorage.getItem(key) || localStorage.getItem(k) || '[]');
+        } catch (_) { return []; }
+    };
+
     // 1. Circolari
-    const circolariList = (state.circolari || []).map(c => {
+    const rawCircList = (Array.isArray(state.circolari) && state.circolari.length > 0) ? state.circolari : _getStoredArr('circolari');
+    const circolariList = rawCircList.map(c => {
         const iso = parseItemDateISO(c.dataPubblicazione || c.date || c.data || c.pubblDate || c.data_pubblicazione);
         return {
             category: 'circolari',
@@ -3251,7 +3271,9 @@ function openTodayNotifications(initialTab) {
 
                 <!-- 3. SEZIONE: RECENTI (Collapsibile con Animazione Fluida) -->
                 ${data.recentItems.length > 0 ? (() => {
-                    const isHidden = localStorage.getItem('notif_recent_hidden') === '1';
+                    const userPrefHidden = localStorage.getItem('notif_recent_hidden') === '1';
+                    // If there are no today items, always default to showing recent items so the view is never empty
+                    const isHidden = (data.todayItems.length > 0) ? userPrefHidden : false;
                     return `
                     <div style="margin-bottom:10px;">
                         <div onclick="window.toggleRecentNotifications(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:11px 14px;background:rgba(255,255,255,0.035);border:0.5px solid rgba(255,255,255,0.09);border-radius:16px;margin-bottom:12px;transition:background 0.2s cubic-bezier(0.16,1,0.3,1),transform 0.15s ease;user-select:none;" ontouchstart="this.style.background='rgba(255,255,255,0.07)';this.style.transform='scale(0.99)'" ontouchend="this.style.background='rgba(255,255,255,0.035)';this.style.transform='scale(1)'">
@@ -6137,7 +6159,7 @@ window.openArgoLogin = function openArgoLogin() {
                     <div style="position:relative;display:flex;align-items:center;">
                         <i class="ph-bold ph-buildings" style="position:absolute;left:14px;color:#8e909f;font-size:18px;pointer-events:none;"></i>
                         <input id="argo-school" placeholder="Codice Scuola (es. SG20925)" autocomplete="organization"
-                               value="${localStorage.getItem('argo_school') || 'SG20925'}"
+                               value="${(() => { const s = localStorage.getItem('argo_school'); return (!s || s === 'SG28499' || s === 'SS19014') ? 'SG20925' : s; })()}"
                                style="height:48px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
                                       padding:0 14px 0 42px;font-size:14.5px;font-weight:600;
                                       background:rgba(255,255,255,0.05);color:#ffffff;
@@ -11061,7 +11083,7 @@ function renderProfile() {
             <!-- ── FOOTER APP INFO ── -->
             <div style="text-align:center;padding-bottom:20px;">
                 <p style="font-size:12px;font-weight:700;color:#8e909f;letter-spacing:0.04em;margin:0 0 4px;">
-                    Gandhi Diary • v4.0.2
+                    Gandhi Diary • v4.0.3
                 </p>
                 <p style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);margin:0;">
                     Liceo Gandhi · Liquid Glass Interface

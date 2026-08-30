@@ -295,7 +295,7 @@
         window.scrollTo({ top: 0, behavior: 'instant' });
         if (typeof _renderViewDirect === 'function') _renderViewDirect(v);
         const nc = document.getElementById('nav-container');
-        if (nc && typeof renderNav === 'function') nc.innerHTML = renderNav();
+        if (nc) nc.innerHTML = (!state.isLoggedIn || v === 'login') ? '' : (typeof renderNav === 'function' ? renderNav() : '');
         _animateViewEntrance(v);
       };
 

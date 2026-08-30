@@ -1262,7 +1262,10 @@
                 return;
             }
 
-            if (inputSchool) tempCreds = { school: credentials.schoolCode, user: credentials.username, pass: credentials.password };
+            if (inputSchool) {
+                tempCreds = { school: credentials.schoolCode, user: credentials.username, pass: credentials.password };
+                try { localStorage.setItem('argo_school', credentials.schoolCode); } catch(_) {}
+            }
 
             if (typeof setLoginBtnText === 'function') setLoginBtnText("Connessione... ");
 
