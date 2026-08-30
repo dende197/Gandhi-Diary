@@ -1961,8 +1961,11 @@ function gcInitMediaWidgetSwipe() {
 
     let currentSlide = 0;
     let startX = 0;
+    let startY = 0;
     let currentX = 0;
+    let currentY = 0;
     let isDragging = false;
+    let isHorizontal = null;
     const totalSlides = track.children.length;
 
     function goToSlide(index) {
@@ -1974,36 +1977,53 @@ function gcInitMediaWidgetSwipe() {
             if (i === currentSlide) {
                 dot.style.width = '18px';
                 dot.style.background = '#ffffff';
-                dot.style.boxShadow = 'none';
+                dot.style.opacity = '1';
             } else {
                 dot.style.width = '5px';
                 dot.style.background = 'rgba(255,255,255,0.3)';
-                dot.style.boxShadow = 'none';
+                dot.style.opacity = '0.6';
             }
         }
     }
 
     function handleSwipe() {
-        const diffX = startX - currentX;
-        if (Math.abs(diffX) > 30 && currentX !== 0) {
-            if (diffX > 0 && currentSlide < totalSlides - 1) {
-                goToSlide(currentSlide + 1);
-            } else if (diffX < 0 && currentSlide > 0) {
-                goToSlide(currentSlide - 1);
+        if (currentX !== 0 && isHorizontal) {
+            const diffX = startX - currentX;
+            if (Math.abs(diffX) > 35) {
+                if (diffX > 0 && currentSlide < totalSlides - 1) {
+                    goToSlide(currentSlide + 1);
+                } else if (diffX < 0 && currentSlide > 0) {
+                    goToSlide(currentSlide - 1);
+                }
             }
         }
         startX = 0;
+        startY = 0;
         currentX = 0;
+        currentY = 0;
+        isHorizontal = null;
     }
 
     widget.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        currentX = startX;
+        currentY = startY;
         isDragging = true;
+        isHorizontal = null;
     }, { passive: true });
 
     widget.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
         currentX = e.touches[0].clientX;
+        currentY = e.touches[0].clientY;
+        if (isHorizontal === null) {
+            const dx = Math.abs(currentX - startX);
+            const dy = Math.abs(currentY - startY);
+            if (dx > 8 || dy > 8) {
+                isHorizontal = dx > dy;
+            }
+        }
     }, { passive: true });
 
     widget.addEventListener('touchend', () => {
@@ -2014,7 +2034,9 @@ function gcInitMediaWidgetSwipe() {
 
     widget.addEventListener('mousedown', (e) => {
         startX = e.clientX;
+        currentX = startX;
         isDragging = true;
+        isHorizontal = true;
     });
 
     widget.addEventListener('mousemove', (e) => {
@@ -2035,8 +2057,7 @@ function gcInitMediaWidgetSwipe() {
         }
     });
 
-    // Espone l'istanza corrente ai pulsanti-dot (onclick="gcMediaGoToSlide(n)"
-    // nel markup), che restano semplici attributi HTML come nel resto dell'app.
+    // Espone l'istanza corrente ai pulsanti-dot
     window._gcMediaGoToSlideImpl = goToSlide;
 }
 window.gcMediaGoToSlide = function (index) {
@@ -2267,27 +2288,27 @@ function renderHome() {
         ? `${assenzeGiorni}g, ${ritardiTotali}r, ${usciteTotali}u`
         : 'Nessuna recente';
 
-    // 6c. Dati sintetici e precisi per il nuovo WIDGET STUDENT HUB (Overview)
+    // 6c. Dati sintetici e precisi per il CAROSELLO STUDENT HUB (Overview a 3 slide)
     const _mediaColor = media >= 8 ? '#30d158' : media >= 7 ? '#64d2ff' : media >= 6 ? '#ff9f0a' : media > 0 ? '#ff453a' : '#8e909f';
 
     // Calcolo % Ore di Assenza rispetto al monte ore totale annuale (~1000h, limite max 25% = 250h)
     const _monteOreTotale = 1000;
-    const _limiteOreMax = 250; // 25% del monte ore per validità anno scolastico
+    const _limiteOreMax = 250;
     const _assenzePctTotale = ((oreAssenzaTotali / _monteOreTotale) * 100).toFixed(1);
-    const _assenzePctLimite = Math.min(100, Math.round((oreAssenzaTotali / _limiteOreMax) * 100));
     const _assenzeStatusColor = oreAssenzaTotali > 180 ? '#ff453a' : (oreAssenzaTotali > 100 ? '#ff9f0a' : '#30d158');
     const _assenzeStatusBg = oreAssenzaTotali > 180 ? 'rgba(255,69,58,0.15)' : (oreAssenzaTotali > 100 ? 'rgba(255,159,10,0.15)' : 'rgba(48,209,88,0.15)');
 
-    // Dati per "Quanto Manca A..."
+    // Dati per "Quanto Manca A..." (Slide 2)
     const _countdownsData = (typeof window.getSchoolCountdowns === 'function') ? window.getSchoolCountdowns() : null;
     const _nearestMilestone = _countdownsData ? _countdownsData.nearest : {
         title: 'Vacanze di Natale',
         emoji: '🎄',
         daysLeft: 115,
-        badgeText: '115 giorni'
+        badgeText: '115 giorni',
+        dateFormatted: '23 Dic'
     };
 
-    // Dati per Mood Giornaliero (5 faccine)
+    // Dati per Mood Giornaliero (Slide 3)
     const _dailyMoodsMap = (typeof window.getDailyMoods === 'function') ? window.getDailyMoods() : {};
     const _todayMoodEntry = _dailyMoodsMap[todayISO] || null;
 
@@ -2295,7 +2316,7 @@ function renderHome() {
     const _hour = today.getHours();
     const _greetWord = _hour < 6 ? 'Buonanotte' : _hour < 12 ? 'Buongiorno' : _hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
 
-    // 7. WIDGET OVERVIEW — Apple Liquid Glass Student Life Hub
+    // 7. WIDGET OVERVIEW — Apple Liquid Glass Swipeable Carousel (3 Slide)
     return `
     <main class="view-fullbleed min-h-screen pb-32 pt-2 font-sans text-[#dae2fd] antialiased overflow-y-auto hide-scrollbar" style="background:var(--background, #0b1326);">
 
@@ -2311,224 +2332,234 @@ function renderHome() {
             </header>
 
             <div style="margin-bottom: 16px; padding: 0 20px;">
-                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Student Life Hub -->
-                <div id="home-student-hub-widget" style="
+                <!-- WIDGET PRINCIPALE — Apple Liquid Glass Carousel a 3 Slide -->
+                <div id="home-media-widget" style="
                     background: linear-gradient(150deg, rgba(22,34,58,0.92) 0%, rgba(10,16,30,0.96) 100%);
                     backdrop-filter: blur(40px) saturate(210%);-webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 0.5px solid rgba(255,255,255,0.14);
                     border-top: 1px solid rgba(255,255,255,0.30);
                     border-radius: 28px;
-                    padding: 20px;
                     position: relative;
                     overflow: hidden;
                     box-shadow: 0 16px 40px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
+                    user-select: none;
                 ">
                     <!-- Glow Spheres Liquid Glass -->
                     <div style="position:absolute;top:-50px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(41,151,255,0.20) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
                     <div style="position:absolute;bottom:-40px;left:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,159,10,0.15) 0%,transparent 70%);pointer-events:none;filter:blur(20px);"></div>
 
-                    <!-- Top Bar: Header & Data Odierna -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:relative;z-index:1;">
-                        <div style="display:flex;align-items:center;gap:7px;">
-                            <span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:13px;">
-                                <i class="ph-fill ph-student"></i>
-                            </span>
-                            <div>
-                                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">STUDENT HUB</span>
-                                <div style="font-size:13px;font-weight:700;color:#ffffff;line-height:1.1;">${_greetWord}, ${toDisplayName(getSafeUserName())}</div>
-                            </div>
-                        </div>
+                    <!-- Carousel Track -->
+                    <div id="home-media-track" style="display:flex;width:100%;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);will-change:transform;">
 
-                        <span style="
-                            font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);
-                            background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);
-                            padding:4px 10px;border-radius:999px;backdrop-filter:blur(10px);
-                        ">
-                            ${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
-                        </span>
-                    </div>
-
-                    <!-- ROW 1: 3 BENTO BADGES GENERALI (Media, Assenze, Prossima Verifica) -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;position:relative;z-index:1;">
-                        
-                        <!-- 1. BADGE: Media Generale -->
-                        <div onclick="navigate('voti')" style="
-                            background:rgba(255,255,255,0.04);
-                            border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
-                            border-radius:18px;padding:12px 10px;cursor:pointer;
-                            position:relative;overflow:hidden;transition:transform 0.15s ease;
-                            display:flex;flex-direction:column;justify-content:space-between;min-height:92px;
-                        " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#2997ff,${_mediaColor});"></div>
-                            
-                            <div style="display:flex;align-items:center;justify-content:space-between;">
-                                <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA</span>
-                                <i class="ph-bold ph-chart-line-up" style="font-size:12px;color:${_mediaColor};"></i>
-                            </div>
-
-                            <div style="font-size:24px;font-weight:900;color:${_mediaColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:4px 0 2px;">
-                                ${isInitialLoad ? '—' : media.toFixed(2)}
-                            </div>
-
-                            <div style="display:flex;align-items:center;gap:2px;">
-                                <span style="
-                                    display:inline-flex;align-items:center;gap:2px;
-                                    font-size:9px;font-weight:800;color:${isPositive ? '#30d158' : '#ff453a'};
-                                    background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};
-                                    padding:1px 6px;border-radius:999px;
-                                ">
-                                    <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- 2. BADGE: Percentuale Assenze su Totale Ore -->
-                        <div onclick="mostraAssenzeModal()" style="
-                            background:rgba(255,255,255,0.04);
-                            border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
-                            border-radius:18px;padding:12px 10px;cursor:pointer;
-                            position:relative;overflow:hidden;transition:transform 0.15s ease;
-                            display:flex;flex-direction:column;justify-content:space-between;min-height:92px;
-                        " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#ff9f0a,${_assenzeStatusColor});"></div>
-                            
-                            <div style="display:flex;align-items:center;justify-content:space-between;">
-                                <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">ASSENZE</span>
-                                <i class="ph-bold ph-calendar-x" style="font-size:12px;color:${_assenzeStatusColor};"></i>
-                            </div>
-
-                            <div style="font-size:22px;font-weight:900;color:${_assenzeStatusColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:4px 0 2px;">
-                                ${_assenzePctTotale}%
-                            </div>
-
-                            <div style="display:flex;align-items:center;gap:2px;">
-                                <span style="
-                                    font-size:9px;font-weight:700;color:${_assenzeStatusColor};
-                                    background:${_assenzeStatusBg};
-                                    padding:1px 6px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-                                ">
-                                    ${oreAssenzaTotali}h / 250h max
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- 3. BADGE: Prossime Verifiche -->
-                        <div onclick="navigate('planner')" style="
-                            background:rgba(255,255,255,0.04);
-                            border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
-                            border-radius:18px;padding:12px 10px;cursor:pointer;
-                            position:relative;overflow:hidden;transition:transform 0.15s ease;
-                            display:flex;flex-direction:column;justify-content:space-between;min-height:92px;
-                        " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <div style="position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,#ff453a,#bf5af2);"></div>
-                            
-                            <div style="display:flex;align-items:center;justify-content:space-between;">
-                                <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">VERIFICHE</span>
-                                <i class="ph-bold ph-exam" style="font-size:12px;color:#ff453a;"></i>
-                            </div>
-
-                            <div style="font-size:12.5px;font-weight:800;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:4px 0 2px;">
-                                ${nextVerifica ? escapeHtml(nextVerifica.materia) : 'Nessuna 🎉'}
-                            </div>
-
-                            <div style="display:flex;align-items:center;gap:2px;">
-                                <span style="
-                                    font-size:9px;font-weight:800;
-                                    color:${nextVerifica ? (daysDiff <= 2 ? '#ff453a' : '#ff9f0a') : '#30d158'};
-                                    background:${nextVerifica ? (daysDiff <= 2 ? 'rgba(255,69,58,0.18)' : 'rgba(255,159,10,0.18)') : 'rgba(48,209,88,0.15)'};
-                                    padding:1px 6px;border-radius:999px;white-space:nowrap;
-                                ">
-                                    ${nextVerifica ? countdownText : 'Tutto ok'}
-                                </span>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- ROW 2: TASTO "QUANTO MANCA A..." (Countdown Traguardi Scolastici) -->
-                    <div onclick="window.openSchoolCountdownsModal()" style="
-                        background: linear-gradient(135deg, rgba(255,159,10,0.12) 0%, rgba(20,31,54,0.7) 100%);
-                        border: 0.5px solid rgba(255,159,10,0.28);
-                        border-top: 1px solid rgba(255,255,255,0.22);
-                        border-radius: 20px; padding: 12px 14px;
-                        cursor: pointer; position: relative; overflow: hidden;
-                        margin-bottom: 14px; transition: transform 0.15s ease;
-                    " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                                <div style="
-                                    width:38px;height:38px;border-radius:12px;
-                                    background:rgba(255,159,10,0.20);border:0.5px solid rgba(255,159,10,0.4);
-                                    display:flex;align-items:center;justify-content:center;
-                                    font-size:20px;flex-shrink:0;box-shadow:0 0 12px rgba(255,159,10,0.3);
-                                ">
-                                    ${_nearestMilestone.emoji}
+                        <!-- ════════ SLIDE 1: QUADRO GENERALE & MEDIA (Spazioso Saluto Hero) ════════ -->
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;padding:20px 20px 16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-height:226px;">
+                            <!-- Ampio Saluto Hero -->
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <span style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:11px;">
+                                            <i class="ph-fill ph-sparkle"></i>
+                                        </span>
+                                        <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">QUADRO GENERALE</span>
+                                    </div>
+                                    <h2 style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;margin:4px 0 0;line-height:1.2;font-family:'Inter',sans-serif;">
+                                        ${_greetWord}, ${toDisplayName(getSafeUserName())}
+                                    </h2>
+                                    <p style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55);margin:2px 0 0;">
+                                        ${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    </p>
                                 </div>
-                                <div style="min-width:0;">
-                                    <div style="font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;">QUANTO MANCA A...</div>
-                                    <div style="font-size:13.5px;font-weight:700;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                        ${_nearestMilestone.title}
+                                <span style="
+                                    font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.7);
+                                    background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);
+                                    padding:4px 10px;border-radius:999px;backdrop-filter:blur(10px);white-space:nowrap;
+                                ">
+                                    A.S. 2026/27
+                                </span>
+                            </div>
+
+                            <!-- 3 Bento Badges (Media, Assenze %, Prossima Verifica) -->
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                                <!-- 1. Media -->
+                                <div onclick="navigate('voti')" style="
+                                    background:rgba(255,255,255,0.04);
+                                    border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                                    border-radius:16px;padding:10px 9px;cursor:pointer;
+                                    display:flex;flex-direction:column;justify-content:space-between;min-height:86px;
+                                    transition:transform 0.15s ease;
+                                " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">MEDIA</span>
+                                        <i class="ph-bold ph-chart-line-up" style="font-size:11px;color:${_mediaColor};"></i>
+                                    </div>
+                                    <div style="font-size:22px;font-weight:900;color:${_mediaColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:3px 0 1px;">
+                                        ${isInitialLoad ? '—' : media.toFixed(2)}
+                                    </div>
+                                    <span style="font-size:9px;font-weight:800;color:${isPositive ? '#30d158' : '#ff453a'};background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};padding:1px 5px;border-radius:999px;display:inline-flex;align-items:center;gap:2px;width:fit-content;">
+                                        <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
+                                    </span>
+                                </div>
+
+                                <!-- 2. Assenze % -->
+                                <div onclick="mostraAssenzeModal()" style="
+                                    background:rgba(255,255,255,0.04);
+                                    border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                                    border-radius:16px;padding:10px 9px;cursor:pointer;
+                                    display:flex;flex-direction:column;justify-content:space-between;min-height:86px;
+                                    transition:transform 0.15s ease;
+                                " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">ASSENZE</span>
+                                        <i class="ph-bold ph-calendar-x" style="font-size:11px;color:${_assenzeStatusColor};"></i>
+                                    </div>
+                                    <div style="font-size:20px;font-weight:900;color:${_assenzeStatusColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:3px 0 1px;">
+                                        ${_assenzePctTotale}%
+                                    </div>
+                                    <span style="font-size:8.5px;font-weight:700;color:${_assenzeStatusColor};background:${_assenzeStatusBg};padding:1px 5px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:fit-content;">
+                                        ${oreAssenzaTotali}h / 250h
+                                    </span>
+                                </div>
+
+                                <!-- 3. Prossima Verifica -->
+                                <div onclick="navigate('planner')" style="
+                                    background:rgba(255,255,255,0.04);
+                                    border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);
+                                    border-radius:16px;padding:10px 9px;cursor:pointer;
+                                    display:flex;flex-direction:column;justify-content:space-between;min-height:86px;
+                                    transition:transform 0.15s ease;
+                                " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <span style="font-size:8.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);">VERIFICA</span>
+                                        <i class="ph-bold ph-exam" style="font-size:11px;color:#ff453a;"></i>
+                                    </div>
+                                    <div style="font-size:12px;font-weight:800;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:3px 0 1px;">
+                                        ${nextVerifica ? escapeHtml(nextVerifica.materia) : 'Nessuna 🎉'}
+                                    </div>
+                                    <span style="font-size:8.5px;font-weight:800;color:${nextVerifica ? (daysDiff <= 2 ? '#ff453a' : '#ff9f0a') : '#30d158'};background:${nextVerifica ? (daysDiff <= 2 ? 'rgba(255,69,58,0.18)' : 'rgba(255,159,10,0.18)') : 'rgba(48,209,88,0.15)'};padding:1px 5px;border-radius:999px;white-space:nowrap;width:fit-content;">
+                                        ${nextVerifica ? countdownText : 'Libero'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ════════ SLIDE 2: QUANTO MANCA A... (Traguardi Scolastici) ════════ -->
+                        <div onclick="window.openSchoolCountdownsModal()" style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;padding:20px 20px 16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-height:226px;cursor:pointer;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:10px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(255,159,10,0.2);color:#ff9f0a;font-size:11px;">
+                                        <i class="ph-fill ph-hourglass-high"></i>
+                                    </span>
+                                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;">QUANTO MANCA A...</span>
+                                </div>
+                                <span style="font-size:11px;font-weight:700;color:#ff9f0a;display:flex;align-items:center;gap:3px;">
+                                    Tutti i traguardi <i class="ph-bold ph-arrow-right" style="font-size:11px;"></i>
+                                </span>
+                            </div>
+
+                            <!-- Central Hero Countdown Box -->
+                            <div style="
+                                background: linear-gradient(135deg, rgba(255,159,10,0.14) 0%, rgba(255,255,255,0.03) 100%);
+                                border: 0.5px solid rgba(255,159,10,0.32); border-radius: 18px;
+                                padding: 14px 16px; margin: auto 0;
+                                display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                            ">
+                                <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                                    <div style="
+                                        width:44px;height:44px;border-radius:14px;
+                                        background:rgba(255,159,10,0.22);border:0.5px solid rgba(255,159,10,0.45);
+                                        display:flex;align-items:center;justify-content:center;
+                                        font-size:22px;flex-shrink:0;box-shadow:0 0 16px rgba(255,159,10,0.35);
+                                    ">
+                                        ${_nearestMilestone.emoji}
+                                    </div>
+                                    <div style="min-width:0;">
+                                        <div style="font-size:15px;font-weight:800;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            ${_nearestMilestone.title}
+                                        </div>
+                                        <div style="font-size:11.5px;color:rgba(255,255,255,0.6);margin-top:2px;">
+                                            ${_nearestMilestone.dateFormatted} · Prossima tappa
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
                                 <span style="
-                                    font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums;
-                                    color:#ff9f0a;background:rgba(255,159,10,0.18);border:0.5px solid rgba(255,159,10,0.35);
-                                    padding:3px 10px;border-radius:999px;
+                                    font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;
+                                    color:#ff9f0a;background:rgba(255,159,10,0.20);border:0.5px solid rgba(255,159,10,0.40);
+                                    padding:5px 12px;border-radius:999px;white-space:nowrap;
                                 ">
                                     ${_nearestMilestone.badgeText}
                                 </span>
-                                <i class="ph-bold ph-caret-right" style="font-size:14px;color:rgba(255,255,255,0.4);"></i>
+                            </div>
+
+                            <!-- Bottom Progress Line -->
+                            <div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                                    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;">ANNO SCOLASTICO ${_countdownsData ? _countdownsData.schoolYearLabel : ''}</span>
+                                    <span style="font-size:10.5px;font-weight:800;color:#2997ff;">${_countdownsData ? _countdownsData.schoolYearProgress : 0}% completato</span>
+                                </div>
+                                <div style="width:100%;height:5px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+                                    <div style="width:${_countdownsData ? _countdownsData.schoolYearProgress : 0}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- ROW 3: MOOD TRACKER GIORNALIERO (5 Faccine & Sync Planner) -->
-                    <div style="
-                        background: rgba(255,255,255,0.03);
-                        border: 0.5px solid rgba(255,255,255,0.09);
-                        border-radius: 20px; padding: 12px 14px;
-                        position: relative; z-index: 1;
-                    ">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                            <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:4px;">
-                                <i class="ph-fill ph-smiley" style="color:#ffd60a;"></i>
-                                COM'È ANDATA OGGI?
-                            </span>
-                            <span id="home-daily-mood-label" style="font-size:10.5px;color:rgba(255,255,255,0.5);">
-                                ${_todayMoodEntry ? `✨ Mood: <strong style="color:${_todayMoodEntry.color};">${_todayMoodEntry.emoji} ${_todayMoodEntry.label}</strong>` : 'Seleziona per il diario'}
-                            </span>
+                        <!-- ════════ SLIDE 3: DIARIO & MOOD GIORNALIERO (Com'è andata oggi?) ════════ -->
+                        <div style="width:100%;min-width:100%;max-width:100%;flex-shrink:0;box-sizing:border-box;padding:20px 20px 16px 20px;display:flex;flex-direction:column;justify-content:space-between;min-height:226px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);padding-bottom:10px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(255,214,10,0.2);color:#ffd60a;font-size:11px;">
+                                        <i class="ph-fill ph-smiley"></i>
+                                    </span>
+                                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ffd60a;">DIARIO & MOOD</span>
+                                </div>
+                                <span id="home-daily-mood-label" style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);">
+                                    ${_todayMoodEntry ? `✨ <strong style="color:${_todayMoodEntry.color};">${_todayMoodEntry.emoji} ${_todayMoodEntry.label}</strong>` : 'Tocca una faccina'}
+                                </span>
+                            </div>
+
+                            <div style="text-align:center;margin:2px 0;">
+                                <h3 style="font-size:16px;font-weight:800;color:#ffffff;margin:0 0 2px;letter-spacing:-0.02em;">Com'è andata oggi?</h3>
+                                <p style="font-size:11.5px;color:rgba(255,255,255,0.5);margin:0;">Scegli la tua reazione per registrarla nel diario</p>
+                            </div>
+
+                            <!-- 5 Faccine Emoji -->
+                            <div id="home-daily-mood-buttons" style="display:flex;justify-content:space-between;gap:8px;">
+                                ${[
+                                    { idx: 0, emoji: '😫', label: 'Pessima', color: '#ff453a', bg: 'rgba(255,69,58,0.22)' },
+                                    { idx: 1, emoji: '🥱', label: 'Faticosa', color: '#ff9f0a', bg: 'rgba(255,159,10,0.22)' },
+                                    { idx: 2, emoji: '😐', label: 'Normale', color: '#ffd60a', bg: 'rgba(255,214,10,0.22)' },
+                                    { idx: 3, emoji: '😊', label: 'Buona', color: '#64d2ff', bg: 'rgba(100,210,255,0.22)' },
+                                    { idx: 4, emoji: '🤩', label: 'Top!', color: '#30d158', bg: 'rgba(48,209,88,0.22)' }
+                                ].map(item => {
+                                    const isSelected = _todayMoodEntry && _todayMoodEntry.index === item.idx;
+                                    return `
+                                    <button type="button" data-mood-idx="${item.idx}" onclick="window.setDailyMood(${item.idx})" style="
+                                        flex: 1; height: 44px; border-radius: 14px;
+                                        background: ${isSelected ? item.bg : 'rgba(255,255,255,0.06)'};
+                                        border: ${isSelected ? `1.5px solid ${item.color}` : '0.5px solid rgba(255,255,255,0.12)'};
+                                        box-shadow: ${isSelected ? `0 0 16px ${item.color}50, 0 4px 12px rgba(0,0,0,0.3)` : 'none'};
+                                        transform: ${isSelected ? 'scale(1.12)' : 'scale(1)'};
+                                        font-size: 20px; display: flex; align-items: center; justify-content: center;
+                                        cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+                                        -webkit-tap-highlight-color: transparent;
+                                    " title="${item.label}" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='${isSelected ? 'scale(1.12)' : 'scale(1)'}'">
+                                        ${item.emoji}
+                                    </button>`;
+                                }).join('')}
+                            </div>
+
+                            <div style="font-size:10px;color:rgba(255,255,255,0.4);text-align:center;margin-top:2px;">
+                                📅 Sincronizzato con il calendario del Planner
+                            </div>
                         </div>
 
-                        <!-- 5 Faccine Interactive Emoji Buttons -->
-                        <div id="home-daily-mood-buttons" style="display:flex;justify-content:space-between;gap:8px;">
-                            ${[
-                                { idx: 0, emoji: '😫', label: 'Pessima', color: '#ff453a', bg: 'rgba(255,69,58,0.22)' },
-                                { idx: 1, emoji: '🥱', label: 'Faticosa', color: '#ff9f0a', bg: 'rgba(255,159,10,0.22)' },
-                                { idx: 2, emoji: '😐', label: 'Normale', color: '#ffd60a', bg: 'rgba(255,214,10,0.22)' },
-                                { idx: 3, emoji: '😊', label: 'Buona', color: '#64d2ff', bg: 'rgba(100,210,255,0.22)' },
-                                { idx: 4, emoji: '🤩', label: 'Top!', color: '#30d158', bg: 'rgba(48,209,88,0.22)' }
-                            ].map(item => {
-                                const isSelected = _todayMoodEntry && _todayMoodEntry.index === item.idx;
-                                return `
-                                <button type="button" data-mood-idx="${item.idx}" onclick="window.setDailyMood(${item.idx})" style="
-                                    flex: 1; height: 42px; border-radius: 14px;
-                                    background: ${isSelected ? item.bg : 'rgba(255,255,255,0.06)'};
-                                    border: ${isSelected ? `1.5px solid ${item.color}` : '0.5px solid rgba(255,255,255,0.12)'};
-                                    box-shadow: ${isSelected ? `0 0 16px ${item.color}50, 0 4px 12px rgba(0,0,0,0.3)` : 'none'};
-                                    transform: ${isSelected ? 'scale(1.12)' : 'scale(1)'};
-                                    font-size: 20px; display: flex; align-items: center; justify-content: center;
-                                    cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
-                                    -webkit-tap-highlight-color: transparent;
-                                " title="${item.label}" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='${isSelected ? 'scale(1.12)' : 'scale(1)'}'">
-                                    ${item.emoji}
-                                </button>`;
-                            }).join('')}
-                        </div>
                     </div>
 
+                    <!-- Capsule Indicator Dots -->
+                    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0 0 10px;">
+                        <button id="home-media-dot0" onclick="gcMediaGoToSlide(0)" aria-label="Slide 1" style="height:4px;width:18px;background:#ffffff;border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s ease;"></button>
+                        <button id="home-media-dot1" onclick="gcMediaGoToSlide(1)" aria-label="Slide 2" style="height:4px;width:5px;background:rgba(255,255,255,0.3);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s ease;"></button>
+                        <button id="home-media-dot2" onclick="gcMediaGoToSlide(2)" aria-label="Slide 3" style="height:4px;width:5px;background:rgba(255,255,255,0.3);border-radius:9999px;border:none;padding:0;cursor:pointer;transition:all 0.3s ease;"></button>
+                    </div>
                 </div>
             </div>
 
