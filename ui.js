@@ -7224,8 +7224,23 @@ window.removeLoader = function () {
     }
 };
 
-window.logout = async function () {
-    if (confirm('Sei sicuro di voler disconnettere? I tuoi planner e feed saranno mantenuti.')) {
+window.handleLogoutPrompt = function () {
+    try {
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+    } catch (_) {}
+    if (confirm("Sei sicuro di voler uscire dall'account?")) {
+        if (typeof window.logout === 'function') {
+            window.logout(true);
+        }
+    }
+};
+
+window.logout = async function (skipConfirm = false) {
+    if (!skipConfirm) {
+        if (!confirm("Sei sicuro di voler uscire dall'account?")) {
+            return;
+        }
+    }
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
         state._loggedOut = true;
         state.isLoggedIn = false;
@@ -7330,7 +7345,6 @@ window.logout = async function () {
                 keepalive: true
             }).catch((e) => { console.warn("Logout save failed", e); });
         }
-    }
 };
 
 window.saveProfileToServer = async function (profileData) {
@@ -11026,7 +11040,7 @@ function renderProfile() {
             </div>
 
             <!-- ── LOGOUT (Apple Frosted Danger Button) ── -->
-            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(confirm('Sei sicuro di voler uscire dall\'account?')){if(typeof logout==='function')logout();}"
+            <button onclick="window.handleLogoutPrompt()"
                 style="
                     width:100%;height:54px;border-radius:20px;
                     background:rgba(255,69,58,0.12);
@@ -11047,7 +11061,7 @@ function renderProfile() {
             <!-- ── FOOTER APP INFO ── -->
             <div style="text-align:center;padding-bottom:20px;">
                 <p style="font-size:12px;font-weight:700;color:#8e909f;letter-spacing:0.04em;margin:0 0 4px;">
-                    Gandhi Diary • v4.0.0
+                    Gandhi Diary • v4.0.1
                 </p>
                 <p style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.35);margin:0;">
                     Liceo Gandhi · Liquid Glass Interface
