@@ -66,4 +66,23 @@ describe('Security Controls & Migrations', () => {
         assert.strictEqual(headersSet['Access-Control-Allow-Origin'], undefined);
         assert.strictEqual(headersSet['Access-Control-Allow-Credentials'], 'false');
     });
+
+    test('CORS headers allow GitHub Pages and include required headers', () => {
+        const req = {
+            headers: {
+                origin: 'https://dende197.github.io'
+            }
+        };
+        const headersSet = {};
+        const res = {
+            setHeader: (key, val) => {
+                headersSet[key] = val;
+            }
+        };
+
+        setCorsHeaders(req, res);
+        assert.strictEqual(headersSet['Access-Control-Allow-Origin'], 'https://dende197.github.io');
+        assert.strictEqual(headersSet['Access-Control-Allow-Credentials'], 'true');
+        assert.ok(headersSet['Access-Control-Allow-Headers'].includes('x-user-id'));
+    });
 });

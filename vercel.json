@@ -52,7 +52,7 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token, x-session-token"
+          "value": "Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey, x-id-soggetto, x-prg-soggetto, x-auth-token, x-session-token, x-user-id"
         }
       ]
     }
