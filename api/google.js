@@ -43,7 +43,7 @@ function getOAuth2Client() {
 }
 
 function getOAuthStateKey() {
-    const key = process.env.ARGO_ENCRYPTION_KEY || '';
+    const key = process.env.OAUTH_STATE_KEY || process.env.ARGO_ENCRYPTION_KEY || '';
     if (!HEX_TOKEN_REGEX.test(key)) return null;
     return Buffer.from(key, 'hex');
 }
@@ -288,30 +288,8 @@ module.exports = async function handler(req, res) {
                     return res.status(403).json({ success: false, error: 'Non autorizzato' });
                 }
 
-                let argoCreds = null;
-                if (req.query.state) {
-                    try {
-                        const decoded = JSON.parse(Buffer.from(req.query.state, 'base64').toString('utf8'));
-                        if (decoded?.argo && typeof decoded.argo === 'object') argoCreds = decoded.argo;
-                    } catch (e) {
-                        debugLog('[Google OAuth] Invalid state payload from client', e.message);
-                    }
-                }
-                if (!argoCreds) {
-                    const credsFromVault = getVaultCredentialsFromContext({ userId: normalizedUserId });
-                    if (credsFromVault?.password) {
-                        argoCreds = {
-                            schoolCode: credsFromVault.schoolCode,
-                            username: credsFromVault.username,
-                            password: credsFromVault.password,
-                            profileIndex: credsFromVault.profileIndex ?? 0
-                        };
-                    }
-                }
-
                 const signedState = signOAuthState({
                     userId: normalizedUserId,
-                    argo: argoCreds,
                     ts: Date.now()
                 });
                 if (!signedState) {
@@ -343,7 +321,6 @@ module.exports = async function handler(req, res) {
 
                 const parsedState = verifyAndParseOAuthState(stateParam);
                 const userId = parsedState?.userId || null;
-                const argoCreds = parsedState?.argo || null;
 
                 debugLog('[OAuth] Code received', { codePrefix: code?.slice(0, 10) });
                 if (error) {
@@ -358,6 +335,15 @@ module.exports = async function handler(req, res) {
                 try {
                     const oauth2 = getOAuth2Client();
                     const { tokens } = await oauth2.getToken(code);
+
+                    // Fetch argo creds from server session-vault if present, never from URL state
+                    const credsFromVault = getVaultCredentialsFromContext({ userId });
+                    const argoCreds = credsFromVault?.password ? {
+                        schoolCode: credsFromVault.schoolCode,
+                        username: credsFromVault.username,
+                        password: credsFromVault.password,
+                        profileIndex: credsFromVault.profileIndex ?? 0
+                    } : null;
 
                     await saveTokens(userId, tokens, argoCreds);
                     debugLog('Google Calendar linked', { userId, hasArgo: !!argoCreds });

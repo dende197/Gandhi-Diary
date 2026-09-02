@@ -454,16 +454,7 @@ window.refreshSessionToken = async function () {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
     if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
-    // Restore password from sessionStorage if RAM copy was lost (iOS process kill, page reload)
-    if (!window._argoPasswordRuntime) {
-        try {
-            const stored = sessionStorage.getItem('_argo_pwd_session');
-            if (stored) {
-                window._argoPasswordRuntime = decodeURIComponent(escape(atob(stored)));
-                console.log('[refreshSessionToken] Restored password from sessionStorage');
-            }
-        } catch (_) {}
-    }
+    // SECURITY: Passwords are never retrieved from sessionStorage.
 
     // Helper: apply refreshed session data from server response
     const _applyRefreshedSession = (data) => {
@@ -4513,7 +4504,7 @@ async function mostraCircolare(id) {
     sheet.style.cssText = 'width:100%;max-width:540px;background:rgba(18,29,50,0.96);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid rgba(182,196,255,0.18);border-top:1px solid rgba(255,255,255,0.35);border-radius:32px 32px 0 0;display:flex;flex-direction:column;max-height:92vh;box-shadow:0 -12px 48px rgba(6,14,32,0.85);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);font-family:\'Inter\',sans-serif;color:#dae2fd;';
 
     const sintesiContent = c.sintesi
-        ? `<div style="font-size:14px;line-height:1.75;color:#dae2fd;">${typeof marked !== 'undefined' ? marked.parse(c.sintesi) : escapeHtml(c.sintesi)}</div>`
+        ? `<div style="font-size:14px;line-height:1.75;color:#dae2fd;">${typeof window.renderSafeMarkdown === 'function' ? window.renderSafeMarkdown(c.sintesi) : escapeHtml(c.sintesi)}</div>`
         : `<div id="sintesi-placeholder-${c.id}" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 16px;gap:12px;background:rgba(23,31,51,0.8);border:1px solid rgba(182,196,255,0.14);border-radius:22px;">
                <div style="width:52px;height:52px;border-radius:18px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.3);display:flex;align-items:center;justify-content:center;color:#b6c4ff;">
                    <i class="ph-fill ph-sparkle" style="font-size:26px;"></i>
@@ -7540,11 +7531,27 @@ window.requestCircularSynthesis = async function (id, link) {
     clearInterval(interval);
 };
 
+window.renderSafeMarkdown = function(md) {
+    if (!md) return '';
+    try {
+        let rawHtml = typeof marked !== 'undefined' ? marked.parse(String(md)) : escapeHtml(md);
+        if (typeof window.DOMPurify !== 'undefined' && typeof window.DOMPurify.sanitize === 'function') {
+            return window.DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: ['p', 'b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'span'],
+                ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style']
+            });
+        }
+        return escapeHtml(md);
+    } catch (_) {
+        return escapeHtml(md);
+    }
+};
+
 window.ensureMarked = function() {
     return new Promise((resolve, reject) => {
         if (typeof marked !== 'undefined') return resolve();
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/marked@14.1.2/marked.min.js';
         script.onload = resolve;
         script.onerror = reject;
         document.head.appendChild(script);
@@ -7554,10 +7561,19 @@ window.ensureMarked = function() {
 window.loadCircolareSintesi = async function (id, link) {
     try {
         console.log(`[Network] Sintesi Request: ${id}`);
+        const session = (typeof sessionManager !== 'undefined' && sessionManager.load) ? sessionManager.load() : null;
+        const sessionToken = (typeof state !== 'undefined' && state.sessionToken) || (session && session.sessionToken) || '';
+        const resolvedUserId = (typeof window.getUserId === 'function')
+            ? window.getUserId()
+            : (session && (session.studentId || session.userId)) || (state && state.user && state.user.id) || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (sessionToken) headers['x-session-token'] = sessionToken;
+        if (resolvedUserId) headers['x-user-id'] = resolvedUserId;
+
         const response = await fetch(`${API_BASE_URL}/api/circolari/sintesi`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, link })
+            headers,
+            body: JSON.stringify({ id, link, userId: resolvedUserId })
         });
         const data = await response.json();
         if (data.success && data.sintesi) {
@@ -7570,7 +7586,7 @@ window.loadCircolareSintesi = async function (id, link) {
             if (box) {
                 box.innerHTML = `
                     <div class="ai-prose" style="animation: fadeIn 0.4s ease-out;">
-                        ${marked.parse(data.sintesi)}
+                        ${window.renderSafeMarkdown(data.sintesi)}
                     </div>`;
             }
         } else {

@@ -1,9 +1,33 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const pdfParse = require('pdf-parse');
-const { handleCors, USER_AGENT, getRequestBody } = require('../../lib/helpers');
+const { handleCors, USER_AGENT, getRequestBody, verifySessionToken, normalizeUserId, isSessionSecurityConfigured } = require('../../lib/helpers');
 const { getGroq } = require('../../lib/groq');
 const { getSintesiFromCache, setSintesiInCache } = require('../../lib/sintesiCache');
+
+// In-memory rate limiting map: IP -> array of request timestamps
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 15;
+const MAX_PDF_BYTES = 8 * 1024 * 1024; // 8 MB
+
+function checkRateLimit(clientIp) {
+    const now = Date.now();
+    const timestamps = rateLimitMap.get(clientIp) || [];
+    const recent = timestamps.filter(t => (now - t) < RATE_LIMIT_WINDOW_MS);
+    if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
+        return false;
+    }
+    recent.push(now);
+    rateLimitMap.set(clientIp, recent);
+    // Cleanup stale entries
+    if (rateLimitMap.size > 1000) {
+        for (const [ip, ts] of rateLimitMap.entries()) {
+            if (!ts.some(t => (now - t) < RATE_LIMIT_WINDOW_MS)) rateLimitMap.delete(ip);
+        }
+    }
+    return true;
+}
 
 // Returns the allowed hostname for circolari links (derived from SCHOOL_CIRCOLARI_URL).
 function _getAllowedHostname() {
@@ -31,7 +55,30 @@ module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+    // Client IP rate limiting
+    const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1').split(',')[0].trim();
+    if (!checkRateLimit(clientIp)) {
+        return res.status(429).json({
+            success: false,
+            error: 'Troppe richieste di sintesi. Attendi un minuto prima di riprovare.',
+            errorType: 'rateLimit'
+        });
+    }
+
     const body = getRequestBody(req);
+
+    // Enforce valid session token if session security is configured, to protect Groq API costs
+    if (isSessionSecurityConfigured()) {
+        const sessionUserId = normalizeUserId(req.headers['x-user-id'] || body.userId || '');
+        if (!sessionUserId || !verifySessionToken(req, sessionUserId)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Sessione non valida o scaduta. Effettua nuovamente il login per richiedere la sintesi.',
+                errorType: 'unauthorized'
+            });
+        }
+    }
+
     const { link, id } = body;
     if (!link) return res.status(400).json({ success: false, error: 'Link mancante', errorType: 'badRequest' });
 
@@ -50,8 +97,20 @@ module.exports = async function handler(req, res) {
         let textContent = '';
         let finalPdfUrl = link;
 
+        const safeAxiosOptions = {
+            timeout: 12000,
+            maxRedirects: 3,
+            maxContentLength: MAX_PDF_BYTES,
+            beforeRedirect: (options) => {
+                const redirectUrl = options.href || `${options.protocol}//${options.hostname}${options.path}`;
+                if (!isAllowedCircolariLink(redirectUrl)) {
+                    throw new Error(`SSRF Blocked: redirect to non-whitelisted host ${redirectUrl}`);
+                }
+            }
+        };
+
         if (!link.toLowerCase().endsWith('.pdf')) {
-            const htmlRes = await axios.get(link, { timeout: 10000 });
+            const htmlRes = await axios.get(link, safeAxiosOptions);
             const $ = cheerio.load(htmlRes.data);
             const pdfLinks = [];
             $('#attachmentsList a[href*=".pdf"]').each((i, el) => {
@@ -75,6 +134,7 @@ module.exports = async function handler(req, res) {
         if (finalPdfUrl.toLowerCase().endsWith('.pdf') && !textContent) {
             try {
                 const pdfRes = await axios.get(finalPdfUrl, {
+                    ...safeAxiosOptions,
                     headers: { 'User-Agent': USER_AGENT, 'Referer': 'https://www.liceogandhi.edu.it/' },
                     responseType: 'arraybuffer',
                     timeout: 15000

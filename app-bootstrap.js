@@ -4,33 +4,18 @@
         const GCONNECT_DEFAULT_API_BACKEND = 'https://g-connect-backend-r5j1.vercel.app';
         console.log(`🚀 Booting G-Connect on ${window.location.hostname}`);
 
-        function normalizeApiBase(url) {
-            if (!url || typeof url !== 'string') return '';
-            const trimmed = url.trim();
-            if (!trimmed) return '';
-            try {
-                return new URL(trimmed).origin;
-            } catch (_) {
-                return '';
-            }
-        }
-
         function resolveApiBaseUrl() {
-            const localOverride = normalizeApiBase(localStorage.getItem('gconnect_api_base_url') || '');
-            if (localOverride) return { url: localOverride, source: 'localStorage override' };
-
-            const queryOverride = normalizeApiBase(new URLSearchParams(window.location.search).get('api') || '');
-            if (queryOverride) {
-                try { localStorage.setItem('gconnect_api_base_url', queryOverride); } catch (_) {}
-                return { url: queryOverride, source: 'query override' };
-            }
-
+            // SECURITY: No user-controlled overrides (?api= or localStorage).
+            // Only same-origin or the hardcoded production backend for GitHub Pages.
             const sameOrigin = window.location.origin;
             const isGitHubPages = /(^|\.)github\.io$/i.test(window.location.hostname);
             if (!isGitHubPages) return { url: sameOrigin, source: 'same-origin' };
-
             return { url: GCONNECT_DEFAULT_API_BACKEND, source: 'github-pages fallback' };
         }
+
+        // Clean up any previously stored override from old versions and sensitive sessionStorage items
+        try { localStorage.removeItem('gconnect_api_base_url'); } catch (_) {}
+        try { sessionStorage.removeItem('_argo_pwd_session'); } catch (_) {}
 
         const resolvedApi = resolveApiBaseUrl();
         const API_BASE_URL = resolvedApi.url;
@@ -42,15 +27,13 @@
         async function getSupabaseClient() {
             if (supabaseClient) return supabaseClient;
             try {
-                let sbUrl = '';
-                let sbKey = '';
-                try {
-                    const cfg = await fetch(`${API_BASE_URL}/api/config`).then(r => r.json());
-                    sbUrl = cfg.supabaseUrl;
-                    sbKey = cfg.supabaseAnonKey;
-                } catch (_) {}
-                sbUrl = sbUrl || 'https://mlcutgkfunbpmrnbeznd.supabase.co';
-                sbKey = sbKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sY3V0Z2tmdW5icG1ybmJlem5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTg2NDgsImV4cCI6MjA4NDc3NDY0OH0.eWR7PxNsJjSGAM1WoaNseVkeQDpEqaUvO8xvXoDKLQg';
+                const cfg = await fetch(`${API_BASE_URL}/api/config`).then(r => r.json());
+                const sbUrl = cfg.supabaseUrl;
+                const sbKey = cfg.supabaseAnonKey;
+                if (!sbUrl || !sbKey) {
+                    console.error('[Config] Server did not return Supabase configuration.');
+                    return null;
+                }
                 if (window.supabase && typeof window.supabase.createClient === 'function') {
                     supabaseClient = window.supabase.createClient(sbUrl, sbKey);
                 }
@@ -551,16 +534,8 @@
             if (!sessionData) { state.syncing = false; return; }
             
             try {
-                // Ensure password is available from sessionStorage if RAM copy was lost
-                if (!window._argoPasswordRuntime) {
-                    try {
-                        const storedPwd = sessionStorage.getItem('_argo_pwd_session');
-                        if (storedPwd) {
-                            window._argoPasswordRuntime = decodeURIComponent(escape(atob(storedPwd)));
-                            console.log('[performSync] Restored password from sessionStorage');
-                        }
-                    } catch(_) {}
-                }
+                // SECURITY: Never persist or restore passwords from sessionStorage.
+                // Session synchronization uses server-side encrypted credentials and session tokens.
 
                 const getFreshRequestBody = () => {
                     const s = sessionManager.load() || sessionData;
@@ -804,16 +779,7 @@
             const session = sessionManager.load();
             if (!session || !sessionManager.isLoggedIn()) return;
 
-            // Restore password from sessionStorage if RAM copy was lost (iOS process kill)
-            if (!window._argoPasswordRuntime) {
-                try {
-                    const stored = sessionStorage.getItem('_argo_pwd_session');
-                    if (stored) {
-                        window._argoPasswordRuntime = decodeURIComponent(escape(atob(stored)));
-                        console.log('[AutoSync] Restored password from sessionStorage');
-                    }
-                } catch(_) {}
-            }
+            // SECURITY: Never persist or restore passwords from sessionStorage.
 
             _autoSyncInFlight = true;
             _lastAutoSyncAt = now;
@@ -999,16 +965,7 @@
                 state.isLoggedIn = true;
                 state.booting = false;
 
-                // Restore password from sessionStorage if available (survives page refresh, iOS PWA restart)
-                if (!window._argoPasswordRuntime) {
-                    try {
-                        const storedPwd = sessionStorage.getItem('_argo_pwd_session');
-                        if (storedPwd) {
-                            window._argoPasswordRuntime = decodeURIComponent(escape(atob(storedPwd)));
-                            console.log('[Boot] Restored Argo password from sessionStorage');
-                        }
-                    } catch(_) {}
-                }
+                // SECURITY: Never persist or restore passwords from sessionStorage.
                 
                 // Hydrate
                 try {
@@ -1345,9 +1302,8 @@
             }
             // Keep password in volatile memory for session refresh (never persisted to localStorage)
             window._argoPasswordRuntime = pass;
-            // Also persist in sessionStorage so it survives page refreshes and iOS PWA process restarts
-            // sessionStorage is cleared on tab close (safe) but survives reloads
-            try { sessionStorage.setItem('_argo_pwd_session', btoa(unescape(encodeURIComponent(pass)))); } catch(_) {}
+            // SECURITY: Never persist passwords to sessionStorage or localStorage.
+            try { sessionStorage.removeItem('_argo_pwd_session'); } catch(_) {}
 
             // 1. Session Save
             if (data.session) {

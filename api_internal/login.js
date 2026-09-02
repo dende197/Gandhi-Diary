@@ -226,7 +226,7 @@ module.exports = async function handler(req, res) {
         res.status(200).json(resp);
 
     } catch (e) {
-        console.error('LOGIN FAILURE', e);
+        console.error('LOGIN FAILURE:', e.message || 'Authentication error');
         const status = e.status || (e.response?.status) || 401;
         const msg = e.message || "Errore sconosciuto durante il login";
         res.status(status).json({

@@ -6,11 +6,13 @@ const STATIC_DESTINATIONS = new Set(['style', 'script', 'font', 'image']);
 const STATIC_PATH_REGEX = /\.(?:css|js|mjs|png|jpe?g|svg|webp|avif|woff2?|ttf|ico|json)$/i;
 const EXTERNAL_ASSETS = [
   'https://cdn.tailwindcss.com?plugins=forms,container-queries',
-  'https://unpkg.com/@phosphor-icons/web',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-  'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-  'https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js',
-  'https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js',
+  'https://unpkg.com/@phosphor-icons/web@2.1.1',
+  'https://unpkg.com/lucide@0.441.0/dist/umd/lucide.min.js',
+  'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
+  'https://cdn.jsdelivr.net/npm/marked@14.1.2/marked.min.js',
+  'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
+  'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js',
   'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap'
 ];
 const EXTERNAL_ORIGINS = new Set([
