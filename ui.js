@@ -1269,28 +1269,80 @@ function hideBoot() {
         setTimeout(() => loader.remove(), 500);
     }
 }
-function normalizeClassUi(cls) {
+function detectTrackUi(text) {
+    if (!text) return null;
+    const s = String(text).toUpperCase()
+        .replace(/[\(\)\[\],.\-_/]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!s) return null;
+
+    if (/\b(?:OPZIONE\s+)?SCIENZE\s+APPLICATE\b|\bSC\s*APP(?:LICATE)?\b|\bSA\b/.test(s)) return 'SA';
+    if (/\bSCIENZE\s+UMANE\b|\bSC\s*UMANE\b|\bECONOMICO\s+SOCIALE\b|\bLES\b|\bSU\b/.test(s)) return 'SU';
+    if (/\b(?:LICEO\s+)?CLASSICO\b|\bCL\b|\bLC\b/.test(s)) return 'CL';
+    if (/\b(?:LICEO\s+)?SCIENTIFICO\b|\bLS\b/.test(s)) return 'LS';
+    if (/\b(?:LICEO\s+)?LINGUISTICO\b|\bLL\b/.test(s)) return 'LL';
+    if (/\b(?:LICEO\s+)?ARTISTICO\b|\bLA\b/.test(s)) return 'LA';
+    return null;
+}
+
+function normalizeClassUi(cls, track) {
     if (!cls) return null;
-    const txt = String(cls).toUpperCase().trim();
+    let txt = String(cls).toUpperCase().trim();
 
-    // 1. Compact compound track formats: 4DSA, 4DLS, 3ACL, 1BSU, 4DLC -> 4D, 3A, 1B
-    const compactMatch = txt.match(/\b([1-5])[\^°]?\s*([A-Z])\s*(?:SA|LS|SU|CL|LC|LL|LA)\b/i);
+    // Word boundary blacklist for non-class phrases (e.g. "4 ORE", "2 ANNI")
+    if (/^\s*[1-5]\s*(?:ORE|ANNI|ANNO|OGGETTI|OTTOBRE|ORA|ORDINE|OFFERTA|ORARIO|OVVERO|OGNI|OLTRE)\b/i.test(txt)) {
+        return null;
+    }
+
+    // Convert written word ordinals
+    txt = txt
+        .replace(/\bPRIMA\b|\bI\^?\b/g, '1')
+        .replace(/\bSECONDA\b|\bII\^?\b/g, '2')
+        .replace(/\bTERZA\b|\bIII\^?\b/g, '3')
+        .replace(/\bQUARTA\b|\bIV\^?\b/g, '4')
+        .replace(/\bQUINTA\b|\bV\^?\b/g, '5');
+
+    // 1. If already in canonical formatted shape: e.g. "4D (SA)", "5A (LS)", "3B (SU)"
+    const alreadyFormatted = txt.match(/^([1-5])\s*([A-Z]{1,2})\s*\(([A-Z]{2,4})\)$/);
+    if (alreadyFormatted) {
+        return `${alreadyFormatted[1]}${alreadyFormatted[2]} (${alreadyFormatted[3]})`;
+    }
+
+    // Detect track from track param first, then from text
+    let detectedTrack = detectTrackUi(track) || detectTrackUi(txt);
+
+    // 2. Compact compound formats: 4DSA, 4DLS, 3ACL, 1BSU, 4DLC, 4DLL, 4DLA
+    const compactMatch = txt.match(/\b([1-5])[\^°]?\s*([A-Z])\s*(SA|LS|SU|CL|LC|LL|LA)\b/i);
     if (compactMatch) {
-        return (compactMatch[1] + compactMatch[2]).toUpperCase();
+        const year = compactMatch[1];
+        const section = compactMatch[2].toUpperCase();
+        const t = detectTrackUi(compactMatch[3]) || compactMatch[3].toUpperCase();
+        return `${year}${section} (${t})`;
     }
 
-    // 2. Canonical Italian class format: Year (1-5) + Section (A-Z), e.g. "4D", "5A", "4D (SA)", "4 D SA"
-    const baseMatch = txt.match(/\b([1-5])[\^°]?\s*([A-Z]{1,2})\b/);
-    if (baseMatch) {
-        return (baseMatch[1] + baseMatch[2]).toUpperCase();
+    // 3. Match Year + Section with possible track in string:
+    // e.g. "4D (SA)", "4 D SA", "4 D (SA)", "4D SCIENZE APPLICATE", "CLASSE 4 SEZ. D"
+    const explicitMatch = txt.match(/(?:CLASSE\s*[:\-]?\s*)?([1-5])[\^°]?\s*(?:(?:SEZ(?:IONE)?\.?|\/|\-)\s*[:\-]?\s*)?([A-Z]{1,2})\b/i);
+    if (explicitMatch) {
+        const year = explicitMatch[1];
+        const section = explicitMatch[2].toUpperCase();
+        if (!/^(ORE|AN|P|DA)$/i.test(section)) {
+            return detectedTrack ? `${year}${section} (${detectedTrack})` : `${year}${section}`;
+        }
     }
 
+    // 4. Fallback matching
     const fallbackMatch = txt.match(/([1-5])\s*([A-Z]{1,2})/);
     if (fallbackMatch) {
-        return (fallbackMatch[1] + fallbackMatch[2]).toUpperCase();
+        const year = fallbackMatch[1];
+        const section = fallbackMatch[2].toUpperCase();
+        if (!/^(ORE|AN|P|DA)$/i.test(section)) {
+            return detectedTrack ? `${year}${section} (${detectedTrack})` : `${year}${section}`;
+        }
     }
 
-    return txt.length <= 10 ? txt : null;
+    return txt.length <= 15 ? txt : null;
 }
 function isValidClass(cls) {
     if (!cls) return false;
@@ -4980,7 +5032,7 @@ function showProfileActions() {
                     ${renderAvatar(state.user.name, 56)}
                     <div style="min-width: 0;">
                         <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(state.user.name)}</div>
-                        <div style="font-size: 13px; color: var(--text-dim); font-weight: 600;">${escapeHtml(normalizeClassUi(state.user.class) || 'Studente')}</div>
+                        <div style="font-size: 13px; color: var(--text-dim); font-weight: 600;">${escapeHtml(normalizeClassUi(state.user?.class, state.user?.specialization) || 'Studente')}</div>
                     </div>
                 </div>
 
@@ -5015,7 +5067,7 @@ function renderSettings() {
                          ${renderAvatar(state.user.name, 56)}
                         <div>
                             <div style="font-size: 17px; font-weight: 600; color: var(--text-primary);">${escapeHtml(state.user.name)}</div>
-                            <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(state.user.class || 'Studente')}</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(normalizeClassUi(state.user?.class, state.user?.specialization) || state.user?.class || 'Studente')}</div>
                        </div>
                    </div>
                     
@@ -9097,8 +9149,10 @@ function renderPlanner() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function getEffectiveUserClass() {
-    const rawClass = state.user?.class || state.userData?.class || localStorage.getItem('gc_user_class_override') || '';
-    const norm = (typeof normalizeClassUi === 'function') ? normalizeClassUi(rawClass) : rawClass;
+    const savedSession = (typeof sessionManager !== 'undefined' && sessionManager.load) ? sessionManager.load() : null;
+    const rawClass = state.user?.class || state.userData?.class || savedSession?.class || localStorage.getItem('gc_user_class_override') || '';
+    const track = state.user?.specialization || state.userData?.specialization || savedSession?.specialization || '';
+    const norm = (typeof normalizeClassUi === 'function') ? normalizeClassUi(rawClass, track) : rawClass;
     return (norm && norm !== 'N/D' && norm !== 'Studente') ? norm.trim().toUpperCase() : '';
 }
 
@@ -9350,11 +9404,11 @@ window.promptSetUserClass = function(callback) {
             </button>
         </div>
         <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.45;margin:0;">
-            Non siamo riusciti a rilevare automaticamente la tua sezione dal registro. Inserisci la tua classe (es. <strong>5A</strong>, <strong>3B</strong>, <strong>4INF</strong>) per attivare le funzioni di classe.
+            Non siamo riusciti a rilevare automaticamente la tua classe dal registro. Inserisci la tua classe e indirizzo (es. <strong>4D (SA)</strong>, <strong>5A (LS)</strong>, <strong>3B</strong>) per attivare le funzioni di classe.
         </p>
         <div>
-            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Nome Classe / Sezione</label>
-            <input id="user-manual-class-input" type="text" placeholder="Es. 5A" value="${escapeHtml(currentCls)}" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:16px;font-weight:700;outline:none;box-sizing:border-box;text-transform:uppercase;" />
+            <label style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Nome Classe e Indirizzo</label>
+            <input id="user-manual-class-input" type="text" placeholder="Es. 4D (SA)" value="${escapeHtml(currentCls)}" style="width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:0 14px;color:#ffffff;font-size:16px;font-weight:700;outline:none;box-sizing:border-box;text-transform:uppercase;" />
         </div>
         <div style="display:flex;gap:10px;margin-top:6px;">
             <button onclick="document.getElementById('set-class-modal-overlay')?.remove();" style="flex:1;height:46px;border-radius:14px;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.8);font-size:14px;font-weight:600;cursor:pointer;">Annulla</button>
@@ -9370,15 +9424,16 @@ window.promptSetUserClass = function(callback) {
         const inp = document.getElementById('user-manual-class-input');
         const val = (inp?.value || '').trim().toUpperCase();
         if (!val) {
-            alert('Inserisci una classe valida (es. 5A)');
+            alert('Inserisci una classe valida (es. 4D (SA))');
             return;
         }
+        const normVal = (typeof normalizeClassUi === 'function') ? (normalizeClassUi(val) || val) : val;
         if (!state.user) state.user = {};
-        state.user.class = val;
-        localStorage.setItem('gc_user_class_override', val);
-        showToast(`Classe impostata: ${val}`, 'success');
+        state.user.class = normVal;
+        localStorage.setItem('gc_user_class_override', normVal);
+        showToast(`Classe impostata: ${normVal}`, 'success');
         overlay.remove();
-        if (typeof callback === 'function') callback(val);
+        if (typeof callback === 'function') callback(normVal);
         state._forceRender = true;
         scheduleRender(0);
     };
@@ -10824,7 +10879,7 @@ function renderProfile() {
     const rawName = (typeof getSafeUserName === 'function') ? getSafeUserName() : (state.user?.name || 'Utente');
     const userName = escapeHtml((typeof toDisplayName === 'function') ? toDisplayName(rawName) : rawName);
     const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
-    const userClass = escapeHtml(effClass || (typeof normalizeClassUi === 'function' ? normalizeClassUi(state.user?.class || '') : (state.user?.class || '')) || 'Studente');
+    const userClass = escapeHtml(effClass || (typeof normalizeClassUi === 'function' ? normalizeClassUi(state.user?.class || '', state.user?.specialization || '') : (state.user?.class || '')) || 'Studente');
     const initials = (rawName || 'U').trim().split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase() || 'U';
     const isRep = (typeof isCurrentUserRepresentative === 'function') ? isCurrentUserRepresentative() : false;
 
@@ -10951,7 +11006,7 @@ function renderProfile() {
                                     Rappresentante di Classe
                                 </div>
                                 <div style="font-size:12px;font-weight:600;color:${isRep ? '#30d158' : '#8e909f'};margin-top:3px;">
-                                    ${isRep ? `Attivo · Classe ${escapeHtml(effClass)}` : `Non attivo · Sezione: ${escapeHtml(effClass || 'Non impostata')}`}
+                                    ${isRep ? `Attivo · Classe ${escapeHtml(effClass)}` : `Non attivo · Classe: ${escapeHtml(effClass || 'Non impostata')}`}
                                 </div>
                             </div>
                         </div>
@@ -10967,10 +11022,10 @@ function renderProfile() {
 
                     <div style="margin-top:14px;padding-top:14px;border-top:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;">
                         <span style="font-size:12px;color:#8e909f;font-weight:500;">
-                            ${effClass ? `Sezione attiva: <strong style="color:#b6c4ff;">${escapeHtml(effClass)}</strong>` : 'Sezione di classe non definita'}
+                            ${effClass ? `Classe attiva: <strong style="color:#b6c4ff;">${escapeHtml(effClass)}</strong>` : 'Classe non definita'}
                         </span>
                         <button onclick="window.promptSetUserClass()" style="background:rgba(37,99,235,0.2);border:0.5px solid rgba(182,196,255,0.25);color:#b6c4ff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform 0.12s ease;" ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                            <i class="ph-bold ph-pencil-simple"></i> ${effClass ? 'Modifica' : 'Imposta Sezione'}
+                            <i class="ph-bold ph-pencil-simple"></i> ${effClass ? 'Modifica' : 'Imposta Classe'}
                         </button>
                     </div>
                 </div>
