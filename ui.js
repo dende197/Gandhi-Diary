@@ -721,6 +721,79 @@ function getProjectionComboDetailLabel(grade, extraTopGrades, maxGradeValue) {
     return `1 voto ${grade.toFixed(2)} + ${extraTopGrades} vot${extraTopGrades === 1 ? 'o' : 'i'} da ${maxGradeValue.toFixed(2)}`;
 }
 
+// ============= SCHOOL YEAR (ANNO SCOLASTICO) HELPERS =============
+
+function getSchoolYearFromDate(dateInput) {
+    if (!dateInput) return null;
+    const d = (dateInput instanceof Date) ? dateInput : ((typeof parseArgoDate === 'function') ? parseArgoDate(dateInput) : new Date(dateInput));
+    if (!(d instanceof Date) || Number.isNaN(d.getTime()) || d.getTime() <= 86400000) return null;
+    const y = d.getFullYear();
+    const m = d.getMonth(); // 0 = Jan ... 8 = Sep
+    const startYear = m >= 8 ? y : y - 1;
+    const endYear = startYear + 1;
+    const shortEnd = String(endYear).slice(-2);
+    return {
+        startYear,
+        endYear,
+        key: `${startYear}/${shortEnd}`,
+        label: `A.S. ${startYear}/${shortEnd}`,
+        startDate: new Date(startYear, 8, 1, 0, 0, 0, 0),
+        endDate: new Date(endYear, 7, 31, 23, 59, 59, 999)
+    };
+}
+
+function getCurrentSchoolYearKey(refDate = new Date()) {
+    const sy = getSchoolYearFromDate(refDate);
+    return sy ? sy.key : '2026/27';
+}
+
+function getAvailableSchoolYears(allVotes = null, refDate = new Date()) {
+    const currentKey = getCurrentSchoolYearKey(refDate);
+    const votes = Array.isArray(allVotes) ? allVotes : (typeof getVotiData === 'function' ? getVotiData() : (state.voti || []));
+    const yearSet = new Set();
+    yearSet.add(currentKey);
+    (votes || []).forEach(v => {
+        const raw = v.data || v.date || '';
+        const sy = getSchoolYearFromDate(raw);
+        if (sy) yearSet.add(sy.key);
+    });
+    return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+}
+
+function getVotesForSchoolYear(yearKey, allVotes = null) {
+    const votes = Array.isArray(allVotes) ? allVotes : (typeof getVotiData === 'function' ? getVotiData() : (state.voti || []));
+    if (!yearKey) return votes;
+    return (votes || []).filter(v => {
+        const raw = v.data || v.date || '';
+        const sy = getSchoolYearFromDate(raw);
+        return sy && sy.key === yearKey;
+    });
+}
+
+function getActiveSchoolYear() {
+    if (state.selectedSchoolYear) return state.selectedSchoolYear;
+    try {
+        const key = (typeof lsKey === 'function') ? lsKey('selected_school_year') : 'selected_school_year';
+        const stored = localStorage.getItem(key);
+        if (stored) {
+            state.selectedSchoolYear = stored;
+            return stored;
+        }
+    } catch (_) { }
+    return getCurrentSchoolYearKey();
+}
+
+window.selectSchoolYear = function(yearKey) {
+    state.selectedSchoolYear = yearKey;
+    try {
+        const key = (typeof lsKey === 'function') ? lsKey('selected_school_year') : 'selected_school_year';
+        localStorage.setItem(key, yearKey);
+    } catch (_) { }
+    if (typeof window.scheduleRender === 'function') {
+        window.scheduleRender(0);
+    }
+};
+
 function getSchoolYearRanges(refDate = new Date()) {
     const year = refDate.getFullYear();
     const month = refDate.getMonth();
@@ -763,9 +836,9 @@ function averageFromNumeric(values) {
 }
 
 function getGradeMonthlyTrendSummary(votiData = null) {
-    const data = votiData || (typeof getVotiData === 'function' ? getVotiData() : (state.voti || []));
+    const data = votiData !== null ? votiData : (typeof getVotiData === 'function' ? getVotiData() : (state.voti || []));
     const numericVotes = (data || []).map(getNumericGradeValue).filter(v => Number.isFinite(v));
-    const media = averageFromNumeric(numericVotes) || 0;
+    const media = numericVotes.length > 0 ? averageFromNumeric(numericVotes) : null;
 
     const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
     function voteYearMonth(v) {
@@ -789,7 +862,7 @@ function getGradeMonthlyTrendSummary(votiData = null) {
 
     const mediaCurMese = monthList.length >= 1 ? monthList[monthList.length - 1].avg : null;
     const mediaPrevMese = monthList.length >= 2 ? monthList[monthList.length - 2].avg : null;
-    let diffStr = '+0.00';
+    let diffStr = '';
     let diffVal = 0;
     let isPositive = true;
     let hasComparison = false;
@@ -2242,8 +2315,11 @@ function renderHome() {
 
     // 1. Recupero dei dati reali dal backend/stato globale
     const isInitialLoad = !state.lastSync && (!state.tasks || state.tasks.length === 0) && (!state.voti || state.voti.length === 0);
-    const trendSummary = getGradeMonthlyTrendSummary();
-    const media = trendSummary.media || parseFloat(calcolaMedia(getVotiData())) || 0;
+    const currentSchoolYearKey = (typeof getCurrentSchoolYearKey === 'function') ? getCurrentSchoolYearKey() : '2026/27';
+    const currentYearVotes = (typeof getVotesForSchoolYear === 'function') ? getVotesForSchoolYear(currentSchoolYearKey) : (state.voti || []);
+    const trendSummary = getGradeMonthlyTrendSummary(currentYearVotes);
+    const media = trendSummary.media !== null ? trendSummary.media : (parseFloat(calcolaMedia(currentYearVotes)) || 0);
+    const hasHomeMedia = trendSummary.media !== null && Number.isFinite(trendSummary.media) && currentYearVotes.length > 0;
     const diffStr = trendSummary.diffStr;
     const isPositive = trendSummary.isPositive;
     const assenze = state.assenzeData || {};
@@ -2531,10 +2607,10 @@ function renderHome() {
                                         <i class="ph-bold ph-chart-line-up" style="font-size:11px;color:${_mediaColor};"></i>
                                     </div>
                                     <div style="font-size:22px;font-weight:900;color:${_mediaColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:3px 0 1px;">
-                                        ${isInitialLoad ? '—' : media.toFixed(2)}
+                                        ${!hasHomeMedia ? '—' : media.toFixed(2)}
                                     </div>
-                                    <span style="font-size:9px;font-weight:800;color:${isPositive ? '#30d158' : '#ff453a'};background:${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};padding:1px 5px;border-radius:999px;display:inline-flex;align-items:center;gap:2px;width:fit-content;">
-                                        <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:8px;"></i>${diffStr}
+                                    <span style="font-size:9px;font-weight:800;color:${hasHomeMedia ? (isPositive ? '#30d158' : '#ff453a') : '#2997ff'};background:${hasHomeMedia ? (isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)') : 'rgba(41,151,255,0.15)'};padding:1px 5px;border-radius:999px;display:inline-flex;align-items:center;gap:2px;width:fit-content;">
+                                        <i class="ph-bold ${hasHomeMedia ? (isPositive ? 'ph-trend-up' : 'ph-trend-down') : 'ph-sparkle'}" style="font-size:8px;"></i>${hasHomeMedia && diffStr ? diffStr : 'Nuovo A.S.'}
                                     </span>
                                 </div>
 
@@ -3874,11 +3950,16 @@ function initGradesCharts() {
     });
 }
 function renderSubjectDetailView(subjectName) {
+    const activeYearKey = (typeof getActiveSchoolYear === 'function') ? getActiveSchoolYear() : ((typeof getCurrentSchoolYearKey === 'function') ? getCurrentSchoolYearKey() : '2026/27');
     const normalizedSubject = normalizeSubjectName(subjectName);
-    const votiData = getVotiData()
+    const allYearVotes = (typeof getVotesForSchoolYear === 'function')
+        ? getVotesForSchoolYear(activeYearKey)
+        : getVotiData();
+    const votiData = allYearVotes
         .filter(v => areSubjectsEquivalent(v.materia || v.subject, normalizedSubject))
         .sort((a, b) => parseArgoDate(b.data || b.date) - parseArgoDate(a.data || a.date));
     const media = parseFloat(calcolaMedia(votiData)) || 0;
+    const hasSubjectMedia = votiData.length > 0 && media > 0;
     const goal = state.goals?.[subjectName] || 8.0;
     const n = votiData.length;
     const theme = getSubjectTheme(subjectName);
@@ -4043,7 +4124,7 @@ function renderSubjectDetailView(subjectName) {
                 </button>
                 <div style="min-width:0;flex:1;">
                     <h1 style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin:0;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(formattedTitle)}</h1>
-                    <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);">${n} valutazioni · Anno Scolastico</span>
+                    <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);">${n} valutazioni · A.S. ${escapeHtml(activeYearKey)}</span>
                 </div>
             </div>
             <div style="width:38px;height:38px;border-radius:12px;background:${theme.iconBg};border:1px solid ${theme.border};display:flex;align-items:center;justify-content:center;color:${theme.color};flex-shrink:0;margin-left:12px;">
@@ -4066,7 +4147,7 @@ function renderSubjectDetailView(subjectName) {
                             MEDIA MATERIA
                         </span>
                         <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;">
-                            <span style="font-size:48px;font-weight:800;color:#ffffff;line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;">${media.toFixed(2)}</span>
+                            <span style="font-size:48px;font-weight:800;color:#ffffff;line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;">${hasSubjectMedia ? media.toFixed(2) : '—'}</span>
                             ${diffStr ? `
                             <div style="background:${isPosTrend ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid ${isPosTrend ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};">
                                 <i class="ph-bold ${isPosTrend ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:12px;color:${isPosTrend ? '#30d158' : '#ff453a'};"></i>
@@ -4119,7 +4200,7 @@ function renderSubjectDetailView(subjectName) {
                     ${votiListHtml || `
                     <div style="text-align:center;padding:24px 12px;color:rgba(255,255,255,0.45);">
                         <i class="ph ph-tray" style="font-size:28px;margin-bottom:6px;display:block;"></i>
-                        <p style="font-size:12px;margin:0;font-style:italic;">Nessuna valutazione registrata per ${escapeHtml(formattedTitle)}.</p>
+                        <p style="font-size:12px;margin:0;font-style:italic;">Nessuna valutazione registrata per ${escapeHtml(formattedTitle)} nell'A.S. ${escapeHtml(activeYearKey)}.</p>
                     </div>`}
                 </div>
             </section>
@@ -11253,10 +11334,22 @@ function formatFriendlyDate(dateStr) {
 function renderGradesView() {
     if (state.activeSubject) return renderSubjectDetailView(state.activeSubject);
 
-    const votiData = getVotiData();
+    const allVoti = getVotiData();
+    const currentYearKey = getCurrentSchoolYearKey();
+    const availableYears = getAvailableSchoolYears(allVoti);
+    let activeYearKey = getActiveSchoolYear();
+    if (!availableYears.includes(activeYearKey)) {
+        activeYearKey = currentYearKey;
+        state.selectedSchoolYear = activeYearKey;
+    }
+    const isCurrentSchoolYear = activeYearKey === currentYearKey;
+    const archiveYears = availableYears.filter(yk => yk !== activeYearKey);
+
+    const votiData = getVotesForSchoolYear(activeYearKey, allVoti);
     const trendSummary = getGradeMonthlyTrendSummary(votiData);
-    const media = trendSummary.media || 7.85;
-    const monthList = trendSummary.monthList;
+    const media = trendSummary.media;
+    const hasMedia = media !== null && Number.isFinite(media) && votiData.length > 0;
+    const monthList = trendSummary.monthList || [];
     const diffStr = trendSummary.diffStr;
     const isPositive = trendSummary.isPositive;
 
@@ -11265,35 +11358,64 @@ function renderGradesView() {
     const now = new Date();
     const monthYearLabel = `${MN_FULL[now.getMonth()]} ${now.getFullYear()}`;
 
-    // ── Build Geometrically Clean Straight Line Graph (Pure geometric segments, no curves) ──
-    const defaultAvgs = [6.8, 7.0, 7.2, 7.1, 7.4, 7.5, 7.7, media];
-    const rawVals = defaultAvgs.map((defVal, i) => {
-        if (monthList.length > 0) {
-            const mIdx = monthList.length - 8 + i;
-            if (mIdx >= 0 && mIdx < monthList.length) {
-                return monthList[mIdx].avg;
-            }
-        }
-        return defVal;
-    });
+    // ── Build Geometrically Clean Straight Line Graph ──
+    let graphHtml = '';
+    if (monthList.length >= 2) {
+        const rawVals = monthList.map(m => m.avg);
+        const minV = Math.min(...rawVals);
+        const maxV = Math.max(...rawVals);
+        const span = (maxV - minV) || 1.0;
 
-    const minV = Math.min(...rawVals);
-    const maxV = Math.max(...rawVals);
-    const span = (maxV - minV) || 1.0;
+        const pts = rawVals.map((val, i) => {
+            const x = Math.round(14 + (i / (rawVals.length - 1)) * 312);
+            const norm = (val - minV) / span;
+            const y = Math.round(54 - norm * 40); // 14 .. 54
+            return { x, y };
+        });
 
-    // ViewBox is 340 x 70. X spans 14 to 326 (safe padding of 14px on sides so dot never clips)
-    // Y spans from 14 (top/high grade) to 54 (bottom/low grade)
-    const pts = rawVals.map((val, i) => {
-        const x = Math.round(14 + (i / 7) * 312);
-        const norm = (val - minV) / span;
-        const y = Math.round(54 - norm * 40); // 14 .. 54
-        return { x, y };
-    });
+        const linePathD = pts.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+        const areaPathD = `${linePathD} L ${pts[pts.length - 1].x} 70 L ${pts[0].x} 70 Z`;
+        const lastPt = pts[pts.length - 1];
 
-    // Straight geometric line segments (retta / segmenti lineari puliti senza curve Bézier)
-    const linePathD = pts.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
-    const areaPathD = `${linePathD} L ${pts[pts.length - 1].x} 70 L ${pts[0].x} 70 Z`;
-    const lastPt = pts[pts.length - 1];
+        graphHtml = `
+        <div style="height:70px;width:100%;position:relative;z-index:1;">
+            <svg viewBox="0 0 340 70" style="width:100%;height:100%;display:block;overflow:visible;" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="voti-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2997ff" stop-opacity="0.25"></stop>
+                        <stop offset="50%" stop-color="#30d158" stop-opacity="0.08"></stop>
+                        <stop offset="100%" stop-color="#30d158" stop-opacity="0"></stop>
+                    </linearGradient>
+                    <linearGradient id="voti-line-gradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#2997ff"></stop>
+                        <stop offset="100%" stop-color="#30d158"></stop>
+                    </linearGradient>
+                </defs>
+                <path class="grade-chart-area" d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
+                <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="url(#voti-line-gradient)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="4.5" fill="#30d158" stroke="#ffffff" stroke-width="2"></circle>
+            </svg>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;padding:0 4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);position:relative;z-index:1;">
+            ${monthList.map((m, idx) => `<span style="${idx === monthList.length - 1 ? 'color:#30d158;font-weight:800;' : ''}">${m.label}</span>`).join('')}
+        </div>`;
+    } else if (monthList.length === 1) {
+        const m = monthList[0];
+        graphHtml = `
+        <div style="height:56px;width:100%;position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:0 16px;margin:6px 0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#30d158;box-shadow:0 0 8px #30d158;"></span>
+                <span style="font-size:12px;font-weight:700;color:#ffffff;">Media ${m.label}</span>
+            </div>
+            <span style="font-size:18px;font-weight:800;color:#30d158;">${m.avg.toFixed(2)}</span>
+        </div>`;
+    } else {
+        graphHtml = `
+        <div style="height:60px;width:100%;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1);border-radius:14px;padding:0 14px;margin:6px 0;box-sizing:border-box;text-align:center;">
+            <i class="ph-bold ph-chart-line" style="font-size:17px;color:#2997ff;"></i>
+            <span style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,0.5);">Grafico dell'andamento attivo con le prime valutazioni</span>
+        </div>`;
+    }
 
     // ── Per-subject stats ────────────────────────────────────────────────────
     const subjectsMap = {};
@@ -11315,87 +11437,127 @@ function renderGradesView() {
         return { name, media: subMedia, lastVote: lastVal, lastVoteDate: lastDate };
     }).sort((a, b) => b.media - a.media);
 
-    if (subjects.length === 0) {
-        subjects = [
-            { name: 'Storia Triennio', media: 9.3, lastVote: 9.5, lastVoteDate: 'ieri' },
-            { name: 'Matematica', media: 7.5, lastVote: 7.5, lastVoteDate: '3 giorni fa' },
-            { name: 'Lingua Inglese', media: 8.2, lastVote: 8.5, lastVoteDate: '1 settimana fa' },
-            { name: 'Fisica', media: 6.5, lastVote: 6.5, lastVoteDate: '5 giorni fa' },
-            { name: 'Filosofia', media: 9.0, lastVote: 9.0, lastVoteDate: 'ieri' }
-        ];
-    }
+    let materieContentHtml = '';
+    let subjectSlidesCount = 0;
+    if (subjects.length > 0) {
+        const SLIDE_SIZE = 5;
+        const subjectSlides = [];
+        for (let i = 0; i < subjects.length; i += SLIDE_SIZE) {
+            subjectSlides.push(subjects.slice(i, i + SLIDE_SIZE));
+        }
+        subjectSlidesCount = subjectSlides.length;
 
-    const SLIDE_SIZE = 5;
-    const subjectSlides = [];
-    for (let i = 0; i < subjects.length; i += SLIDE_SIZE) {
-        subjectSlides.push(subjects.slice(i, i + SLIDE_SIZE));
-    }
+        const slidesHtml = subjectSlides.map((slideItems) => {
+            const featureItem = slideItems[0];
+            const gridItems = slideItems.slice(1);
 
-    const slidesHtml = subjectSlides.map((slideItems, sIdx) => {
-        const featureItem = slideItems[0];
-        const gridItems = slideItems.slice(1);
+            const featureNameFormatted = formatSubjectTitle(featureItem ? featureItem.name : '');
+            const featureDateFormatted = formatFriendlyDate(featureItem ? featureItem.lastVoteDate : '');
+            const featureTheme = featureItem ? getSubjectTheme(featureItem.name) : getSubjectTheme('');
 
-        const featureNameFormatted = formatSubjectTitle(featureItem ? featureItem.name : '');
-        const featureDateFormatted = formatFriendlyDate(featureItem ? featureItem.lastVoteDate : '');
-        const featureTheme = featureItem ? getSubjectTheme(featureItem.name) : getSubjectTheme('');
-
-        const featureHtml = featureItem ? `
-        <div style="position:relative;padding:16px 18px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${featureTheme.border};border-top:1px solid rgba(255,255,255,0.25);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-            <!-- Sfumatura cromatica in angolo del colore della materia -->
-            <div style="position:absolute;top:-28px;right:-28px;width:100px;height:100px;background:${featureTheme.color};opacity:0.22;border-radius:50%;filter:blur(26px);pointer-events:none;"></div>
-
-            <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;position:relative;z-index:1;">
-                <div style="width:44px;height:44px;border-radius:14px;background:${featureTheme.iconBg};border:1px solid ${featureTheme.border};display:flex;align-items:center;justify-content:center;color:${featureTheme.color};flex-shrink:0;">
-                    <i class="ph-fill ${featureTheme.icon}" style="font-size:22px;"></i>
-                </div>
-                <div style="min-width:0;flex:1;">
-                    <h3 style="font-size:15px;font-weight:700;color:#ffffff;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(featureNameFormatted)}</h3>
-                    <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
-                </div>
-            </div>
-            <div style="text-align:right;flex-shrink:0;margin-left:12px;position:relative;z-index:1;">
-                <span style="font-size:22px;font-weight:800;color:${featureItem.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
-                <div style="width:36px;height:3px;background:linear-gradient(90deg, ${featureTheme.color}, #30d158);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
-            </div>
-        </div>` : '';
-
-        const gridCardsHtml = gridItems.map((item, gIdx) => {
-            const itemFormattedName = formatSubjectTitle(item.name);
-            const itemTheme = getSubjectTheme(item.name);
-            return `
-            <div style="position:relative;padding:14px 16px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${itemTheme.border};border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:114px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+            const featureHtml = featureItem ? `
+            <div style="position:relative;padding:16px 18px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${featureTheme.border};border-top:1px solid rgba(255,255,255,0.25);border-radius:24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:12px;transition:transform 0.15s ease;box-shadow:0 8px 24px -6px rgba(6,14,32,0.6);overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(featureItem.name)}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
                 <!-- Sfumatura cromatica in angolo del colore della materia -->
-                <div style="position:absolute;top:-22px;right:-22px;width:76px;height:76px;background:${itemTheme.color};opacity:0.20;border-radius:50%;filter:blur(20px);pointer-events:none;"></div>
+                <div style="position:absolute;top:-28px;right:-28px;width:100px;height:100px;background:${featureTheme.color};opacity:0.22;border-radius:50%;filter:blur(26px);pointer-events:none;"></div>
 
-                <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
-                    <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;">
-                        <i class="ph-fill ${itemTheme.icon}" style="font-size:18px;"></i>
+                <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;position:relative;z-index:1;">
+                    <div style="width:44px;height:44px;border-radius:14px;background:${featureTheme.iconBg};border:1px solid ${featureTheme.border};display:flex;align-items:center;justify-content:center;color:${featureTheme.color};flex-shrink:0;">
+                        <i class="ph-fill ${featureTheme.icon}" style="font-size:22px;"></i>
                     </div>
-                    <span style="font-size:20px;font-weight:800;color:${item.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
+                    <div style="min-width:0;flex:1;">
+                        <h3 style="font-size:15px;font-weight:700;color:#ffffff;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(featureNameFormatted)}</h3>
+                        <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Ultimo: ${featureItem.lastVote !== null && featureItem.lastVote !== undefined ? featureItem.lastVote : '—'} (${featureDateFormatted})</p>
+                    </div>
                 </div>
-                <h3 style="font-size:13px;font-weight:700;color:${itemTheme.color};line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative;z-index:1;">${escapeHtml(itemFormattedName)}</h3>
+                <div style="text-align:right;flex-shrink:0;margin-left:12px;position:relative;z-index:1;">
+                    <span style="font-size:22px;font-weight:800;color:${featureItem.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;">${featureItem.media.toFixed(1)}</span>
+                    <div style="width:36px;height:3px;background:linear-gradient(90deg, ${featureTheme.color}, #30d158);border-radius:9999px;margin-top:4px;margin-left:auto;"></div>
+                </div>
+            </div>` : '';
+
+            const gridCardsHtml = gridItems.map((item) => {
+                const itemFormattedName = formatSubjectTitle(item.name);
+                const itemTheme = getSubjectTheme(item.name);
+                return `
+                <div style="position:relative;padding:14px 16px;background:rgba(20,31,54,0.85);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid ${itemTheme.border};border-top:1px solid rgba(255,255,255,0.22);border-radius:20px;display:flex;flex-direction:column;justify-content:space-between;height:114px;box-sizing:border-box;cursor:pointer;transition:transform 0.15s ease;overflow:hidden;" onclick="navigateSubject('${escapeJsSingleQuote(item.name)}')" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                    <!-- Sfumatura cromatica in angolo del colore della materia -->
+                    <div style="position:absolute;top:-22px;right:-22px;width:76px;height:76px;background:${itemTheme.color};opacity:0.20;border-radius:50%;filter:blur(20px);pointer-events:none;"></div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
+                        <div style="width:36px;height:36px;border-radius:12px;background:${itemTheme.iconBg};border:1px solid ${itemTheme.border};display:flex;align-items:center;justify-content:center;color:${itemTheme.color};flex-shrink:0;">
+                            <i class="ph-fill ${itemTheme.icon}" style="font-size:18px;"></i>
+                        </div>
+                        <span style="font-size:20px;font-weight:800;color:${item.media >= 6 ? '#ffffff' : '#ffb4ab'};letter-spacing:-0.02em;flex-shrink:0;">${item.media.toFixed(1)}</span>
+                    </div>
+                    <h3 style="font-size:13px;font-weight:700;color:${itemTheme.color};line-height:1.25;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative;z-index:1;">${escapeHtml(itemFormattedName)}</h3>
+                </div>`;
+            }).join('');
+
+            return `
+            <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:flex-start;min-height:310px;padding:0 20px;">
+                ${featureHtml}
+                ${gridCardsHtml ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    ${gridCardsHtml}
+                </div>` : ''}
             </div>`;
         }).join('');
 
-        return `
-        <div class="voti-subjects-slide" style="flex:0 0 100%;min-width:100%;width:100%;max-width:100%;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;justify-content:flex-start;min-height:310px;padding:0 20px;">
-            ${featureHtml}
-            ${gridCardsHtml ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                ${gridCardsHtml}
-            </div>` : ''}
+        const dotsHtml = subjectSlides.map((_, i) => `
+            <div class="voti-subjects-dot" data-idx="${i}" onclick="window.votiJumpToSlide(${i})" style="width:${i===0?'20px':'6px'};height:6px;border-radius:9999px;background:${i===0?'#2997ff':'rgba(255,255,255,0.25)'};transition:all 0.3s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
+        `).join('');
+
+        materieContentHtml = `
+        <div id="voti-subjects-carousel" style="
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            gap: 0;
+            margin: 0 -20px;
+            padding: 0;
+            width: calc(100% + 40px);
+        " onscroll="handleVotiSubjectsScroll(this)">
+            ${slidesHtml}
+        </div>
+        ${subjectSlides.length > 1 ? `
+        <div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px;">
+            ${dotsHtml}
+        </div>` : ''}`;
+    } else {
+        materieContentHtml = `
+        <div style="position:relative;padding:26px 20px;background:rgba(20,31,54,0.76);backdrop-filter:blur(25px) saturate(180%);-webkit-backdrop-filter:blur(25px) saturate(180%);border:0.5px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);border-radius:24px;text-align:center;box-shadow:0 12px 32px -8px rgba(0,0,0,0.5);overflow:hidden;">
+            <div style="position:absolute;top:-25px;right:-25px;width:100px;height:100px;background:#2997ff;opacity:0.15;border-radius:50%;filter:blur(28px);pointer-events:none;"></div>
+            <div style="width:48px;height:48px;border-radius:16px;background:rgba(41,151,255,0.12);border:1px solid rgba(41,151,255,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:#2997ff;">
+                <i class="ph-bold ${isCurrentSchoolYear ? 'ph-graduation-cap' : 'ph-archive'}" style="font-size:24px;"></i>
+            </div>
+            <h3 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 6px;">${isCurrentSchoolYear ? 'Nuovo Anno Scolastico Avviato' : `Archivio A.S. ${escapeHtml(activeYearKey)}`}</h3>
+            <p style="font-size:13px;color:rgba(255,255,255,0.65);line-height:1.45;margin:0 auto ${archiveYears.length > 0 && isCurrentSchoolYear ? '16px' : '0'};max-width:320px;">
+                ${isCurrentSchoolYear 
+                    ? 'Nessuna valutazione registrata per l\'A.S. ' + escapeHtml(activeYearKey) + '. I voti appariranno qui automaticamente appena i docenti li pubblicheranno su DidUP.' 
+                    : 'Nessuna valutazione registrata per questo anno scolastico.'}
+            </p>
+            ${archiveYears.length > 0 && isCurrentSchoolYear ? `
+            <button onclick="window.selectSchoolYear('${archiveYears[0]}')" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:14px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.4);color:#ffffff;font-size:12.5px;font-weight:700;cursor:pointer;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph-bold ph-archive" style="font-size:14px;color:#2997ff;"></i>
+                <span>Consulta Archivio A.S. ${archiveYears[0]}</span>
+            </button>` : ''}
         </div>`;
-    }).join('');
+    }
 
-    const dotsHtml = subjectSlides.map((_, i) => `
-        <div class="voti-subjects-dot" data-idx="${i}" onclick="window.votiJumpToSlide(${i})" style="width:${i===0?'20px':'6px'};height:6px;border-radius:9999px;background:${i===0?'#2997ff':'rgba(255,255,255,0.25)'};transition:all 0.3s cubic-bezier(0.2,0.8,0.2,1);cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
-    `).join('');
-
-    let aiInsightText = "Il tuo rendimento in materie umanistiche è eccellente. Ti suggeriamo di dedicare 30m extra a Fisica per equilibrare la media.";
-    const minSubj = [...subjects].sort((a,b) => a.media - b.media)[0];
-    if (minSubj && minSubj.media < 7 && minSubj.media > 0) {
-        aiInsightText = `Il tuo rendimento complessivo è solido. Ti suggeriamo di dedicare 30m extra a ${formatSubjectTitle(minSubj.name)} per equilibrare la media generale.`;
-    } else if (media >= 8.5) {
-        aiInsightText = "Rendimento straordinario in tutte le materie! Mantieni questo ritmo costante per il prossimo trimestre.";
+    let aiInsightText = "L'anno scolastico è appena iniziato. Appena riceverai le prime valutazioni, l'AI analizzerà il tuo rendimento e suggerirà strategie di studio personalizzate.";
+    if (votiData.length > 0 && subjects.length > 0) {
+        const minSubj = [...subjects].sort((a,b) => a.media - b.media)[0];
+        if (minSubj && minSubj.media < 7 && minSubj.media > 0) {
+            aiInsightText = `Il tuo rendimento complessivo è solido. Ti suggeriamo di dedicare 30m extra a ${formatSubjectTitle(minSubj.name)} per equilibrare la media generale.`;
+        } else if (hasMedia && media >= 8.5) {
+            aiInsightText = "Rendimento straordinario in tutte le materie! Mantieni questo ritmo costante per il prossimo trimestre.";
+        } else {
+            aiInsightText = "Rendimento equilibrato nelle materie registrate. Continua con costanza nello studio quotidiano.";
+        }
     }
 
     // ── Global Stats & Highlights ──
@@ -11407,29 +11569,52 @@ function renderGradesView() {
     const minSubject = subjects.length > 0 ? [...subjects].sort((a, b) => a.media - b.media)[0] : null;
 
     // Status Badge
-    let globalStatusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check-circle' };
-    if (media >= 8.5) {
-        globalStatusBadge = { label: 'Eccellente', color: '#30d158', bg: 'rgba(48,209,88,0.18)', border: 'rgba(48,209,88,0.38)', icon: 'ph-star' };
-    } else if (media >= 7.5) {
-        globalStatusBadge = { label: 'Ottimo', color: '#30d158', bg: 'rgba(48,209,88,0.15)', border: 'rgba(48,209,88,0.35)', icon: 'ph-trend-up' };
-    } else if (media >= 6.5) {
-        globalStatusBadge = { label: 'Discreto', color: '#64d2ff', bg: 'rgba(100,210,255,0.15)', border: 'rgba(100,210,255,0.35)', icon: 'ph-thumbs-up' };
-    } else if (media >= 6.0) {
-        globalStatusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check' };
-    } else if (media > 0) {
-        globalStatusBadge = { label: 'Critico', color: '#ff453a', bg: 'rgba(255,69,58,0.18)', border: 'rgba(255,69,58,0.38)', icon: 'ph-warning' };
-    } else {
-        globalStatusBadge = { label: 'In attesa', color: 'rgba(255,255,255,0.5)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', icon: 'ph-info' };
+    let globalStatusBadge = { label: 'In attesa', color: 'rgba(255,255,255,0.6)', bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.14)', icon: 'ph-hourglass-simple' };
+    if (hasMedia) {
+        if (media >= 8.5) {
+            globalStatusBadge = { label: 'Eccellente', color: '#30d158', bg: 'rgba(48,209,88,0.18)', border: 'rgba(48,209,88,0.38)', icon: 'ph-star' };
+        } else if (media >= 7.5) {
+            globalStatusBadge = { label: 'Ottimo', color: '#30d158', bg: 'rgba(48,209,88,0.15)', border: 'rgba(48,209,88,0.35)', icon: 'ph-trend-up' };
+        } else if (media >= 6.5) {
+            globalStatusBadge = { label: 'Discreto', color: '#64d2ff', bg: 'rgba(100,210,255,0.15)', border: 'rgba(100,210,255,0.35)', icon: 'ph-thumbs-up' };
+        } else if (media >= 6.0) {
+            globalStatusBadge = { label: 'Sufficiente', color: '#2997ff', bg: 'rgba(41,151,255,0.15)', border: 'rgba(41,151,255,0.35)', icon: 'ph-check' };
+        } else {
+            globalStatusBadge = { label: 'Critico', color: '#ff453a', bg: 'rgba(255,69,58,0.18)', border: 'rgba(255,69,58,0.38)', icon: 'ph-warning' };
+        }
     }
 
     return `
     <div class="view-fullbleed min-h-screen" style="padding:0 0 160px 0;background:var(--bg-base, #0c1424);font-family:'Inter',sans-serif;">
 
         <!-- ══ HEADER (iOS HIG Large Title) ══ -->
-        <header class="ios-header-wrapper" style="padding:max(env(safe-area-inset-top,0px),24px) 20px 16px;">
+        <header class="ios-header-wrapper" style="padding:max(env(safe-area-inset-top,0px),24px) 20px 14px;">
             <div class="ios-sub-title">VALUTAZIONI & MEDIE</div>
             <h1 class="ios-large-title">Voti</h1>
         </header>
+
+        ${availableYears.length > 1 ? `
+        <!-- ══ SCHOOL YEAR SELECTOR (ANNO SCOLASTICO) ══ -->
+        <div style="display:flex;align-items:center;gap:8px;padding:0 20px 14px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+            ${availableYears.map(yk => {
+                const isSelected = yk === activeYearKey;
+                const isCurr = yk === currentYearKey;
+                const label = `A.S. ${yk}${isCurr ? ' (In corso)' : ' (Archivio)'}`;
+                return `
+                <button onclick="window.selectSchoolYear('${yk}')" style="
+                    display:inline-flex;align-items:center;gap:6px;
+                    padding:7px 14px;border-radius:9999px;font-size:12px;font-weight:700;
+                    white-space:nowrap;cursor:pointer;transition:all 0.2s ease;
+                    background:${isSelected ? 'rgba(41,151,255,0.22)' : 'rgba(255,255,255,0.06)'};
+                    border:${isSelected ? '1px solid rgba(41,151,255,0.6)' : '1px solid rgba(255,255,255,0.1)'};
+                    color:${isSelected ? '#ffffff' : 'rgba(255,255,255,0.65)'};
+                    box-shadow:${isSelected ? '0 2px 10px rgba(41,151,255,0.25)' : 'none'};
+                " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                    <i class="ph-bold ${isCurr ? 'ph-graduation-cap' : 'ph-archive'}" style="font-size:13px;color:${isSelected ? '#2997ff' : 'rgba(255,255,255,0.5)'};"></i>
+                    <span>${label}</span>
+                </button>`;
+            }).join('')}
+        </div>` : ''}
 
         <main style="padding:0 20px;display:flex;flex-direction:column;gap:18px;">
             <!-- ══ HERO CARD: MEDIA GENERALE & STATISTICHE ══ -->
@@ -11446,9 +11631,9 @@ function renderGradesView() {
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9999px;background:rgba(41,151,255,0.14);border:0.5px solid rgba(41,151,255,0.35);font-size:10px;font-weight:700;color:#2997ff;backdrop-filter:blur(12px);">
-                            <i class="ph-bold ph-graduation-cap" style="font-size:12px;"></i> Anno Scolastico
+                            <i class="ph-bold ph-graduation-cap" style="font-size:12px;"></i> A.S. ${escapeHtml(activeYearKey)}${isCurrentSchoolYear ? ' (In corso)' : ' (Archivio)'}
                         </span>
-                        <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media attuale su Gandhi Diary è ${media.toFixed(2)}!'}).catch(()=>{});}" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+                        <button onclick="if(navigator.share){navigator.share({title:'Media Generale',text:'La mia media su Gandhi Diary per l\\'A.S. ${escapeJsSingleQuote(activeYearKey)} è ${hasMedia ? media.toFixed(2) : 'in aggiornamento'}!'}).catch(()=>{});}" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
                             <i class="ph ph-share-network text-[16px] text-[#ffffff]"></i>
                         </button>
                     </div>
@@ -11457,12 +11642,16 @@ function renderGradesView() {
                 <!-- Primary Number & Badges -->
                 <div style="display:flex;align-items:baseline;justify-content:space-between;position:relative;z-index:1;margin-bottom:16px;">
                     <div style="display:flex;align-items:baseline;gap:12px;">
-                        <span style="font-size:52px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;">${media.toFixed(2)}</span>
-                        ${diffStr ? `
+                        <span style="font-size:52px;font-weight:800;color:#ffffff;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;">${hasMedia ? media.toFixed(2) : '—'}</span>
+                        ${hasMedia && diffStr ? `
                         <div style="background:${isPositive ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)'};padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid ${isPositive ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)'};box-shadow:0 2px 6px ${isPositive ? 'rgba(48,209,88,0.15)' : 'rgba(255,69,58,0.15)'};">
                             <i class="ph-bold ${isPositive ? 'ph-trend-up' : 'ph-trend-down'}" style="font-size:12px;color:${isPositive ? '#30d158' : '#ff453a'};"></i>
                             <span style="font-size:11px;font-weight:700;color:${isPositive ? '#30d158' : '#ff453a'};">${diffStr}</span>
-                        </div>` : ''}
+                        </div>` : (!hasMedia && isCurrentSchoolYear ? `
+                        <div style="background:rgba(41,151,255,0.12);padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(41,151,255,0.3);">
+                            <i class="ph-bold ph-sparkle" style="font-size:12px;color:#2997ff;"></i>
+                            <span style="font-size:11px;font-weight:700;color:#2997ff;">Nuovo Anno</span>
+                        </div>` : '')}
                     </div>
                     <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:9999px;background:${globalStatusBadge.bg};border:1px solid ${globalStatusBadge.border};font-size:11px;font-weight:700;color:${globalStatusBadge.color};">
                         <i class="ph-fill ${globalStatusBadge.icon}" style="font-size:13px;"></i> ${globalStatusBadge.label}
@@ -11486,7 +11675,7 @@ function renderGradesView() {
                             <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Sufficienze</span>
                             <i class="ph-fill ph-check-circle" style="font-size:13px;color:#30d158;"></i>
                         </div>
-                        <span style="font-size:16px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;">${suffPct}% <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.7);">(${suffCount}/${totVoti})</span></span>
+                        <span style="font-size:16px;font-weight:800;color:#30d158;font-variant-numeric:tabular-nums;">${totVoti > 0 ? `${suffPct}% <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.7);">(${suffCount}/${totVoti})</span>` : '—'}</span>
                     </div>
 
                     <!-- Bento 3: Materia Top -->
@@ -11495,7 +11684,7 @@ function renderGradesView() {
                             <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Materia Top</span>
                             <i class="ph-fill ph-trophy" style="font-size:13px;color:#ff9f0a;"></i>
                         </div>
-                        <span style="font-size:14px;font-weight:800;color:#ff9f0a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bestSubject ? `${bestSubject.media.toFixed(1)} ${formatSubjectTitle(bestSubject.name)}` : '—'}</span>
+                        <span style="font-size:14px;font-weight:800;color:#ff9f0a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bestSubject && totVoti > 0 ? `${bestSubject.media.toFixed(1)} ${formatSubjectTitle(bestSubject.name)}` : '—'}</span>
                     </div>
 
                     <!-- Bento 4: Da Monitorare -->
@@ -11504,7 +11693,7 @@ function renderGradesView() {
                             <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Da Monitorare</span>
                             <i class="ph-fill ph-crosshair" style="font-size:13px;color:#bf5af2;"></i>
                         </div>
-                        <span style="font-size:14px;font-weight:800;color:#bf5af2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${minSubject ? `${minSubject.media.toFixed(1)} ${formatSubjectTitle(minSubject.name)}` : '—'}</span>
+                        <span style="font-size:14px;font-weight:800;color:#bf5af2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${minSubject && totVoti > 0 ? `${minSubject.media.toFixed(1)} ${formatSubjectTitle(minSubject.name)}` : '—'}</span>
                     </div>
                 </div>
 
@@ -11515,33 +11704,13 @@ function renderGradesView() {
                         <span style="color:${insuffCount > 0 ? '#ff453a' : 'rgba(255,255,255,0.4)'};display:flex;align-items:center;gap:3px;">${insuffCount} Insufficienze <i class="ph-bold ph-x" style="font-size:10px;"></i></span>
                     </div>
                     <div style="width:100%;height:5px;background:rgba(255,255,255,0.06);border-radius:9999px;overflow:hidden;display:flex;">
-                        <div style="width:${suffPct}%;height:100%;background:#30d158;border-radius:9999px 0 0 9999px;transition:width 0.4s ease;"></div>
-                        <div style="width:${100 - suffPct}%;height:100%;background:#ff453a;border-radius:0 9999px 9999px 0;transition:width 0.4s ease;"></div>
+                        <div style="width:${totVoti > 0 ? suffPct : 0}%;height:100%;background:#30d158;border-radius:9999px 0 0 9999px;transition:width 0.4s ease;"></div>
+                        <div style="width:${totVoti > 0 ? (100 - suffPct) : 0}%;height:100%;background:#ff453a;border-radius:0 9999px 9999px 0;transition:width 0.4s ease;"></div>
                     </div>
                 </div>
 
-                <!-- Trend Graph SVG (Dual Gradient) -->
-                <div style="height:70px;width:100%;position:relative;z-index:1;">
-                    <svg viewBox="0 0 340 70" style="width:100%;height:100%;display:block;overflow:visible;" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="voti-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#2997ff" stop-opacity="0.25"></stop>
-                                <stop offset="50%" stop-color="#30d158" stop-opacity="0.08"></stop>
-                                <stop offset="100%" stop-color="#30d158" stop-opacity="0"></stop>
-                            </linearGradient>
-                            <linearGradient id="voti-line-gradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stop-color="#2997ff"></stop>
-                                <stop offset="100%" stop-color="#30d158"></stop>
-                            </linearGradient>
-                        </defs>
-                        <path class="grade-chart-area" d="${areaPathD}" fill="url(#voti-area-gradient)"></path>
-                        <path class="grade-chart-line" d="${linePathD}" fill="none" stroke="url(#voti-line-gradient)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <circle class="grade-chart-dot" cx="${lastPt.x}" cy="${lastPt.y}" r="4.5" fill="#30d158" stroke="#ffffff" stroke-width="2"></circle>
-                    </svg>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-top:6px;padding:0 4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);position:relative;z-index:1;">
-                    <span>Nov</span><span>Dic</span><span>Gen</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mag</span><span style="color:#30d158;font-weight:800;">Giu</span>
-                </div>
+                <!-- Trend Graph SVG or Empty State -->
+                ${graphHtml}
             </section>
 
             <!-- Subjects Bento Section -->
@@ -11551,27 +11720,7 @@ function renderGradesView() {
                     <span style="font-size:13px;font-weight:600;color:#2997ff;cursor:pointer;opacity:0.9;transition:opacity 0.15s ease;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.9'" onclick="if(typeof openAllGradesModal==='function')openAllGradesModal();">Tutti i voti</span>
                 </div>
 
-                <div id="voti-subjects-carousel" style="
-                    display: flex;
-                    overflow-x: auto;
-                    scroll-snap-type: x mandatory;
-                    scroll-behavior: smooth;
-                    -webkit-overflow-scrolling: touch;
-                    overscroll-behavior-x: contain;
-                    scrollbar-width: none;
-                    -ms-overflow-style: none;
-                    gap: 0;
-                    margin: 0 -20px;
-                    padding: 0;
-                    width: calc(100% + 40px);
-                " onscroll="handleVotiSubjectsScroll(this)">
-                    ${slidesHtml}
-                </div>
-
-                ${subjectSlides.length > 1 ? `
-                <div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:6px;">
-                    ${dotsHtml}
-                </div>` : ''}
+                ${materieContentHtml}
             </section>
 
             <!-- AI Insight Card (Apple Material) -->
@@ -11615,10 +11764,13 @@ window.handleVotiSubjectsScroll = function(el) {
 };
 
 window.openAllGradesModal = function() {
-    const rawVoti = getVotiData();
+    const activeYearKey = (typeof getActiveSchoolYear === 'function') ? getActiveSchoolYear() : getCurrentSchoolYearKey();
+    const allVoti = getVotiData();
+    const rawVoti = (typeof getVotesForSchoolYear === 'function') ? getVotesForSchoolYear(activeYearKey, allVoti) : allVoti;
+
     if (!rawVoti || rawVoti.length === 0) {
         if (typeof window.showToast === 'function') {
-            window.showToast({ message: 'Nessuna valutazione registrata', type: 'info' });
+            window.showToast({ message: `Nessuna valutazione registrata per l'A.S. ${activeYearKey}`, type: 'info' });
         }
         return;
     }
@@ -11627,7 +11779,7 @@ window.openAllGradesModal = function() {
 
     const html = `
         <div style="display:flex;flex-direction:column;gap:10px;padding-bottom:20px;">
-            ${sortedVoti.map((v, i) => {
+            ${sortedVoti.map((v) => {
                 const val = getNumericGradeValue(v);
                 const isSuff = val >= 6;
                 const color = isSuff ? '#30d158' : '#ff453a';
@@ -11662,7 +11814,7 @@ window.openAllGradesModal = function() {
 
     if (typeof window.openBottomSheet === 'function') {
         window.openBottomSheet({
-            title: `Tutti i Voti (${sortedVoti.length})`,
+            title: `Tutti i Voti · A.S. ${escapeHtml(activeYearKey)} (${sortedVoti.length})`,
             html: html
         });
     }
