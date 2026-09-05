@@ -172,3 +172,20 @@
 .skeleton * {
     visibility: hidden !important;
 }
+
+/* Liquid AI Progress Animations */
+@keyframes liquidGlowPulse {
+    0%, 100% {
+        box-shadow: 0 0 16px rgba(47, 88, 205, 0.45);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 26px rgba(182, 196, 255, 0.7);
+        transform: scale(1.03);
+    }
+}
+
+@keyframes liquidBarShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}

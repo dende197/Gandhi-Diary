@@ -4558,59 +4558,137 @@ async function mostraCircolare(id) {
     overlay.addEventListener('click', e => { if (e.target === overlay) closeCirc(); });
     document.getElementById('circ-close-btn-' + id).addEventListener('click', closeCirc);
 
-    // ── Sintesi progress animation ───────────────────────────────────────────
-    window._circ_startSintesi = function(cid, link) {
-        const btn = document.getElementById('btn-sintesi-' + cid);
+    // ── Sintesi Liquid Glass progress animation ─────────────────────────────
+    window._circ_startSintesi = async function(cid, link) {
+        if (window.navigator?.vibrate) {
+            try { window.navigator.vibrate(15); } catch (_) {}
+        }
         const placeholder = document.getElementById('sintesi-placeholder-' + cid);
         if (!placeholder) return;
 
-        // Replace placeholder with progress UI
+        // Render signature Apple Liquid Glass progress card
         placeholder.innerHTML = `
-            <div style="width:100%;padding:12px 0;">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                    <div style="width:40px;height:40px;border-radius:14px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#b6c4ff;">
-                        <i class="ph-fill ph-brain" style="font-size:22px;"></i>
-                    </div>
-                    <div style="flex:1;">
-                        <p id="sintesi-stage-${cid}" style="font-size:11px;font-weight:800;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Avvio analisi…</p>
-                        <div style="width:100%;height:6px;background:rgba(6,14,32,0.6);border:0.5px solid rgba(182,196,255,0.15);border-radius:999px;overflow:hidden;">
-                            <div id="sintesi-bar-${cid}" style="height:100%;width:0%;background:linear-gradient(90deg,#2f58cd,#b6c4ff);border-radius:999px;transition:width 0.4s ease;box-shadow:0 0 10px rgba(182,196,255,0.5);"></div>
+            <div id="sintesi-card-${cid}" style="width:100%;background:rgba(23,31,51,0.88);backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);border:1px solid rgba(182,196,255,0.22);border-top:1px solid rgba(255,255,255,0.28);border-radius:24px;padding:22px 20px;box-shadow:0 12px 36px rgba(6,14,32,0.65), inset 0 1px 0 rgba(255,255,255,0.15);display:flex;flex-direction:column;gap:14px;box-sizing:border-box;text-align:left;animation:fadeIn 0.35s ease-out;">
+                <!-- Header row with pulsing icon, badge and percentage -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div id="sintesi-icon-${cid}" style="width:42px;height:42px;border-radius:15px;background:rgba(47,88,205,0.25);border:1px solid rgba(182,196,255,0.35);display:flex;align-items:center;justify-content:center;color:#b6c4ff;box-shadow:0 0 18px rgba(47,88,205,0.45);flex-shrink:0;animation:liquidGlowPulse 2.4s infinite ease-in-out;">
+                            <i class="ph-fill ph-sparkle" style="font-size:22px;"></i>
+                        </div>
+                        <div>
+                            <span id="sintesi-badge-${cid}" style="font-size:10.5px;font-weight:800;color:#b6c4ff;text-transform:uppercase;letter-spacing:0.08em;background:rgba(47,88,205,0.22);border:1px solid rgba(182,196,255,0.28);padding:3px 9px;border-radius:999px;display:inline-block;">Sintesi AI</span>
+                            <p id="sintesi-title-${cid}" style="font-size:14px;color:#dae2fd;font-weight:700;margin:4px 0 0;line-height:1.3;">Avvio elaborazione…</p>
                         </div>
                     </div>
+                    <span id="sintesi-pct-${cid}" style="font-size:13px;font-weight:800;color:#b6c4ff;font-variant-numeric:tabular-nums;background:rgba(6,14,32,0.6);padding:4px 9px;border-radius:10px;border:1px solid rgba(182,196,255,0.18);flex-shrink:0;">0%</span>
                 </div>
-                <p id="sintesi-sub-${cid}" style="font-size:12px;color:#c4c5d6;font-weight:500;margin:0;">Lettura del documento in corso…</p>
+
+                <!-- Liquid Progress Bar -->
+                <div style="width:100%;height:8px;background:rgba(6,14,32,0.75);border:0.5px solid rgba(182,196,255,0.18);border-radius:999px;overflow:hidden;position:relative;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6);">
+                    <div id="sintesi-bar-${cid}" style="height:100%;width:0%;background:linear-gradient(90deg,#2f58cd 0%,#3b82f6 50%,#b6c4ff 100%);border-radius:999px;transition:width 0.35s cubic-bezier(0.16,1,0.3,1);box-shadow:0 0 14px rgba(79,120,255,0.7);"></div>
+                </div>
+
+                <!-- Subtitle / status details -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <p id="sintesi-desc-${cid}" style="font-size:12px;color:#c4c5d6;font-weight:500;margin:0;line-height:1.4;">Scansione del documento in corso…</p>
+                    <div style="display:flex;align-items:center;gap:4px;color:#8e909f;font-size:11px;font-weight:600;flex-shrink:0;">
+                        <i class="ph-bold ph-lightning" style="color:#b6c4ff;"></i> AI Assistant
+                    </div>
+                </div>
             </div>`;
 
         const stages = [
-            { pct: 18, label: 'Scansione metadati…',       sub: 'Identificazione del documento' },
-            { pct: 40, label: 'Recupero PDF…',             sub: 'Download del file circolare' },
-            { pct: 65, label: 'Estrazione testo…',         sub: 'Analisi del contenuto' },
-            { pct: 85, label: 'Sintesi neurale in corso…', sub: 'Elaborazione dei punti chiave' },
-            { pct: 95, label: 'Quasi pronto…',             sub: 'Finalizzazione del riassunto' },
+            { pct: 22, title: 'Identificazione circolare…', desc: 'Scansione metadati e ricerca allegati' },
+            { pct: 48, title: 'Recupero documento…',       desc: 'Download ed estrazione del testo' },
+            { pct: 74, title: 'Analisi neurale AI…',       desc: 'Estrazione punti chiave, date e scadenze' },
+            { pct: 92, title: 'Finalizzazione sintesi…',   desc: 'Formattazione del riassunto per la lettura' },
         ];
-        let si = 0;
+
+        let currentStageIdx = 0;
+        let progress = 6;
         const bar = document.getElementById('sintesi-bar-' + cid);
-        const stageEl = document.getElementById('sintesi-stage-' + cid);
-        const subEl = document.getElementById('sintesi-sub-' + cid);
+        const titleEl = document.getElementById('sintesi-title-' + cid);
+        const descEl = document.getElementById('sintesi-desc-' + cid);
+        const pctEl = document.getElementById('sintesi-pct-' + cid);
 
         const iv = setInterval(() => {
-            if (si >= stages.length) { clearInterval(iv); return; }
-            const s = stages[si++];
-            if (bar) bar.style.width = s.pct + '%';
-            if (stageEl) stageEl.textContent = s.label;
-            if (subEl) subEl.textContent = s.sub;
-        }, 1400);
+            if (progress >= 92) return;
+            progress += (92 - progress) * 0.12 + 0.6;
+            if (progress > 92) progress = 92;
+            const rounded = Math.round(progress);
+            if (bar) bar.style.width = rounded + '%';
+            if (pctEl) pctEl.textContent = rounded + '%';
 
-        // Call the real synthesis
-        (async () => {
-            if (typeof window.requestCircularSynthesis === 'function') {
-                await window.requestCircularSynthesis(cid, link);
+            if (currentStageIdx < stages.length && progress >= stages[currentStageIdx].pct) {
+                const s = stages[currentStageIdx++];
+                if (titleEl) titleEl.textContent = s.title;
+                if (descEl) descEl.textContent = s.desc;
             }
+        }, 320);
+
+        try {
+            const result = await window.loadCircolareSintesi(cid, link);
             clearInterval(iv);
-            if (bar) bar.style.width = '100%';
-            if (stageEl) stageEl.textContent = 'Completato';
-        })();
+
+            if (result && result.success && result.sintesi) {
+                if (bar) bar.style.width = '100%';
+                if (pctEl) pctEl.textContent = '100%';
+                const badge = document.getElementById('sintesi-badge-' + cid);
+                if (badge) {
+                    badge.textContent = 'Completato';
+                    badge.style.background = 'rgba(74, 222, 128, 0.2)';
+                    badge.style.color = '#4ade80';
+                    badge.style.borderColor = 'rgba(74, 222, 128, 0.35)';
+                }
+                if (titleEl) titleEl.textContent = 'Sintesi completata!';
+                if (descEl) descEl.textContent = 'Riassunto pronto per la consultazione.';
+
+                if (window.navigator?.vibrate) {
+                    try { window.navigator.vibrate(25); } catch (_) {}
+                }
+
+                setTimeout(async () => {
+                    await window.ensureMarked();
+                    const box = document.getElementById(`sintesi-box-${cid}`);
+                    if (box) {
+                        box.innerHTML = `
+                            <div class="ai-prose" style="animation: fadeIn 0.4s ease-out; font-size:14px; line-height:1.75; color:#dae2fd;">
+                                ${window.renderSafeMarkdown(result.sintesi)}
+                            </div>`;
+                    }
+                }, 380);
+            } else {
+                const errMsg = (result && result.error) || 'Impossibile completare la sintesi.';
+                _renderSintesiError(cid, link, errMsg);
+            }
+        } catch (err) {
+            clearInterval(iv);
+            _renderSintesiError(cid, link, err?.message || 'Errore di connessione durante la sintesi.');
+        }
     };
+
+    function _renderSintesiError(cid, link, errMsg) {
+        const card = document.getElementById('sintesi-card-' + cid);
+        if (!card) return;
+        card.style.borderColor = 'rgba(255, 120, 120, 0.35)';
+        card.style.background = 'rgba(38, 20, 30, 0.88)';
+        card.innerHTML = `
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:42px;height:42px;border-radius:15px;background:rgba(255,80,80,0.2);border:1px solid rgba(255,120,120,0.35);display:flex;align-items:center;justify-content:center;color:#ff9e9e;flex-shrink:0;">
+                    <i class="ph-bold ph-warning-circle" style="font-size:22px;"></i>
+                </div>
+                <div>
+                    <span style="font-size:10.5px;font-weight:800;color:#ff9e9e;text-transform:uppercase;letter-spacing:0.08em;background:rgba(255,80,80,0.2);border:1px solid rgba(255,120,120,0.3);padding:3px 9px;border-radius:999px;display:inline-block;">Errore Sintesi</span>
+                    <p style="font-size:14px;color:#dae2fd;font-weight:700;margin:4px 0 0;line-height:1.3;">Elaborazione non riuscita</p>
+                </div>
+            </div>
+            <p style="font-size:12.5px;color:#ffc4c4;margin:0;line-height:1.45;">${escapeHtml(errMsg)}</p>
+            <button onclick="window._circ_startSintesi('${escapeJsSingleQuote(cid)}', '${escapeJsSingleQuote(link || '')}')" style="width:100%;height:44px;border-radius:14px;background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;border:none;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;margin-top:4px;box-shadow:0 4px 16px rgba(47,88,205,0.4);">
+                <i class="ph-bold ph-arrows-clockwise" style="font-size:16px;"></i>
+                Riprova Elaborazione
+            </button>
+        `;
+    }
 }
 function renderDayDetailModal(dateStr) {
     const container = getModalContainer();
@@ -7496,39 +7574,10 @@ window.refreshCircolari = function () {
 };
 
 window.requestCircularSynthesis = async function (id, link) {
-    const btn = document.getElementById(`btn-sintesi-${id}`);
-    const placeholder = document.getElementById(`sintesi-placeholder-${id}`);
-    if (btn) btn.style.display = 'none';
-    if (placeholder) {
-        placeholder.innerHTML = `
-            <div class="sintesi-progress-container" style="width:100%; max-width:300px; margin:0 auto; text-align:left;">
-                <span id="sintesi-progress-label-${id}" class="sintesi-progress-label">INITIALIZING_ENGINE</span>
-                <div class="sintesi-progress-bg">
-                    <div id="sintesi-progress-bar-${id}" class="sintesi-progress-fill" style="width:0%;"></div>
-                </div>
-            </div>`;
+    if (typeof window._circ_startSintesi === 'function') {
+        return window._circ_startSintesi(id, link);
     }
-    const label = document.getElementById(`sintesi-progress-label-${id}`);
-    const bar = document.getElementById(`sintesi-progress-bar-${id}`);
-    let progress = 0;
-    const stages = [
-        { limit: 25, text: "SCANNING_METADATA", duration: 1500 },
-        { limit: 50, text: "FETCHING_PDF_STREAM", duration: 2500 },
-        { limit: 75, text: "EXTRACTING_TEXT_LAYER", duration: 3500 },
-        { limit: 90, text: "NEURAL_SYNTHESIS_RUNNING", duration: 5000 }
-    ];
-    let currentStage = 0;
-    const interval = setInterval(() => {
-        if (progress >= 90 || !bar) { clearInterval(interval); return; }
-        progress += (90 / 120);
-        bar.style.width = progress + '%';
-        if (currentStage < stages.length && progress > stages[currentStage].limit) {
-            if (label) label.innerText = stages[currentStage].text;
-            currentStage++;
-        }
-    }, 100);
-    if (typeof window.loadCircolareSintesi === 'function') await window.loadCircolareSintesi(id, link);
-    clearInterval(interval);
+    return window.loadCircolareSintesi(id, link);
 };
 
 window.renderSafeMarkdown = function(md) {
@@ -7590,51 +7639,13 @@ window.loadCircolareSintesi = async function (id, link) {
         if (data.success && data.sintesi) {
             const circolare = (typeof state !== 'undefined' && state.circolari) ? state.circolari.find(c => c.id === id) : null;
             if (circolare) circolare.sintesi = data.sintesi;
-
-            await window.ensureMarked();
-
-            const box = document.getElementById(`sintesi-box-${id}`);
-            if (box) {
-                box.innerHTML = `
-                    <div class="ai-prose" style="animation: fadeIn 0.4s ease-out;">
-                        ${window.renderSafeMarkdown(data.sintesi)}
-                    </div>`;
-            }
+            return { success: true, sintesi: data.sintesi };
         } else {
-            const errorMsg = data.error || "ANALISI NON RIUSCITA";
-            const label = document.getElementById(`sintesi-progress-label-${id}`);
-            if (label) {
-                label.innerText = errorMsg;
-                label.style.color = "var(--red)";
-            }
-            const stage = document.getElementById(`sintesi-stage-${id}`);
-            if (stage) {
-                stage.innerText = "ERRORE";
-                stage.style.color = "var(--red)";
-            }
-            const sub = document.getElementById(`sintesi-sub-${id}`);
-            if (sub) {
-                sub.innerText = errorMsg;
-                sub.style.color = "rgba(255, 120, 120, 0.9)";
-            }
+            return { success: false, error: data.error || 'Analisi AI non riuscita.' };
         }
     } catch (e) {
         console.error("Synthesis error:", e);
-        const label = document.getElementById(`sintesi-progress-label-${id}`);
-        if (label) {
-            label.innerText = "ERRORE DI RETE";
-            label.style.color = "var(--red)";
-        }
-        const stage = document.getElementById(`sintesi-stage-${id}`);
-        if (stage) {
-            stage.innerText = "CONNESSIONE NON RIUSCITA";
-            stage.style.color = "var(--red)";
-        }
-        const sub = document.getElementById(`sintesi-sub-${id}`);
-        if (sub) {
-            sub.innerText = "Impossibile contattare il server. Riprova più tardi.";
-            sub.style.color = "rgba(255, 120, 120, 0.9)";
-        }
+        return { success: false, error: 'Errore di rete durante la richiesta. Riprova più tardi.' };
     }
 };
 
