@@ -7561,11 +7561,22 @@ window.ensureMarked = function() {
 window.loadCircolareSintesi = async function (id, link) {
     try {
         console.log(`[Network] Sintesi Request: ${id}`);
-        const session = (typeof sessionManager !== 'undefined' && sessionManager.load) ? sessionManager.load() : null;
+        let session = null;
+        try {
+            if (typeof sessionManager !== 'undefined' && sessionManager.load) {
+                session = sessionManager.load();
+            } else if (typeof window.sessionManager !== 'undefined' && window.sessionManager.load) {
+                session = window.sessionManager.load();
+            } else {
+                const raw = localStorage.getItem('argo_session');
+                if (raw) session = JSON.parse(raw);
+            }
+        } catch (_) {}
+
         const sessionToken = (typeof state !== 'undefined' && state.sessionToken) || (session && session.sessionToken) || '';
         const resolvedUserId = (typeof window.getUserId === 'function')
             ? window.getUserId()
-            : (session && (session.studentId || session.userId)) || (state && state.user && state.user.id) || '';
+            : (session && (session.studentId || session.userId || session.pid)) || (state && state.user && state.user.id) || '';
         const headers = { 'Content-Type': 'application/json' };
         if (sessionToken) headers['x-session-token'] = sessionToken;
         if (resolvedUserId) headers['x-user-id'] = resolvedUserId;
@@ -7577,7 +7588,7 @@ window.loadCircolareSintesi = async function (id, link) {
         });
         const data = await response.json();
         if (data.success && data.sintesi) {
-            const circolare = state.circolari.find(c => c.id === id);
+            const circolare = (typeof state !== 'undefined' && state.circolari) ? state.circolari.find(c => c.id === id) : null;
             if (circolare) circolare.sintesi = data.sintesi;
 
             await window.ensureMarked();
@@ -7590,18 +7601,39 @@ window.loadCircolareSintesi = async function (id, link) {
                     </div>`;
             }
         } else {
+            const errorMsg = data.error || "ANALISI NON RIUSCITA";
             const label = document.getElementById(`sintesi-progress-label-${id}`);
             if (label) {
-                label.innerText = "ERROR: ANALYSIS_FAILED";
+                label.innerText = errorMsg;
                 label.style.color = "var(--red)";
+            }
+            const stage = document.getElementById(`sintesi-stage-${id}`);
+            if (stage) {
+                stage.innerText = "ERRORE";
+                stage.style.color = "var(--red)";
+            }
+            const sub = document.getElementById(`sintesi-sub-${id}`);
+            if (sub) {
+                sub.innerText = errorMsg;
+                sub.style.color = "rgba(255, 120, 120, 0.9)";
             }
         }
     } catch (e) {
         console.error("Synthesis error:", e);
         const label = document.getElementById(`sintesi-progress-label-${id}`);
         if (label) {
-            label.innerText = "ERROR: NETWORK_TIMEOUT";
+            label.innerText = "ERRORE DI RETE";
             label.style.color = "var(--red)";
+        }
+        const stage = document.getElementById(`sintesi-stage-${id}`);
+        if (stage) {
+            stage.innerText = "CONNESSIONE NON RIUSCITA";
+            stage.style.color = "var(--red)";
+        }
+        const sub = document.getElementById(`sintesi-sub-${id}`);
+        if (sub) {
+            sub.innerText = "Impossibile contattare il server. Riprova più tardi.";
+            sub.style.color = "rgba(255, 120, 120, 0.9)";
         }
     }
 };

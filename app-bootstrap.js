@@ -129,6 +129,7 @@
             return headers;
         }
         window.getSessionHeaders = getSessionHeaders;
+        window.sessionManager = sessionManager;
 
         // --- STATE ENGINE ---
         const state = {

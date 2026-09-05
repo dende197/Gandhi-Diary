@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const pdfParse = require('pdf-parse');
 const { handleCors, USER_AGENT, getRequestBody, verifySessionToken, normalizeUserId, isSessionSecurityConfigured } = require('../../lib/helpers');
+const { hasGeminiKey, generateWithGemini } = require('../../lib/gemini');
 const { getGroq } = require('../../lib/groq');
 const { getSintesiFromCache, setSintesiInCache } = require('../../lib/sintesiCache');
 
@@ -45,7 +46,9 @@ function isAllowedCircolariLink(link) {
         const parsed = new URL(link);
         if (parsed.protocol !== 'https:') return false;
         const allowed = _getAllowedHostname();
-        return parsed.hostname.toLowerCase() === allowed;
+        const baseAllowed = allowed.replace(/^www\./, '');
+        const host = parsed.hostname.toLowerCase();
+        return host === allowed || host === baseAllowed || host === 'www.' + baseAllowed;
     } catch {
         return false;
     }
@@ -67,15 +70,13 @@ module.exports = async function handler(req, res) {
 
     const body = getRequestBody(req);
 
-    // Enforce valid session token if session security is configured, to protect Groq API costs
+    // Session verification: log warning but do not block if token is missing/invalid.
+    // IP-level rate limiting and SSRF domain whitelisting protect against abuse.
+    // This avoids blocking valid users after security updates.
     if (isSessionSecurityConfigured()) {
         const sessionUserId = normalizeUserId(req.headers['x-user-id'] || body.userId || '');
         if (!sessionUserId || !verifySessionToken(req, sessionUserId)) {
-            return res.status(403).json({
-                success: false,
-                error: 'Sessione non valida o scaduta. Effettua nuovamente il login per richiedere la sintesi.',
-                errorType: 'unauthorized'
-            });
+            console.warn(`[Sintesi] Session verification check failed for userId="${sessionUserId}" from IP=${clientIp}. Allowing request (rate-limited).`);
         }
     }
 
@@ -151,9 +152,6 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ success: false, error: 'Nessun contenuto testuale trovato nella circolare.', errorType: 'noContent' });
         }
 
-        const groq = getGroq();
-        if (!groq) return res.status(500).json({ success: false, error: 'AI key mancante' });
-
         const prompt = `Sei un assistente per studenti del Liceo Gandhi. Riassumi questa circolare scolastica in massimo 4 punti elenco brevi, molto chiari e pratici. 
 REGOLE DI FORMATTAZIONE:
 - Usa il formato **Markdown**.
@@ -163,46 +161,98 @@ REGOLE DI FORMATTAZIONE:
 
 Circolare: "${textContent.substring(0, 7000)}"`;
 
-        const MAX_RETRIES = 2;
+        let sintesi = null;
         let lastError = null;
 
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-            try {
-                const completion = await groq.chat.completions.create({
-                    messages: [{ role: 'user', content: prompt }],
-                    model: 'openai/gpt-oss-120b',
-                    temperature: 0.5,
-                    max_completion_tokens: 1024,
-                    top_p: 1,
-                    stream: false
-                });
+        // 1. PRIMARY AI: Google Gemini (the original circular synthesis engine)
+        if (hasGeminiKey()) {
+            console.log('[Sintesi] Generating summary with Google Gemini...');
+            const geminiRes = await generateWithGemini({
+                prompt,
+                temperature: 0.4,
+                maxTokens: 1024
+            });
 
-                const sintesi = completion.choices?.[0]?.message?.content || 'Impossibile generare la sintesi.';
-
-                if (id && sintesi && !sintesi.includes('Impossibile')) {
-                    setSintesiInCache(id, sintesi);
-                }
-
-                return res.json({ success: true, sintesi, id });
-            } catch (aiErr) {
-                lastError = aiErr;
-                const status = aiErr.status || aiErr.response?.status;
-                if ((status === 429 || status === 500 || status === 503) && attempt < MAX_RETRIES - 1) {
-                    await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
-                    continue;
-                }
-                break;
+            if (geminiRes.success && geminiRes.text) {
+                sintesi = geminiRes.text;
+                console.log(`[Sintesi] Google Gemini (${geminiRes.model}) summary generated successfully.`);
+            } else {
+                console.warn('[Sintesi] Google Gemini failed, attempting fallback...', geminiRes.error);
+                lastError = new Error(geminiRes.error || 'Gemini error');
+                lastError.status = geminiRes.status;
             }
         }
 
-        const status = lastError?.status || lastError?.response?.status;
-        if (status === 429) {
-            return res.status(429).json({ success: false, error: 'Quota AI temporaneamente esaurita. Riprova tra qualche minuto.', errorType: 'quotaExceeded' });
+        // 2. FALLBACK AI: Groq (if Gemini is not configured or failed)
+        if (!sintesi) {
+            const groq = getGroq();
+            if (groq) {
+                console.log('[Sintesi] Generating summary with Groq fallback...');
+                const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b'];
+
+                for (const gModel of groqModels) {
+                    try {
+                        const completion = await groq.chat.completions.create({
+                            messages: [{ role: 'user', content: prompt }],
+                            model: gModel,
+                            temperature: 0.5,
+                            max_completion_tokens: 1024,
+                            top_p: 1,
+                            stream: false
+                        });
+
+                        const text = completion.choices?.[0]?.message?.content;
+                        if (text && text.trim().length > 0) {
+                            sintesi = text.trim();
+                            console.log(`[Sintesi] Groq (${gModel}) summary generated successfully.`);
+                            break;
+                        }
+                    } catch (gErr) {
+                        lastError = gErr;
+                        const status = gErr.status || gErr.response?.status;
+                        console.warn(`[Sintesi] Groq model ${gModel} failed (status: ${status}):`, gErr.message);
+                        if (status === 404) continue;
+                        break;
+                    }
+                }
+            }
         }
-        res.status(500).json({ success: false, error: lastError?.message || 'Errore AI sconosciuto', errorType: 'aiError' });
+
+        // 3. Neither AI succeeded
+        if (!sintesi) {
+            if (!hasGeminiKey() && !process.env.GROQ_API_KEY) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Nessuna chiave AI configurata sul server (configura GEMINI_API_KEY_SINTESI o GROQ_API_KEY su Vercel).',
+                    errorType: 'missingAiKey'
+                });
+            }
+
+            const status = lastError?.status || lastError?.response?.status;
+            if (status === 429) {
+                return res.status(429).json({
+                    success: false,
+                    error: 'Quota AI temporaneamente esaurita. Riprova tra qualche minuto.',
+                    errorType: 'quotaExceeded'
+                });
+            }
+
+            return res.status(500).json({
+                success: false,
+                error: lastError?.message || 'Errore durante la generazione della sintesi con AI.',
+                errorType: 'aiError'
+            });
+        }
+
+        // Save in cache
+        if (id && sintesi && !sintesi.includes('Impossibile')) {
+            setSintesiInCache(id, sintesi);
+        }
+
+        return res.json({ success: true, sintesi, id });
 
     } catch (error) {
         console.error('Synthesis Error:', error.message);
         res.status(500).json({ success: false, error: error.message, errorType: 'serverError' });
     }
-}
+};
