@@ -1273,7 +1273,13 @@ function normalizeClassUi(cls) {
     if (!cls) return null;
     const txt = String(cls).toUpperCase().trim();
 
-    // Canonical Italian class format: Year (1-5) + Section (A-Z), e.g. "4D", "5A"
+    // 1. Compact compound track formats: 4DSA, 4DLS, 3ACL, 1BSU, 4DLC -> 4D, 3A, 1B
+    const compactMatch = txt.match(/\b([1-5])[\^°]?\s*([A-Z])\s*(?:SA|LS|SU|CL|LC|LL|LA)\b/i);
+    if (compactMatch) {
+        return (compactMatch[1] + compactMatch[2]).toUpperCase();
+    }
+
+    // 2. Canonical Italian class format: Year (1-5) + Section (A-Z), e.g. "4D", "5A", "4D (SA)", "4 D SA"
     const baseMatch = txt.match(/\b([1-5])[\^°]?\s*([A-Z]{1,2})\b/);
     if (baseMatch) {
         return (baseMatch[1] + baseMatch[2]).toUpperCase();

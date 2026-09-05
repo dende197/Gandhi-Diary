@@ -1,9 +1,11 @@
 const {
-    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb, verifySessionToken, getRequestBody, decryptArgoPassword, encryptArgoPassword, normalizeUserId
+    handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, parseJsonb,
+    verifySessionToken, getRequestBody, decryptArgoPassword, encryptArgoPassword, normalizeUserId,
+    parseClassDetails, CLASS_REGEX
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const {
-    AdvancedArgo, resolveIdentityForProfile, enrichProfiles,
+    AdvancedArgo, resolveIdentityForProfile, enrichProfiles, extractClassFromDashboard,
     getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
@@ -322,7 +324,7 @@ module.exports = async function handler(req, res) {
 
         if (supabase) {
             try {
-                let sName = null, sClass = null;
+                let sName = null, sClass = null, sTrack = null;
                 if (profiles.length > 0) {
                     const t = profiles[profileIndex];
                     const resIdent = await resolveIdentityForProfile(
@@ -330,6 +332,22 @@ module.exports = async function handler(req, res) {
                     );
                     sName = resIdent.name;
                     sClass = normalizeClass(resIdent.cls) || resIdent.cls;
+                    sTrack = resIdent.track || t.specialization || null;
+                }
+
+                // Dashboard fallback if sClass is missing or has no section/track
+                if (!sClass || sClass === 'N/D' || !CLASS_REGEX.test(sClass)) {
+                    const dashCls = extractClassFromDashboard(dashboardData);
+                    if (dashCls?.formatted) {
+                        sClass = dashCls.formatted;
+                        if (dashCls.track && !sTrack) sTrack = dashCls.track;
+                    }
+                }
+
+                // Extract track if embedded in class string
+                const parsedSClass = parseClassDetails(sClass);
+                if (parsedSClass?.track && !sTrack) {
+                    sTrack = parsedSClass.track;
                 }
 
                 const pid = generatePid(school, user, profileIndex);
@@ -338,7 +356,7 @@ module.exports = async function handler(req, res) {
                 const { data: existingProfile } = await supabase.from('profiles')
                     .select('specialization, avatar, name, class').eq('id', pid).single();
 
-                const storedSpecialization = existingProfile?.specialization || null;
+                const storedSpecialization = sTrack || existingProfile?.specialization || null;
                 const storedAvatar = existingProfile?.avatar || null;
 
                 const payload = {

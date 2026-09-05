@@ -1,12 +1,12 @@
 const {
     handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken,
-    isSessionSecurityConfigured, getRequestBody, encryptArgoPassword
+    isSessionSecurityConfigured, getRequestBody, encryptArgoPassword, parseClassDetails, CLASS_REGEX
 } = require('../lib/helpers');
 const { getSupabase } = require('../lib/supabase');
 const { setArgoCredentials } = require('../lib/session-vault');
 const {
     AdvancedArgo, enrichProfiles, resolveIdentityForProfile,
-    resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb,
+    resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb, extractClassFromDashboard,
     getDashboard, extractGradesFromDashboard, extractHomeworkFromDashboard,
     extractPromemoriaFromDashboard, extractClassActivitiesFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard
 } = require('../lib/argo');
@@ -66,29 +66,34 @@ module.exports = async function handler(req, res) {
 
         let studentName = targetProfile.name;
         let studentClass = targetProfile.class;
+        let detectedTrack = targetProfile.specialization || null;
 
-        // Fallback identity resolution via API
-        if (!studentName || studentName.startsWith('STUDENTE') || studentClass === 'N/D') {
+        // Fallback identity resolution via API (or enrich if track missing or class incomplete)
+        const hasFullClass = studentClass && studentClass !== 'N/D' && CLASS_REGEX.test(studentClass) && /\([A-Z]{2,3}\)/.test(studentClass);
+        if (!studentName || studentName.startsWith('STUDENTE') || !hasFullClass) {
             const resolved = await resolveIdentityForProfile(
                 school, username, password, accessToken, authToken,
                 studentName, studentClass, targetProfile.idSoggetto
             );
             if (resolved.name) studentName = resolved.name;
             if (resolved.cls && resolved.cls !== 'N/D') studentClass = normalizeClass(resolved.cls) || studentClass;
+            if (resolved.track) detectedTrack = detectedTrack || resolved.track;
         }
 
         // Fallback HTML scraping via cookie jar (per scuole con API limitate)
         const jar = loginRes.jar;
-        if (jar && (!isValidName(studentName, username) || studentClass === 'N/D')) {
+        if (jar && (!isValidName(studentName, username) || studentClass === 'N/D' || !CLASS_REGEX.test(studentClass))) {
             try {
                 const webId = await resolveIdentityFromWebUI(jar);
                 if (webId.name && isValidName(webId.name, username)) studentName = webId.name;
                 if (webId.cls && webId.cls !== 'N/D') studentClass = normalizeClass(webId.cls) || studentClass;
+                if (webId.track) detectedTrack = detectedTrack || webId.track;
 
                 if (!isValidName(studentName, username) || !normalizeClass(studentClass)) {
                     const webAna = await resolveClassFromAnagraficaWeb(jar);
                     if (webAna.cls) studentClass = normalizeClass(webAna.cls) || studentClass;
                     if (webAna.name && !isValidName(studentName, username)) studentName = webAna.name;
+                    if (webAna.track) detectedTrack = detectedTrack || webAna.track;
                 }
             } catch (e) {
                 debugLog('⚠️ Login fallback identity resolution failed', e.message);
@@ -102,6 +107,22 @@ module.exports = async function handler(req, res) {
         } catch (dashErr) {
             debugLog('⚠️ Login getDashboard failed (non-fatal)', dashErr.message);
         }
+
+        // Dashboard fallback for class / track if still incomplete
+        if (!studentClass || studentClass === 'N/D' || !CLASS_REGEX.test(studentClass)) {
+            const dashCls = extractClassFromDashboard(dashboardData);
+            if (dashCls?.formatted) {
+                studentClass = dashCls.formatted;
+                if (dashCls.track) detectedTrack = detectedTrack || dashCls.track;
+            }
+        }
+
+        // Extract track from studentClass if embedded in class string (e.g. 4D (SA))
+        const parsedStudentClass = parseClassDetails(studentClass);
+        if (parsedStudentClass?.track) {
+            detectedTrack = detectedTrack || parsedStudentClass.track;
+        }
+
         const gradesData = extractGradesFromDashboard(dashboardData);
         const tasksData = extractHomeworkFromDashboard(dashboardData);
         const announcementsData = extractPromemoriaFromDashboard(dashboardData);
@@ -118,7 +139,7 @@ module.exports = async function handler(req, res) {
             password,
             profileIndex: targetIndex
         });
-        let storedSpecialization = null;
+        let storedSpecialization = detectedTrack || null;
         let storedAvatar = null;
 
         const supabase = getSupabase();
@@ -129,7 +150,7 @@ module.exports = async function handler(req, res) {
                     .select('specialization, avatar').eq('id', pid).single();
 
                 if (existingProfile) {
-                    storedSpecialization = existingProfile.specialization;
+                    storedSpecialization = storedSpecialization || existingProfile.specialization;
                     storedAvatar = existingProfile.avatar;
                 }
 
