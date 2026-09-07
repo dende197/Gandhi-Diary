@@ -3097,18 +3097,21 @@ window.getComprehensiveNotificationData = function() {
     const rawCircList = (Array.isArray(state.circolari) && state.circolari.length > 0) ? state.circolari : _getStoredArr('circolari');
     const circolariList = rawCircList.map(c => {
         const iso = parseItemDateISO(c.dataPubblicazione || c.date || c.data || c.pubblDate || c.data_pubblicazione);
+        const rawNum = c.numero || (c.titolo ? (c.titolo.match(/n\.?\s*(\d+)/i) || [])[1] : '') || '';
         return {
             category: 'circolari',
             categoryLabel: 'Circolare',
             type: 'circolare',
             id: c.id,
+            numero: rawNum,
             title: c.titolo || c.title || 'Circolare',
-            desc: c.numero ? `Circolare n. ${c.numero}` : 'Comunicazione ufficiale',
+            desc: c.descrizione || c.oggetto || (rawNum ? `Circolare n. ${rawNum}` : 'Comunicazione ufficiale'),
+            borderAccent: '#ffd60a',
             dateISO: iso,
             rawDate: c.data || c.date || '',
             icon: 'ph-file-text',
-            iconColor: '#2997ff',
-            iconBg: 'rgba(41,151,255,0.16)',
+            iconColor: '#ffd60a',
+            iconBg: 'rgba(255,214,10,0.16)',
             action: `mostraCircolare('${escapeJsSingleQuote(c.id)}')`
         };
     });
@@ -3122,16 +3125,20 @@ window.getComprehensiveNotificationData = function() {
         const numVal = parseFloat(String(val).replace(',', '.'));
         const isGood = !isNaN(numVal) && numVal >= 6;
         const valColor = !isNaN(numVal) ? (isGood ? '#30d158' : '#ff453a') : '#2997ff';
-        const valBg = !isNaN(numVal) ? (isGood ? 'rgba(48,209,88,0.16)' : 'rgba(255,69,58,0.16)') : 'rgba(41,151,255,0.16)';
+        const valBg = !isNaN(numVal) ? (isGood ? 'rgba(48,209,88,0.18)' : 'rgba(255,69,58,0.18)') : 'rgba(41,151,255,0.18)';
         return {
             category: 'voti',
             categoryLabel: 'Voto',
             type: 'voto',
-            title: `Nuovo Voto: ${subj}`,
+            subject: subj,
+            title: subj,
+            tipo: v.tipo || 'Valutazione',
+            commento: v.commento || '',
             desc: `${v.tipo || 'Valutazione'}${v.commento ? ' — ' + v.commento : ''}`,
             val: val,
             valColor: valColor,
             valBg: valBg,
+            borderAccent: valColor,
             dateISO: iso,
             rawDate: v.data || v.date,
             icon: 'ph-chart-line-up',
@@ -3148,7 +3155,10 @@ window.getComprehensiveNotificationData = function() {
         categoryLabel: 'Assenza',
         type: 'assenza',
         title: 'Assenza Scolastica',
+        dettaglio: a.numOre ? `${a.numOre} ore di assenza` : (a.oraInizio ? `${a.oraInizio}ª - ${a.oraFine || 5}ª ora` : 'Giornata intera'),
         desc: a.numOre ? `Assenza di ${a.numOre} ore` : (a.oraInizio ? `${a.oraInizio}ª - ${a.oraFine || 5}ª ora` : 'Giornata intera'),
+        giustificata: !!a.giustificata,
+        borderAccent: '#ff453a',
         dateISO: parseItemDateISO(a.data || a.date),
         rawDate: a.data || a.date,
         icon: 'ph-calendar-x',
@@ -3161,7 +3171,10 @@ window.getComprehensiveNotificationData = function() {
         categoryLabel: 'Ritardo',
         type: 'ritardo',
         title: 'Ingresso in Ritardo',
+        dettaglio: r.oraInizio ? `Entrata ore ${r.oraInizio}` : (r.numOre ? `${r.numOre}ª ora` : 'Ingresso posticipato'),
         desc: r.oraInizio ? `Entrata ore ${r.oraInizio}` : (r.numOre ? `${r.numOre}ª ora` : 'Ingresso posticipato'),
+        giustificata: !!(r.giustificato || r.giustificata),
+        borderAccent: '#ff9f0a',
         dateISO: parseItemDateISO(r.data || r.date),
         rawDate: r.data || r.date,
         icon: 'ph-clock-countdown',
@@ -3174,7 +3187,10 @@ window.getComprehensiveNotificationData = function() {
         categoryLabel: 'Uscita',
         type: 'uscita',
         title: 'Uscita Anticipata',
+        dettaglio: u.oraFine || u.oraInizio ? `Uscita ore ${u.oraFine || u.oraInizio}` : 'Uscita anticipata',
         desc: u.oraFine || u.oraInizio ? `Uscita ore ${u.oraFine || u.oraInizio}` : 'Uscita anticipata',
+        giustificata: !!(u.giustificato || u.giustificata),
+        borderAccent: '#64d2ff',
         dateISO: parseItemDateISO(u.data || u.date),
         rawDate: u.data || u.date,
         icon: 'ph-sign-out',
@@ -3183,11 +3199,14 @@ window.getComprehensiveNotificationData = function() {
         action: "mostraAssenzeModal()"
     }));
     const noteRaw = (ad.note || state.note || []).map(n => ({
-        category: 'assenze',
+        category: 'note',
         categoryLabel: 'Nota',
         type: 'nota',
         title: 'Nota Disciplinare',
+        autore: n.autore || 'Docente',
+        testo: n.testo || n.descrizione || '',
         desc: n.autore ? `Docente: ${n.autore} — ${n.testo || n.descrizione || ''}` : (n.testo || n.descrizione || 'Annotazione docente'),
+        borderAccent: '#bf5af2',
         dateISO: parseItemDateISO(n.data || n.date),
         rawDate: n.data || n.date,
         icon: 'ph-warning-octagon',
@@ -3199,14 +3218,17 @@ window.getComprehensiveNotificationData = function() {
     // 4. Compiti
     const tasksRaw = (state.tasks || []).filter(t => t.subject !== 'QUEST').map(t => {
         const iso = parseItemDateISO(t.due_date || t.assigned_date || t.created_at);
+        const subj = t.subject || t.materia || 'Compito';
         return {
             category: 'compiti',
             categoryLabel: 'Compito',
             type: 'compito',
             id: t.id,
-            title: `Compito: ${t.subject || t.materia || 'Materia'}`,
+            subject: subj,
+            title: subj,
             desc: t.text || t.title || 'Compito assegnato',
             done: !!t.done,
+            borderAccent: '#2997ff',
             dateISO: iso,
             rawDate: t.due_date,
             icon: 'ph-book-open',
@@ -3219,13 +3241,16 @@ window.getComprehensiveNotificationData = function() {
     // 5. Verifiche
     const verificheRaw = (state.verifiche || []).map(v => {
         const iso = parseItemDateISO(v.data || v.date);
+        const subj = v.materia || v.subject || 'Verifica';
         return {
             category: 'verifiche',
             categoryLabel: 'Verifica',
             type: 'verifica',
             id: v.id,
-            title: `Verifica: ${v.materia || v.subject || 'Materia'}`,
+            subject: subj,
+            title: subj,
             desc: v.text || v.descrizione || 'Verifica in programma',
+            borderAccent: '#ff9f0a',
             dateISO: iso,
             rawDate: v.data || v.date,
             icon: 'ph-pencil-simple',
@@ -3251,9 +3276,10 @@ window.getComprehensiveNotificationData = function() {
             desc: p.reason || (isAssembly ? `Proposta per ${p.targetDate}` : `Nuova data richiesta: ${p.targetDate}`),
             dateISO: iso,
             status: p.status,
+            borderAccent: isAssembly ? '#30d158' : '#32ade6',
             icon: isAssembly ? 'ph-users-three' : 'ph-calendar-plus',
-            iconColor: isAssembly ? '#30d158' : '#ff9f0a',
-            iconBg: isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(255,159,10,0.16)',
+            iconColor: isAssembly ? '#30d158' : '#32ade6',
+            iconBg: isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(50,173,230,0.16)',
             action: null
         };
     });
@@ -3363,33 +3389,80 @@ function openTodayNotifications(initialTab) {
 
     window._notifCategoryFilter = initialTab || window._notifCategoryFilter || 'all';
 
-    function formatItemDateBadge(iso, raw) {
-        if (!iso) return raw ? `<span style="font-size:10.5px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;font-weight:600;">${escapeHtml(raw)}</span>` : '';
-        if (iso === todayISO) {
-            return `<span style="font-size:10px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.16);border:1px solid rgba(48,209,88,0.4);padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;"><i class="ph-fill ph-circle" style="font-size:6px;"></i> OGGI</span>`;
+    // Formattazione data amichevole per divisori di sezione (es: "Oggi · Lunedì 7 Settembre", "Domani", "Ieri", "4 Settembre")
+    function getFriendlyDateLabel(iso, raw) {
+        if (!iso) return raw || 'Data non specificata';
+        if (iso === todayISO) return 'Oggi';
+        const parts = iso.split('-');
+        if (parts.length === 3) {
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const d = parseInt(parts[2], 10);
+            const targetDate = new Date(y, m, d);
+            const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const diffDays = Math.round((targetDate.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
+
+            const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+            const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+            const monthShort = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+
+            if (diffDays === 0) return `Oggi · ${dayNames[targetDate.getDay()]} ${d} ${monthShort[m]}`;
+            if (diffDays === 1) return `Domani · ${dayNames[targetDate.getDay()]} ${d} ${monthShort[m]}`;
+            if (diffDays === -1) return `Ieri · ${dayNames[targetDate.getDay()]} ${d} ${monthShort[m]}`;
+            if (diffDays === 2) return `Dopodomani · ${dayNames[targetDate.getDay()]} ${d} ${monthShort[m]}`;
+
+            if (diffDays > 0 && diffDays <= 7) {
+                return `${dayNames[targetDate.getDay()]} ${d} ${monthShort[m]}`;
+            }
+            if (diffDays < 0 && diffDays >= -7) {
+                return `${dayNames[targetDate.getDay()]} ${d} ${monthShort[m]}`;
+            }
+
+            if (y === today.getFullYear()) {
+                return `${dayNames[targetDate.getDay()]} ${d} ${monthNames[m]}`;
+            }
+            return `${d} ${monthShort[m]} ${y}`;
         }
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return `<span style="font-size:10.5px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;font-weight:600;">${escapeHtml(raw || iso)}</span>`;
-        
-        const diffMs = d.getTime() - today.getTime();
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) return `<span style="font-size:10px;font-weight:800;color:#ff9f0a;background:rgba(255,159,10,0.16);border:1px solid rgba(255,159,10,0.4);padding:2px 8px;border-radius:999px;">DOMANI</span>`;
-        if (diffDays === -1) return `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);padding:2px 8px;border-radius:999px;">IERI</span>`;
-        
-        const day = d.getDate();
-        const mnShort = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][d.getMonth()];
-        return `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.75);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;">${day} ${mnShort}</span>`;
+        return raw || iso;
     }
 
+    // Badge data e timing in alto a destra su ogni card
+    function getCardDateChip(iso, raw) {
+        if (!iso) {
+            return raw ? `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);padding:2px 8px;border-radius:999px;white-space:nowrap;">${escapeHtml(raw)}</span>` : '';
+        }
+        if (iso === todayISO) {
+            return `<span style="font-size:10px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.45);padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="ph-fill ph-circle" style="font-size:5px;"></i> OGGI</span>`;
+        }
+        const parts = iso.split('-');
+        if (parts.length === 3) {
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const d = parseInt(parts[2], 10);
+            const targetDate = new Date(y, m, d);
+            const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const diffDays = Math.round((targetDate.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) return `<span style="font-size:10px;font-weight:800;color:#ff9f0a;background:rgba(255,159,10,0.18);border:1px solid rgba(255,159,10,0.45);padding:2px 8px;border-radius:999px;white-space:nowrap;">DOMANI</span>`;
+            if (diffDays === -1) return `<span style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.75);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);padding:2px 8px;border-radius:999px;white-space:nowrap;">IERI</span>`;
+            if (diffDays > 1 && diffDays <= 7) {
+                const dayNamesShort = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+                return `<span style="font-size:10px;font-weight:800;color:#ff9f0a;background:rgba(255,159,10,0.14);border:1px solid rgba(255,159,10,0.35);padding:2px 8px;border-radius:999px;white-space:nowrap;">${dayNamesShort[targetDate.getDay()]} ${d}</span>`;
+            }
+            const mnShort = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m];
+            return `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;white-space:nowrap;">${d} ${mnShort}</span>`;
+        }
+        return raw ? `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;white-space:nowrap;">${escapeHtml(raw)}</span>` : '';
+    }
+
+    // Costruzione card notifica visivamente distintiva (Bordi laterali colorati, hero visual, zero muri di testo)
     function renderItemCard(item) {
         if (item.type === 'proposta') {
             const prop = item.rawProp;
             const isAssembly = prop.type === 'assembly';
-            const title = isAssembly ? 'Richiesta Assemblea di Classe' : `Sposta Verifica: ${escapeHtml(prop.subject || 'Verifica')}`;
+            const title = isAssembly ? 'Assemblea di Classe' : `Sposta Verifica: ${escapeHtml(prop.subject || 'Verifica')}`;
             const icon = isAssembly ? 'ph-users-three' : 'ph-calendar-plus';
-            const iconColor = isAssembly ? '#30d158' : '#ff9f0a';
-            const iconBg = isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(255,159,10,0.16)';
-            const borderGlow = isAssembly ? 'rgba(48,209,88,0.35)' : 'rgba(255,159,10,0.35)';
+            const accentColor = isAssembly ? '#30d158' : '#32ade6';
 
             const acceptVotes = Array.isArray(prop.votes?.accept) ? prop.votes.accept : [];
             const declineVotes = Array.isArray(prop.votes?.decline) ? prop.votes.decline : [];
@@ -3403,119 +3476,362 @@ function openTodayNotifications(initialTab) {
                 ? '<span style="background:rgba(48,209,88,0.18);color:#30d158;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(48,209,88,0.45);white-space:nowrap;">APPROVATA</span>'
                 : prop.status === 'rejected'
                 ? '<span style="background:rgba(255,69,58,0.18);color:#ff453a;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,69,58,0.45);white-space:nowrap;">RIFIUTATA</span>'
-                : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(41,151,255,0.45);white-space:nowrap;">IN VOTAZIONE</span>';
+                : '<span style="background:rgba(50,173,230,0.18);color:#32ade6;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(50,173,230,0.45);white-space:nowrap;">IN VOTAZIONE</span>';
 
             return `
-            <div data-notif-card style="background:rgba(20,31,54,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.28);border-radius:22px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);display:flex;flex-direction:column;gap:10px;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-                    <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
-                        <div style="width:42px;height:42px;border-radius:14px;background:${iconBg};border:1px solid ${borderGlow};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;box-shadow:0 0 14px ${iconColor}25;">
-                            <i class="ph-bold ${icon}" style="font-size:20px;"></i>
-                        </div>
-                        <div style="min-width:0;flex:1;">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                                <span style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${iconColor};background:${iconBg};border:1px solid ${borderGlow};padding:2px 8px;border-radius:999px;">
-                                    ${item.categoryLabel}
-                                </span>
-                                ${formatItemDateBadge(item.dateISO, item.rawDate)}
-                            </div>
-                            <div style="font-size:15px;font-weight:700;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-                            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-top:3px;">
-                                ${isAssembly ? `Data proposta: <strong style="color:#2997ff;">${prop.targetDate}</strong> (${escapeHtml(prop.duration || '2 ore')})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong style="color:#ff9f0a;">${prop.targetDate}</strong>`}
-                            </div>
-                        </div>
+            <div data-notif-card style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid ${accentColor};
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                display:flex;flex-direction:column;gap:9px;
+            ">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${accentColor};display:flex;align-items:center;gap:4px;">
+                            <i class="ph-bold ${icon}"></i> ${item.categoryLabel}
+                        </span>
+                        ${getCardDateChip(item.dateISO, item.rawDate)}
                     </div>
                     <div style="flex-shrink:0;">${statusBadge}</div>
                 </div>
 
-                <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
-                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Motivazione (${escapeHtml(prop.authorName || 'Compagno')})</div>
-                    <div style="font-size:12.5px;color:rgba(255,255,255,0.92);margin-top:3px;line-height:1.4;">${escapeHtml(prop.reason)}</div>
+                <div>
+                    <div style="font-size:15.5px;font-weight:800;color:#ffffff;line-height:1.25;">${title}</div>
+                    <div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.75);margin-top:3px;">
+                        ${isAssembly ? `Data proposta: <strong style="color:#32ade6;">${prop.targetDate}</strong> (${escapeHtml(prop.duration || '2 ore')})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong style="color:#ff9f0a;">${prop.targetDate}</strong>`}
+                    </div>
                 </div>
+
+                ${prop.reason ? `
+                <div style="font-size:12.5px;color:rgba(255,255,255,0.88);line-height:1.4;background:rgba(255,255,255,0.04);border-left:2px solid ${accentColor};padding:6px 10px;border-radius:0 8px 8px 0;">
+                    <strong style="color:rgba(255,255,255,0.6);font-size:11px;">${escapeHtml(prop.authorName || 'Compagno')}:</strong> ${escapeHtml(prop.reason)}
+                </div>` : ''}
 
                 <div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,0.7);padding:0 2px;">
                     <span>Voti: <strong style="color:#30d158;">${acceptVotes.length}</strong> Favorevoli · <strong style="color:#ff453a;">${declineVotes.length}</strong> Contrari</span>
-                    ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:700;">${altVotes.length} date alternative</span>` : ''}
+                    ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:700;">${altVotes.length} alternative</span>` : ''}
                 </div>
 
                 ${prop.status === 'pending' ? `
                 <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:2px;">
-                    <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:40px;border-radius:12px;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.16)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(48,209,88,0.4);">
+                    <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:38px;border-radius:12px;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.16)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(48,209,88,0.4);">
                         <i class="ph-bold ph-check"></i> Accetta
                     </button>
-                    <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:40px;border-radius:12px;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.16)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(255,69,58,0.4);">
+                    <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:38px;border-radius:12px;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.16)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(255,69,58,0.4);">
                         <i class="ph-bold ph-x"></i> Rifiuta
                     </button>
-                    <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:40px;border-radius:12px;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.16)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid rgba(255,159,10,0.4);">
+                    <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:38px;border-radius:12px;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.16)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid rgba(255,159,10,0.4);">
                         <i class="ph-bold ph-calendar"></i> Altra Data
                     </button>
                 </div>` : ''}
 
                 ${isRep && prop.status === 'pending' ? `
-                <div style="margin-top:4px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-                    <span style="font-size:10.5px;font-weight:800;color:#2997ff;text-transform:uppercase;letter-spacing:0.04em;">Azioni Rappresentante</span>
+                <div style="margin-top:4px;padding-top:8px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:10.5px;font-weight:800;color:#2997ff;text-transform:uppercase;letter-spacing:0.04em;">Rappresentante</span>
                     <div style="display:flex;gap:6px;">
-                        <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="padding:6px 14px;border-radius:10px;background:#30d158;border:none;color:#ffffff;font-size:11.5px;font-weight:800;cursor:pointer;">Approva</button>
-                        <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="padding:6px 14px;border-radius:10px;background:rgba(255,69,58,0.2);border:1px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11.5px;font-weight:800;cursor:pointer;">Archivia</button>
+                        <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="padding:5px 12px;border-radius:9px;background:#30d158;border:none;color:#ffffff;font-size:11px;font-weight:800;cursor:pointer;">Approva</button>
+                        <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="padding:5px 12px;border-radius:9px;background:rgba(255,69,58,0.2);border:1px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11px;font-weight:800;cursor:pointer;">Archivia</button>
                     </div>
                 </div>` : ''}
             </div>`;
         }
 
+        const borderAccent = item.borderAccent || '#2997ff';
         const clickAttr = item.action ? `onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');closeTodayNotifications();${item.action};" style="cursor:pointer;"` : '';
-        const valuePill = item.val !== undefined ? `
-            <div style="background:${item.valBg || 'rgba(41,151,255,0.16)'};border:1px solid ${item.valColor || '#2997ff'}55;padding:5px 12px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px ${item.valColor || '#2997ff'}25;flex-shrink:0;">
-                <span style="font-size:16px;font-weight:900;color:${item.valColor || '#2997ff'};font-variant-numeric:tabular-nums;line-height:1;">
-                    ${escapeHtml(String(item.val))}
-                </span>
-            </div>` : '';
 
+        // ── 1. Card Specializzata VOTO ──
+        if (item.type === 'voto') {
+            return `
+            <div data-notif-card ${clickAttr} style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid ${item.valColor};
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                display:flex;flex-direction:column;gap:6px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                transition:transform 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${item.valColor};display:inline-flex;align-items:center;gap:4px;">
+                        <i class="ph-bold ph-chart-line-up"></i> VOTO VALUTATO
+                    </span>
+                    ${getCardDateChip(item.dateISO, item.rawDate)}
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${escapeHtml(item.subject || item.title)}
+                        </div>
+                        <div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.78);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${escapeHtml(item.tipo || 'Valutazione')}
+                        </div>
+                        ${item.commento ? `<div style="font-size:11.5px;color:rgba(255,255,255,0.55);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">"${escapeHtml(item.commento)}"</div>` : ''}
+                    </div>
+
+                    <div style="flex-shrink:0;min-width:48px;height:48px;border-radius:14px;background:${item.valBg};border:1.5px solid ${item.valColor}77;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px ${item.valColor}33;padding:0 8px;">
+                        <span style="font-size:20px;font-weight:900;color:${item.valColor};font-variant-numeric:tabular-nums;line-height:1;">
+                            ${escapeHtml(String(item.val))}
+                        </span>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── 2. Card Specializzata VERIFICA ──
+        if (item.type === 'verifica') {
+            return `
+            <div data-notif-card ${clickAttr} style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid #ff9f0a;
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                display:flex;flex-direction:column;gap:6px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                transition:transform 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#ff9f0a;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="ph-bold ph-pencil-simple"></i> VERIFICA IN PROGRAMMA
+                    </span>
+                    ${getCardDateChip(item.dateISO, item.rawDate)}
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${escapeHtml(item.subject || item.title)}
+                        </div>
+                        <div style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.85);margin-top:3px;line-height:1.35;">
+                            ${escapeHtml(item.desc)}
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0;width:42px;height:42px;border-radius:13px;background:rgba(255,159,10,0.16);border:1px solid rgba(255,159,10,0.4);display:flex;align-items:center;justify-content:center;color:#ff9f0a;">
+                        <i class="ph-bold ph-calendar-check" style="font-size:20px;"></i>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── 3. Card Specializzata COMPITO ──
+        if (item.type === 'compito') {
+            return `
+            <div data-notif-card ${clickAttr} style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid #2997ff;
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                display:flex;flex-direction:column;gap:6px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                transition:transform 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#2997ff;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="ph-bold ph-book-open"></i> COMPITO ASSEGNATO
+                    </span>
+                    ${getCardDateChip(item.dateISO, item.rawDate)}
+                </div>
+
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:2px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${escapeHtml(item.subject || item.title)}
+                        </div>
+                        <div style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.88);margin-top:3px;line-height:1.4;">
+                            ${escapeHtml(item.desc)}
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0;background:${item.done ? 'rgba(48,209,88,0.16)' : 'rgba(41,151,255,0.16)'};border:1px solid ${item.done ? 'rgba(48,209,88,0.4)' : 'rgba(41,151,255,0.4)'};color:${item.done ? '#30d158' : '#2997ff'};padding:4px 9px;border-radius:10px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:4px;white-space:nowrap;">
+                        ${item.done ? '<i class="ph-bold ph-check"></i> Fatto' : 'Da fare'}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── 4. Card Specializzata CIRCOLARE ──
+        if (item.type === 'circolare') {
+            return `
+            <div data-notif-card ${clickAttr} style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid #ffd60a;
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                display:flex;flex-direction:column;gap:6px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                transition:transform 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#ffd60a;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="ph-bold ph-file-text"></i> ${item.numero ? `CIRCOLARE N. ${escapeHtml(item.numero)}` : 'CIRCOLARE'}
+                    </span>
+                    ${getCardDateChip(item.dateISO, item.rawDate)}
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:14.5px;font-weight:700;color:#ffffff;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                            ${escapeHtml(item.title)}
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0;display:flex;align-items:center;gap:4px;background:rgba(255,214,10,0.14);border:1px solid rgba(255,214,10,0.35);color:#ffd60a;padding:5px 10px;border-radius:10px;font-size:11px;font-weight:800;white-space:nowrap;">
+                        <span>Apri</span> <i class="ph-bold ph-arrow-right" style="font-size:11px;"></i>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── 5. Card Specializzata ASSENZE / RITARDI / USCITE ──
+        if (item.type === 'assenza' || item.type === 'ritardo' || item.type === 'uscita') {
+            const statusLabel = item.giustificata ? 'Giustificata' : 'Da giustificare';
+            const statusColor = item.giustificata ? '#30d158' : '#ff453a';
+            const statusBg = item.giustificata ? 'rgba(48,209,88,0.16)' : 'rgba(255,69,58,0.16)';
+            const statusBorder = item.giustificata ? 'rgba(48,209,88,0.4)' : 'rgba(255,69,58,0.4)';
+
+            return `
+            <div data-notif-card ${clickAttr} style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid ${borderAccent};
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                display:flex;flex-direction:column;gap:6px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                transition:transform 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${borderAccent};display:inline-flex;align-items:center;gap:4px;">
+                        <i class="ph-bold ${item.icon}"></i> ${escapeHtml(item.categoryLabel)}
+                    </span>
+                    ${getCardDateChip(item.dateISO, item.rawDate)}
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:15px;font-weight:800;color:#ffffff;line-height:1.25;">
+                            ${escapeHtml(item.title)}
+                        </div>
+                        <div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.78);margin-top:2px;">
+                            ${escapeHtml(item.dettaglio || item.desc)}
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0;background:${statusBg};border:1px solid ${statusBorder};color:${statusColor};padding:4px 9px;border-radius:10px;font-size:10.5px;font-weight:800;white-space:nowrap;">
+                        ${statusLabel}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── 6. Card Specializzata NOTA DISCIPLINARE ──
+        if (item.type === 'nota') {
+            return `
+            <div data-notif-card ${clickAttr} style="
+                background:rgba(20,31,54,0.85);
+                backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+                border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid #bf5af2;
+                border-radius:18px;padding:14px 15px;margin-bottom:10px;
+                display:flex;flex-direction:column;gap:6px;
+                box-shadow:0 6px 20px rgba(0,0,0,0.25);
+                transition:transform 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+                
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#bf5af2;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="ph-bold ph-warning-octagon"></i> NOTA DISCIPLINARE
+                    </span>
+                    ${getCardDateChip(item.dateISO, item.rawDate)}
+                </div>
+
+                <div style="margin-top:2px;">
+                    <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(191,90,242,0.16);border:1px solid rgba(191,90,242,0.35);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800;color:#bf5af2;margin-bottom:6px;">
+                        <i class="ph-bold ph-user"></i> ${escapeHtml(item.autore || 'Docente')}
+                    </div>
+                    <div style="font-size:13px;color:rgba(255,255,255,0.92);line-height:1.45;font-style:italic;background:rgba(255,255,255,0.04);border-left:2px solid #bf5af2;padding:6px 10px;border-radius:0 8px 8px 0;">
+                        "${escapeHtml(item.testo || item.desc)}"
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── 7. Fallback standard pulito (Lezioni, Bacheca, etc.) ──
         return `
         <div data-notif-card ${clickAttr} style="
             background:rgba(20,31,54,0.85);
             backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-            border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.28);
-            border-radius:20px;padding:15px 16px;margin-bottom:12px;
-            display:flex;flex-direction:column;gap:8px;
+            border:1px solid rgba(255,255,255,0.12);border-left:4.5px solid ${borderAccent};
+            border-radius:18px;padding:14px 15px;margin-bottom:10px;
+            display:flex;flex-direction:column;gap:6px;
+            box-shadow:0 6px 20px rgba(0,0,0,0.25);
             transition:transform 0.15s ease;
-            box-shadow:0 6px 20px rgba(0,0,0,0.28);
         " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
             
-            <!-- Top bar: Category + Date + Value/Arrow -->
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-                    <div style="width:34px;height:34px;border-radius:11px;background:${item.iconBg};border:1px solid ${item.iconColor}40;display:flex;align-items:center;justify-content:center;color:${item.iconColor};flex-shrink:0;box-shadow:0 0 10px ${item.iconColor}20;">
-                        <i class="ph-bold ${item.icon}" style="font-size:18px;"></i>
-                    </div>
-                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${item.iconColor};background:${item.iconBg};border:1px solid ${item.iconColor}40;padding:2px 8px;border-radius:999px;white-space:nowrap;">
-                        ${escapeHtml(item.categoryLabel || item.type)}
-                    </span>
-                    ${formatItemDateBadge(item.dateISO, item.rawDate)}
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                    ${valuePill}
-                    ${item.action ? `<i class="ph-bold ph-caret-right" style="font-size:16px;color:rgba(255,255,255,0.4);flex-shrink:0;"></i>` : ''}
-                </div>
+                <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${borderAccent};display:inline-flex;align-items:center;gap:4px;">
+                    <i class="ph-bold ${item.icon || 'ph-bell'}"></i> ${escapeHtml(item.categoryLabel || item.type)}
+                </span>
+                ${getCardDateChip(item.dateISO, item.rawDate)}
             </div>
 
-            <!-- Title -->
-            <div style="font-size:14.5px;font-weight:700;color:#ffffff;line-height:1.3;margin-top:2px;">
-                ${escapeHtml(item.title)}
+            <div style="margin-top:2px;">
+                <div style="font-size:15px;font-weight:800;color:#ffffff;line-height:1.25;">
+                    ${escapeHtml(item.title)}
+                </div>
+                ${item.desc ? `
+                <div style="font-size:12.5px;color:rgba(255,255,255,0.82);margin-top:3px;line-height:1.4;">
+                    ${escapeHtml(item.desc)}
+                </div>` : ''}
             </div>
-
-            <!-- Inset Box for Description / Content Details -->
-            ${item.desc ? `
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:12px;padding:9px 12px;font-size:12.5px;color:rgba(255,255,255,0.88);line-height:1.45;">
-                ${escapeHtml(item.desc)}
-            </div>` : ''}
-
-            <!-- Action Hint -->
-            ${item.action ? `
-            <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:11px;font-weight:700;color:#2997ff;margin-top:2px;">
-                <span>Visualizza</span> <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
-            </div>` : ''}
-
         </div>`;
+    }
+
+    // Raggruppamento per data con divisori temporali ad alto contrasto
+    function renderGroupedByDate(items) {
+        if (!items || items.length === 0) return '';
+        const groups = {};
+        const groupOrder = [];
+
+        items.forEach(item => {
+            const key = item.dateISO || 'undated';
+            if (!groups[key]) {
+                groups[key] = [];
+                groupOrder.push(key);
+            }
+            groups[key].push(item);
+        });
+
+        return groupOrder.map(key => {
+            const groupItems = groups[key];
+            const isUndated = key === 'undated';
+            const friendly = isUndated ? 'Altre Attività' : getFriendlyDateLabel(key, groupItems[0]?.rawDate);
+            const isOggi = key === todayISO;
+            const isFuturo = key > todayISO;
+
+            const accent = isOggi ? '#30d158' : (isFuturo ? '#ff9f0a' : (isUndated ? 'rgba(255,255,255,0.5)' : '#2997ff'));
+            const bg = isOggi ? 'rgba(48,209,88,0.14)' : (isFuturo ? 'rgba(255,159,10,0.14)' : (isUndated ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.07)'));
+            const border = isOggi ? 'rgba(48,209,88,0.35)' : (isFuturo ? 'rgba(255,159,10,0.35)' : 'rgba(255,255,255,0.12)');
+            const textColor = isOggi ? '#30d158' : (isFuturo ? '#ff9f0a' : (isUndated ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.85)'));
+            const icon = isOggi ? 'ph-fill ph-circle' : (isFuturo ? 'ph-bold ph-calendar-plus' : (isUndated ? 'ph-bold ph-dots-three' : 'ph-bold ph-calendar-blank'));
+
+            const dividerHtml = `
+            <div style="display:flex;align-items:center;gap:8px;margin:18px 0 10px;padding:0 2px;">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:${textColor};background:${bg};border:1px solid ${border};padding:3px 11px;border-radius:999px;">
+                    <i class="${icon}" style="font-size:${isOggi ? '6px' : '11px'};"></i> ${escapeHtml(friendly)}
+                </span>
+                <div style="flex:1;height:1px;background:${isOggi ? 'rgba(48,209,88,0.2)' : (isFuturo ? 'rgba(255,159,10,0.2)' : 'rgba(255,255,255,0.08)')};"></div>
+                <span style="font-size:10px;font-weight:800;color:${textColor};opacity:0.8;background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:999px;">${groupItems.length}</span>
+            </div>`;
+
+            return dividerHtml + groupItems.map(renderItemCard).join('');
+        }).join('');
     }
 
     // Helper per costruire il contenuto in base al filtro attivo
@@ -3525,7 +3841,7 @@ function openTodayNotifications(initialTab) {
 
         if (filter === 'oggi') {
             return d.todayItems.length > 0 
-                ? d.todayItems.map(renderItemCard).join('')
+                ? renderGroupedByDate(d.todayItems)
                 : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
                     <i class="ph ph-sparkle" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#2997ff;"></i>
                     Nessuna novità registrata per oggi.
@@ -3535,7 +3851,7 @@ function openTodayNotifications(initialTab) {
         if (filter === 'voti') {
             const votiItems = all.filter(x => x.category === 'voti' || x.type === 'nota');
             return votiItems.length > 0
-                ? votiItems.map(renderItemCard).join('')
+                ? renderGroupedByDate(votiItems)
                 : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
                     <i class="ph ph-chart-line-up" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#30d158;"></i>
                     Nessun voto o nota recente registrata.
@@ -3545,7 +3861,7 @@ function openTodayNotifications(initialTab) {
         if (filter === 'compiti') {
             const compitiItems = all.filter(x => x.category === 'compiti' || x.category === 'verifiche');
             return compitiItems.length > 0
-                ? compitiItems.map(renderItemCard).join('')
+                ? renderGroupedByDate(compitiItems)
                 : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
                     <i class="ph ph-book-open" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#2997ff;"></i>
                     Nessun compito o verifica in arrivo.
@@ -3555,7 +3871,7 @@ function openTodayNotifications(initialTab) {
         if (filter === 'circolari') {
             const circItems = all.filter(x => x.category === 'circolari' || x.category === 'comunicazioni');
             return circItems.length > 0
-                ? circItems.map(renderItemCard).join('')
+                ? renderGroupedByDate(circItems)
                 : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
                     <i class="ph ph-file-text" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#ffd60a;"></i>
                     Nessuna circolare o avviso registrato.
@@ -3565,61 +3881,54 @@ function openTodayNotifications(initialTab) {
         if (filter === 'proposte') {
             const propItems = all.filter(x => x.category === 'proposte');
             return propItems.length > 0
-                ? propItems.map(renderItemCard).join('')
+                ? renderGroupedByDate(propItems)
                 : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
                     <i class="ph ph-users-three" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#30d158;"></i>
                     Nessuna proposta attiva al momento.
                    </div>`;
         }
 
-        // Default 'all': Vista timeline a sezioni
-        const todayCards = d.todayItems.length > 0
-            ? d.todayItems.map(renderItemCard).join('')
-            : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;">
-                Nessuna novità registrata in data odierna.
-               </div>`;
+        // Default 'all': Timeline ordinata con sezioni e divisori per giorno
+        const hasAny = d.todayItems.length > 0 || d.upcomingItems.length > 0 || d.recentItems.length > 0;
+        if (!hasAny) {
+            return `
+            <div style="text-align:center;padding:48px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:22px;color:rgba(255,255,255,0.45);font-size:13px;">
+                <i class="ph ph-bell-simple-slash" style="font-size:32px;display:block;margin:0 auto 10px;opacity:0.4;color:#2997ff;"></i>
+                Nessuna novità o notifica recente registrata.
+            </div>`;
+        }
 
-        const upcomingCards = d.upcomingItems.length > 0
-            ? d.upcomingItems.slice(0, 10).map(renderItemCard).join('')
-            : `<div style="text-align:center;padding:22px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;">
-                Nessun impegno nei prossimi giorni.
-               </div>`;
+        let out = '';
 
-        const recentCards = d.recentItems.length > 0
-            ? d.recentItems.slice(0, 12).map(renderItemCard).join('')
-            : `<div style="text-align:center;padding:22px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;">
-                Nessuna attività recente registrata.
-               </div>`;
+        // 1. OGGI
+        if (d.todayItems.length > 0) {
+            out += `
+            <div style="margin-bottom:20px;">
+                ${renderGroupedByDate(d.todayItems)}
+            </div>`;
+        }
 
-        return `
-            <!-- 1. SEZIONE: OGGI -->
-            <div style="margin-bottom:24px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px;">
-                    <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#2997ff;display:flex;align-items:center;gap:6px;">
-                        <i class="ph-fill ph-sparkle"></i> IN DATA ODIERNA (${d.todayItems.length})
+        // 2. PROSSIMI GIORNI & IN ARRIVO
+        if (d.upcomingItems.length > 0) {
+            out += `
+            <div style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:8px;margin:22px 0 10px;padding:0 2px;">
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#ff9f0a;background:rgba(255,159,10,0.16);border:1px solid rgba(255,159,10,0.4);padding:4px 12px;border-radius:999px;">
+                        <i class="ph-fill ph-calendar-plus" style="font-size:12px;"></i> PROSSIMI GIORNI (${d.upcomingItems.length})
                     </span>
-                    <span style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:600;">${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+                    <div style="flex:1;height:1px;background:rgba(255,159,10,0.25);"></div>
                 </div>
-                ${todayCards}
-            </div>
+                ${renderGroupedByDate(d.upcomingItems)}
+            </div>`;
+        }
 
-            <!-- 2. SEZIONE: PROSSIMI GIORNI -->
-            ${d.upcomingItems.length > 0 ? `
-            <div style="margin-bottom:24px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px;">
-                    <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;display:flex;align-items:center;gap:6px;">
-                        <i class="ph-fill ph-calendar-plus"></i> PROSSIMI GIORNI & IN ARRIVO (${d.upcomingItems.length})
-                    </span>
-                </div>
-                ${upcomingCards}
-            </div>` : ''}
-
-            <!-- 3. SEZIONE: RECENTI -->
-            ${d.recentItems.length > 0 ? `
+        // 3. RECENTI / ATTIVITÀ PRECEDENTI
+        if (d.recentItems.length > 0) {
+            out += `
             <div style="margin-bottom:12px;">
-                <div onclick="window.toggleRecentNotifications(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:16px;margin-bottom:12px;transition:all 0.15s ease;user-select:none;">
+                <div onclick="window.toggleRecentNotifications(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:15px;margin-bottom:10px;transition:all 0.15s ease;user-select:none;">
                     <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.65);display:flex;align-items:center;gap:6px;">
-                        <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${d.recentItems.length})
+                        <i class="ph-fill ph-clock-counter-clockwise"></i> ATTIVITÀ PRECEDENTI (${d.recentItems.length})
                     </span>
                     <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:3px 10px;border-radius:999px;">
                         <span id="notif-recent-btn-text" style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.8);">Nascondi</span>
@@ -3627,10 +3936,12 @@ function openTodayNotifications(initialTab) {
                     </div>
                 </div>
                 <div id="notif-recent-items-wrap" data-collapsed="false" style="display:block;">
-                    ${recentCards}
+                    ${renderGroupedByDate(d.recentItems.slice(0, 25))}
                 </div>
-            </div>` : ''}
-        `;
+            </div>`;
+        }
+
+        return out;
     }
 
     // Costruzione tab filtri orizzontali
