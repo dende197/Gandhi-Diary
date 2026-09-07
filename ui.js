@@ -3361,22 +3361,24 @@ function openTodayNotifications(initialTab) {
     const isRep = (typeof isCurrentUserRepresentative === 'function') ? isCurrentUserRepresentative() : false;
     const userId = String(state.user?.id || 'utente');
 
+    window._notifCategoryFilter = initialTab || window._notifCategoryFilter || 'all';
+
     function formatItemDateBadge(iso, raw) {
-        if (!iso) return raw ? `<span style="font-size:11px;color:#8e909f;font-weight:600;">${escapeHtml(raw)}</span>` : '';
+        if (!iso) return raw ? `<span style="font-size:10.5px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;font-weight:600;">${escapeHtml(raw)}</span>` : '';
         if (iso === todayISO) {
-            return `<span style="font-size:10px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.14);border:0.5px solid rgba(48,209,88,0.3);padding:2px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:3px;"><i class="ph-fill ph-circle" style="font-size:6px;"></i> OGGI</span>`;
+            return `<span style="font-size:10px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.16);border:1px solid rgba(48,209,88,0.4);padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;"><i class="ph-fill ph-circle" style="font-size:6px;"></i> OGGI</span>`;
         }
         const d = new Date(iso);
-        if (isNaN(d.getTime())) return `<span style="font-size:11px;color:#8e909f;font-weight:600;">${escapeHtml(raw || iso)}</span>`;
+        if (isNaN(d.getTime())) return `<span style="font-size:10.5px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;font-weight:600;">${escapeHtml(raw || iso)}</span>`;
         
         const diffMs = d.getTime() - today.getTime();
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) return `<span style="font-size:10px;font-weight:800;color:#ff9f0a;background:rgba(255,159,10,0.14);border:0.5px solid rgba(255,159,10,0.3);padding:2px 7px;border-radius:999px;">DOMANI</span>`;
-        if (diffDays === -1) return `<span style="font-size:10px;font-weight:700;color:#8e909f;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:2px 7px;border-radius:999px;">IERI</span>`;
+        if (diffDays === 1) return `<span style="font-size:10px;font-weight:800;color:#ff9f0a;background:rgba(255,159,10,0.16);border:1px solid rgba(255,159,10,0.4);padding:2px 8px;border-radius:999px;">DOMANI</span>`;
+        if (diffDays === -1) return `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);padding:2px 8px;border-radius:999px;">IERI</span>`;
         
         const day = d.getDate();
         const mnShort = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][d.getMonth()];
-        return `<span style="font-size:10px;font-weight:700;color:#8e909f;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:2px 7px;border-radius:999px;">${day} ${mnShort}</span>`;
+        return `<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.75);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:2px 8px;border-radius:999px;">${day} ${mnShort}</span>`;
     }
 
     function renderItemCard(item) {
@@ -3387,7 +3389,7 @@ function openTodayNotifications(initialTab) {
             const icon = isAssembly ? 'ph-users-three' : 'ph-calendar-plus';
             const iconColor = isAssembly ? '#30d158' : '#ff9f0a';
             const iconBg = isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(255,159,10,0.16)';
-            const borderGlow = isAssembly ? 'rgba(48,209,88,0.3)' : 'rgba(255,159,10,0.3)';
+            const borderGlow = isAssembly ? 'rgba(48,209,88,0.35)' : 'rgba(255,159,10,0.35)';
 
             const acceptVotes = Array.isArray(prop.votes?.accept) ? prop.votes.accept : [];
             const declineVotes = Array.isArray(prop.votes?.decline) ? prop.votes.decline : [];
@@ -3398,63 +3400,63 @@ function openTodayNotifications(initialTab) {
             const hasAlt = altVotes.some(a => a.userId === userId);
 
             const statusBadge = prop.status === 'approved' 
-                ? '<span style="background:rgba(48,209,88,0.2);color:#30d158;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(48,209,88,0.4);white-space:nowrap;">APPROVATA</span>'
+                ? '<span style="background:rgba(48,209,88,0.18);color:#30d158;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(48,209,88,0.45);white-space:nowrap;">APPROVATA</span>'
                 : prop.status === 'rejected'
-                ? '<span style="background:rgba(255,69,58,0.2);color:#ff453a;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(255,69,58,0.4);white-space:nowrap;">RIFIUTATA</span>'
-                : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;border:0.5px solid rgba(41,151,255,0.35);white-space:nowrap;">IN VOTAZIONE</span>';
+                ? '<span style="background:rgba(255,69,58,0.18);color:#ff453a;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,69,58,0.45);white-space:nowrap;">RIFIUTATA</span>'
+                : '<span style="background:rgba(41,151,255,0.18);color:#2997ff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid rgba(41,151,255,0.45);white-space:nowrap;">IN VOTAZIONE</span>';
 
             return `
-            <div data-notif-card style="background:rgba(23,33,58,0.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);border-radius:22px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);">
+            <div data-notif-card style="background:rgba(20,31,54,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.28);border-radius:22px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);display:flex;flex-direction:column;gap:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                     <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
                         <div style="width:42px;height:42px;border-radius:14px;background:${iconBg};border:1px solid ${borderGlow};display:flex;align-items:center;justify-content:center;color:${iconColor};flex-shrink:0;box-shadow:0 0 14px ${iconColor}25;">
                             <i class="ph-bold ${icon}" style="font-size:20px;"></i>
                         </div>
                         <div style="min-width:0;flex:1;">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                                <span style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${iconColor};background:${iconBg};border:0.5px solid ${borderGlow};padding:2px 7px;border-radius:999px;">
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                                <span style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${iconColor};background:${iconBg};border:1px solid ${borderGlow};padding:2px 8px;border-radius:999px;">
                                     ${item.categoryLabel}
                                 </span>
                                 ${formatItemDateBadge(item.dateISO, item.rawDate)}
                             </div>
-                            <div style="font-size:14.5px;font-weight:700;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-                            <div style="font-size:12px;font-weight:500;color:#c4c5d6;margin-top:2px;">
-                                ${isAssembly ? `Proposta per: <strong style="color:#2997ff;">${prop.targetDate}</strong> (${escapeHtml(prop.duration || '2 ore')})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong style="color:#ff9f0a;">${prop.targetDate}</strong>`}
+                            <div style="font-size:15px;font-weight:700;color:#ffffff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);margin-top:3px;">
+                                ${isAssembly ? `Data proposta: <strong style="color:#2997ff;">${prop.targetDate}</strong> (${escapeHtml(prop.duration || '2 ore')})` : `Da: <strong>${prop.originalDate || '—'}</strong> ➔ A: <strong style="color:#ff9f0a;">${prop.targetDate}</strong>`}
                             </div>
                         </div>
                     </div>
                     <div style="flex-shrink:0;">${statusBadge}</div>
                 </div>
 
-                <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 12px;margin-top:12px;">
-                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.04em;">Motivazione (${escapeHtml(prop.authorName || 'Compagno')})</div>
-                    <div style="font-size:12.5px;color:rgba(255,255,255,0.9);margin-top:3px;line-height:1.35;">${escapeHtml(prop.reason)}</div>
+                <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;">Motivazione (${escapeHtml(prop.authorName || 'Compagno')})</div>
+                    <div style="font-size:12.5px;color:rgba(255,255,255,0.92);margin-top:3px;line-height:1.4;">${escapeHtml(prop.reason)}</div>
                 </div>
 
-                <div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,0.65);margin-top:10px;padding:0 2px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:rgba(255,255,255,0.7);padding:0 2px;">
                     <span>Voti: <strong style="color:#30d158;">${acceptVotes.length}</strong> Favorevoli · <strong style="color:#ff453a;">${declineVotes.length}</strong> Contrari</span>
-                    ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:700;">${altVotes.length} date alt.</span>` : ''}
+                    ${altVotes.length > 0 ? `<span style="color:#ff9f0a;font-weight:700;">${altVotes.length} date alternative</span>` : ''}
                 </div>
 
                 ${prop.status === 'pending' ? `
-                <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:10px;">
-                    <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:40px;border-radius:12px;border:none;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.16)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:11.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:0.5px solid rgba(48,209,88,0.35);">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px;margin-top:2px;">
+                    <button onclick="window.voteClassProposal('${prop.id}', 'accept')" style="min-height:40px;border-radius:12px;background:${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.16)'};color:${hasAccepted ? '#ffffff' : '#30d158'};font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(48,209,88,0.4);">
                         <i class="ph-bold ph-check"></i> Accetta
                     </button>
-                    <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:40px;border-radius:12px;border:none;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.16)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:11.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:0.5px solid rgba(255,69,58,0.35);">
+                    <button onclick="window.voteClassProposal('${prop.id}', 'decline')" style="min-height:40px;border-radius:12px;background:${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.16)'};color:${hasDeclined ? '#ffffff' : '#ff453a'};font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid rgba(255,69,58,0.4);">
                         <i class="ph-bold ph-x"></i> Rifiuta
                     </button>
-                    <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:40px;border-radius:12px;border:none;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.16)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:0.5px solid rgba(255,159,10,0.35);">
+                    <button onclick="const altD = prompt('Inserisci una data alternativa (YYYY-MM-DD):', '${prop.targetDate}'); if (altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="min-height:40px;border-radius:12px;background:${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.16)'};color:${hasAlt ? '#ffffff' : '#ff9f0a'};font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid rgba(255,159,10,0.4);">
                         <i class="ph-bold ph-calendar"></i> Altra Data
                     </button>
                 </div>` : ''}
 
                 ${isRep && prop.status === 'pending' ? `
-                <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-                    <span style="font-size:10px;font-weight:800;color:#2997ff;text-transform:uppercase;letter-spacing:0.04em;">Rappresentante</span>
+                <div style="margin-top:4px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:10.5px;font-weight:800;color:#2997ff;text-transform:uppercase;letter-spacing:0.04em;">Azioni Rappresentante</span>
                     <div style="display:flex;gap:6px;">
-                        <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="padding:6px 12px;border-radius:10px;background:#30d158;border:none;color:#ffffff;font-size:11px;font-weight:800;cursor:pointer;">Approva</button>
-                        <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="padding:6px 12px;border-radius:10px;background:rgba(255,69,58,0.2);border:0.5px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11px;font-weight:800;cursor:pointer;">Archivia</button>
+                        <button onclick="window.manageClassProposal('${prop.id}', 'approved')" style="padding:6px 14px;border-radius:10px;background:#30d158;border:none;color:#ffffff;font-size:11.5px;font-weight:800;cursor:pointer;">Approva</button>
+                        <button onclick="window.manageClassProposal('${prop.id}', 'rejected')" style="padding:6px 14px;border-radius:10px;background:rgba(255,69,58,0.2);border:1px solid rgba(255,69,58,0.4);color:#ff453a;font-size:11.5px;font-weight:800;cursor:pointer;">Archivia</button>
                     </div>
                 </div>` : ''}
             </div>`;
@@ -3462,165 +3464,330 @@ function openTodayNotifications(initialTab) {
 
         const clickAttr = item.action ? `onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');closeTodayNotifications();${item.action};" style="cursor:pointer;"` : '';
         const valuePill = item.val !== undefined ? `
-            <div style="background:${item.valBg || 'rgba(41,151,255,0.16)'};border:0.5px solid ${item.valColor || '#2997ff'}40;padding:6px 12px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px ${item.valColor || '#2997ff'}20;flex-shrink:0;">
-                <span style="font-size:17px;font-weight:900;color:${item.valColor || '#2997ff'};font-variant-numeric:tabular-nums;line-height:1;">
+            <div style="background:${item.valBg || 'rgba(41,151,255,0.16)'};border:1px solid ${item.valColor || '#2997ff'}55;padding:5px 12px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px ${item.valColor || '#2997ff'}25;flex-shrink:0;">
+                <span style="font-size:16px;font-weight:900;color:${item.valColor || '#2997ff'};font-variant-numeric:tabular-nums;line-height:1;">
                     ${escapeHtml(String(item.val))}
                 </span>
             </div>` : '';
 
         return `
         <div data-notif-card ${clickAttr} style="
-            background:rgba(23,33,58,0.75);
-            backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
-            border:0.5px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.28);
-            border-radius:20px;padding:14px 16px;margin-bottom:10px;
-            display:flex;align-items:center;justify-content:space-between;gap:14px;
+            background:rgba(20,31,54,0.85);
+            backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+            border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.28);
+            border-radius:20px;padding:15px 16px;margin-bottom:12px;
+            display:flex;flex-direction:column;gap:8px;
             transition:transform 0.15s ease;
-            box-shadow:0 4px 16px rgba(0,0,0,0.22);
+            box-shadow:0 6px 20px rgba(0,0,0,0.28);
         " ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
-                <div style="width:40px;height:40px;border-radius:14px;background:${item.iconBg};border:1px solid ${item.iconColor}40;display:flex;align-items:center;justify-content:center;color:${item.iconColor};flex-shrink:0;box-shadow:0 0 12px ${item.iconColor}20;">
-                    <i class="ph-bold ${item.icon}" style="font-size:20px;"></i>
-                </div>
-                <div style="min-width:0;flex:1;">
-                    <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${escapeHtml(item.title)}
+            
+            <!-- Top bar: Category + Date + Value/Arrow -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                    <div style="width:34px;height:34px;border-radius:11px;background:${item.iconBg};border:1px solid ${item.iconColor}40;display:flex;align-items:center;justify-content:center;color:${item.iconColor};flex-shrink:0;box-shadow:0 0 10px ${item.iconColor}20;">
+                        <i class="ph-bold ${item.icon}" style="font-size:18px;"></i>
                     </div>
-                    ${item.desc ? `
-                    <div style="font-size:12px;font-weight:500;color:#8e909f;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">
-                        ${escapeHtml(item.desc)}
-                    </div>` : ''}
+                    <span style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${item.iconColor};background:${item.iconBg};border:1px solid ${item.iconColor}40;padding:2px 8px;border-radius:999px;white-space:nowrap;">
+                        ${escapeHtml(item.categoryLabel || item.type)}
+                    </span>
+                    ${formatItemDateBadge(item.dateISO, item.rawDate)}
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    ${valuePill}
+                    ${item.action ? `<i class="ph-bold ph-caret-right" style="font-size:16px;color:rgba(255,255,255,0.4);flex-shrink:0;"></i>` : ''}
                 </div>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                ${formatItemDateBadge(item.dateISO, item.rawDate)}
-                ${valuePill}
+
+            <!-- Title -->
+            <div style="font-size:14.5px;font-weight:700;color:#ffffff;line-height:1.3;margin-top:2px;">
+                ${escapeHtml(item.title)}
             </div>
-            ${item.action ? `<i class="ph-bold ph-caret-right" style="font-size:15px;color:rgba(255,255,255,0.4);flex-shrink:0;"></i>` : ''}
+
+            <!-- Inset Box for Description / Content Details -->
+            ${item.desc ? `
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:12px;padding:9px 12px;font-size:12.5px;color:rgba(255,255,255,0.88);line-height:1.45;">
+                ${escapeHtml(item.desc)}
+            </div>` : ''}
+
+            <!-- Action Hint -->
+            ${item.action ? `
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:11px;font-weight:700;color:#2997ff;margin-top:2px;">
+                <span>Visualizza</span> <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+            </div>` : ''}
+
         </div>`;
     }
 
-    // Build 3 sections HTML
-    const todayHtml = data.todayItems.length > 0
-        ? data.todayItems.map(renderItemCard).join('')
-        : `<div style="text-align:center;padding:28px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:#8e909f;font-size:13px;font-style:italic;">
-            <i class="ph ph-sparkle" style="font-size:24px;display:block;margin-bottom:6px;opacity:0.4;"></i>
-            Nessuna novità registrata in data odierna.
-           </div>`;
+    // Helper per costruire il contenuto in base al filtro attivo
+    function buildNotifContentHtml(filter) {
+        const d = window.getComprehensiveNotificationData();
+        const all = [...d.todayItems, ...d.upcomingItems, ...d.recentItems];
 
-    const upcomingHtml = data.upcomingItems.length > 0
-        ? data.upcomingItems.slice(0, 10).map(renderItemCard).join('')
-        : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:#8e909f;font-size:12.5px;font-style:italic;">
-            <i class="ph ph-calendar" style="font-size:22px;display:block;margin-bottom:6px;opacity:0.4;"></i>
-            Nessun impegno nei prossimi giorni.
-           </div>`;
+        if (filter === 'oggi') {
+            return d.todayItems.length > 0 
+                ? d.todayItems.map(renderItemCard).join('')
+                : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
+                    <i class="ph ph-sparkle" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#2997ff;"></i>
+                    Nessuna novità registrata per oggi.
+                   </div>`;
+        }
 
-    const recentHtml = data.recentItems.length > 0
-        ? data.recentItems.slice(0, 10).map(renderItemCard).join('')
-        : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:#8e909f;font-size:12.5px;font-style:italic;">
-            <i class="ph ph-clock" style="font-size:22px;display:block;margin-bottom:6px;opacity:0.4;"></i>
-            Nessuna attività recente registrata.
-           </div>`;
+        if (filter === 'voti') {
+            const votiItems = all.filter(x => x.category === 'voti' || x.type === 'nota');
+            return votiItems.length > 0
+                ? votiItems.map(renderItemCard).join('')
+                : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
+                    <i class="ph ph-chart-line-up" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#30d158;"></i>
+                    Nessun voto o nota recente registrata.
+                   </div>`;
+        }
 
-    const modals = document.getElementById('modals');
-    if (!modals) return;
+        if (filter === 'compiti') {
+            const compitiItems = all.filter(x => x.category === 'compiti' || x.category === 'verifiche');
+            return compitiItems.length > 0
+                ? compitiItems.map(renderItemCard).join('')
+                : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
+                    <i class="ph ph-book-open" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#2997ff;"></i>
+                    Nessun compito o verifica in arrivo.
+                   </div>`;
+        }
 
-    modals.innerHTML = `
-    <div id="today-notif-overlay" style="position:fixed;inset:0;z-index:10000;background:rgba(6,10,20,0.78);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeTodayNotifications()">
-        <div style="
-            width:100%;max-width:500px;max-height:86vh;
-            background:linear-gradient(180deg, rgba(20,29,51,0.97) 0%, rgba(11,16,30,0.99) 100%);
-            backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);
+        if (filter === 'circolari') {
+            const circItems = all.filter(x => x.category === 'circolari' || x.category === 'comunicazioni');
+            return circItems.length > 0
+                ? circItems.map(renderItemCard).join('')
+                : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
+                    <i class="ph ph-file-text" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#ffd60a;"></i>
+                    Nessuna circolare o avviso registrato.
+                   </div>`;
+        }
+
+        if (filter === 'proposte') {
+            const propItems = all.filter(x => x.category === 'proposte');
+            return propItems.length > 0
+                ? propItems.map(renderItemCard).join('')
+                : `<div style="text-align:center;padding:36px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;">
+                    <i class="ph ph-users-three" style="font-size:28px;display:block;margin:0 auto 8px;opacity:0.5;color:#30d158;"></i>
+                    Nessuna proposta attiva al momento.
+                   </div>`;
+        }
+
+        // Default 'all': Vista timeline a sezioni
+        const todayCards = d.todayItems.length > 0
+            ? d.todayItems.map(renderItemCard).join('')
+            : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;">
+                Nessuna novità registrata in data odierna.
+               </div>`;
+
+        const upcomingCards = d.upcomingItems.length > 0
+            ? d.upcomingItems.slice(0, 10).map(renderItemCard).join('')
+            : `<div style="text-align:center;padding:22px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;">
+                Nessun impegno nei prossimi giorni.
+               </div>`;
+
+        const recentCards = d.recentItems.length > 0
+            ? d.recentItems.slice(0, 12).map(renderItemCard).join('')
+            : `<div style="text-align:center;padding:22px 16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.08);border-radius:18px;color:rgba(255,255,255,0.45);font-size:12.5px;">
+                Nessuna attività recente registrata.
+               </div>`;
+
+        return `
+            <!-- 1. SEZIONE: OGGI -->
+            <div style="margin-bottom:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px;">
+                    <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#2997ff;display:flex;align-items:center;gap:6px;">
+                        <i class="ph-fill ph-sparkle"></i> IN DATA ODIERNA (${d.todayItems.length})
+                    </span>
+                    <span style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:600;">${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+                </div>
+                ${todayCards}
+            </div>
+
+            <!-- 2. SEZIONE: PROSSIMI GIORNI -->
+            ${d.upcomingItems.length > 0 ? `
+            <div style="margin-bottom:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px;">
+                    <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;display:flex;align-items:center;gap:6px;">
+                        <i class="ph-fill ph-calendar-plus"></i> PROSSIMI GIORNI & IN ARRIVO (${d.upcomingItems.length})
+                    </span>
+                </div>
+                ${upcomingCards}
+            </div>` : ''}
+
+            <!-- 3. SEZIONE: RECENTI -->
+            ${d.recentItems.length > 0 ? `
+            <div style="margin-bottom:12px;">
+                <div onclick="window.toggleRecentNotifications(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:16px;margin-bottom:12px;transition:all 0.15s ease;user-select:none;">
+                    <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:rgba(255,255,255,0.65);display:flex;align-items:center;gap:6px;">
+                        <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${d.recentItems.length})
+                    </span>
+                    <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);padding:3px 10px;border-radius:999px;">
+                        <span id="notif-recent-btn-text" style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.8);">Nascondi</span>
+                        <i id="notif-recent-btn-icon" class="ph-bold ph-caret-down" style="font-size:11px;color:rgba(255,255,255,0.8);display:inline-block;transform:rotate(180deg);"></i>
+                    </div>
+                </div>
+                <div id="notif-recent-items-wrap" data-collapsed="false" style="display:block;">
+                    ${recentCards}
+                </div>
+            </div>` : ''}
+        `;
+    }
+
+    // Costruzione tab filtri orizzontali
+    const filterTabs = [
+        { id: 'all', label: 'Tutte', count: data.totalCount },
+        { id: 'oggi', label: 'Oggi', count: data.todayCount },
+        { id: 'voti', label: 'Voti & Note', count: data.todayItems.concat(data.upcomingItems, data.recentItems).filter(x => x.category === 'voti' || x.type === 'nota').length },
+        { id: 'compiti', label: 'Compiti & Verifiche', count: data.todayItems.concat(data.upcomingItems, data.recentItems).filter(x => x.category === 'compiti' || x.category === 'verifiche').length },
+        { id: 'circolari', label: 'Circolari & Avvisi', count: data.todayItems.concat(data.upcomingItems, data.recentItems).filter(x => x.category === 'circolari' || x.category === 'comunicazioni').length },
+        { id: 'proposte', label: 'Proposte', count: data.todayItems.concat(data.upcomingItems, data.recentItems).filter(x => x.category === 'proposte').length }
+    ];
+
+    window.setNotifCategoryFilter = function(filterId) {
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('selection');
+        window._notifCategoryFilter = filterId;
+
+        // Aggiorna aspetto dei pulsanti
+        document.querySelectorAll('#notif-filter-bar button').forEach(btn => {
+            const isSelected = btn.getAttribute('data-notif-filter') === filterId;
+            btn.style.background = isSelected ? '#2997ff' : 'rgba(20,31,54,0.75)';
+            btn.style.color = isSelected ? '#ffffff' : 'rgba(255,255,255,0.7)';
+            btn.style.borderColor = isSelected ? 'rgba(41,151,255,0.6)' : 'rgba(255,255,255,0.12)';
+            btn.style.boxShadow = isSelected ? '0 4px 12px rgba(41,151,255,0.35)' : 'none';
+            const countEl = btn.querySelector('.notif-tab-count');
+            if (countEl) countEl.style.background = isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+        });
+
+        // Aggiorna risultati con fade
+        const container = document.getElementById('today-notif-results-container');
+        if (container) {
+            container.innerHTML = buildNotifContentHtml(filterId);
+            container.scrollTop = 0;
+        }
+    };
+
+    // Controllo se l'overlay è già aperto (aggiornamento in-place senza scatti)
+    const existingOverlay = document.getElementById('today-notif-overlay');
+    if (existingOverlay) {
+        const container = document.getElementById('today-notif-results-container');
+        if (container) {
+            container.innerHTML = buildNotifContentHtml(window._notifCategoryFilter);
+        }
+        return;
+    }
+
+    const modals = document.getElementById('modals') || document.body;
+
+    const overlayHtml = `
+    <div id="today-notif-overlay" style="position:fixed;inset:0;z-index:10000;background:rgba(5,8,17,0.78);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);display:flex;flex-direction:column;justify-content:flex-end;opacity:0;transition:opacity 0.25s ease;font-family:'Inter',sans-serif;" onclick="if(event.target===this)closeTodayNotifications()">
+        <div id="today-notif-sheet" style="
+            width:100%;max-width:640px;margin:0 auto;height:92vh;max-height:92vh;
+            background:rgba(12,20,36,0.96);
+            border:1px solid rgba(255,255,255,0.14);
+            border-top:1px solid rgba(255,255,255,0.28);
             border-radius:32px 32px 0 0;
-            border:0.5px solid rgba(182,196,255,0.16);
-            border-top:1px solid rgba(255,255,255,0.32);
-            overflow-y:auto;
-            animation:notifSlideUp 0.32s cubic-bezier(0.16,1,0.3,1);
-            box-shadow:0 -16px 48px rgba(0,0,0,0.7);
+            display:flex;flex-direction:column;
+            overflow:hidden;
+            box-shadow:0 -16px 48px rgba(0,0,0,0.75);
+            transform:translateY(100%);
+            transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);
         ">
-            <!-- Drag Handle -->
-            <div style="display:flex;justify-content:center;padding:12px 0 4px;touch-action:none;">
-                <div style="width:38px;height:4px;background:rgba(255,255,255,0.25);border-radius:999px;"></div>
+            <!-- Drag Handle Bar -->
+            <div id="today-notif-drag-handle" style="display:flex;justify-content:center;padding:12px 0 6px;flex-shrink:0;cursor:grab;touch-action:none;">
+                <div style="width:40px;height:5px;background:rgba(255,255,255,0.25);border-radius:999px;"></div>
             </div>
 
             <!-- Header -->
-            <div style="padding:14px 22px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid rgba(255,255,255,0.08);">
+            <div style="padding:6px 20px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
                 <div>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(41,151,255,0.2);color:#2997ff;font-size:11px;">
                             <i class="ph-fill ph-bell"></i>
                         </span>
-                        <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">CENTRO NOTIFICHE</span>
+                        <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">CENTRO NOTIFICHE</span>
                     </div>
-                    <h2 style="font-size:20px;font-weight:800;color:#ffffff;margin:4px 0 0;letter-spacing:-0.02em;">Novità & Attività</h2>
-                    <p style="font-size:12px;color:#8e909f;margin:2px 0 0;font-weight:500;">${dayLabel}</p>
+                    <h2 style="font-size:22px;font-weight:800;color:#ffffff;margin:2px 0 0;letter-spacing:-0.02em;">Novità & Attività</h2>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.6);margin:2px 0 0;font-weight:500;">${dayLabel}</p>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:11.5px;font-weight:800;color:${data.todayCount > 0 ? '#2997ff' : '#8e909f'};background:${data.todayCount > 0 ? 'rgba(41,151,255,0.18)' : 'rgba(255,255,255,0.06)'};border:0.5px solid ${data.todayCount > 0 ? 'rgba(41,151,255,0.35)' : 'rgba(255,255,255,0.12)'};padding:5px 11px;border-radius:999px;">
+                    <span style="font-size:11.5px;font-weight:800;color:${data.todayCount > 0 ? '#2997ff' : 'rgba(255,255,255,0.6)'};background:${data.todayCount > 0 ? 'rgba(41,151,255,0.18)' : 'rgba(255,255,255,0.06)'};border:1px solid ${data.todayCount > 0 ? 'rgba(41,151,255,0.35)' : 'rgba(255,255,255,0.12)'};padding:5px 11px;border-radius:999px;">
                         ${data.todayCount > 0 ? `${data.todayCount} oggi` : '0 oggi'}
                     </span>
-                    <button onclick="closeTodayNotifications()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ffffff;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-                        <i class="ph-bold ph-x" style="font-size:16px;"></i>
+                    <button onclick="closeTodayNotifications()" class="liquid-glass-v8 rim-light squircle-full" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:#ffffff;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                        <i class="ph ph-x" style="font-size:14px;"></i>
+                        <span>Chiudi</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Content Body with Grouped Sections -->
-            <div data-notif-content style="padding:18px 20px 36px;">
-
-                <!-- 1. SEZIONE: OGGI -->
-                <div style="margin-bottom:22px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                        <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#2997ff;display:flex;align-items:center;gap:5px;">
-                            <i class="ph-fill ph-sparkle"></i> IN DATA ODIERNA (${data.todayItems.length})
-                        </span>
-                        <span style="font-size:11px;color:#8e909f;font-weight:600;">${today.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
-                    </div>
-                    ${todayHtml}
-                </div>
-
-                <!-- 2. SEZIONE: IN ARRIVO -->
-                ${data.upcomingItems.length > 0 ? `
-                <div style="margin-bottom:22px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                        <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#ff9f0a;display:flex;align-items:center;gap:5px;">
-                            <i class="ph-fill ph-calendar-plus"></i> PROSSIMI GIORNI & IN ARRIVO (${data.upcomingItems.length})
-                        </span>
-                    </div>
-                    ${upcomingHtml}
-                </div>` : ''}
-
-                <!-- 3. SEZIONE: RECENTI (Collapsibile con Animazione Fluida) -->
-                ${data.recentItems.length > 0 ? (() => {
-                    const userPrefHidden = localStorage.getItem('notif_recent_hidden') === '1';
-                    // If there are no today items, always default to showing recent items so the view is never empty
-                    const isHidden = (data.todayItems.length > 0) ? userPrefHidden : false;
+            <!-- Horizontal Category Filter Bar (Evita confusione visiva) -->
+            <div id="notif-filter-bar" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:0 20px 14px;flex-shrink:0;">
+                ${filterTabs.map(tab => {
+                    const active = window._notifCategoryFilter === tab.id;
                     return `
-                    <div style="margin-bottom:10px;">
-                        <div onclick="window.toggleRecentNotifications(this)" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:11px 14px;background:rgba(255,255,255,0.035);border:0.5px solid rgba(255,255,255,0.09);border-radius:16px;margin-bottom:12px;transition:background 0.2s cubic-bezier(0.16,1,0.3,1),transform 0.15s ease;user-select:none;" ontouchstart="this.style.background='rgba(255,255,255,0.07)';this.style.transform='scale(0.99)'" ontouchend="this.style.background='rgba(255,255,255,0.035)';this.style.transform='scale(1)'">
-                            <span style="font-size:11px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#8e909f;display:flex;align-items:center;gap:6px;">
-                                <i class="ph-fill ph-clock-counter-clockwise"></i> RECENTI (${data.recentItems.length})
-                            </span>
-                            <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);padding:3px 10px;border-radius:999px;">
-                                <span id="notif-recent-btn-text" style="font-size:10.5px;font-weight:700;color:#c4c5d6;">${isHidden ? 'Mostra' : 'Nascondi'}</span>
-                                <i id="notif-recent-btn-icon" class="ph-bold ph-caret-down" style="font-size:11px;color:#c4c5d6;display:inline-block;transform:rotate(${isHidden ? '0' : '180'}deg);"></i>
-                            </div>
-                        </div>
-                        <div id="notif-recent-items-wrap" data-collapsed="${isHidden ? 'true' : 'false'}" style="display:${isHidden ? 'none' : 'block'};transform-origin:top center;">
-                            ${recentHtml}
-                        </div>
-                    </div>`;
-                })() : ''}
-
+                    <button data-notif-filter="${tab.id}" onclick="window.setNotifCategoryFilter('${tab.id}')" style="flex-shrink:0;padding:7px 13px;border-radius:9999px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s ease;background:${active ? '#2997ff' : 'rgba(20,31,54,0.75)'};border:1px solid ${active ? 'rgba(41,151,255,0.6)' : 'rgba(255,255,255,0.12)'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.75)'};box-shadow:${active ? '0 4px 12px rgba(41,151,255,0.35)' : 'none'};">
+                        <span>${tab.label}</span>
+                        <span class="notif-tab-count" style="font-size:9.5px;opacity:0.85;padding:1px 5px;border-radius:999px;background:${active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'};">${tab.count}</span>
+                    </button>`;
+                }).join('')}
             </div>
+
+            <!-- Scrollable List Container (A filo con il bordo del telefono, senza blur cutoffs) -->
+            <div id="today-notif-results-container" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 80px 20px;">
+                ${buildNotifContentHtml(window._notifCategoryFilter)}
+            </div>
+
         </div>
     </div>
-    <style>
-        @keyframes notifSlideUp {
-            from { transform: translateY(100%); opacity: 0.4; }
-            to   { transform: translateY(0);    opacity: 1; }
-        }
-    </style>`;
+    `;
+
+    if (modals.id === 'modals') {
+        modals.innerHTML = overlayHtml;
+    } else {
+        const temp = document.createElement('div');
+        temp.innerHTML = overlayHtml;
+        modals.appendChild(temp.firstElementChild);
+    }
+
+    const overlay = document.getElementById('today-notif-overlay');
+    const sheet = document.getElementById('today-notif-sheet');
+
+    requestAnimationFrame(() => {
+        if (overlay) overlay.style.opacity = '1';
+        if (sheet) sheet.style.transform = 'translateY(0)';
+    });
+
+    // Touch drag down on handle
+    const handle = document.getElementById('today-notif-drag-handle');
+    if (handle && sheet) {
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+
+        handle.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            }
+        }, { passive: true });
+
+        handle.addEventListener('touchmove', (e) => {
+            if (!isDragging || !e.touches) return;
+            currentY = Math.max(0, e.touches[0].clientY - startY);
+            sheet.style.transform = `translateY(${currentY}px)`;
+        }, { passive: true });
+
+        handle.addEventListener('touchend', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (currentY > 110) {
+                window.closeTodayNotifications();
+            } else {
+                sheet.style.transform = 'translateY(0)';
+                sheet.style.transition = 'transform 0.3s cubic-bezier(0.16,1,0.3,1)';
+            }
+        }, { passive: true });
+    }
 }
 window.openTodayNotifications = openTodayNotifications;
 
@@ -3633,90 +3800,34 @@ window.toggleRecentNotifications = function(btn) {
 
     const isHidden = wrap.style.display === 'none' || wrap.getAttribute('data-collapsed') === 'true';
 
-    if (typeof gsap !== 'undefined') {
-        if (isHidden) {
-            // EXPAND ANIMATION
-            wrap.style.display = 'block';
-            wrap.style.overflow = 'hidden';
-            wrap.setAttribute('data-collapsed', 'false');
-            if (text) text.textContent = 'Nascondi';
-            if (icon) gsap.to(icon, { rotation: 180, duration: 0.32, ease: 'back.out(1.7)' });
-            localStorage.setItem('notif_recent_hidden', '0');
-
-            const fullHeight = wrap.scrollHeight;
-            gsap.fromTo(wrap,
-                { height: 0, opacity: 0, y: -6, scale: 0.99 },
-                {
-                    height: fullHeight,
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    duration: 0.36,
-                    ease: 'power3.out',
-                    onComplete: () => {
-                        wrap.style.height = 'auto';
-                        wrap.style.overflow = 'visible';
-                    }
-                }
-            );
-            const cards = wrap.querySelectorAll('[data-notif-card]');
-            if (cards.length) {
-                gsap.fromTo(cards,
-                    { opacity: 0, y: 8, scale: 0.98 },
-                    { opacity: 1, y: 0, scale: 1, duration: 0.28, stagger: 0.025, ease: 'power2.out' }
-                );
-            }
-        } else {
-            // COLLAPSE ANIMATION
-            wrap.style.overflow = 'hidden';
-            wrap.setAttribute('data-collapsed', 'true');
-            if (text) text.textContent = 'Mostra';
-            if (icon) gsap.to(icon, { rotation: 0, duration: 0.3, ease: 'power2.out' });
-            localStorage.setItem('notif_recent_hidden', '1');
-
-            const cards = wrap.querySelectorAll('[data-notif-card]');
-            if (cards.length) {
-                gsap.to(cards, { opacity: 0, y: -4, duration: 0.16, stagger: 0.015, ease: 'power2.in' });
-            }
-
-            gsap.to(wrap, {
-                height: 0,
-                opacity: 0,
-                y: -6,
-                scale: 0.99,
-                duration: 0.28,
-                ease: 'power2.inOut',
-                onComplete: () => {
-                    wrap.style.display = 'none';
-                }
-            });
-        }
+    if (isHidden) {
+        wrap.style.display = 'block';
+        wrap.setAttribute('data-collapsed', 'false');
+        if (text) text.textContent = 'Nascondi';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+        localStorage.setItem('notif_recent_hidden', '0');
     } else {
-        if (isHidden) {
-            wrap.style.display = 'block';
-            wrap.setAttribute('data-collapsed', 'false');
-            if (text) text.textContent = 'Nascondi';
-            if (icon) icon.style.transform = 'rotate(180deg)';
-            localStorage.setItem('notif_recent_hidden', '0');
-        } else {
-            wrap.style.display = 'none';
-            wrap.setAttribute('data-collapsed', 'true');
-            if (text) text.textContent = 'Mostra';
-            if (icon) icon.style.transform = 'rotate(0deg)';
-            localStorage.setItem('notif_recent_hidden', '1');
-        }
+        wrap.style.display = 'none';
+        wrap.setAttribute('data-collapsed', 'true');
+        if (text) text.textContent = 'Mostra';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+        localStorage.setItem('notif_recent_hidden', '1');
     }
 };
 
 function closeTodayNotifications() {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
     const overlay = document.getElementById('today-notif-overlay');
+    const sheet = document.getElementById('today-notif-sheet');
+    if (sheet) sheet.style.transform = 'translateY(100%)';
     if (overlay) {
         overlay.style.opacity = '0';
-        overlay.style.transition = 'opacity 0.2s ease-out';
+        overlay.style.transition = 'opacity 0.25s ease-out';
         setTimeout(() => {
             const modals = document.getElementById('modals');
             if (modals) modals.innerHTML = '';
-        }, 200);
+            if (overlay && overlay.parentNode && overlay.parentNode !== modals) overlay.remove();
+        }, 260);
     }
 }
 window.closeTodayNotifications = closeTodayNotifications;
@@ -4557,7 +4668,7 @@ function mostraAssenzeModal() {
         label: 'Assenza Giornaliera',
         icon: 'ph-calendar-x',
         iconColor: '#ff453a',
-        iconBg: 'rgba(255,69,58,0.15)',
+        iconBg: 'rgba(255,69,58,0.16)',
         hoursStr: x.numOre ? `${x.numOre} ore` : (x.oraInizio ? `${x.oraInizio}ª - ${x.oraFine || 5}ª ora` : 'Giornata intera')
     }));
 
@@ -4567,7 +4678,7 @@ function mostraAssenzeModal() {
         label: 'Ingresso in Ritardo',
         icon: 'ph-clock-countdown',
         iconColor: '#ff9f0a',
-        iconBg: 'rgba(255,159,10,0.15)',
+        iconBg: 'rgba(255,159,10,0.16)',
         hoursStr: x.oraInizio ? `Entrata ore ${x.oraInizio}` : (x.numOre ? `${x.numOre}ª ora` : 'Ritardo breve')
     }));
 
@@ -4577,8 +4688,8 @@ function mostraAssenzeModal() {
         label: 'Uscita Anticipata',
         icon: 'ph-sign-out',
         iconColor: '#2997ff',
-        iconBg: 'rgba(41,151,255,0.15)',
-        hoursStr: x.oraFine || x.oraInizio ? `Uscita ore ${x.oraFine || x.oraInizio}` : (x.numOre ? `${x.numOre}ª ora` : 'Uscita')
+        iconBg: 'rgba(41,151,255,0.16)',
+        hoursStr: x.oraFine || x.oraInizio ? `Uscita ore ${x.oraFine || x.oraInizio}` : (x.numOre ? `${x.numOre}ª ora` : 'Uscita anticipata')
     }));
 
     const rawNote = (ad.note || []).map(x => ({
@@ -4587,7 +4698,7 @@ function mostraAssenzeModal() {
         label: 'Nota Disciplinare',
         icon: 'ph-warning',
         iconColor: '#bf5af2',
-        iconBg: 'rgba(191,90,242,0.15)',
+        iconBg: 'rgba(191,90,242,0.16)',
         hoursStr: x.autore || 'Docente',
         giustificata: true
     }));
@@ -4608,41 +4719,19 @@ function mostraAssenzeModal() {
         ? ad.oreAssenzaTotali
         : (rawAssenze.length * 5 + rawRitardi.length * 1 + rawUscite.length * 2);
 
-    window._assenzeFilter = 'tutte';
+    state.assenzeFilter = state.assenzeFilter || 'tutte';
 
-    window.filterAssenzeView = function(filterType) {
-        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('selection');
-        window._assenzeFilter = filterType;
-        
-        // Update segmented control buttons
-        document.querySelectorAll('.assenze-tab-btn').forEach(btn => {
-            const isSelected = btn.getAttribute('data-filter') === filterType;
-            btn.style.background = isSelected ? '#2997ff' : 'transparent';
-            btn.style.color = isSelected ? '#ffffff' : 'rgba(255,255,255,0.6)';
-            btn.style.fontWeight = isSelected ? '700' : '600';
-            btn.style.boxShadow = isSelected ? '0 2px 8px rgba(41,151,255,0.4)' : 'none';
-        });
+    // Rimuoviamo eventuale overlay esistente
+    const existing = document.getElementById('assenze-modal-overlay');
+    if (existing) existing.remove();
 
-        // Filter cards in list
-        document.querySelectorAll('.assenze-card-item').forEach(card => {
-            const isPending = card.getAttribute('data-pending') === 'true';
-            if (filterType === 'tutte') {
-                card.style.display = 'flex';
-            } else if (filterType === 'pending') {
-                card.style.display = isPending ? 'flex' : 'none';
-            } else if (filterType === 'justified') {
-                card.style.display = !isPending ? 'flex' : 'none';
-            }
-        });
+    const overlay = document.createElement('div');
+    overlay.id = 'assenze-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(5,8,17,0.78);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);display:flex;flex-direction:column;justify-content:flex-end;opacity:0;transition:opacity 0.25s ease;font-family:\'Inter\',sans-serif;';
 
-        // Show empty message if needed
-        const listEl = document.getElementById('assenze-items-list');
-        const emptyEl = document.getElementById('assenze-empty-msg');
-        if (listEl && emptyEl) {
-            const visibleCards = Array.from(listEl.querySelectorAll('.assenze-card-item')).filter(c => c.style.display !== 'none');
-            emptyEl.style.display = visibleCards.length === 0 ? 'block' : 'none';
-        }
-    };
+    const sheet = document.createElement('div');
+    sheet.id = 'assenze-modal-sheet';
+    sheet.style.cssText = 'width:100%;max-width:640px;margin:0 auto;height:92vh;max-height:92vh;background:rgba(12,20,36,0.96);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.25);border-radius:32px 32px 0 0;display:flex;flex-direction:column;box-shadow:0 -12px 48px rgba(0,0,0,0.75);transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);overflow:hidden;';
 
     const renderCardHtml = (a) => {
         const isPending = a.tipo !== 'nota' && (!a.giustificata || a.daGiustificare);
@@ -4653,21 +4742,21 @@ function mostraAssenzeModal() {
         const capitalizedDate = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
 
         const statusBadge = a.tipo === 'nota' 
-            ? `<span style="background:rgba(191,90,242,0.15);border:0.5px solid rgba(191,90,242,0.35);color:#bf5af2;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0;"><i class="ph-fill ph-chat-circle-dots"></i> NOTA</span>`
+            ? `<span style="background:rgba(191,90,242,0.16);border:1px solid rgba(191,90,242,0.4);color:#bf5af2;font-size:10px;font-weight:800;padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;"><i class="ph-fill ph-chat-circle-dots"></i> NOTA</span>`
             : isPending
-            ? `<span style="background:rgba(255,69,58,0.18);border:0.5px solid rgba(255,69,58,0.4);color:#ff453a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0;"><i class="ph-fill ph-warning-circle"></i> DA GIUSTIFICARE</span>`
-            : `<span style="background:rgba(48,209,88,0.15);border:0.5px solid rgba(48,209,88,0.35);color:#30d158;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0;"><i class="ph-fill ph-check-circle"></i> GIUSTIFICATA</span>`;
+            ? `<span style="background:rgba(255,69,58,0.18);border:1px solid rgba(255,69,58,0.45);color:#ff453a;font-size:10px;font-weight:800;padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;"><i class="ph-fill ph-warning-circle"></i> DA GIUSTIFICARE</span>`
+            : `<span style="background:rgba(48,209,88,0.15);border:1px solid rgba(48,209,88,0.4);color:#30d158;font-size:10px;font-weight:800;padding:3px 9px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;"><i class="ph-fill ph-check-circle"></i> GIUSTIFICATA</span>`;
 
         return `
-        <div class="assenze-card-item" data-pending="${isPending}" style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;background:rgba(20,31,54,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.1);border-top:1px solid rgba(255,255,255,0.18);border-radius:20px;transition:all 0.2s ease;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:36px;height:36px;border-radius:12px;background:${a.iconBg};display:flex;align-items:center;justify-content:center;color:${a.iconColor};flex-shrink:0;">
-                        <i class="ph-fill ${a.icon}" style="font-size:18px;"></i>
+        <div class="assenze-card-item" data-pending="${isPending}" data-tipo="${a.tipo}" style="display:flex;flex-direction:column;gap:10px;padding:15px 16px;background:rgba(20,31,54,0.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.24);border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,0.25);transition:transform 0.15s ease;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                    <div style="width:40px;height:40px;border-radius:13px;background:${a.iconBg};border:1px solid ${a.iconColor}40;display:flex;align-items:center;justify-content:center;color:${a.iconColor};flex-shrink:0;box-shadow:0 0 12px ${a.iconColor}20;">
+                        <i class="ph-bold ${a.icon}" style="font-size:20px;"></i>
                     </div>
                     <div style="min-width:0;flex:1;">
-                        <h4 style="font-size:14px;font-weight:700;color:#ffffff;margin:0 0 2px;">${escapeHtml(a.label)}</h4>
-                        <span style="font-size:12px;color:rgba(255,255,255,0.55);font-weight:500;">${capitalizedDate} · ${escapeHtml(a.hoursStr)}</span>
+                        <h4 style="font-size:14.5px;font-weight:700;color:#ffffff;margin:0 0 3px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(a.label)}</h4>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.65);font-weight:600;">${capitalizedDate} · ${escapeHtml(a.hoursStr)}</span>
                     </div>
                 </div>
                 <div>
@@ -4675,65 +4764,183 @@ function mostraAssenzeModal() {
                 </div>
             </div>
             ${(a.nota || a.testo || a.motivo) ? `
-            <div style="padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,0.75);line-height:1.4;margin-top:2px;">
+            <div style="padding:9px 13px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.09);border-radius:12px;font-size:12.5px;color:rgba(255,255,255,0.88);line-height:1.45;">
                 "${escapeHtml(a.nota || a.testo || a.motivo)}"
             </div>` : ''}
         </div>`;
     };
 
-    const sheetHtml = `
-        <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:4px;">
-            
-            <!-- Summary Metrics Cards (3 Colonne) -->
+    sheet.innerHTML = `
+        <!-- Drag Handle Bar -->
+        <div id="assenze-modal-drag-handle" style="display:flex;justify-content:center;padding:12px 0 6px;flex-shrink:0;cursor:grab;touch-action:none;">
+            <div style="width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
+        </div>
+
+        <!-- Header Bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 20px 14px;flex-shrink:0;">
+            <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#ff453a;display:flex;align-items:center;gap:6px;">
+                    <i class="ph-fill ph-calendar-blank"></i> REGISTRO DIDATTICO · ARGO
+                </div>
+                <h2 style="font-size:22px;font-weight:800;color:#ffffff;margin:2px 0 0;letter-spacing:-0.02em;">Registro Assenze</h2>
+            </div>
+            <button onclick="window.closeAssenzeModal()" class="liquid-glass-v8 rim-light squircle-full" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:#ffffff;font-size:12px;font-weight:700;font-family:'Inter',sans-serif;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph ph-x" style="font-size:14px;"></i>
+                <span>Chiudi</span>
+            </button>
+        </div>
+
+        <!-- Summary Metrics Cards (3 Colonne) -->
+        <div style="padding:0 20px 12px;flex-shrink:0;">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
                 <!-- Da Giustificare -->
-                <div style="padding:12px 8px;background:${countDaGiustificare > 0 ? 'rgba(255,69,58,0.15)' : 'rgba(255,255,255,0.05)'};border:0.5px solid ${countDaGiustificare > 0 ? 'rgba(255,69,58,0.35)' : 'rgba(255,255,255,0.1)'};border-radius:18px;text-align:center;">
-                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:${countDaGiustificare > 0 ? '#ff453a' : 'rgba(255,255,255,0.5)'};display:block;margin-bottom:4px;letter-spacing:0.04em;">Da Giustif.</span>
-                    <span style="font-size:22px;font-weight:800;color:${countDaGiustificare > 0 ? '#ff453a' : '#ffffff'};line-height:1;">${countDaGiustificare}</span>
+                <div style="padding:11px 10px;background:${countDaGiustificare > 0 ? 'rgba(255,69,58,0.16)' : 'rgba(255,255,255,0.04)'};border:1px solid ${countDaGiustificare > 0 ? 'rgba(255,69,58,0.4)' : 'rgba(255,255,255,0.1)'};border-radius:18px;text-align:center;box-shadow:${countDaGiustificare > 0 ? '0 0 16px rgba(255,69,58,0.2)' : 'none'};">
+                    <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:${countDaGiustificare > 0 ? '#ff453a' : 'rgba(255,255,255,0.5)'};display:block;margin-bottom:3px;letter-spacing:0.04em;">Da Giustif.</span>
+                    <span style="font-size:22px;font-weight:900;color:${countDaGiustificare > 0 ? '#ff453a' : '#ffffff'};line-height:1;font-variant-numeric:tabular-nums;">${countDaGiustificare}</span>
                 </div>
                 <!-- Giustificate -->
-                <div style="padding:12px 8px;background:rgba(48,209,88,0.12);border:0.5px solid rgba(48,209,88,0.28);border-radius:18px;text-align:center;">
-                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#30d158;display:block;margin-bottom:4px;letter-spacing:0.04em;">Giustificate</span>
-                    <span style="font-size:22px;font-weight:800;color:#30d158;line-height:1;">${countGiustificate}</span>
+                <div style="padding:11px 10px;background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.32);border-radius:18px;text-align:center;">
+                    <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:#30d158;display:block;margin-bottom:3px;letter-spacing:0.04em;">Giustificate</span>
+                    <span style="font-size:22px;font-weight:900;color:#30d158;line-height:1;font-variant-numeric:tabular-nums;">${countGiustificate}</span>
                 </div>
                 <!-- Ore Assenza Totali -->
-                <div style="padding:12px 8px;background:rgba(41,151,255,0.12);border:0.5px solid rgba(41,151,255,0.28);border-radius:18px;text-align:center;">
-                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#2997ff;display:block;margin-bottom:4px;letter-spacing:0.04em;">Ore Totali</span>
-                    <span style="font-size:22px;font-weight:800;color:#2997ff;line-height:1;">${typeof oreTotali === 'number' ? oreTotali.toFixed(0) + 'h' : oreTotali}</span>
+                <div style="padding:11px 10px;background:rgba(41,151,255,0.12);border:1px solid rgba(41,151,255,0.32);border-radius:18px;text-align:center;">
+                    <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:#2997ff;display:block;margin-bottom:3px;letter-spacing:0.04em;">Ore Totali</span>
+                    <span style="font-size:22px;font-weight:900;color:#2997ff;line-height:1;font-variant-numeric:tabular-nums;">${typeof oreTotali === 'number' ? oreTotali.toFixed(0) + 'h' : oreTotali}</span>
                 </div>
             </div>
+        </div>
 
-            <!-- Apple Segmented Control Filter -->
-            <div style="display:flex;background:rgba(255,255,255,0.06);padding:3px;border-radius:14px;border:0.5px solid rgba(255,255,255,0.1);">
-                <button class="assenze-tab-btn" data-filter="tutte" onclick="window.filterAssenzeView('tutte')" style="flex:1;padding:8px 4px;border-radius:11px;border:none;background:#2997ff;color:#ffffff;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s ease;box-shadow:0 2px 8px rgba(41,151,255,0.4);">
-                    Tutte (${all.length})
-                </button>
-                <button class="assenze-tab-btn" data-filter="pending" onclick="window.filterAssenzeView('pending')" style="flex:1;padding:8px 4px;border-radius:11px;border:none;background:transparent;color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">
-                    Da Giustif. (${countDaGiustificare})
-                </button>
-                <button class="assenze-tab-btn" data-filter="justified" onclick="window.filterAssenzeView('justified')" style="flex:1;padding:8px 4px;border-radius:11px;border:none;background:transparent;color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">
-                    Giustificate (${countGiustificate})
-                </button>
+        <!-- Segmented Filter Control -->
+        <div style="padding:0 20px 12px;flex-shrink:0;">
+            <div id="assenze-filter-bar" style="display:flex;background:rgba(10,16,28,0.75);padding:4px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);gap:4px;">
+                ${[
+                    { id: 'tutte', label: 'Tutte', count: all.length },
+                    { id: 'pending', label: 'Da Giustif.', count: countDaGiustificare },
+                    { id: 'justified', label: 'Giustificate', count: countGiustificate },
+                    { id: 'note', label: 'Note', count: rawNote.length }
+                ].map(tab => {
+                    const active = (state.assenzeFilter || 'tutte') === tab.id;
+                    return `
+                    <button class="assenze-tab-btn" data-filter="${tab.id}" onclick="window.filterAssenzeView('${tab.id}')" style="flex:1;padding:8px 4px;border-radius:12px;font-size:11.5px;font-weight:${active ? '700' : '600'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:'Inter',sans-serif;transition:all 0.2s ease;background:${active ? '#2997ff' : 'transparent'};color:${active ? '#ffffff' : 'rgba(255,255,255,0.6)'};box-shadow:${active ? '0 2px 8px rgba(41,151,255,0.35)' : 'none'};">
+                        <span>${tab.label}</span>
+                        <span style="font-size:9.5px;opacity:0.85;padding:1px 5px;border-radius:999px;background:${active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'};">${tab.count}</span>
+                    </button>`;
+                }).join('')}
             </div>
+        </div>
 
-            <!-- List of Items -->
-            <div id="assenze-items-list" style="display:flex;flex-direction:column;gap:10px;height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px;padding-bottom:16px;-webkit-mask-image:linear-gradient(to bottom, black 0%, black 85%, transparent 100%);mask-image:linear-gradient(to bottom, black 0%, black 85%, transparent 100%);">
-
-                ${all.length > 0 ? all.map(renderCardHtml).join('') : ''}
-                <!-- Empty State -->
-                <div id="assenze-empty-msg" style="display:${all.length === 0 ? 'flex' : 'none'};align-items:center;justify-content:center;flex:1;text-align:center;padding:32px 16px;color:rgba(255,255,255,0.5);font-size:14px;font-style:italic;">
-                    Nessun evento o assenza da visualizzare in questa categoria.
+        <!-- Scrollable List Container (Flush to bottom edge of screen, NO mask-image, NO blur cutoffs) -->
+        <div id="assenze-items-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 80px 20px;display:flex;flex-direction:column;gap:10px;">
+            ${all.length > 0 ? all.map(renderCardHtml).join('') : ''}
+            <!-- Empty State -->
+            <div id="assenze-empty-msg" style="display:${all.length === 0 ? 'flex' : 'none'};flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;text-align:center;gap:8px;">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);">
+                    <i class="ph ph-check" style="font-size:24px;"></i>
                 </div>
+                <span style="font-size:14px;color:rgba(255,255,255,0.5);font-weight:500;">Nessun evento o assenza da visualizzare in questa categoria.</span>
             </div>
-
         </div>
     `;
 
-    if (typeof window.openBottomSheet === 'function') {
-        window.openBottomSheet({
-            title: 'Registro Assenze',
-            html: sheetHtml
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        sheet.style.transform = 'translateY(0)';
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) window.closeAssenzeModal();
+    });
+
+    // Touch drag down on handle
+    const handle = document.getElementById('assenze-modal-drag-handle');
+    if (handle) {
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+
+        handle.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            }
+        }, { passive: true });
+
+        handle.addEventListener('touchmove', (e) => {
+            if (!isDragging || !e.touches) return;
+            currentY = Math.max(0, e.touches[0].clientY - startY);
+            sheet.style.transform = `translateY(${currentY}px)`;
+        }, { passive: true });
+
+        handle.addEventListener('touchend', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (currentY > 110) {
+                window.closeAssenzeModal();
+            } else {
+                sheet.style.transform = 'translateY(0)';
+                sheet.style.transition = 'transform 0.3s cubic-bezier(0.16,1,0.3,1)';
+            }
+        }, { passive: true });
+    }
+
+    window.filterAssenzeView = function(filterType) {
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('selection');
+        state.assenzeFilter = filterType;
+        
+        // Update segmented control buttons
+        document.querySelectorAll('#assenze-filter-bar .assenze-tab-btn').forEach(btn => {
+            const isSelected = btn.getAttribute('data-filter') === filterType;
+            btn.style.background = isSelected ? '#2997ff' : 'transparent';
+            btn.style.color = isSelected ? '#ffffff' : 'rgba(255,255,255,0.6)';
+            btn.style.fontWeight = isSelected ? '700' : '600';
+            btn.style.boxShadow = isSelected ? '0 2px 8px rgba(41,151,255,0.35)' : 'none';
+            const badge = btn.querySelector('span:nth-child(2)');
+            if (badge) badge.style.background = isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
         });
+
+        // Filter cards in list
+        document.querySelectorAll('#assenze-items-list .assenze-card-item').forEach(card => {
+            const isPending = card.getAttribute('data-pending') === 'true';
+            const tipo = card.getAttribute('data-tipo');
+            if (filterType === 'tutte') {
+                card.style.display = 'flex';
+            } else if (filterType === 'pending') {
+                card.style.display = isPending ? 'flex' : 'none';
+            } else if (filterType === 'justified') {
+                card.style.display = (!isPending && tipo !== 'nota') ? 'flex' : 'none';
+            } else if (filterType === 'note') {
+                card.style.display = tipo === 'nota' ? 'flex' : 'none';
+            }
+        });
+
+        // Show empty message if needed
+        const listEl = document.getElementById('assenze-items-list');
+        const emptyEl = document.getElementById('assenze-empty-msg');
+        if (listEl && emptyEl) {
+            const visibleCards = Array.from(listEl.querySelectorAll('.assenze-card-item')).filter(c => c.style.display !== 'none');
+            emptyEl.style.display = visibleCards.length === 0 ? 'flex' : 'none';
+        }
+    };
+
+    window.closeAssenzeModal = function() {
+        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+        const ov = document.getElementById('assenze-modal-overlay');
+        const sh = document.getElementById('assenze-modal-sheet');
+        if (!ov) return;
+        if (sh) sh.style.transform = 'translateY(100%)';
+        ov.style.opacity = '0';
+        setTimeout(() => {
+            if (ov && ov.parentNode) ov.remove();
+        }, 320);
+    };
+
+    // If a filter was already active, apply it
+    if (state.assenzeFilter && state.assenzeFilter !== 'tutte') {
+        window.filterAssenzeView(state.assenzeFilter);
     }
 }
 window.mostraAssenzeModal = mostraAssenzeModal;
