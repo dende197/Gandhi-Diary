@@ -3365,6 +3365,12 @@ window.renderTodayRewindBadgeHTML = function() {
         ? getLocalDateString(today)
         : today.toISOString().split('T')[0];
 
+    // Verifica se l'utente ha già visualizzato tutte le novità di oggi
+    let isSeen = false;
+    try {
+        isSeen = localStorage.getItem(`gc_seen_rewind_v2_${todayISO}`) === 'true';
+    } catch (e) {}
+
     // Genera slides per determinare se ci sono novità odierne
     const slides = (typeof window.getTodayRewindSlides === 'function')
         ? window.getTodayRewindSlides()
@@ -3372,56 +3378,71 @@ window.renderTodayRewindBadgeHTML = function() {
     const hasRealNews = slides.length > 0 && slides[0].id !== 'quiet_day';
     const totalEvents = hasRealNews ? slides.length : 0;
 
-    // Quando ci sono novità:
-    // Il pulsante mostra l'icona delle notifiche (campanella) ed è illuminato dall'alone vibrante in stile PWA
-    if (hasRealNews) {
+    // Quando ci sono novità NON ancora tutte visualizzate:
+    // Mostra una morbida sfumatura / aura attorno all'icona notifiche
+    if (hasRealNews && !isSeen) {
         return `
-        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Novità di oggi (${totalEvents})" aria-label="Novità di oggi (${totalEvents})" style="
-            position: relative;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00d2ff 0%, #2997ff 45%, #6366f1 80%, #bf5af2 100%);
-            padding: 2.5px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.8), 0 0 16px rgba(41, 151, 255, 0.9), 0 0 32px rgba(0, 210, 255, 0.7), 0 0 48px rgba(99, 102, 241, 0.45);
-            animation: pwaStoryHaloPulse 2.4s infinite ease-in-out;
-            transition: transform 0.15s ease;
-            box-sizing: border-box;
-            flex-shrink: 0;
-        " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-            <div style="width: 100%; height: 100%; border-radius: 50%; background: #081126; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
-                <!-- Glowing ambient center -->
-                <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 210, 255, 0.4) 0%, transparent 75%);"></div>
-                <i class="ph-fill ph-bell" style="font-size: 20px; color: #ffffff; filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.85));"></i>
-            </div>
-            <span style="position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 999px; background: #2997ff; border: 2px solid #081126; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800; color: #ffffff; padding: 0 4px; box-shadow: 0 0 12px rgba(41, 151, 255, 0.95);">
-                ${totalEvents > 9 ? '9+' : totalEvents}
-            </span>
-        </button>`;
+        <div id="today-rewind-header-badge" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <!-- Sfumatura / bagliore morbido attorno all'icona notifiche -->
+            <div class="notification-aura-glow" style="
+                position: absolute;
+                inset: -6px;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(0, 210, 255, 0.75) 0%, rgba(41, 151, 255, 0.5) 45%, rgba(99, 102, 241, 0.28) 75%, transparent 100%);
+                filter: blur(8px);
+                pointer-events: none;
+                z-index: 0;
+            "></div>
+
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Novità di oggi (${totalEvents})" aria-label="Novità di oggi (${totalEvents})" style="
+                position: relative;
+                z-index: 1;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, rgba(0, 210, 255, 0.95) 0%, rgba(41, 151, 255, 0.95) 45%, rgba(99, 102, 241, 0.95) 80%, rgba(191, 90, 242, 0.9) 100%);
+                padding: 2.5px;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 16px rgba(41, 151, 255, 0.4);
+                transition: transform 0.15s ease;
+                box-sizing: border-box;
+            " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <div style="width: 100%; height: 100%; border-radius: 50%; background: #081126; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                    <!-- Glowing ambient center -->
+                    <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 210, 255, 0.35) 0%, transparent 70%);"></div>
+                    <i class="ph-fill ph-bell" style="font-size: 20px; color: #ffffff; filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.85));"></i>
+                </div>
+                <span style="position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 999px; background: #2997ff; border: 2px solid #081126; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800; color: #ffffff; padding: 0 4px; box-shadow: 0 2px 8px rgba(41, 151, 255, 0.8);">
+                    ${totalEvents > 9 ? '9+' : totalEvents}
+                </span>
+            </button>
+        </div>`;
     } else {
+        // Dopo aver visualizzato tutte le notifiche (o se non ci sono novità):
+        // Il bagliore scompare completamente, icona pulita ed elegante in stile Liquid Glass
         return `
-        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openTodayRewind();" title="Novità di oggi" aria-label="Novità di oggi" style="
-            position: relative;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1.5px solid rgba(255, 255, 255, 0.18);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.15s ease, background 0.15s ease;
-            box-sizing: border-box;
-            flex-shrink: 0;
-        " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-            <i class="ph-bold ph-bell" style="font-size: 19px; color: rgba(255, 255, 255, 0.72);"></i>
-        </button>`;
+        <div id="today-rewind-header-badge" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openTodayRewind();" title="Novità di oggi" aria-label="Novità di oggi" style="
+                position: relative;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1.5px solid rgba(255, 255, 255, 0.18);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.15s ease, background 0.15s ease;
+                box-sizing: border-box;
+            " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph-bold ph-bell" style="font-size: 19px; color: rgba(255, 255, 255, 0.72);"></i>
+            </button>
+        </div>`;
     }
 };
 
@@ -3442,12 +3463,13 @@ window.markTodayRewindSeen = function() {
         ? getLocalDateString(today)
         : today.toISOString().split('T')[0];
     try {
-        localStorage.setItem(`gc_seen_rewind_${todayISO}`, 'true');
+        localStorage.setItem(`gc_seen_rewind_v2_${todayISO}`, 'true');
     } catch (e) {}
     if (typeof window.updateTodayRewindBadge === 'function') {
         window.updateTodayRewindBadge();
     }
 };
+
 
 // ── SLIDE DECK GENERATOR: SOLO LE NOVITÀ EFFETTIVE DI OGGI CON STILE APPLE LIQUID GLASS ──
 window.getTodayRewindSlides = function() {
@@ -3504,29 +3526,47 @@ window.getTodayRewindSlides = function() {
     const media = (typeof calculateMedia === 'function') ? calculateMedia() : (state.media || 8.1);
 
     // 2. Nuovi Compiti per oggi o assegnati oggi
-    const compitiData = (typeof getCompitiData === 'function') ? getCompitiData() : [];
-    let todayCompiti = compitiData.filter(c => {
-        const d = c.scadenza || c.data || c.dataISO || '';
-        const ins = c.dataInserimento || c.created_at || '';
-        return d === todayISO || d.startsWith(todayISO) || ins === todayISO || ins.startsWith(todayISO);
-    });
+    let todayCompiti = [];
+    if (Array.isArray(state.tasks)) {
+        state.tasks.forEach(t => {
+            if (t.subject === 'QUEST') return;
+            const dueStr = t.due_date || t.date || '';
+            const assStr = t.assigned_date || t.created_at || '';
+            const isDueToday = dueStr === todayISO || dueStr.startsWith(todayISO);
+            const isAssignedToday = assStr === todayISO || assStr.startsWith(todayISO);
+            if (isDueToday || isAssignedToday) {
+                todayCompiti.push({
+                    id: t.id,
+                    materia: t.subject || 'Compito',
+                    compito: t.text || t.title || 'Nessun dettaglio specificato',
+                    scadenza: t.due_date || todayISO
+                });
+            }
+        });
+    }
+
+    // Aggiungi anche da notifData.todayItems se ce ne sono di tipo compito
     (notifData.todayItems || []).forEach(it => {
         if (it.type === 'compito' || it.category === 'compiti') {
-            if (!todayCompiti.some(c => (c.id && c.id === it.id) || (c.compito === it.title && c.materia === it.materia))) {
+            const taskText = it.desc || it.content || it.compito || it.title || '';
+            const taskSubj = it.subject || it.materia || it.categoryLabel || 'Compito';
+            if (!todayCompiti.some(c => (c.id && it.id && c.id === it.id) || (c.compito === taskText && c.materia === taskSubj))) {
                 todayCompiti.push({
-                    materia: it.materia || it.subject || it.categoryLabel || 'Compito',
-                    compito: it.title || it.desc || '',
-                    scadenza: it.dateISO || todayISO
+                    id: it.id,
+                    materia: taskSubj,
+                    compito: taskText || 'Nessun dettaglio specificato',
+                    scadenza: it.rawDate || it.dateISO || todayISO
                 });
             }
         }
     });
+
     if (todayCompiti.length === 0) {
         todayCompiti = [
             {
                 id: 'demo_task_1',
                 materia: 'Fisica',
-                compito: 'Esercizi pag. 142 n. 14, 15, 18 su campo magnetico, induzione e legge di Faraday.',
+                compito: 'Esercizi pag. 142 n. 14, 15, 18 su campo magnetico, induzione e legge di Faraday. Preparare relazione per laboratorio.',
                 scadenza: todayISO
             }
         ];
@@ -3975,22 +4015,27 @@ window.getTodayRewindSlides = function() {
                             </span>
                         </div>
 
-                        <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64d2ff;margin-bottom:4px;">
-                            ${escapeHtml(c.materia || 'Materia')}
+                        <div style="font-size:11.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64d2ff;margin-bottom:4px;">
+                            MATERIA
                         </div>
-                        <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
-                            ${escapeHtml(c.materia || 'Attività')}
+                        <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.2;margin:0 0 16px;letter-spacing:-0.02em;">
+                            ${escapeHtml(c.materia || 'Compito Assegnato')}
                         </h2>
 
-                        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
-                            <p style="font-size:14.5px;color:rgba(255,255,255,0.95);line-height:1.5;margin:0;">
+                        <!-- Card Contenuto Compito (Liquid Glass) -->
+                        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:16px 18px;margin-bottom:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);">
+                            <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.6);margin-bottom:8px;">
+                                <i class="ph-bold ph-note-pencil" style="color:#2997ff;font-size:13px;"></i>
+                                <span>Contenuto del Compito</span>
+                            </div>
+                            <p style="font-size:15px;color:#ffffff;line-height:1.55;margin:0;font-weight:500;word-break:break-word;max-height:180px;overflow-y:auto;">
                                 ${escapeHtml(c.compito || 'Nessun dettaglio specificato')}
                             </p>
                         </div>
 
-                        <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7);font-size:12.5px;font-weight:600;">
-                            <i class="ph-bold ph-calendar-check" style="color:#2997ff;"></i>
-                            <span>Scadenza: ${escapeHtml(c.scadenza || todayISO)}</span>
+                        <div style="display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.75);font-size:12.5px;font-weight:600;">
+                            <i class="ph-bold ph-calendar-check" style="color:#2997ff;font-size:15px;"></i>
+                            <span>Scadenza: <strong style="color:#ffffff;">${escapeHtml(c.scadenza || todayISO)}</strong></span>
                         </div>
                     </div>
 
@@ -4271,6 +4316,14 @@ window._renderRewindFrame = function(slideIdx) {
     if (!currentSlide) return;
 
     const slideCount = slides.length;
+
+    // Se l'utente raggiunge l'ultima novità/notifica, contrassegna tutto come visualizzato
+    if (slideIdx === slideCount - 1) {
+        if (typeof window.markTodayRewindSeen === 'function') {
+            window.markTodayRewindSeen();
+        }
+    }
+
     const progressSegmentsHtml = slides.map((s, idx) => {
         let barInner = '';
         if (idx < slideIdx) {
@@ -4347,12 +4400,6 @@ window._renderRewindFrame = function(slideIdx) {
             <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 12; display: flex; align-items: center; justify-content: center;">
                 ${currentSlide.renderHtml ? currentSlide.renderHtml() : ''}
             </div>
-        </div>
-
-        <!-- Bottom Gesture Hint -->
-        <div style="display: flex; justify-content: center; align-items: center; gap: 6px; padding-top: 10px; color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 600; flex-shrink: 0;">
-            <i class="ph-bold ph-caret-double-down" style="font-size: 12px;"></i>
-            <span>Tocca a destra/sinistra • Trascina in basso per chiudere</span>
         </div>
     </div>`;
 };
@@ -4437,7 +4484,10 @@ window.rewindNextSlide = function(force = false) {
         window._renderRewindFrame(window._rewindState.currentIndex);
         window._startRewindSlideTimer();
     } else {
-        // Fine delle novità odierne: chiude naturalmente
+        // Fine delle novità odierne: chiude naturalmente e segna come visualizzato
+        if (typeof window.markTodayRewindSeen === 'function') {
+            window.markTodayRewindSeen();
+        }
         window.closeTodayRewind();
     }
 };

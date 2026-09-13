@@ -314,6 +314,24 @@
     }
 }
 
+@keyframes notificationAuraBreath {
+    0%, 100% {
+        opacity: 0.60;
+        transform: scale(0.96);
+        filter: blur(8px);
+    }
+    50% {
+        opacity: 0.95;
+        transform: scale(1.16);
+        filter: blur(14px);
+    }
+}
+
+.notification-aura-glow {
+    animation: notificationAuraBreath 2.6s ease-in-out infinite;
+}
+
+
 #today-rewind-viewer-overlay {
     position: fixed !important;
     inset: 0 !important;
