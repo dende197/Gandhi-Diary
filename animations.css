@@ -303,5 +303,17 @@
     animation: rewindSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes pwaStoryHaloPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 2px rgba(41, 151, 255, 0.55), 0 0 16px rgba(41, 151, 255, 0.75), 0 0 30px rgba(0, 210, 255, 0.45), 0 0 45px rgba(99, 102, 241, 0.3);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(100, 210, 255, 0.85), 0 0 24px rgba(41, 151, 255, 0.95), 0 0 42px rgba(0, 210, 255, 0.7), 0 0 60px rgba(99, 102, 241, 0.45);
+        transform: scale(1.04);
+    }
+}
+
+
 
 

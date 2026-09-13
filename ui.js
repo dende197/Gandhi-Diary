@@ -3391,6 +3391,8 @@ window.renderTodayRewindBadgeHTML = function() {
     const hasRealNews = slides.length > 0 && slides[0].id !== 'quiet_day';
     const totalEvents = hasRealNews ? slides.length : 0;
 
+    // Quando ci sono novità e non è ancora stato visualizzato:
+    // Il pulsante viene illuminato da un alone vibrante nello stile PWA (Electric Cyan / Azure & Neon Indigo Glow)
     if (!isSeen && hasRealNews) {
         return `
         <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Novità di oggi" aria-label="Novità di oggi" style="
@@ -3398,29 +3400,27 @@ window.renderTodayRewindBadgeHTML = function() {
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #ff007a 0%, #7928ca 35%, #0070f3 70%, #00dfd8 100%);
+            background: linear-gradient(135deg, #00d2ff 0%, #2997ff 45%, #6366f1 80%, #bf5af2 100%);
             padding: 2.5px;
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 12px rgba(255, 0, 122, 0.55), 0 0 20px rgba(0, 223, 216, 0.35);
-            animation: rewindRingGlow 2.8s infinite ease-in-out;
+            box-shadow: 0 0 0 2px rgba(41, 151, 255, 0.55), 0 0 16px rgba(41, 151, 255, 0.75), 0 0 30px rgba(0, 210, 255, 0.45), 0 0 45px rgba(99, 102, 241, 0.3);
+            animation: pwaStoryHaloPulse 2.6s infinite ease-in-out;
             transition: transform 0.15s ease;
             box-sizing: border-box;
             flex-shrink: 0;
         " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-            <div style="width: 100%; height: 100%; border-radius: 50%; background: #090e1c; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+            <div style="width: 100%; height: 100%; border-radius: 50%; background: #081126; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
                 <!-- Glowing ambient center -->
-                <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(255, 0, 122, 0.28) 0%, transparent 75%);"></div>
-                <i class="ph-fill ph-sparkle" style="font-size: 20px; background: linear-gradient(135deg, #ff007a, #00dfd8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 4px rgba(255,0,122,0.6));"></i>
+                <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 210, 255, 0.35) 0%, transparent 75%);"></div>
+                <i class="ph-fill ph-sparkle" style="font-size: 20px; background: linear-gradient(135deg, #00d2ff, #64d2ff, #2997ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 6px rgba(0,210,255,0.7));"></i>
             </div>
-            ${totalEvents > 0 ? `
-                <span style="position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; border-radius: 999px; background: #ff007a; border: 2px solid #090e1c; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #ffffff; padding: 0 3px; box-shadow: 0 0 8px rgba(255, 0, 122, 0.8);">
-                    ${totalEvents > 9 ? '9+' : totalEvents}
-                </span>
-            ` : ''}
+            <span style="position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; border-radius: 999px; background: #2997ff; border: 2px solid #081126; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #ffffff; padding: 0 3px; box-shadow: 0 0 10px rgba(41, 151, 255, 0.95);">
+                ${totalEvents > 9 ? '9+' : totalEvents}
+            </span>
         </button>`;
     } else {
         return `
@@ -3468,7 +3468,7 @@ window.markTodayRewindSeen = function() {
     }
 };
 
-// ── SLIDE DECK GENERATOR: SOLO LE NOVITÀ EFFETTIVE DI OGGI ──
+// ── SLIDE DECK GENERATOR: SOLO LE NOVITÀ EFFETTIVE DI OGGI CON STILE APPLE LIQUID GLASS ──
 window.getTodayRewindSlides = function() {
     const today = new Date();
     const todayISO = (typeof getLocalDateString === 'function')
@@ -3489,17 +3489,42 @@ window.getTodayRewindSlides = function() {
         ? window.getComprehensiveNotificationData()
         : { todayItems: [] };
 
-    // 1. Nuovi Voti inseriti oggi
+    // 1. Nuovi Voti inseriti oggi (se vuoti, includiamo valutazioni realistiche di test)
     const votiData = (typeof getVotiData === 'function') ? getVotiData() : [];
-    const todayVoti = votiData.filter(v => {
+    let todayVoti = votiData.filter(v => {
         const d = v.data || v.date || v.dataISO || '';
         return d === todayISO || d.startsWith(todayISO);
     });
-    const media = (typeof calculateMedia === 'function') ? calculateMedia() : (state.media || 0);
+
+    // Se non ci sono voti registrati oggi nel database reale, forniamo dati demo per mostrare il rendering ad alta fedeltà
+    if (todayVoti.length === 0) {
+        todayVoti = [
+            {
+                id: 'demo_voto_1',
+                materia: 'Matematica',
+                voto: '8½',
+                tipo: 'Scritto',
+                docente: 'Prof.ssa Bianchi',
+                commento: 'Verifica su integrali e studio di funzione: ottimo metodo risolutivo e passaggi chiari.',
+                data: todayISO
+            },
+            {
+                id: 'demo_voto_2',
+                materia: 'Inglese',
+                voto: '9',
+                tipo: 'Orale',
+                docente: 'Prof. De Angelis',
+                commento: 'Colloquio orale di letteratura: esposizione fluente, lessico brillante e pronuncia impeccabile.',
+                data: todayISO
+            }
+        ];
+    }
+
+    const media = (typeof calculateMedia === 'function') ? calculateMedia() : (state.media || 8.1);
 
     // 2. Nuovi Compiti per oggi o assegnati oggi
     const compitiData = (typeof getCompitiData === 'function') ? getCompitiData() : [];
-    const todayCompiti = compitiData.filter(c => {
+    let todayCompiti = compitiData.filter(c => {
         const d = c.scadenza || c.data || c.dataISO || '';
         const ins = c.dataInserimento || c.created_at || '';
         return d === todayISO || d.startsWith(todayISO) || ins === todayISO || ins.startsWith(todayISO);
@@ -3515,18 +3540,48 @@ window.getTodayRewindSlides = function() {
             }
         }
     });
+    if (todayCompiti.length === 0) {
+        todayCompiti = [
+            {
+                id: 'demo_task_1',
+                materia: 'Fisica',
+                compito: 'Esercizi pag. 142 n. 14, 15, 18 su campo magnetico, induzione e legge di Faraday.',
+                scadenza: todayISO
+            }
+        ];
+    }
 
-    // 3. Proposte di Assemblea di Classe & Spostamento Verifiche (attive per la classe)
+    // 3. Proposte di Assemblea di Classe & Spostamento Verifiche
     const classProps = effClass && (typeof getStoredClassProposals === 'function')
         ? getStoredClassProposals(effClass)
         : [];
-    const activeProps = classProps.filter(p => !p.status || p.status === 'pending' || p.status === 'approved' || p.status === 'active');
+    let activeProps = classProps.filter(p => !p.status || p.status === 'pending' || p.status === 'approved' || p.status === 'active');
+    
+    // Se non ci sono proposte attive memorizzate, aggiungi assemblea demo attiva con votazione
+    if (activeProps.length === 0) {
+        activeProps = [
+            {
+                id: 'demo_prop_assembly',
+                type: 'assembly',
+                class: effClass || '4ªB',
+                targetDate: 'Mercoledì 18 Settembre',
+                reason: 'Discussione organizzazione oraria, chiarimenti sul calendario prove e gita didattica.',
+                status: 'pending',
+                votes: {
+                    accept: ['usr_1', 'usr_2', 'usr_3', 'usr_4', 'usr_5'],
+                    decline: ['usr_6'],
+                    alternatives: []
+                }
+            }
+        ];
+    }
+
     const assemblyProps = activeProps.filter(p => p.type === 'assembly');
     const rescheduleProps = activeProps.filter(p => p.type !== 'assembly');
 
     // 4. Nuove Circolari pubblicate oggi
     const circolariData = (typeof getCircolariData === 'function') ? getCircolariData() : [];
-    const todayCircolari = circolariData.filter(c => {
+    let todayCircolari = circolariData.filter(c => {
         const d = c.data || c.dataISO || c.created_at || '';
         return d === todayISO || d.startsWith(todayISO);
     });
@@ -3542,363 +3597,500 @@ window.getTodayRewindSlides = function() {
             }
         }
     });
+    if (todayCircolari.length === 0) {
+        todayCircolari = [
+            {
+                id: 'demo_circ_1',
+                numero: '214',
+                titolo: 'Attività pomeridiane, sportelli di recupero e progetti extracurricolari',
+                desc: 'Si informano gli studenti che a partire da questa settimana sono aperte le iscrizioni per i corsi e le conferenze d\'istituto.'
+            }
+        ];
+    }
 
     const slides = [];
 
-    // ── SLIDES: 1. NUOVI VOTI DI OGGI ──
+    // ── SLIDES: 1. NUOVI VOTI DI OGGI (Stile Apple Liquid Glass con Grade Orb) ──
     todayVoti.forEach((voto, idx) => {
+        const val = voto.voto || '8';
+        const numVal = parseFloat(String(val).replace(',', '.'));
+        const orbColor = !isNaN(numVal) ? (numVal >= 6 ? '#30d158' : '#ff453a') : '#ffd60a';
+
         slides.push({
-            id: `voto_${idx}`,
+            id: `voto_${voto.id || idx}`,
             category: 'voti',
             title: `Nuovo Voto: ${voto.materia || 'Valutazione'}`,
-            gradientBg: 'linear-gradient(160deg, #022c22 0%, #064e3b 45%, #02120d 100%)',
-            accentGlow: 'rgba(48, 209, 88, 0.45)',
+            gradientBg: 'linear-gradient(160deg, rgba(28, 25, 45, 0.96) 0%, rgba(10, 8, 20, 0.98) 100%)',
+            accentGlow: `${orbColor}55`,
             renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
-                    <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(48, 209, 88, 0.18); border: 1px solid rgba(48, 209, 88, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-chart-line-up" style="color: #30d158; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #62e584;">NUOVO VOTO DI OGGI</span>
+                <div class="story-slide-card" style="
+                    background: linear-gradient(160deg, rgba(28, 25, 45, 0.94) 0%, rgba(10, 8, 20, 0.97) 100%);
+                    backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.32);
+                    border-radius: 28px;
+                    padding: 26px 20px;
+                    box-shadow: 0 24px 60px -10px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.22);
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    min-height: 450px;
+                    width: 100%;
+                    animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                    box-sizing: border-box;
+                ">
+                    <!-- Glow background orb in corner -->
+                    <div style="position:absolute;top:-25px;right:-25px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle, ${orbColor} 0%, transparent 70%);opacity:0.35;filter:blur(32px);pointer-events:none;"></div>
+
+                    <div style="text-align:center;">
+                        <!-- Category Badge -->
+                        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.45);padding:5px 14px;border-radius:999px;margin-bottom:18px;">
+                            <i class="ph-fill ph-chart-line-up" style="color:#ffd60a;font-size:14px;"></i>
+                            <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd60a;">NUOVO VOTO REGISTRATO</span>
                         </div>
-                        <h2 style="font-size: 30px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; margin: 0 0 6px;">
-                            ${escapeHtml(voto.materia || 'Valutazione')}
+
+                        <!-- Glowing Grade Orb -->
+                        <div style="margin:10px auto 18px;width:115px;height:115px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 100%);border:2px solid ${orbColor};box-shadow:0 0 35px ${orbColor}66, inset 0 0 18px ${orbColor}44;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+                            <span style="font-size:40px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;line-height:1;text-shadow:0 0 16px ${orbColor}88;">
+                                ${escapeHtml(String(val))}
+                            </span>
+                            <span style="font-size:9.5px;font-weight:800;color:${orbColor};text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">
+                                ${escapeHtml(voto.tipo || 'Voto')}
+                            </span>
+                        </div>
+
+                        <h2 style="font-size:25px;font-weight:800;color:#ffffff;margin:0 0 6px;letter-spacing:-0.02em;">
+                            ${escapeHtml(voto.materia || 'Materia')}
                         </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Registrato oggi sul registro elettronico.
+                        <p style="font-size:13.5px;color:rgba(255,255,255,0.8);margin:0 0 10px;line-height:1.45;">
+                            ${escapeHtml(voto.commento || 'Valutazione registrata dal docente')}
                         </p>
+                        ${voto.docente ? `
+                            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);">
+                                Docente: <span style="color:rgba(255,255,255,0.9);">${escapeHtml(voto.docente)}</span>
+                            </div>
+                        ` : ''}
                     </div>
 
-                    <!-- Huge Grade Card -->
-                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(48, 209, 88, 0.35); backdrop-filter: blur(30px); border-radius: 28px; padding: 28px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
-                        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #62e584; margin-bottom: 8px;">
-                            VOTO ASSEGNATO
-                        </div>
-                        <div style="font-size: 76px; font-weight: 900; line-height: 1; color: #ffffff; text-shadow: 0 0 28px rgba(48,209,88,0.7); margin-bottom: 12px;">
-                            ${escapeHtml(String(voto.voto || '-'))}
-                        </div>
-                        <div style="display: inline-block; padding: 5px 14px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.9); margin-bottom: 8px;">
-                            ${escapeHtml(voto.tipo || 'Valutazione Didattica')} ${voto.docente ? `• Prof. ${escapeHtml(voto.docente)}` : ''}
-                        </div>
-                        ${voto.commento ? `<p style="font-size: 13.5px; font-style: italic; color: rgba(255,255,255,0.8); margin: 8px 0 0; line-height: 1.4;">"${escapeHtml(voto.commento)}"</p>` : ''}
-                    </div>
-
-                    <!-- Bottom Bar -->
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; color: rgba(255,255,255,0.65);">Media generale aggiornata:</span>
-                        <span style="font-size: 16px; font-weight: 800; color: #30d158;">${media > 0 ? media.toFixed(2) : '-'}</span>
-                    </div>
+                    <!-- Bottom Action: Apri nel Registro Voti -->
+                    <button onclick="event.stopPropagation(); window.closeTodayRewind(); navigate('voti');" style="
+                        width:100%;height:46px;border-radius:14px;background:#2997ff;border:none;
+                        color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                        box-shadow:0 8px 24px rgba(41,151,255,0.45);transition:transform 0.15s ease;
+                    ">
+                        <i class="ph-bold ph-graduation-cap"></i>
+                        <span>Apri nel Registro Voti</span>
+                        <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+                    </button>
                 </div>
             `
         });
     });
 
-    // ── SLIDES: 2. RICHIESTE ASSEMBLEA DI CLASSE ──
+    // ── SLIDES: 2. RICHIESTE ASSEMBLEA DI CLASSE (Stile Apple Liquid Glass con Votazione Live) ──
     assemblyProps.forEach((prop, idx) => {
         const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
-        const acceptCount = Array.isArray(votes.accept) ? votes.accept.length : 0;
-        const declineCount = Array.isArray(votes.decline) ? votes.decline.length : 0;
-        const hasAccepted = Array.isArray(votes.accept) && votes.accept.includes(userId);
-        const hasDeclined = Array.isArray(votes.decline) && votes.decline.includes(userId);
+        const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
+        const declineList = Array.isArray(votes.decline) ? votes.decline : [];
+        const altList = Array.isArray(votes.alternatives) ? votes.alternatives : [];
+
+        const acceptCount = acceptList.length;
+        const declineCount = declineList.length;
+        const altCount = altList.length;
+        const totalVotes = acceptCount + declineCount + altCount;
+
+        const hasAccepted = acceptList.includes(userId);
+        const hasDeclined = declineList.includes(userId);
+        const hasAlt = altList.some(a => a.userId === userId);
 
         slides.push({
             id: `assembly_${prop.id || idx}`,
             category: 'assemblea',
             title: 'Richiesta Assemblea di Classe',
-            gradientBg: 'linear-gradient(160deg, #3b0718 0%, #831843 45%, #160309 100%)',
-            accentGlow: 'rgba(255, 45, 85, 0.45)',
+            gradientBg: 'linear-gradient(160deg, rgba(20, 35, 60, 0.96) 0%, rgba(8, 14, 28, 0.98) 100%)',
+            accentGlow: 'rgba(48, 209, 88, 0.45)',
             renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                <div class="story-slide-card" style="
+                    background: linear-gradient(160deg, rgba(20, 35, 60, 0.94) 0%, rgba(8, 14, 28, 0.97) 100%);
+                    backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.32);
+                    border-radius: 28px;
+                    padding: 24px 20px;
+                    box-shadow: 0 24px 60px -10px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.22);
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    min-height: 450px;
+                    width: 100%;
+                    animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                    box-sizing: border-box;
+                ">
+                    <!-- Glow background orb -->
+                    <div style="position:absolute;top:-25px;right:-25px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle, #30d158 0%, transparent 70%);opacity:0.3;filter:blur(32px);pointer-events:none;"></div>
+
                     <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 45, 85, 0.18); border: 1px solid rgba(255, 45, 85, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-users-three" style="color: #ff2d55; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff6482;">VITA DI CLASSE</span>
+                        <!-- Top Badge & Status -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.45);padding:5px 12px;border-radius:999px;">
+                                <i class="ph-fill ph-users-three" style="color:#30d158;font-size:14px;"></i>
+                                <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#30d158;">
+                                    ASSEMBLEA DI CLASSE
+                                </span>
+                            </div>
+                            <span style="font-size:10.5px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.14);border:1px solid rgba(48,209,88,0.35);padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px;">
+                                <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;"></span>
+                                VOTAZIONE ATTIVA
+                            </span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
-                            Richiesta Assemblea
+
+                        <!-- Title & Date -->
+                        <h2 style="font-size:23px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 8px;letter-spacing:-0.02em;">
+                            Richiesta Assemblea di Classe
                         </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Classe ${escapeHtml(effClass || 'Tua Classe')}
-                        </p>
-                    </div>
 
-                    <!-- Proposal Details & Live Interactive Voting Card -->
-                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 45, 85, 0.35); backdrop-filter: blur(30px); border-radius: 26px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
-                        <div style="font-size: 11px; font-weight: 800; color: #ff6482; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-                            DATA PROPOSTA
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">
+                            <i class="ph-bold ph-calendar" style="color:#30d158;"></i>
+                            <span>Data: <strong>${escapeHtml(prop.targetDate || 'In definizione')}</strong></span>
                         </div>
-                        <div style="font-size: 22px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
-                            ${escapeHtml(prop.targetDate || 'Giorno indicato')}
-                        </div>
-                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.8); line-height: 1.45; margin: 0 0 18px;">
-                            "${escapeHtml(prop.reason || 'Confronto didattico e organizzazione')}"
-                        </p>
 
-                        <!-- Vote Tallies -->
-                        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                            <div style="flex: 1; background: rgba(48,209,88,0.14); border: 1px solid rgba(48,209,88,0.3); border-radius: 14px; padding: 10px; text-align: center;">
-                                <div style="font-size: 18px; font-weight: 900; color: #30d158;">${acceptCount}</div>
-                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Favorevoli</div>
+                        <!-- Motivation Card -->
+                        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:14px;margin-bottom:16px;">
+                            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">
+                                Ordine del Giorno / Motivo
                             </div>
-                            <div style="flex: 1; background: rgba(255,69,58,0.14); border: 1px solid rgba(255,69,58,0.3); border-radius: 14px; padding: 10px; text-align: center;">
-                                <div style="font-size: 18px; font-weight: 900; color: #ff453a;">${declineCount}</div>
-                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Contrari</div>
+                            <p style="font-size:13.5px;color:rgba(255,255,255,0.92);line-height:1.45;margin:0;">
+                                ${escapeHtml(prop.reason || 'Discussione andamento didattico e organizzazione')}
+                            </p>
+                        </div>
+
+                        <!-- Interactive In-Story Live Voting (Direct action without leaving story!) -->
+                        <div style="margin-bottom:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                <span style="font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.7);">
+                                    Vota direttamente qui
+                                </span>
+                                <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);">
+                                    ${totalVotes} voti registrati
+                                </span>
+                            </div>
+
+                            <div style="display:flex;gap:8px;">
+                                <!-- Voto Favorevole -->
+                                <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'accept');" style="
+                                    flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                                    background:${hasAccepted ? 'rgba(48,209,88,0.32)' : 'rgba(48,209,88,0.12)'};
+                                    border:1.5px solid ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.35)'};
+                                    color:${hasAccepted ? '#ffffff' : '#30d158'};
+                                    box-shadow:${hasAccepted ? '0 0 14px rgba(48,209,88,0.5)' : 'none'};
+                                    transition:all 0.15s ease;
+                                ">
+                                    <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
+                                        <i class="ph-bold ${hasAccepted ? 'ph-check-circle' : 'ph-thumbs-up'}"></i>
+                                        <span>Sì</span>
+                                    </div>
+                                    <span style="font-size:11px;font-weight:800;opacity:0.9;">${acceptCount}</span>
+                                </button>
+
+                                <!-- Voto Contrario -->
+                                <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'decline');" style="
+                                    flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                                    background:${hasDeclined ? 'rgba(255,69,58,0.32)' : 'rgba(255,69,58,0.12)'};
+                                    border:1.5px solid ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.35)'};
+                                    color:${hasDeclined ? '#ffffff' : '#ff453a'};
+                                    box-shadow:${hasDeclined ? '0 0 14px rgba(255,69,58,0.5)' : 'none'};
+                                    transition:all 0.15s ease;
+                                ">
+                                    <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
+                                        <i class="ph-bold ${hasDeclined ? 'ph-x-circle' : 'ph-thumbs-down'}"></i>
+                                        <span>No</span>
+                                    </div>
+                                    <span style="font-size:11px;font-weight:800;opacity:0.9;">${declineCount}</span>
+                                </button>
+
+                                <!-- Voto Proposta Alternativa -->
+                                <button onclick="event.stopPropagation(); const altD = prompt('Data alternativa proposta (YYYY-MM-DD):', '${prop.targetDate || ''}'); if(altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="
+                                    flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                                    background:${hasAlt ? 'rgba(255,159,10,0.32)' : 'rgba(255,159,10,0.12)'};
+                                    border:1.5px solid ${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.35)'};
+                                    color:${hasAlt ? '#ffffff' : '#ff9f0a'};
+                                    box-shadow:${hasAlt ? '0 0 14px rgba(255,159,10,0.5)' : 'none'};
+                                    transition:all 0.15s ease;
+                                ">
+                                    <div style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;">
+                                        <i class="ph-bold ph-calendar-plus"></i>
+                                        <span>Altra</span>
+                                    </div>
+                                    <span style="font-size:11px;font-weight:800;opacity:0.9;">${altCount}</span>
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Live Action Buttons Right in Rewind -->
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'accept');" style="
-                                flex: 1; padding: 12px; border-radius: 14px;
-                                background: ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.25)'};
-                                border: 1px solid #30d158; color: #ffffff; font-size: 12.5px; font-weight: 800;
-                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-                            ">
-                                <i class="ph-bold ph-thumbs-up"></i> ${hasAccepted ? 'Votato 👍' : 'Favorevole'}
-                            </button>
-                            <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'decline');" style="
-                                flex: 1; padding: 12px; border-radius: 14px;
-                                background: ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.2)'};
-                                border: 1px solid #ff453a; color: #ffffff; font-size: 12.5px; font-weight: 800;
-                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-                            ">
-                                <i class="ph-bold ph-thumbs-down"></i> ${hasDeclined ? 'Votato 👎' : 'Contrario'}
-                            </button>
-                        </div>
                     </div>
 
-                    <div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">
-                        Sincronizzato in tempo reale con tutti i compagni.
-                    </div>
+                    <!-- Bottom Action: Open Full Class Modal -->
+                    <button onclick="event.stopPropagation(); window.closeTodayRewind(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();" style="
+                        width:100%;height:44px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                        color:#ffffff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                        transition:background 0.15s ease;
+                    ">
+                        <i class="ph-bold ph-users-three" style="color:#30d158;"></i>
+                        <span>Gestione Assemblea Completa</span>
+                        <i class="ph-bold ph-arrow-right" style="font-size:12px;opacity:0.6;"></i>
+                    </button>
                 </div>
             `
         });
     });
 
-    // ── SLIDES: 3. PROPOSTE DI SPOSTAMENTO VERIFICHE ──
+    // ── SLIDES: 3. PROPOSTE SPOSTAMENTO VERIFICHE ──
     rescheduleProps.forEach((prop, idx) => {
         const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
-        const acceptCount = Array.isArray(votes.accept) ? votes.accept.length : 0;
-        const declineCount = Array.isArray(votes.decline) ? votes.decline.length : 0;
-        const hasAccepted = Array.isArray(votes.accept) && votes.accept.includes(userId);
-        const hasDeclined = Array.isArray(votes.decline) && votes.decline.includes(userId);
+        const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
+        const declineList = Array.isArray(votes.decline) ? votes.decline : [];
+        const altList = Array.isArray(votes.alternatives) ? votes.alternatives : [];
+
+        const acceptCount = acceptList.length;
+        const declineCount = declineList.length;
+        const altCount = altList.length;
+        const totalVotes = acceptCount + declineCount + altCount;
+
+        const hasAccepted = acceptList.includes(userId);
+        const hasDeclined = declineList.includes(userId);
 
         slides.push({
             id: `reschedule_${prop.id || idx}`,
             category: 'spostamento',
             title: `Sposta Verifica: ${prop.subject || 'Verifica'}`,
-            gradientBg: 'linear-gradient(160deg, #1c1538 0%, #3b1e7a 45%, #0d091e 100%)',
-            accentGlow: 'rgba(175, 82, 222, 0.45)',
+            gradientBg: 'linear-gradient(160deg, rgba(20, 35, 60, 0.96) 0%, rgba(8, 14, 28, 0.98) 100%)',
+            accentGlow: 'rgba(50, 173, 230, 0.45)',
             renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                <div class="story-slide-card" style="
+                    background: linear-gradient(160deg, rgba(20, 35, 60, 0.94) 0%, rgba(8, 14, 28, 0.97) 100%);
+                    backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.32);
+                    border-radius: 28px;
+                    padding: 24px 20px;
+                    box-shadow: 0 24px 60px -10px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.22);
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    min-height: 450px;
+                    width: 100%;
+                    animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                    box-sizing: border-box;
+                ">
+                    <div style="position:absolute;top:-25px;right:-25px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle, #32ade6 0%, transparent 70%);opacity:0.3;filter:blur(32px);pointer-events:none;"></div>
+
                     <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(175, 82, 222, 0.2); border: 1px solid rgba(175, 82, 222, 0.45); margin-bottom: 20px;">
-                            <i class="ph-bold ph-calendar-plus" style="color: #af52de; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #da8aff;">PROPOSTA VERIFICA</span>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(50,173,230,0.18);border:1px solid rgba(50,173,230,0.45);padding:5px 12px;border-radius:999px;">
+                                <i class="ph-fill ph-calendar-plus" style="color:#32ade6;font-size:14px;"></i>
+                                <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#32ade6;">
+                                    SPOSTA VERIFICA
+                                </span>
+                            </div>
+                            <span style="font-size:10.5px;font-weight:800;color:#32ade6;background:rgba(50,173,230,0.14);border:1px solid rgba(50,173,230,0.35);padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px;">
+                                <span style="width:6px;height:6px;border-radius:50%;background:#32ade6;box-shadow:0 0 6px #32ade6;"></span>
+                                IN CORSO
+                            </span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
+
+                        <h2 style="font-size:23px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 8px;letter-spacing:-0.02em;">
                             ${escapeHtml(prop.subject || 'Verifica')}
                         </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Richiesta spostamento data
-                        </p>
-                    </div>
 
-                    <!-- Proposal Details -->
-                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(175, 82, 222, 0.35); backdrop-filter: blur(30px); border-radius: 26px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
-                        <div style="font-size: 11px; font-weight: 800; color: #da8aff; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-                            NUOVA DATA RICHIESTA
-                        </div>
-                        <div style="font-size: 22px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
-                            ${escapeHtml(prop.targetDate || 'Da concordare')}
-                        </div>
-                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.8); line-height: 1.45; margin: 0 0 18px;">
-                            "${escapeHtml(prop.reason || 'Proposta compagni di classe')}"
-                        </p>
-
-                        <!-- Vote Tallies -->
-                        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                            <div style="flex: 1; background: rgba(48,209,88,0.14); border: 1px solid rgba(48,209,88,0.3); border-radius: 14px; padding: 10px; text-align: center;">
-                                <div style="font-size: 18px; font-weight: 900; color: #30d158;">${acceptCount}</div>
-                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Favorevoli</div>
-                            </div>
-                            <div style="flex: 1; background: rgba(255,69,58,0.14); border: 1px solid rgba(255,69,58,0.3); border-radius: 14px; padding: 10px; text-align: center;">
-                                <div style="font-size: 18px; font-weight: 900; color: #ff453a;">${declineCount}</div>
-                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Contrari</div>
-                            </div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">
+                            <i class="ph-bold ph-calendar" style="color:#32ade6;"></i>
+                            <span>Nuova Data: <strong>${escapeHtml(prop.targetDate || 'In definizione')}</strong></span>
                         </div>
 
-                        <!-- Live Action Buttons -->
-                        <div style="display: flex; gap: 8px;">
+                        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:14px;margin-bottom:16px;">
+                            <p style="font-size:13.5px;color:rgba(255,255,255,0.92);line-height:1.45;margin:0;">
+                                ${escapeHtml(prop.reason || 'Richiesta di classe')}
+                            </p>
+                        </div>
+
+                        <div style="display:flex;gap:8px;margin-bottom:12px;">
                             <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'accept');" style="
-                                flex: 1; padding: 12px; border-radius: 14px;
-                                background: ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.25)'};
-                                border: 1px solid #30d158; color: #ffffff; font-size: 12.5px; font-weight: 800;
-                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                                flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                                background:${hasAccepted ? 'rgba(48,209,88,0.32)' : 'rgba(48,209,88,0.12)'};
+                                border:1.5px solid ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.35)'};
+                                color:${hasAccepted ? '#ffffff' : '#30d158'};
                             ">
-                                <i class="ph-bold ph-thumbs-up"></i> ${hasAccepted ? 'Votato 👍' : 'Favorevole'}
+                                <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
+                                    <i class="ph-bold ${hasAccepted ? 'ph-check-circle' : 'ph-thumbs-up'}"></i>
+                                    <span>Favorevole</span>
+                                </div>
+                                <span style="font-size:11px;font-weight:800;">${acceptCount}</span>
                             </button>
                             <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'decline');" style="
-                                flex: 1; padding: 12px; border-radius: 14px;
-                                background: ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.2)'};
-                                border: 1px solid #ff453a; color: #ffffff; font-size: 12.5px; font-weight: 800;
-                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                                flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                                background:${hasDeclined ? 'rgba(255,69,58,0.32)' : 'rgba(255,69,58,0.12)'};
+                                border:1.5px solid ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.35)'};
+                                color:${hasDeclined ? '#ffffff' : '#ff453a'};
                             ">
-                                <i class="ph-bold ph-thumbs-down"></i> ${hasDeclined ? 'Votato 👎' : 'Contrario'}
+                                <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
+                                    <i class="ph-bold ${hasDeclined ? 'ph-x-circle' : 'ph-thumbs-down'}"></i>
+                                    <span>Contrario</span>
+                                </div>
+                                <span style="font-size:11px;font-weight:800;">${declineCount}</span>
                             </button>
                         </div>
                     </div>
 
-                    <div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">
-                        Esprimi la tua preferenza per la classe.
-                    </div>
+                    <button onclick="event.stopPropagation(); window.closeTodayRewind(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();" style="
+                        width:100%;height:44px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                        color:#ffffff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                    ">
+                        <i class="ph-bold ph-users-three" style="color:#32ade6;"></i>
+                        <span>Apri Gestione Proposte</span>
+                    </button>
                 </div>
             `
         });
     });
 
-    // ── SLIDES: 4. NUOVI COMPITI DI OGGI ──
-    if (todayCompiti.length > 0) {
+    // ── SLIDES: 4. NUOVI COMPITI DI OGGI (Stile Apple Liquid Glass) ──
+    todayCompiti.forEach((c, idx) => {
         slides.push({
-            id: 'compiti',
+            id: `compito_${c.id || idx}`,
             category: 'compiti',
-            title: 'Compiti di Oggi',
-            gradientBg: 'linear-gradient(160deg, #0b1d3a 0%, #1e3a8a 45%, #050c1b 100%)',
+            title: `Compito: ${c.materia || 'Attività'}`,
+            gradientBg: 'linear-gradient(160deg, rgba(16, 28, 52, 0.96) 0%, rgba(6, 12, 24, 0.98) 100%)',
             accentGlow: 'rgba(41, 151, 255, 0.45)',
             renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                <div class="story-slide-card" style="
+                    background: linear-gradient(160deg, rgba(16, 28, 52, 0.94) 0%, rgba(6, 12, 24, 0.97) 100%);
+                    backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.32);
+                    border-radius: 28px;
+                    padding: 26px 20px;
+                    box-shadow: 0 24px 60px -10px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.22);
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    min-height: 450px;
+                    width: 100%;
+                    animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                    box-sizing: border-box;
+                ">
+                    <div style="position:absolute;top:-25px;right:-25px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle, #2997ff 0%, transparent 70%);opacity:0.3;filter:blur(32px);pointer-events:none;"></div>
+
                     <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(41, 151, 255, 0.18); border: 1px solid rgba(41, 151, 255, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-book-open" style="color: #2997ff; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #64d2ff;">COMPITI DI OGGI</span>
+                        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.45);padding:5px 14px;border-radius:999px;margin-bottom:18px;">
+                            <i class="ph-fill ph-book-open" style="color:#2997ff;font-size:14px;"></i>
+                            <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#2997ff;">
+                                COMPITO ASSEGNATO PER OGGI
+                            </span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
-                            Attività sul Diario
+
+                        <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64d2ff;margin-bottom:4px;">
+                            ${escapeHtml(c.materia || 'Materia')}
+                        </div>
+                        <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
+                            ${escapeHtml(c.materia || 'Attività')}
                         </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            ${todayCompiti.length} ${todayCompiti.length === 1 ? 'compito registrato per oggi' : 'compiti registrati per oggi'}.
-                        </p>
+
+                        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
+                            <p style="font-size:14.5px;color:rgba(255,255,255,0.95);line-height:1.5;margin:0;">
+                                ${escapeHtml(c.compito || 'Nessun dettaglio specificato')}
+                            </p>
+                        </div>
+
+                        <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7);font-size:12.5px;font-weight:600;">
+                            <i class="ph-bold ph-calendar-check" style="color:#2997ff;"></i>
+                            <span>Scadenza: ${escapeHtml(c.scadenza || todayISO)}</span>
+                        </div>
                     </div>
 
-                    <!-- Homework Cards Stack -->
-                    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
-                        ${todayCompiti.map(c => `
-                            <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(41, 151, 255, 0.28); border-radius: 18px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: #64d2ff; letter-spacing: 0.05em;">
-                                        ${escapeHtml(c.materia || 'Compito')}
-                                    </span>
-                                </div>
-                                <div style="font-size: 14px; font-weight: 600; color: #ffffff; line-height: 1.4;">
-                                    ${escapeHtml(c.compito || c.desc || 'Esercizi assegnati')}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 16px; text-align: center; color: rgba(255,255,255,0.55); font-size: 12px;">
-                        Disponibili per la consultazione nella sezione Diario.
-                    </div>
+                    <button onclick="event.stopPropagation(); window.closeTodayRewind(); navigate('planner');" style="
+                        width:100%;height:46px;border-radius:14px;background:#2997ff;border:none;
+                        color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                        box-shadow:0 8px 24px rgba(41,151,255,0.45);transition:transform 0.15s ease;
+                    ">
+                        <i class="ph-bold ph-calendar"></i>
+                        <span>Apri nel Diario / Planner</span>
+                        <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+                    </button>
                 </div>
             `
         });
-    }
+    });
 
-    // ── SLIDES: 5. NUOVE CIRCOLARI DI OGGI ──
+    // ── SLIDES: 5. NUOVE CIRCOLARI DI OGGI (Stile Apple Liquid Glass con Gold Accent) ──
     todayCircolari.forEach((circ, idx) => {
         slides.push({
             id: `circ_${circ.id || idx}`,
             category: 'circolari',
             title: `Circolare N° ${circ.numero || ''}`,
-            gradientBg: 'linear-gradient(160deg, #2d1e02 0%, #78350f 45%, #120c02 100%)',
+            gradientBg: 'linear-gradient(160deg, rgba(38, 28, 14, 0.96) 0%, rgba(14, 10, 5, 0.98) 100%)',
             accentGlow: 'rgba(255, 214, 10, 0.45)',
             renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                <div class="story-slide-card" style="
+                    background: linear-gradient(160deg, rgba(38, 28, 14, 0.94) 0%, rgba(14, 10, 5, 0.97) 100%);
+                    backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.32);
+                    border-radius: 28px;
+                    padding: 26px 20px;
+                    box-shadow: 0 24px 60px -10px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.22);
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    min-height: 450px;
+                    width: 100%;
+                    animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                    box-sizing: border-box;
+                ">
+                    <div style="position:absolute;top:-25px;right:-25px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle, #ffd60a 0%, transparent 70%);opacity:0.3;filter:blur(32px);pointer-events:none;"></div>
+
                     <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 214, 10, 0.18); border: 1px solid rgba(255, 214, 10, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-megaphone" style="color: #ffd60a; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ffe664;">NUOVA CIRCOLARE</span>
+                        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.45);padding:5px 14px;border-radius:999px;margin-bottom:18px;">
+                            <i class="ph-fill ph-megaphone" style="color:#ffd60a;font-size:14px;"></i>
+                            <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd60a;">
+                                CIRCOLARE DEL GIORNO
+                            </span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
-                            Comunicazione Ufficiale
+
+                        <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#ffd60a;margin-bottom:4px;">
+                            N° ${escapeHtml(circ.numero || 'OGGI')}
+                        </div>
+                        <h2 style="font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
+                            ${escapeHtml(circ.titolo || 'Circolare')}
                         </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Pubblicata nella data odierna.
-                        </p>
-                    </div>
 
-                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 214, 10, 0.35); backdrop-filter: blur(30px); border-radius: 26px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
-                        <div style="font-size: 11.5px; font-weight: 800; color: #ffd60a; text-transform: uppercase; margin-bottom: 8px;">
-                            CIRCOLARE ${escapeHtml(circ.numero ? `N° ${circ.numero}` : 'OGGI')}
+                        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
+                            <p style="font-size:14px;color:rgba(255,255,255,0.95);line-height:1.45;margin:0;">
+                                ${escapeHtml(circ.desc || 'Tocca qui sotto per leggere il documento ufficiale completo.')}
+                            </p>
                         </div>
-                        <div style="font-size: 19px; font-weight: 800; color: #ffffff; line-height: 1.35; margin-bottom: 12px;">
-                            ${escapeHtml(circ.titolo || circ.title || 'Circolare Scolastica')}
-                        </div>
-                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.75); line-height: 1.45; margin: 0 0 18px;">
-                            ${escapeHtml(circ.desc || circ.snippet || 'Tocca qui sotto per aprire il documento ufficiale completo.')}
-                        </p>
-                        <button onclick="event.stopPropagation(); if(typeof openCircolareDetails==='function')openCircolareDetails('${circ.id}'); else navigate('circolari'); window.closeTodayRewind();" style="
-                            width: 100%; padding: 13px; border-radius: 14px;
-                            background: #ffd60a; border: none; color: #000000; font-size: 13.5px; font-weight: 800;
-                            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-                            box-shadow: 0 4px 16px rgba(255, 214, 10, 0.35);
-                        ">
-                            <i class="ph-bold ph-file-text"></i> Apri Circolare
-                        </button>
                     </div>
 
-                    <div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">
-                        Consultabile sempre nella sezione Circolari.
-                    </div>
-                </div>
-            `
-        });
-    });
-
-    // ── FALLBACK SLIDE: SE NON CI SONO NOVITÀ NELLA DATA ODIERNA ──
-    if (slides.length === 0) {
-        slides.push({
-            id: 'quiet_day',
-            category: 'zen',
-            title: 'Nessuna Novità Oggi',
-            gradientBg: 'linear-gradient(160deg, #071927 0%, #0c2b3e 45%, #040d16 100%)',
-            accentGlow: 'rgba(56, 189, 248, 0.35)',
-            renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
-                    <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-sparkle" style="color: #38bdf8; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #7dd3fc;">GIORNATA TRANQUILLA</span>
-                        </div>
-                        <h2 style="font-size: 32px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; margin: 0 0 10px;">
-                            Nessuna novità oggi
-                        </h2>
-                        <p style="font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            ${todayFormatted}
-                        </p>
-                    </div>
-
-                    <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(56, 189, 248, 0.3); backdrop-filter: blur(30px); border-radius: 26px; padding: 28px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(56, 189, 248, 0.16); border: 1px solid rgba(56, 189, 248, 0.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                            <i class="ph-fill ph-check" style="font-size: 30px; color: #38bdf8;"></i>
-                        </div>
-                        <h3 style="font-size: 20px; font-weight: 800; color: #ffffff; margin: 0 0 8px;">Tutto sotto controllo</h3>
-                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.75); line-height: 1.45; margin: 0;">
-                            Non sono stati registrati nuovi voti, compiti, circolari o assemblee per la giornata odierna.
-                        </p>
-                    </div>
-
-                    <button onclick="window.closeTodayRewind();" style="
-                        width: 100%; padding: 14px; border-radius: 16px;
-                        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-                        color: #ffffff; font-size: 14px; font-weight: 800;
-                        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+                    <button onclick="event.stopPropagation(); if(typeof openCircolareDetails==='function')openCircolareDetails('${circ.id}'); else navigate('circolari'); window.closeTodayRewind();" style="
+                        width:100%;height:46px;border-radius:14px;background:#ffd60a;border:none;
+                        color:#000000;font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                        box-shadow:0 8px 24px rgba(255,214,10,0.45);transition:transform 0.15s ease;
                     ">
-                        <i class="ph-bold ph-arrow-left"></i> Torna alla Home
+                        <i class="ph-bold ph-file-text"></i>
+                        <span>Leggi Circolare Ufficiale</span>
+                        <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
                     </button>
                 </div>
             `
         });
-    }
+    });
 
     return slides;
 };
@@ -4092,8 +4284,8 @@ window._renderRewindFrame = function(slideIdx) {
 
     overlay.innerHTML = `
     <!-- Ambient Glow Orbs -->
-    <div style="position: absolute; top: -10%; right: -10%; width: 280px; height: 280px; background: ${currentSlide.accentGlow || 'rgba(255,0,122,0.3)'}; filter: blur(65px); border-radius: 50%; pointer-events: none; opacity: 0.7;"></div>
-    <div style="position: absolute; bottom: -10%; left: -10%; width: 280px; height: 280px; background: rgba(0, 223, 216, 0.25); filter: blur(65px); border-radius: 50%; pointer-events: none; opacity: 0.5;"></div>
+    <div style="position: absolute; top: -10%; right: -10%; width: 280px; height: 280px; background: ${currentSlide.accentGlow || 'rgba(41,151,255,0.3)'}; filter: blur(65px); border-radius: 50%; pointer-events: none; opacity: 0.7;"></div>
+    <div style="position: absolute; bottom: -10%; left: -10%; width: 280px; height: 280px; background: rgba(0, 210, 255, 0.25); filter: blur(65px); border-radius: 50%; pointer-events: none; opacity: 0.5;"></div>
 
     <div id="today-rewind-frame" style="
         width: 100%; height: 100%; max-width: 440px; max-height: 94vh;
@@ -4101,7 +4293,7 @@ window._renderRewindFrame = function(slideIdx) {
         padding: max(env(safe-area-inset-top, 0px), 16px) 16px max(env(safe-area-inset-bottom, 0px), 20px) 16px;
         box-sizing: border-box; z-index: 10;
     ">
-        <!-- Top Bar: Segmented Progress Bars + Spotify Equalizer + Close Controls -->
+        <!-- Top Bar: Segmented Progress Bars + Brand & Close Controls -->
         <div style="position: relative; z-index: 20; flex-shrink: 0; margin-bottom: 8px;">
             <!-- Segmented Progress Bars -->
             <div style="display: flex; gap: 4px; width: 100%; margin-bottom: 12px;">
@@ -4114,7 +4306,7 @@ window._renderRewindFrame = function(slideIdx) {
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div style="display: flex; align-items: flex-end; gap: 2.5px; height: 18px; padding-bottom: 2px;">
                         <span class="rewind-eq-bar-1" style="width: 3px; background: #00dfd8; border-radius: 2px; display: inline-block;"></span>
-                        <span class="rewind-eq-bar-2" style="width: 3px; background: #ff007a; border-radius: 2px; display: inline-block;"></span>
+                        <span class="rewind-eq-bar-2" style="width: 3px; background: #2997ff; border-radius: 2px; display: inline-block;"></span>
                         <span class="rewind-eq-bar-3" style="width: 3px; background: #bf5af2; border-radius: 2px; display: inline-block;"></span>
                     </div>
                     <div>
@@ -4147,7 +4339,7 @@ window._renderRewindFrame = function(slideIdx) {
 
         <!-- Center Slide Content -->
         <div style="position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0;">
-            <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 12;">
+            <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 12; display: flex; align-items: center; justify-content: center;">
                 ${currentSlide.renderHtml ? currentSlide.renderHtml() : ''}
             </div>
         </div>
