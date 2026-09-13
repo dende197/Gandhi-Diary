@@ -2766,29 +2766,17 @@ function renderHome() {
 
         <div style="padding:0;">
 
-            <!-- HEADER (iOS HIG Large Title): Overview + Notifiche + Avatar -->
+            <!-- HEADER (iOS HIG Large Title): Overview + Rewind Circular Badge + Avatar -->
             <header class="ios-header-wrapper" style="display:flex;justify-content:space-between;align-items:flex-end;padding:max(env(safe-area-inset-top,0px),24px) 20px 14px 20px;">
                 <div>
                     <div class="ios-sub-title" style="color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:0.06em;font-size:11px;">PANORAMICA</div>
                     <h1 class="ios-large-title" style="color:#ffffff;font-weight:800;font-size:32px;letter-spacing:-0.03em;margin:2px 0 0;">Overview</h1>
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <button id="header-notif-btn" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');openTodayNotifications();" style="position:relative;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;color:#ffffff;cursor:pointer;transition:transform 0.15s ease, background 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'" aria-label="Notifiche">
-                        <i class="ph-bold ph-bell" style="font-size:20px;color:#dae2fd;"></i>
-                        ${_homeNotifCount > 0 ? `
-                            <span style="position:absolute;top:5px;right:5px;min-width:16px;height:16px;border-radius:999px;background:#2997ff;border:2px solid #0b1326;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#ffffff;padding:0 3px;box-shadow:0 0 8px rgba(41,151,255,0.8);">
-                                ${_homeNotifCount > 9 ? '9+' : _homeNotifCount}
-                            </span>
-                        ` : ''}
-                    </button>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    ${(typeof window.renderTodayRewindBadgeHTML === 'function') ? window.renderTodayRewindBadgeHTML() : ''}
                     ${avatarHtml}
                 </div>
             </header>
-
-            <!-- ════════ STORIE DEL GIORNO (INSTAGRAM-STYLE TRAY) ════════ -->
-            <div id="overview-stories-tray-container" style="padding: 0 20px; margin-bottom: 14px;">
-                ${(typeof window.renderInstagramStoriesTrayHTML === 'function') ? window.renderInstagramStoriesTrayHTML() : ''}
-            </div>
 
             <div style="margin-bottom: 16px; padding: 0 20px;">
                 <!-- WIDGET PRINCIPALE — Apple Liquid Glass Carousel a 3 Slide -->
@@ -3367,20 +3355,19 @@ window.getComprehensiveNotificationData = function() {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// INSTAGRAM STORIES ENGINE & VIEWER FOR G-CONNECT
-// Storie del Giorno con reset automatico a mezzanotte (00:00)
+// OGGI REWIND & SPOTIFY WRAPPED ENGINE FOR G-CONNECT
+// Badge Circolare con Anello Storia & Recap Giornaliero (Reset 00:00)
 // ═══════════════════════════════════════════════════════════════
 
-window.getTodayStoriesData = function() {
+window.renderTodayRewindBadgeHTML = function() {
     const today = new Date();
     const todayISO = (typeof getLocalDateString === 'function')
         ? getLocalDateString(today)
         : today.toISOString().split('T')[0];
-    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
 
-    // Pulizia chiavi 'seen' dei giorni passati per garantire reset pulito
+    // Pulizia chiavi 'seen' dei giorni passati per garantire reset automatico e pulito a mezzanotte (00:00)
     try {
-        const prefix = 'gc_seen_stories_';
+        const prefix = 'gc_seen_rewind_';
         for (let i = 0; i < localStorage.length; i++) {
             const k = localStorage.key(i);
             if (k && k.startsWith(prefix) && k !== `${prefix}${todayISO}`) {
@@ -3389,839 +3376,628 @@ window.getTodayStoriesData = function() {
         }
     } catch (e) {}
 
-    // Carica storie visualizzate oggi (a 00:00 la data cambia e mappa sarà automaticamente vuota!)
-    let seenMap = {};
+    // Verifica se l'utente ha già visualizzato il Rewind nella data odierna
+    let isSeen = false;
     try {
-        const raw = localStorage.getItem(`gc_seen_stories_${todayISO}`);
-        if (raw) seenMap = JSON.parse(raw);
+        isSeen = localStorage.getItem(`gc_seen_rewind_${todayISO}`) === 'true';
     } catch (e) {
-        seenMap = {};
+        isSeen = false;
     }
 
+    // Recupera eventi attivi di oggi
     const notifData = (typeof window.getComprehensiveNotificationData === 'function')
         ? window.getComprehensiveNotificationData()
-        : { todayItems: [], upcomingItems: [], recentItems: [] };
-
-    // Recupera proposte/assemblee attive per la classe
+        : { todayItems: [] };
+    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
     const classProps = effClass && (typeof getStoredClassProposals === 'function')
         ? getStoredClassProposals(effClass)
         : [];
+    const activeProps = classProps.filter(p => !p.status || p.status === 'pending' || p.status === 'approved' || p.status === 'active');
 
-    const todayItems = [...(notifData.todayItems || [])];
+    const totalEvents = (notifData.todayItems ? notifData.todayItems.length : 0) + activeProps.length;
 
-    // Includi proposte di classe o assemblee attive se non già presenti
-    classProps.forEach(p => {
-        if (p.status === 'pending' || p.status === 'approved' || p.status === 'active' || !p.status) {
-            const exists = todayItems.some(it => it.type === 'proposta' && it.id === p.id);
-            if (!exists) {
-                const isAssembly = p.type === 'assembly';
-                todayItems.unshift({
-                    category: 'proposte',
-                    categoryLabel: isAssembly ? 'Assemblea' : 'Proposta',
-                    type: 'proposta',
-                    id: p.id,
-                    rawProp: p,
-                    title: isAssembly ? 'Richiesta Assemblea di Classe' : `Sposta Verifica: ${p.subject || 'Verifica'}`,
-                    desc: p.reason || (isAssembly ? `Assemblea richiesta per il ${p.targetDate || 'giorno indicato'}` : `Nuova data richiesta: ${p.targetDate || ''}`),
-                    dateISO: p.targetDate || todayISO,
-                    status: p.status || 'pending',
-                    borderAccent: isAssembly ? '#30d158' : '#32ade6',
-                    icon: isAssembly ? 'ph-users-three' : 'ph-calendar-plus',
-                    iconColor: isAssembly ? '#30d158' : '#32ade6',
-                    iconBg: isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(50,173,230,0.16)',
-                    action: null
-                });
-            }
-        }
-    });
-
-    const isQuietDay = todayItems.length === 0;
-    const channels = [];
-
-    // Canale 1: "Tutte le Novità" / "Highlights di Oggi"
-    const allSlides = isQuietDay ? [{
-        id: `zen_${todayISO}`,
-        slideId: `zen_${todayISO}`,
-        type: 'zen',
-        category: 'zen',
-        channelId: 'all',
-        title: 'Giornata Serena',
-        subtitle: 'Nessuna notifica urgente per oggi',
-        desc: 'Tutti i compiti sono in regola e non ci sono verifiche o assemblee previste per oggi. Buon proseguimento!',
-        dateISO: todayISO,
-        accentColor: '#30d158',
-        icon: 'ph-sparkle'
-    }] : todayItems.map((item, idx) => ({
-        ...item,
-        slideId: `slide_${item.type || 'item'}_${item.id || idx}`,
-        channelId: 'all'
-    }));
-
-    const allUnseen = allSlides.some(s => !seenMap[s.slideId || s.id]);
-    channels.push({
-        id: 'all',
-        title: 'Highlights',
-        shortTitle: 'Oggi',
-        icon: 'ph-sparkle',
-        gradient: 'linear-gradient(135deg, #ff2d55 0%, #af52de 50%, #5856d6 100%)',
-        ringColor: '#ff2d55',
-        unseen: allUnseen,
-        slides: allSlides,
-        count: allSlides.length
-    });
-
-    // Canale 2: Assemblea & Proposte di Classe (se presenti)
-    const propItems = todayItems.filter(it => it.category === 'proposte' || it.type === 'proposta');
-    if (propItems.length > 0) {
-        const propSlides = propItems.map((item, idx) => ({
-            ...item,
-            slideId: `prop_${item.id || idx}`,
-            channelId: 'assemblea'
-        }));
-        const unseen = propSlides.some(s => !seenMap[s.slideId || s.id]);
-        channels.push({
-            id: 'assemblea',
-            title: 'Assemblea',
-            shortTitle: 'Assemblea',
-            icon: 'ph-users-three',
-            gradient: 'linear-gradient(135deg, #30d158 0%, #00c7be 100%)',
-            ringColor: '#30d158',
-            unseen,
-            slides: propSlides,
-            count: propSlides.length
-        });
-    }
-
-    // Canale 3: Voti e Note (se presenti oggi)
-    const votiItems = todayItems.filter(it => it.category === 'voti' || it.type === 'voto' || it.type === 'nota');
-    if (votiItems.length > 0) {
-        const votiSlides = votiItems.map((item, idx) => ({
-            ...item,
-            slideId: `voto_${item.id || idx}`,
-            channelId: 'voti'
-        }));
-        const unseen = votiSlides.some(s => !seenMap[s.slideId || s.id]);
-        channels.push({
-            id: 'voti',
-            title: 'Nuovi Voti',
-            shortTitle: 'Voti',
-            icon: 'ph-chart-line-up',
-            gradient: 'linear-gradient(135deg, #ffd60a 0%, #ff9f0a 100%)',
-            ringColor: '#ffd60a',
-            unseen,
-            slides: votiSlides,
-            count: votiSlides.length
-        });
-    }
-
-    // Canale 4: Verifiche e Compiti (se presenti oggi)
-    const compitiItems = todayItems.filter(it => it.category === 'compiti' || it.category === 'verifiche' || it.type === 'compito' || it.type === 'verifica');
-    if (compitiItems.length > 0) {
-        const compitiSlides = compitiItems.map((item, idx) => ({
-            ...item,
-            slideId: `compiti_${item.id || idx}`,
-            channelId: 'compiti'
-        }));
-        const unseen = compitiSlides.some(s => !seenMap[s.slideId || s.id]);
-        channels.push({
-            id: 'compiti',
-            title: 'Compiti & Test',
-            shortTitle: 'Compiti',
-            icon: 'ph-book-open',
-            gradient: 'linear-gradient(135deg, #2997ff 0%, #64d2ff 100%)',
-            ringColor: '#2997ff',
-            unseen,
-            slides: compitiSlides,
-            count: compitiSlides.length
-        });
-    }
-
-    // Canale 5: Circolari (se presenti oggi)
-    const circItems = todayItems.filter(it => it.category === 'circolari' || it.type === 'circolare');
-    if (circItems.length > 0) {
-        const circSlides = circItems.map((item, idx) => ({
-            ...item,
-            slideId: `circ_${item.id || idx}`,
-            channelId: 'circolari'
-        }));
-        const unseen = circSlides.some(s => !seenMap[s.slideId || s.id]);
-        channels.push({
-            id: 'circolari',
-            title: 'Circolari',
-            shortTitle: 'Circolari',
-            icon: 'ph-file-text',
-            gradient: 'linear-gradient(135deg, #ff9f0a 0%, #ff375f 100%)',
-            ringColor: '#ff9f0a',
-            unseen,
-            slides: circSlides,
-            count: circSlides.length
-        });
-    }
-
-    // Canale 6: Presenze (assenze / ritardi)
-    const assenzeItems = todayItems.filter(it => it.category === 'assenze' || it.type === 'assenza' || it.type === 'ritardo' || it.type === 'uscita');
-    if (assenzeItems.length > 0) {
-        const assenzeSlides = assenzeItems.map((item, idx) => ({
-            ...item,
-            slideId: `ass_${item.id || idx}`,
-            channelId: 'presenze'
-        }));
-        const unseen = assenzeSlides.some(s => !seenMap[s.slideId || s.id]);
-        channels.push({
-            id: 'presenze',
-            title: 'Presenze',
-            shortTitle: 'Presenze',
-            icon: 'ph-clock',
-            gradient: 'linear-gradient(135deg, #bf5af2 0%, #5e5ce6 100%)',
-            ringColor: '#bf5af2',
-            unseen,
-            slides: assenzeSlides,
-            count: assenzeSlides.length
-        });
-    }
-
-    return {
-        todayISO,
-        channels,
-        todayItems,
-        totalStories: todayItems.length,
-        hasUnseen: channels.some(c => c.unseen),
-        seenMap
-    };
-};
-
-window.markStoryAsSeen = function(slideId) {
-    if (!slideId) return;
-    const todayISO = (typeof getLocalDateString === 'function') ? getLocalDateString(new Date()) : new Date().toISOString().split('T')[0];
-    const key = `gc_seen_stories_${todayISO}`;
-    try {
-        let map = {};
-        const raw = localStorage.getItem(key);
-        if (raw) map = JSON.parse(raw);
-        map[slideId] = Date.now();
-        localStorage.setItem(key, JSON.stringify(map));
-        if (typeof window.updateTodayStoriesTray === 'function') {
-            window.updateTodayStoriesTray();
-        }
-    } catch (e) {}
-};
-
-window.renderInstagramStoriesTrayHTML = function() {
-    const storiesData = (typeof window.getTodayStoriesData === 'function')
-        ? window.getTodayStoriesData()
-        : { channels: [], totalStories: 0 };
-    const channels = storiesData.channels || [];
-
-    return `
-    <div style="
-        background: rgba(18, 26, 44, 0.7);
-        backdrop-filter: blur(28px) saturate(190%); -webkit-backdrop-filter: blur(28px) saturate(190%);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 22px;
-        padding: 12px 14px 10px 14px;
-        box-shadow: 0 10px 30px -8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
-    ">
-        <!-- Tray Header -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px;">
-            <div style="display:flex;align-items:center;gap:6px;">
-                <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff2d55;box-shadow:0 0 8px #ff2d55;"></span>
-                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.85);">STORIE DI OGGI</span>
-                <span style="font-size:9.5px;font-weight:700;background:rgba(255,45,85,0.18);border:1px solid rgba(255,45,85,0.4);color:#ff2d55;padding:1px 6px;border-radius:999px;">
-                    ${storiesData.totalStories > 0 ? `${storiesData.totalStories} novità` : 'sereno'}
-                </span>
+    if (!isSeen) {
+        return `
+        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Oggi Rewind • Il recap della tua giornata" aria-label="Oggi Rewind" style="
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff007a 0%, #7928ca 35%, #0070f3 70%, #00dfd8 100%);
+            padding: 2.5px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px rgba(255, 0, 122, 0.55), 0 0 20px rgba(0, 223, 216, 0.35);
+            animation: rewindRingGlow 2.8s infinite ease-in-out;
+            transition: transform 0.15s ease;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+            <div style="width: 100%; height: 100%; border-radius: 50%; background: #090e1c; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                <!-- Glowing ambient center -->
+                <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(255, 0, 122, 0.28) 0%, transparent 75%);"></div>
+                <i class="ph-fill ph-sparkle" style="font-size: 20px; background: linear-gradient(135deg, #ff007a, #00dfd8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 4px rgba(255,0,122,0.6));"></i>
             </div>
-            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive();else openTodayNotifications('archive');" style="display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:rgba(255,255,255,0.55);font-size:11px;font-weight:600;cursor:pointer;padding:2px 6px;border-radius:6px;transition:color 0.15s ease;" ontouchstart="this.style.color='#2997ff'" ontouchend="this.style.color='rgba(255,255,255,0.55)'">
-                <i class="ph-bold ph-clock-counter-clockwise" style="font-size:12px;"></i>
-                <span>Archivio</span>
-            </button>
-        </div>
-
-        <!-- Horizontal Story Scroll List -->
-        <div id="stories-tray-scroll" style="display:flex;align-items:flex-start;gap:14px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;">
-            ${channels.map(ch => {
-                const ringStyle = ch.unseen
-                    ? 'background: linear-gradient(135deg, #ff2d55 0%, #af52de 50%, #5856d6 100%); animation: storyRingPulse 2.8s infinite ease-in-out; box-shadow: 0 0 12px rgba(255,45,85,0.55);'
-                    : 'background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);';
-                return `
-                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openInstagramStoryViewer('${ch.id}', 0);" style="background:none;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;outline:none;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-                    <!-- Outer Ring -->
-                    <div style="width:60px;height:60px;border-radius:50%;padding:2.5px;display:flex;align-items:center;justify-content:center;position:relative;${ringStyle}">
-                        <!-- Inner Bubble -->
-                        <div style="width:100%;height:100%;border-radius:50%;background:#090e1c;border:2px solid #090e1c;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-                            <div style="position:absolute;inset:0;background:${ch.gradient};opacity:0.25;"></div>
-                            <i class="ph-fill ${ch.icon}" style="font-size:24px;color:${ch.ringColor};position:relative;z-index:2;"></i>
-                            ${ch.count > 1 ? `
-                                <span style="position:absolute;bottom:2px;right:2px;min-width:14px;height:14px;border-radius:999px;background:#090e1c;border:1px solid ${ch.ringColor};color:${ch.ringColor};font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 2px;z-index:3;">
-                                    ${ch.count}
-                                </span>
-                            ` : ''}
-                        </div>
-                    </div>
-                    <!-- Channel Label -->
-                    <span style="font-size:10.5px;font-weight:${ch.unseen ? '700' : '500'};color:${ch.unseen ? '#ffffff' : 'rgba(255,255,255,0.7)'};max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
-                        ${escapeHtml(ch.shortTitle || ch.title)}
-                    </span>
-                </button>`;
-            }).join('')}
-
-            <!-- Dedicated Archive Circle Bubble at the end of the tray -->
-            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive();else openTodayNotifications('archive');" style="background:none;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;outline:none;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-                <div style="width:60px;height:60px;border-radius:50%;padding:2.5px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);">
-                    <div style="width:100%;height:100%;border-radius:50%;background:#090e1c;display:flex;align-items:center;justify-content:center;">
-                        <i class="ph-bold ph-archive-box" style="font-size:22px;color:rgba(255,255,255,0.75);"></i>
-                    </div>
-                </div>
-                <span style="font-size:10.5px;font-weight:500;color:rgba(255,255,255,0.6);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
-                    Archivio
+            ${totalEvents > 0 ? `
+                <span style="position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; border-radius: 999px; background: #ff007a; border: 2px solid #090e1c; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #ffffff; padding: 0 3px; box-shadow: 0 0 8px rgba(255, 0, 122, 0.8);">
+                    ${totalEvents > 9 ? '9+' : totalEvents}
                 </span>
-            </button>
-        </div>
-    </div>`;
+            ` : ''}
+        </button>`;
+    } else {
+        return `
+        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openTodayRewind();" title="Oggi Rewind • Riguarda il recap" aria-label="Oggi Rewind" style="
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease, background 0.15s ease;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+            <i class="ph-bold ph-sparkle" style="font-size: 19px; color: rgba(255, 255, 255, 0.72);"></i>
+        </button>`;
+    }
 };
 
+window.updateTodayRewindBadge = function() {
+    const badge = document.getElementById('today-rewind-header-badge');
+    if (badge && typeof window.renderTodayRewindBadgeHTML === 'function') {
+        badge.outerHTML = window.renderTodayRewindBadgeHTML();
+    }
+};
+// Backward compatibility alias for Realtime / proposals hooks
 window.updateTodayStoriesTray = function() {
-    const container = document.getElementById('overview-stories-tray-container');
-    if (container && typeof window.renderInstagramStoriesTrayHTML === 'function') {
-        container.innerHTML = window.renderInstagramStoriesTrayHTML();
+    window.updateTodayRewindBadge();
+};
+
+window.markTodayRewindSeen = function() {
+    const today = new Date();
+    const todayISO = (typeof getLocalDateString === 'function')
+        ? getLocalDateString(today)
+        : today.toISOString().split('T')[0];
+    try {
+        localStorage.setItem(`gc_seen_rewind_${todayISO}`, 'true');
+    } catch (e) {}
+    if (typeof window.updateTodayRewindBadge === 'function') {
+        window.updateTodayRewindBadge();
     }
 };
 
-function buildStorySlideCardHtml(slide, effClass, userId) {
-    if (!slide) return '';
+// ── SLIDE DECK GENERATOR (SPOTIFY WRAPPED STYLE) ──
+window.getTodayRewindSlides = function() {
+    const today = new Date();
+    const todayISO = (typeof getLocalDateString === 'function')
+        ? getLocalDateString(today)
+        : today.toISOString().split('T')[0];
 
-    // ── 1. ASSEMBLEA / PROPOSTA DI CLASSE ──
-    if (slide.type === 'proposta' || slide.category === 'proposte') {
-        const prop = slide.rawProp || (effClass && typeof getStoredClassProposals === 'function'
-            ? (getStoredClassProposals(effClass) || []).find(p => p.id === slide.id)
-            : null) || slide;
+    const daysOfWeek = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const todayFormatted = `${daysOfWeek[today.getDay()]}, ${today.getDate()} ${months[today.getMonth()]}`;
 
-        const isAssembly = prop.type === 'assembly' || slide.categoryLabel === 'Assemblea';
-        const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
-        const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
-        const declineList = Array.isArray(votes.decline) ? votes.decline : [];
-        const altList = Array.isArray(votes.alternatives) ? votes.alternatives : [];
-
-        const acceptCount = acceptList.length;
-        const declineCount = declineList.length;
-        const altCount = altList.length;
-        const totalVotes = acceptCount + declineCount + altCount;
-
-        const hasAccepted = acceptList.includes(userId);
-        const hasDeclined = declineList.includes(userId);
-        const hasAlt = altList.some(a => a.userId === userId);
-
-        const accentColor = isAssembly ? '#30d158' : '#32ade6';
-        const titleText = isAssembly ? 'Assemblea di Classe' : (prop.subject ? `Sposta Verifica: ${prop.subject}` : 'Proposta di Classe');
-
-        return `
-        <div class="story-slide-card" style="
-            background: linear-gradient(160deg, rgba(20, 35, 60, 0.94) 0%, rgba(8, 14, 28, 0.97) 100%);
-            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 28px;
-            padding: 24px 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 440px;
-            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        ">
-            <!-- Glow background orb -->
-            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${accentColor} 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
-
-            <div>
-                <!-- Top Badge & Status -->
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.45);padding:5px 12px;border-radius:999px;">
-                        <i class="ph-fill ${isAssembly ? 'ph-users-three' : 'ph-calendar-plus'}" style="color:${accentColor};font-size:14px;"></i>
-                        <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${accentColor};">
-                            ${isAssembly ? 'ASSEMBLEA DI CLASSE' : 'PROPOSTA DI CLASSE'}
-                        </span>
-                    </div>
-                    <span style="font-size:10.5px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.14);border:1px solid rgba(48,209,88,0.35);padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px;">
-                        <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;"></span>
-                        VOTAZIONE ATTIVA
-                    </span>
-                </div>
-
-                <!-- Title & Date -->
-                <h2 style="font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 8px;letter-spacing:-0.02em;">
-                    ${escapeHtml(titleText)}
-                </h2>
-
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.7);font-size:12.5px;font-weight:600;">
-                    <i class="ph-bold ph-calendar" style="color:${accentColor};"></i>
-                    <span>Data: <strong>${escapeHtml(prop.targetDate || 'In definizione')}</strong></span>
-                    ${prop.targetHour ? `<span style="opacity:0.4;">•</span><span>${escapeHtml(prop.targetHour)}ª ora</span>` : ''}
-                </div>
-
-                <!-- Motivation / Description Card -->
-                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:12px 14px;margin-bottom:16px;">
-                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">
-                        Ordine del Giorno / Motivo
-                    </div>
-                    <p style="font-size:13.5px;color:rgba(255,255,255,0.92);line-height:1.45;margin:0;">
-                        ${escapeHtml(prop.reason || slide.desc || 'Nessuna descrizione inserita')}
-                    </p>
-                    ${prop.authorName ? `
-                        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px;font-weight:500;">
-                            Proposta da: <strong style="color:rgba(255,255,255,0.85);">${escapeHtml(prop.authorName)}</strong>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <!-- Interactive In-Story Live Voting (Direct action without leaving story!) -->
-                <div style="margin-bottom:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                        <span style="font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.7);">
-                            Vota direttamente qui
-                        </span>
-                        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);">
-                            ${totalVotes} voti registrati
-                        </span>
-                    </div>
-
-                    <div style="display:flex;gap:8px;">
-                        <!-- Voto Favorevole -->
-                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'accept');" style="
-                            flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
-                            background:${hasAccepted ? 'rgba(48,209,88,0.32)' : 'rgba(48,209,88,0.12)'};
-                            border:1.5px solid ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.35)'};
-                            color:${hasAccepted ? '#ffffff' : '#30d158'};
-                            box-shadow:${hasAccepted ? '0 0 14px rgba(48,209,88,0.5)' : 'none'};
-                            transition:all 0.15s ease;
-                        ">
-                            <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
-                                <i class="ph-bold ${hasAccepted ? 'ph-check-circle' : 'ph-thumbs-up'}"></i>
-                                <span>Sì</span>
-                            </div>
-                            <span style="font-size:11px;font-weight:800;opacity:0.9;">${acceptCount}</span>
-                        </button>
-
-                        <!-- Voto Contrario -->
-                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'decline');" style="
-                            flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
-                            background:${hasDeclined ? 'rgba(255,69,58,0.32)' : 'rgba(255,69,58,0.12)'};
-                            border:1.5px solid ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.35)'};
-                            color:${hasDeclined ? '#ffffff' : '#ff453a'};
-                            box-shadow:${hasDeclined ? '0 0 14px rgba(255,69,58,0.5)' : 'none'};
-                            transition:all 0.15s ease;
-                        ">
-                            <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
-                                <i class="ph-bold ${hasDeclined ? 'ph-x-circle' : 'ph-thumbs-down'}"></i>
-                                <span>No</span>
-                            </div>
-                            <span style="font-size:11px;font-weight:800;opacity:0.9;">${declineCount}</span>
-                        </button>
-
-                        <!-- Voto Proposta Alternativa -->
-                        <button onclick="event.stopPropagation(); const altD = prompt('Data alternativa proposta (YYYY-MM-DD):', '${prop.targetDate || ''}'); if(altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="
-                            flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
-                            background:${hasAlt ? 'rgba(255,159,10,0.32)' : 'rgba(255,159,10,0.12)'};
-                            border:1.5px solid ${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.35)'};
-                            color:${hasAlt ? '#ffffff' : '#ff9f0a'};
-                            box-shadow:${hasAlt ? '0 0 14px rgba(255,159,10,0.5)' : 'none'};
-                            transition:all 0.15s ease;
-                        ">
-                            <div style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;">
-                                <i class="ph-bold ph-calendar-plus"></i>
-                                <span>Altra</span>
-                            </div>
-                            <span style="font-size:11px;font-weight:800;opacity:0.9;">${altCount}</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bottom Action: Open Full Class Modal -->
-            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();" style="
-                width:100%;height:44px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
-                color:#ffffff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
-                transition:background 0.15s ease;
-            ">
-                <i class="ph-bold ph-users-three" style="color:${accentColor};"></i>
-                <span>Gestione Assemblea Completa</span>
-                <i class="ph-bold ph-arrow-right" style="font-size:12px;opacity:0.6;"></i>
-            </button>
-        </div>`;
-    }
-
-    // ── 2. NUOVO VOTO ──
-    if (slide.type === 'voto' || slide.category === 'voti') {
-        const val = slide.voto || slide.title || 'Voto';
-        const numVal = parseFloat(String(val).replace(',', '.'));
-        const orbColor = !isNaN(numVal) ? (numVal >= 6 ? '#30d158' : '#ff453a') : '#ffd60a';
-
-        return `
-        <div class="story-slide-card" style="
-            background: linear-gradient(160deg, rgba(28, 25, 45, 0.94) 0%, rgba(10, 8, 20, 0.97) 100%);
-            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 28px;
-            padding: 26px 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 440px;
-            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        ">
-            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${orbColor} 0%, transparent 70%);opacity:0.3;filter:blur(30px);pointer-events:none;"></div>
-
-            <div style="text-align:center;">
-                <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.45);padding:5px 14px;border-radius:999px;margin-bottom:20px;">
-                    <i class="ph-fill ph-chart-line-up" style="color:#ffd60a;font-size:14px;"></i>
-                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd60a;">NUOVO VOTO REGISTRATO</span>
-                </div>
-
-                <div style="margin:10px auto 20px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 100%);border:2px solid ${orbColor};box-shadow:0 0 30px ${orbColor}55, inset 0 0 15px ${orbColor}44;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
-                    <span style="font-size:38px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;line-height:1;">
-                        ${escapeHtml(String(val))}
-                    </span>
-                    <span style="font-size:9.5px;font-weight:800;color:${orbColor};text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
-                        ${escapeHtml(slide.tipo || 'Voto')}
-                    </span>
-                </div>
-
-                <h2 style="font-size:24px;font-weight:800;color:#ffffff;margin:0 0 6px;letter-spacing:-0.02em;">
-                    ${escapeHtml(slide.materia || slide.title || 'Materia')}
-                </h2>
-                <p style="font-size:13.5px;color:rgba(255,255,255,0.75);margin:0 0 10px;line-height:1.4;">
-                    ${escapeHtml(slide.desc || slide.dettaglio || 'Valutazione registrata dal docente')}
-                </p>
-                ${slide.docente ? `
-                    <div style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,0.5);">
-                        Docente: <span style="color:rgba(255,255,255,0.85);">${escapeHtml(slide.docente)}</span>
-                    </div>
-                ` : ''}
-            </div>
-
-            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); navigate('voti');" style="
-                width:100%;height:46px;border-radius:14px;background:#2997ff;border:none;
-                color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
-                box-shadow:0 6px 20px rgba(41,151,255,0.4);transition:transform 0.15s ease;
-            ">
-                <i class="ph-bold ph-graduation-cap"></i>
-                <span>Apri nel Registro Voti</span>
-                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
-            </button>
-        </div>`;
-    }
-
-    // ── 3. COMPITO O VERIFICA ──
-    if (slide.type === 'compito' || slide.type === 'verifica' || slide.category === 'compiti' || slide.category === 'verifiche') {
-        const isVerifica = slide.type === 'verifica' || slide.category === 'verifiche';
-        const accent = isVerifica ? '#ff9f0a' : '#2997ff';
-
-        return `
-        <div class="story-slide-card" style="
-            background: linear-gradient(160deg, rgba(16, 28, 52, 0.94) 0%, rgba(6, 12, 24, 0.97) 100%);
-            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 28px;
-            padding: 26px 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 440px;
-            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        ">
-            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${accent} 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
-
-            <div>
-                <div style="display:inline-flex;align-items:center;gap:6px;background:${isVerifica ? 'rgba(255,159,10,0.18)' : 'rgba(41,151,255,0.18)'};border:1px solid ${isVerifica ? 'rgba(255,159,10,0.45)' : 'rgba(41,151,255,0.45)'};padding:5px 14px;border-radius:999px;margin-bottom:18px;">
-                    <i class="ph-fill ${isVerifica ? 'ph-pencil-simple' : 'ph-book-open'}" style="color:${accent};font-size:14px;"></i>
-                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${accent};">
-                        ${isVerifica ? 'VERIFICA IN PROGRAMMA' : 'COMPITO PER OGGI'}
-                    </span>
-                </div>
-
-                <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${accent};margin-bottom:4px;">
-                    ${escapeHtml(slide.subject || slide.materia || 'Materia')}
-                </div>
-                <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
-                    ${escapeHtml(slide.title || slide.subject || 'Attività scolastica')}
-                </h2>
-
-                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
-                    <p style="font-size:14.5px;color:rgba(255,255,255,0.95);line-height:1.5;margin:0;">
-                        ${escapeHtml(slide.desc || 'Nessun dettaglio specificato')}
-                    </p>
-                </div>
-
-                ${slide.rawDate ? `
-                    <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7);font-size:12.5px;font-weight:600;">
-                        <i class="ph-bold ph-calendar-check" style="color:${accent};"></i>
-                        <span>Scadenza: ${escapeHtml(slide.rawDate)}</span>
-                    </div>
-                ` : ''}
-            </div>
-
-            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); navigate('planner');" style="
-                width:100%;height:46px;border-radius:14px;background:${accent};border:none;
-                color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
-                box-shadow:0 6px 20px ${accent}55;transition:transform 0.15s ease;
-            ">
-                <i class="ph-bold ph-calendar"></i>
-                <span>Apri nel Planner</span>
-                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
-            </button>
-        </div>`;
-    }
-
-    // ── 4. CIRCOLARE ──
-    if (slide.type === 'circolare' || slide.category === 'circolari') {
-        return `
-        <div class="story-slide-card" style="
-            background: linear-gradient(160deg, rgba(30, 24, 18, 0.94) 0%, rgba(12, 10, 8, 0.97) 100%);
-            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 28px;
-            padding: 26px 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 440px;
-            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        ">
-            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, #ffd60a 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
-
-            <div>
-                <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.45);padding:5px 14px;border-radius:999px;margin-bottom:18px;">
-                    <i class="ph-fill ph-file-text" style="color:#ffd60a;font-size:14px;"></i>
-                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd60a;">
-                        ${slide.numero ? `CIRCOLARE N. ${escapeHtml(slide.numero)}` : 'NUOVA CIRCOLARE'}
-                    </span>
-                </div>
-
-                <h2 style="font-size:22px;font-weight:800;color:#ffffff;line-height:1.3;margin:0 0 14px;letter-spacing:-0.02em;">
-                    ${escapeHtml(slide.title || 'Circolare Scolastica')}
-                </h2>
-
-                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
-                    <p style="font-size:13.5px;color:rgba(255,255,255,0.9);line-height:1.5;margin:0;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;">
-                        ${escapeHtml(slide.desc || slide.testo || 'Comunicazione pubblicata dalla presidenza')}
-                    </p>
-                </div>
-            </div>
-
-            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof openCircolareDetail==='function')openCircolareDetail('${escapeHtml(slide.id)}');" style="
-                width:100%;height:46px;border-radius:14px;background:#ffd60a;border:none;
-                color:#000000;font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
-                box-shadow:0 6px 20px rgba(255,214,10,0.4);transition:transform 0.15s ease;
-            ">
-                <i class="ph-bold ph-read-cv-logo"></i>
-                <span>Leggi Circolare Completa</span>
-                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
-            </button>
-        </div>`;
-    }
-
-    // ── 5. ASSENZA / RITARDO / NOTA ──
-    if (slide.type === 'assenza' || slide.type === 'ritardo' || slide.type === 'uscita' || slide.type === 'nota' || slide.category === 'assenze' || slide.category === 'note') {
-        const isNota = slide.type === 'nota';
-        const accent = isNota ? '#bf5af2' : '#ff453a';
-
-        return `
-        <div class="story-slide-card" style="
-            background: linear-gradient(160deg, rgba(32, 18, 38, 0.94) 0%, rgba(14, 8, 18, 0.97) 100%);
-            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 28px;
-            padding: 26px 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 440px;
-            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        ">
-            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${accent} 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
-
-            <div>
-                <div style="display:inline-flex;align-items:center;gap:6px;background:${accent}22;border:1px solid ${accent}55;padding:5px 14px;border-radius:999px;margin-bottom:18px;">
-                    <i class="ph-fill ${isNota ? 'ph-warning-octagon' : 'ph-clock'}" style="color:${accent};font-size:14px;"></i>
-                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${accent};">
-                        ${isNota ? 'NOTA DISCIPLINARE' : 'REGISTRO PRESENZE'}
-                    </span>
-                </div>
-
-                <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
-                    ${escapeHtml(slide.title || 'Comunicazione')}
-                </h2>
-
-                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
-                    <p style="font-size:14px;color:rgba(255,255,255,0.92);line-height:1.5;margin:0;">
-                        ${escapeHtml(slide.desc || slide.testo || 'Dettagli non specificati')}
-                    </p>
-                </div>
-            </div>
-
-            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof mostraAssenzeModal==='function')mostraAssenzeModal();" style="
-                width:100%;height:46px;border-radius:14px;background:${accent};border:none;
-                color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
-                box-shadow:0 6px 20px ${accent}55;transition:transform 0.15s ease;
-            ">
-                <i class="ph-bold ph-shield-check"></i>
-                <span>Vedi Registro Assenze</span>
-                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
-            </button>
-        </div>`;
-    }
-
-    // ── 6. ZEN / GIORNATA TRANQUILLA (Fallback pulito a 0 notifiche) ──
-    return `
-    <div class="story-slide-card" style="
-        background: linear-gradient(160deg, rgba(14, 34, 38, 0.94) 0%, rgba(6, 18, 20, 0.97) 100%);
-        backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-top: 1.5px solid rgba(255, 255, 255, 0.3);
-        border-radius: 28px;
-        padding: 30px 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: center;
-        text-align: center;
-        min-height: 440px;
-        animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    ">
-        <div style="position:absolute;top:20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, #30d158 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
-
-        <div>
-            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.45);padding:5px 14px;border-radius:999px;margin-bottom:24px;">
-                <i class="ph-fill ph-sparkle" style="color:#30d158;font-size:14px;"></i>
-                <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#30d158;">TUTTO IN REGOLA</span>
-            </div>
-
-            <div style="width:90px;height:90px;border-radius:50%;background:rgba(48,209,88,0.14);border:1.5px solid rgba(48,209,88,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-                <i class="ph-fill ph-sun" style="font-size:44px;color:#30d158;"></i>
-            </div>
-
-            <h2 style="font-size:24px;font-weight:800;color:#ffffff;margin:0 0 10px;letter-spacing:-0.02em;">
-                Giornata Serena
-            </h2>
-            <p style="font-size:14px;color:rgba(255,255,255,0.75);line-height:1.5;max-width:280px;margin:0 auto;">
-                Nessun compito, verifica o assemblea in sospeso per oggi. Ottimo momento per rilassarti o consultare l'archivio!
-            </p>
-        </div>
-
-        <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive(); else openTodayNotifications('archive');" style="
-            width:100%;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);
-            color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
-            transition:background 0.15s ease;
-        ">
-            <i class="ph-bold ph-archive-box"></i>
-            <span>Apri Archivio Notifiche</span>
-        </button>
-    </div>`;
-}
-
-window.openInstagramStoryViewer = function(channelId, initialSlideIndex) {
-    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
-
-    const storiesData = window.getTodayStoriesData();
-    const channels = storiesData.channels || [];
-    if (channels.length === 0) {
-        return window.openNotificationsArchive ? window.openNotificationsArchive() : null;
-    }
-
-    let targetChannel = channels.find(c => c.id === channelId) || channels[0];
-    let slideIdx = typeof initialSlideIndex === 'number' ? initialSlideIndex : 0;
-    if (slideIdx < 0) slideIdx = 0;
-    if (slideIdx >= targetChannel.slides.length) slideIdx = targetChannel.slides.length - 1;
-
-    window._storyViewerState = {
-        channelId: targetChannel.id,
-        slideIndex: slideIdx,
-        isPaused: false,
-        timer: null,
-        progressStartedAt: 0,
-        slideDuration: 6000,
-        touchStartY: 0,
-        touchStartX: 0
-    };
-
+    const userName = (typeof toDisplayName === 'function' && typeof getSafeUserName === 'function')
+        ? toDisplayName(getSafeUserName())
+        : (state.user?.name || 'Studente');
     const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
     const userId = (typeof getClassRepAuthInfo === 'function') ? getClassRepAuthInfo().userId : String(state.user?.id || 'utente');
 
-    let overlay = document.getElementById('instagram-story-viewer-overlay');
+    // Voti
+    const votiData = (typeof getVotiData === 'function') ? getVotiData() : [];
+    const todayVoti = votiData.filter(v => v.data === todayISO || (v.data && v.data.startsWith(todayISO)));
+    const media = (typeof calculateMedia === 'function') ? calculateMedia() : (state.media || 0);
+
+    // Compiti
+    const compitiData = (typeof getCompitiData === 'function') ? getCompitiData() : [];
+    const todayCompiti = compitiData.filter(c => {
+        const d = c.scadenza || c.data || c.dataISO || '';
+        return d === todayISO || d.startsWith(todayISO);
+    });
+
+    // Proposte & Assemblea
+    const classProps = effClass && (typeof getStoredClassProposals === 'function')
+        ? getStoredClassProposals(effClass)
+        : [];
+    const activeProps = classProps.filter(p => !p.status || p.status === 'pending' || p.status === 'approved' || p.status === 'active');
+    const assemblyProp = activeProps.find(p => p.type === 'assembly') || activeProps[0] || null;
+
+    // Circolari
+    const circolariData = (typeof getCircolariData === 'function') ? getCircolariData() : [];
+    const todayCircolari = circolariData.filter(c => {
+        const d = c.data || c.dataISO || '';
+        return d === todayISO || d.startsWith(todayISO);
+    });
+
+    const slides = [];
+
+    // ── SLIDE 1: INTRO COVER ──
+    const totalHighlights = todayVoti.length + todayCompiti.length + (assemblyProp ? 1 : 0) + todayCircolari.length;
+    slides.push({
+        id: 'cover',
+        category: 'intro',
+        title: 'Oggi Rewind',
+        subtitle: todayFormatted,
+        gradientBg: 'linear-gradient(160deg, #1c0936 0%, #0d061f 55%, #05020c 100%)',
+        accentGlow: 'rgba(255, 0, 122, 0.4)',
+        renderHtml: () => `
+            <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                <div>
+                    <!-- Wrapped Pill Tag -->
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 0, 122, 0.18); border: 1px solid rgba(255, 0, 122, 0.4); margin-bottom: 20px;">
+                        <i class="ph-fill ph-sparkle" style="color: #ff007a; font-size: 13px;"></i>
+                        <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff70a6;">SPOTLIGHT • OGGI REWIND</span>
+                    </div>
+
+                    <h1 style="font-size: 34px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.03em; margin: 0 0 10px;">
+                        Ciao ${escapeHtml(userName)},<br>
+                        <span style="background: linear-gradient(135deg, #ff007a 0%, #af52de 50%, #00dfd8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                            ecco il tuo giorno.
+                        </span>
+                    </h1>
+                    <p style="font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0 0 24px;">
+                        ${todayFormatted}
+                    </p>
+                </div>
+
+                <!-- Central Wrapped Visual Card -->
+                <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); backdrop-filter: blur(30px); border-radius: 24px; padding: 22px; position: relative; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                    <div style="font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">
+                        IN QUESTA GIORNATA
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+                        ${todayVoti.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.35);color:#30d158;font-size:12px;font-weight:700;"><i class="ph-bold ph-chart-line-up"></i> ${todayVoti.length} ${todayVoti.length === 1 ? 'Nuovo Voto' : 'Nuovi Voti'}</span>` : ''}
+                        ${todayCompiti.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.35);color:#64d2ff;font-size:12px;font-weight:700;"><i class="ph-bold ph-book-open"></i> ${todayCompiti.length} ${todayCompiti.length === 1 ? 'Compito' : 'Compiti'}</span>` : ''}
+                        ${assemblyProp ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(255,45,85,0.18);border:1px solid rgba(255,45,85,0.35);color:#ff375f;font-size:12px;font-weight:700;"><i class="ph-bold ph-users-three"></i> ${assemblyProp.type === 'assembly' ? 'Assemblea Attiva' : 'Proposta Classe'}</span>` : ''}
+                        ${todayCircolari.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.35);color:#ffd60a;font-size:12px;font-weight:700;"><i class="ph-bold ph-megaphone"></i> ${todayCircolari.length} Circolari</span>` : ''}
+                        ${totalHighlights === 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.35);color:#30d158;font-size:12px;font-weight:700;"><i class="ph-bold ph-sparkle"></i> Tutto regolare</span>` : ''}
+                    </div>
+                    <p style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.45; margin: 0;">
+                        ${totalHighlights > 0 
+                            ? `Abbiamo preparato per te un riassunto dinamico di tutto ciò che è accaduto oggi a scuola.` 
+                            : `Nessun compito o notifica urgente per oggi. Una giornata completamente tranquilla!`}
+                    </p>
+                </div>
+
+                <!-- Footer Hint -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px;">
+                    <span style="font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.45);">
+                        Tocca a destra per scoprire
+                    </span>
+                    <i class="ph-bold ph-arrow-right" style="font-size: 16px; color: #ff007a;"></i>
+                </div>
+            </div>
+        `
+    });
+
+    // ── SLIDE 2: VOTI O RENDIMENTO ──
+    if (todayVoti.length > 0) {
+        const topVoto = todayVoti[0];
+        slides.push({
+            id: 'voti',
+            category: 'voti',
+            title: 'Valutazioni di Oggi',
+            gradientBg: 'linear-gradient(160deg, #022c22 0%, #064e3b 45%, #02120d 100%)',
+            accentGlow: 'rgba(48, 209, 88, 0.4)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(48, 209, 88, 0.18); border: 1px solid rgba(48, 209, 88, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-chart-line-up" style="color: #30d158; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #62e584;">I TUOI RISULTATI</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
+                            Nuovo Voto Registrato!
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            Oggi è stato inserito un aggiornamento sul registro.
+                        </p>
+                    </div>
+
+                    <!-- Huge Grade Display -->
+                    <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(48, 209, 88, 0.3); backdrop-filter: blur(30px); border-radius: 28px; padding: 28px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #62e584; margin-bottom: 8px;">
+                            ${escapeHtml(topVoto.materia || 'Valutazione')}
+                        </div>
+                        <div style="font-size: 68px; font-weight: 900; line-height: 1; color: #ffffff; text-shadow: 0 0 24px rgba(48,209,88,0.6); margin-bottom: 12px;">
+                            ${escapeHtml(String(topVoto.voto || '-'))}
+                        </div>
+                        <div style="display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85); margin-bottom: 10px;">
+                            ${escapeHtml(topVoto.tipo || 'Valutazione Didattica')}
+                        </div>
+                        ${topVoto.commento ? `<p style="font-size: 13px; font-style: italic; color: rgba(255,255,255,0.7); margin: 6px 0 0;">"${escapeHtml(topVoto.commento)}"</p>` : ''}
+                    </div>
+
+                    <!-- Bottom Stat -->
+                    <div style="background: rgba(255,255,255,0.04); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: rgba(255,255,255,0.6);">Media generale:</span>
+                        <span style="font-size: 15px; font-weight: 800; color: #30d158;">${media > 0 ? media.toFixed(2) : '-'}</span>
+                    </div>
+                </div>
+            `
+        });
+    } else {
+        slides.push({
+            id: 'rendimento',
+            category: 'voti',
+            title: 'Il tuo Rendimento',
+            gradientBg: 'linear-gradient(160deg, #022c22 0%, #064e3b 45%, #02120d 100%)',
+            accentGlow: 'rgba(48, 209, 88, 0.4)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(48, 209, 88, 0.18); border: 1px solid rgba(48, 209, 88, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-trend-up" style="color: #30d158; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #62e584;">RENDIMENTO ATTUALE</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
+                            Quadro Voti Stabile
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            Nessuna nuova valutazione registrata per oggi.
+                        </p>
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(48, 209, 88, 0.3); backdrop-filter: blur(30px); border-radius: 28px; padding: 32px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #62e584; margin-bottom: 8px;">
+                            MEDIA ATTUALE
+                        </div>
+                        <div style="font-size: 64px; font-weight: 900; line-height: 1; color: #ffffff; text-shadow: 0 0 24px rgba(48,209,88,0.6); margin-bottom: 14px;">
+                            ${media > 0 ? media.toFixed(2) : 'N/D'}
+                        </div>
+                        <div style="display: inline-block; padding: 6px 14px; border-radius: 999px; background: rgba(48,209,88,0.18); font-size: 12px; font-weight: 700; color: #30d158;">
+                            ${media >= 8 ? 'Eccellente! 🌟' : media >= 7 ? 'Ottimo andamento 🚀' : media >= 6 ? 'Sufficiente 👍' : 'Continua a impegnarti 💪'}
+                        </div>
+                    </div>
+
+                    <div style="color: rgba(255,255,255,0.45); font-size: 12px; text-align: center;">
+                        I voti registrati si sincronizzano in automatico.
+                    </div>
+                </div>
+            `
+        });
+    }
+
+    // ── SLIDE 3: COMPITI & DIARIO ──
+    if (todayCompiti.length > 0) {
+        slides.push({
+            id: 'compiti',
+            category: 'compiti',
+            title: 'Compiti & Scadenze',
+            gradientBg: 'linear-gradient(160deg, #0b1d3a 0%, #1e3a8a 45%, #050c1b 100%)',
+            accentGlow: 'rgba(41, 151, 255, 0.4)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(41, 151, 255, 0.18); border: 1px solid rgba(41, 151, 255, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-book-open" style="color: #2997ff; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #64d2ff;">IL TUO DIARIO</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
+                            Cosa c'era oggi
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            ${todayCompiti.length} ${todayCompiti.length === 1 ? 'attività registrata' : 'attività registrate'} per questa data.
+                        </p>
+                    </div>
+
+                    <!-- Homework Cards Stack -->
+                    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 52vh; overflow-y: auto; padding-right: 4px;">
+                        ${todayCompiti.slice(0, 3).map(c => `
+                            <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(41, 151, 255, 0.25); border-radius: 18px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64d2ff; letter-spacing: 0.05em;">
+                                        ${escapeHtml(c.materia || 'Compito')}
+                                    </span>
+                                </div>
+                                <div style="font-size: 13.5px; font-weight: 600; color: #ffffff; line-height: 1.4;">
+                                    ${escapeHtml(c.compito || c.desc || 'Esercizi assegnati')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.04); border-radius: 16px; padding: 12px 16px; text-align: center; color: rgba(255,255,255,0.5); font-size: 12px;">
+                        Trovi tutti i dettagli completi nella sezione Diario.
+                    </div>
+                </div>
+            `
+        });
+    }
+
+    // ── SLIDE 4: ASSEMBLEA & VITA DI CLASSE ──
+    if (assemblyProp) {
+        const isAssembly = assemblyProp.type === 'assembly';
+        const votes = assemblyProp.votes || { accept: [], decline: [], alternatives: [] };
+        const acceptCount = Array.isArray(votes.accept) ? votes.accept.length : 0;
+        const declineCount = Array.isArray(votes.decline) ? votes.decline.length : 0;
+        const hasAccepted = Array.isArray(votes.accept) && votes.accept.includes(userId);
+        const hasDeclined = Array.isArray(votes.decline) && votes.decline.includes(userId);
+
+        slides.push({
+            id: 'assemblea',
+            category: 'classe',
+            title: isAssembly ? 'Assemblea di Classe' : 'Proposta di Classe',
+            gradientBg: 'linear-gradient(160deg, #3b0718 0%, #831843 45%, #160309 100%)',
+            accentGlow: 'rgba(255, 45, 85, 0.4)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 45, 85, 0.18); border: 1px solid rgba(255, 45, 85, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-users-three" style="color: #ff2d55; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff6482;">VITA DI CLASSE</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
+                            ${isAssembly ? 'Richiesta Assemblea' : 'Proposta Spostamento'}
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            Classe ${escapeHtml(effClass || 'Tua Classe')}
+                        </p>
+                    </div>
+
+                    <!-- Proposal Details & Live Interactive Voting Card -->
+                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 45, 85, 0.3); backdrop-filter: blur(30px); border-radius: 24px; padding: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                        <div style="font-size: 11px; font-weight: 800; color: #ff6482; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+                            DATA RICHIESTA
+                        </div>
+                        <div style="font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">
+                            ${escapeHtml(assemblyProp.targetDate || 'Giorno indicato')}
+                        </div>
+                        <p style="font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.45; margin: 0 0 16px;">
+                            "${escapeHtml(assemblyProp.reason || 'Organizzazione didattica e confronto')}"
+                        </p>
+
+                        <!-- Vote Tallies -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                            <div style="flex: 1; background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.25); border-radius: 12px; padding: 8px; text-align: center;">
+                                <div style="font-size: 16px; font-weight: 800; color: #30d158;">${acceptCount}</div>
+                                <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);">Favorevoli</div>
+                            </div>
+                            <div style="flex: 1; background: rgba(255,69,58,0.12); border: 1px solid rgba(255,69,58,0.25); border-radius: 12px; padding: 8px; text-align: center;">
+                                <div style="font-size: 16px; font-weight: 800; color: #ff453a;">${declineCount}</div>
+                                <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);">Contrari</div>
+                            </div>
+                        </div>
+
+                        <!-- Live Action Buttons Right in Rewind -->
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="event.stopPropagation(); window.voteClassProposal('${assemblyProp.id}', 'accept');" style="
+                                flex: 1; padding: 11px; border-radius: 14px;
+                                background: ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.25)'};
+                                border: 1px solid #30d158; color: #ffffff; font-size: 12px; font-weight: 800;
+                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            ">
+                                <i class="ph-bold ph-thumbs-up"></i> ${hasAccepted ? 'Votato 👍' : 'Favorevole'}
+                            </button>
+                            <button onclick="event.stopPropagation(); window.voteClassProposal('${assemblyProp.id}', 'decline');" style="
+                                flex: 1; padding: 11px; border-radius: 14px;
+                                background: ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.2)'};
+                                border: 1px solid #ff453a; color: #ffffff; font-size: 12px; font-weight: 800;
+                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            ">
+                                <i class="ph-bold ph-thumbs-down"></i> ${hasDeclined ? 'Votato 👎' : 'Contrario'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="color: rgba(255,255,255,0.45); font-size: 11.5px; text-align: center;">
+                        I voti si sincronizzano in tempo reale tra tutti i compagni.
+                    </div>
+                </div>
+            `
+        });
+    }
+
+    // ── SLIDE 5: CIRCOLARI ──
+    if (todayCircolari.length > 0) {
+        const circ = todayCircolari[0];
+        slides.push({
+            id: 'circolari',
+            category: 'circolari',
+            title: 'Circolari della Scuola',
+            gradientBg: 'linear-gradient(160deg, #2d1e02 0%, #78350f 45%, #120c02 100%)',
+            accentGlow: 'rgba(255, 214, 10, 0.4)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 214, 10, 0.18); border: 1px solid rgba(255, 214, 10, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-megaphone" style="color: #ffd60a; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ffe664;">COMUNICAZIONI SCUOLA</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
+                            Nuova Circolare
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            Pubblicata oggi dall'istituto.
+                        </p>
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 214, 10, 0.3); backdrop-filter: blur(30px); border-radius: 24px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                        <div style="font-size: 11px; font-weight: 800; color: #ffd60a; text-transform: uppercase; margin-bottom: 8px;">
+                            N° ${escapeHtml(circ.numero || 'N.D.')}
+                        </div>
+                        <div style="font-size: 18px; font-weight: 800; color: #ffffff; line-height: 1.35; margin-bottom: 12px;">
+                            ${escapeHtml(circ.titolo || circ.title || 'Circolare')}
+                        </div>
+                        <p style="font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.4; margin: 0 0 16px;">
+                            ${escapeHtml(circ.desc || circ.snippet || 'Tocca per aprire il documento ufficiale completo.')}
+                        </p>
+                        <button onclick="event.stopPropagation(); if(typeof openCircolareDetails==='function')openCircolareDetails('${circ.id}'); else navigate('circolari'); window.closeTodayRewind();" style="
+                            width: 100%; padding: 12px; border-radius: 14px;
+                            background: #ffd60a; border: none; color: #000000; font-size: 13px; font-weight: 800;
+                            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                        ">
+                            <i class="ph-bold ph-file-text"></i> Apri Circolare
+                        </button>
+                    </div>
+
+                    <div style="color: rgba(255,255,255,0.45); font-size: 12px; text-align: center;">
+                        Archivio circolari sempre consultabile.
+                    </div>
+                </div>
+            `
+        });
+    }
+
+    // ── SLIDE FINALE: SPOTIFY WRAPPED SUMMARY CARD ──
+    slides.push({
+        id: 'outro',
+        category: 'recap',
+        title: 'Quadro Completo',
+        gradientBg: 'linear-gradient(160deg, #181135 0%, #101935 45%, #0a0d1a 100%)',
+        accentGlow: 'rgba(121, 40, 202, 0.45)',
+        renderHtml: () => `
+            <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(121, 40, 202, 0.25); border: 1px solid rgba(121, 40, 202, 0.45); margin-bottom: 20px;">
+                        <i class="ph-fill ph-check-circle" style="color: #bf5af2; font-size: 13px;"></i>
+                        <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #da8aff;">GIORNATA COMPLETATA</span>
+                    </div>
+                    <h2 style="font-size: 32px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; margin: 0 0 10px;">
+                        Sei al passo con tutto.
+                    </h2>
+                    <p style="font-size: 13.5px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                        Hai visualizzato tutte le novità di oggi.
+                    </p>
+                </div>
+
+                <!-- Spotify Wrapped 3-Stat Summary Grid -->
+                <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); backdrop-filter: blur(30px); border-radius: 24px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; margin-bottom: 14px;">
+                        IL TUO QUADRO DI OGGI
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
+                        <div style="background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 8px; text-align: center;">
+                            <div style="font-size: 18px; font-weight: 900; color: #30d158;">${media > 0 ? media.toFixed(1) : '-'}</div>
+                            <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-top: 2px;">Media Voti</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 8px; text-align: center;">
+                            <div style="font-size: 18px; font-weight: 900; color: #64d2ff;">${todayCompiti.length}</div>
+                            <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-top: 2px;">Compiti</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 8px; text-align: center;">
+                            <div style="font-size: 18px; font-weight: 900; color: #ff375f;">${effClass || '100%'}</div>
+                            <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-top: 2px;">Classe</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.7);">
+                        <i class="ph-fill ph-clock-countdown" style="color: #bf5af2;"></i>
+                        <span>Il Rewind si resetterà alle 00:00 per la nuova giornata.</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="window.closeTodayRewind();" style="
+                        width: 100%; padding: 14px; border-radius: 16px;
+                        background: linear-gradient(135deg, #ff007a 0%, #7928ca 100%);
+                        border: none; color: #ffffff; font-size: 14px; font-weight: 800;
+                        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+                        box-shadow: 0 6px 20px rgba(255, 0, 122, 0.4);
+                    ">
+                        <i class="ph-bold ph-check"></i> Chiudi e Torna alla Home
+                    </button>
+                    <button onclick="window.rewindGoToSlide(0);" style="
+                        width: 100%; padding: 12px; border-radius: 16px;
+                        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+                        color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 700;
+                        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                    ">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i> Riguarda Rewind
+                    </button>
+                </div>
+            </div>
+        `
+    });
+
+    return slides;
+};
+
+// ── REWIND VIEWER ENGINE ──
+window._rewindState = null;
+
+window.openTodayRewind = function(slideIdx = 0) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+    const slides = window.getTodayRewindSlides();
+    if (!slides || slides.length === 0) return;
+
+    window._rewindState = {
+        slides,
+        currentIndex: Math.max(0, Math.min(slideIdx, slides.length - 1)),
+        timer: null,
+        startTime: 0,
+        duration: 6200,
+        remainingTime: 6200,
+        isPaused: false
+    };
+
+    let overlay = document.getElementById('today-rewind-viewer-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
-        overlay.id = 'instagram-story-viewer-overlay';
+        overlay.id = 'today-rewind-viewer-overlay';
         overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 999999;
-            background: rgba(4, 8, 18, 0.95);
-            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            position: fixed; inset: 0; z-index: 99999;
+            background: #000000;
             display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.22s ease;
+            opacity: 0; transition: opacity 0.25s ease-out;
             user-select: none; -webkit-user-select: none;
+            overflow: hidden;
         `;
         document.body.appendChild(overlay);
     }
 
-    window._renderStoryViewerFrame(targetChannel, slideIdx, effClass, userId);
+    window._renderRewindFrame(window._rewindState.currentIndex);
 
     requestAnimationFrame(() => {
         if (overlay) overlay.style.opacity = '1';
-        window._startStorySlideTimer();
+        window._startRewindSlideTimer();
     });
 
-    if (!window._storyKeydownHandler) {
-        window._storyKeydownHandler = function(e) {
+    // Registra ascolto tastiera
+    if (!window._rewindKeydownHandler) {
+        window._rewindKeydownHandler = function(e) {
             if (e.key === 'Escape') {
-                window.closeInstagramStoryViewer();
+                window.closeTodayRewind();
             } else if (e.key === 'ArrowRight') {
-                window.storyViewerNextSlide();
+                window.rewindNextSlide();
             } else if (e.key === 'ArrowLeft') {
-                window.storyViewerPrevSlide();
+                window.rewindPrevSlide();
             } else if (e.key === ' ') {
-                window.togglePauseStoryViewer();
+                window.togglePauseRewindViewer();
             }
         };
-        window.addEventListener('keydown', window._storyKeydownHandler);
+        window.addEventListener('keydown', window._rewindKeydownHandler);
     }
 };
 
-window._renderStoryViewerFrame = function(channel, slideIdx, effClass, userId) {
-    const overlay = document.getElementById('instagram-story-viewer-overlay');
-    if (!overlay) return;
+window._renderRewindFrame = function(slideIdx) {
+    const overlay = document.getElementById('today-rewind-viewer-overlay');
+    if (!overlay || !window._rewindState) return;
 
-    const currentSlide = channel.slides[slideIdx];
+    const slides = window._rewindState.slides;
+    const currentSlide = slides[slideIdx];
     if (!currentSlide) return;
 
-    if (typeof window.markStoryAsSeen === 'function') {
-        window.markStoryAsSeen(currentSlide.slideId || currentSlide.id);
+    // Se siamo arrivati all'ultima slide (outro), marchiamo come visto!
+    if (slideIdx === slides.length - 1) {
+        window.markTodayRewindSeen();
     }
 
-    const slideCount = channel.slides.length;
-    const progressSegmentsHtml = channel.slides.map((s, idx) => {
+    const slideCount = slides.length;
+    const progressSegmentsHtml = slides.map((s, idx) => {
         let barInner = '';
         if (idx < slideIdx) {
             barInner = '<div style="width:100%;height:100%;background:#ffffff;border-radius:2px;"></div>';
         } else if (idx === slideIdx) {
-            barInner = '<div id="active-story-progress-bar" style="height:100%;background:#ffffff;border-radius:2px;width:0%;"></div>';
+            barInner = '<div id="active-rewind-progress-bar" style="height:100%;background:#ffffff;border-radius:2px;width:0%;"></div>';
         } else {
             barInner = '<div style="width:0%;height:100%;background:#ffffff;border-radius:2px;"></div>';
         }
@@ -4231,77 +4007,86 @@ window._renderStoryViewerFrame = function(channel, slideIdx, effClass, userId) {
         </div>`;
     }).join('');
 
+    overlay.style.background = currentSlide.gradientBg || '#080d1a';
+
     overlay.innerHTML = `
-    <div id="instagram-story-frame" style="
+    <!-- Ambient Glow Orbs -->
+    <div style="position: absolute; top: -10%; right: -10%; width: 280px; height: 280px; background: ${currentSlide.accentGlow || 'rgba(255,0,122,0.3)'}; filter: blur(65px); border-radius: 50%; pointer-events: none; opacity: 0.7;"></div>
+    <div style="position: absolute; bottom: -10%; left: -10%; width: 280px; height: 280px; background: rgba(0, 223, 216, 0.25); filter: blur(65px); border-radius: 50%; pointer-events: none; opacity: 0.5;"></div>
+
+    <div id="today-rewind-frame" style="
         width: 100%; height: 100%; max-width: 440px; max-height: 94vh;
         position: relative; display: flex; flex-direction: column; justify-content: space-between;
         padding: max(env(safe-area-inset-top, 0px), 16px) 16px max(env(safe-area-inset-bottom, 0px), 20px) 16px;
-        box-sizing: border-box;
+        box-sizing: border-box; z-index: 10;
     ">
-        <!-- Top Bar: Progress Bars + Channel Info + Close Controls -->
-        <div style="position:relative;z-index:20;flex-shrink:0;margin-bottom:12px;">
-            <!-- Segmented Progress Bar -->
-            <div style="display:flex;gap:4px;width:100%;margin-bottom:10px;">
+        <!-- Top Bar: Progress Segment Bars + Brand Label & Audio Equalizer + Close Controls -->
+        <div style="position: relative; z-index: 20; flex-shrink: 0; margin-bottom: 8px;">
+            <!-- Segmented Progress Bars -->
+            <div style="display: flex; gap: 4px; width: 100%; margin-bottom: 12px;">
                 ${progressSegmentsHtml}
             </div>
 
             <!-- Header Row -->
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:34px;height:34px;border-radius:50%;background:#0b1326;border:1.5px solid ${channel.ringColor || '#ff2d55'};display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px ${channel.ringColor}66;">
-                        <i class="ph-fill ${channel.icon}" style="font-size:17px;color:${channel.ringColor};"></i>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <!-- Brand + Spotify Equalizer Icon -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: flex-end; gap: 2.5px; height: 18px; padding-bottom: 2px;">
+                        <span class="rewind-eq-bar-1" style="width: 3px; background: #00dfd8; border-radius: 2px; display: inline-block;"></span>
+                        <span class="rewind-eq-bar-2" style="width: 3px; background: #ff007a; border-radius: 2px; display: inline-block;"></span>
+                        <span class="rewind-eq-bar-3" style="width: 3px; background: #bf5af2; border-radius: 2px; display: inline-block;"></span>
                     </div>
                     <div>
-                        <div style="font-size:13.5px;font-weight:800;color:#ffffff;display:flex;align-items:center;gap:6px;">
-                            <span>${escapeHtml(channel.title)}</span>
-                            <span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.6);">${slideIdx + 1}/${slideCount}</span>
+                        <div style="font-size: 13px; font-weight: 800; color: #ffffff; letter-spacing: 0.02em; display: flex; align-items: center; gap: 6px;">
+                            <span>OGGI REWIND</span>
+                            <span style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5);">${slideIdx + 1}/${slideCount}</span>
                         </div>
-                        <div style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.5);">Oggi • Gandhi Connect</div>
                     </div>
                 </div>
 
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <!-- Pause/Resume Button -->
-                    <button id="story-play-pause-btn" onclick="window.togglePauseStoryViewer();" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-                        <i class="ph-fill ph-pause" style="font-size:14px;"></i>
+                <!-- Right Controls: Pause / Close -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="rewind-pause-btn" onclick="window.togglePauseRewindViewer();" title="Pausa" style="
+                        width: 32px; height: 32px; border-radius: 50%;
+                        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+                    ">
+                        <i class="ph-fill ph-pause" style="font-size: 13px;"></i>
                     </button>
-
-                    <!-- Switch to Archive Button -->
-                    <button onclick="window.closeInstagramStoryViewer(); if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive(); else openTodayNotifications('archive');" title="Vedi tutte in archivio" style="height:32px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,0.12);border:none;color:#ffffff;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;cursor:pointer;">
-                        <i class="ph-bold ph-archive-box" style="font-size:13px;"></i>
-                        <span>Archivio</span>
-                    </button>
-
-                    <!-- Close Button -->
-                    <button onclick="window.closeInstagramStoryViewer();" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-                        <i class="ph-bold ph-x" style="font-size:16px;"></i>
+                    <button onclick="window.closeTodayRewind();" title="Chiudi" style="
+                        width: 32px; height: 32px; border-radius: 50%;
+                        background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+                    ">
+                        <i class="ph-bold ph-x" style="font-size: 15px;"></i>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Center Card Container with Invisible Tap Navigation Zones -->
-        <div style="position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0;">
-            <!-- Left Tap Zone (Previous) -->
-            <div id="story-tap-left" onclick="window.storyViewerPrevSlide();" style="position:absolute;top:0;left:0;bottom:0;width:30%;z-index:5;cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
+        <!-- Center Slide Content with Left/Right Invisible Tap Zones -->
+        <div style="position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0;">
+            <!-- Left Tap Zone (Previous Slide) -->
+            <div id="rewind-tap-left" onclick="window.rewindPrevSlide();" style="position: absolute; top: 0; left: 0; bottom: 0; width: 30%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
 
-            <!-- Right Tap Zone (Next) -->
-            <div id="story-tap-right" onclick="window.storyViewerNextSlide();" style="position:absolute;top:0;right:0;bottom:0;width:70%;z-index:5;cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
+            <!-- Right Tap Zone (Next Slide) -->
+            <div id="rewind-tap-right" onclick="window.rewindNextSlide();" style="position: absolute; top: 0; right: 0; bottom: 0; width: 70%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
 
-            <!-- Slide Content Card (Z-index 8 so its buttons capture click first) -->
-            <div id="instagram-story-content-card" style="width:100%;position:relative;z-index:8;">
-                ${buildStorySlideCardHtml(currentSlide, effClass, userId)}
+            <!-- Slide Content Card (Z-index 8 to allow buttons inside to be clicked) -->
+            <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 8;">
+                ${currentSlide.renderHtml ? currentSlide.renderHtml() : ''}
             </div>
         </div>
 
         <!-- Bottom Gesture Hint -->
-        <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding-top:10px;color:rgba(255,255,255,0.4);font-size:10.5px;font-weight:600;flex-shrink:0;">
-            <i class="ph-bold ph-caret-double-down" style="font-size:11px;"></i>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 6px; padding-top: 10px; color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 600; flex-shrink: 0;">
+            <i class="ph-bold ph-caret-double-down" style="font-size: 12px;"></i>
             <span>Trascina in basso per chiudere</span>
         </div>
     </div>`;
 
-    const frame = document.getElementById('instagram-story-frame');
+    // Attach Swipe & Touch-to-hold handlers
+    const frame = document.getElementById('today-rewind-frame');
     if (frame) {
         let touchStartY = 0;
         let isHolding = false;
@@ -4312,8 +4097,8 @@ window._renderStoryViewerFrame = function(channel, slideIdx, effClass, userId) {
                 touchStartY = e.touches[0].clientY;
                 holdTimeout = setTimeout(() => {
                     isHolding = true;
-                    window.pauseStoryViewer();
-                }, 140);
+                    window.pauseRewindViewer();
+                }, 150);
             }
         }, { passive: true });
 
@@ -4333,12 +4118,12 @@ window._renderStoryViewerFrame = function(channel, slideIdx, effClass, userId) {
             clearTimeout(holdTimeout);
             if (isHolding) {
                 isHolding = false;
-                window.resumeStoryViewer();
+                window.resumeRewindViewer();
             }
             if (e.changedTouches && e.changedTouches.length === 1) {
                 const diffY = e.changedTouches[0].clientY - touchStartY;
                 if (diffY > 80) {
-                    window.closeInstagramStoryViewer();
+                    window.closeTodayRewind();
                     return;
                 }
             }
@@ -4348,150 +4133,116 @@ window._renderStoryViewerFrame = function(channel, slideIdx, effClass, userId) {
     }
 };
 
-window._startStorySlideTimer = function() {
-    if (!window._storyViewerState) return;
-    if (window._storyViewerState.timer) {
-        clearTimeout(window._storyViewerState.timer);
-        window._storyViewerState.timer = null;
+window._startRewindSlideTimer = function() {
+    if (!window._rewindState) return;
+
+    if (window._rewindState.timer) {
+        clearTimeout(window._rewindState.timer);
+        window._rewindState.timer = null;
     }
 
-    const duration = window._storyViewerState.slideDuration || 6000;
-    const bar = document.getElementById('active-story-progress-bar');
-    if (bar) {
-        bar.style.transition = 'none';
-        bar.style.width = '0%';
-        requestAnimationFrame(() => {
-            bar.style.transition = `width ${duration}ms linear`;
-            bar.style.width = '100%';
-        });
+    const duration = window._rewindState.remainingTime || window._rewindState.duration;
+    window._rewindState.startTime = Date.now();
+
+    const progressBar = document.getElementById('active-rewind-progress-bar');
+    if (progressBar) {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '0%';
+        void progressBar.offsetWidth;
+        progressBar.style.transition = `width ${duration}ms linear`;
+        progressBar.style.width = '100%';
     }
 
-    window._storyViewerState.progressStartedAt = Date.now();
-    window._storyViewerState.remainingTime = duration;
-
-    window._storyViewerState.timer = setTimeout(() => {
-        window.storyViewerNextSlide();
+    window._rewindState.timer = setTimeout(() => {
+        window.rewindNextSlide();
     }, duration);
 };
 
-window.pauseStoryViewer = function() {
-    if (!window._storyViewerState || window._storyViewerState.isPaused) return;
-    window._storyViewerState.isPaused = true;
-    if (window._storyViewerState.timer) {
-        clearTimeout(window._storyViewerState.timer);
-        window._storyViewerState.timer = null;
+window.pauseRewindViewer = function() {
+    if (!window._rewindState || window._rewindState.isPaused) return;
+    window._rewindState.isPaused = true;
+    if (window._rewindState.timer) {
+        clearTimeout(window._rewindState.timer);
+        window._rewindState.timer = null;
     }
-    const elapsed = Date.now() - window._storyViewerState.progressStartedAt;
-    window._storyViewerState.remainingTime = Math.max(200, window._storyViewerState.slideDuration - elapsed);
+    const elapsed = Date.now() - window._rewindState.startTime;
+    window._rewindState.remainingTime = Math.max(0, (window._rewindState.remainingTime || window._rewindState.duration) - elapsed);
 
-    const bar = document.getElementById('active-story-progress-bar');
-    if (bar) {
-        const computedWidth = window.getComputedStyle(bar).width;
-        bar.style.transition = 'none';
-        bar.style.width = computedWidth;
+    const progressBar = document.getElementById('active-rewind-progress-bar');
+    if (progressBar) {
+        const computedWidth = window.getComputedStyle(progressBar).width;
+        progressBar.style.transition = 'none';
+        progressBar.style.width = computedWidth;
     }
 
-    const icon = document.querySelector('#story-play-pause-btn i');
-    if (icon) {
-        icon.className = 'ph-fill ph-play';
-    }
+    const btn = document.getElementById('rewind-pause-btn');
+    if (btn) btn.innerHTML = '<i class="ph-fill ph-play" style="font-size:13px;"></i>';
 };
 
-window.resumeStoryViewer = function() {
-    if (!window._storyViewerState || !window._storyViewerState.isPaused) return;
-    window._storyViewerState.isPaused = false;
-
-    const remaining = window._storyViewerState.remainingTime || 3000;
-    const bar = document.getElementById('active-story-progress-bar');
-    if (bar) {
-        bar.style.transition = `width ${remaining}ms linear`;
-        bar.style.width = '100%';
-    }
-
-    window._storyViewerState.progressStartedAt = Date.now();
-    window._storyViewerState.timer = setTimeout(() => {
-        window.storyViewerNextSlide();
-    }, remaining);
-
-    const icon = document.querySelector('#story-play-pause-btn i');
-    if (icon) {
-        icon.className = 'ph-fill ph-pause';
-    }
+window.resumeRewindViewer = function() {
+    if (!window._rewindState || !window._rewindState.isPaused) return;
+    window._rewindState.isPaused = false;
+    const btn = document.getElementById('rewind-pause-btn');
+    if (btn) btn.innerHTML = '<i class="ph-fill ph-pause" style="font-size:13px;"></i>';
+    window._startRewindSlideTimer();
 };
 
-window.togglePauseStoryViewer = function() {
-    if (!window._storyViewerState) return;
-    if (window._storyViewerState.isPaused) {
-        window.resumeStoryViewer();
+window.togglePauseRewindViewer = function() {
+    if (!window._rewindState) return;
+    if (window._rewindState.isPaused) {
+        window.resumeRewindViewer();
     } else {
-        window.pauseStoryViewer();
+        window.pauseRewindViewer();
     }
 };
 
-window.storyViewerNextSlide = function() {
-    if (!window._storyViewerState) return;
-    const storiesData = window.getTodayStoriesData();
-    const channels = storiesData.channels || [];
-    const currentChannel = channels.find(c => c.id === window._storyViewerState.channelId);
-    if (!currentChannel) return window.closeInstagramStoryViewer();
-
-    if (window._storyViewerState.slideIndex < currentChannel.slides.length - 1) {
-        window._storyViewerState.slideIndex++;
-        window.openInstagramStoryViewer(currentChannel.id, window._storyViewerState.slideIndex);
+window.rewindNextSlide = function() {
+    if (!window._rewindState) return;
+    const slides = window._rewindState.slides;
+    if (window._rewindState.currentIndex < slides.length - 1) {
+        window._rewindState.currentIndex++;
+        window._rewindState.remainingTime = window._rewindState.duration;
+        window._rewindState.isPaused = false;
+        window._renderRewindFrame(window._rewindState.currentIndex);
+        window._startRewindSlideTimer();
     } else {
-        const currentChannelIdx = channels.findIndex(c => c.id === currentChannel.id);
-        if (currentChannelIdx !== -1 && currentChannelIdx < channels.length - 1) {
-            window.openInstagramStoryViewer(channels[currentChannelIdx + 1].id, 0);
-        } else {
-            window.closeInstagramStoryViewer();
-        }
+        // Fine del rewind!
+        window.markTodayRewindSeen();
+        window.closeTodayRewind();
     }
 };
 
-window.storyViewerPrevSlide = function() {
-    if (!window._storyViewerState) return;
-    const storiesData = window.getTodayStoriesData();
-    const channels = storiesData.channels || [];
-    const currentChannel = channels.find(c => c.id === window._storyViewerState.channelId);
-    if (!currentChannel) return;
-
-    if (window._storyViewerState.slideIndex > 0) {
-        window._storyViewerState.slideIndex--;
-        window.openInstagramStoryViewer(currentChannel.id, window._storyViewerState.slideIndex);
-    } else {
-        const currentChannelIdx = channels.findIndex(c => c.id === currentChannel.id);
-        if (currentChannelIdx > 0) {
-            const prevCh = channels[currentChannelIdx - 1];
-            window.openInstagramStoryViewer(prevCh.id, prevCh.slides.length - 1);
-        }
+window.rewindPrevSlide = function() {
+    if (!window._rewindState) return;
+    if (window._rewindState.currentIndex > 0) {
+        window._rewindState.currentIndex--;
+        window._rewindState.remainingTime = window._rewindState.duration;
+        window._rewindState.isPaused = false;
+        window._renderRewindFrame(window._rewindState.currentIndex);
+        window._startRewindSlideTimer();
     }
 };
 
-window.rerenderCurrentStorySlide = function() {
-    if (!window._storyViewerState) return;
-    const card = document.getElementById('instagram-story-content-card');
-    if (!card) return;
-
-    const storiesData = window.getTodayStoriesData();
-    const currentChannel = (storiesData.channels || []).find(c => c.id === window._storyViewerState.channelId);
-    if (!currentChannel) return;
-    const currentSlide = currentChannel.slides[window._storyViewerState.slideIndex];
-    if (!currentSlide) return;
-
-    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
-    const userId = (typeof getClassRepAuthInfo === 'function') ? getClassRepAuthInfo().userId : String(state.user?.id || 'utente');
-
-    card.innerHTML = buildStorySlideCardHtml(currentSlide, effClass, userId);
+window.rewindGoToSlide = function(idx) {
+    if (!window._rewindState) return;
+    const slides = window._rewindState.slides;
+    if (idx >= 0 && idx < slides.length) {
+        window._rewindState.currentIndex = idx;
+        window._rewindState.remainingTime = window._rewindState.duration;
+        window._rewindState.isPaused = false;
+        window._renderRewindFrame(idx);
+        window._startRewindSlideTimer();
+    }
 };
 
-window.closeInstagramStoryViewer = function() {
+window.closeTodayRewind = function() {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
-    if (window._storyViewerState && window._storyViewerState.timer) {
-        clearTimeout(window._storyViewerState.timer);
-        window._storyViewerState.timer = null;
+    if (window._rewindState && window._rewindState.timer) {
+        clearTimeout(window._rewindState.timer);
+        window._rewindState.timer = null;
     }
-    const overlay = document.getElementById('instagram-story-viewer-overlay');
-    const frame = document.getElementById('instagram-story-frame');
+    const overlay = document.getElementById('today-rewind-viewer-overlay');
+    const frame = document.getElementById('today-rewind-frame');
     if (frame) {
         frame.style.transform = 'translateY(60px) scale(0.92)';
         frame.style.opacity = '0';
@@ -4504,11 +4255,23 @@ window.closeInstagramStoryViewer = function() {
             overlay.remove();
         }, 230);
     }
-    if (window._storyKeydownHandler) {
-        window.removeEventListener('keydown', window._storyKeydownHandler);
-        window._storyKeydownHandler = null;
+    if (window._rewindKeydownHandler) {
+        window.removeEventListener('keydown', window._rewindKeydownHandler);
+        window._rewindKeydownHandler = null;
     }
+    window.markTodayRewindSeen();
 };
+
+// Hook openTodayNotifications to launch Rewind directly
+window.openTodayNotifications = function(mode) {
+    if (mode === 'archive' || mode === 'list') {
+        if (typeof window.openNotificationsArchive === 'function') {
+            return window.openNotificationsArchive('all');
+        }
+    }
+    return window.openTodayRewind();
+};
+
 
 // ═══════════════════════════════════════════════════════════════
 // openNotificationsArchive() — Centro Notifiche & Attività Apple Glass (Archivio)
@@ -5256,7 +5019,7 @@ function openTodayNotifications(mode) {
     if (mode === 'archive' || mode === 'list') {
         return openNotificationsArchive('all');
     }
-    return openInstagramStoryViewer('all', 0);
+    return window.openTodayRewind();
 }
 window.openTodayNotifications = openTodayNotifications;
 
