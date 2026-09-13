@@ -314,6 +314,12 @@
     }
 }
 
-
-
-
+#today-rewind-viewer-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #000000 !important;
+    z-index: 999999 !important;
+    touch-action: manipulation;
+}

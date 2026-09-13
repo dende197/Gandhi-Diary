@@ -3620,11 +3620,11 @@ window.getTodayRewindSlides = function() {
             id: `voto_${voto.id || idx}`,
             category: 'voti',
             title: `Nuovo Voto: ${voto.materia || 'Valutazione'}`,
-            gradientBg: 'linear-gradient(160deg, rgba(28, 25, 45, 0.96) 0%, rgba(10, 8, 20, 0.98) 100%)',
+            gradientBg: 'linear-gradient(160deg, #1c192d 0%, #0a0814 100%)',
             accentGlow: `${orbColor}55`,
             renderHtml: () => `
                 <div class="story-slide-card" style="
-                    background: linear-gradient(160deg, rgba(28, 25, 45, 0.94) 0%, rgba(10, 8, 20, 0.97) 100%);
+                    background: linear-gradient(160deg, #1c192d 0%, #0a0814 100%);
                     backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     border-top: 1.5px solid rgba(255, 255, 255, 0.32);
@@ -3709,11 +3709,11 @@ window.getTodayRewindSlides = function() {
             id: `assembly_${prop.id || idx}`,
             category: 'assemblea',
             title: 'Richiesta Assemblea di Classe',
-            gradientBg: 'linear-gradient(160deg, rgba(20, 35, 60, 0.96) 0%, rgba(8, 14, 28, 0.98) 100%)',
+            gradientBg: 'linear-gradient(160deg, #14233c 0%, #080e1c 100%)',
             accentGlow: 'rgba(48, 209, 88, 0.45)',
             renderHtml: () => `
                 <div class="story-slide-card" style="
-                    background: linear-gradient(160deg, rgba(20, 35, 60, 0.94) 0%, rgba(8, 14, 28, 0.97) 100%);
+                    background: linear-gradient(160deg, #14233c 0%, #080e1c 100%);
                     backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     border-top: 1.5px solid rgba(255, 255, 255, 0.32);
@@ -3865,11 +3865,11 @@ window.getTodayRewindSlides = function() {
             id: `reschedule_${prop.id || idx}`,
             category: 'spostamento',
             title: `Sposta Verifica: ${prop.subject || 'Verifica'}`,
-            gradientBg: 'linear-gradient(160deg, rgba(20, 35, 60, 0.96) 0%, rgba(8, 14, 28, 0.98) 100%)',
+            gradientBg: 'linear-gradient(160deg, #14233c 0%, #080e1c 100%)',
             accentGlow: 'rgba(50, 173, 230, 0.45)',
             renderHtml: () => `
                 <div class="story-slide-card" style="
-                    background: linear-gradient(160deg, rgba(20, 35, 60, 0.94) 0%, rgba(8, 14, 28, 0.97) 100%);
+                    background: linear-gradient(160deg, #14233c 0%, #080e1c 100%);
                     backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     border-top: 1.5px solid rgba(255, 255, 255, 0.32);
@@ -3963,11 +3963,11 @@ window.getTodayRewindSlides = function() {
             id: `compito_${c.id || idx}`,
             category: 'compiti',
             title: `Compito: ${c.materia || 'Attività'}`,
-            gradientBg: 'linear-gradient(160deg, rgba(16, 28, 52, 0.96) 0%, rgba(6, 12, 24, 0.98) 100%)',
+            gradientBg: 'linear-gradient(160deg, #101c34 0%, #060c18 100%)',
             accentGlow: 'rgba(41, 151, 255, 0.45)',
             renderHtml: () => `
                 <div class="story-slide-card" style="
-                    background: linear-gradient(160deg, rgba(16, 28, 52, 0.94) 0%, rgba(6, 12, 24, 0.97) 100%);
+                    background: linear-gradient(160deg, #101c34 0%, #060c18 100%);
                     backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     border-top: 1.5px solid rgba(255, 255, 255, 0.32);
@@ -4033,11 +4033,11 @@ window.getTodayRewindSlides = function() {
             id: `circ_${circ.id || idx}`,
             category: 'circolari',
             title: `Circolare N° ${circ.numero || ''}`,
-            gradientBg: 'linear-gradient(160deg, rgba(38, 28, 14, 0.96) 0%, rgba(14, 10, 5, 0.98) 100%)',
+            gradientBg: 'linear-gradient(160deg, #261c0e 0%, #0e0a05 100%)',
             accentGlow: 'rgba(255, 214, 10, 0.45)',
             renderHtml: () => `
                 <div class="story-slide-card" style="
-                    background: linear-gradient(160deg, rgba(38, 28, 14, 0.94) 0%, rgba(14, 10, 5, 0.97) 100%);
+                    background: linear-gradient(160deg, #261c0e 0%, #0e0a05 100%);
                     backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     border-top: 1.5px solid rgba(255, 255, 255, 0.32);
@@ -4119,8 +4119,9 @@ window.openTodayRewind = function(slideIdx = 0) {
         overlay = document.createElement('div');
         overlay.id = 'today-rewind-viewer-overlay';
         overlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 99999;
-            background: #000000;
+            position: fixed; inset: 0; z-index: 999999;
+            background: #000000 !important;
+            width: 100vw; height: 100vh;
             display: flex; align-items: center; justify-content: center;
             opacity: 0; transition: opacity 0.25s ease-out;
             user-select: none; -webkit-user-select: none;
@@ -4129,7 +4130,14 @@ window.openTodayRewind = function(slideIdx = 0) {
         document.body.appendChild(overlay);
     }
 
-    // Attach full-screen tap & swipe listeners (cliccabile da OGNI punto destro/sinistro)
+    // Nascondi completamente l'overview e la nav sottostanti per garantire uno sfondo 100% opaco
+    const mainContainer = document.querySelector('.main-container');
+    const navContainer = document.getElementById('nav-container');
+    if (mainContainer) mainContainer.style.visibility = 'hidden';
+    if (navContainer) navContainer.style.visibility = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    // Registra ascolto tap, click e swipe
     window._setupRewindTapNavigation(overlay);
 
     window._renderRewindFrame(window._rewindState.currentIndex);
@@ -4159,8 +4167,34 @@ window.openTodayRewind = function(slideIdx = 0) {
 window._setupRewindTapNavigation = function(overlay) {
     if (!overlay) return;
 
-    // Desktop Click anywhere on screen (esclusi bottoni interattivi)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let isHolding = false;
+    let holdTimeout = null;
+    let isTouchDrag = false;
+
+    // Helper per navigazione sicura con cooldown / debounce per evitare salti multipli
+    const safeNavigate = function(direction) {
+        const now = Date.now();
+        if (window._rewindLastNavTime && (now - window._rewindLastNavTime < 380)) {
+            return false;
+        }
+        window._rewindLastNavTime = now;
+        if (direction === 'next') {
+            window.rewindNextSlide();
+        } else if (direction === 'prev') {
+            window.rewindPrevSlide();
+        }
+        return true;
+    };
+
+    // Desktop Click (esclusi bottoni e click sintetici fantasma post-touch)
     overlay.onclick = function(e) {
+        // Ignora qualsiasi click che arrivi entro 550ms da un tocco touch (evita il double-skip su mobile!)
+        if (Date.now() - (window._rewindLastTouchTime || 0) < 550) {
+            return;
+        }
         if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) {
             return;
         }
@@ -4169,28 +4203,24 @@ window._setupRewindTapNavigation = function(overlay) {
         const width = rect.width;
 
         if (clickX < width * 0.45) {
-            window.rewindPrevSlide();
+            safeNavigate('prev');
         } else {
-            window.rewindNextSlide();
+            safeNavigate('next');
         }
     };
 
     // Mobile Touch Navigation (Swipe down to dismiss + Tap left/right to navigate + Touch-and-hold to pause)
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartTime = 0;
-    let isHolding = false;
-    let holdTimeout = null;
-
     overlay.ontouchstart = function(e) {
+        window._rewindLastTouchTime = Date.now();
         if (e.touches && e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
             touchStartTime = Date.now();
+            isTouchDrag = false;
             holdTimeout = setTimeout(() => {
                 isHolding = true;
                 window.pauseRewindViewer();
-            }, 180);
+            }, 200);
         }
     };
 
@@ -4198,7 +4228,8 @@ window._setupRewindTapNavigation = function(overlay) {
         if (e.touches && e.touches.length === 1) {
             const diffY = e.touches[0].clientY - touchStartY;
             const diffX = Math.abs(e.touches[0].clientX - touchStartX);
-            if ((Math.abs(diffY) > 10 || diffX > 10) && !isHolding) {
+            if ((Math.abs(diffY) > 8 || diffX > 8) && !isHolding) {
+                isTouchDrag = true;
                 clearTimeout(holdTimeout);
             }
             const frame = document.getElementById('today-rewind-frame');
@@ -4209,6 +4240,7 @@ window._setupRewindTapNavigation = function(overlay) {
     };
 
     overlay.ontouchend = function(e) {
+        window._rewindLastTouchTime = Date.now();
         clearTimeout(holdTimeout);
         const frame = document.getElementById('today-rewind-frame');
 
@@ -4224,23 +4256,38 @@ window._setupRewindTapNavigation = function(overlay) {
 
         if (e.changedTouches && e.changedTouches.length === 1) {
             const diffY = e.changedTouches[0].clientY - touchStartY;
+            const touchX = e.changedTouches[0].clientX;
+            const touchY = e.changedTouches[0].clientY;
+
+            // Swipe down to dismiss
             if (diffY > 75) {
+                if (e.cancelable) e.preventDefault();
                 window.closeTodayRewind();
                 return;
             }
 
-            // Quick Tap: verifica se è stato cliccato un bottone o link
-            const touchX = e.changedTouches[0].clientX;
-            const touchY = e.changedTouches[0].clientY;
+            // Se l'utente ha mosso il dito per trascinare senza raggiungere la soglia di chiusura
+            if (isTouchDrag && Math.abs(diffY) > 25) {
+                if (frame) {
+                    frame.style.transform = 'translateY(0)';
+                    frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+                }
+                return;
+            }
+
+            // Se ha toccato un bottone o link interattivo, lascia agire l'elemento nativo
             const target = document.elementFromPoint(touchX, touchY);
             if (target && target.closest('button, a, input, textarea, [data-prevent-slide]')) {
                 return;
             }
 
+            // TAP per avanzare o andare indietro: blocca il click sintetico del browser per prevenire il doppio salto!
+            if (e.cancelable) e.preventDefault();
+
             if (touchX < window.innerWidth * 0.45) {
-                window.rewindPrevSlide();
+                safeNavigate('prev');
             } else {
-                window.rewindNextSlide();
+                safeNavigate('next');
             }
         }
 
@@ -4280,6 +4327,7 @@ window._renderRewindFrame = function(slideIdx) {
         </div>`;
     }).join('');
 
+    overlay.style.backgroundColor = '#000000';
     overlay.style.background = currentSlide.gradientBg || '#080d1a';
 
     overlay.innerHTML = `
@@ -4373,7 +4421,7 @@ window._startRewindSlideTimer = function() {
     }
 
     window._rewindState.timer = setTimeout(() => {
-        window.rewindNextSlide();
+        window.rewindNextSlide(true);
     }, duration);
 };
 
@@ -4415,8 +4463,13 @@ window.togglePauseRewindViewer = function() {
     }
 };
 
-window.rewindNextSlide = function() {
+window.rewindNextSlide = function(force = false) {
     if (!window._rewindState) return;
+    const now = Date.now();
+    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 350)) {
+        return;
+    }
+    window._rewindLastNavTime = now;
     const slides = window._rewindState.slides;
     if (window._rewindState.currentIndex < slides.length - 1) {
         window._rewindState.currentIndex++;
@@ -4431,8 +4484,13 @@ window.rewindNextSlide = function() {
     }
 };
 
-window.rewindPrevSlide = function() {
+window.rewindPrevSlide = function(force = false) {
     if (!window._rewindState) return;
+    const now = Date.now();
+    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 350)) {
+        return;
+    }
+    window._rewindLastNavTime = now;
     if (window._rewindState.currentIndex > 0) {
         window._rewindState.currentIndex--;
         window._rewindState.remainingTime = window._rewindState.duration;
@@ -4467,6 +4525,14 @@ window.closeTodayRewind = function() {
         frame.style.opacity = '0';
         frame.style.transition = 'all 0.22s cubic-bezier(0.16,1,0.3,1)';
     }
+
+    // Ripristina la visibilità della pagina overview e lo scroll
+    const mainContainer = document.querySelector('.main-container');
+    const navContainer = document.getElementById('nav-container');
+    if (mainContainer) mainContainer.style.visibility = '';
+    if (navContainer) navContainer.style.visibility = '';
+    document.body.style.overflow = '';
+
     if (overlay) {
         overlay.style.opacity = '0';
         overlay.style.transition = 'opacity 0.22s ease-out';
