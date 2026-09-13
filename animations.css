@@ -189,3 +189,72 @@
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
 }
+
+/* ══════════════════════════════════════════════════
+   G-CONNECT INSTAGRAM STORIES SYSTEM ANIMATIONS
+   ══════════════════════════════════════════════════ */
+@keyframes storyRingPulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(41, 151, 255, 0.4), 0 0 20px rgba(191, 90, 242, 0.25);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 16px rgba(41, 151, 255, 0.75), 0 0 28px rgba(191, 90, 242, 0.5);
+        transform: scale(1.025);
+    }
+}
+
+@keyframes storyRingRotate {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes storySlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes storySlideDown {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(60px) scale(0.94);
+    }
+}
+
+@keyframes storyCardPop {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.story-ring-unseen {
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 25%, #8a2387 50%, #e94057 75%, #f27121 100%);
+    animation: storyRingPulse 2.8s infinite ease-in-out;
+}
+
+.story-ring-seen {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@keyframes storyProgressFill {
+    from { width: 0%; }
+    to { width: 100%; }
+}
+
+

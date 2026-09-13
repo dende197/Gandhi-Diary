@@ -2785,6 +2785,11 @@ function renderHome() {
                 </div>
             </header>
 
+            <!-- ════════ STORIE DEL GIORNO (INSTAGRAM-STYLE TRAY) ════════ -->
+            <div id="overview-stories-tray-container" style="padding: 0 20px; margin-bottom: 14px;">
+                ${(typeof window.renderInstagramStoriesTrayHTML === 'function') ? window.renderInstagramStoriesTrayHTML() : ''}
+            </div>
+
             <div style="margin-bottom: 16px; padding: 0 20px;">
                 <!-- WIDGET PRINCIPALE — Apple Liquid Glass Carousel a 3 Slide -->
                 <div id="home-media-widget" style="
@@ -3362,10 +3367,1155 @@ window.getComprehensiveNotificationData = function() {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// openTodayNotifications() — Centro Notifiche & Attività Apple Glass
+// INSTAGRAM STORIES ENGINE & VIEWER FOR G-CONNECT
+// Storie del Giorno con reset automatico a mezzanotte (00:00)
 // ═══════════════════════════════════════════════════════════════
 
-function openTodayNotifications(initialTab) {
+window.getTodayStoriesData = function() {
+    const today = new Date();
+    const todayISO = (typeof getLocalDateString === 'function')
+        ? getLocalDateString(today)
+        : today.toISOString().split('T')[0];
+    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
+
+    // Pulizia chiavi 'seen' dei giorni passati per garantire reset pulito
+    try {
+        const prefix = 'gc_seen_stories_';
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(prefix) && k !== `${prefix}${todayISO}`) {
+                localStorage.removeItem(k);
+            }
+        }
+    } catch (e) {}
+
+    // Carica storie visualizzate oggi (a 00:00 la data cambia e mappa sarà automaticamente vuota!)
+    let seenMap = {};
+    try {
+        const raw = localStorage.getItem(`gc_seen_stories_${todayISO}`);
+        if (raw) seenMap = JSON.parse(raw);
+    } catch (e) {
+        seenMap = {};
+    }
+
+    const notifData = (typeof window.getComprehensiveNotificationData === 'function')
+        ? window.getComprehensiveNotificationData()
+        : { todayItems: [], upcomingItems: [], recentItems: [] };
+
+    // Recupera proposte/assemblee attive per la classe
+    const classProps = effClass && (typeof getStoredClassProposals === 'function')
+        ? getStoredClassProposals(effClass)
+        : [];
+
+    const todayItems = [...(notifData.todayItems || [])];
+
+    // Includi proposte di classe o assemblee attive se non già presenti
+    classProps.forEach(p => {
+        if (p.status === 'pending' || p.status === 'approved' || p.status === 'active' || !p.status) {
+            const exists = todayItems.some(it => it.type === 'proposta' && it.id === p.id);
+            if (!exists) {
+                const isAssembly = p.type === 'assembly';
+                todayItems.unshift({
+                    category: 'proposte',
+                    categoryLabel: isAssembly ? 'Assemblea' : 'Proposta',
+                    type: 'proposta',
+                    id: p.id,
+                    rawProp: p,
+                    title: isAssembly ? 'Richiesta Assemblea di Classe' : `Sposta Verifica: ${p.subject || 'Verifica'}`,
+                    desc: p.reason || (isAssembly ? `Assemblea richiesta per il ${p.targetDate || 'giorno indicato'}` : `Nuova data richiesta: ${p.targetDate || ''}`),
+                    dateISO: p.targetDate || todayISO,
+                    status: p.status || 'pending',
+                    borderAccent: isAssembly ? '#30d158' : '#32ade6',
+                    icon: isAssembly ? 'ph-users-three' : 'ph-calendar-plus',
+                    iconColor: isAssembly ? '#30d158' : '#32ade6',
+                    iconBg: isAssembly ? 'rgba(48,209,88,0.16)' : 'rgba(50,173,230,0.16)',
+                    action: null
+                });
+            }
+        }
+    });
+
+    const isQuietDay = todayItems.length === 0;
+    const channels = [];
+
+    // Canale 1: "Tutte le Novità" / "Highlights di Oggi"
+    const allSlides = isQuietDay ? [{
+        id: `zen_${todayISO}`,
+        slideId: `zen_${todayISO}`,
+        type: 'zen',
+        category: 'zen',
+        channelId: 'all',
+        title: 'Giornata Serena',
+        subtitle: 'Nessuna notifica urgente per oggi',
+        desc: 'Tutti i compiti sono in regola e non ci sono verifiche o assemblee previste per oggi. Buon proseguimento!',
+        dateISO: todayISO,
+        accentColor: '#30d158',
+        icon: 'ph-sparkle'
+    }] : todayItems.map((item, idx) => ({
+        ...item,
+        slideId: `slide_${item.type || 'item'}_${item.id || idx}`,
+        channelId: 'all'
+    }));
+
+    const allUnseen = allSlides.some(s => !seenMap[s.slideId || s.id]);
+    channels.push({
+        id: 'all',
+        title: 'Highlights',
+        shortTitle: 'Oggi',
+        icon: 'ph-sparkle',
+        gradient: 'linear-gradient(135deg, #ff2d55 0%, #af52de 50%, #5856d6 100%)',
+        ringColor: '#ff2d55',
+        unseen: allUnseen,
+        slides: allSlides,
+        count: allSlides.length
+    });
+
+    // Canale 2: Assemblea & Proposte di Classe (se presenti)
+    const propItems = todayItems.filter(it => it.category === 'proposte' || it.type === 'proposta');
+    if (propItems.length > 0) {
+        const propSlides = propItems.map((item, idx) => ({
+            ...item,
+            slideId: `prop_${item.id || idx}`,
+            channelId: 'assemblea'
+        }));
+        const unseen = propSlides.some(s => !seenMap[s.slideId || s.id]);
+        channels.push({
+            id: 'assemblea',
+            title: 'Assemblea',
+            shortTitle: 'Assemblea',
+            icon: 'ph-users-three',
+            gradient: 'linear-gradient(135deg, #30d158 0%, #00c7be 100%)',
+            ringColor: '#30d158',
+            unseen,
+            slides: propSlides,
+            count: propSlides.length
+        });
+    }
+
+    // Canale 3: Voti e Note (se presenti oggi)
+    const votiItems = todayItems.filter(it => it.category === 'voti' || it.type === 'voto' || it.type === 'nota');
+    if (votiItems.length > 0) {
+        const votiSlides = votiItems.map((item, idx) => ({
+            ...item,
+            slideId: `voto_${item.id || idx}`,
+            channelId: 'voti'
+        }));
+        const unseen = votiSlides.some(s => !seenMap[s.slideId || s.id]);
+        channels.push({
+            id: 'voti',
+            title: 'Nuovi Voti',
+            shortTitle: 'Voti',
+            icon: 'ph-chart-line-up',
+            gradient: 'linear-gradient(135deg, #ffd60a 0%, #ff9f0a 100%)',
+            ringColor: '#ffd60a',
+            unseen,
+            slides: votiSlides,
+            count: votiSlides.length
+        });
+    }
+
+    // Canale 4: Verifiche e Compiti (se presenti oggi)
+    const compitiItems = todayItems.filter(it => it.category === 'compiti' || it.category === 'verifiche' || it.type === 'compito' || it.type === 'verifica');
+    if (compitiItems.length > 0) {
+        const compitiSlides = compitiItems.map((item, idx) => ({
+            ...item,
+            slideId: `compiti_${item.id || idx}`,
+            channelId: 'compiti'
+        }));
+        const unseen = compitiSlides.some(s => !seenMap[s.slideId || s.id]);
+        channels.push({
+            id: 'compiti',
+            title: 'Compiti & Test',
+            shortTitle: 'Compiti',
+            icon: 'ph-book-open',
+            gradient: 'linear-gradient(135deg, #2997ff 0%, #64d2ff 100%)',
+            ringColor: '#2997ff',
+            unseen,
+            slides: compitiSlides,
+            count: compitiSlides.length
+        });
+    }
+
+    // Canale 5: Circolari (se presenti oggi)
+    const circItems = todayItems.filter(it => it.category === 'circolari' || it.type === 'circolare');
+    if (circItems.length > 0) {
+        const circSlides = circItems.map((item, idx) => ({
+            ...item,
+            slideId: `circ_${item.id || idx}`,
+            channelId: 'circolari'
+        }));
+        const unseen = circSlides.some(s => !seenMap[s.slideId || s.id]);
+        channels.push({
+            id: 'circolari',
+            title: 'Circolari',
+            shortTitle: 'Circolari',
+            icon: 'ph-file-text',
+            gradient: 'linear-gradient(135deg, #ff9f0a 0%, #ff375f 100%)',
+            ringColor: '#ff9f0a',
+            unseen,
+            slides: circSlides,
+            count: circSlides.length
+        });
+    }
+
+    // Canale 6: Presenze (assenze / ritardi)
+    const assenzeItems = todayItems.filter(it => it.category === 'assenze' || it.type === 'assenza' || it.type === 'ritardo' || it.type === 'uscita');
+    if (assenzeItems.length > 0) {
+        const assenzeSlides = assenzeItems.map((item, idx) => ({
+            ...item,
+            slideId: `ass_${item.id || idx}`,
+            channelId: 'presenze'
+        }));
+        const unseen = assenzeSlides.some(s => !seenMap[s.slideId || s.id]);
+        channels.push({
+            id: 'presenze',
+            title: 'Presenze',
+            shortTitle: 'Presenze',
+            icon: 'ph-clock',
+            gradient: 'linear-gradient(135deg, #bf5af2 0%, #5e5ce6 100%)',
+            ringColor: '#bf5af2',
+            unseen,
+            slides: assenzeSlides,
+            count: assenzeSlides.length
+        });
+    }
+
+    return {
+        todayISO,
+        channels,
+        todayItems,
+        totalStories: todayItems.length,
+        hasUnseen: channels.some(c => c.unseen),
+        seenMap
+    };
+};
+
+window.markStoryAsSeen = function(slideId) {
+    if (!slideId) return;
+    const todayISO = (typeof getLocalDateString === 'function') ? getLocalDateString(new Date()) : new Date().toISOString().split('T')[0];
+    const key = `gc_seen_stories_${todayISO}`;
+    try {
+        let map = {};
+        const raw = localStorage.getItem(key);
+        if (raw) map = JSON.parse(raw);
+        map[slideId] = Date.now();
+        localStorage.setItem(key, JSON.stringify(map));
+        if (typeof window.updateTodayStoriesTray === 'function') {
+            window.updateTodayStoriesTray();
+        }
+    } catch (e) {}
+};
+
+window.renderInstagramStoriesTrayHTML = function() {
+    const storiesData = (typeof window.getTodayStoriesData === 'function')
+        ? window.getTodayStoriesData()
+        : { channels: [], totalStories: 0 };
+    const channels = storiesData.channels || [];
+
+    return `
+    <div style="
+        background: rgba(18, 26, 44, 0.7);
+        backdrop-filter: blur(28px) saturate(190%); -webkit-backdrop-filter: blur(28px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 22px;
+        padding: 12px 14px 10px 14px;
+        box-shadow: 0 10px 30px -8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+    ">
+        <!-- Tray Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff2d55;box-shadow:0 0 8px #ff2d55;"></span>
+                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.85);">STORIE DI OGGI</span>
+                <span style="font-size:9.5px;font-weight:700;background:rgba(255,45,85,0.18);border:1px solid rgba(255,45,85,0.4);color:#ff2d55;padding:1px 6px;border-radius:999px;">
+                    ${storiesData.totalStories > 0 ? `${storiesData.totalStories} novità` : 'sereno'}
+                </span>
+            </div>
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive();else openTodayNotifications('archive');" style="display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:rgba(255,255,255,0.55);font-size:11px;font-weight:600;cursor:pointer;padding:2px 6px;border-radius:6px;transition:color 0.15s ease;" ontouchstart="this.style.color='#2997ff'" ontouchend="this.style.color='rgba(255,255,255,0.55)'">
+                <i class="ph-bold ph-clock-counter-clockwise" style="font-size:12px;"></i>
+                <span>Archivio</span>
+            </button>
+        </div>
+
+        <!-- Horizontal Story Scroll List -->
+        <div id="stories-tray-scroll" style="display:flex;align-items:flex-start;gap:14px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;">
+            ${channels.map(ch => {
+                const ringStyle = ch.unseen
+                    ? 'background: linear-gradient(135deg, #ff2d55 0%, #af52de 50%, #5856d6 100%); animation: storyRingPulse 2.8s infinite ease-in-out; box-shadow: 0 0 12px rgba(255,45,85,0.55);'
+                    : 'background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);';
+                return `
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openInstagramStoryViewer('${ch.id}', 0);" style="background:none;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;outline:none;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                    <!-- Outer Ring -->
+                    <div style="width:60px;height:60px;border-radius:50%;padding:2.5px;display:flex;align-items:center;justify-content:center;position:relative;${ringStyle}">
+                        <!-- Inner Bubble -->
+                        <div style="width:100%;height:100%;border-radius:50%;background:#090e1c;border:2px solid #090e1c;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+                            <div style="position:absolute;inset:0;background:${ch.gradient};opacity:0.25;"></div>
+                            <i class="ph-fill ${ch.icon}" style="font-size:24px;color:${ch.ringColor};position:relative;z-index:2;"></i>
+                            ${ch.count > 1 ? `
+                                <span style="position:absolute;bottom:2px;right:2px;min-width:14px;height:14px;border-radius:999px;background:#090e1c;border:1px solid ${ch.ringColor};color:${ch.ringColor};font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 2px;z-index:3;">
+                                    ${ch.count}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <!-- Channel Label -->
+                    <span style="font-size:10.5px;font-weight:${ch.unseen ? '700' : '500'};color:${ch.unseen ? '#ffffff' : 'rgba(255,255,255,0.7)'};max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                        ${escapeHtml(ch.shortTitle || ch.title)}
+                    </span>
+                </button>`;
+            }).join('')}
+
+            <!-- Dedicated Archive Circle Bubble at the end of the tray -->
+            <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive();else openTodayNotifications('archive');" style="background:none;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;outline:none;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                <div style="width:60px;height:60px;border-radius:50%;padding:2.5px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);">
+                    <div style="width:100%;height:100%;border-radius:50%;background:#090e1c;display:flex;align-items:center;justify-content:center;">
+                        <i class="ph-bold ph-archive-box" style="font-size:22px;color:rgba(255,255,255,0.75);"></i>
+                    </div>
+                </div>
+                <span style="font-size:10.5px;font-weight:500;color:rgba(255,255,255,0.6);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+                    Archivio
+                </span>
+            </button>
+        </div>
+    </div>`;
+};
+
+window.updateTodayStoriesTray = function() {
+    const container = document.getElementById('overview-stories-tray-container');
+    if (container && typeof window.renderInstagramStoriesTrayHTML === 'function') {
+        container.innerHTML = window.renderInstagramStoriesTrayHTML();
+    }
+};
+
+function buildStorySlideCardHtml(slide, effClass, userId) {
+    if (!slide) return '';
+
+    // ── 1. ASSEMBLEA / PROPOSTA DI CLASSE ──
+    if (slide.type === 'proposta' || slide.category === 'proposte') {
+        const prop = slide.rawProp || (effClass && typeof getStoredClassProposals === 'function'
+            ? (getStoredClassProposals(effClass) || []).find(p => p.id === slide.id)
+            : null) || slide;
+
+        const isAssembly = prop.type === 'assembly' || slide.categoryLabel === 'Assemblea';
+        const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
+        const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
+        const declineList = Array.isArray(votes.decline) ? votes.decline : [];
+        const altList = Array.isArray(votes.alternatives) ? votes.alternatives : [];
+
+        const acceptCount = acceptList.length;
+        const declineCount = declineList.length;
+        const altCount = altList.length;
+        const totalVotes = acceptCount + declineCount + altCount;
+
+        const hasAccepted = acceptList.includes(userId);
+        const hasDeclined = declineList.includes(userId);
+        const hasAlt = altList.some(a => a.userId === userId);
+
+        const accentColor = isAssembly ? '#30d158' : '#32ade6';
+        const titleText = isAssembly ? 'Assemblea di Classe' : (prop.subject ? `Sposta Verifica: ${prop.subject}` : 'Proposta di Classe');
+
+        return `
+        <div class="story-slide-card" style="
+            background: linear-gradient(160deg, rgba(20, 35, 60, 0.94) 0%, rgba(8, 14, 28, 0.97) 100%);
+            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 28px;
+            padding: 24px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 440px;
+            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        ">
+            <!-- Glow background orb -->
+            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${accentColor} 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
+
+            <div>
+                <!-- Top Badge & Status -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.45);padding:5px 12px;border-radius:999px;">
+                        <i class="ph-fill ${isAssembly ? 'ph-users-three' : 'ph-calendar-plus'}" style="color:${accentColor};font-size:14px;"></i>
+                        <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${accentColor};">
+                            ${isAssembly ? 'ASSEMBLEA DI CLASSE' : 'PROPOSTA DI CLASSE'}
+                        </span>
+                    </div>
+                    <span style="font-size:10.5px;font-weight:800;color:#30d158;background:rgba(48,209,88,0.14);border:1px solid rgba(48,209,88,0.35);padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px;">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;"></span>
+                        VOTAZIONE ATTIVA
+                    </span>
+                </div>
+
+                <!-- Title & Date -->
+                <h2 style="font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 8px;letter-spacing:-0.02em;">
+                    ${escapeHtml(titleText)}
+                </h2>
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.7);font-size:12.5px;font-weight:600;">
+                    <i class="ph-bold ph-calendar" style="color:${accentColor};"></i>
+                    <span>Data: <strong>${escapeHtml(prop.targetDate || 'In definizione')}</strong></span>
+                    ${prop.targetHour ? `<span style="opacity:0.4;">•</span><span>${escapeHtml(prop.targetHour)}ª ora</span>` : ''}
+                </div>
+
+                <!-- Motivation / Description Card -->
+                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:12px 14px;margin-bottom:16px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">
+                        Ordine del Giorno / Motivo
+                    </div>
+                    <p style="font-size:13.5px;color:rgba(255,255,255,0.92);line-height:1.45;margin:0;">
+                        ${escapeHtml(prop.reason || slide.desc || 'Nessuna descrizione inserita')}
+                    </p>
+                    ${prop.authorName ? `
+                        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px;font-weight:500;">
+                            Proposta da: <strong style="color:rgba(255,255,255,0.85);">${escapeHtml(prop.authorName)}</strong>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Interactive In-Story Live Voting (Direct action without leaving story!) -->
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <span style="font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.7);">
+                            Vota direttamente qui
+                        </span>
+                        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);">
+                            ${totalVotes} voti registrati
+                        </span>
+                    </div>
+
+                    <div style="display:flex;gap:8px;">
+                        <!-- Voto Favorevole -->
+                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'accept');" style="
+                            flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                            background:${hasAccepted ? 'rgba(48,209,88,0.32)' : 'rgba(48,209,88,0.12)'};
+                            border:1.5px solid ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.35)'};
+                            color:${hasAccepted ? '#ffffff' : '#30d158'};
+                            box-shadow:${hasAccepted ? '0 0 14px rgba(48,209,88,0.5)' : 'none'};
+                            transition:all 0.15s ease;
+                        ">
+                            <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
+                                <i class="ph-bold ${hasAccepted ? 'ph-check-circle' : 'ph-thumbs-up'}"></i>
+                                <span>Sì</span>
+                            </div>
+                            <span style="font-size:11px;font-weight:800;opacity:0.9;">${acceptCount}</span>
+                        </button>
+
+                        <!-- Voto Contrario -->
+                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'decline');" style="
+                            flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                            background:${hasDeclined ? 'rgba(255,69,58,0.32)' : 'rgba(255,69,58,0.12)'};
+                            border:1.5px solid ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.35)'};
+                            color:${hasDeclined ? '#ffffff' : '#ff453a'};
+                            box-shadow:${hasDeclined ? '0 0 14px rgba(255,69,58,0.5)' : 'none'};
+                            transition:all 0.15s ease;
+                        ">
+                            <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;">
+                                <i class="ph-bold ${hasDeclined ? 'ph-x-circle' : 'ph-thumbs-down'}"></i>
+                                <span>No</span>
+                            </div>
+                            <span style="font-size:11px;font-weight:800;opacity:0.9;">${declineCount}</span>
+                        </button>
+
+                        <!-- Voto Proposta Alternativa -->
+                        <button onclick="event.stopPropagation(); const altD = prompt('Data alternativa proposta (YYYY-MM-DD):', '${prop.targetDate || ''}'); if(altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="
+                            flex:1;padding:10px 6px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+                            background:${hasAlt ? 'rgba(255,159,10,0.32)' : 'rgba(255,159,10,0.12)'};
+                            border:1.5px solid ${hasAlt ? '#ff9f0a' : 'rgba(255,159,10,0.35)'};
+                            color:${hasAlt ? '#ffffff' : '#ff9f0a'};
+                            box-shadow:${hasAlt ? '0 0 14px rgba(255,159,10,0.5)' : 'none'};
+                            transition:all 0.15s ease;
+                        ">
+                            <div style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;">
+                                <i class="ph-bold ph-calendar-plus"></i>
+                                <span>Altra</span>
+                            </div>
+                            <span style="font-size:11px;font-weight:800;opacity:0.9;">${altCount}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Action: Open Full Class Modal -->
+            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();" style="
+                width:100%;height:44px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                color:#ffffff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                transition:background 0.15s ease;
+            ">
+                <i class="ph-bold ph-users-three" style="color:${accentColor};"></i>
+                <span>Gestione Assemblea Completa</span>
+                <i class="ph-bold ph-arrow-right" style="font-size:12px;opacity:0.6;"></i>
+            </button>
+        </div>`;
+    }
+
+    // ── 2. NUOVO VOTO ──
+    if (slide.type === 'voto' || slide.category === 'voti') {
+        const val = slide.voto || slide.title || 'Voto';
+        const numVal = parseFloat(String(val).replace(',', '.'));
+        const orbColor = !isNaN(numVal) ? (numVal >= 6 ? '#30d158' : '#ff453a') : '#ffd60a';
+
+        return `
+        <div class="story-slide-card" style="
+            background: linear-gradient(160deg, rgba(28, 25, 45, 0.94) 0%, rgba(10, 8, 20, 0.97) 100%);
+            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 28px;
+            padding: 26px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 440px;
+            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        ">
+            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${orbColor} 0%, transparent 70%);opacity:0.3;filter:blur(30px);pointer-events:none;"></div>
+
+            <div style="text-align:center;">
+                <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.45);padding:5px 14px;border-radius:999px;margin-bottom:20px;">
+                    <i class="ph-fill ph-chart-line-up" style="color:#ffd60a;font-size:14px;"></i>
+                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd60a;">NUOVO VOTO REGISTRATO</span>
+                </div>
+
+                <div style="margin:10px auto 20px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 100%);border:2px solid ${orbColor};box-shadow:0 0 30px ${orbColor}55, inset 0 0 15px ${orbColor}44;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+                    <span style="font-size:38px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;line-height:1;">
+                        ${escapeHtml(String(val))}
+                    </span>
+                    <span style="font-size:9.5px;font-weight:800;color:${orbColor};text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
+                        ${escapeHtml(slide.tipo || 'Voto')}
+                    </span>
+                </div>
+
+                <h2 style="font-size:24px;font-weight:800;color:#ffffff;margin:0 0 6px;letter-spacing:-0.02em;">
+                    ${escapeHtml(slide.materia || slide.title || 'Materia')}
+                </h2>
+                <p style="font-size:13.5px;color:rgba(255,255,255,0.75);margin:0 0 10px;line-height:1.4;">
+                    ${escapeHtml(slide.desc || slide.dettaglio || 'Valutazione registrata dal docente')}
+                </p>
+                ${slide.docente ? `
+                    <div style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,0.5);">
+                        Docente: <span style="color:rgba(255,255,255,0.85);">${escapeHtml(slide.docente)}</span>
+                    </div>
+                ` : ''}
+            </div>
+
+            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); navigate('voti');" style="
+                width:100%;height:46px;border-radius:14px;background:#2997ff;border:none;
+                color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                box-shadow:0 6px 20px rgba(41,151,255,0.4);transition:transform 0.15s ease;
+            ">
+                <i class="ph-bold ph-graduation-cap"></i>
+                <span>Apri nel Registro Voti</span>
+                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+            </button>
+        </div>`;
+    }
+
+    // ── 3. COMPITO O VERIFICA ──
+    if (slide.type === 'compito' || slide.type === 'verifica' || slide.category === 'compiti' || slide.category === 'verifiche') {
+        const isVerifica = slide.type === 'verifica' || slide.category === 'verifiche';
+        const accent = isVerifica ? '#ff9f0a' : '#2997ff';
+
+        return `
+        <div class="story-slide-card" style="
+            background: linear-gradient(160deg, rgba(16, 28, 52, 0.94) 0%, rgba(6, 12, 24, 0.97) 100%);
+            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 28px;
+            padding: 26px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 440px;
+            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        ">
+            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${accent} 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
+
+            <div>
+                <div style="display:inline-flex;align-items:center;gap:6px;background:${isVerifica ? 'rgba(255,159,10,0.18)' : 'rgba(41,151,255,0.18)'};border:1px solid ${isVerifica ? 'rgba(255,159,10,0.45)' : 'rgba(41,151,255,0.45)'};padding:5px 14px;border-radius:999px;margin-bottom:18px;">
+                    <i class="ph-fill ${isVerifica ? 'ph-pencil-simple' : 'ph-book-open'}" style="color:${accent};font-size:14px;"></i>
+                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${accent};">
+                        ${isVerifica ? 'VERIFICA IN PROGRAMMA' : 'COMPITO PER OGGI'}
+                    </span>
+                </div>
+
+                <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${accent};margin-bottom:4px;">
+                    ${escapeHtml(slide.subject || slide.materia || 'Materia')}
+                </div>
+                <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
+                    ${escapeHtml(slide.title || slide.subject || 'Attività scolastica')}
+                </h2>
+
+                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
+                    <p style="font-size:14.5px;color:rgba(255,255,255,0.95);line-height:1.5;margin:0;">
+                        ${escapeHtml(slide.desc || 'Nessun dettaglio specificato')}
+                    </p>
+                </div>
+
+                ${slide.rawDate ? `
+                    <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7);font-size:12.5px;font-weight:600;">
+                        <i class="ph-bold ph-calendar-check" style="color:${accent};"></i>
+                        <span>Scadenza: ${escapeHtml(slide.rawDate)}</span>
+                    </div>
+                ` : ''}
+            </div>
+
+            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); navigate('planner');" style="
+                width:100%;height:46px;border-radius:14px;background:${accent};border:none;
+                color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                box-shadow:0 6px 20px ${accent}55;transition:transform 0.15s ease;
+            ">
+                <i class="ph-bold ph-calendar"></i>
+                <span>Apri nel Planner</span>
+                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+            </button>
+        </div>`;
+    }
+
+    // ── 4. CIRCOLARE ──
+    if (slide.type === 'circolare' || slide.category === 'circolari') {
+        return `
+        <div class="story-slide-card" style="
+            background: linear-gradient(160deg, rgba(30, 24, 18, 0.94) 0%, rgba(12, 10, 8, 0.97) 100%);
+            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 28px;
+            padding: 26px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 440px;
+            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        ">
+            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, #ffd60a 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
+
+            <div>
+                <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.45);padding:5px 14px;border-radius:999px;margin-bottom:18px;">
+                    <i class="ph-fill ph-file-text" style="color:#ffd60a;font-size:14px;"></i>
+                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#ffd60a;">
+                        ${slide.numero ? `CIRCOLARE N. ${escapeHtml(slide.numero)}` : 'NUOVA CIRCOLARE'}
+                    </span>
+                </div>
+
+                <h2 style="font-size:22px;font-weight:800;color:#ffffff;line-height:1.3;margin:0 0 14px;letter-spacing:-0.02em;">
+                    ${escapeHtml(slide.title || 'Circolare Scolastica')}
+                </h2>
+
+                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
+                    <p style="font-size:13.5px;color:rgba(255,255,255,0.9);line-height:1.5;margin:0;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;">
+                        ${escapeHtml(slide.desc || slide.testo || 'Comunicazione pubblicata dalla presidenza')}
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof openCircolareDetail==='function')openCircolareDetail('${escapeHtml(slide.id)}');" style="
+                width:100%;height:46px;border-radius:14px;background:#ffd60a;border:none;
+                color:#000000;font-size:13.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                box-shadow:0 6px 20px rgba(255,214,10,0.4);transition:transform 0.15s ease;
+            ">
+                <i class="ph-bold ph-read-cv-logo"></i>
+                <span>Leggi Circolare Completa</span>
+                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+            </button>
+        </div>`;
+    }
+
+    // ── 5. ASSENZA / RITARDO / NOTA ──
+    if (slide.type === 'assenza' || slide.type === 'ritardo' || slide.type === 'uscita' || slide.type === 'nota' || slide.category === 'assenze' || slide.category === 'note') {
+        const isNota = slide.type === 'nota';
+        const accent = isNota ? '#bf5af2' : '#ff453a';
+
+        return `
+        <div class="story-slide-card" style="
+            background: linear-gradient(160deg, rgba(32, 18, 38, 0.94) 0%, rgba(14, 8, 18, 0.97) 100%);
+            backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 28px;
+            padding: 26px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 440px;
+            animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        ">
+            <div style="position:absolute;top:-20px;right:-20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, ${accent} 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
+
+            <div>
+                <div style="display:inline-flex;align-items:center;gap:6px;background:${accent}22;border:1px solid ${accent}55;padding:5px 14px;border-radius:999px;margin-bottom:18px;">
+                    <i class="ph-fill ${isNota ? 'ph-warning-octagon' : 'ph-clock'}" style="color:${accent};font-size:14px;"></i>
+                    <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${accent};">
+                        ${isNota ? 'NOTA DISCIPLINARE' : 'REGISTRO PRESENZE'}
+                    </span>
+                </div>
+
+                <h2 style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;margin:0 0 14px;letter-spacing:-0.02em;">
+                    ${escapeHtml(slide.title || 'Comunicazione')}
+                </h2>
+
+                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;margin-bottom:16px;">
+                    <p style="font-size:14px;color:rgba(255,255,255,0.92);line-height:1.5;margin:0;">
+                        ${escapeHtml(slide.desc || slide.testo || 'Dettagli non specificati')}
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof mostraAssenzeModal==='function')mostraAssenzeModal();" style="
+                width:100%;height:46px;border-radius:14px;background:${accent};border:none;
+                color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+                box-shadow:0 6px 20px ${accent}55;transition:transform 0.15s ease;
+            ">
+                <i class="ph-bold ph-shield-check"></i>
+                <span>Vedi Registro Assenze</span>
+                <i class="ph-bold ph-arrow-right" style="font-size:12px;"></i>
+            </button>
+        </div>`;
+    }
+
+    // ── 6. ZEN / GIORNATA TRANQUILLA (Fallback pulito a 0 notifiche) ──
+    return `
+    <div class="story-slide-card" style="
+        background: linear-gradient(160deg, rgba(14, 34, 38, 0.94) 0%, rgba(6, 18, 20, 0.97) 100%);
+        backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-top: 1.5px solid rgba(255, 255, 255, 0.3);
+        border-radius: 28px;
+        padding: 30px 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.18);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        text-align: center;
+        min-height: 440px;
+        animation: storyCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    ">
+        <div style="position:absolute;top:20px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, #30d158 0%, transparent 70%);opacity:0.25;filter:blur(30px);pointer-events:none;"></div>
+
+        <div>
+            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.45);padding:5px 14px;border-radius:999px;margin-bottom:24px;">
+                <i class="ph-fill ph-sparkle" style="color:#30d158;font-size:14px;"></i>
+                <span style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#30d158;">TUTTO IN REGOLA</span>
+            </div>
+
+            <div style="width:90px;height:90px;border-radius:50%;background:rgba(48,209,88,0.14);border:1.5px solid rgba(48,209,88,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                <i class="ph-fill ph-sun" style="font-size:44px;color:#30d158;"></i>
+            </div>
+
+            <h2 style="font-size:24px;font-weight:800;color:#ffffff;margin:0 0 10px;letter-spacing:-0.02em;">
+                Giornata Serena
+            </h2>
+            <p style="font-size:14px;color:rgba(255,255,255,0.75);line-height:1.5;max-width:280px;margin:0 auto;">
+                Nessun compito, verifica o assemblea in sospeso per oggi. Ottimo momento per rilassarti o consultare l'archivio!
+            </p>
+        </div>
+
+        <button onclick="event.stopPropagation(); window.closeInstagramStoryViewer(); if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive(); else openTodayNotifications('archive');" style="
+            width:100%;height:46px;border-radius:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);
+            color:#ffffff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+            transition:background 0.15s ease;
+        ">
+            <i class="ph-bold ph-archive-box"></i>
+            <span>Apri Archivio Notifiche</span>
+        </button>
+    </div>`;
+}
+
+window.openInstagramStoryViewer = function(channelId, initialSlideIndex) {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
+
+    const storiesData = window.getTodayStoriesData();
+    const channels = storiesData.channels || [];
+    if (channels.length === 0) {
+        return window.openNotificationsArchive ? window.openNotificationsArchive() : null;
+    }
+
+    let targetChannel = channels.find(c => c.id === channelId) || channels[0];
+    let slideIdx = typeof initialSlideIndex === 'number' ? initialSlideIndex : 0;
+    if (slideIdx < 0) slideIdx = 0;
+    if (slideIdx >= targetChannel.slides.length) slideIdx = targetChannel.slides.length - 1;
+
+    window._storyViewerState = {
+        channelId: targetChannel.id,
+        slideIndex: slideIdx,
+        isPaused: false,
+        timer: null,
+        progressStartedAt: 0,
+        slideDuration: 6000,
+        touchStartY: 0,
+        touchStartX: 0
+    };
+
+    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
+    const userId = (typeof getClassRepAuthInfo === 'function') ? getClassRepAuthInfo().userId : String(state.user?.id || 'utente');
+
+    let overlay = document.getElementById('instagram-story-viewer-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'instagram-story-viewer-overlay';
+        overlay.style.cssText = `
+            position: fixed; inset: 0; z-index: 999999;
+            background: rgba(4, 8, 18, 0.95);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.22s ease;
+            user-select: none; -webkit-user-select: none;
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    window._renderStoryViewerFrame(targetChannel, slideIdx, effClass, userId);
+
+    requestAnimationFrame(() => {
+        if (overlay) overlay.style.opacity = '1';
+        window._startStorySlideTimer();
+    });
+
+    if (!window._storyKeydownHandler) {
+        window._storyKeydownHandler = function(e) {
+            if (e.key === 'Escape') {
+                window.closeInstagramStoryViewer();
+            } else if (e.key === 'ArrowRight') {
+                window.storyViewerNextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                window.storyViewerPrevSlide();
+            } else if (e.key === ' ') {
+                window.togglePauseStoryViewer();
+            }
+        };
+        window.addEventListener('keydown', window._storyKeydownHandler);
+    }
+};
+
+window._renderStoryViewerFrame = function(channel, slideIdx, effClass, userId) {
+    const overlay = document.getElementById('instagram-story-viewer-overlay');
+    if (!overlay) return;
+
+    const currentSlide = channel.slides[slideIdx];
+    if (!currentSlide) return;
+
+    if (typeof window.markStoryAsSeen === 'function') {
+        window.markStoryAsSeen(currentSlide.slideId || currentSlide.id);
+    }
+
+    const slideCount = channel.slides.length;
+    const progressSegmentsHtml = channel.slides.map((s, idx) => {
+        let barInner = '';
+        if (idx < slideIdx) {
+            barInner = '<div style="width:100%;height:100%;background:#ffffff;border-radius:2px;"></div>';
+        } else if (idx === slideIdx) {
+            barInner = '<div id="active-story-progress-bar" style="height:100%;background:#ffffff;border-radius:2px;width:0%;"></div>';
+        } else {
+            barInner = '<div style="width:0%;height:100%;background:#ffffff;border-radius:2px;"></div>';
+        }
+        return `
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.25);border-radius:2px;overflow:hidden;position:relative;">
+            ${barInner}
+        </div>`;
+    }).join('');
+
+    overlay.innerHTML = `
+    <div id="instagram-story-frame" style="
+        width: 100%; height: 100%; max-width: 440px; max-height: 94vh;
+        position: relative; display: flex; flex-direction: column; justify-content: space-between;
+        padding: max(env(safe-area-inset-top, 0px), 16px) 16px max(env(safe-area-inset-bottom, 0px), 20px) 16px;
+        box-sizing: border-box;
+    ">
+        <!-- Top Bar: Progress Bars + Channel Info + Close Controls -->
+        <div style="position:relative;z-index:20;flex-shrink:0;margin-bottom:12px;">
+            <!-- Segmented Progress Bar -->
+            <div style="display:flex;gap:4px;width:100%;margin-bottom:10px;">
+                ${progressSegmentsHtml}
+            </div>
+
+            <!-- Header Row -->
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:34px;height:34px;border-radius:50%;background:#0b1326;border:1.5px solid ${channel.ringColor || '#ff2d55'};display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px ${channel.ringColor}66;">
+                        <i class="ph-fill ${channel.icon}" style="font-size:17px;color:${channel.ringColor};"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:13.5px;font-weight:800;color:#ffffff;display:flex;align-items:center;gap:6px;">
+                            <span>${escapeHtml(channel.title)}</span>
+                            <span style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.6);">${slideIdx + 1}/${slideCount}</span>
+                        </div>
+                        <div style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.5);">Oggi • Gandhi Connect</div>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <!-- Pause/Resume Button -->
+                    <button id="story-play-pause-btn" onclick="window.togglePauseStoryViewer();" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        <i class="ph-fill ph-pause" style="font-size:14px;"></i>
+                    </button>
+
+                    <!-- Switch to Archive Button -->
+                    <button onclick="window.closeInstagramStoryViewer(); if(typeof window.openNotificationsArchive==='function')window.openNotificationsArchive(); else openTodayNotifications('archive');" title="Vedi tutte in archivio" style="height:32px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,0.12);border:none;color:#ffffff;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;cursor:pointer;">
+                        <i class="ph-bold ph-archive-box" style="font-size:13px;"></i>
+                        <span>Archivio</span>
+                    </button>
+
+                    <!-- Close Button -->
+                    <button onclick="window.closeInstagramStoryViewer();" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#ffffff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        <i class="ph-bold ph-x" style="font-size:16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Card Container with Invisible Tap Navigation Zones -->
+        <div style="position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0;">
+            <!-- Left Tap Zone (Previous) -->
+            <div id="story-tap-left" onclick="window.storyViewerPrevSlide();" style="position:absolute;top:0;left:0;bottom:0;width:30%;z-index:5;cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
+
+            <!-- Right Tap Zone (Next) -->
+            <div id="story-tap-right" onclick="window.storyViewerNextSlide();" style="position:absolute;top:0;right:0;bottom:0;width:70%;z-index:5;cursor:pointer;-webkit-tap-highlight-color:transparent;"></div>
+
+            <!-- Slide Content Card (Z-index 8 so its buttons capture click first) -->
+            <div id="instagram-story-content-card" style="width:100%;position:relative;z-index:8;">
+                ${buildStorySlideCardHtml(currentSlide, effClass, userId)}
+            </div>
+        </div>
+
+        <!-- Bottom Gesture Hint -->
+        <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding-top:10px;color:rgba(255,255,255,0.4);font-size:10.5px;font-weight:600;flex-shrink:0;">
+            <i class="ph-bold ph-caret-double-down" style="font-size:11px;"></i>
+            <span>Trascina in basso per chiudere</span>
+        </div>
+    </div>`;
+
+    const frame = document.getElementById('instagram-story-frame');
+    if (frame) {
+        let touchStartY = 0;
+        let isHolding = false;
+        let holdTimeout = null;
+
+        frame.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                touchStartY = e.touches[0].clientY;
+                holdTimeout = setTimeout(() => {
+                    isHolding = true;
+                    window.pauseStoryViewer();
+                }, 140);
+            }
+        }, { passive: true });
+
+        frame.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                const diffY = e.touches[0].clientY - touchStartY;
+                if (diffY > 10 && !isHolding) {
+                    clearTimeout(holdTimeout);
+                }
+                if (diffY > 0) {
+                    frame.style.transform = `translateY(${Math.min(diffY, 150)}px)`;
+                }
+            }
+        }, { passive: true });
+
+        frame.addEventListener('touchend', (e) => {
+            clearTimeout(holdTimeout);
+            if (isHolding) {
+                isHolding = false;
+                window.resumeStoryViewer();
+            }
+            if (e.changedTouches && e.changedTouches.length === 1) {
+                const diffY = e.changedTouches[0].clientY - touchStartY;
+                if (diffY > 80) {
+                    window.closeInstagramStoryViewer();
+                    return;
+                }
+            }
+            frame.style.transform = 'translateY(0)';
+            frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+        }, { passive: true });
+    }
+};
+
+window._startStorySlideTimer = function() {
+    if (!window._storyViewerState) return;
+    if (window._storyViewerState.timer) {
+        clearTimeout(window._storyViewerState.timer);
+        window._storyViewerState.timer = null;
+    }
+
+    const duration = window._storyViewerState.slideDuration || 6000;
+    const bar = document.getElementById('active-story-progress-bar');
+    if (bar) {
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        requestAnimationFrame(() => {
+            bar.style.transition = `width ${duration}ms linear`;
+            bar.style.width = '100%';
+        });
+    }
+
+    window._storyViewerState.progressStartedAt = Date.now();
+    window._storyViewerState.remainingTime = duration;
+
+    window._storyViewerState.timer = setTimeout(() => {
+        window.storyViewerNextSlide();
+    }, duration);
+};
+
+window.pauseStoryViewer = function() {
+    if (!window._storyViewerState || window._storyViewerState.isPaused) return;
+    window._storyViewerState.isPaused = true;
+    if (window._storyViewerState.timer) {
+        clearTimeout(window._storyViewerState.timer);
+        window._storyViewerState.timer = null;
+    }
+    const elapsed = Date.now() - window._storyViewerState.progressStartedAt;
+    window._storyViewerState.remainingTime = Math.max(200, window._storyViewerState.slideDuration - elapsed);
+
+    const bar = document.getElementById('active-story-progress-bar');
+    if (bar) {
+        const computedWidth = window.getComputedStyle(bar).width;
+        bar.style.transition = 'none';
+        bar.style.width = computedWidth;
+    }
+
+    const icon = document.querySelector('#story-play-pause-btn i');
+    if (icon) {
+        icon.className = 'ph-fill ph-play';
+    }
+};
+
+window.resumeStoryViewer = function() {
+    if (!window._storyViewerState || !window._storyViewerState.isPaused) return;
+    window._storyViewerState.isPaused = false;
+
+    const remaining = window._storyViewerState.remainingTime || 3000;
+    const bar = document.getElementById('active-story-progress-bar');
+    if (bar) {
+        bar.style.transition = `width ${remaining}ms linear`;
+        bar.style.width = '100%';
+    }
+
+    window._storyViewerState.progressStartedAt = Date.now();
+    window._storyViewerState.timer = setTimeout(() => {
+        window.storyViewerNextSlide();
+    }, remaining);
+
+    const icon = document.querySelector('#story-play-pause-btn i');
+    if (icon) {
+        icon.className = 'ph-fill ph-pause';
+    }
+};
+
+window.togglePauseStoryViewer = function() {
+    if (!window._storyViewerState) return;
+    if (window._storyViewerState.isPaused) {
+        window.resumeStoryViewer();
+    } else {
+        window.pauseStoryViewer();
+    }
+};
+
+window.storyViewerNextSlide = function() {
+    if (!window._storyViewerState) return;
+    const storiesData = window.getTodayStoriesData();
+    const channels = storiesData.channels || [];
+    const currentChannel = channels.find(c => c.id === window._storyViewerState.channelId);
+    if (!currentChannel) return window.closeInstagramStoryViewer();
+
+    if (window._storyViewerState.slideIndex < currentChannel.slides.length - 1) {
+        window._storyViewerState.slideIndex++;
+        window.openInstagramStoryViewer(currentChannel.id, window._storyViewerState.slideIndex);
+    } else {
+        const currentChannelIdx = channels.findIndex(c => c.id === currentChannel.id);
+        if (currentChannelIdx !== -1 && currentChannelIdx < channels.length - 1) {
+            window.openInstagramStoryViewer(channels[currentChannelIdx + 1].id, 0);
+        } else {
+            window.closeInstagramStoryViewer();
+        }
+    }
+};
+
+window.storyViewerPrevSlide = function() {
+    if (!window._storyViewerState) return;
+    const storiesData = window.getTodayStoriesData();
+    const channels = storiesData.channels || [];
+    const currentChannel = channels.find(c => c.id === window._storyViewerState.channelId);
+    if (!currentChannel) return;
+
+    if (window._storyViewerState.slideIndex > 0) {
+        window._storyViewerState.slideIndex--;
+        window.openInstagramStoryViewer(currentChannel.id, window._storyViewerState.slideIndex);
+    } else {
+        const currentChannelIdx = channels.findIndex(c => c.id === currentChannel.id);
+        if (currentChannelIdx > 0) {
+            const prevCh = channels[currentChannelIdx - 1];
+            window.openInstagramStoryViewer(prevCh.id, prevCh.slides.length - 1);
+        }
+    }
+};
+
+window.rerenderCurrentStorySlide = function() {
+    if (!window._storyViewerState) return;
+    const card = document.getElementById('instagram-story-content-card');
+    if (!card) return;
+
+    const storiesData = window.getTodayStoriesData();
+    const currentChannel = (storiesData.channels || []).find(c => c.id === window._storyViewerState.channelId);
+    if (!currentChannel) return;
+    const currentSlide = currentChannel.slides[window._storyViewerState.slideIndex];
+    if (!currentSlide) return;
+
+    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
+    const userId = (typeof getClassRepAuthInfo === 'function') ? getClassRepAuthInfo().userId : String(state.user?.id || 'utente');
+
+    card.innerHTML = buildStorySlideCardHtml(currentSlide, effClass, userId);
+};
+
+window.closeInstagramStoryViewer = function() {
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+    if (window._storyViewerState && window._storyViewerState.timer) {
+        clearTimeout(window._storyViewerState.timer);
+        window._storyViewerState.timer = null;
+    }
+    const overlay = document.getElementById('instagram-story-viewer-overlay');
+    const frame = document.getElementById('instagram-story-frame');
+    if (frame) {
+        frame.style.transform = 'translateY(60px) scale(0.92)';
+        frame.style.opacity = '0';
+        frame.style.transition = 'all 0.22s cubic-bezier(0.16,1,0.3,1)';
+    }
+    if (overlay) {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.22s ease-out';
+        setTimeout(() => {
+            overlay.remove();
+        }, 230);
+    }
+    if (window._storyKeydownHandler) {
+        window.removeEventListener('keydown', window._storyKeydownHandler);
+        window._storyKeydownHandler = null;
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// openNotificationsArchive() — Centro Notifiche & Attività Apple Glass (Archivio)
+// ═══════════════════════════════════════════════════════════════
+
+function openNotificationsArchive(initialTab) {
+
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
 
     const today = new Date();
@@ -4100,7 +5250,16 @@ function openTodayNotifications(initialTab) {
         }, { passive: true });
     }
 }
+window.openNotificationsArchive = openNotificationsArchive;
+
+function openTodayNotifications(mode) {
+    if (mode === 'archive' || mode === 'list') {
+        return openNotificationsArchive('all');
+    }
+    return openInstagramStoryViewer('all', 0);
+}
 window.openTodayNotifications = openTodayNotifications;
+
 
 window.toggleRecentNotifications = function(btn) {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
@@ -4142,6 +5301,7 @@ function closeTodayNotifications() {
     }
 }
 window.closeTodayNotifications = closeTodayNotifications;
+window.closeNotificationsArchive = closeTodayNotifications;
 
 function renderAcademicProfile() {
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
@@ -10039,12 +11199,40 @@ function saveStoredClassProposals(className, props) {
     localStorage.setItem(key, JSON.stringify(props || []));
 }
 
+function getClassRepAuthInfo() {
+    let session = null;
+    if (typeof sessionManager !== 'undefined' && sessionManager.load) {
+        session = sessionManager.load();
+    } else if (typeof window.sessionManager !== 'undefined' && window.sessionManager.load) {
+        session = window.sessionManager.load();
+    }
+    const userId = (typeof window.getUserId === 'function' ? window.getUserId() : null)
+        || (session && (session.studentId || session.userId || session.pid))
+        || (state.user && state.user.id)
+        || 'guest';
+    const userName = (state.user && state.user.name && state.user.name !== 'Studente')
+        ? state.user.name
+        : ((session && session.userName) || (state.user && state.user.name) || 'Studente');
+    
+    let headers = (typeof window.getSessionHeaders === 'function')
+        ? window.getSessionHeaders()
+        : { 'Content-Type': 'application/json' };
+    
+    if (!headers['x-session-token']) {
+        const token = (typeof state !== 'undefined' && state.sessionToken)
+            || (session && session.sessionToken)
+            || localStorage.getItem('gc_cached_session_token') || '';
+        if (token) headers['x-session-token'] = token;
+    }
+    return { userId, userName, headers };
+}
+
 function isCurrentUserRepresentative() {
     const userClass = getEffectiveUserClass();
     if (!userClass) return false;
-    const userId = String(state.user?.id || 'utente');
+    const { userId } = getClassRepAuthInfo();
     const reps = getStoredClassRepresentatives(userClass);
-    return reps.some(r => String(r.userId || r.user_id) === userId);
+    return reps.some(r => String(r.userId || r.user_id) === String(userId));
 }
 
 // ── Remote Database Fetching & Realtime Synchronization ──
@@ -10062,11 +11250,25 @@ window._fetchClassDataSilent = async function(className) {
         const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
         const json = await res.json();
         if (json && json.success) {
+            let changed = false;
             if (Array.isArray(json.representatives)) {
-                saveStoredClassRepresentatives(targetClass, json.representatives);
+                const oldReps = JSON.stringify(getStoredClassRepresentatives(targetClass));
+                if (oldReps !== JSON.stringify(json.representatives)) {
+                    saveStoredClassRepresentatives(targetClass, json.representatives);
+                    changed = true;
+                }
             }
             if (Array.isArray(json.proposals)) {
-                saveStoredClassProposals(targetClass, json.proposals);
+                const oldProps = JSON.stringify(getStoredClassProposals(targetClass));
+                if (oldProps !== JSON.stringify(json.proposals)) {
+                    saveStoredClassProposals(targetClass, json.proposals);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
+                state._forceRender = true;
+                scheduleRender(0);
             }
         }
     } catch (err) {
@@ -10092,6 +11294,9 @@ window.fetchRemoteClassData = async function(className, forceRender = false) {
             }
             if (Array.isArray(json.proposals)) {
                 saveStoredClassProposals(targetClass, json.proposals);
+            }
+            if (typeof window.updateTodayStoriesTray === 'function') {
+                window.updateTodayStoriesTray();
             }
             // If the notification overlay is open, do a soft in-place content refresh
             if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
@@ -10135,6 +11340,9 @@ window.setupClassRealtimeSubscription = async function() {
             clearTimeout(window._classRealtimeDebounce);
             window._classRealtimeDebounce = setTimeout(() => {
                 window.fetchRemoteClassData(userClass, true);
+                if (typeof window.updateTodayStoriesTray === 'function') {
+                    window.updateTodayStoriesTray();
+                }
             }, 500);
         };
 
@@ -10148,8 +11356,8 @@ window.setupClassRealtimeSubscription = async function() {
                     console.log(`[Supabase Realtime] Connected to class room: ${userClass}`);
                 }
             });
-    } catch (e) {
-        console.warn('[ClassRealtime] Subscription error:', e.message);
+    } catch (err) {
+        console.warn('[ClassRealtime] Subscription error:', err.message);
     }
 };
 
@@ -10166,12 +11374,11 @@ window.toggleClassRepresentative = async function(enable) {
         return;
     }
 
-    const userId = String(state.user?.id || 'utente');
-    const userName = state.user?.name || 'Studente';
+    const { userId, userName, headers } = getClassRepAuthInfo();
     const currentReps = getStoredClassRepresentatives(userClass);
 
     if (enable) {
-        const isAlreadyRep = currentReps.some(r => String(r.userId || r.user_id) === userId);
+        const isAlreadyRep = currentReps.some(r => String(r.userId || r.user_id) === String(userId));
         if (!isAlreadyRep) {
             // Rule: Maximum 2 active representatives per class
             if (currentReps.length >= 2) {
@@ -10191,7 +11398,7 @@ window.toggleClassRepresentative = async function(enable) {
             showToast('Ruolo Rappresentante di Classe attivato!', 'success');
         }
     } else {
-        const updated = currentReps.filter(r => String(r.userId || r.user_id) !== userId);
+        const updated = currentReps.filter(r => String(r.userId || r.user_id) !== String(userId));
         saveStoredClassRepresentatives(userClass, updated);
         showToast('Ruolo Rappresentante disattivato', 'info');
     }
@@ -10201,7 +11408,7 @@ window.toggleClassRepresentative = async function(enable) {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
         const res = await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 action: 'set_representative',
                 class: userClass,
@@ -10210,11 +11417,11 @@ window.toggleClassRepresentative = async function(enable) {
                 enable
             })
         });
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
         if (json.limitReached) {
             if (typeof window.triggerHaptic === 'function') window.triggerHaptic('error');
             alert(json.error || "Limite massimo raggiunto (2/2 Rappresentanti attivi per questa classe).");
-            const reverted = currentReps.filter(r => String(r.userId || r.user_id) !== userId);
+            const reverted = currentReps.filter(r => String(r.userId || r.user_id) !== String(userId));
             saveStoredClassRepresentatives(userClass, reverted);
         } else if (json.success && Array.isArray(json.representatives)) {
             saveStoredClassRepresentatives(userClass, json.representatives);
@@ -10663,8 +11870,7 @@ window.openRescheduleExamModal = function() {
 
 window.submitClassProposal = async function(proposalData) {
     const userClass = proposalData.class || getEffectiveUserClass();
-    const userId = String(state.user?.id || 'utente');
-    const userName = state.user?.name || 'Studente';
+    const { userId, userName, headers } = getClassRepAuthInfo();
 
     const newProp = {
         id: 'prop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
@@ -10691,9 +11897,10 @@ window.submitClassProposal = async function(proposalData) {
     currentProps.unshift(newProp);
     saveStoredClassProposals(userClass, currentProps);
 
-    // Soft refresh: update notification overlay in-place if open
+    // Refresh stories and view
+    if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
     if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
-        window.openTodayNotifications(); // In-place update, no re-creation
+        window.openTodayNotifications();
     } else {
         state._forceRender = true;
         scheduleRender(0);
@@ -10704,7 +11911,7 @@ window.submitClassProposal = async function(proposalData) {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
         const res = await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 action: 'create_proposal',
                 ...proposalData,
@@ -10713,9 +11920,8 @@ window.submitClassProposal = async function(proposalData) {
                 authorName: userName
             })
         });
-        const json = await res.json();
-        if (json && json.success && json.proposal) {
-            // Replace temporary optimistic proposal with real persisted database proposal
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json && json.success && json.proposal) {
             const current = getStoredClassProposals(userClass);
             const idx = current.findIndex(p => p.id === newProp.id);
             if (idx >= 0) {
@@ -10724,13 +11930,19 @@ window.submitClassProposal = async function(proposalData) {
                 current.unshift(json.proposal);
             }
             saveStoredClassProposals(userClass, current);
+            showToast('Richiesta assemblea sincronizzata con i compagni!', 'success');
+            if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
             if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
                 window.openTodayNotifications();
             }
             window._fetchClassDataSilent(userClass);
+        } else {
+            console.error('[ClassProposal] Backend returned error:', json);
+            showToast('Attenzione: ' + (json?.error || 'Errore sincronizzazione cloud assemblea'), 'error');
         }
     } catch (e) {
         console.warn('[ClassProposal] Create sync failed:', e.message);
+        showToast('Errore di rete sincronizzazione assemblea', 'error');
     }
 };
 
@@ -10738,8 +11950,7 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
 
     const userClass = getEffectiveUserClass();
-    const userId = String(state.user?.id || 'utente');
-    const userName = state.user?.name || 'Studente';
+    const { userId, userName, headers } = getClassRepAuthInfo();
     const currentProps = getStoredClassProposals(userClass);
     const prop = currentProps.find(p => p.id === proposalId);
     if (!prop) return;
@@ -10762,6 +11973,7 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
     } else if (voteType === 'alternative') {
         prop.votes.alternatives.push({
             userId,
+            userName,
             date: alternativeDate || prop.targetDate,
             note: note || ''
         });
@@ -10769,11 +11981,14 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
     }
 
     saveStoredClassProposals(userClass, currentProps);
+    if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
+    if (document.getElementById('instagram-story-content-card') && typeof window.rerenderCurrentStorySlide === 'function') {
+        window.rerenderCurrentStorySlide();
+    }
 
     // Refresh notifications panel if open
-    // Soft refresh: update notification overlay in-place if open
     if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
-        openTodayNotifications(); // In-place update, no re-creation
+        openTodayNotifications();
     }
 
     // Sync in background with backend
@@ -10781,7 +11996,7 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
         await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 action: 'vote',
                 class: userClass,
@@ -10793,7 +12008,6 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
                 note
             })
         });
-        // Realtime subscription handles sync. Silent fetch to keep cache fresh.
         window._fetchClassDataSilent(userClass);
     } catch (e) {
         console.warn('[ClassProposal] Vote sync failed:', e.message);
@@ -10804,6 +12018,7 @@ window.manageClassProposal = async function(proposalId, newStatus) {
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
 
     const userClass = getEffectiveUserClass();
+    const { userId, headers } = getClassRepAuthInfo();
     const currentProps = getStoredClassProposals(userClass);
     const prop = currentProps.find(p => p.id === proposalId);
     if (!prop) return;
@@ -10814,10 +12029,14 @@ window.manageClassProposal = async function(proposalId, newStatus) {
 
     showToast(newStatus === 'approved' ? 'Proposta approvata ufficialmente!' : 'Proposta archiviata', 'success');
 
+    if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
+    if (document.getElementById('instagram-story-content-card') && typeof window.rerenderCurrentStorySlide === 'function') {
+        window.rerenderCurrentStorySlide();
+    }
+
     // Refresh notifications panel if open
-    // Soft refresh: update notification overlay in-place if open
     if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
-        openTodayNotifications(); // In-place update, no re-creation
+        openTodayNotifications();
     }
 
     // Sync in background with backend
@@ -10825,15 +12044,15 @@ window.manageClassProposal = async function(proposalId, newStatus) {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
         await fetch(`${apiBase}/api/class-representative`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 action: 'manage_proposal',
                 class: userClass,
                 proposalId,
-                status: prop.status
+                status: prop.status,
+                userId
             })
         });
-        // Realtime subscription handles sync. Silent fetch to keep cache fresh.
         window._fetchClassDataSilent(userClass);
     } catch (e) {
         console.warn('[ClassProposal] Manage sync failed:', e.message);

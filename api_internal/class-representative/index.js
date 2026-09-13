@@ -21,11 +21,17 @@ module.exports = async function handler(req, res) {
         }
 
         try {
+            const baseClass = className.replace(/\s*\(.*?\)/, '').trim();
+            const classVariants = [className];
+            if (baseClass && baseClass !== className) {
+                classVariants.push(baseClass);
+            }
+
             // Fetch representatives for this class
             const { data: dbReps, error: repsError } = await supabase
                 .from('class_representatives')
                 .select('*')
-                .eq('class', className);
+                .in('class', classVariants);
 
             if (repsError) throw repsError;
 
@@ -42,7 +48,7 @@ module.exports = async function handler(req, res) {
             const { data: dbProps, error: propsError } = await supabase
                 .from('proposals')
                 .select('*')
-                .eq('class_id', className)
+                .in('class_id', classVariants)
                 .order('created_at', { ascending: false });
 
             if (propsError) throw propsError;
@@ -344,10 +350,15 @@ module.exports = async function handler(req, res) {
             }
 
             // Authorization: verify that managerUserId is an active representative of this class
+            const propClass = String(proposal.class_id || '').trim().toUpperCase();
+            const propClassBase = propClass.replace(/\s*\(.*?\)/, '').trim();
+            const repClassVariants = [propClass];
+            if (propClassBase && propClassBase !== propClass) repClassVariants.push(propClassBase);
+
             const { data: rep, error: repErr } = await supabase
                 .from('class_representatives')
                 .select('id')
-                .eq('class', proposal.class_id)
+                .in('class', repClassVariants)
                 .eq('user_id', managerUserId)
                 .maybeSingle();
 
