@@ -3356,7 +3356,7 @@ window.getComprehensiveNotificationData = function() {
 
 // ═══════════════════════════════════════════════════════════════
 // OGGI REWIND & SPOTIFY WRAPPED ENGINE FOR G-CONNECT
-// Badge Circolare con Anello Storia & Recap Giornaliero (Reset 00:00)
+// Badge Circolare con Anello Storia & Novità Giornaliere (Reset 00:00)
 // ═══════════════════════════════════════════════════════════════
 
 window.renderTodayRewindBadgeHTML = function() {
@@ -3384,21 +3384,16 @@ window.renderTodayRewindBadgeHTML = function() {
         isSeen = false;
     }
 
-    // Recupera eventi attivi di oggi
-    const notifData = (typeof window.getComprehensiveNotificationData === 'function')
-        ? window.getComprehensiveNotificationData()
-        : { todayItems: [] };
-    const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
-    const classProps = effClass && (typeof getStoredClassProposals === 'function')
-        ? getStoredClassProposals(effClass)
+    // Genera slides per determinare se ci sono effettive novità oggi
+    const slides = (typeof window.getTodayRewindSlides === 'function')
+        ? window.getTodayRewindSlides()
         : [];
-    const activeProps = classProps.filter(p => !p.status || p.status === 'pending' || p.status === 'approved' || p.status === 'active');
+    const hasRealNews = slides.length > 0 && slides[0].id !== 'quiet_day';
+    const totalEvents = hasRealNews ? slides.length : 0;
 
-    const totalEvents = (notifData.todayItems ? notifData.todayItems.length : 0) + activeProps.length;
-
-    if (!isSeen) {
+    if (!isSeen && hasRealNews) {
         return `
-        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Oggi Rewind • Il recap della tua giornata" aria-label="Oggi Rewind" style="
+        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Novità di oggi" aria-label="Novità di oggi" style="
             position: relative;
             width: 44px;
             height: 44px;
@@ -3429,7 +3424,7 @@ window.renderTodayRewindBadgeHTML = function() {
         </button>`;
     } else {
         return `
-        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openTodayRewind();" title="Oggi Rewind • Riguarda il recap" aria-label="Oggi Rewind" style="
+        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('light');window.openTodayRewind();" title="Novità di oggi" aria-label="Novità di oggi" style="
             position: relative;
             width: 44px;
             height: 44px;
@@ -3473,7 +3468,7 @@ window.markTodayRewindSeen = function() {
     }
 };
 
-// ── SLIDE DECK GENERATOR (SPOTIFY WRAPPED STYLE) ──
+// ── SLIDE DECK GENERATOR: SOLO LE NOVITÀ EFFETTIVE DI OGGI ──
 window.getTodayRewindSlides = function() {
     const today = new Date();
     const todayISO = (typeof getLocalDateString === 'function')
@@ -3490,243 +3485,127 @@ window.getTodayRewindSlides = function() {
     const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
     const userId = (typeof getClassRepAuthInfo === 'function') ? getClassRepAuthInfo().userId : String(state.user?.id || 'utente');
 
-    // Voti
+    const notifData = (typeof window.getComprehensiveNotificationData === 'function')
+        ? window.getComprehensiveNotificationData()
+        : { todayItems: [] };
+
+    // 1. Nuovi Voti inseriti oggi
     const votiData = (typeof getVotiData === 'function') ? getVotiData() : [];
-    const todayVoti = votiData.filter(v => v.data === todayISO || (v.data && v.data.startsWith(todayISO)));
+    const todayVoti = votiData.filter(v => {
+        const d = v.data || v.date || v.dataISO || '';
+        return d === todayISO || d.startsWith(todayISO);
+    });
     const media = (typeof calculateMedia === 'function') ? calculateMedia() : (state.media || 0);
 
-    // Compiti
+    // 2. Nuovi Compiti per oggi o assegnati oggi
     const compitiData = (typeof getCompitiData === 'function') ? getCompitiData() : [];
     const todayCompiti = compitiData.filter(c => {
         const d = c.scadenza || c.data || c.dataISO || '';
-        return d === todayISO || d.startsWith(todayISO);
+        const ins = c.dataInserimento || c.created_at || '';
+        return d === todayISO || d.startsWith(todayISO) || ins === todayISO || ins.startsWith(todayISO);
+    });
+    (notifData.todayItems || []).forEach(it => {
+        if (it.type === 'compito' || it.category === 'compiti') {
+            if (!todayCompiti.some(c => (c.id && c.id === it.id) || (c.compito === it.title && c.materia === it.materia))) {
+                todayCompiti.push({
+                    materia: it.materia || it.subject || it.categoryLabel || 'Compito',
+                    compito: it.title || it.desc || '',
+                    scadenza: it.dateISO || todayISO
+                });
+            }
+        }
     });
 
-    // Proposte & Assemblea
+    // 3. Proposte di Assemblea di Classe & Spostamento Verifiche (attive per la classe)
     const classProps = effClass && (typeof getStoredClassProposals === 'function')
         ? getStoredClassProposals(effClass)
         : [];
     const activeProps = classProps.filter(p => !p.status || p.status === 'pending' || p.status === 'approved' || p.status === 'active');
-    const assemblyProp = activeProps.find(p => p.type === 'assembly') || activeProps[0] || null;
+    const assemblyProps = activeProps.filter(p => p.type === 'assembly');
+    const rescheduleProps = activeProps.filter(p => p.type !== 'assembly');
 
-    // Circolari
+    // 4. Nuove Circolari pubblicate oggi
     const circolariData = (typeof getCircolariData === 'function') ? getCircolariData() : [];
     const todayCircolari = circolariData.filter(c => {
-        const d = c.data || c.dataISO || '';
+        const d = c.data || c.dataISO || c.created_at || '';
         return d === todayISO || d.startsWith(todayISO);
+    });
+    (notifData.todayItems || []).forEach(it => {
+        if (it.type === 'circolare' || it.category === 'circolari') {
+            if (!todayCircolari.some(c => (c.id && c.id === it.id) || (c.titolo === it.title))) {
+                todayCircolari.push({
+                    id: it.id,
+                    numero: it.numero || '',
+                    titolo: it.title || it.desc,
+                    desc: it.desc || ''
+                });
+            }
+        }
     });
 
     const slides = [];
 
-    // ── SLIDE 1: INTRO COVER ──
-    const totalHighlights = todayVoti.length + todayCompiti.length + (assemblyProp ? 1 : 0) + todayCircolari.length;
-    slides.push({
-        id: 'cover',
-        category: 'intro',
-        title: 'Oggi Rewind',
-        subtitle: todayFormatted,
-        gradientBg: 'linear-gradient(160deg, #1c0936 0%, #0d061f 55%, #05020c 100%)',
-        accentGlow: 'rgba(255, 0, 122, 0.4)',
-        renderHtml: () => `
-            <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
-                <div>
-                    <!-- Wrapped Pill Tag -->
-                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 0, 122, 0.18); border: 1px solid rgba(255, 0, 122, 0.4); margin-bottom: 20px;">
-                        <i class="ph-fill ph-sparkle" style="color: #ff007a; font-size: 13px;"></i>
-                        <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff70a6;">SPOTLIGHT • OGGI REWIND</span>
-                    </div>
-
-                    <h1 style="font-size: 34px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.03em; margin: 0 0 10px;">
-                        Ciao ${escapeHtml(userName)},<br>
-                        <span style="background: linear-gradient(135deg, #ff007a 0%, #af52de 50%, #00dfd8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                            ecco il tuo giorno.
-                        </span>
-                    </h1>
-                    <p style="font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0 0 24px;">
-                        ${todayFormatted}
-                    </p>
-                </div>
-
-                <!-- Central Wrapped Visual Card -->
-                <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); backdrop-filter: blur(30px); border-radius: 24px; padding: 22px; position: relative; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
-                    <div style="font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;">
-                        IN QUESTA GIORNATA
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-                        ${todayVoti.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.35);color:#30d158;font-size:12px;font-weight:700;"><i class="ph-bold ph-chart-line-up"></i> ${todayVoti.length} ${todayVoti.length === 1 ? 'Nuovo Voto' : 'Nuovi Voti'}</span>` : ''}
-                        ${todayCompiti.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(41,151,255,0.18);border:1px solid rgba(41,151,255,0.35);color:#64d2ff;font-size:12px;font-weight:700;"><i class="ph-bold ph-book-open"></i> ${todayCompiti.length} ${todayCompiti.length === 1 ? 'Compito' : 'Compiti'}</span>` : ''}
-                        ${assemblyProp ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(255,45,85,0.18);border:1px solid rgba(255,45,85,0.35);color:#ff375f;font-size:12px;font-weight:700;"><i class="ph-bold ph-users-three"></i> ${assemblyProp.type === 'assembly' ? 'Assemblea Attiva' : 'Proposta Classe'}</span>` : ''}
-                        ${todayCircolari.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(255,214,10,0.18);border:1px solid rgba(255,214,10,0.35);color:#ffd60a;font-size:12px;font-weight:700;"><i class="ph-bold ph-megaphone"></i> ${todayCircolari.length} Circolari</span>` : ''}
-                        ${totalHighlights === 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:12px;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.35);color:#30d158;font-size:12px;font-weight:700;"><i class="ph-bold ph-sparkle"></i> Tutto regolare</span>` : ''}
-                    </div>
-                    <p style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.45; margin: 0;">
-                        ${totalHighlights > 0 
-                            ? `Abbiamo preparato per te un riassunto dinamico di tutto ciò che è accaduto oggi a scuola.` 
-                            : `Nessun compito o notifica urgente per oggi. Una giornata completamente tranquilla!`}
-                    </p>
-                </div>
-
-                <!-- Footer Hint -->
-                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px;">
-                    <span style="font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.45);">
-                        Tocca a destra per scoprire
-                    </span>
-                    <i class="ph-bold ph-arrow-right" style="font-size: 16px; color: #ff007a;"></i>
-                </div>
-            </div>
-        `
-    });
-
-    // ── SLIDE 2: VOTI O RENDIMENTO ──
-    if (todayVoti.length > 0) {
-        const topVoto = todayVoti[0];
+    // ── SLIDES: 1. NUOVI VOTI DI OGGI ──
+    todayVoti.forEach((voto, idx) => {
         slides.push({
-            id: 'voti',
+            id: `voto_${idx}`,
             category: 'voti',
-            title: 'Valutazioni di Oggi',
+            title: `Nuovo Voto: ${voto.materia || 'Valutazione'}`,
             gradientBg: 'linear-gradient(160deg, #022c22 0%, #064e3b 45%, #02120d 100%)',
-            accentGlow: 'rgba(48, 209, 88, 0.4)',
+            accentGlow: 'rgba(48, 209, 88, 0.45)',
             renderHtml: () => `
                 <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
                     <div>
                         <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(48, 209, 88, 0.18); border: 1px solid rgba(48, 209, 88, 0.4); margin-bottom: 20px;">
                             <i class="ph-bold ph-chart-line-up" style="color: #30d158; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #62e584;">I TUOI RISULTATI</span>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #62e584;">NUOVO VOTO DI OGGI</span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
-                            Nuovo Voto Registrato!
+                        <h2 style="font-size: 30px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; margin: 0 0 6px;">
+                            ${escapeHtml(voto.materia || 'Valutazione')}
                         </h2>
                         <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Oggi è stato inserito un aggiornamento sul registro.
+                            Registrato oggi sul registro elettronico.
                         </p>
                     </div>
 
-                    <!-- Huge Grade Display -->
-                    <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(48, 209, 88, 0.3); backdrop-filter: blur(30px); border-radius: 28px; padding: 28px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                    <!-- Huge Grade Card -->
+                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(48, 209, 88, 0.35); backdrop-filter: blur(30px); border-radius: 28px; padding: 28px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
                         <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #62e584; margin-bottom: 8px;">
-                            ${escapeHtml(topVoto.materia || 'Valutazione')}
+                            VOTO ASSEGNATO
                         </div>
-                        <div style="font-size: 68px; font-weight: 900; line-height: 1; color: #ffffff; text-shadow: 0 0 24px rgba(48,209,88,0.6); margin-bottom: 12px;">
-                            ${escapeHtml(String(topVoto.voto || '-'))}
+                        <div style="font-size: 76px; font-weight: 900; line-height: 1; color: #ffffff; text-shadow: 0 0 28px rgba(48,209,88,0.7); margin-bottom: 12px;">
+                            ${escapeHtml(String(voto.voto || '-'))}
                         </div>
-                        <div style="display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85); margin-bottom: 10px;">
-                            ${escapeHtml(topVoto.tipo || 'Valutazione Didattica')}
+                        <div style="display: inline-block; padding: 5px 14px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.9); margin-bottom: 8px;">
+                            ${escapeHtml(voto.tipo || 'Valutazione Didattica')} ${voto.docente ? `• Prof. ${escapeHtml(voto.docente)}` : ''}
                         </div>
-                        ${topVoto.commento ? `<p style="font-size: 13px; font-style: italic; color: rgba(255,255,255,0.7); margin: 6px 0 0;">"${escapeHtml(topVoto.commento)}"</p>` : ''}
+                        ${voto.commento ? `<p style="font-size: 13.5px; font-style: italic; color: rgba(255,255,255,0.8); margin: 8px 0 0; line-height: 1.4;">"${escapeHtml(voto.commento)}"</p>` : ''}
                     </div>
 
-                    <!-- Bottom Stat -->
-                    <div style="background: rgba(255,255,255,0.04); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; color: rgba(255,255,255,0.6);">Media generale:</span>
-                        <span style="font-size: 15px; font-weight: 800; color: #30d158;">${media > 0 ? media.toFixed(2) : '-'}</span>
+                    <!-- Bottom Bar -->
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: rgba(255,255,255,0.65);">Media generale aggiornata:</span>
+                        <span style="font-size: 16px; font-weight: 800; color: #30d158;">${media > 0 ? media.toFixed(2) : '-'}</span>
                     </div>
                 </div>
             `
         });
-    } else {
-        slides.push({
-            id: 'rendimento',
-            category: 'voti',
-            title: 'Il tuo Rendimento',
-            gradientBg: 'linear-gradient(160deg, #022c22 0%, #064e3b 45%, #02120d 100%)',
-            accentGlow: 'rgba(48, 209, 88, 0.4)',
-            renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
-                    <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(48, 209, 88, 0.18); border: 1px solid rgba(48, 209, 88, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-trend-up" style="color: #30d158; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #62e584;">RENDIMENTO ATTUALE</span>
-                        </div>
-                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
-                            Quadro Voti Stabile
-                        </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Nessuna nuova valutazione registrata per oggi.
-                        </p>
-                    </div>
+    });
 
-                    <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(48, 209, 88, 0.3); backdrop-filter: blur(30px); border-radius: 28px; padding: 32px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
-                        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #62e584; margin-bottom: 8px;">
-                            MEDIA ATTUALE
-                        </div>
-                        <div style="font-size: 64px; font-weight: 900; line-height: 1; color: #ffffff; text-shadow: 0 0 24px rgba(48,209,88,0.6); margin-bottom: 14px;">
-                            ${media > 0 ? media.toFixed(2) : 'N/D'}
-                        </div>
-                        <div style="display: inline-block; padding: 6px 14px; border-radius: 999px; background: rgba(48,209,88,0.18); font-size: 12px; font-weight: 700; color: #30d158;">
-                            ${media >= 8 ? 'Eccellente! 🌟' : media >= 7 ? 'Ottimo andamento 🚀' : media >= 6 ? 'Sufficiente 👍' : 'Continua a impegnarti 💪'}
-                        </div>
-                    </div>
-
-                    <div style="color: rgba(255,255,255,0.45); font-size: 12px; text-align: center;">
-                        I voti registrati si sincronizzano in automatico.
-                    </div>
-                </div>
-            `
-        });
-    }
-
-    // ── SLIDE 3: COMPITI & DIARIO ──
-    if (todayCompiti.length > 0) {
-        slides.push({
-            id: 'compiti',
-            category: 'compiti',
-            title: 'Compiti & Scadenze',
-            gradientBg: 'linear-gradient(160deg, #0b1d3a 0%, #1e3a8a 45%, #050c1b 100%)',
-            accentGlow: 'rgba(41, 151, 255, 0.4)',
-            renderHtml: () => `
-                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
-                    <div>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(41, 151, 255, 0.18); border: 1px solid rgba(41, 151, 255, 0.4); margin-bottom: 20px;">
-                            <i class="ph-bold ph-book-open" style="color: #2997ff; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #64d2ff;">IL TUO DIARIO</span>
-                        </div>
-                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
-                            Cosa c'era oggi
-                        </h2>
-                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            ${todayCompiti.length} ${todayCompiti.length === 1 ? 'attività registrata' : 'attività registrate'} per questa data.
-                        </p>
-                    </div>
-
-                    <!-- Homework Cards Stack -->
-                    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 52vh; overflow-y: auto; padding-right: 4px;">
-                        ${todayCompiti.slice(0, 3).map(c => `
-                            <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(41, 151, 255, 0.25); border-radius: 18px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64d2ff; letter-spacing: 0.05em;">
-                                        ${escapeHtml(c.materia || 'Compito')}
-                                    </span>
-                                </div>
-                                <div style="font-size: 13.5px; font-weight: 600; color: #ffffff; line-height: 1.4;">
-                                    ${escapeHtml(c.compito || c.desc || 'Esercizi assegnati')}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div style="background: rgba(255,255,255,0.04); border-radius: 16px; padding: 12px 16px; text-align: center; color: rgba(255,255,255,0.5); font-size: 12px;">
-                        Trovi tutti i dettagli completi nella sezione Diario.
-                    </div>
-                </div>
-            `
-        });
-    }
-
-    // ── SLIDE 4: ASSEMBLEA & VITA DI CLASSE ──
-    if (assemblyProp) {
-        const isAssembly = assemblyProp.type === 'assembly';
-        const votes = assemblyProp.votes || { accept: [], decline: [], alternatives: [] };
+    // ── SLIDES: 2. RICHIESTE ASSEMBLEA DI CLASSE ──
+    assemblyProps.forEach((prop, idx) => {
+        const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
         const acceptCount = Array.isArray(votes.accept) ? votes.accept.length : 0;
         const declineCount = Array.isArray(votes.decline) ? votes.decline.length : 0;
         const hasAccepted = Array.isArray(votes.accept) && votes.accept.includes(userId);
         const hasDeclined = Array.isArray(votes.decline) && votes.decline.includes(userId);
 
         slides.push({
-            id: 'assemblea',
-            category: 'classe',
-            title: isAssembly ? 'Assemblea di Classe' : 'Proposta di Classe',
+            id: `assembly_${prop.id || idx}`,
+            category: 'assemblea',
+            title: 'Richiesta Assemblea di Classe',
             gradientBg: 'linear-gradient(160deg, #3b0718 0%, #831843 45%, #160309 100%)',
-            accentGlow: 'rgba(255, 45, 85, 0.4)',
+            accentGlow: 'rgba(255, 45, 85, 0.45)',
             renderHtml: () => `
                 <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
                     <div>
@@ -3734,8 +3613,8 @@ window.getTodayRewindSlides = function() {
                             <i class="ph-bold ph-users-three" style="color: #ff2d55; font-size: 13px;"></i>
                             <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff6482;">VITA DI CLASSE</span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
-                            ${isAssembly ? 'Richiesta Assemblea' : 'Proposta Spostamento'}
+                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
+                            Richiesta Assemblea
                         </h2>
                         <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
                             Classe ${escapeHtml(effClass || 'Tua Classe')}
@@ -3743,43 +3622,43 @@ window.getTodayRewindSlides = function() {
                     </div>
 
                     <!-- Proposal Details & Live Interactive Voting Card -->
-                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 45, 85, 0.3); backdrop-filter: blur(30px); border-radius: 24px; padding: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 45, 85, 0.35); backdrop-filter: blur(30px); border-radius: 26px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
                         <div style="font-size: 11px; font-weight: 800; color: #ff6482; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-                            DATA RICHIESTA
+                            DATA PROPOSTA
                         </div>
-                        <div style="font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">
-                            ${escapeHtml(assemblyProp.targetDate || 'Giorno indicato')}
+                        <div style="font-size: 22px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
+                            ${escapeHtml(prop.targetDate || 'Giorno indicato')}
                         </div>
-                        <p style="font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.45; margin: 0 0 16px;">
-                            "${escapeHtml(assemblyProp.reason || 'Organizzazione didattica e confronto')}"
+                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.8); line-height: 1.45; margin: 0 0 18px;">
+                            "${escapeHtml(prop.reason || 'Confronto didattico e organizzazione')}"
                         </p>
 
                         <!-- Vote Tallies -->
                         <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                            <div style="flex: 1; background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.25); border-radius: 12px; padding: 8px; text-align: center;">
-                                <div style="font-size: 16px; font-weight: 800; color: #30d158;">${acceptCount}</div>
-                                <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);">Favorevoli</div>
+                            <div style="flex: 1; background: rgba(48,209,88,0.14); border: 1px solid rgba(48,209,88,0.3); border-radius: 14px; padding: 10px; text-align: center;">
+                                <div style="font-size: 18px; font-weight: 900; color: #30d158;">${acceptCount}</div>
+                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Favorevoli</div>
                             </div>
-                            <div style="flex: 1; background: rgba(255,69,58,0.12); border: 1px solid rgba(255,69,58,0.25); border-radius: 12px; padding: 8px; text-align: center;">
-                                <div style="font-size: 16px; font-weight: 800; color: #ff453a;">${declineCount}</div>
-                                <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);">Contrari</div>
+                            <div style="flex: 1; background: rgba(255,69,58,0.14); border: 1px solid rgba(255,69,58,0.3); border-radius: 14px; padding: 10px; text-align: center;">
+                                <div style="font-size: 18px; font-weight: 900; color: #ff453a;">${declineCount}</div>
+                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Contrari</div>
                             </div>
                         </div>
 
                         <!-- Live Action Buttons Right in Rewind -->
                         <div style="display: flex; gap: 8px;">
-                            <button onclick="event.stopPropagation(); window.voteClassProposal('${assemblyProp.id}', 'accept');" style="
-                                flex: 1; padding: 11px; border-radius: 14px;
+                            <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'accept');" style="
+                                flex: 1; padding: 12px; border-radius: 14px;
                                 background: ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.25)'};
-                                border: 1px solid #30d158; color: #ffffff; font-size: 12px; font-weight: 800;
+                                border: 1px solid #30d158; color: #ffffff; font-size: 12.5px; font-weight: 800;
                                 cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
                             ">
                                 <i class="ph-bold ph-thumbs-up"></i> ${hasAccepted ? 'Votato 👍' : 'Favorevole'}
                             </button>
-                            <button onclick="event.stopPropagation(); window.voteClassProposal('${assemblyProp.id}', 'decline');" style="
-                                flex: 1; padding: 11px; border-radius: 14px;
+                            <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'decline');" style="
+                                flex: 1; padding: 12px; border-radius: 14px;
                                 background: ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.2)'};
-                                border: 1px solid #ff453a; color: #ffffff; font-size: 12px; font-weight: 800;
+                                border: 1px solid #ff453a; color: #ffffff; font-size: 12.5px; font-weight: 800;
                                 cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
                             ">
                                 <i class="ph-bold ph-thumbs-down"></i> ${hasDeclined ? 'Votato 👎' : 'Contrario'}
@@ -3787,135 +3666,239 @@ window.getTodayRewindSlides = function() {
                         </div>
                     </div>
 
-                    <div style="color: rgba(255,255,255,0.45); font-size: 11.5px; text-align: center;">
-                        I voti si sincronizzano in tempo reale tra tutti i compagni.
+                    <div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">
+                        Sincronizzato in tempo reale con tutti i compagni.
+                    </div>
+                </div>
+            `
+        });
+    });
+
+    // ── SLIDES: 3. PROPOSTE DI SPOSTAMENTO VERIFICHE ──
+    rescheduleProps.forEach((prop, idx) => {
+        const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
+        const acceptCount = Array.isArray(votes.accept) ? votes.accept.length : 0;
+        const declineCount = Array.isArray(votes.decline) ? votes.decline.length : 0;
+        const hasAccepted = Array.isArray(votes.accept) && votes.accept.includes(userId);
+        const hasDeclined = Array.isArray(votes.decline) && votes.decline.includes(userId);
+
+        slides.push({
+            id: `reschedule_${prop.id || idx}`,
+            category: 'spostamento',
+            title: `Sposta Verifica: ${prop.subject || 'Verifica'}`,
+            gradientBg: 'linear-gradient(160deg, #1c1538 0%, #3b1e7a 45%, #0d091e 100%)',
+            accentGlow: 'rgba(175, 82, 222, 0.45)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(175, 82, 222, 0.2); border: 1px solid rgba(175, 82, 222, 0.45); margin-bottom: 20px;">
+                            <i class="ph-bold ph-calendar-plus" style="color: #af52de; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #da8aff;">PROPOSTA VERIFICA</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
+                            ${escapeHtml(prop.subject || 'Verifica')}
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            Richiesta spostamento data
+                        </p>
+                    </div>
+
+                    <!-- Proposal Details -->
+                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(175, 82, 222, 0.35); backdrop-filter: blur(30px); border-radius: 26px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+                        <div style="font-size: 11px; font-weight: 800; color: #da8aff; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+                            NUOVA DATA RICHIESTA
+                        </div>
+                        <div style="font-size: 22px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
+                            ${escapeHtml(prop.targetDate || 'Da concordare')}
+                        </div>
+                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.8); line-height: 1.45; margin: 0 0 18px;">
+                            "${escapeHtml(prop.reason || 'Proposta compagni di classe')}"
+                        </p>
+
+                        <!-- Vote Tallies -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                            <div style="flex: 1; background: rgba(48,209,88,0.14); border: 1px solid rgba(48,209,88,0.3); border-radius: 14px; padding: 10px; text-align: center;">
+                                <div style="font-size: 18px; font-weight: 900; color: #30d158;">${acceptCount}</div>
+                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Favorevoli</div>
+                            </div>
+                            <div style="flex: 1; background: rgba(255,69,58,0.14); border: 1px solid rgba(255,69,58,0.3); border-radius: 14px; padding: 10px; text-align: center;">
+                                <div style="font-size: 18px; font-weight: 900; color: #ff453a;">${declineCount}</div>
+                                <div style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">Contrari</div>
+                            </div>
+                        </div>
+
+                        <!-- Live Action Buttons -->
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'accept');" style="
+                                flex: 1; padding: 12px; border-radius: 14px;
+                                background: ${hasAccepted ? '#30d158' : 'rgba(48,209,88,0.25)'};
+                                border: 1px solid #30d158; color: #ffffff; font-size: 12.5px; font-weight: 800;
+                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            ">
+                                <i class="ph-bold ph-thumbs-up"></i> ${hasAccepted ? 'Votato 👍' : 'Favorevole'}
+                            </button>
+                            <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'decline');" style="
+                                flex: 1; padding: 12px; border-radius: 14px;
+                                background: ${hasDeclined ? '#ff453a' : 'rgba(255,69,58,0.2)'};
+                                border: 1px solid #ff453a; color: #ffffff; font-size: 12.5px; font-weight: 800;
+                                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            ">
+                                <i class="ph-bold ph-thumbs-down"></i> ${hasDeclined ? 'Votato 👎' : 'Contrario'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">
+                        Esprimi la tua preferenza per la classe.
+                    </div>
+                </div>
+            `
+        });
+    });
+
+    // ── SLIDES: 4. NUOVI COMPITI DI OGGI ──
+    if (todayCompiti.length > 0) {
+        slides.push({
+            id: 'compiti',
+            category: 'compiti',
+            title: 'Compiti di Oggi',
+            gradientBg: 'linear-gradient(160deg, #0b1d3a 0%, #1e3a8a 45%, #050c1b 100%)',
+            accentGlow: 'rgba(41, 151, 255, 0.45)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(41, 151, 255, 0.18); border: 1px solid rgba(41, 151, 255, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-book-open" style="color: #2997ff; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #64d2ff;">COMPITI DI OGGI</span>
+                        </div>
+                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
+                            Attività sul Diario
+                        </h2>
+                        <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            ${todayCompiti.length} ${todayCompiti.length === 1 ? 'compito registrato per oggi' : 'compiti registrati per oggi'}.
+                        </p>
+                    </div>
+
+                    <!-- Homework Cards Stack -->
+                    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+                        ${todayCompiti.map(c => `
+                            <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(41, 151, 255, 0.28); border-radius: 18px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: #64d2ff; letter-spacing: 0.05em;">
+                                        ${escapeHtml(c.materia || 'Compito')}
+                                    </span>
+                                </div>
+                                <div style="font-size: 14px; font-weight: 600; color: #ffffff; line-height: 1.4;">
+                                    ${escapeHtml(c.compito || c.desc || 'Esercizi assegnati')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 12px 16px; text-align: center; color: rgba(255,255,255,0.55); font-size: 12px;">
+                        Disponibili per la consultazione nella sezione Diario.
                     </div>
                 </div>
             `
         });
     }
 
-    // ── SLIDE 5: CIRCOLARI ──
-    if (todayCircolari.length > 0) {
-        const circ = todayCircolari[0];
+    // ── SLIDES: 5. NUOVE CIRCOLARI DI OGGI ──
+    todayCircolari.forEach((circ, idx) => {
         slides.push({
-            id: 'circolari',
+            id: `circ_${circ.id || idx}`,
             category: 'circolari',
-            title: 'Circolari della Scuola',
+            title: `Circolare N° ${circ.numero || ''}`,
             gradientBg: 'linear-gradient(160deg, #2d1e02 0%, #78350f 45%, #120c02 100%)',
-            accentGlow: 'rgba(255, 214, 10, 0.4)',
+            accentGlow: 'rgba(255, 214, 10, 0.45)',
             renderHtml: () => `
                 <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
                     <div>
                         <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 214, 10, 0.18); border: 1px solid rgba(255, 214, 10, 0.4); margin-bottom: 20px;">
                             <i class="ph-bold ph-megaphone" style="color: #ffd60a; font-size: 13px;"></i>
-                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ffe664;">COMUNICAZIONI SCUOLA</span>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ffe664;">NUOVA CIRCOLARE</span>
                         </div>
-                        <h2 style="font-size: 28px; line-height: 1.18; font-weight: 900; color: #ffffff; margin: 0 0 8px;">
-                            Nuova Circolare
+                        <h2 style="font-size: 28px; line-height: 1.15; font-weight: 900; color: #ffffff; margin: 0 0 6px;">
+                            Comunicazione Ufficiale
                         </h2>
                         <p style="font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                            Pubblicata oggi dall'istituto.
+                            Pubblicata nella data odierna.
                         </p>
                     </div>
 
-                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 214, 10, 0.3); backdrop-filter: blur(30px); border-radius: 24px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
-                        <div style="font-size: 11px; font-weight: 800; color: #ffd60a; text-transform: uppercase; margin-bottom: 8px;">
-                            N° ${escapeHtml(circ.numero || 'N.D.')}
+                    <div style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 214, 10, 0.35); backdrop-filter: blur(30px); border-radius: 26px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.55);">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #ffd60a; text-transform: uppercase; margin-bottom: 8px;">
+                            CIRCOLARE ${escapeHtml(circ.numero ? `N° ${circ.numero}` : 'OGGI')}
                         </div>
-                        <div style="font-size: 18px; font-weight: 800; color: #ffffff; line-height: 1.35; margin-bottom: 12px;">
-                            ${escapeHtml(circ.titolo || circ.title || 'Circolare')}
+                        <div style="font-size: 19px; font-weight: 800; color: #ffffff; line-height: 1.35; margin-bottom: 12px;">
+                            ${escapeHtml(circ.titolo || circ.title || 'Circolare Scolastica')}
                         </div>
-                        <p style="font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.4; margin: 0 0 16px;">
-                            ${escapeHtml(circ.desc || circ.snippet || 'Tocca per aprire il documento ufficiale completo.')}
+                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.75); line-height: 1.45; margin: 0 0 18px;">
+                            ${escapeHtml(circ.desc || circ.snippet || 'Tocca qui sotto per aprire il documento ufficiale completo.')}
                         </p>
                         <button onclick="event.stopPropagation(); if(typeof openCircolareDetails==='function')openCircolareDetails('${circ.id}'); else navigate('circolari'); window.closeTodayRewind();" style="
-                            width: 100%; padding: 12px; border-radius: 14px;
-                            background: #ffd60a; border: none; color: #000000; font-size: 13px; font-weight: 800;
+                            width: 100%; padding: 13px; border-radius: 14px;
+                            background: #ffd60a; border: none; color: #000000; font-size: 13.5px; font-weight: 800;
                             cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            box-shadow: 0 4px 16px rgba(255, 214, 10, 0.35);
                         ">
                             <i class="ph-bold ph-file-text"></i> Apri Circolare
                         </button>
                     </div>
 
-                    <div style="color: rgba(255,255,255,0.45); font-size: 12px; text-align: center;">
-                        Archivio circolari sempre consultabile.
+                    <div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">
+                        Consultabile sempre nella sezione Circolari.
                     </div>
                 </div>
             `
         });
-    }
+    });
 
-    // ── SLIDE FINALE: SPOTIFY WRAPPED SUMMARY CARD ──
-    slides.push({
-        id: 'outro',
-        category: 'recap',
-        title: 'Quadro Completo',
-        gradientBg: 'linear-gradient(160deg, #181135 0%, #101935 45%, #0a0d1a 100%)',
-        accentGlow: 'rgba(121, 40, 202, 0.45)',
-        renderHtml: () => `
-            <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
-                <div>
-                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(121, 40, 202, 0.25); border: 1px solid rgba(121, 40, 202, 0.45); margin-bottom: 20px;">
-                        <i class="ph-fill ph-check-circle" style="color: #bf5af2; font-size: 13px;"></i>
-                        <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #da8aff;">GIORNATA COMPLETATA</span>
+    // ── FALLBACK SLIDE: SE NON CI SONO NOVITÀ NELLA DATA ODIERNA ──
+    if (slides.length === 0) {
+        slides.push({
+            id: 'quiet_day',
+            category: 'zen',
+            title: 'Nessuna Novità Oggi',
+            gradientBg: 'linear-gradient(160deg, #071927 0%, #0c2b3e 45%, #040d16 100%)',
+            accentGlow: 'rgba(56, 189, 248, 0.35)',
+            renderHtml: () => `
+                <div class="rewind-card-enter" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 24px 16px; box-sizing: border-box;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.4); margin-bottom: 20px;">
+                            <i class="ph-bold ph-sparkle" style="color: #38bdf8; font-size: 13px;"></i>
+                            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #7dd3fc;">GIORNATA TRANQUILLA</span>
+                        </div>
+                        <h2 style="font-size: 32px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; margin: 0 0 10px;">
+                            Nessuna novità oggi
+                        </h2>
+                        <p style="font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
+                            ${todayFormatted}
+                        </p>
                     </div>
-                    <h2 style="font-size: 32px; line-height: 1.15; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; margin: 0 0 10px;">
-                        Sei al passo con tutto.
-                    </h2>
-                    <p style="font-size: 13.5px; font-weight: 500; color: rgba(255, 255, 255, 0.65); margin: 0;">
-                        Hai visualizzato tutte le novità di oggi.
-                    </p>
-                </div>
 
-                <!-- Spotify Wrapped 3-Stat Summary Grid -->
-                <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); backdrop-filter: blur(30px); border-radius: 24px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
-                    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; margin-bottom: 14px;">
-                        IL TUO QUADRO DI OGGI
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
-                        <div style="background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 8px; text-align: center;">
-                            <div style="font-size: 18px; font-weight: 900; color: #30d158;">${media > 0 ? media.toFixed(1) : '-'}</div>
-                            <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-top: 2px;">Media Voti</div>
+                    <div style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(56, 189, 248, 0.3); backdrop-filter: blur(30px); border-radius: 26px; padding: 28px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(56, 189, 248, 0.16); border: 1px solid rgba(56, 189, 248, 0.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                            <i class="ph-fill ph-check" style="font-size: 30px; color: #38bdf8;"></i>
                         </div>
-                        <div style="background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 8px; text-align: center;">
-                            <div style="font-size: 18px; font-weight: 900; color: #64d2ff;">${todayCompiti.length}</div>
-                            <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-top: 2px;">Compiti</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 8px; text-align: center;">
-                            <div style="font-size: 18px; font-weight: 900; color: #ff375f;">${effClass || '100%'}</div>
-                            <div style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-top: 2px;">Classe</div>
-                        </div>
+                        <h3 style="font-size: 20px; font-weight: 800; color: #ffffff; margin: 0 0 8px;">Tutto sotto controllo</h3>
+                        <p style="font-size: 13.5px; color: rgba(255,255,255,0.75); line-height: 1.45; margin: 0;">
+                            Non sono stati registrati nuovi voti, compiti, circolari o assemblee per la giornata odierna.
+                        </p>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.7);">
-                        <i class="ph-fill ph-clock-countdown" style="color: #bf5af2;"></i>
-                        <span>Il Rewind si resetterà alle 00:00 per la nuova giornata.</span>
-                    </div>
-                </div>
 
-                <!-- Action Buttons -->
-                <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button onclick="window.closeTodayRewind();" style="
                         width: 100%; padding: 14px; border-radius: 16px;
-                        background: linear-gradient(135deg, #ff007a 0%, #7928ca 100%);
-                        border: none; color: #ffffff; font-size: 14px; font-weight: 800;
+                        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+                        color: #ffffff; font-size: 14px; font-weight: 800;
                         cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-                        box-shadow: 0 6px 20px rgba(255, 0, 122, 0.4);
                     ">
-                        <i class="ph-bold ph-check"></i> Chiudi e Torna alla Home
-                    </button>
-                    <button onclick="window.rewindGoToSlide(0);" style="
-                        width: 100%; padding: 12px; border-radius: 16px;
-                        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
-                        color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 700;
-                        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-                    ">
-                        <i class="ph-bold ph-arrow-counter-clockwise"></i> Riguarda Rewind
+                        <i class="ph-bold ph-arrow-left"></i> Torna alla Home
                     </button>
                 </div>
-            </div>
-        `
-    });
+            `
+        });
+    }
 
     return slides;
 };
@@ -3954,6 +3937,9 @@ window.openTodayRewind = function(slideIdx = 0) {
         document.body.appendChild(overlay);
     }
 
+    // Attach full-screen tap & swipe listeners (cliccabile da OGNI punto destro/sinistro)
+    window._setupRewindTapNavigation(overlay);
+
     window._renderRewindFrame(window._rewindState.currentIndex);
 
     requestAnimationFrame(() => {
@@ -3978,6 +3964,101 @@ window.openTodayRewind = function(slideIdx = 0) {
     }
 };
 
+window._setupRewindTapNavigation = function(overlay) {
+    if (!overlay) return;
+
+    // Desktop Click anywhere on screen (esclusi bottoni interattivi)
+    overlay.onclick = function(e) {
+        if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) {
+            return;
+        }
+        const rect = overlay.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const width = rect.width;
+
+        if (clickX < width * 0.45) {
+            window.rewindPrevSlide();
+        } else {
+            window.rewindNextSlide();
+        }
+    };
+
+    // Mobile Touch Navigation (Swipe down to dismiss + Tap left/right to navigate + Touch-and-hold to pause)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let isHolding = false;
+    let holdTimeout = null;
+
+    overlay.ontouchstart = function(e) {
+        if (e.touches && e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+            holdTimeout = setTimeout(() => {
+                isHolding = true;
+                window.pauseRewindViewer();
+            }, 180);
+        }
+    };
+
+    overlay.ontouchmove = function(e) {
+        if (e.touches && e.touches.length === 1) {
+            const diffY = e.touches[0].clientY - touchStartY;
+            const diffX = Math.abs(e.touches[0].clientX - touchStartX);
+            if ((Math.abs(diffY) > 10 || diffX > 10) && !isHolding) {
+                clearTimeout(holdTimeout);
+            }
+            const frame = document.getElementById('today-rewind-frame');
+            if (diffY > 0 && frame) {
+                frame.style.transform = `translateY(${Math.min(diffY, 150)}px)`;
+            }
+        }
+    };
+
+    overlay.ontouchend = function(e) {
+        clearTimeout(holdTimeout);
+        const frame = document.getElementById('today-rewind-frame');
+
+        if (isHolding) {
+            isHolding = false;
+            window.resumeRewindViewer();
+            if (frame) {
+                frame.style.transform = 'translateY(0)';
+                frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+            }
+            return;
+        }
+
+        if (e.changedTouches && e.changedTouches.length === 1) {
+            const diffY = e.changedTouches[0].clientY - touchStartY;
+            if (diffY > 75) {
+                window.closeTodayRewind();
+                return;
+            }
+
+            // Quick Tap: verifica se è stato cliccato un bottone o link
+            const touchX = e.changedTouches[0].clientX;
+            const touchY = e.changedTouches[0].clientY;
+            const target = document.elementFromPoint(touchX, touchY);
+            if (target && target.closest('button, a, input, textarea, [data-prevent-slide]')) {
+                return;
+            }
+
+            if (touchX < window.innerWidth * 0.45) {
+                window.rewindPrevSlide();
+            } else {
+                window.rewindNextSlide();
+            }
+        }
+
+        if (frame) {
+            frame.style.transform = 'translateY(0)';
+            frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+        }
+    };
+};
+
 window._renderRewindFrame = function(slideIdx) {
     const overlay = document.getElementById('today-rewind-viewer-overlay');
     if (!overlay || !window._rewindState) return;
@@ -3986,7 +4067,7 @@ window._renderRewindFrame = function(slideIdx) {
     const currentSlide = slides[slideIdx];
     if (!currentSlide) return;
 
-    // Se siamo arrivati all'ultima slide (outro), marchiamo come visto!
+    // Se siamo arrivati all'ultima slide delle novità, marchiamo come visto!
     if (slideIdx === slides.length - 1) {
         window.markTodayRewindSeen();
     }
@@ -4020,7 +4101,7 @@ window._renderRewindFrame = function(slideIdx) {
         padding: max(env(safe-area-inset-top, 0px), 16px) 16px max(env(safe-area-inset-bottom, 0px), 20px) 16px;
         box-sizing: border-box; z-index: 10;
     ">
-        <!-- Top Bar: Progress Segment Bars + Brand Label & Audio Equalizer + Close Controls -->
+        <!-- Top Bar: Segmented Progress Bars + Spotify Equalizer + Close Controls -->
         <div style="position: relative; z-index: 20; flex-shrink: 0; margin-bottom: 8px;">
             <!-- Segmented Progress Bars -->
             <div style="display: flex; gap: 4px; width: 100%; margin-bottom: 12px;">
@@ -4038,7 +4119,7 @@ window._renderRewindFrame = function(slideIdx) {
                     </div>
                     <div>
                         <div style="font-size: 13px; font-weight: 800; color: #ffffff; letter-spacing: 0.02em; display: flex; align-items: center; gap: 6px;">
-                            <span>OGGI REWIND</span>
+                            <span>NOVITÀ DI OGGI</span>
                             <span style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5);">${slideIdx + 1}/${slideCount}</span>
                         </div>
                     </div>
@@ -4046,14 +4127,14 @@ window._renderRewindFrame = function(slideIdx) {
 
                 <!-- Right Controls: Pause / Close -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <button id="rewind-pause-btn" onclick="window.togglePauseRewindViewer();" title="Pausa" style="
+                    <button id="rewind-pause-btn" onclick="event.stopPropagation(); window.togglePauseRewindViewer();" title="Pausa" style="
                         width: 32px; height: 32px; border-radius: 50%;
                         background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
                         color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
                     ">
                         <i class="ph-fill ph-pause" style="font-size: 13px;"></i>
                     </button>
-                    <button onclick="window.closeTodayRewind();" title="Chiudi" style="
+                    <button onclick="event.stopPropagation(); window.closeTodayRewind();" title="Chiudi" style="
                         width: 32px; height: 32px; border-radius: 50%;
                         background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
                         color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -4064,16 +4145,9 @@ window._renderRewindFrame = function(slideIdx) {
             </div>
         </div>
 
-        <!-- Center Slide Content with Left/Right Invisible Tap Zones -->
+        <!-- Center Slide Content -->
         <div style="position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0;">
-            <!-- Left Tap Zone (Previous Slide) -->
-            <div id="rewind-tap-left" onclick="window.rewindPrevSlide();" style="position: absolute; top: 0; left: 0; bottom: 0; width: 30%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
-
-            <!-- Right Tap Zone (Next Slide) -->
-            <div id="rewind-tap-right" onclick="window.rewindNextSlide();" style="position: absolute; top: 0; right: 0; bottom: 0; width: 70%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
-
-            <!-- Slide Content Card (Z-index 8 to allow buttons inside to be clicked) -->
-            <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 8;">
+            <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 12;">
                 ${currentSlide.renderHtml ? currentSlide.renderHtml() : ''}
             </div>
         </div>
@@ -4081,56 +4155,9 @@ window._renderRewindFrame = function(slideIdx) {
         <!-- Bottom Gesture Hint -->
         <div style="display: flex; justify-content: center; align-items: center; gap: 6px; padding-top: 10px; color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 600; flex-shrink: 0;">
             <i class="ph-bold ph-caret-double-down" style="font-size: 12px;"></i>
-            <span>Trascina in basso per chiudere</span>
+            <span>Tocca a destra/sinistra • Trascina in basso per chiudere</span>
         </div>
     </div>`;
-
-    // Attach Swipe & Touch-to-hold handlers
-    const frame = document.getElementById('today-rewind-frame');
-    if (frame) {
-        let touchStartY = 0;
-        let isHolding = false;
-        let holdTimeout = null;
-
-        frame.addEventListener('touchstart', (e) => {
-            if (e.touches && e.touches.length === 1) {
-                touchStartY = e.touches[0].clientY;
-                holdTimeout = setTimeout(() => {
-                    isHolding = true;
-                    window.pauseRewindViewer();
-                }, 150);
-            }
-        }, { passive: true });
-
-        frame.addEventListener('touchmove', (e) => {
-            if (e.touches && e.touches.length === 1) {
-                const diffY = e.touches[0].clientY - touchStartY;
-                if (diffY > 10 && !isHolding) {
-                    clearTimeout(holdTimeout);
-                }
-                if (diffY > 0) {
-                    frame.style.transform = `translateY(${Math.min(diffY, 150)}px)`;
-                }
-            }
-        }, { passive: true });
-
-        frame.addEventListener('touchend', (e) => {
-            clearTimeout(holdTimeout);
-            if (isHolding) {
-                isHolding = false;
-                window.resumeRewindViewer();
-            }
-            if (e.changedTouches && e.changedTouches.length === 1) {
-                const diffY = e.changedTouches[0].clientY - touchStartY;
-                if (diffY > 80) {
-                    window.closeTodayRewind();
-                    return;
-                }
-            }
-            frame.style.transform = 'translateY(0)';
-            frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
-        }, { passive: true });
-    }
 };
 
 window._startRewindSlideTimer = function() {
@@ -4206,7 +4233,7 @@ window.rewindNextSlide = function() {
         window._renderRewindFrame(window._rewindState.currentIndex);
         window._startRewindSlideTimer();
     } else {
-        // Fine del rewind!
+        // Fine delle novità odierne: chiude naturalmente e marca come visto!
         window.markTodayRewindSeen();
         window.closeTodayRewind();
     }
