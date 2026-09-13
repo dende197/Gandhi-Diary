@@ -3365,37 +3365,18 @@ window.renderTodayRewindBadgeHTML = function() {
         ? getLocalDateString(today)
         : today.toISOString().split('T')[0];
 
-    // Pulizia chiavi 'seen' dei giorni passati per garantire reset automatico e pulito a mezzanotte (00:00)
-    try {
-        const prefix = 'gc_seen_rewind_';
-        for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith(prefix) && k !== `${prefix}${todayISO}`) {
-                localStorage.removeItem(k);
-            }
-        }
-    } catch (e) {}
-
-    // Verifica se l'utente ha già visualizzato il Rewind nella data odierna
-    let isSeen = false;
-    try {
-        isSeen = localStorage.getItem(`gc_seen_rewind_${todayISO}`) === 'true';
-    } catch (e) {
-        isSeen = false;
-    }
-
-    // Genera slides per determinare se ci sono effettive novità oggi
+    // Genera slides per determinare se ci sono novità odierne
     const slides = (typeof window.getTodayRewindSlides === 'function')
         ? window.getTodayRewindSlides()
         : [];
     const hasRealNews = slides.length > 0 && slides[0].id !== 'quiet_day';
     const totalEvents = hasRealNews ? slides.length : 0;
 
-    // Quando ci sono novità e non è ancora stato visualizzato:
-    // Il pulsante viene illuminato da un alone vibrante nello stile PWA (Electric Cyan / Azure & Neon Indigo Glow)
-    if (!isSeen && hasRealNews) {
+    // Quando ci sono novità:
+    // Il pulsante mostra l'icona delle notifiche (campanella) ed è illuminato dall'alone vibrante in stile PWA
+    if (hasRealNews) {
         return `
-        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Novità di oggi" aria-label="Novità di oggi" style="
+        <button id="today-rewind-header-badge" onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.openTodayRewind();" title="Novità di oggi (${totalEvents})" aria-label="Novità di oggi (${totalEvents})" style="
             position: relative;
             width: 44px;
             height: 44px;
@@ -3407,18 +3388,18 @@ window.renderTodayRewindBadgeHTML = function() {
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 0 2px rgba(41, 151, 255, 0.55), 0 0 16px rgba(41, 151, 255, 0.75), 0 0 30px rgba(0, 210, 255, 0.45), 0 0 45px rgba(99, 102, 241, 0.3);
-            animation: pwaStoryHaloPulse 2.6s infinite ease-in-out;
+            box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.8), 0 0 16px rgba(41, 151, 255, 0.9), 0 0 32px rgba(0, 210, 255, 0.7), 0 0 48px rgba(99, 102, 241, 0.45);
+            animation: pwaStoryHaloPulse 2.4s infinite ease-in-out;
             transition: transform 0.15s ease;
             box-sizing: border-box;
             flex-shrink: 0;
         " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
             <div style="width: 100%; height: 100%; border-radius: 50%; background: #081126; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
                 <!-- Glowing ambient center -->
-                <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 210, 255, 0.35) 0%, transparent 75%);"></div>
-                <i class="ph-fill ph-sparkle" style="font-size: 20px; background: linear-gradient(135deg, #00d2ff, #64d2ff, #2997ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 6px rgba(0,210,255,0.7));"></i>
+                <div style="position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 210, 255, 0.4) 0%, transparent 75%);"></div>
+                <i class="ph-fill ph-bell" style="font-size: 20px; color: #ffffff; filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.85));"></i>
             </div>
-            <span style="position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; border-radius: 999px; background: #2997ff; border: 2px solid #081126; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #ffffff; padding: 0 3px; box-shadow: 0 0 10px rgba(41, 151, 255, 0.95);">
+            <span style="position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 999px; background: #2997ff; border: 2px solid #081126; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800; color: #ffffff; padding: 0 4px; box-shadow: 0 0 12px rgba(41, 151, 255, 0.95);">
                 ${totalEvents > 9 ? '9+' : totalEvents}
             </span>
         </button>`;
@@ -3439,7 +3420,7 @@ window.renderTodayRewindBadgeHTML = function() {
             box-sizing: border-box;
             flex-shrink: 0;
         " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
-            <i class="ph-bold ph-sparkle" style="font-size: 19px; color: rgba(255, 255, 255, 0.72);"></i>
+            <i class="ph-bold ph-bell" style="font-size: 19px; color: rgba(255, 255, 255, 0.72);"></i>
         </button>`;
     }
 };
@@ -4169,58 +4150,45 @@ window._setupRewindTapNavigation = function(overlay) {
 
     let touchStartX = 0;
     let touchStartY = 0;
-    let touchStartTime = 0;
     let isHolding = false;
     let holdTimeout = null;
     let isTouchDrag = false;
+    let lastTouchEndTime = 0;
 
-    // Helper per navigazione sicura con cooldown / debounce per evitare salti multipli
-    const safeNavigate = function(direction) {
-        const now = Date.now();
-        if (window._rewindLastNavTime && (now - window._rewindLastNavTime < 380)) {
-            return false;
-        }
-        window._rewindLastNavTime = now;
-        if (direction === 'next') {
-            window.rewindNextSlide();
-        } else if (direction === 'prev') {
+    // Helper per navigare in base alla coordinata orizzontale X (sinistra = indietro, destra = avanti)
+    const doNavigate = function(clientX) {
+        const rect = overlay.getBoundingClientRect();
+        const width = rect.width || window.innerWidth || 360;
+        const relativeX = clientX - rect.left;
+
+        if (relativeX < width * 0.45) {
             window.rewindPrevSlide();
+        } else {
+            window.rewindNextSlide();
         }
-        return true;
     };
 
-    // Desktop Click (esclusi bottoni e click sintetici fantasma post-touch)
+    // Desktop Click (esclusi bottoni interattivi e click sintetici fantasma post-touch)
     overlay.onclick = function(e) {
-        // Ignora qualsiasi click che arrivi entro 550ms da un tocco touch (evita il double-skip su mobile!)
-        if (Date.now() - (window._rewindLastTouchTime || 0) < 550) {
+        if (Date.now() - lastTouchEndTime < 500) {
             return;
         }
         if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) {
             return;
         }
-        const rect = overlay.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const width = rect.width;
-
-        if (clickX < width * 0.45) {
-            safeNavigate('prev');
-        } else {
-            safeNavigate('next');
-        }
+        doNavigate(e.clientX);
     };
 
     // Mobile Touch Navigation (Swipe down to dismiss + Tap left/right to navigate + Touch-and-hold to pause)
     overlay.ontouchstart = function(e) {
-        window._rewindLastTouchTime = Date.now();
         if (e.touches && e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
-            touchStartTime = Date.now();
             isTouchDrag = false;
             holdTimeout = setTimeout(() => {
                 isHolding = true;
                 window.pauseRewindViewer();
-            }, 200);
+            }, 220);
         }
     };
 
@@ -4240,7 +4208,7 @@ window._setupRewindTapNavigation = function(overlay) {
     };
 
     overlay.ontouchend = function(e) {
-        window._rewindLastTouchTime = Date.now();
+        lastTouchEndTime = Date.now();
         clearTimeout(holdTimeout);
         const frame = document.getElementById('today-rewind-frame');
 
@@ -4255,19 +4223,20 @@ window._setupRewindTapNavigation = function(overlay) {
         }
 
         if (e.changedTouches && e.changedTouches.length === 1) {
-            const diffY = e.changedTouches[0].clientY - touchStartY;
             const touchX = e.changedTouches[0].clientX;
             const touchY = e.changedTouches[0].clientY;
+            const diffY = touchY - touchStartY;
+            const diffX = Math.abs(touchX - touchStartX);
 
-            // Swipe down to dismiss
-            if (diffY > 75) {
+            // Swipe down per chiudere
+            if (diffY > 70 && diffX < 80) {
                 if (e.cancelable) e.preventDefault();
                 window.closeTodayRewind();
                 return;
             }
 
-            // Se l'utente ha mosso il dito per trascinare senza raggiungere la soglia di chiusura
-            if (isTouchDrag && Math.abs(diffY) > 25) {
+            // Se l'utente ha mosso il dito verso il basso senza raggiungere la soglia di chiusura
+            if (isTouchDrag && Math.abs(diffY) > 20) {
                 if (frame) {
                     frame.style.transform = 'translateY(0)';
                     frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
@@ -4275,20 +4244,15 @@ window._setupRewindTapNavigation = function(overlay) {
                 return;
             }
 
-            // Se ha toccato un bottone o link interattivo, lascia agire l'elemento nativo
+            // Se ha toccato un bottone o link interattivo, lascia agire l'azione del bottone
             const target = document.elementFromPoint(touchX, touchY);
             if (target && target.closest('button, a, input, textarea, [data-prevent-slide]')) {
                 return;
             }
 
-            // TAP per avanzare o andare indietro: blocca il click sintetico del browser per prevenire il doppio salto!
+            // TAP pulito a sinistra o destra per navigare
             if (e.cancelable) e.preventDefault();
-
-            if (touchX < window.innerWidth * 0.45) {
-                safeNavigate('prev');
-            } else {
-                safeNavigate('next');
-            }
+            doNavigate(touchX);
         }
 
         if (frame) {
@@ -4305,11 +4269,6 @@ window._renderRewindFrame = function(slideIdx) {
     const slides = window._rewindState.slides;
     const currentSlide = slides[slideIdx];
     if (!currentSlide) return;
-
-    // Se siamo arrivati all'ultima slide delle novità, marchiamo come visto!
-    if (slideIdx === slides.length - 1) {
-        window.markTodayRewindSeen();
-    }
 
     const slideCount = slides.length;
     const progressSegmentsHtml = slides.map((s, idx) => {
@@ -4350,12 +4309,10 @@ window._renderRewindFrame = function(slideIdx) {
 
             <!-- Header Row -->
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <!-- Brand + Spotify Equalizer Icon -->
+                <!-- Brand + Notification Bell Icon -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="display: flex; align-items: flex-end; gap: 2.5px; height: 18px; padding-bottom: 2px;">
-                        <span class="rewind-eq-bar-1" style="width: 3px; background: #00dfd8; border-radius: 2px; display: inline-block;"></span>
-                        <span class="rewind-eq-bar-2" style="width: 3px; background: #2997ff; border-radius: 2px; display: inline-block;"></span>
-                        <span class="rewind-eq-bar-3" style="width: 3px; background: #bf5af2; border-radius: 2px; display: inline-block;"></span>
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(0, 210, 255, 0.18); border: 1px solid rgba(0, 210, 255, 0.4); display: flex; align-items: center; justify-content: center;">
+                        <i class="ph-fill ph-bell" style="font-size: 13px; color: #00dfd8;"></i>
                     </div>
                     <div>
                         <div style="font-size: 13px; font-weight: 800; color: #ffffff; letter-spacing: 0.02em; display: flex; align-items: center; gap: 6px;">
@@ -4466,10 +4423,12 @@ window.togglePauseRewindViewer = function() {
 window.rewindNextSlide = function(force = false) {
     if (!window._rewindState) return;
     const now = Date.now();
-    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 350)) {
+    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 260)) {
         return;
     }
     window._rewindLastNavTime = now;
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
     const slides = window._rewindState.slides;
     if (window._rewindState.currentIndex < slides.length - 1) {
         window._rewindState.currentIndex++;
@@ -4478,8 +4437,7 @@ window.rewindNextSlide = function(force = false) {
         window._renderRewindFrame(window._rewindState.currentIndex);
         window._startRewindSlideTimer();
     } else {
-        // Fine delle novità odierne: chiude naturalmente e marca come visto!
-        window.markTodayRewindSeen();
+        // Fine delle novità odierne: chiude naturalmente
         window.closeTodayRewind();
     }
 };
@@ -4487,10 +4445,12 @@ window.rewindNextSlide = function(force = false) {
 window.rewindPrevSlide = function(force = false) {
     if (!window._rewindState) return;
     const now = Date.now();
-    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 350)) {
+    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 260)) {
         return;
     }
     window._rewindLastNavTime = now;
+    if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+
     if (window._rewindState.currentIndex > 0) {
         window._rewindState.currentIndex--;
         window._rewindState.remainingTime = window._rewindState.duration;
@@ -4544,7 +4504,6 @@ window.closeTodayRewind = function() {
         window.removeEventListener('keydown', window._rewindKeydownHandler);
         window._rewindKeydownHandler = null;
     }
-    window.markTodayRewindSeen();
 };
 
 // Hook openTodayNotifications to launch Rewind directly
