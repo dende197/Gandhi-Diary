@@ -426,6 +426,8 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        console.log(`✅ SYNC SUCCESS: Restituzione ${tasks.length} compiti per ${school}/${user}:`, tasks.map(t => `${t.subject} (${t.due_date})`).join(', ') || 'Nessun compito');
+
         res.json({
             success: true,
             tasks,

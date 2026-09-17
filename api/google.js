@@ -575,6 +575,8 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
+                console.log(`📅 GOOGLE SYNC: Sincronizzazione ${tasks?.length || 0} compiti verso Google Calendar per ${normalizedUserId}:`, tasks?.map(t => `${t.subject} (${t.due_date})`).join(', ') || '0 compiti');
+
                 let taskSyncResult = { success: true, added: 0, skipped: 0, errors: [] };
                 if (tasks && tasks.length > 0) {
                     taskSyncResult = await syncTasksToCalendar(tasks, calendarId, auth, classSchedule);

@@ -58,8 +58,8 @@ module.exports = async function handler(req, res) {
 
     const normalizedUserId = normalizeUserId(userId);
 
-    // Verify the caller's session token
-    if (!verifySessionToken(req, normalizedUserId)) {
+    // Verify the caller's session token (allows up to 14 days window to refresh expired sessions)
+    if (!verifySessionToken(req, normalizedUserId, 14)) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
     }
 

@@ -104,6 +104,23 @@ describe('Authentication & Session Token Security (lib/auth.js)', () => {
         assert.strictEqual(verifySessionToken(req, userId), false);
     });
 
+    test('verifySessionToken supports custom maxWindows for session refresh', () => {
+        const { verifySessionToken, SESSION_TTL_MS } = require('../lib/auth');
+        const key = Buffer.from(TEST_SESSION_KEY, 'hex');
+        const userId = 'sg12345_mariorossi_0';
+        // Token from 5 days ago (window - 5)
+        const fiveDayOldWindow = Math.floor(Date.now() / SESSION_TTL_MS) - 5;
+        const oldToken = crypto.createHmac('sha256', key)
+            .update('g-connect-session:' + userId + ':' + fiveDayOldWindow)
+            .digest('hex');
+
+        const req = { headers: { 'x-session-token': oldToken } };
+        // Rejected with default 2 windows (48h)
+        assert.strictEqual(verifySessionToken(req, userId), false);
+        // Accepted with 14 windows (14 days)
+        assert.strictEqual(verifySessionToken(req, userId, 14), true);
+    });
+
     test('encryptArgoPassword and decryptArgoPassword round-trip correctly', () => {
         const { encryptArgoPassword, decryptArgoPassword } = require('../lib/auth');
         const original = 'MyS3cr3tP@ssw0rd!#';

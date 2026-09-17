@@ -207,6 +207,8 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        console.log(`✅ LOGIN SUCCESS: Restituzione ${tasksData.length} compiti per ${school}/${username}:`, tasksData.map(t => `${t.subject} (${t.due_date})`).join(', ') || 'Nessun compito');
+
         const resp = {
             success: true,
             sessionToken: generateSessionToken(pid),
