@@ -275,9 +275,41 @@
     };
 
     /**
-     * Applica i dati finti se ENABLE_DEMO_DATA è true.
-     * Salva anche i dati in localStorage per persistenza durante refresh/offline.
-     * PRESERVA TOTALMENTE LE CIRCOLARI REALI.
+     * Riconosce se un elemento appartiene ai dati finti/demo.
+     */
+    function isDemoItem(item) {
+        if (!item || typeof item !== 'object') return false;
+        var id = String(item.id || '');
+        if (id.startsWith('v26-') || id.startsWith('task-demo-') || id.startsWith('verif-demo-') || id.startsWith('act-demo-') || id.startsWith('demo_')) {
+            return true;
+        }
+        if (item.commento && typeof item.commento === 'string' && (
+            item.commento.indexOf('Dante e le origini') !== -1 ||
+            item.commento.indexOf('limiti notevoli') !== -1 ||
+            item.commento.indexOf('Weierstrass') !== -1 ||
+            item.commento.indexOf('cinematica rotazionale') !== -1 ||
+            item.commento.indexOf('termodinamica') !== -1 ||
+            item.commento.indexOf('genetica mendeliana') !== -1
+        )) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Riconosce l'oggetto assenze finto.
+     */
+    function isDemoAssenze(ad) {
+        if (!ad || typeof ad !== 'object') return false;
+        if (ad.totaleAssenze === 1 && ad.totaleRitardi === 1 && ad.totaleUscite === 1 && ad.oreAssenzaTotali === 5 && ad.daGiustificare === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Applica i dati finti SOLO se esplicitamente forzato (es. nei test di compatibilità).
+     * Disattivato in produzione per ripristinare il backend reale al 100%.
      */
     function applyDemoDataIfEnabled(targetState, force) {
         if (!ENABLE_DEMO_DATA && !force) return false;
@@ -288,8 +320,6 @@
         targetState.verifiche = Array.isArray(DEMO_DATA.verifiche) ? DEMO_DATA.verifiche.slice() : [];
         targetState.classActivities = Array.isArray(DEMO_DATA.classActivities) ? DEMO_DATA.classActivities.slice() : [];
         targetState.assenzeData = JSON.parse(JSON.stringify(DEMO_DATA.assenzeData));
-
-        // IMPORTANTE: targetState.circolari rimane INVARIATO (vengono utilizzate le circolari reali)!
 
         try {
             var getPrefix = (typeof root.lsKey === 'function') ? root.lsKey : function(k) { return k; };
@@ -305,19 +335,86 @@
     }
 
     /**
-     * Rimuove i dati finti e ripristina la sessione normale.
+     * Esegue una pulizia profonda, radicale ed incondizionata di TUTTI i dati finti:
+     * Scansiona tutte le chiavi in localStorage (con qualsiasi prefisso utente o profilo),
+     * rimuove qualsiasi elemento con ID demo e pulisce le proprietà di stato.
      */
-    function clearDemoData(targetState) {
+    function purgeAllDemoData(targetState) {
         try {
-            var getPrefix = (typeof root.lsKey === 'function') ? root.lsKey : function(k) { return k; };
-            root.localStorage.removeItem(getPrefix('voti'));
-            root.localStorage.removeItem(getPrefix('tasks'));
-            root.localStorage.removeItem(getPrefix('verifiche'));
-            root.localStorage.removeItem(getPrefix('class_activities'));
-            root.localStorage.removeItem(getPrefix('assenzeData'));
-            root.localStorage.removeItem('gc_demo_data_active');
+            if (typeof root.localStorage !== 'undefined') {
+                var keysToRemove = [];
+                for (var i = 0; i < root.localStorage.length; i++) {
+                    var k = root.localStorage.key(i);
+                    if (!k) continue;
+
+                    if (k.startsWith('gc_demo_') || k === 'gc_demo_data_active') {
+                        keysToRemove.push(k);
+                        continue;
+                    }
+
+                    if (k === 'voti' || k.endsWith(':voti') ||
+                        k === 'tasks' || k.endsWith(':tasks') ||
+                        k === 'verifiche' || k.endsWith(':verifiche') ||
+                        k === 'class_activities' || k.endsWith(':class_activities') ||
+                        k === 'activities' || k.endsWith(':activities') ||
+                        k === 'manual_verifiche' || k.endsWith(':manual_verifiche')) {
+                        try {
+                            var raw = root.localStorage.getItem(k);
+                            if (raw) {
+                                var parsed = JSON.parse(raw);
+                                if (Array.isArray(parsed)) {
+                                    var filtered = parsed.filter(function(it) { return !isDemoItem(it); });
+                                    if (filtered.length !== parsed.length) {
+                                        root.localStorage.setItem(k, JSON.stringify(filtered));
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+                    }
+
+                    if (k === 'assenzeData' || k.endsWith(':assenzeData')) {
+                        try {
+                            var rawA = root.localStorage.getItem(k);
+                            if (rawA) {
+                                var parsedA = JSON.parse(rawA);
+                                if (isDemoAssenze(parsedA)) {
+                                    keysToRemove.push(k);
+                                }
+                            }
+                        } catch (_) {}
+                    }
+                }
+
+                keysToRemove.forEach(function(key) {
+                    try { root.localStorage.removeItem(key); } catch (_) {}
+                });
+            }
         } catch (_) {}
 
+        if (targetState && typeof targetState === 'object') {
+            if (Array.isArray(targetState.voti)) {
+                targetState.voti = targetState.voti.filter(function(v) { return !isDemoItem(v); });
+            }
+            if (Array.isArray(targetState.tasks)) {
+                targetState.tasks = targetState.tasks.filter(function(t) { return !isDemoItem(t); });
+            }
+            if (Array.isArray(targetState.verifiche)) {
+                targetState.verifiche = targetState.verifiche.filter(function(v) { return !isDemoItem(v); });
+            }
+            if (Array.isArray(targetState.classActivities)) {
+                targetState.classActivities = targetState.classActivities.filter(function(a) { return !isDemoItem(a); });
+            }
+            if (isDemoAssenze(targetState.assenzeData)) {
+                targetState.assenzeData = null;
+            }
+        }
+    }
+
+    /**
+     * Alias per retrocompatibilità.
+     */
+    function clearDemoData(targetState) {
+        purgeAllDemoData(targetState);
         if (targetState && typeof targetState === 'object') {
             targetState.voti = [];
             targetState.tasks = [];
@@ -327,11 +424,9 @@
         }
     }
 
-    // Pulizia immediata automatica dei dati finti salvati in precedenza nella cache del browser
+    // Pulizia immediata e incondizionata all'avvio dello script
     try {
-        if (typeof root.localStorage !== 'undefined' && root.localStorage.getItem('gc_demo_data_active') === '1') {
-            clearDemoData(typeof state !== 'undefined' ? state : null);
-        }
+        purgeAllDemoData(typeof state !== 'undefined' ? state : null);
     } catch (_) {}
 
     // Esportazione per browser e test Node.js
@@ -339,13 +434,17 @@
     root.DEMO_DATA = DEMO_DATA;
     root.applyDemoDataIfEnabled = applyDemoDataIfEnabled;
     root.clearDemoData = clearDemoData;
+    root.purgeAllDemoData = purgeAllDemoData;
+    root.isDemoItem = isDemoItem;
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = {
             ENABLE_DEMO_DATA: ENABLE_DEMO_DATA,
             DEMO_DATA: DEMO_DATA,
             applyDemoDataIfEnabled: applyDemoDataIfEnabled,
-            clearDemoData: clearDemoData
+            clearDemoData: clearDemoData,
+            purgeAllDemoData: purgeAllDemoData,
+            isDemoItem: isDemoItem
         };
     }
 })(typeof window !== 'undefined' ? window : globalThis);

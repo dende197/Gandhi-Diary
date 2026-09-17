@@ -627,7 +627,9 @@
                     }
                     state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
                     localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
-                    if (typeof clearDemoData === 'function' && localStorage.getItem('gc_demo_data_active') === '1') {
+                    if (typeof purgeAllDemoData === 'function') {
+                        purgeAllDemoData(state);
+                    } else if (typeof clearDemoData === 'function') {
                         clearDemoData(state);
                     }
                     if (data.student) {
@@ -1045,9 +1047,17 @@
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
                     try { localStorage.removeItem(lsKey('ai_chat')); } catch (_) {}
-                    if (localStorage.getItem('gc_demo_data_active') === '1') {
-                        if (typeof clearDemoData === 'function') clearDemoData(state);
+                    if (typeof purgeAllDemoData === 'function') {
+                        purgeAllDemoData(state);
+                    } else if (typeof clearDemoData === 'function') {
+                        clearDemoData(state);
                     }
+                    // Filtro di sicurezza immediato contro residui di dati demo
+                    const isDemo = (it) => it && typeof it === 'object' && String(it.id || '').match(/^(v26-|task-demo-|verif-demo-|act-demo-|demo_)/);
+                    if (Array.isArray(state.voti)) state.voti = state.voti.filter(v => !isDemo(v));
+                    if (Array.isArray(state.tasks)) state.tasks = state.tasks.filter(t => !isDemo(t));
+                    if (Array.isArray(state.verifiche)) state.verifiche = state.verifiche.filter(v => !isDemo(v));
+                    if (Array.isArray(state.classActivities)) state.classActivities = state.classActivities.filter(a => !isDemo(a));
                     // Restore persisted sync timestamp and freshness against SYNC_TTL_MS.
                     const didupTs = getPersistedLastSyncAt();
                     state.didup.lastSuccessTs = didupTs;
@@ -1466,7 +1476,9 @@
             }
             state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
             localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
-            if (typeof clearDemoData === 'function' && localStorage.getItem('gc_demo_data_active') === '1') {
+            if (typeof purgeAllDemoData === 'function') {
+                purgeAllDemoData(state);
+            } else if (typeof clearDemoData === 'function') {
                 clearDemoData(state);
             }
 

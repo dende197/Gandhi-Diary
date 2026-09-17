@@ -107,4 +107,46 @@ test('G-Connect Demo / Mock Data Engine Suite', async (t) => {
         assert.strictEqual(state.classActivities.length, 0);
         assert.strictEqual(state.assenzeData, null);
     });
+
+    await t.test('purgeAllDemoData purges demo items from state while preserving real items', () => {
+        const { purgeAllDemoData } = demoDataModule;
+        assert.strictEqual(typeof purgeAllDemoData, 'function');
+        const state = {
+            voti: [
+                { id: 'v26-ita-1', materia: 'Italiano', valore: 8 },
+                { id: 'real-voto-101', materia: 'Matematica', valore: 9 }
+            ],
+            tasks: [
+                { id: 'task-demo-today-1', text: 'Demo task' },
+                { id: 'real-task-202', text: 'Real task' }
+            ],
+            verifiche: [
+                { id: 'verif-demo-1', subject: 'Fisica' },
+                { id: 'real-verif-303', subject: 'Italiano' }
+            ],
+            classActivities: [
+                { id: 'act-demo-1', title: 'Demo act' },
+                { id: 'real-act-404', title: 'Real act' }
+            ],
+            assenzeData: {
+                totaleAssenze: 1,
+                totaleRitardi: 1,
+                totaleUscite: 1,
+                oreAssenzaTotali: 5,
+                daGiustificare: 0
+            }
+        };
+
+        purgeAllDemoData(state);
+
+        assert.strictEqual(state.voti.length, 1, 'Only real vote must remain');
+        assert.strictEqual(state.voti[0].id, 'real-voto-101');
+        assert.strictEqual(state.tasks.length, 1, 'Only real task must remain');
+        assert.strictEqual(state.tasks[0].id, 'real-task-202');
+        assert.strictEqual(state.verifiche.length, 1, 'Only real verifica must remain');
+        assert.strictEqual(state.verifiche[0].id, 'real-verif-303');
+        assert.strictEqual(state.classActivities.length, 1, 'Only real activity must remain');
+        assert.strictEqual(state.classActivities[0].id, 'real-act-404');
+        assert.strictEqual(state.assenzeData, null, 'Demo assenze must be nulled');
+    });
 });
