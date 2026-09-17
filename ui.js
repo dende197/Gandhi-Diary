@@ -4030,74 +4030,144 @@ window._renderRewindFrame = function(slideIdx) {
             barInner = '<div style="width:0%;height:100%;background:#ffffff;border-radius:2px;"></div>';
         }
         return `
-        <div style="flex:1;height:3px;background:rgba(255,255,255,0.25);border-radius:2px;overflow:hidden;position:relative;">
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;position:relative;">
             ${barInner}
         </div>`;
     }).join('');
 
-    overlay.style.backgroundColor = '#000000';
-    overlay.style.background = currentSlide.gradientBg || '#080d1a';
-    overlay.style.transition = 'background 0.35s ease';
+    overlay.style.backgroundColor = '#0c1424';
+    overlay.style.background = 'radial-gradient(circle at 50% 20%, #162440 0%, #0c1424 70%, #060a12 100%)';
 
     overlay.innerHTML = `
-    <!-- Ambient Dynamic Glow Overlays -->
-    <div style="position: absolute; top: -15%; right: -15%; width: 380px; height: 380px; background: ${currentSlide.accentGlow || 'rgba(255,255,255,0.3)'}; filter: blur(80px); border-radius: 50%; pointer-events: none; opacity: 0.65; mix-blend-mode: screen;"></div>
-    <div style="position: absolute; bottom: -15%; left: -15%; width: 380px; height: 380px; background: rgba(255, 255, 255, 0.2); filter: blur(80px); border-radius: 50%; pointer-events: none; opacity: 0.45; mix-blend-mode: overlay;"></div>
+    <!-- Background Ambient Glow -->
+    <div style="position: absolute; top: -10%; left: 50%; transform: translateX(-50%); width: 400px; height: 300px; background: radial-gradient(circle, rgba(41, 151, 255, 0.15) 0%, transparent 70%); pointer-events: none; filter: blur(50px);"></div>
 
     <div id="today-rewind-frame" style="
-        width: 100%; height: 100%; height: 100dvh; max-width: 520px;
+        width: 100%; height: 100%; height: 100dvh; max-width: 540px;
         position: relative; display: flex; flex-direction: column; justify-content: space-between;
-        padding: max(env(safe-area-inset-top, 0px), 16px) 20px max(env(safe-area-inset-bottom, 0px), 24px) 20px;
+        padding: max(env(safe-area-inset-top, 0px), 12px) 16px max(env(safe-area-inset-bottom, 0px), 16px) 16px;
         box-sizing: border-box; z-index: 10; margin: 0 auto;
     ">
-        <!-- Top Bar: Segmented Progress Bars + Brand & Close Controls -->
+        <!-- ── CHAT HEADER ── -->
         <div style="position: relative; z-index: 20; flex-shrink: 0; margin-bottom: 12px;">
             <!-- Segmented Progress Bars -->
-            <div style="display: flex; gap: 5px; width: 100%; margin-bottom: 14px;">
+            <div style="display: flex; gap: 4px; width: 100%; margin-bottom: 10px;">
                 ${progressSegmentsHtml}
             </div>
 
-            <!-- Header Row -->
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <!-- Brand + Notification Bell Icon -->
-                <div style="display: flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, 0.22); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.22); padding: 5px 12px 5px 6px; border-radius: 999px;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center;">
-                        <i class="ph-fill ph-bell" style="font-size: 13px; color: #ffffff;"></i>
+            <!-- Chat Title Bar -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(20, 31, 54, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- AI Avatar with Pulsing Online Dot -->
+                    <div style="position: relative;">
+                        <div style="width: 36px; height: 36px; border-radius: 12px; background: linear-gradient(135deg, #2997ff, #0056b3); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 14px; box-shadow: 0 2px 10px rgba(41,151,255,0.4);">
+                            AI
+                        </div>
+                        <div style="position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #30d158; border: 2px solid #141f36;"></div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; font-weight: 800; color: #ffffff; letter-spacing: 0.03em; display: flex; align-items: center; gap: 6px;">
-                            <span>NOVITÀ DI OGGI</span>
-                            <span style="font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.7);">${slideIdx + 1}/${slideCount}</span>
+                        <div style="font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: -0.01em; display: flex; align-items: center; gap: 6px;">
+                            <span>G-Diary Assistant</span>
+                            <span style="font-size: 10px; font-weight: 800; background: rgba(41,151,255,0.2); color: #64d2ff; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(100,210,255,0.3);">NOVITÀ</span>
+                        </div>
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 5px; margin-top: 1px;">
+                            <span>Storie di Oggi</span>
+                            <span>·</span>
+                            <span style="color: #64d2ff; font-weight: 700;">${slideIdx + 1} di ${slideCount}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Controls: Pause / Close -->
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <!-- Right Header Actions -->
+                <div style="display: flex; align-items: center; gap: 6px;">
                     <button id="rewind-pause-btn" onclick="event.stopPropagation(); window.togglePauseRewindViewer();" title="Pausa" style="
-                        width: 36px; height: 36px; border-radius: 50%;
-                        background: rgba(0, 0, 0, 0.22); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-                        border: 1px solid rgba(255, 255, 255, 0.22);
+                        width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
                         color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
                     ">
-                        <i class="ph-fill ph-pause" style="font-size: 14px;"></i>
+                        <i class="ph-fill ph-pause" style="font-size: 12px;"></i>
                     </button>
                     <button onclick="event.stopPropagation(); window.closeTodayRewind();" title="Chiudi" style="
-                        width: 36px; height: 36px; border-radius: 50%;
-                        background: rgba(0, 0, 0, 0.22); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-                        border: 1px solid rgba(255, 255, 255, 0.22);
+                        width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
                         color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
                     ">
-                        <i class="ph-bold ph-x" style="font-size: 16px;"></i>
+                        <i class="ph-bold ph-x" style="font-size: 14px;"></i>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Center Slide Content: Fullscreen, no inner card wrapper -->
-        <div style="position: relative; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; width: 100%;">
-            <div id="today-rewind-content-card" style="width: 100%; height: 100%; position: relative; z-index: 12; display: flex; flex-direction: column; justify-content: space-between; min-height: 0;">
-                ${currentSlide.renderHtml ? currentSlide.renderHtml() : ''}
+        <!-- ── CENTER CHAT BODY ── -->
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding: 8px 0; overflow-y: auto;">
+            <div class="ai-chat-row is-ai" style="display: flex; gap: 10px; align-items: flex-start; max-width: 100%; animation: storyCardPop 0.28s cubic-bezier(0.16,1,0.3,1);">
+                <div class="ai-chat-avatar ai" style="
+                    width: 34px; height: 34px; border-radius: 12px; background: linear-gradient(135deg, #2997ff, #0056b3);
+                    display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 13px;
+                    flex-shrink: 0; margin-top: 2px; box-shadow: 0 2px 8px rgba(41,151,255,0.3);
+                ">AI</div>
+                <div class="ai-chat-message-bubble msg-ai" style="
+                    flex: 1; background: rgba(20, 31, 54, 0.9); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+                    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px 20px 20px 6px;
+                    padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); max-width: calc(100% - 44px);
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
+                        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #64d2ff;">
+                            ${escapeHtml(currentSlide.categoryBadge || 'AGGIORNAMENTO')}
+                        </span>
+                        <span style="font-size: 10.5px; color: rgba(255,255,255,0.5); font-weight: 600;">
+                            ${escapeHtml(currentSlide.timestamp || 'Oggi')}
+                        </span>
+                    </div>
+
+                    ${currentSlide.renderChatHtml ? currentSlide.renderChatHtml() : (currentSlide.renderHtml ? currentSlide.renderHtml() : '')}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── BOTTOM CHAT ACTION DOCK ── -->
+        <div style="position: relative; z-index: 20; flex-shrink: 0; margin-top: 10px;">
+            <div style="
+                background: rgba(20, 31, 54, 0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+                border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 999px; padding: 6px 8px 6px 12px;
+                display: flex; align-items: center; justify-content: space-between; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            ">
+                <!-- Navigation controls (Prev / Next) -->
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <button onclick="event.stopPropagation(); window.rewindPrevSlide();" title="Precedente" style="
+                        width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+                        opacity: ${slideIdx === 0 ? '0.3' : '1'};
+                    " ${slideIdx === 0 ? 'disabled' : ''}>
+                        <i class="ph-bold ph-caret-left" style="font-size: 15px;"></i>
+                    </button>
+                    <button onclick="event.stopPropagation(); window.rewindNextSlide();" title="Successivo" style="
+                        width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+                        opacity: ${slideIdx === slideCount - 1 ? '0.3' : '1'};
+                    " ${slideIdx === slideCount - 1 ? 'disabled' : ''}>
+                        <i class="ph-bold ph-caret-right" style="font-size: 15px;"></i>
+                    </button>
+                </div>
+
+                <!-- Primary Action Chip -->
+                ${currentSlide.primaryLabel ? `
+                <button onclick="event.stopPropagation(); ${currentSlide.primaryAction || ''}" style="
+                    flex: 1; max-width: 280px; height: 40px; border-radius: 999px;
+                    background: linear-gradient(135deg, #2997ff, #0056b3); border: none;
+                    color: #ffffff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+                    box-shadow: 0 4px 15px rgba(41,151,255,0.35); transition: transform 0.15s ease;
+                " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
+                    <span>${currentSlide.primaryLabel}</span>
+                    <i class="ph-bold ph-arrow-right" style="font-size: 13px;"></i>
+                </button>
+                ` : `
+                <button onclick="event.stopPropagation(); window.closeTodayRewind();" style="
+                    flex: 1; max-width: 200px; height: 40px; border-radius: 999px;
+                    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+                    color: #ffffff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+                ">
+                    <span>Chiudi Storie</span>
+                </button>
+                `}
             </div>
         </div>
     </div>`;
@@ -10728,9 +10798,7 @@ function renderPlanner() {
                 const dayMood = (typeof window.getDailyMoodForDate === 'function') ? window.getDailyMoodForDate(d.iso) : null;
                 const indicatorHtml = dayMood
                     ? `<span style="font-size:14px;line-height:1;margin-top:5px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">${dayMood.emoji}</span>`
-                    : (isSel
-                        ? `<div style="width:6px;height:6px;border-radius:9999px;background:#ffffff;margin-top:8px;box-shadow:0 0 8px rgba(255,255,255,0.8);"></div>`
-                        : `<div style="width:5px;height:5px;border-radius:9999px;background:${(d.isToday || d.hasTask) ? 'rgba(182,196,255,0.6)' : 'transparent'};margin-top:6px;"></div>`);
+                    : `<div class="planner-task-dot" data-has-task="${(d.isToday || d.hasTask) ? 'true' : 'false'}" style="width:5px;height:5px;border-radius:9999px;background:${(d.isToday || d.hasTask) ? (isSel ? '#ffffff' : 'rgba(182,196,255,0.6)') : 'transparent'};margin-top:6px;"></div>`;
 
                 if (isSel) {
                     return `<div class="planner-day-pill active-blue-glow squircle-full" onclick="plannerSelectDay('${d.iso}')" style="
@@ -12050,7 +12118,7 @@ window._buildPlannerDayContentHTML = function() {
         '<h4 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 4px;">Nessuna attività</h4>' +
         '<p style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);max-width:240px;line-height:1.5;margin:0;">Nessun compito o verifica programmata per questo giorno.</p>' +
         '</div>';
-    return '<div style="display:flex;flex-direction:column;gap:16px;padding-bottom:140px;">' +
+    return '<div style="display:flex;flex-direction:column;gap:16px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">' +
         '<h2 style="font-size:18px;font-weight:600;color:rgba(218,226,253,0.9);margin:0;line-height:1.2;" class="sentence-case">' + dayLabel + '</h2>' +
         '<span style="font-size:12px;font-weight:500;color:rgba(196,197,214,0.6);">' + dayTasks.length + (dayTasks.length===1?' evento':' eventi') + '</span></div>' +
@@ -12602,17 +12670,15 @@ window.plannerSelectDay = function(iso) {
         if (spans[1]) {
             spans[1].style.color = isSel ? '#ffffff' : '#dae2fd';
         }
-        const dot = el.querySelector('div');
+        const dot = el.querySelector('.planner-task-dot');
         if (dot) {
-            if (isSel) {
-                dot.style.background = '#ffffff';
-                dot.style.boxShadow = '0 0 8px rgba(255,255,255,0.8)';
-                dot.style.width = '6px';
-                dot.style.height = '6px';
+            const hasTaskOrToday = dot.getAttribute('data-has-task') === 'true';
+            if (hasTaskOrToday) {
+                dot.style.background = isSel ? '#ffffff' : 'rgba(182,196,255,0.6)';
+                dot.style.boxShadow = isSel ? '0 0 8px rgba(255,255,255,0.8)' : 'none';
             } else {
+                dot.style.background = 'transparent';
                 dot.style.boxShadow = 'none';
-                dot.style.width = '5px';
-                dot.style.height = '5px';
             }
         }
     });
