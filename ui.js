@@ -3815,38 +3815,6 @@ window.getTodayRewindSlides = function() {
     }
 
     return slides;
-};               border: 3px solid rgba(255,255,255,0.65);
-                            box-shadow: 0 16px 40px rgba(0, 210, 255, 0.5), inset 0 2px 10px rgba(255,255,255,0.6);
-                            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-                            display: flex; align-items: center; justify-content: center;
-                            margin-bottom: 24px;
-                        ">
-                            <i class="ph-fill ph-check-circle" style="font-size: 64px; color: #ffffff; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));"></i>
-                        </div>
-
-                        <h1 style="font-size: 32px; font-weight: 900; color: #ffffff; margin: 0 0 12px; letter-spacing: -0.02em; text-shadow: 0 2px 12px rgba(0,0,0,0.25);">
-                            Tutto Tranquillo!
-                        </h1>
-                        <p style="font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.5; margin: 0; max-width: 320px; font-weight: 500;">
-                            Nessun nuovo voto, compito o circolare registrato oggi dal server. Sei perfettamente in pari!
-                        </p>
-                    </div>
-
-                    <!-- Bottom Action Button -->
-                    <button onclick="event.stopPropagation(); window.closeTodayRewind();" style="
-                        width: 100%; height: 52px; border-radius: 18px; background: #ffffff; border: none;
-                        color: #0f2027; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.25); transition: transform 0.15s ease; margin-top: 18px;
-                    " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                        <i class="ph-bold ph-check" style="font-size: 18px; color: #00d2ff;"></i>
-                        <span>Chiudi Storie</span>
-                    </button>
-                </div>
-            `
-        });
-    }
-
-    return slides;
 };
 
 // ── REWIND VIEWER ENGINE ──
