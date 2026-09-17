@@ -6,9 +6,9 @@ const demoDataModule = require('../demo-data.js');
 test('G-Connect Demo / Mock Data Engine Suite', async (t) => {
     const { ENABLE_DEMO_DATA, DEMO_DATA, applyDemoDataIfEnabled, clearDemoData } = demoDataModule;
 
-    await t.test('Module exports required interface and flag is active', () => {
+    await t.test('Module exports required interface and flag is disabled by default', () => {
         assert.strictEqual(typeof ENABLE_DEMO_DATA, 'boolean');
-        assert.strictEqual(ENABLE_DEMO_DATA, true, 'Demo data should be active by default');
+        assert.strictEqual(ENABLE_DEMO_DATA, false, 'Demo data should be disabled by default to restore pure backend');
         assert.ok(DEMO_DATA, 'DEMO_DATA must be defined');
         assert.strictEqual(typeof applyDemoDataIfEnabled, 'function');
         assert.strictEqual(typeof clearDemoData, 'function');
@@ -58,7 +58,14 @@ test('G-Connect Demo / Mock Data Engine Suite', async (t) => {
         assert.strictEqual(DEMO_DATA.assenzeData.totaleUscite, 1);
     });
 
-    await t.test('applyDemoDataIfEnabled hydrates state and STRICTLY preserves real circolari', () => {
+    await t.test('applyDemoDataIfEnabled returns false when flag is disabled (no force)', () => {
+        const state = { voti: [], tasks: [], verifiche: [], classActivities: [], assenzeData: null };
+        const applied = applyDemoDataIfEnabled(state);
+        assert.strictEqual(applied, false, 'Should not apply demo data when flag is disabled');
+        assert.strictEqual(state.voti.length, 0, 'State must remain empty');
+    });
+
+    await t.test('applyDemoDataIfEnabled hydrates state with force=true and STRICTLY preserves real circolari', () => {
         const realCircolari = [
             { id: 999, title: 'Circolare Reale n. 42', link: 'https://istitutogandhi.edu.it/circ42' }
         ];
@@ -71,7 +78,7 @@ test('G-Connect Demo / Mock Data Engine Suite', async (t) => {
             circolari: realCircolari
         };
 
-        const applied = applyDemoDataIfEnabled(state);
+        const applied = applyDemoDataIfEnabled(state, true);
         assert.strictEqual(applied, true);
         assert.ok(state.voti.length > 0, 'Voti should be populated');
         assert.ok(state.tasks.length > 0, 'Tasks should be populated');

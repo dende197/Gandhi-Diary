@@ -7,7 +7,7 @@
 (function (root) {
     'use strict';
 
-    var ENABLE_DEMO_DATA = true; // <-- MASTER SWITCH: true per attivare, false per disattivare
+    var ENABLE_DEMO_DATA = false; // <-- MASTER SWITCH: disattivato per mostrare esclusivamente i dati reali del server
 
     function getIsoDate(daysOffset) {
         var d = new Date();
@@ -279,8 +279,8 @@
      * Salva anche i dati in localStorage per persistenza durante refresh/offline.
      * PRESERVA TOTALMENTE LE CIRCOLARI REALI.
      */
-    function applyDemoDataIfEnabled(targetState) {
-        if (!ENABLE_DEMO_DATA) return false;
+    function applyDemoDataIfEnabled(targetState, force) {
+        if (!ENABLE_DEMO_DATA && !force) return false;
         if (!targetState || typeof targetState !== 'object') return false;
 
         targetState.voti = Array.isArray(DEMO_DATA.voti) ? DEMO_DATA.voti.slice() : [];
@@ -326,6 +326,13 @@
             targetState.assenzeData = null;
         }
     }
+
+    // Pulizia immediata automatica dei dati finti salvati in precedenza nella cache del browser
+    try {
+        if (typeof root.localStorage !== 'undefined' && root.localStorage.getItem('gc_demo_data_active') === '1') {
+            clearDemoData(typeof state !== 'undefined' ? state : null);
+        }
+    } catch (_) {}
 
     // Esportazione per browser e test Node.js
     root.ENABLE_DEMO_DATA = ENABLE_DEMO_DATA;

@@ -627,8 +627,8 @@
                     }
                     state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
                     localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
-                    if (typeof applyDemoDataIfEnabled === 'function') {
-                        applyDemoDataIfEnabled(state);
+                    if (typeof clearDemoData === 'function' && localStorage.getItem('gc_demo_data_active') === '1') {
+                        clearDemoData(state);
                     }
                     if (data.student) {
                         const rawCls = data.student.class || state.user?.class || '';
@@ -1045,10 +1045,8 @@
                     state.goals = JSON.parse(localStorage.getItem(lsKey('goals'))) || {};
                     purgeUserGeneratedTasksAndPlans(false);
                     try { localStorage.removeItem(lsKey('ai_chat')); } catch (_) {}
-                    if (typeof window !== 'undefined' && window.ENABLE_DEMO_DATA === false && localStorage.getItem('gc_demo_data_active') === '1') {
+                    if (localStorage.getItem('gc_demo_data_active') === '1') {
                         if (typeof clearDemoData === 'function') clearDemoData(state);
-                    } else if (typeof applyDemoDataIfEnabled === 'function') {
-                        applyDemoDataIfEnabled(state);
                     }
                     // Restore persisted sync timestamp and freshness against SYNC_TTL_MS.
                     const didupTs = getPersistedLastSyncAt();
@@ -1468,8 +1466,8 @@
             }
             state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
             localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
-            if (typeof applyDemoDataIfEnabled === 'function') {
-                applyDemoDataIfEnabled(state);
+            if (typeof clearDemoData === 'function' && localStorage.getItem('gc_demo_data_active') === '1') {
+                clearDemoData(state);
             }
 
             state.isLoggedIn = true;
