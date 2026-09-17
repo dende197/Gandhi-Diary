@@ -337,7 +337,71 @@
     inset: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
+    height: 100dvh !important;
     background-color: #000000 !important;
     z-index: 999999 !important;
-    touch-action: manipulation;
+    touch-action: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+    overflow: hidden !important;
 }
+
+@keyframes storyAppleCardIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.93) translateY(18px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.story-apple-card {
+    animation: storyAppleCardIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes storyOrbBreathe {
+    0%, 100% {
+        transform: scale(1) translate3d(0, 0, 0);
+        opacity: 0.65;
+    }
+    50% {
+        transform: scale(1.15) translate3d(12px, -15px, 0);
+        opacity: 0.95;
+    }
+}
+
+.story-orb-float {
+    animation: storyOrbBreathe 7s ease-in-out infinite alternate;
+}
+
+@keyframes storyTapRipple {
+    0% { opacity: 0; }
+    40% { opacity: 0.3; }
+    100% { opacity: 0; }
+}
+
+.story-tap-flash-left {
+    position: absolute;
+    top: 0; left: 0; width: 35%; height: 100%;
+    pointer-events: none;
+    background: radial-gradient(circle at left center, rgba(255,255,255,0.22), transparent 70%);
+    opacity: 0;
+    z-index: 25;
+}
+
+.story-tap-flash-right {
+    position: absolute;
+    top: 0; right: 0; width: 35%; height: 100%;
+    pointer-events: none;
+    background: radial-gradient(circle at right center, rgba(255,255,255,0.22), transparent 70%);
+    opacity: 0;
+    z-index: 25;
+}
+
+.story-tap-flash-active {
+    animation: storyTapRipple 0.26s ease-out forwards;
+}
+

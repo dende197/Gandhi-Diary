@@ -3486,7 +3486,7 @@ window.markTodayRewindSeen = function() {
     }
 };
 
-// ── SLIDE DECK GENERATOR: STILE CONVERSAZIONALE ASSISTENTE / CHAT ──
+// ── SLIDE DECK GENERATOR: STILE APPLE LIQUID GLASS & INSTAGRAM STORIES ──
 window.getTodayRewindSlides = function() {
     const today = new Date();
     const todayISO = (typeof getLocalDateString === 'function')
@@ -3510,15 +3510,24 @@ window.getTodayRewindSlides = function() {
     // Filtro di sicurezza assoluto contro qualsiasi residuo di ID fake o demo
     const isRealItem = (it) => it && typeof it === 'object' && !String(it.id || '').match(/^(v26-|task-demo-|verif-demo-|act-demo-|demo_)/);
 
-    // 1. Nuovi Voti inseriti oggi (SOLO dati reali dal server)
+    // 1. Nuovi Voti inseriti oggi o recenti (ultimi 4 giorni)
     const votiData = (typeof getVotiData === 'function') ? getVotiData() : [];
     let todayVoti = votiData.filter(v => {
         if (!isRealItem(v)) return false;
         const d = v.data || v.date || v.dataISO || '';
         return d === todayISO || d.startsWith(todayISO);
     });
+    if (todayVoti.length === 0) {
+        todayVoti = votiData.filter(v => {
+            if (!isRealItem(v)) return false;
+            const d = v.data || v.date || v.dataISO || '';
+            if (!d) return false;
+            const diff = (today - new Date(d)) / (1000 * 60 * 60 * 24);
+            return diff >= 0 && diff <= 4;
+        }).slice(0, 2);
+    }
 
-    // 2. Nuovi Compiti per oggi o assegnati oggi (SOLO dati reali dal server)
+    // 2. Nuovi Compiti per oggi o assegnati oggi o prossimi 3 giorni
     let todayCompiti = [];
     if (Array.isArray(state.tasks)) {
         state.tasks.filter(isRealItem).forEach(t => {
@@ -3532,10 +3541,29 @@ window.getTodayRewindSlides = function() {
                     id: t.id,
                     materia: t.subject || 'Compito',
                     compito: t.text || t.title || 'Nessun dettaglio specificato',
-                    scadenza: t.due_date || todayISO
+                    scadenza: t.due_date || todayISO,
+                    isToday: true
                 });
             }
         });
+        if (todayCompiti.length === 0) {
+            state.tasks.filter(isRealItem).forEach(t => {
+                if (t.subject === 'QUEST') return;
+                const dueStr = t.due_date || t.date || '';
+                if (dueStr && dueStr > todayISO) {
+                    const diff = (new Date(dueStr) - today) / (1000 * 60 * 60 * 24);
+                    if (diff <= 4) {
+                        todayCompiti.push({
+                            id: t.id,
+                            materia: t.subject || 'Compito',
+                            compito: t.text || t.title || 'Nessun dettaglio specificato',
+                            scadenza: t.due_date || dueStr,
+                            isUpcoming: true
+                        });
+                    }
+                }
+            });
+        }
     }
 
     // Aggiungi anche da notifData.todayItems se ce ne sono di tipo compito
@@ -3548,13 +3576,33 @@ window.getTodayRewindSlides = function() {
                     id: it.id,
                     materia: taskSubj,
                     compito: taskText || 'Nessun dettaglio specificato',
-                    scadenza: it.rawDate || it.dateISO || todayISO
+                    scadenza: it.rawDate || it.dateISO || todayISO,
+                    isToday: true
                 });
             }
         }
     });
 
-    // 3. Proposte di Assemblea di Classe & Spostamento Verifiche (SOLO dati reali dal server)
+    // 3. Verifiche in programma (Oggi o prossimi 5 giorni)
+    let todayVerifiche = [];
+    const allVerifiche = (state.verifiche || []).concat(state.manualVerifiche || []).filter(isRealItem);
+    allVerifiche.forEach(v => {
+        const d = v.data || v.date || '';
+        if (!d) return;
+        const isToday = d === todayISO || d.startsWith(todayISO);
+        const diff = (new Date(d) - today) / (1000 * 60 * 60 * 24);
+        if (isToday || (diff > 0 && diff <= 5)) {
+            todayVerifiche.push({
+                id: v.id,
+                materia: v.materia || v.subject || 'Verifica',
+                descrizione: v.text || v.descrizione || 'Verifica in programma',
+                data: d,
+                isToday
+            });
+        }
+    });
+
+    // 4. Proposte di Assemblea di Classe & Spostamento Verifiche
     const classProps = effClass && (typeof getStoredClassProposals === 'function')
         ? getStoredClassProposals(effClass)
         : [];
@@ -3563,7 +3611,7 @@ window.getTodayRewindSlides = function() {
     const assemblyProps = activeProps.filter(p => p.type === 'assembly');
     const rescheduleProps = activeProps.filter(p => p.type !== 'assembly');
 
-    // 4. Nuove Circolari pubblicate oggi (SOLO dati reali dal server)
+    // 5. Nuove Circolari pubblicate oggi o recenti
     const circolariData = (typeof getCircolariData === 'function') ? getCircolariData() : [];
     let todayCircolari = circolariData.filter(c => {
         if (!isRealItem(c)) return false;
@@ -3582,124 +3630,239 @@ window.getTodayRewindSlides = function() {
             }
         }
     });
+    if (todayCircolari.length === 0 && circolariData.length > 0) {
+        todayCircolari = circolariData.filter(isRealItem).slice(0, 1);
+    }
+
+    // 6. Assenze non ancora giustificate
+    const daGiustificare = (state.assenzeData && state.assenzeData.daGiustificare > 0) ? state.assenzeData.daGiustificare : 0;
 
     const slides = [];
 
-    // ── SLIDES: 1. NUOVI VOTI DI OGGI (Stile Chat / Balloon) ──
+    // ── SLIDES: 1. NUOVI VOTI ──
     todayVoti.forEach((voto, idx) => {
-        const val = voto.voto || '8';
+        const val = voto.voto || voto.valore || '8';
         const numVal = parseFloat(String(val).replace(',', '.'));
         const isSuff = !isNaN(numVal) ? numVal >= 6 : true;
 
         slides.push({
             id: `voto_${voto.id || idx}`,
             category: 'voti',
-            categoryBadge: 'VALUTAZIONE REGISTRO',
+            categoryBadge: 'NUOVA VALUTAZIONE',
+            tag: isSuff ? 'REGISTRO' : 'ATTENZIONE',
+            icon: 'ph-graduation-cap',
             timestamp: voto.data || 'Oggi',
-            primaryLabel: 'Apri Registro Voti',
-            primaryAction: "window.closeTodayRewind(); navigate('voti');",
-            renderChatHtml: () => `
-                <div style="font-size: 14px; color: #ffffff; line-height: 1.55; margin-bottom: 12px;">
-                    Ciao <strong style="color: #64d2ff;">${escapeHtml(userName)}</strong>! È appena arrivata una nuova valutazione nel tuo registro elettronico:
-                </div>
-                <div style="background: rgba(12, 20, 36, 0.75); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-                    <div>
-                        <div style="font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px;">
-                            ${escapeHtml(voto.tipo || 'Valutazione')}
-                        </div>
-                        <div style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: -0.01em;">
-                            ${escapeHtml(voto.materia || 'Materia')}
-                        </div>
-                        ${voto.docente ? `<div style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px;">${escapeHtml(voto.docente)}</div>` : ''}
-                    </div>
+            theme: {
+                gradient: isSuff
+                    ? 'linear-gradient(160deg, #022c22 0%, #064e3b 40%, #059669 75%, #10b981 100%)'
+                    : 'linear-gradient(160deg, #3f0713 0%, #881337 40%, #be123c 75%, #f43f5e 100%)',
+                glow: isSuff ? 'rgba(16, 185, 129, 0.55)' : 'rgba(244, 63, 94, 0.55)',
+                accent: isSuff ? '#34d399' : '#fb7185'
+            },
+            primaryAction: {
+                label: 'Apri nel Registro Voti',
+                icon: 'ph-graduation-cap',
+                action: "window.closeTodayRewind(); navigate('voti');"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 26px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column; align-items: center; text-align: center;
+                ">
                     <div style="
-                        min-width: 48px; height: 48px; border-radius: 14px;
-                        background: ${isSuff ? 'linear-gradient(135deg, #28a745, #34d399)' : 'linear-gradient(135deg, #dc3545, #f87171)'};
+                        width: 90px; height: 90px; border-radius: 26px;
+                        background: ${isSuff ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.9), rgba(5, 150, 105, 0.95))' : 'linear-gradient(135deg, rgba(251, 113, 133, 0.9), rgba(225, 29, 72, 0.95))'};
+                        border: 2px solid rgba(255,255,255,0.45);
+                        box-shadow: 0 12px 32px ${isSuff ? 'rgba(52, 211, 153, 0.55)' : 'rgba(244, 63, 94, 0.55)'}, inset 0 1px 1px rgba(255,255,255,0.7);
                         display: flex; align-items: center; justify-content: center;
-                        font-size: 20px; font-weight: 900; color: #ffffff;
-                        box-shadow: 0 4px 14px ${isSuff ? 'rgba(52, 211, 153, 0.4)' : 'rgba(248, 113, 113, 0.4)'};
+                        font-size: 40px; font-weight: 900; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', sans-serif;
+                        letter-spacing: -0.03em; margin-bottom: 16px;
                     ">
                         ${escapeHtml(val)}
                     </div>
+
+                    <div style="
+                        display: inline-flex; align-items: center; gap: 6px;
+                        background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.25);
+                        padding: 4px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 800;
+                        text-transform: uppercase; letter-spacing: 0.08em; color: #ffffff; margin-bottom: 10px;
+                    ">
+                        <i class="ph-bold ph-star" style="color: ${isSuff ? '#34d399' : '#fb7185'};"></i>
+                        <span>${escapeHtml(voto.tipo || 'Valutazione')}</span>
+                    </div>
+
+                    <div style="
+                        font-size: 27px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;
+                        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; line-height: 1.15; margin-bottom: 4px;
+                    ">
+                        ${escapeHtml(voto.materia || 'Materia')}
+                    </div>
+
+                    ${voto.docente ? `
+                    <div style="font-size: 13.5px; color: rgba(255,255,255,0.78); font-weight: 600; margin-bottom: 14px;">
+                        <i class="ph-bold ph-chalkboard-teacher" style="opacity: 0.85; margin-right: 4px;"></i>${escapeHtml(voto.docente)}
+                    </div>` : '<div style="height: 12px;"></div>'}
+
+                    ${voto.commento ? `
+                    <div style="
+                        width: 100%; box-sizing: border-box;
+                        background: rgba(0, 0, 0, 0.22); backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255,255,255,0.16); border-radius: 20px;
+                        padding: 14px 16px; text-align: left; margin-top: 4px;
+                    ">
+                        <div style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.65); margin-bottom: 4px;">
+                            Nota del Docente
+                        </div>
+                        <div style="font-size: 14px; color: rgba(255,255,255,0.95); font-style: italic; line-height: 1.45;">
+                            "${escapeHtml(voto.commento)}"
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
-                ${voto.commento ? `<div style="font-size: 13px; color: rgba(255,255,255,0.85); font-style: italic; background: rgba(255,255,255,0.06); padding: 10px 12px; border-radius: 12px; border-left: 3px solid #64d2ff;">"${escapeHtml(voto.commento)}"</div>` : ''}
             `
         });
     });
 
-    // ── SLIDES: 2. RICHIESTE ASSEMBLEA DI CLASSE (Stile Chat) ──
-    assemblyProps.forEach((prop, idx) => {
-        const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
-        const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
-        const declineList = Array.isArray(votes.decline) ? votes.decline : [];
-        const altList = Array.isArray(votes.alternatives) ? votes.alternatives : [];
-
-        const acceptCount = acceptList.length;
-        const declineCount = declineList.length;
-        const altCount = altList.length;
-        const totalVotes = acceptCount + declineCount + altCount;
-
-        const hasAccepted = acceptList.includes(userId);
-        const hasDeclined = declineList.includes(userId);
-        const hasAlt = altList.some(a => a.userId === userId);
-
+    // ── SLIDES: 2. COMPITI ASSEGNATI ──
+    todayCompiti.forEach((c, idx) => {
         slides.push({
-            id: `assembly_${prop.id || idx}`,
-            category: 'assemblea',
-            categoryBadge: 'ASSEMBLEA DI CLASSE',
-            timestamp: 'Votazione aperta',
-            primaryLabel: 'Gestione Assemblea',
-            primaryAction: "window.closeTodayRewind(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();",
-            renderChatHtml: () => `
-                <div style="font-size: 14px; color: #ffffff; line-height: 1.55; margin-bottom: 12px;">
-                    Ciao <strong style="color: #64d2ff;">${escapeHtml(userName)}</strong>! I tuoi rappresentanti hanno aperto una richiesta per l'<strong>Assemblea di Classe</strong>:
-                </div>
-                <div style="background: rgba(12, 20, 36, 0.75); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #64d2ff; margin-bottom: 6px;">
-                        <i class="ph-bold ph-calendar"></i>
-                        <span>Data proposta: <strong style="color: #ffffff;">${escapeHtml(prop.targetDate || 'In definizione')}</strong></span>
-                    </div>
-                    <div style="font-size: 13.5px; color: rgba(255,255,255,0.9); line-height: 1.45; margin-bottom: 12px;">
-                        <strong>Ordine del giorno:</strong> ${escapeHtml(prop.reason || 'Discussione andamento didattico e organizzazione')}
-                    </div>
-                    <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.6); margin-bottom: 8px;">
-                        Vota direttamente da questo messaggio (${totalVotes} voti):
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'accept');" style="
-                            flex: 1; padding: 8px 6px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
-                            background: ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.08)'};
-                            border: 1px solid ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.15)'};
-                            color: ${hasAccepted ? '#0c1424' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
+            id: `compito_${c.id || idx}`,
+            category: 'compiti',
+            categoryBadge: 'COMPITO ASSEGNATO',
+            tag: c.isUpcoming ? 'IN ARRIVO' : 'PER OGGI',
+            icon: 'ph-book-open',
+            timestamp: c.scadenza || 'Oggi',
+            theme: {
+                gradient: 'linear-gradient(160deg, #100e2b 0%, #1e1b4b 40%, #4338ca 75%, #6366f1 100%)',
+                glow: 'rgba(99, 102, 241, 0.55)',
+                accent: '#818cf8'
+            },
+            primaryAction: {
+                label: 'Apri nel Diario',
+                icon: 'ph-notebook',
+                action: "window.closeTodayRewind(); navigate('planner');"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                        <div style="
+                            display: inline-flex; align-items: center; gap: 7px;
+                            background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+                            padding: 5px 14px; border-radius: 999px;
                         ">
-                            <i class="ph-bold ph-thumbs-up"></i>
-                            <span>Sì (${acceptCount})</span>
-                        </button>
-                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'decline');" style="
-                            flex: 1; padding: 8px 6px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
-                            background: ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.08)'};
-                            border: 1px solid ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.15)'};
-                            color: ${hasDeclined ? '#ffffff' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
+                            <i class="ph-bold ph-book-open" style="color: #a5b4fc; font-size: 14px;"></i>
+                            <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #ffffff;">
+                                ${escapeHtml(c.materia || 'Compito')}
+                            </span>
+                        </div>
+
+                        <div style="
+                            display: inline-flex; align-items: center; gap: 5px;
+                            background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.18);
+                            padding: 5px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: #a5b4fc;
                         ">
-                            <i class="ph-bold ph-thumbs-down"></i>
-                            <span>No (${declineCount})</span>
-                        </button>
-                        <button onclick="event.stopPropagation(); const altD = prompt('Data alternativa (YYYY-MM-DD):', '${prop.targetDate || ''}'); if(altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="
-                            flex: 1; padding: 8px 6px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
-                            background: ${hasAlt ? '#ff9f0a' : 'rgba(255,255,255,0.08)'};
-                            border: 1px solid ${hasAlt ? '#ff9f0a' : 'rgba(255,255,255,0.15)'};
-                            color: ${hasAlt ? '#0c1424' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
-                        ">
-                            <i class="ph-bold ph-calendar-plus"></i>
-                            <span>Altra (${altCount})</span>
-                        </button>
+                            <i class="ph-bold ph-calendar"></i>
+                            <span>${escapeHtml(c.scadenza || todayISO)}</span>
+                        </div>
+                    </div>
+
+                    <div style="
+                        font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;
+                        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; line-height: 1.2; margin-bottom: 14px;
+                    ">
+                        ${escapeHtml(c.materia || 'Compito')}
+                    </div>
+
+                    <div style="
+                        background: rgba(0,0,0,0.22); backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255,255,255,0.16); border-radius: 20px;
+                        padding: 16px 18px; max-height: 220px; overflow-y: auto;
+                    ">
+                        <div style="font-size: 15px; color: #ffffff; line-height: 1.55; word-break: break-word; font-weight: 500;">
+                            ${escapeHtml(c.compito || 'Nessun dettaglio specificato')}
+                        </div>
                     </div>
                 </div>
             `
         });
     });
 
-    // ── SLIDES: 3. PROPOSTE SPOSTAMENTO VERIFICHE (Stile Chat) ──
+    // ── SLIDES: 3. VERIFICHE PROGRAMMATE ──
+    todayVerifiche.forEach((v, idx) => {
+        slides.push({
+            id: `verifica_${v.id || idx}`,
+            category: 'verifiche',
+            categoryBadge: 'VERIFICA IN PROGRAMMA',
+            tag: v.isToday ? 'OGGI' : 'CALENDARIO',
+            icon: 'ph-pencil-simple',
+            timestamp: v.data || 'In arrivo',
+            theme: {
+                gradient: 'linear-gradient(160deg, #2e1003 0%, #451a03 40%, #b45309 75%, #f59e0b 100%)',
+                glow: 'rgba(245, 158, 11, 0.55)',
+                accent: '#fbbf24'
+            },
+            primaryAction: {
+                label: 'Vedi nel Calendario',
+                icon: 'ph-calendar',
+                action: "window.closeTodayRewind(); navigate('planner');"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                        <div style="
+                            display: inline-flex; align-items: center; gap: 7px;
+                            background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+                            padding: 5px 14px; border-radius: 999px;
+                        ">
+                            <i class="ph-bold ph-pencil-simple" style="color: #fed7aa; font-size: 14px;"></i>
+                            <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #ffffff;">
+                                VERIFICA PROGRAMMATA
+                            </span>
+                        </div>
+                        <div style="
+                            display: inline-flex; align-items: center; gap: 5px;
+                            background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.18);
+                            padding: 5px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: #fed7aa;
+                        ">
+                            <i class="ph-bold ph-calendar"></i>
+                            <span>${escapeHtml(v.data || 'In arrivo')}</span>
+                        </div>
+                    </div>
+
+                    <div style="
+                        font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;
+                        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; line-height: 1.2; margin-bottom: 14px;
+                    ">
+                        ${escapeHtml(v.materia || 'Verifica')}
+                    </div>
+
+                    <div style="
+                        background: rgba(0,0,0,0.22); backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255,255,255,0.16); border-radius: 20px;
+                        padding: 16px 18px; max-height: 200px; overflow-y: auto;
+                    ">
+                        <div style="font-size: 15px; color: #ffffff; line-height: 1.5; word-break: break-word;">
+                            ${escapeHtml(v.descrizione || 'Verifica scritta/orale programmata')}
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+    });
+
+    // ── SLIDES: 4. PROPOSTE SPOSTAMENTO VERIFICHE ──
     rescheduleProps.forEach((prop, idx) => {
         const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
         const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
@@ -3712,41 +3875,67 @@ window.getTodayRewindSlides = function() {
         slides.push({
             id: `reschedule_${prop.id || idx}`,
             category: 'spostamento',
-            categoryBadge: 'PROPOSTA SPOSTAMENTO',
-            timestamp: 'Votazione aperta',
-            primaryLabel: 'Gestione Proposte',
-            primaryAction: "window.closeTodayRewind(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();",
-            renderChatHtml: () => `
-                <div style="font-size: 14px; color: #ffffff; line-height: 1.55; margin-bottom: 12px;">
-                    Attenzione <strong style="color: #64d2ff;">${escapeHtml(userName)}</strong>! È stato proposto lo <strong>spostamento di una verifica</strong> di ${escapeHtml(prop.subject || 'classe')}:
-                </div>
-                <div style="background: rgba(12, 20, 36, 0.75); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px;">
-                        <span style="color: rgba(255,255,255,0.7);"><i class="ph-bold ph-calendar-x" style="color: #ff453a;"></i> Da: <strong style="color: #ffffff;">${escapeHtml(prop.originalDate || '—')}</strong></span>
-                        <span style="color: #64d2ff;">➔</span>
-                        <span style="color: rgba(255,255,255,0.7);"><i class="ph-bold ph-calendar-check" style="color: #30d158;"></i> A: <strong style="color: #ffffff;">${escapeHtml(prop.targetDate || '—')}</strong></span>
+            categoryBadge: 'SPOSTAMENTO VERIFICA',
+            tag: 'VOTAZIONE',
+            icon: 'ph-calendar-plus',
+            timestamp: 'Proposta Aperta',
+            theme: {
+                gradient: 'linear-gradient(160deg, #330f04 0%, #7c2d12 40%, #c2410c 75%, #ea580c 100%)',
+                glow: 'rgba(234, 88, 12, 0.55)',
+                accent: '#fb923c'
+            },
+            primaryAction: {
+                label: 'Gestione Proposte',
+                icon: 'ph-sliders-horizontal',
+                action: "window.closeTodayRewind(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column;
+                ">
+                    <div style="font-size: 24px; font-weight: 900; color: #ffffff; line-height: 1.2; margin-bottom: 12px;">
+                        Spostamento ${escapeHtml(prop.subject || 'Verifica')}
                     </div>
-                    <div style="font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.45; margin-bottom: 12px;">
-                        <strong>Motivo:</strong> ${escapeHtml(prop.reason || 'Sovrapposizione verifiche o carico didattico')}
+
+                    <div style="
+                        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+                        background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.18);
+                        border-radius: 16px; padding: 12px 14px; margin-bottom: 12px;
+                    ">
+                        <span style="font-size: 13px; color: rgba(255,255,255,0.8);">
+                            Da: <strong style="color:#ffffff;">${escapeHtml(prop.originalDate || '—')}</strong>
+                        </span>
+                        <i class="ph-bold ph-arrow-right" style="color: #fb923c; font-size: 14px;"></i>
+                        <span style="font-size: 13px; color: rgba(255,255,255,0.8);">
+                            A: <strong style="color:#ffffff;">${escapeHtml(prop.targetDate || '—')}</strong>
+                        </span>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'accept');" style="
-                            flex: 1; padding: 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-                            background: ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.08)'};
-                            border: 1px solid ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.15)'};
-                            color: ${hasAccepted ? '#0c1424' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
+
+                    <div style="font-size: 13.5px; color: rgba(255,255,255,0.9); line-height: 1.45; margin-bottom: 16px;">
+                        <strong>Motivo:</strong> ${escapeHtml(prop.reason || 'Carico didattico')}
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'accept');" style="
+                            flex: 1; padding: 12px; border-radius: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            background: ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.12)'};
+                            border: 1.5px solid ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.25)'};
+                            color: ${hasAccepted ? '#000000' : '#ffffff'}; font-size: 13px; font-weight: 800;
                         ">
                             <i class="ph-bold ph-thumbs-up"></i>
-                            <span>Favorevole (${acceptCount})</span>
+                            <span>Sì (${acceptCount})</span>
                         </button>
-                        <button onclick="event.stopPropagation(); window.voteClassProposal('${prop.id}', 'decline');" style="
-                            flex: 1; padding: 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-                            background: ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.08)'};
-                            border: 1px solid ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.15)'};
-                            color: ${hasDeclined ? '#ffffff' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
+                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'decline');" style="
+                            flex: 1; padding: 12px; border-radius: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+                            background: ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.12)'};
+                            border: 1.5px solid ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.25)'};
+                            color: #ffffff; font-size: 13px; font-weight: 800;
                         ">
                             <i class="ph-bold ph-thumbs-down"></i>
-                            <span>Contrario (${declineCount})</span>
+                            <span>No (${declineCount})</span>
                         </button>
                     </div>
                 </div>
@@ -3754,78 +3943,237 @@ window.getTodayRewindSlides = function() {
         });
     });
 
-    // ── SLIDES: 4. NUOVI COMPITI DI OGGI ──
-    todayCompiti.forEach((c, idx) => {
+    // ── SLIDES: 5. ASSEMBLEA DI CLASSE ──
+    assemblyProps.forEach((prop, idx) => {
+        const votes = prop.votes || { accept: [], decline: [], alternatives: [] };
+        const acceptList = Array.isArray(votes.accept) ? votes.accept : [];
+        const declineList = Array.isArray(votes.decline) ? votes.decline : [];
+        const altList = Array.isArray(votes.alternatives) ? votes.alternatives : [];
+        const acceptCount = acceptList.length;
+        const declineCount = declineList.length;
+        const altCount = altList.length;
+        const hasAccepted = acceptList.includes(userId);
+        const hasDeclined = declineList.includes(userId);
+        const hasAlt = altList.some(a => a.userId === userId);
+
         slides.push({
-            id: `compito_${c.id || idx}`,
-            category: 'compiti',
-            categoryBadge: 'COMPITO ASSEGNATO',
-            timestamp: c.scadenza || 'Oggi',
-            primaryLabel: 'Apri nel Diario',
-            primaryAction: "window.closeTodayRewind(); navigate('planner');",
-            renderChatHtml: () => `
-                <div style="font-size: 14px; color: #ffffff; line-height: 1.55; margin-bottom: 12px;">
-                    Ecco un nuovo compito per la materia <strong style="color: #64d2ff;">${escapeHtml(c.materia || 'Materia')}</strong>:
-                </div>
-                <div style="background: rgba(12, 20, 36, 0.75); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;">
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.95); line-height: 1.5; margin-bottom: 10px; word-break: break-word;">
-                        ${escapeHtml(c.compito || 'Nessun dettaglio specificato')}
+            id: `assembly_${prop.id || idx}`,
+            category: 'assemblea',
+            categoryBadge: 'ASSEMBLEA DI CLASSE',
+            tag: 'VOTAZIONE',
+            icon: 'ph-users-three',
+            timestamp: 'Proposta Aperta',
+            theme: {
+                gradient: 'linear-gradient(160deg, #022325 0%, #042f2e 40%, #0f766e 75%, #06b6d4 100%)',
+                glow: 'rgba(6, 182, 212, 0.55)',
+                accent: '#22d3ee'
+            },
+            primaryAction: {
+                label: 'Gestione Assemblea',
+                icon: 'ph-users-three',
+                action: "window.closeTodayRewind(); if(typeof window.openClassRepModal==='function')window.openClassRepModal();"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column;
+                ">
+                    <div style="font-size: 24px; font-weight: 900; color: #ffffff; line-height: 1.2; margin-bottom: 12px;">
+                        Richiesta Assemblea
                     </div>
-                    <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #64d2ff; background: rgba(100,210,255,0.1); padding: 4px 10px; border-radius: 8px;">
-                        <i class="ph-bold ph-calendar"></i>
-                        <span>Scadenza: <strong style="color: #ffffff;">${escapeHtml(c.scadenza || todayISO)}</strong></span>
+
+                    <div style="
+                        display: inline-flex; align-items: center; gap: 8px;
+                        background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.18);
+                        border-radius: 14px; padding: 8px 14px; margin-bottom: 12px; color: #ffffff; font-size: 13.5px; font-weight: 700;
+                    ">
+                        <i class="ph-bold ph-calendar" style="color: #22d3ee;"></i>
+                        <span>Data: <strong style="color:#ffffff;">${escapeHtml(prop.targetDate || 'In definizione')}</strong></span>
+                    </div>
+
+                    <div style="font-size: 13.5px; color: rgba(255,255,255,0.9); line-height: 1.45; margin-bottom: 16px;">
+                        <strong>Ordine del giorno:</strong> ${escapeHtml(prop.reason || 'Discussione andamento didattico e organizzazione')}
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'accept');" style="
+                            flex: 1; padding: 10px 6px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+                            background: ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.12)'};
+                            border: 1.5px solid ${hasAccepted ? '#30d158' : 'rgba(255,255,255,0.25)'};
+                            color: ${hasAccepted ? '#000000' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
+                        ">
+                            <i class="ph-bold ph-thumbs-up"></i>
+                            <span>Sì (${acceptCount})</span>
+                        </button>
+                        <button onclick="event.stopPropagation(); if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium'); window.voteClassProposal('${prop.id}', 'decline');" style="
+                            flex: 1; padding: 10px 6px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+                            background: ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.12)'};
+                            border: 1.5px solid ${hasDeclined ? '#ff453a' : 'rgba(255,255,255,0.25)'};
+                            color: #ffffff; font-size: 12.5px; font-weight: 800;
+                        ">
+                            <i class="ph-bold ph-thumbs-down"></i>
+                            <span>No (${declineCount})</span>
+                        </button>
+                        <button onclick="event.stopPropagation(); const altD = prompt('Data alternativa (YYYY-MM-DD):', '${prop.targetDate || ''}'); if(altD) window.voteClassProposal('${prop.id}', 'alternative', altD);" style="
+                            flex: 1; padding: 10px 6px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+                            background: ${hasAlt ? '#ff9f0a' : 'rgba(255,255,255,0.12)'};
+                            border: 1.5px solid ${hasAlt ? '#ff9f0a' : 'rgba(255,255,255,0.25)'};
+                            color: ${hasAlt ? '#000000' : '#ffffff'}; font-size: 12.5px; font-weight: 800;
+                        ">
+                            <i class="ph-bold ph-calendar-plus"></i>
+                            <span>Altra (${altCount})</span>
+                        </button>
                     </div>
                 </div>
             `
         });
     });
 
-    // ── SLIDES: 5. NUOVE CIRCOLARI DI OGGI ──
+    // ── SLIDES: 6. CIRCOLARI ──
     todayCircolari.forEach((circ, idx) => {
         slides.push({
             id: `circ_${circ.id || idx}`,
             category: 'circolari',
             categoryBadge: 'CIRCOLARE UFFICIALE',
-            timestamp: circ.numero ? `N° ${circ.numero}` : 'Oggi',
-            primaryLabel: 'Leggi Circolare',
-            primaryAction: `window.closeTodayRewind(); if(typeof openCircolareDetails==='function')openCircolareDetails('${circ.id}'); else navigate('circolari');`,
-            renderChatHtml: () => `
-                <div style="font-size: 14px; color: #ffffff; line-height: 1.55; margin-bottom: 12px;">
-                    Attenzione <strong style="color: #64d2ff;">${escapeHtml(userName)}</strong>! È stata pubblicata una nuova <strong>Circolare Ufficiale</strong>:
-                </div>
-                <div style="background: rgba(12, 20, 36, 0.75); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;">
-                    <div style="font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.35; margin-bottom: 6px;">
-                        ${escapeHtml(circ.titolo || 'Circolare')}
+            tag: circ.numero ? `N° ${circ.numero}` : 'UFFICIALE',
+            icon: 'ph-newspaper',
+            timestamp: circ.numero ? `Circolare N° ${circ.numero}` : 'Oggi',
+            theme: {
+                gradient: 'linear-gradient(160deg, #051226 0%, #0c2340 40%, #1d4ed8 75%, #38bdf8 100%)',
+                glow: 'rgba(56, 189, 248, 0.55)',
+                accent: '#60a5fa'
+            },
+            primaryAction: {
+                label: 'Leggi Circolare Completa',
+                icon: 'ph-arrow-up-right',
+                action: `window.closeTodayRewind(); if(typeof openCircolareDetails==='function')openCircolareDetails('${circ.id}'); else navigate('circolari');`
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 24px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column;
+                ">
+                    <div style="
+                        font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: -0.01em;
+                        line-height: 1.3; margin-bottom: 12px;
+                    ">
+                        ${escapeHtml(circ.titolo || 'Nuova Circolare')}
                     </div>
-                    <p style="font-size: 13.5px; color: rgba(255,255,255,0.8); line-height: 1.45; margin: 0;">
-                        ${escapeHtml(circ.desc || 'Tocca il pulsante qui sotto per leggere il testo completo.')}
-                    </p>
+
+                    <div style="
+                        background: rgba(0,0,0,0.22); backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255,255,255,0.16); border-radius: 20px;
+                        padding: 16px 18px; max-height: 220px; overflow-y: auto;
+                    ">
+                        <p style="font-size: 14.5px; color: rgba(255,255,255,0.9); line-height: 1.5; margin: 0;">
+                            ${escapeHtml(circ.desc || 'Tocca il pulsante qui sotto per visualizzare il documento integrale.')}
+                        </p>
+                    </div>
                 </div>
             `
         });
     });
 
-    // ── FALLBACK SLIDE: SE NON CI SONO EVENTI OGGI ──
+    // ── SLIDES: 7. ASSENZE DA GIUSTIFICARE ──
+    if (daGiustificare > 0) {
+        slides.push({
+            id: 'assenze_alert',
+            category: 'assenze',
+            categoryBadge: 'REGISTRO ASSENZE',
+            tag: 'ATTENZIONE',
+            icon: 'ph-warning',
+            timestamp: 'Da Giustificare',
+            theme: {
+                gradient: 'linear-gradient(160deg, #320f04 0%, #7c2d12 40%, #b45309 75%, #ea580c 100%)',
+                glow: 'rgba(234, 88, 12, 0.55)',
+                accent: '#fb923c'
+            },
+            primaryAction: {
+                label: 'Giustifica nel Registro',
+                icon: 'ph-check-circle',
+                action: "window.closeTodayRewind(); if(typeof mostraAssenzeModal==='function')mostraAssenzeModal(); else navigate('assenze');"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 26px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column; align-items: center; text-align: center;
+                ">
+                    <div style="
+                        width: 80px; height: 80px; border-radius: 50%;
+                        background: rgba(251, 146, 60, 0.2); border: 2px solid rgba(251, 146, 60, 0.6);
+                        display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+                        box-shadow: 0 8px 24px rgba(234, 88, 12, 0.4);
+                    ">
+                        <i class="ph-fill ph-warning" style="font-size: 38px; color: #fb923c;"></i>
+                    </div>
+                    <div style="font-size: 24px; font-weight: 900; color: #ffffff; margin-bottom: 6px;">
+                        ${daGiustificare} ${daGiustificare === 1 ? 'Assenza da Giustificare' : 'Assenze da Giustificare'}
+                    </div>
+                    <div style="font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.45;">
+                        Ricordati di far firmare o giustificare i giorni di assenza tramite il libretto o l'app Argo.
+                    </div>
+                </div>
+            `
+        });
+    }
+
+    // ── FALLBACK SLIDE: TUTTO AGGIORNATO ──
     if (slides.length === 0) {
+        const media = (typeof calculateMedia === 'function') ? calculateMedia() : (state.media || null);
         slides.push({
             id: 'quiet_day',
             category: 'tranquillo',
             categoryBadge: 'REGISTRO AGGIORNATO',
-            timestamp: 'Oggi',
-            primaryLabel: null,
-            primaryAction: null,
-            renderChatHtml: () => `
-                <div style="font-size: 14px; color: #ffffff; line-height: 1.55; margin-bottom: 14px;">
-                    Ciao <strong style="color: #64d2ff;">${escapeHtml(userName)}</strong>! Ho controllato il registro in tempo reale:
-                </div>
-                <div style="background: rgba(12, 20, 36, 0.75); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 12px;">
-                    <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(48, 209, 88, 0.15); border: 1px solid rgba(48, 209, 88, 0.4); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
-                        <i class="ph-fill ph-check-circle" style="font-size: 30px; color: #30d158;"></i>
+            tag: 'IN PARI',
+            icon: 'ph-check-circle',
+            timestamp: todayFormatted,
+            theme: {
+                gradient: 'linear-gradient(160deg, #060c18 0%, #0f172a 40%, #1e293b 75%, #0284c7 100%)',
+                glow: 'rgba(41, 151, 255, 0.45)',
+                accent: '#38bdf8'
+            },
+            primaryAction: {
+                label: 'Chiudi Storie',
+                icon: 'ph-check',
+                action: "window.closeTodayRewind();"
+            },
+            renderCardHtml: () => `
+                <div class="story-apple-card" style="
+                    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+                    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 32px;
+                    padding: 30px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.6);
+                    display: flex; flex-direction: column; align-items: center; text-align: center;
+                ">
+                    <div style="
+                        width: 84px; height: 84px; border-radius: 50%;
+                        background: rgba(48, 209, 88, 0.2); border: 2px solid rgba(48, 209, 88, 0.6);
+                        display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+                        box-shadow: 0 10px 30px rgba(48, 209, 88, 0.45);
+                    ">
+                        <i class="ph-fill ph-check-circle" style="font-size: 44px; color: #30d158;"></i>
                     </div>
-                    <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">Tutto Aggiornato!</div>
-                    <div style="font-size: 13.5px; color: rgba(255,255,255,0.75); line-height: 1.45;">
-                        Nessun nuovo voto, compito o circolare registrato oggi dal server. Sei perfettamente in pari!
+                    <div style="font-size: 26px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
+                        Tutto in Ordine!
                     </div>
+                    <div style="font-size: 14.5px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-bottom: 16px;">
+                        Nessuna nuova valutazione o compito inserito oggi dal server. Sei perfettamente in pari!
+                    </div>
+                    ${media ? `
+                    <div style="
+                        display: inline-flex; align-items: center; gap: 8px;
+                        background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+                        padding: 8px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 800; color: #ffffff;
+                    ">
+                        <i class="ph-bold ph-chart-line-up" style="color: #38bdf8;"></i>
+                        <span>Media Voti Attuale: <strong style="color:#38bdf8;">${media}</strong></span>
+                    </div>
+                    ` : ''}
                 </div>
             `
         });
@@ -3834,7 +4182,7 @@ window.getTodayRewindSlides = function() {
     return slides;
 };
 
-// ── REWIND VIEWER ENGINE ──
+// ── REWIND VIEWER ENGINE (INSTAGRAM STORIES APPLE STYLE) ──
 window._rewindState = null;
 
 window.openTodayRewind = function(slideIdx = 0) {
@@ -3848,8 +4196,8 @@ window.openTodayRewind = function(slideIdx = 0) {
         currentIndex: Math.max(0, Math.min(slideIdx, slides.length - 1)),
         timer: null,
         startTime: 0,
-        duration: 6200,
-        remainingTime: 6200,
+        duration: 5500,
+        remainingTime: 5500,
         isPaused: false
     };
 
@@ -3862,9 +4210,9 @@ window.openTodayRewind = function(slideIdx = 0) {
             background: #000000 !important;
             width: 100vw; height: 100vh; height: 100dvh;
             display: flex; align-items: stretch; justify-content: center;
-            opacity: 0; transition: opacity 0.25s ease-out;
-            user-select: none; -webkit-user-select: none;
-            overflow: hidden;
+            opacity: 0; transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            overflow: hidden; touch-action: none;
         `;
         document.body.appendChild(overlay);
     }
@@ -3876,7 +4224,7 @@ window.openTodayRewind = function(slideIdx = 0) {
     if (navContainer) navContainer.style.visibility = 'hidden';
     document.body.style.overflow = 'hidden';
 
-    // Registra ascolto tap, click e swipe
+    // Registra ascolto tap, touch, hold e swipe in perfetto stile Instagram
     window._setupRewindTapNavigation(overlay);
 
     window._renderRewindFrame(window._rewindState.currentIndex);
@@ -3913,40 +4261,71 @@ window._setupRewindTapNavigation = function(overlay) {
     let isTouchDrag = false;
     let lastTouchEndTime = 0;
 
-    // Helper per navigare in base alla coordinata orizzontale X (sinistra = indietro, destra = avanti)
+    // Helper per mostrare flash di tocco
+    const triggerTapFlash = (side) => {
+        const el = document.getElementById(side === 'left' ? 'story-flash-left' : 'story-flash-right');
+        if (el) {
+            el.classList.remove('story-tap-flash-active');
+            void el.offsetWidth;
+            el.classList.add('story-tap-flash-active');
+        }
+    };
+
+    // Helper per navigare in base alla coordinata orizzontale X (sinistra 35% = indietro, destra 65% = avanti)
     const doNavigate = function(clientX) {
         const rect = overlay.getBoundingClientRect();
         const width = rect.width || window.innerWidth || 360;
         const relativeX = clientX - rect.left;
 
-        if (relativeX < width * 0.45) {
+        if (relativeX < width * 0.35) {
+            triggerTapFlash('left');
             window.rewindPrevSlide();
         } else {
+            triggerTapFlash('right');
             window.rewindNextSlide();
         }
     };
 
     // Desktop Click (esclusi bottoni interattivi e click sintetici fantasma post-touch)
     overlay.onclick = function(e) {
-        if (Date.now() - lastTouchEndTime < 500) {
-            return;
-        }
-        if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) {
-            return;
-        }
+        if (Date.now() - lastTouchEndTime < 500) return;
+        if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) return;
         doNavigate(e.clientX);
     };
 
-    // Mobile Touch Navigation (Swipe down to dismiss + Tap left/right to navigate + Touch-and-hold to pause)
+    // Desktop mouse down/up for press and hold to pause
+    overlay.onmousedown = function(e) {
+        if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) return;
+        holdTimeout = setTimeout(() => {
+            isHolding = true;
+            window.pauseRewindViewer();
+            window._setRewindChromeVisibility(false);
+        }, 160);
+    };
+
+    overlay.onmouseup = function(e) {
+        clearTimeout(holdTimeout);
+        if (isHolding) {
+            isHolding = false;
+            window.resumeRewindViewer();
+            window._setRewindChromeVisibility(true);
+        }
+    };
+
+    // Touch Handling Mobile (Swipe down to dismiss, Left/Right tap, Press-and-hold to pause)
     overlay.ontouchstart = function(e) {
         if (e.touches && e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
             isTouchDrag = false;
+
+            if (e.target.closest('button, a, input, textarea, [data-prevent-slide]')) return;
+
             holdTimeout = setTimeout(() => {
                 isHolding = true;
                 window.pauseRewindViewer();
-            }, 220);
+                window._setRewindChromeVisibility(false);
+            }, 160);
         }
     };
 
@@ -3954,13 +4333,17 @@ window._setupRewindTapNavigation = function(overlay) {
         if (e.touches && e.touches.length === 1) {
             const diffY = e.touches[0].clientY - touchStartY;
             const diffX = Math.abs(e.touches[0].clientX - touchStartX);
+
             if ((Math.abs(diffY) > 8 || diffX > 8) && !isHolding) {
                 isTouchDrag = true;
                 clearTimeout(holdTimeout);
             }
+
             const frame = document.getElementById('today-rewind-frame');
             if (diffY > 0 && frame) {
-                frame.style.transform = `translateY(${Math.min(diffY, 150)}px)`;
+                const damping = Math.min(diffY, 180);
+                const scale = Math.max(0.85, 1 - (diffY / 900));
+                frame.style.transform = `translateY(${damping}px) scale(${scale})`;
             }
         }
     };
@@ -3973,9 +4356,10 @@ window._setupRewindTapNavigation = function(overlay) {
         if (isHolding) {
             isHolding = false;
             window.resumeRewindViewer();
+            window._setRewindChromeVisibility(true);
             if (frame) {
-                frame.style.transform = 'translateY(0)';
-                frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+                frame.style.transform = 'translateY(0) scale(1)';
+                frame.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
             }
             return;
         }
@@ -3987,37 +4371,51 @@ window._setupRewindTapNavigation = function(overlay) {
             const diffX = Math.abs(touchX - touchStartX);
 
             // Swipe down per chiudere
-            if (diffY > 70 && diffX < 80) {
+            if (diffY > 70 && diffX < 90) {
                 if (e.cancelable) e.preventDefault();
                 window.closeTodayRewind();
                 return;
             }
 
-            // Se l'utente ha mosso il dito verso il basso senza raggiungere la soglia di chiusura
-            if (isTouchDrag && Math.abs(diffY) > 20) {
+            // Drag parziale senza superare la soglia di chiusura: ritorna con rimbalzo morbido
+            if (isTouchDrag && Math.abs(diffY) > 15) {
                 if (frame) {
-                    frame.style.transform = 'translateY(0)';
-                    frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+                    frame.style.transform = 'translateY(0) scale(1)';
+                    frame.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
                 }
                 return;
             }
 
-            // Se ha toccato un bottone o link interattivo, lascia agire l'azione del bottone
+            // Click su elementi interattivi (lascia agire il bottone)
             const target = document.elementFromPoint(touchX, touchY);
             if (target && target.closest('button, a, input, textarea, [data-prevent-slide]')) {
                 return;
             }
 
-            // TAP pulito a sinistra o destra per navigare
+            // Tap sinistro o destro per scorrere esattamente come Instagram
             if (e.cancelable) e.preventDefault();
             doNavigate(touchX);
         }
 
         if (frame) {
-            frame.style.transform = 'translateY(0)';
-            frame.style.transition = 'transform 0.2s cubic-bezier(0.16,1,0.3,1)';
+            frame.style.transform = 'translateY(0) scale(1)';
+            frame.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
         }
     };
+};
+
+window._setRewindChromeVisibility = function(visible) {
+    const top = document.getElementById('story-top-chrome');
+    const bottom = document.getElementById('story-bottom-chrome');
+    const opacity = visible ? '1' : '0.15';
+    if (top) {
+        top.style.transition = 'opacity 0.18s ease';
+        top.style.opacity = opacity;
+    }
+    if (bottom) {
+        bottom.style.transition = 'opacity 0.18s ease';
+        bottom.style.opacity = opacity;
+    }
 };
 
 window._renderRewindFrame = function(slideIdx) {
@@ -4040,154 +4438,148 @@ window._renderRewindFrame = function(slideIdx) {
     const progressSegmentsHtml = slides.map((s, idx) => {
         let barInner = '';
         if (idx < slideIdx) {
-            barInner = '<div style="width:100%;height:100%;background:#ffffff;border-radius:2px;"></div>';
+            barInner = '<div style="width:100%;height:100%;background:#ffffff;border-radius:999px;"></div>';
         } else if (idx === slideIdx) {
-            barInner = '<div id="active-rewind-progress-bar" style="height:100%;background:#ffffff;border-radius:2px;width:0%;"></div>';
+            barInner = '<div id="active-rewind-progress-bar" style="height:100%;background:#ffffff;border-radius:999px;width:0%;"></div>';
         } else {
-            barInner = '<div style="width:0%;height:100%;background:#ffffff;border-radius:2px;"></div>';
+            barInner = '<div style="width:0%;height:100%;background:#ffffff;border-radius:999px;"></div>';
         }
         return `
-        <div style="flex:1;height:3px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;position:relative;">
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.22);border-radius:999px;overflow:hidden;position:relative;">
             ${barInner}
         </div>`;
     }).join('');
 
-    overlay.style.backgroundColor = '#0c1424';
-    overlay.style.background = 'radial-gradient(circle at 50% 20%, #162440 0%, #0c1424 70%, #060a12 100%)';
+    const theme = currentSlide.theme || {
+        gradient: 'linear-gradient(160deg, #090e17 0%, #0f172a 40%, #1e293b 75%, #0284c7 100%)',
+        glow: 'rgba(41, 151, 255, 0.45)',
+        accent: '#38bdf8'
+    };
+
+    overlay.style.background = '#000000';
 
     overlay.innerHTML = `
-    <!-- Background Ambient Glow -->
-    <div style="position: absolute; top: -10%; left: 50%; transform: translateX(-50%); width: 400px; height: 300px; background: radial-gradient(circle, rgba(41, 151, 255, 0.15) 0%, transparent 70%); pointer-events: none; filter: blur(50px);"></div>
-
-    <div id="today-rewind-frame" style="
-        width: 100%; height: 100%; height: 100dvh; max-width: 540px;
-        position: relative; display: flex; flex-direction: column; justify-content: space-between;
-        padding: max(env(safe-area-inset-top, 0px), 12px) 16px max(env(safe-area-inset-bottom, 0px), 16px) 16px;
-        box-sizing: border-box; z-index: 10; margin: 0 auto;
+    <!-- Dynamic Ambient Gradient Mesh -->
+    <div id="story-ambient-mesh" style="
+        position: absolute; inset: 0; background: ${theme.gradient};
+        transition: background 0.35s ease; z-index: 1; overflow: hidden; pointer-events: none;
     ">
-        <!-- ── CHAT HEADER ── -->
-        <div style="position: relative; z-index: 20; flex-shrink: 0; margin-bottom: 12px;">
+        <!-- Radiant blur orbs with subtle floating animation -->
+        <div class="story-orb-float" style="
+            position: absolute; top: -12%; left: 50%; transform: translateX(-50%);
+            width: 440px; height: 440px; background: ${theme.glow};
+            filter: blur(80px); border-radius: 50%; opacity: 0.85;
+        "></div>
+        <div class="story-orb-float" style="
+            position: absolute; bottom: -15%; right: 10%;
+            width: 360px; height: 360px; background: ${theme.glow};
+            filter: blur(95px); border-radius: 50%; opacity: 0.6;
+        "></div>
+    </div>
+
+    <!-- Tap Flash Visual Indicators -->
+    <div id="story-flash-left" class="story-tap-flash-left"></div>
+    <div id="story-flash-right" class="story-tap-flash-right"></div>
+
+    <!-- Main Frame (Safe-area padded) -->
+    <div id="today-rewind-frame" style="
+        width: 100%; height: 100%; height: 100dvh; max-width: 480px; margin: 0 auto;
+        position: relative; display: flex; flex-direction: column; justify-content: space-between;
+        padding: max(env(safe-area-inset-top, 0px), 14px) 18px max(env(safe-area-inset-bottom, 0px), 18px) 18px;
+        box-sizing: border-box; z-index: 10;
+    ">
+        <!-- ── TOP CHROME ── -->
+        <div id="story-top-chrome" style="position: relative; z-index: 30; flex-shrink: 0; transition: opacity 0.2s ease;">
             <!-- Segmented Progress Bars -->
-            <div style="display: flex; gap: 4px; width: 100%; margin-bottom: 10px;">
+            <div style="display: flex; gap: 4.5px; width: 100%; margin-bottom: 12px;">
                 ${progressSegmentsHtml}
             </div>
 
-            <!-- Chat Title Bar -->
-            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(20, 31, 54, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <!-- Header Info Bar -->
+            <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <!-- AI Avatar with Pulsing Online Dot -->
-                    <div style="position: relative;">
-                        <div style="width: 36px; height: 36px; border-radius: 12px; background: linear-gradient(135deg, #2997ff, #0056b3); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 14px; box-shadow: 0 2px 10px rgba(41,151,255,0.4);">
-                            AI
-                        </div>
-                        <div style="position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #30d158; border: 2px solid #141f36;"></div>
+                    <!-- Rounded Icon Tile with Apple Glass Ring -->
+                    <div style="
+                        width: 38px; height: 38px; border-radius: 12px;
+                        background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255, 255, 255, 0.28); display: flex; align-items: center; justify-content: center;
+                        box-shadow: 0 4px 16px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.4); flex-shrink: 0;
+                    ">
+                        <i class="ph-fill ${currentSlide.icon || 'ph-bell'}" style="font-size: 20px; color: #ffffff;"></i>
                     </div>
+
                     <div>
-                        <div style="font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: -0.01em; display: flex; align-items: center; gap: 6px;">
-                            <span>G-Diary Assistant</span>
-                            <span style="font-size: 10px; font-weight: 800; background: rgba(41,151,255,0.2); color: #64d2ff; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(100,210,255,0.3);">NOVITÀ</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="
+                                font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: -0.01em;
+                                font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+                            ">
+                                ${escapeHtml(currentSlide.categoryBadge || 'G-CONNECT')}
+                            </span>
+                            <span style="
+                                font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+                                background: rgba(255,255,255,0.18); backdrop-filter: blur(10px);
+                                color: #ffffff; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25);
+                            ">
+                                ${escapeHtml(currentSlide.tag || 'OGGI')}
+                            </span>
                         </div>
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 5px; margin-top: 1px;">
-                            <span>Storie di Oggi</span>
+                        <div style="font-size: 11.5px; color: rgba(255,255,255,0.72); font-weight: 500; display: flex; align-items: center; gap: 5px; margin-top: 1px;">
+                            <span>${escapeHtml(currentSlide.timestamp || 'Oggi')}</span>
                             <span>·</span>
-                            <span style="color: #64d2ff; font-weight: 700;">${slideIdx + 1} di ${slideCount}</span>
+                            <span style="color: #ffffff; font-weight: 700;">${slideIdx + 1} di ${slideCount}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Header Actions -->
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <button id="rewind-pause-btn" onclick="event.stopPropagation(); window.togglePauseRewindViewer();" title="Pausa" style="
-                        width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
-                    ">
-                        <i class="ph-fill ph-pause" style="font-size: 12px;"></i>
-                    </button>
-                    <button onclick="event.stopPropagation(); window.closeTodayRewind();" title="Chiudi" style="
-                        width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
-                    ">
-                        <i class="ph-bold ph-x" style="font-size: 14px;"></i>
-                    </button>
-                </div>
+                <!-- Sleek Close Button (X) -->
+                <button onclick="event.stopPropagation(); window.closeTodayRewind();" title="Chiudi" aria-label="Chiudi storie" style="
+                    width: 34px; height: 34px; border-radius: 50%;
+                    background: rgba(0, 0, 0, 0.28); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.24); color: #ffffff;
+                    display: flex; align-items: center; justify-content: center; cursor: pointer;
+                    box-shadow: 0 4px 14px rgba(0,0,0,0.3); transition: transform 0.15s ease;
+                " ontouchstart="this.style.transform='scale(0.92)'" ontouchend="this.style.transform='scale(1)'">
+                    <i class="ph-bold ph-x" style="font-size: 14px;"></i>
+                </button>
             </div>
         </div>
 
-        <!-- ── CENTER CHAT BODY ── -->
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding: 8px 0; overflow-y: auto;">
-            <div class="ai-chat-row is-ai" style="display: flex; gap: 10px; align-items: flex-start; max-width: 100%; animation: storyCardPop 0.28s cubic-bezier(0.16,1,0.3,1);">
-                <div class="ai-chat-avatar ai" style="
-                    width: 34px; height: 34px; border-radius: 12px; background: linear-gradient(135deg, #2997ff, #0056b3);
-                    display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 900; font-size: 13px;
-                    flex-shrink: 0; margin-top: 2px; box-shadow: 0 2px 8px rgba(41,151,255,0.3);
-                ">AI</div>
-                <div class="ai-chat-message-bubble msg-ai" style="
-                    flex: 1; background: rgba(20, 31, 54, 0.9); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-                    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px 20px 20px 6px;
-                    padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); max-width: calc(100% - 44px);
-                ">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
-                        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #64d2ff;">
-                            ${escapeHtml(currentSlide.categoryBadge || 'AGGIORNAMENTO')}
-                        </span>
-                        <span style="font-size: 10.5px; color: rgba(255,255,255,0.5); font-weight: 600;">
-                            ${escapeHtml(currentSlide.timestamp || 'Oggi')}
-                        </span>
-                    </div>
-
-                    ${currentSlide.renderChatHtml ? currentSlide.renderChatHtml() : (currentSlide.renderHtml ? currentSlide.renderHtml() : '')}
-                </div>
-            </div>
+        <!-- ── CENTER CONTENT (Card) ── -->
+        <div id="instagram-story-content-card" style="
+            flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center;
+            padding: 10px 0; z-index: 20; position: relative;
+        ">
+            ${currentSlide.renderCardHtml ? currentSlide.renderCardHtml() : ''}
         </div>
 
-        <!-- ── BOTTOM CHAT ACTION DOCK ── -->
-        <div style="position: relative; z-index: 20; flex-shrink: 0; margin-top: 10px;">
-            <div style="
-                background: rgba(20, 31, 54, 0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-                border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 999px; padding: 6px 8px 6px 12px;
-                display: flex; align-items: center; justify-content: space-between; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-            ">
-                <!-- Navigation controls (Prev / Next) -->
-                <div style="display: flex; align-items: center; gap: 4px;">
-                    <button onclick="event.stopPropagation(); window.rewindPrevSlide();" title="Precedente" style="
-                        width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
-                        opacity: ${slideIdx === 0 ? '0.3' : '1'};
-                    " ${slideIdx === 0 ? 'disabled' : ''}>
-                        <i class="ph-bold ph-caret-left" style="font-size: 15px;"></i>
-                    </button>
-                    <button onclick="event.stopPropagation(); window.rewindNextSlide();" title="Successivo" style="
-                        width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-                        color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
-                        opacity: ${slideIdx === slideCount - 1 ? '0.3' : '1'};
-                    " ${slideIdx === slideCount - 1 ? 'disabled' : ''}>
-                        <i class="ph-bold ph-caret-right" style="font-size: 15px;"></i>
-                    </button>
-                </div>
-
-                <!-- Primary Action Chip -->
-                ${currentSlide.primaryLabel ? `
-                <button onclick="event.stopPropagation(); ${currentSlide.primaryAction || ''}" style="
-                    flex: 1; max-width: 280px; height: 40px; border-radius: 999px;
-                    background: linear-gradient(135deg, #2997ff, #0056b3); border: none;
-                    color: #ffffff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
-                    box-shadow: 0 4px 15px rgba(41,151,255,0.35); transition: transform 0.15s ease;
-                " ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform='scale(1)'">
-                    <span>${currentSlide.primaryLabel}</span>
-                    <i class="ph-bold ph-arrow-right" style="font-size: 13px;"></i>
-                </button>
-                ` : `
-                <button onclick="event.stopPropagation(); window.closeTodayRewind();" style="
-                    flex: 1; max-width: 200px; height: 40px; border-radius: 999px;
-                    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
-                    color: #ffffff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
-                ">
-                    <span>Chiudi Storie</span>
-                </button>
-                `}
-            </div>
+        <!-- ── BOTTOM ACTION CHROME (Only 1 sleek Apple pill button, no extra arrows!) ── -->
+        <div id="story-bottom-chrome" style="position: relative; z-index: 30; flex-shrink: 0; transition: opacity 0.2s ease;">
+            ${currentSlide.primaryAction ? `
+            <button onclick="event.stopPropagation(); ${currentSlide.primaryAction.action || ''}" style="
+                width: 100%; height: 50px; border-radius: 999px;
+                background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                color: #ffffff; font-size: 14.5px; font-weight: 800;
+                font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+                letter-spacing: -0.01em; display: flex; align-items: center; justify-content: center; gap: 8px;
+                cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.6);
+                transition: transform 0.15s ease, background 0.15s ease;
+            " ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                <i class="ph-bold ${currentSlide.primaryAction.icon || 'ph-arrow-up-right'}" style="font-size: 17px;"></i>
+                <span>${currentSlide.primaryAction.label}</span>
+            </button>
+            ` : `
+            <div style="height: 10px;"></div>
+            `}
         </div>
     </div>`;
+};
+
+window.rerenderCurrentStorySlide = function() {
+    if (window._rewindState && typeof window._renderRewindFrame === 'function') {
+        window._renderRewindFrame(window._rewindState.currentIndex);
+    }
 };
 
 window._startRewindSlideTimer = function() {
@@ -4231,16 +4623,11 @@ window.pauseRewindViewer = function() {
         progressBar.style.transition = 'none';
         progressBar.style.width = computedWidth;
     }
-
-    const btn = document.getElementById('rewind-pause-btn');
-    if (btn) btn.innerHTML = '<i class="ph-fill ph-play" style="font-size:13px;"></i>';
 };
 
 window.resumeRewindViewer = function() {
     if (!window._rewindState || !window._rewindState.isPaused) return;
     window._rewindState.isPaused = false;
-    const btn = document.getElementById('rewind-pause-btn');
-    if (btn) btn.innerHTML = '<i class="ph-fill ph-pause" style="font-size:13px;"></i>';
     window._startRewindSlideTimer();
 };
 
@@ -4248,15 +4635,17 @@ window.togglePauseRewindViewer = function() {
     if (!window._rewindState) return;
     if (window._rewindState.isPaused) {
         window.resumeRewindViewer();
+        window._setRewindChromeVisibility(true);
     } else {
         window.pauseRewindViewer();
+        window._setRewindChromeVisibility(false);
     }
 };
 
 window.rewindNextSlide = function(force = false) {
     if (!window._rewindState) return;
     const now = Date.now();
-    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 260)) {
+    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 240)) {
         return;
     }
     window._rewindLastNavTime = now;
@@ -4270,7 +4659,7 @@ window.rewindNextSlide = function(force = false) {
         window._renderRewindFrame(window._rewindState.currentIndex);
         window._startRewindSlideTimer();
     } else {
-        // Fine delle novità odierne: chiude naturalmente e segna come visualizzato
+        // Fine delle storie: chiude e contrassegna come visualizzato
         if (typeof window.markTodayRewindSeen === 'function') {
             window.markTodayRewindSeen();
         }
@@ -4281,7 +4670,7 @@ window.rewindNextSlide = function(force = false) {
 window.rewindPrevSlide = function(force = false) {
     if (!window._rewindState) return;
     const now = Date.now();
-    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 260)) {
+    if (!force && window._rewindLastNavTime && (now - window._rewindLastNavTime < 240)) {
         return;
     }
     window._rewindLastNavTime = now;
@@ -4292,6 +4681,11 @@ window.rewindPrevSlide = function(force = false) {
         window._rewindState.remainingTime = window._rewindState.duration;
         window._rewindState.isPaused = false;
         window._renderRewindFrame(window._rewindState.currentIndex);
+        window._startRewindSlideTimer();
+    } else {
+        // Al primo slide, un tap a sinistra riavvia lo slide corrente
+        window._rewindState.remainingTime = window._rewindState.duration;
+        window._renderRewindFrame(0);
         window._startRewindSlideTimer();
     }
 };
@@ -4317,9 +4711,9 @@ window.closeTodayRewind = function() {
     const overlay = document.getElementById('today-rewind-viewer-overlay');
     const frame = document.getElementById('today-rewind-frame');
     if (frame) {
-        frame.style.transform = 'translateY(60px) scale(0.92)';
+        frame.style.transform = 'translateY(80px) scale(0.92)';
         frame.style.opacity = '0';
-        frame.style.transition = 'all 0.22s cubic-bezier(0.16,1,0.3,1)';
+        frame.style.transition = 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
     }
 
     // Ripristina la visibilità della pagina overview e lo scroll
