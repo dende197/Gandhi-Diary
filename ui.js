@@ -546,7 +546,24 @@ window.closeSubject = function () {
     }
 };
 // --- Google Calendar OAuth2 (Universal) ---
+// Deduplication guard: only one refresh can run at a time. Concurrent callers
+// share the same in-flight promise to avoid cascading token invalidations.
+let _refreshSessionPromise = null;
 window.refreshSessionToken = async function () {
+    if (_refreshSessionPromise) {
+        console.log('[refreshSessionToken] ⏳ Reusing in-flight refresh promise');
+        return _refreshSessionPromise;
+    }
+    _refreshSessionPromise = (async () => {
+    try {
+        return await _doRefreshSession();
+    } finally {
+        _refreshSessionPromise = null;
+    }
+    })();
+    return _refreshSessionPromise;
+};
+async function _doRefreshSession() {
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
     if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
@@ -624,7 +641,7 @@ window.refreshSessionToken = async function () {
 
     console.warn('[refreshSessionToken] ❌ All strategies failed');
     return false;
-};
+}
 
 window.googleFetchWithAuthRetry = async function (url, options = {}) {
     let res = await fetch(url, options);

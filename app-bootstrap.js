@@ -813,14 +813,7 @@
             _autoSyncInFlight = true;
             _lastAutoSyncAt = now;
             try {
-                // Pre-refresh session tokens to keep DiDUP connection alive
-                // This ensures cached Argo tokens on the server are always fresh
-                if (typeof window.refreshSessionToken === 'function') {
-                    const refreshed = await window.refreshSessionToken().catch(() => false);
-                    if (refreshed) {
-                        console.log(`[AutoSync:${reason}] Session tokens pre-refreshed`);
-                    }
-                }
+                // performSync handles auth refresh internally on 403, no pre-refresh needed
                 await performSync(sessionManager.load() || session, { suppressHideBoot: true, suppressRender: false });
                 // performSync already sets didup.connected = true on success
                 state.isOffline = false;
