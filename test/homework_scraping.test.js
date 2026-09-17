@@ -132,4 +132,63 @@ describe('Homework Scraping & Parsing Engine (lib/argo.js)', () => {
         assert.deepStrictEqual(extractHomeworkFromDashboard({}), []);
         assert.deepStrictEqual(extractHomeworkFromDashboard({ dati: [] }), []);
     });
+
+    test('canonicalizes DidUp subject names for Storia, Italiano, Matematica, Inglese', () => {
+        const dashboard = {
+            dati: [
+                {
+                    datGiorno: '2026-09-17',
+                    compiti: [
+                        { desMateria: 'STORIA', desCompito: 'Studiare cap. 3 Rivoluzione Francese', dataConsegna: '2026-09-22' },
+                        { desMateria: 'LINGUA E LETTERATURA ITALIANA', desCompito: 'Analisi Canto V Inferno', dataConsegna: '2026-09-22' },
+                        { desMateria: 'MATEMATICA', desCompito: 'Esercizi pag. 45 n. 1-10', dataConsegna: '2026-09-23' },
+                        { desMateria: 'LINGUA E CULTURA STRANIERA (INGLESE)', desCompito: 'Reading comprehension Unit 3', dataConsegna: '2026-09-23' }
+                    ]
+                }
+            ]
+        };
+        const tasks = extractHomeworkFromDashboard(dashboard);
+        assert.strictEqual(tasks.length, 4);
+
+        const storia = tasks.find(t => t.text.includes('Rivoluzione Francese'));
+        assert.ok(storia, 'Storia task should exist');
+        assert.strictEqual(storia.subject, 'Storia Triennio');
+        assert.strictEqual(storia.materia, 'Storia Triennio');
+        assert.strictEqual(storia.raw_materia, 'STORIA');
+
+        const italiano = tasks.find(t => t.text.includes('Canto V'));
+        assert.ok(italiano, 'Italiano task should exist');
+        assert.strictEqual(italiano.subject, 'Italiano');
+        assert.strictEqual(italiano.materia, 'Italiano');
+        assert.strictEqual(italiano.raw_materia, 'LINGUA E LETTERATURA ITALIANA');
+
+        const matematica = tasks.find(t => t.text.includes('pag. 45'));
+        assert.ok(matematica, 'Matematica task should exist');
+        assert.strictEqual(matematica.subject, 'Matematica');
+        assert.strictEqual(matematica.materia, 'Matematica');
+        assert.strictEqual(matematica.raw_materia, 'MATEMATICA');
+
+        const inglese = tasks.find(t => t.text.includes('Unit 3'));
+        assert.ok(inglese, 'Inglese task should exist');
+        assert.strictEqual(inglese.subject, 'Inglese');
+        assert.strictEqual(inglese.materia, 'Inglese');
+        assert.strictEqual(inglese.raw_materia, 'LINGUA E CULTURA STRANIERA (INGLESE)');
+    });
+
+    test('detects subject from text when materia is generic (AVVISO)', () => {
+        const dashboard = {
+            dati: [
+                {
+                    datGiorno: '2026-09-17',
+                    promemoria: [
+                        { desAnnotazioni: 'Compiti di matematica: esercizi pag 80 per il 24/09', materia: 'AVVISO' }
+                    ]
+                }
+            ]
+        };
+        const tasks = extractHomeworkFromDashboard(dashboard);
+        assert.strictEqual(tasks.length, 1);
+        assert.strictEqual(tasks[0].subject, 'Matematica');
+        assert.strictEqual(tasks[0].due_date, '2026-09-24');
+    });
 });
