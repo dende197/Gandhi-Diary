@@ -1,9 +1,9 @@
+const { database, checked, text, httpError, quota } = require('../lib/backend');
+const { persistCredentials } = require('../lib/argo-session');
 const {
     handleCors, debugLog, generatePid, normalizeClass, isValidName, createHeaders, generateSessionToken,
-    isSessionSecurityConfigured, getRequestBody, encryptArgoPassword, parseClassDetails, CLASS_REGEX
+    isSessionSecurityConfigured, getRequestBody, parseClassDetails, CLASS_REGEX
 } = require('../lib/helpers');
-const { getSupabase } = require('../lib/supabase');
-const { setArgoCredentials } = require('../lib/session-vault');
 const {
     AdvancedArgo, enrichProfiles, resolveIdentityForProfile,
     resolveIdentityFromWebUI, resolveClassFromAnagraficaWeb, extractClassFromDashboard,
@@ -22,9 +22,9 @@ module.exports = async function handler(req, res) {
     }
 
     const body = getRequestBody(req);
-    const school = (body.schoolCode || body.school || '').trim().toUpperCase();
-    const username = (body.username || '').trim().toLowerCase();
-    const password = body.password;
+    const school = text(body.schoolCode || body.school, 30).toUpperCase();
+    const username = text(body.username, 200).toLowerCase();
+    const password = typeof body.password === 'string' && body.password.length <= 1000 ? body.password : '';
     const selectedProfileIndex = (body.selectedProfileIndex !== undefined) ? body.selectedProfileIndex :
         (body.profileIndex !== undefined ? body.profileIndex : null);
 
@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        debugLog('LOGIN REQUEST', { school, username, idx: selectedProfileIndex });
+        await quota('login:' + school + ':' + username, 10, 300);
 
         const loginRes = await AdvancedArgo.rawLogin(school, username, password);
         const accessToken = loginRes.access_token;
@@ -55,11 +55,10 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        const parsedTargetIndex = parseInt(selectedProfileIndex, 10);
-        let targetIndex = (!isNaN(parsedTargetIndex) && parsedTargetIndex >= 0) ? parsedTargetIndex : 0;
-        if (targetIndex < 0 || targetIndex >= profiles.length) targetIndex = 0;
-
-        const targetProfile = profiles[targetIndex];
+        let targetIndex = selectedProfileIndex === null ? 0 : Number(selectedProfileIndex);
+        if (!Number.isInteger(targetIndex) || targetIndex < 0) throw httpError(400,'Indice profilo non valido');
+        const targetProfile = profiles.find(p => Number(p.index) === targetIndex);
+        if (!targetProfile) throw httpError(400, 'Profilo Argo non disponibile');
         const authToken = targetProfile.token;
 
         if (!accessToken || !authToken) throw new Error('Impossibile recuperare i token di sessione');
@@ -103,9 +102,9 @@ module.exports = async function handler(req, res) {
         const headers = createHeaders(school, accessToken, authToken, targetProfile?.idSoggetto);
         let dashboardData = {};
         try {
-            dashboardData = await getDashboard(headers);
+            dashboardData = await getDashboard(headers, {enableBackfill:false});
         } catch (dashErr) {
-            debugLog('⚠️ Login getDashboard failed (non-fatal)', dashErr.message);
+            throw dashErr;
         }
 
         // Dashboard fallback for class / track if still incomplete
@@ -132,13 +131,14 @@ module.exports = async function handler(req, res) {
         const assenzeData = extractAssenzeFromDashboard(dashboardData);
         const verificheData = extractVerificheFromDashboard(dashboardData);
 
+        // Preserve a student's existing PID when Argo reorders the account profiles.
+        if (targetProfile.idSoggetto != null) {
+            const existingIdentity = await checked(database().from('google_tokens').select('profile_index')
+                .eq('argo_school_code', school).eq('argo_username', username)
+                .eq('argo_id_soggetto', String(targetProfile.idSoggetto)).maybeSingle());
+            if (existingIdentity) targetIndex = existingIdentity.profile_index;
+        }
         const pid = generatePid(school, username, targetIndex);
-        setArgoCredentials(pid, {
-            schoolCode: school,
-            username,
-            password,
-            profileIndex: targetIndex
-        });
         let storedSpecialization = detectedTrack || null;
         let storedAvatar = null;
         const normalizedClass = (studentClass && detectedTrack)
@@ -146,72 +146,17 @@ module.exports = async function handler(req, res) {
             : (studentClass ? normalizeClass(studentClass) : null);
         const finalStudentClass = normalizedClass || studentClass || 'N/D';
 
-        const supabase = getSupabase();
-        if (supabase) {
-            try {
-                const { data: existingProfile } = await supabase.from('profiles')
-                    .select('specialization, avatar').eq('id', pid).single();
-
-                if (existingProfile) {
-                    storedSpecialization = storedSpecialization || existingProfile.specialization;
-                    storedAvatar = existingProfile.avatar;
-                }
-
-                await supabase.from('profiles').upsert({
-                    id: pid,
-                    name: studentName,
-                    class: finalStudentClass,
-                    specialization: storedSpecialization || null,
-                    avatar: storedAvatar || null,
-                    last_active: new Date().toISOString()
-                }, { onConflict: 'id' });
-
-                const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
-                const tokenExpiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-
-                // Smart merge: load existing row so we can preserve Google tokens that
-                // may already be linked, instead of overwriting them with NULL.
-                const { data: existingTokenRow, error: fetchError } = await supabase.from('google_tokens')
-                    .select('access_token, refresh_token, expiry_date, calendar_id')
-                    .eq('user_id', pid).maybeSingle();
-                if (fetchError) console.warn('⚠️ Could not fetch existing token row for merge:', fetchError.message);
-
-                const argoUpsertData = {
-                    user_id: pid,
-                    argo_school_code: school,
-                    argo_username: username,
-                    argo_password: encryptArgoPassword(password),
-                    profile_index: targetIndex,
-                    argo_access_token: accessToken,
-                    argo_auth_token: authToken,
-                    argo_tokens_expiry: tokenExpiry,
-                    argo_id_soggetto: targetProfile?.idSoggetto ?? null,
-                    updated_at: new Date().toISOString()
-                };
-
-                // Carry forward existing Google tokens so the Argo upsert never nullifies them.
-                if (existingTokenRow?.access_token) argoUpsertData.access_token = existingTokenRow.access_token;
-                if (existingTokenRow?.refresh_token) argoUpsertData.refresh_token = existingTokenRow.refresh_token;
-                if (existingTokenRow?.expiry_date) argoUpsertData.expiry_date = existingTokenRow.expiry_date;
-                if (existingTokenRow?.calendar_id) argoUpsertData.calendar_id = existingTokenRow.calendar_id;
-
-                const { error: upsertError } = await supabase.from('google_tokens').upsert(argoUpsertData, { onConflict: 'user_id' });
-                if (upsertError) {
-                    console.error('❌ LOGIN: Argo credential upsert FAILED:', upsertError.message, JSON.stringify(upsertError));
-                    throw upsertError;
-                }
-                console.log(`✅ LOGIN: Argo credentials saved to Supabase for ${pid} (school=${school}, user=${username})`);
-            } catch (e) {
-                console.error('❌ Supabase sync error:', e.message);
-                debugLog('⚠️ Supabase sync error', e.message);
-            }
-        }
-
-        console.log(`✅ LOGIN SUCCESS: Restituzione ${tasksData.length} compiti per ${school}/${username}:`, tasksData.map(t => `${t.subject} (${t.due_date})`).join(', ') || 'Nessun compito');
+        const supabase = database();
+        const existingProfile = await checked(supabase.from('profiles').select('specialization,avatar').eq('id',pid).maybeSingle());
+        storedSpecialization = storedSpecialization || existingProfile?.specialization || null;
+        storedAvatar = existingProfile?.avatar || null;
+        await persistCredentials(pid,school,username,password,targetIndex,loginRes,{...targetProfile,class:finalStudentClass});
+        await checked(supabase.from('profiles').upsert({ id:pid,name:studentName,class:finalStudentClass,
+            specialization:storedSpecialization,avatar:storedAvatar,last_active:new Date().toISOString() },{onConflict:'id'}));
 
         const resp = {
             success: true,
-            sessionToken: generateSessionToken(pid),
+            sessionToken: await generateSessionToken(pid),
             session: {
                 schoolCode: school,
                 authToken,
@@ -269,3 +214,5 @@ module.exports = async function handler(req, res) {
         });
     }
 }
+
+module.exports = require('../lib/backend').endpoint(module.exports);

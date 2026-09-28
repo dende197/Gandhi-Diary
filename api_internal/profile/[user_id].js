@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
     const { user_id } = req.query;
 
     const normalizedUserId = normalizeUserIdParam(user_id);
-    if (!verifySessionToken(req, normalizedUserId)) {
+    if (!(await verifySessionToken(req, normalizedUserId))) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
     }
 
@@ -26,3 +26,5 @@ module.exports = async function handler(req, res) {
         res.status(500).json({ success: false, error: e.message });
     }
 }
+
+module.exports = require('../../lib/backend').endpoint(module.exports);

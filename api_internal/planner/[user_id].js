@@ -1,120 +1,85 @@
-const { handleCors, parseJsonb, verifySessionToken, normalizeUserIdParam, getRequestBody } = require('../../lib/helpers');
-const { getSupabase } = require('../../lib/supabase');
-
-module.exports = async function handler(req, res) {
+const {
+    handleCors,
+    verifySessionToken,
+    normalizeUserIdParam,
+    getRequestBody,
+    parseJsonb,
+} = require('../../lib/helpers');
+const { database, checked, httpError } = require('../../lib/backend');
+module.exports = async (req, res) => {
     if (handleCors(req, res)) return;
-
-    const { user_id } = req.query;
-    if (!user_id) return res.status(400).json({ success: false, error: 'user_id mancante' });
-
-    const userId = normalizeUserIdParam(user_id);
-
-    if (!verifySessionToken(req, userId)) {
+    const id = normalizeUserIdParam(req.query.user_id);
+    if (!(await verifySessionToken(req, id)))
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
-    }
-
-    // GET
+    const db = database();
     if (req.method === 'GET') {
-        const supabase = getSupabase();
-        if (!supabase) return res.status(500).json({ success: false, error: 'Supabase not configured' });
-
-        try {
-            const { data, error } = await supabase
-                .from('planners')
-                .select('*')
-                .eq('user_id', userId)
-                .limit(1);
-
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        user_id: userId,
-                        planned_tasks: {},
-                        stress_levels: {},
-                        planned_details: {},
-                        tasks: [],
-                        prep_levels: {},
-                        updated_at: null
-                    }
-                });
-            }
-
-            const row = data[0];
-
-            // Parsa campi jsonb nel caso arrivino come stringa
-            row.tasks = parseJsonb(row.tasks, []);
-            row.planned_tasks = parseJsonb(row.planned_tasks, {});
-            row.stress_levels = parseJsonb(row.stress_levels, {});
-            row.planned_details = parseJsonb(row.planned_details, {});
-            row.prep_levels = parseJsonb(row.prep_levels, {});
-
-            return res.json({ success: true, data: row });
-
-        } catch (e) {
-            return res.status(500).json({ success: false, error: e.message });
-        }
+        const row = await checked(db.from('planners').select('*').eq('user_id', id).maybeSingle());
+        return res.json({
+            success: true,
+            data: row || {
+                user_id: id,
+                planned_tasks: {},
+                stress_levels: {},
+                planned_details: {},
+                tasks: [],
+                prep_levels: {},
+                version: 0,
+                updated_at: null,
+            },
+        });
     }
-
-    // PUT
-    if (req.method === 'PUT') {
-        const body = getRequestBody(req);
-
-        // Embed stressVents into stress_levels as __vents key (no separate DB column needed).
-        // Always set __vents (even to {}) so callers can clear it by sending stressVents: {}
-        const stressLevels = body.stressLevels || body.stress_levels || {};
-        const stressVents = body.stressVents || body.stress_vents || {};
-        stressLevels.__vents = stressVents;
-
-        const payload = {
-            user_id: userId,
-            planned_tasks: body.plannedTasks || body.planned_tasks || {},
-            stress_levels: stressLevels,
-            planned_details: body.plannedDetails || body.planned_details || {},
-            tasks: body.tasks || [],
-            prep_levels: body.prepLevels || body.prep_levels || {},
-            updated_at: new Date().toISOString()
-        };
-
-        const supabase = getSupabase();
-        if (!supabase) return res.status(503).json({ success: false, error: 'Supabase non configurato' });
-
-        try {
-            const { data, error } = await supabase
-                .from('planners')
-                .upsert(payload, { onConflict: 'user_id' })
-                .select()
-                .single();
-
-            if (error) {
-                console.error('planner upsert error:', error.message);
-                return res.status(500).json({ success: false, error: error.message || 'Errore aggiornamento planner' });
-            }
-
-            if (!data) {
-                return res.status(500).json({ success: false, error: 'Nessun dato restituito dal database' });
-            }
-
-            return res.json({
-                success: true,
-                data: {
-                    userId: data.user_id,
-                    plannedTasks: parseJsonb(data.planned_tasks, {}),
-                    stressLevels: parseJsonb(data.stress_levels, {}),
-                    plannedDetails: parseJsonb(data.planned_details, {}),
-                    tasks: parseJsonb(data.tasks, []),
-                    prepLevels: parseJsonb(data.prep_levels, {}),
-                    stressVents: parseJsonb(data.stress_levels, {}).__vents || {},
-                    updatedAt: data.updated_at
-                }
-            });
-        } catch (e) {
-            console.error('planner upsert exception:', e.message);
-            return res.status(500).json({ success: false, error: e.message || 'Errore aggiornamento planner' });
-        }
+    if (req.method !== 'PUT') return res.status(405).json({ success: false, error: 'Method not allowed' });
+    const body = getRequestBody(req);
+    if (!Number.isSafeInteger(body.version) || body.version < 0)
+        throw httpError(428, 'Leggi il planner prima di salvarlo: versione mancante');
+    const payload = {};
+    for (const [camel, snake] of [
+        ['plannedTasks', 'planned_tasks'],
+        ['plannedDetails', 'planned_details'],
+        ['stressLevels', 'stress_levels'],
+        ['prepLevels', 'prep_levels'],
+        ['tasks', 'tasks'],
+    ]) {
+        const value = body[camel] ?? body[snake];
+        if (value === undefined) continue;
+        if (
+            !value ||
+            typeof value !== 'object' ||
+            (snake === 'tasks' ? !Array.isArray(value) : Array.isArray(value))
+        )
+            throw httpError(400, 'Formato planner non valido');
+        payload[snake] = value;
     }
-
-    res.status(405).json({ error: 'Method not allowed' });
+    if (body.stressVents !== undefined || body.stress_vents !== undefined) {
+        const vents = body.stressVents ?? body.stress_vents;
+        if (!vents || typeof vents !== 'object' || Array.isArray(vents))
+            throw httpError(400, 'Formato stressVents non valido');
+        if (!payload.stress_levels) throw httpError(400, 'Invia stressLevels insieme a stressVents');
+        payload.stress_levels = { ...payload.stress_levels, __vents: vents };
+    }
+    const rows = await checked(
+        db.rpc('save_planner', { p_user: id, p_version: body.version, p_payload: payload }),
+    );
+    if (!rows?.length)
+        throw httpError(
+            409,
+            'Il planner è stato modificato da un altro dispositivo. Ricarica prima di salvare.',
+        );
+    const d = rows[0];
+    return res.json({
+        success: true,
+        data: {
+            userId: id,
+            plannedTasks: parseJsonb(d.planned_tasks, {}),
+            plannedDetails: parseJsonb(d.planned_details, {}),
+            stressLevels: parseJsonb(d.stress_levels, {}),
+            tasks: parseJsonb(d.tasks, []),
+            prepLevels: parseJsonb(d.prep_levels, {}),
+            stressVents: parseJsonb(d.stress_levels, {}).__vents || {},
+            version: d.version,
+            updatedAt: d.updated_at,
+        },
+    });
 };
+
+module.exports = require('../../lib/backend').endpoint(module.exports);

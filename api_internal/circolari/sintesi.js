@@ -6,29 +6,8 @@ const { hasGeminiKey, generateWithGemini } = require('../../lib/gemini');
 const { getGroq } = require('../../lib/groq');
 const { getSintesiFromCache, setSintesiInCache } = require('../../lib/sintesiCache');
 
-// In-memory rate limiting map: IP -> array of request timestamps
-const rateLimitMap = new Map();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 15;
-const MAX_PDF_BYTES = 8 * 1024 * 1024; // 8 MB
-
-function checkRateLimit(clientIp) {
-    const now = Date.now();
-    const timestamps = rateLimitMap.get(clientIp) || [];
-    const recent = timestamps.filter(t => (now - t) < RATE_LIMIT_WINDOW_MS);
-    if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
-        return false;
-    }
-    recent.push(now);
-    rateLimitMap.set(clientIp, recent);
-    // Cleanup stale entries
-    if (rateLimitMap.size > 1000) {
-        for (const [ip, ts] of rateLimitMap.entries()) {
-            if (!ts.some(t => (now - t) < RATE_LIMIT_WINDOW_MS)) rateLimitMap.delete(ip);
-        }
-    }
-    return true;
-}
+const { quota, endpoint, signal } = require('../../lib/backend');
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
 
 // Returns the allowed hostname for circolari links (derived from SCHOOL_CIRCOLARI_URL).
 function _getAllowedHostname() {
@@ -44,7 +23,7 @@ function _getAllowedHostname() {
 function isAllowedCircolariLink(link) {
     try {
         const parsed = new URL(link);
-        if (parsed.protocol !== 'https:') return false;
+        if (parsed.protocol !== 'https:' || parsed.username || parsed.password || (parsed.port && parsed.port !== '443')) return false;
         const allowed = _getAllowedHostname();
         const baseAllowed = allowed.replace(/^www\./, '');
         const host = parsed.hostname.toLowerCase();
@@ -58,28 +37,7 @@ module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    // Client IP rate limiting
-    const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1').split(',')[0].trim();
-    if (!checkRateLimit(clientIp)) {
-        return res.status(429).json({
-            success: false,
-            error: 'Troppe richieste di sintesi. Attendi un minuto prima di riprovare.',
-            errorType: 'rateLimit'
-        });
-    }
-
     const body = getRequestBody(req);
-
-    // Session verification: log warning but do not block if token is missing/invalid.
-    // IP-level rate limiting and SSRF domain whitelisting protect against abuse.
-    // This avoids blocking valid users after security updates.
-    if (isSessionSecurityConfigured()) {
-        const sessionUserId = normalizeUserId(req.headers['x-user-id'] || body.userId || '');
-        if (!sessionUserId || !verifySessionToken(req, sessionUserId)) {
-            console.warn(`[Sintesi] Session verification check failed for userId="${sessionUserId}" from IP=${clientIp}. Allowing request (rate-limited).`);
-        }
-    }
-
     const { link, id } = body;
     if (!link) return res.status(400).json({ success: false, error: 'Link mancante', errorType: 'badRequest' });
 
@@ -88,11 +46,12 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Link non consentito', errorType: 'badRequest' });
     }
 
-    // Cache check
-    if (id) {
-        const cached = getSintesiFromCache(id);
-        if (cached) return res.json({ success: true, sintesi: cached, id, cached: true });
-    }
+    const sessionUserId = normalizeUserId(req.headers['x-user-id'] || body.userId || '');
+    if (!sessionUserId || !await verifySessionToken(req,sessionUserId)) return res.status(403).json({success:false,error:'Sessione non valida'});
+    await quota(`summary:${sessionUserId}`,15);
+    const cacheKey = new URL(link); cacheKey.hash = '';
+    const cached = await getSintesiFromCache(cacheKey.href);
+    if (cached) return res.json({success:true,sintesi:cached,id,cached:true});
 
     try {
         let textContent = '';
@@ -100,6 +59,7 @@ module.exports = async function handler(req, res) {
 
         const safeAxiosOptions = {
             timeout: 12000,
+            signal: signal(),
             maxRedirects: 3,
             maxContentLength: MAX_PDF_BYTES,
             beforeRedirect: (options) => {
@@ -110,7 +70,7 @@ module.exports = async function handler(req, res) {
             }
         };
 
-        if (!link.toLowerCase().endsWith('.pdf')) {
+        if (!new URL(link).pathname.toLowerCase().endsWith('.pdf')) {
             const htmlRes = await axios.get(link, safeAxiosOptions);
             const $ = cheerio.load(htmlRes.data);
             const pdfLinks = [];
@@ -119,8 +79,7 @@ module.exports = async function handler(req, res) {
             });
             if (pdfLinks.length > 0) {
                 const bestLink = pdfLinks.find(url => url.toLowerCase().includes('circolare') || url.toLowerCase().includes('comunicato')) || pdfLinks[0];
-                const schoolBase = `https://${_getAllowedHostname()}`;
-                const resolvedUrl = (bestLink.startsWith('http') ? bestLink : `${schoolBase}${bestLink.startsWith('/') ? bestLink : '/' + bestLink}`).trim();
+                const resolvedUrl = new URL(bestLink, htmlRes.request?.res?.responseUrl || link).href;
                 // Only follow PDF links that stay within the school's own domain.
                 if (isAllowedCircolariLink(resolvedUrl)) {
                     finalPdfUrl = resolvedUrl;
@@ -132,7 +91,7 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        if (finalPdfUrl.toLowerCase().endsWith('.pdf') && !textContent) {
+        if (new URL(finalPdfUrl).pathname.toLowerCase().endsWith('.pdf') && !textContent) {
             try {
                 const pdfRes = await axios.get(finalPdfUrl, {
                     ...safeAxiosOptions,
@@ -199,7 +158,7 @@ Circolare: "${textContent.substring(0, 7000)}"`;
                             max_completion_tokens: 1024,
                             top_p: 1,
                             stream: false
-                        });
+                        }, {signal:signal(),timeout:15000,maxRetries:0});
 
                         const text = completion.choices?.[0]?.message?.content;
                         if (text && text.trim().length > 0) {
@@ -245,8 +204,8 @@ Circolare: "${textContent.substring(0, 7000)}"`;
         }
 
         // Save in cache
-        if (id && sintesi && !sintesi.includes('Impossibile')) {
-            setSintesiInCache(id, sintesi);
+        if (sintesi && !sintesi.includes('Impossibile')) {
+            await setSintesiInCache(cacheKey.href, sintesi);
         }
 
         return res.json({ success: true, sintesi, id });
@@ -256,3 +215,5 @@ Circolare: "${textContent.substring(0, 7000)}"`;
         res.status(500).json({ success: false, error: error.message, errorType: 'serverError' });
     }
 };
+
+module.exports = endpoint(module.exports);

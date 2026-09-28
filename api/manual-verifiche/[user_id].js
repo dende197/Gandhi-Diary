@@ -1,3 +1,4 @@
+const {endpoint,isoDate,text} = require('../../lib/backend');
 const { getSupabase } = require('../../lib/supabase');
 const { handleCors, verifySessionToken, normalizeUserIdParam, getRequestBody } = require('../../lib/helpers');
 
@@ -9,7 +10,7 @@ module.exports = async function handler(req, res) {
 
     const userId = normalizeUserIdParam(user_id);
 
-    if (!verifySessionToken(req, userId)) {
+    if (!(await verifySessionToken(req, userId))) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
     }
 
@@ -36,7 +37,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'POST') {
         const body = getRequestBody(req);
         const { subject, date, type, args } = body;
-        if (!subject || !date || !type) {
+        if (!text(subject,200) || !isoDate(date) || !['scritta','orale','pratica','unknown'].includes(type) || (args != null && typeof args !== 'string')) {
             return res.status(400).json({ success: false, error: 'Mancano campi obbligatori' });
         }
 
@@ -60,6 +61,9 @@ module.exports = async function handler(req, res) {
         const { id, done, date, subject, type, args } = body;
         if (!id) return res.status(400).json({ success: false, error: 'ID verifica mancante' });
 
+        if ((done !== undefined && typeof done !== 'boolean') || (date !== undefined && !isoDate(date)) ||
+            (subject !== undefined && !text(subject,200)) || (type !== undefined && !['scritta','orale','pratica','unknown'].includes(type)) ||
+            (args !== undefined && typeof args !== 'string')) return res.status(400).json({success:false,error:'Dati verifica non validi'});
         const updates = {};
         if (done !== undefined) updates.done = done;
         if (date) updates.date = date;
@@ -105,3 +109,5 @@ module.exports = async function handler(req, res) {
 
     res.status(405).json({ error: 'Method not allowed' });
 };
+
+module.exports = endpoint(module.exports);

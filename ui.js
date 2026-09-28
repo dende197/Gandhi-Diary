@@ -9592,6 +9592,20 @@ window.logout = async function (skipConfirm = false) {
             return;
         }
     }
+        const logoutUser = getUserId();
+        if (logoutUser && logoutUser !== 'guest') {
+            try {
+                if (window.saveTasksToSupabase) await window.saveTasksToSupabase();
+                const response = await fetch(`${API_BASE_URL}/api/auth?action=logout`,{
+                    method:'POST',headers:getSessionHeaders(),body:JSON.stringify({userId:logoutUser}),signal:AbortSignal.timeout(15000)
+                });
+                if (!response.ok && response.status !== 403) throw new Error('Revoca sessione non riuscita');
+            } catch (error) {
+                if (typeof window.showToast === 'function') window.showToast('Connessione necessaria per uscire in sicurezza. Riprova.','warning');
+                return;
+            }
+        }
+        clearInterval(window._classPollTimer);
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
         state._loggedOut = true;
         state.isLoggedIn = false;
@@ -9683,19 +9697,7 @@ window.logout = async function (skipConfirm = false) {
         _lastRenderedLoggedIn = false;
         _lastRenderedView = 'login';
 
-        if (currentUserId && currentUserId !== 'guest') {
-            const payload = {
-                plannedTasks: state.plannedTasks || {},
-                plannedDetails: {},
-                updatedAt: new Date().toISOString()
-            };
-            fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(currentUserId)}`, {
-                method: 'PUT',
-                headers: getSessionHeaders(),
-                body: JSON.stringify(payload),
-                keepalive: true
-            }).catch((e) => { console.warn("Logout save failed", e); });
-        }
+
 };
 
 window.saveProfileToServer = async function (profileData) {
@@ -11459,6 +11461,7 @@ function getClassRepAuthInfo() {
             || localStorage.getItem('gc_cached_session_token') || '';
         if (token) headers['x-session-token'] = token;
     }
+    headers['x-user-id'] = userId;
     return { userId, userName, headers };
 }
 
@@ -11482,7 +11485,7 @@ window._fetchClassDataSilent = async function(className) {
     window._isFetchingClassDataSilent = true;
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
+        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`,{headers:getClassRepAuthInfo().headers});
         const json = await res.json();
         if (json && json.success) {
             let changed = false;
@@ -11521,7 +11524,7 @@ window.fetchRemoteClassData = async function(className, forceRender = false) {
 
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`);
+        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`,{headers:getClassRepAuthInfo().headers});
         const json = await res.json();
         if (json && json.success) {
             if (Array.isArray(json.representatives)) {
@@ -11553,47 +11556,13 @@ window.fetchRemoteClassData = async function(className, forceRender = false) {
 };
 
 window.setupClassRealtimeSubscription = async function() {
-    const userClass = getEffectiveUserClass();
-    if (!userClass) return;
-    if (window._classRealtimeSubscribedClass === userClass && window._classRealtimeChannel) return;
-
-    try {
-        const client = typeof getSupabaseClient === 'function' 
-            ? await getSupabaseClient() 
-            : (typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null);
-        if (!client) return;
-
-        if (window._classRealtimeChannel) {
-            try { client.removeChannel(window._classRealtimeChannel); } catch (_) {}
-            window._classRealtimeChannel = null;
+    clearInterval(window._classPollTimer);
+    const userId = getClassRepAuthInfo().userId;
+    window._classPollTimer = setInterval(() => {
+        if (state.isLoggedIn && document.visibilityState === 'visible' && getClassRepAuthInfo().userId === userId) {
+            window._fetchClassDataSilent(getEffectiveUserClass());
         }
-
-        window._classRealtimeSubscribedClass = userClass;
-
-        // Debounced handler: coalesce rapid-fire Realtime events
-        const debouncedFetch = () => {
-            clearTimeout(window._classRealtimeDebounce);
-            window._classRealtimeDebounce = setTimeout(() => {
-                window.fetchRemoteClassData(userClass, true);
-                if (typeof window.updateTodayStoriesTray === 'function') {
-                    window.updateTodayStoriesTray();
-                }
-            }, 500);
-        };
-
-        window._classRealtimeChannel = client
-            .channel('realtime:class:' + userClass)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals', filter: `class_id=eq.${userClass}` }, debouncedFetch)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'proposal_votes' }, debouncedFetch)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'class_representatives', filter: `class=eq.${userClass}` }, debouncedFetch)
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log(`[Supabase Realtime] Connected to class room: ${userClass}`);
-                }
-            });
-    } catch (err) {
-        console.warn('[ClassRealtime] Subscription error:', err.message);
-    }
+    },60000);
 };
 
 window.toggleClassRepresentative = async function(enable) {
