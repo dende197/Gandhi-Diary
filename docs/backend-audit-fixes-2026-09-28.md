@@ -93,6 +93,14 @@ Questa versione richiede una pubblicazione coordinata. **Non pubblicare soltanto
 
 ## Verifiche ripetibili
 
+### Verifica Supabase del 29 settembre
+
+Ispezionati in sola lettura colonne, vincoli, policy, privilegi e cronologia del progetto collegato. Le tabelle usate dalle correzioni hanno i tipi e le chiavi attesi; le nuove tabelle operative e la versione del planner non sono ancora presenti. Nella cronologia risulta applicata soltanto `20260823142414_init_proposals_schema.sql`. La migrazione di base antecedente richiede quindi una riconciliazione esplicita (`db push --include-all --dry-run` per controllare l'elenco prima dell'applicazione); non segnare come applicati aggiornamenti non eseguiti.
+
+Rilevate anche quattro tabelle storiche senza riferimenti nel codice corrente: `conversations`, `conversation_participants`, `mental_health_logs`, `push_subscriptions`. I privilegi consentono lettura/inserimento anonimi; le prime tre hanno policy pubbliche permissive, l'ultima non ha RLS. La policy chiamata "Service role full access" su `mental_health_logs` è in realtà assegnata a PUBLIC. La migrazione `202609290001_lock_legacy_tables.sql` chiude tali accessi, mantiene i dati e l'accesso amministrativo, e salta le tabelle assenti nelle installazioni nuove. La verifica locale copre sia tabelle assenti sia presenti, riesecuzione, conservazione dei dati e diniego di lettura/scrittura ai client. Eventuali applicazioni esterne alla repository che usano queste tabelle richiedono verifica prima del rilascio.
+
+La simulazione `db push --linked --include-all --dry-run` è riuscita: elenca, nell'ordine, base (`20260801000000`), policy (`20260901`), integrità (`202609280001`) e tabelle storiche (`202609290001`). La suite locale aggiornata passa 132 test su 132 con Node 20. Nessuna modifica è stata applicata al database reale. Restano necessari backup, aggiornamento coordinato, nuovo login e prove con account di test; questa ispezione non certifica le integrazioni esterne o le prestazioni in produzione.
+
 ```sh
 npm ci
 npm test

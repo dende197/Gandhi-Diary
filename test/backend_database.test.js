@@ -3,6 +3,38 @@ const assert = require('node:assert/strict'),
     fs = require('node:fs'),
     path = require('node:path');
 const { PGlite } = require('@electric-sql/pglite');
+test('legacy tables retain data and service access while public access is closed', async () => {
+    const db = new PGlite();
+    const tables = ['conversations', 'conversation_participants', 'mental_health_logs', 'push_subscriptions'];
+    const migration = fs.readFileSync(path.join(__dirname,
+        '../supabase/migrations/202609290001_lock_legacy_tables.sql'), 'utf8');
+    try {
+        await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;');
+        await db.exec(migration); // Fresh installations do not have the historical feature tables.
+        for (const table of tables) {
+            await db.exec(`CREATE TABLE ${table}(id integer PRIMARY KEY);
+                INSERT INTO ${table} VALUES(1);
+                GRANT ALL ON ${table} TO PUBLIC, anon, authenticated;
+                CREATE POLICY legacy_public ON ${table} USING(true) WITH CHECK(true);`);
+        }
+        await db.exec(migration);
+        await db.exec(migration);
+        for (const table of tables) {
+            for (const role of ['anon', 'authenticated']) {
+                await db.exec(`SET ROLE ${role}`);
+                await assert.rejects(() => db.query(`SELECT * FROM ${table}`), /permission denied/);
+                await assert.rejects(() => db.query(`INSERT INTO ${table} VALUES(2)`), /permission denied/);
+                await db.exec('RESET ROLE');
+            }
+            assert.equal((await db.query(`SELECT relrowsecurity FROM pg_class WHERE oid='${table}'::regclass`)).rows[0].relrowsecurity, true);
+            await db.exec('SET ROLE service_role');
+            assert.deepEqual((await db.query(`SELECT * FROM ${table}`)).rows, [{ id: 1 }]);
+            await db.exec(`INSERT INTO ${table} VALUES(2); RESET ROLE;`);
+        }
+    } finally {
+        await db.close();
+    }
+});
 test('B05/B35/B38 database policies, atomic planner writes, representative limits and closed votes', async () => {
     const db = new PGlite();
     try {
