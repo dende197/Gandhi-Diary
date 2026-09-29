@@ -1,47 +1,12 @@
-/**
- * api/google.js
- * Universal Google Calendar OAuth2 — per-user flow.
- * 
- * Actions:
- *   ?action=auth-url   → Genera URL di consenso Google
- *   ?action=callback    → Riceve auth code, scambia per tokens, salva in Supabase
- *   ?action=sync        → Sincronizza compiti Argo → Google Calendar dell'utente
- *   ?action=disconnect  → Rimuove i tokens Google dell'utente
- *   ?action=status      → Verifica se l'utente ha Google collegato
- */
-
 const crypto = require('crypto');
-const { google } = require('googleapis');
-const { AdvancedArgo, getDashboard, extractHomeworkFromDashboard, extractAssenzeFromDashboard, extractVerificheFromDashboard } = require('../lib/argo');
-const { syncTasksToCalendar, syncVerificheToCalendar, syncUnjustifiedAttendanceReminders } = require('../lib/googleCalendar');
-const {
-    createHeaders, debugLog, encryptArgoPassword, decryptArgoPassword,
-    handleCors, verifySessionToken, normalizeUserId, generatePid, SESSION_TOKEN_HEX_LENGTH,
-    getRequestBody
-} = require('../lib/helpers');
-const { getSupabase } = require('../lib/supabase');
-const { getArgoCredentials } = require('../lib/session-vault');
-
-// --- Google OAuth2 Config ---
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ||
-    (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}/api/google?action=callback`
-        : 'https://g-connect-backend-r5j1.vercel.app/api/google?action=callback');
-
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h conservative TTL (Argo tokens typically live ~8h)
-const RECENT_TOKEN_EXPIRY_STAGGER_MS = 5 * 60 * 1000; // 5 minutes
-const HEX_TOKEN_REGEX = new RegExp(`^[0-9a-fA-F]{${SESSION_TOKEN_HEX_LENGTH}}$`);
+const { handleCors, verifySessionToken, normalizeUserId, getRequestBody } = require('../lib/helpers');
+const { database, checked, endpoint, httpError, withLease, text } = require('../lib/backend');
+const { oauthClient, saveGoogleTokens, syncGoogleUser } = require('../lib/google-sync');
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const HEX_TOKEN_REGEX = /^[0-9a-fA-F]{64}$/;
 const WEEK_DAYS = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
 const HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-function getOAuth2Client() {
-    return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
-}
-
+const PWA_URL = process.env.PWA_URL || 'https://dende197.github.io/Gandhi-Diary/';
 function getOAuthStateKey() {
     const key = process.env.OAUTH_STATE_KEY || process.env.ARGO_ENCRYPTION_KEY || '';
     if (!HEX_TOKEN_REGEX.test(key)) return null;
@@ -81,7 +46,12 @@ function verifyAndParseOAuthState(rawState) {
     try {
         const parsed = JSON.parse(decodeBase64Url(encodedPayload));
         if (!parsed || typeof parsed !== 'object' || !parsed.userId) return null;
-        if (!parsed.ts || (Date.now() - Number(parsed.ts)) > OAUTH_STATE_TTL_MS) return null;
+        if (
+            !Number.isFinite(parsed.ts) ||
+            parsed.ts > Date.now() + 30000 ||
+            Date.now() - parsed.ts > OAUTH_STATE_TTL_MS
+        )
+            return null;
         return parsed;
     } catch {
         return null;
@@ -148,581 +118,131 @@ function parseAndValidateClassSchedule(rawClassSchedule) {
     return { value: schedule };
 }
 
-function parseProfileIndex(value, fallback = 0) {
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-function getVaultCredentialsByCandidates(candidates = []) {
-    const dedupedCandidates = [...new Set(
-        candidates
-            .map(candidate => String(candidate || '').trim().toLowerCase())
-            .filter(Boolean)
-    )];
-
-    for (const candidate of dedupedCandidates) {
-        const creds = getArgoCredentials(candidate);
-        if (creds?.password) return creds;
-    }
-    return null;
-}
-
-function getVaultCredentialsFromContext({ userId, schoolCode, username, profileIndex } = {}) {
-    const normalizedUserId = normalizeUserId(userId);
-    const candidates = [normalizedUserId];
-
-    if (schoolCode && username) {
-        candidates.push(generatePid(schoolCode, username, parseProfileIndex(profileIndex, 0)));
-    }
-
-    return getVaultCredentialsByCandidates(candidates);
-}
-
-// --- Token Storage (Supabase) ---
-async function saveTokens(userId, tokens, argoCreds = null) {
-    const normalizedUserId = normalizeUserId(userId);
-    const updateData = {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expiry_date: tokens.expiry_date || null,
-        calendar_id: 'primary',
-        updated_at: new Date().toISOString()
-    };
-
-    // If argo credentials provided (during initial link), save them too
-    if (argoCreds) {
-        updateData.argo_school_code = argoCreds.schoolCode;
-        updateData.argo_username = argoCreds.username;
-        updateData.argo_password = encryptArgoPassword(argoCreds.password);
-        updateData.profile_index = argoCreds.profileIndex ?? 0;
-    }
-
-    // Try to update the existing row first: this is a safe partial update that only touches
-    // the columns present in updateData, preserving Argo credentials when only refreshing
-    // Google tokens (i.e. when argoCreds is null).
-    const { data: updated, error: updateError } = await getSupabase()
-        .from('google_tokens')
-        .update(updateData)
-        .eq('user_id', normalizedUserId)
-        .select('user_id');
-
-    if (updateError) throw new Error(`Supabase save error: ${updateError.message}`);
-
-    // If no row was updated the user is new — insert a fresh row.
-    if (!updated || updated.length === 0) {
-        const { error: insertError } = await getSupabase()
-            .from('google_tokens')
-            .insert({ user_id: normalizedUserId, ...updateData });
-        if (insertError) throw new Error(`Supabase save error: ${insertError.message}`);
-    }
-
-}
-
-async function loadTokens(userId) {
-    const normalizedUserId = normalizeUserId(userId);
-    const { data, error } = await getSupabase()
-        .from('google_tokens')
-        .select('*')
-        .eq('user_id', normalizedUserId)
-        .single();
-    if (error || !data) return null;
-    return data;
-}
-
-async function deleteTokens(userId) {
-    const normalizedUserId = normalizeUserId(userId);
-    const { error } = await getSupabase()
-        .from('google_tokens')
-        .delete()
-        .eq('user_id', normalizedUserId);
-    if (error) throw new Error(`Supabase delete error: ${error.message}`);
-}
-
-function getAuthenticatedClient(tokenRow) {
-    const oauth2 = getOAuth2Client();
-    oauth2.setCredentials({
-        access_token: tokenRow.access_token,
-        refresh_token: tokenRow.refresh_token,
-        expiry_date: tokenRow.expiry_date
-    });
-    // Auto-refresh: when tokens are refreshed, update Supabase
-    oauth2.on('tokens', async (newTokens) => {
-        try {
-            const update = {
-                access_token: newTokens.access_token,
-                expiry_date: newTokens.expiry_date,
-                updated_at: new Date().toISOString()
-            };
-            if (newTokens.refresh_token) update.refresh_token = newTokens.refresh_token;
-            await getSupabase().from('google_tokens').update(update).eq('user_id', tokenRow.user_id);
-        } catch (e) {
-            console.error('Token auto-refresh save failed:', e.message);
-        }
-    });
-    return oauth2;
-}
-
-// ============= HANDLER =============
-module.exports = async function handler(req, res) {
+module.exports = endpoint(async function handler(req, res) {
     if (handleCors(req, res)) return;
-
     const action = req.query.action || 'status';
-
-    try {
-        switch (action) {
-
-            // ============= AUTH URL =============
-            case 'auth-url': {
-                if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-                    return res.status(500).json({ success: false, error: 'Google OAuth non configurato sul server' });
-                }
-                if (req.method !== 'GET' && req.method !== 'POST') {
-                    return res.status(405).json({ success: false, error: 'Method not allowed' });
-                }
-
-                const userId = req.query.userId || getRequestBody(req).userId;
-                if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
-
-                const normalizedUserId = normalizeUserId(userId);
-                if (!verifySessionToken(req, normalizedUserId)) {
-                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
-                }
-
-                const signedState = signOAuthState({
-                    userId: normalizedUserId,
-                    ts: Date.now()
-                });
-                if (!signedState) {
-                    return res.status(500).json({ success: false, error: 'OAuth state signing key non configurata' });
-                }
-
-                const oauth2 = getOAuth2Client();
-                const url = oauth2.generateAuthUrl({
-                    access_type: 'offline',
-                    scope: SCOPES,
-                    // Space-separated prompts: force consent screen + account picker
-                    // to avoid cross-profile Google account reuse.
-                    prompt: 'consent select_account',
-                    state: signedState
-                });
-
-                if (req.query.redirect === 'true') {
-                    return res.redirect(url);
-                }
-
-                return res.json({ success: true, url });
-            }
-
-            // ============= CALLBACK =============
-            case 'callback': {
-                const code = req.query.code;
-                const stateParam = req.query.state;
-                const error = req.query.error;
-
-                const parsedState = verifyAndParseOAuthState(stateParam);
-                const userId = parsedState?.userId || null;
-
-                debugLog('[OAuth] Code received', { codePrefix: code?.slice(0, 10) });
-                if (error) {
-                    console.error('[Google OAuth] Error from Google:', error);
-                    return res.redirect('/?google=error&reason=' + encodeURIComponent(error));
-                }
-
-                if (!code || !userId) {
-                    return res.status(400).json({ success: false, error: 'Parametri mancanti o state non valido/scaduto' });
-                }
-
-                try {
-                    const oauth2 = getOAuth2Client();
-                    const { tokens } = await oauth2.getToken(code);
-
-                    // Fetch argo creds from server session-vault if present, never from URL state
-                    const credsFromVault = getVaultCredentialsFromContext({ userId });
-                    const argoCreds = credsFromVault?.password ? {
-                        schoolCode: credsFromVault.schoolCode,
-                        username: credsFromVault.username,
-                        password: credsFromVault.password,
-                        profileIndex: credsFromVault.profileIndex ?? 0
-                    } : null;
-
-                    await saveTokens(userId, tokens, argoCreds);
-                    debugLog('Google Calendar linked', { userId, hasArgo: !!argoCreds });
-
-                    // Redirect alla PWA
-                    return res.redirect('/#profile?google=success');
-                } catch (tokenErr) {
-                    console.error('[Google OAuth] Token exchange failed:', tokenErr.message);
-                    if (tokenErr.message.includes('invalid_client')) {
-                        console.error('[Google OAuth] SUGGERIMENTO: Controlla che GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET siano corretti su Vercel.');
-                    }
-                    throw tokenErr;
-                }
-            }
-
-            // ============= STATUS =============
-            case 'status': {
-                const userId = req.query.userId || getRequestBody(req).userId;
-                if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
-
-                if (!verifySessionToken(req, normalizeUserId(userId))) {
-                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
-                }
-
-                const tokenRow = await loadTokens(userId);
-                return res.json({
-                    success: true,
-                    connected: !!tokenRow,
-                    lastSync: tokenRow?.updated_at || null
-                });
-            }
-
-            // ============= SYNC =============
-            case 'sync': {
-                const body = getRequestBody(req);
-                const { userId, schoolCode: bodySchoolCode, username: bodyUsername, password: bodyPassword, profileIndex: bodyProfileIndex, session } = body;
-                if (!userId) {
-                    return res.status(400).json({ success: false, error: 'userId richiesto' });
-                }
-
-                if (!verifySessionToken(req, normalizeUserId(userId))) {
-                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
-                }
-
-                // 1. Get user's Google tokens from Supabase
-                const normalizedUserId = normalizeUserId(userId);
-                const { data: tokenRow, error: tokenError } = await getSupabase()
-                    .from('google_tokens')
-                    .select('*')
-                    .eq('user_id', normalizedUserId)
-                    .single();
-
-                if (tokenError || !tokenRow) {
-                    return res.status(404).json({
-                        success: false,
-                        error: 'Account Google non collegato'
-                    });
-                }
-
-                // 2. Fetch homework from Argo (or use tasks passed in body)
-                let tasks = body.tasks;
-                let lastDashboardData = null;
-
-                if (!tasks) {
-                    let schoolCode = bodySchoolCode || tokenRow.argo_school_code;
-                    let userName = bodyUsername || tokenRow.argo_username;
-                    let password = bodyPassword ? bodyPassword : (tokenRow.argo_password ? decryptArgoPassword(tokenRow.argo_password) : null);
-                    let resolvedProfileIndex = Number.isInteger(bodyProfileIndex)
-                        ? bodyProfileIndex
-                        : (Number.isInteger(tokenRow.profile_index) ? tokenRow.profile_index : 0);
-
-                    // If password is missing, attempt to retrieve it from the session vault.
-                    if (!password) {
-                        const credsFromVault = getVaultCredentialsFromContext({
-                            userId: normalizedUserId,
-                            schoolCode,
-                            username: userName,
-                            profileIndex: resolvedProfileIndex
-                        });
-                        if (credsFromVault?.password) {
-                            schoolCode = schoolCode || credsFromVault.schoolCode;
-                            userName = userName || credsFromVault.username;
-                            password = credsFromVault.password;
-                            resolvedProfileIndex = session?.profileIndex ?? credsFromVault.profileIndex ?? resolvedProfileIndex;
-                        }
-                    }
-
-                    // Resilient fallback: try Argo tokens already available in the client session.
-                    if (!password && session?.accessToken && session?.authToken && schoolCode) {
-                        try {
-                            const headersFromSession = createHeaders(
-                                schoolCode,
-                                session.accessToken,
-                                session.authToken,
-                                session.idSoggetto || session.subjectId || null
-                            );
-                            const dashboardData = await getDashboard(headersFromSession);
-                            lastDashboardData = dashboardData;
-                            tasks = extractHomeworkFromDashboard(dashboardData);
-                        } catch (sessionTokenErr) {
-                            debugLog('[Google sync] Session token fallback failed', {
-                                userId: normalizedUserId,
-                                reason: sessionTokenErr?.message || 'unknown'
-                            });
-                        }
-                    }
-                    
-                    // Fallback: cached Argo tokens persisted in Supabase (usable even without password)
-                    if (!tasks && !password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
-                        const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
-                        const resolvedSchoolCodeForCache = tokenRow.argo_school_code || schoolCode;
-                        if (expiry && expiry > new Date() && resolvedSchoolCodeForCache) {
-                            try {
-                                const cachedHeaders = createHeaders(
-                                    resolvedSchoolCodeForCache,
-                                    tokenRow.argo_access_token,
-                                    tokenRow.argo_auth_token,
-                                    session?.idSoggetto || tokenRow.argo_id_soggetto || null
-                                );
-                                const dashboardData = await getDashboard(cachedHeaders);
-                                lastDashboardData = dashboardData;
-                                tasks = extractHomeworkFromDashboard(dashboardData);
-                                debugLog('[Google sync] ✅ Used cached Argo tokens from Supabase');
-                            } catch (cachedErr) {
-                                debugLog('[Google sync] ⚠️ Supabase cached tokens failed', cachedErr.message);
-                            }
-                        }
-                    }
-
-                    if (!tasks && !password) {
-                        return res.status(400).json({
-                            success: false,
-                            error: 'Credenziali Argo non trovate. Collega nuovamente Google o rieffettua il login.'
-                        });
-                    }
-
-                    if (!tasks && password && tokenRow?.argo_access_token && tokenRow?.argo_auth_token) {
-                        const expiry = tokenRow.argo_tokens_expiry ? new Date(tokenRow.argo_tokens_expiry) : null;
-                        const msElapsedSinceExpiry = expiry ? (Date.now() - expiry.getTime()) : Infinity;
-                        if (msElapsedSinceExpiry >= 0 && msElapsedSinceExpiry < RECENT_TOKEN_EXPIRY_STAGGER_MS) {
-                            debugLog('[Google sync] ⏳ Token refresh likely in progress, returning retriable 503', {
-                                userId: normalizedUserId,
-                                msElapsedSinceExpiry
-                            });
-                            return res.status(503).json({
-                                success: false,
-                                error: 'TOKEN_REFRESH_IN_PROGRESS',
-                                retryAfter: 5
-                            });
-                        }
-                    }
-
-                    if (!tasks) {
-                        try {
-                            const loginRes = await AdvancedArgo.rawLogin(schoolCode, userName, password);
-                            const { access_token, profiles } = loginRes;
-                            if (!profiles || profiles.length === 0) throw new Error('Nessun profilo Argo');
-
-                            const rawProfileIndex = resolvedProfileIndex;
-                            const parsedProfileIndex = Number(rawProfileIndex);
-                            const profileIndex = Number.isFinite(parsedProfileIndex) ? parsedProfileIndex : 0;
-                            const profileByIndexField = profiles.find(p => Number(p.index ?? p.profileIndex) === profileIndex);
-                            const profileByArrayIndex = Number.isInteger(profileIndex) && profileIndex >= 0 && profileIndex < profiles.length
-                                ? profiles[profileIndex]
-                                : null;
-                            const targetProfile = profileByIndexField || profileByArrayIndex || profiles[0];
-                            const authToken = targetProfile.token;
-                            const subjectId = targetProfile.idSoggetto;
-                            const headers = createHeaders(schoolCode, access_token, authToken, subjectId);
-                            const dashboardData = await getDashboard(headers);
-                            lastDashboardData = dashboardData;
-                            tasks = extractHomeworkFromDashboard(dashboardData);
-
-                            try {
-                                const expiry = new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString();
-                                const persistData = {
-                                    argo_access_token: access_token,
-                                    argo_auth_token: authToken,
-                                    argo_tokens_expiry: expiry,
-                                    argo_id_soggetto: subjectId ?? null,
-                                    updated_at: new Date().toISOString()
-                                };
-                                if (schoolCode) persistData.argo_school_code = schoolCode;
-                                if (userName) persistData.argo_username = userName;
-                                if (password) persistData.argo_password = encryptArgoPassword(password);
-                                if (Number.isInteger(profileIndex)) persistData.profile_index = profileIndex;
-                                const { error: persistError } = await getSupabase()
-                                    .from('google_tokens')
-                                    .update(persistData)
-                                    .eq('user_id', normalizedUserId);
-                                if (persistError) throw persistError;
-                                debugLog(`[Google sync] ✅ Persisted fresh Argo tokens for ${normalizedUserId}`);
-                            } catch (persistErr) {
-                                console.error('[Google sync] ⚠️ Token persist failed:', persistErr.message);
-                            }
-                        } catch (argoErr) {
-                            console.error('Argo fetch failed:', argoErr.message);
-                            return res.status(500).json({
-                                success: false,
-                                error: 'Impossibile recuperare i dati da Argo: ' + argoErr.message
-                            });
-                        }
-                    }
-                }
-
-                // 3. Sync tasks, verifiche, and unjustified attendance reminders to Google Calendar
-                const auth = getAuthenticatedClient(tokenRow);
-                const calendarId = tokenRow.calendar_id || 'primary';
-
-                let classSchedule = null;
-                let usedScheduleFallback = false;
-                const hasClassScheduleInBody = Object.prototype.hasOwnProperty.call(body, 'classSchedule');
-                if (hasClassScheduleInBody) {
-                    const parsedBodySchedule = parseAndValidateClassSchedule(body.classSchedule);
-                    if (parsedBodySchedule.error) {
-                        return res.status(400).json({ success: false, error: parsedBodySchedule.error });
-                    }
-                    classSchedule = parsedBodySchedule.value;
-                } else if (tokenRow.class_schedule) {
-                    const parsedStoredSchedule = parseAndValidateClassSchedule(tokenRow.class_schedule);
-                    if (parsedStoredSchedule.error) {
-                        usedScheduleFallback = true;
-                        console.warn('[Google sync] Invalid stored class_schedule - using default schedule', {
-                            userId: normalizeUserId(userId),
-                            reason: parsedStoredSchedule.error
-                        });
-                    } else {
-                        classSchedule = parsedStoredSchedule.value;
-                    }
-                }
-
-                console.log(`📅 GOOGLE SYNC: Sincronizzazione ${tasks?.length || 0} compiti verso Google Calendar per ${normalizedUserId}:`, tasks?.map(t => `${t.subject} (${t.due_date})`).join(', ') || '0 compiti');
-
-                let taskSyncResult = { success: true, added: 0, skipped: 0, errors: [] };
-                if (tasks && tasks.length > 0) {
-                    taskSyncResult = await syncTasksToCalendar(tasks, calendarId, auth, classSchedule);
-                }
-
-                let verificheSyncResult = { success: true, added: 0, skipped: 0, filtered: 0, errors: [] };
-                if (lastDashboardData) {
-                    try {
-                        const verifiche = extractVerificheFromDashboard(lastDashboardData);
-                        if (verifiche && verifiche.length > 0) {
-                            verificheSyncResult = await syncVerificheToCalendar(verifiche, calendarId, auth);
-                        }
-                    } catch (vErr) {
-                        console.warn('[Google sync] Verifiche sync error:', vErr.message);
-                    }
-                }
-
-                let attendanceSyncResult = { success: true, added: 0, skipped: 0, deleted: 0, pending: 0, errors: [] };
-                if (lastDashboardData) {
-                    try {
-                        const assenzeData = extractAssenzeFromDashboard(lastDashboardData);
-                        if (assenzeData) {
-                            attendanceSyncResult = await syncUnjustifiedAttendanceReminders(assenzeData, calendarId, auth);
-                        }
-                    } catch (attErr) {
-                        console.warn('[Google sync] Attendance sync error:', attErr.message);
-                    }
-                }
-
-                const allErrors = [
-                    ...(taskSyncResult.errors || []),
-                    ...(verificheSyncResult.errors || []),
-                    ...(attendanceSyncResult.errors || [])
-                ];
-
-                debugLog(`Calendar sync full result`, {
-                    userId,
-                    tasksAdded: taskSyncResult.added,
-                    verificheAdded: verificheSyncResult.added,
-                    attendancePending: attendanceSyncResult.pending
-                });
-
-                if (!taskSyncResult.success || !verificheSyncResult.success || !attendanceSyncResult.success) {
-                    const has403 = allErrors.some(e =>
-                        e.includes('403') || e.includes('Forbidden') || e.includes('insufficient')
-                    );
-                    if (has403) {
-                        return res.status(403).json({
-                            success: false,
-                            error: 'GOOGLE_AUTH_EXPIRED',
-                            message: 'Reconnect Google account',
-                            details: allErrors
-                        });
-                    }
-                }
-
-                return res.json({
-                    success: true,
-                    tasks_added: taskSyncResult.added || 0,
-                    tasks_skipped: taskSyncResult.skipped || 0,
-                    verifiche_added: verificheSyncResult.added || 0,
-                    verifiche_skipped: verificheSyncResult.skipped || 0,
-                    attendance_pending: attendanceSyncResult.pending || 0,
-                    attendance_deleted: attendanceSyncResult.deleted || 0,
-                    errors: allErrors,
-                    usedScheduleFallback: usedScheduleFallback || !!taskSyncResult.usedScheduleFallback,
-                    total_tasks: (tasks || []).length
-                });
-            }
-
-            // ============= SAVE ARGO CREDENTIALS =============
-            case 'save-argo': {
-                const { userId, schoolCode, username, password, profileIndex } = getRequestBody(req);
-                if (!userId) {
-                    return res.status(400).json({ success: false, error: 'userId richiesto' });
-                }
-
-                if (!verifySessionToken(req, normalizeUserId(userId))) {
-                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
-                }
-
-                const fromVault = getVaultCredentialsFromContext({
-                    userId,
-                    schoolCode,
-                    username,
-                    profileIndex
-                });
-                const resolvedSchoolCode = schoolCode || fromVault?.schoolCode || null;
-                const resolvedUsername = username || fromVault?.username || null;
-                const resolvedPassword = password || fromVault?.password || null;
-                const resolvedProfileIndex = profileIndex ?? fromVault?.profileIndex ?? 0;
-
-                // If already present in DB and no fresh credentials are available, allow no-op success.
-                if (!resolvedSchoolCode || !resolvedUsername || !resolvedPassword) {
-                    const existing = await loadTokens(userId);
-                    if (existing?.argo_school_code && existing?.argo_username && existing?.argo_password) {
-                        return res.json({ success: true, message: 'Credenziali Argo già presenti' });
-                    }
-                    return res.status(400).json({ success: false, error: 'Credenziali Argo non disponibili. Esegui nuovamente il login Argo.' });
-                }
-
-                const { error } = await getSupabase()
-                    .from('google_tokens')
-                    .upsert({
-                        user_id: normalizeUserId(userId),
-                        argo_school_code: resolvedSchoolCode,
-                        argo_username: resolvedUsername,
-                        argo_password: encryptArgoPassword(resolvedPassword),
-                        profile_index: resolvedProfileIndex,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id' });
-
-                if (error) throw error;
-                return res.json({ success: true, message: 'Credenziali Argo salvate' });
-            }
-
-            // ============= DISCONNECT =============
-            case 'disconnect': {
-                const userId = req.query.userId || getRequestBody(req).userId;
-                if (!userId) return res.status(400).json({ success: false, error: 'userId richiesto' });
-
-                if (!verifySessionToken(req, normalizeUserId(userId))) {
-                    return res.status(403).json({ success: false, error: 'Non autorizzato' });
-                }
-
-                // Optionally revoke the token
-                try {
-                    const tokenRow = await loadTokens(userId);
-                    if (tokenRow?.access_token) {
-                        const oauth2 = getOAuth2Client();
-                        await oauth2.revokeToken(tokenRow.access_token).catch(() => { });
-                    }
-                } catch (e) { /* ignore revoke errors */ }
-
-                await deleteTokens(userId);
-                debugLog(`Google Calendar disconnected`, { userId });
-
-                return res.json({ success: true, message: 'Google Calendar disconnesso' });
-            }
-
-            default:
-                return res.status(400).json({ success: false, error: `Azione sconosciuta: ${action}` });
-        }
-
-    } catch (e) {
-        console.error(`Google API error (action=${action}):`, e.message);
-        return res.status(500).json({ success: false, error: e.message });
+    const body = getRequestBody(req);
+    const allowed = {
+        status: ['GET'],
+        'auth-url': ['GET', 'POST'],
+        callback: ['GET'],
+        sync: ['POST'],
+        'save-argo': ['POST'],
+        disconnect: ['POST', 'DELETE'],
+    };
+    if (!Object.hasOwn(allowed, action)) throw httpError(400, 'Azione sconosciuta');
+    if (!allowed[action].includes(req.method)) throw httpError(405, 'Metodo non consentito');
+    if (action === 'callback') {
+        const state = verifyAndParseOAuthState(text(req.query.state, 2048));
+        if (!state?.nonce) throw httpError(400, 'State OAuth non valido o scaduto');
+        // DELETE RETURNING atomically consumes a single-use nonce across instances.
+        const states = await checked(
+            database()
+                .from('oauth_states')
+                .delete()
+                .eq('nonce', state.nonce)
+                .eq('user_id', state.userId)
+                .gt('expires_at', new Date().toISOString())
+                .select('user_id'),
+        );
+        if (!states?.length) throw httpError(400, 'Richiesta OAuth già utilizzata o scaduta');
+        if (req.query.error) return res.redirect(`${PWA_URL}?google=error`);
+        const code = text(req.query.code, 4096);
+        if (!code) throw httpError(400, 'Codice OAuth mancante');
+        await withLease(`google:${state.userId}`, async () => {
+            const { tokens } = await oauthClient().getToken(code);
+            await saveGoogleTokens(state.userId, tokens);
+        });
+        return res.redirect(`${PWA_URL}?google=success#profile`);
     }
-};
+    const userId = normalizeUserId(text(req.query.userId || body.userId, 200));
+    if (!userId) throw httpError(400, 'userId richiesto');
+    if (!(await verifySessionToken(req, userId))) throw httpError(403, 'Sessione non valida');
+    if (action === 'auth-url') {
+        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET)
+            throw httpError(503, 'Google OAuth non configurato');
+        const nonce = crypto.randomBytes(32).toString('hex');
+        const state = signOAuthState({ userId, nonce, ts: Date.now() });
+        if (!state) throw httpError(503, 'Chiave OAuth non configurata');
+        await checked(
+            database()
+                .from('oauth_states')
+                .insert({
+                    nonce,
+                    user_id: userId,
+                    expires_at: new Date(Date.now() + OAUTH_STATE_TTL_MS).toISOString(),
+                }),
+        );
+        const url = oauthClient().generateAuthUrl({
+            access_type: 'offline',
+            scope: ['https://www.googleapis.com/auth/calendar'],
+            prompt: 'consent select_account',
+            state,
+        });
+        return req.query.redirect === 'true' ? res.redirect(url) : res.json({ success: true, url });
+    }
+    if (action === 'status') {
+        const row = await checked(
+            database()
+                .from('google_tokens')
+                .select('refresh_token,last_google_sync')
+                .eq('user_id', userId)
+                .maybeSingle(),
+        );
+        return res.json({
+            success: true,
+            connected: !!row?.refresh_token,
+            lastSync: row?.last_google_sync || null,
+        });
+    }
+    if (action === 'sync') {
+        const options = {};
+        if (Object.hasOwn(body, 'classSchedule')) {
+            const parsed = parseAndValidateClassSchedule(body.classSchedule);
+            if (parsed.error) throw httpError(400, parsed.error);
+            options.classSchedule = parsed.value;
+        }
+        const result = await syncGoogleUser(userId, options);
+        return res.status(result.success ? 200 : 502).json(result);
+    }
+    if (action === 'save-argo') {
+        // Credentials are established by the authenticated Argo login only.
+        const row = await checked(
+            database().from('google_tokens').select('argo_password').eq('user_id', userId).maybeSingle(),
+        );
+        if (!row?.argo_password)
+            throw httpError(409, 'Effettua nuovamente il login Argo per aggiornare le credenziali');
+        return res.json({ success: true });
+    }
+    if (action === 'disconnect') {
+        await withLease(`google:${userId}`, async () => {
+            const row = await checked(
+                database()
+                    .from('google_tokens')
+                    .select('refresh_token,access_token')
+                    .eq('user_id', userId)
+                    .maybeSingle(),
+            );
+            if (row?.refresh_token || row?.access_token) {
+                try {
+                    await oauthClient().revokeToken(row.refresh_token || row.access_token);
+                } catch (e) {
+                    if (![400, 401].includes(Number(e.response?.status))) throw e;
+                }
+            }
+            await checked(
+                database()
+                    .from('google_tokens')
+                    .update({
+                        access_token: null,
+                        refresh_token: null,
+                        expiry_date: null,
+                        calendar_id: null,
+                        last_google_sync: null,
+                    })
+                    .eq('user_id', userId),
+            );
+        });
+        return res.json({ success: true });
+    }
+});

@@ -20,6 +20,7 @@
     "node": "20.x"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "supabase": "^2.115.0"
   }
 }

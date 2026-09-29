@@ -14,21 +14,27 @@ module.exports = async function handler(req, res) {
         if (!userId) return res.status(400).json({ success: false, error: 'userId mancante' });
 
         const normalizedId = normalizeUserId(userId);
-        if (!verifySessionToken(req, normalizedId)) {
+        if (!(await verifySessionToken(req, normalizedId))) {
             return res.status(403).json({ success: false, error: 'Non autorizzato' });
         }
 
+        for (const [key,value] of Object.entries({name,class:className,specialization,avatar})) {
+            if (value !== undefined && value !== null && (typeof value !== 'string' || value.length > (key==='avatar' ? 2048 : 200))) {
+                return res.status(400).json({success:false,error:'Dati profilo non validi'});
+            }
+        }
         const profileData = { id: normalizedId, last_active: new Date().toISOString() };
         if (name) profileData.name = name;
         if (className) profileData.class = className;
         if (specialization) profileData.specialization = specialization;
         if (avatar) {
-            if (!avatar.startsWith('http')) {
+            if (!/^https?:\/\//i.test(avatar)) {
                 return res.status(400).json({ success: false, error: 'Avatar deve essere URL' });
             }
             profileData.avatar = avatar;
         }
 
+        if (avatar === null) profileData.avatar = null;
         const { error } = await supabase.from('profiles').upsert(profileData, { onConflict: 'id' });
         if (error) throw error;
 
@@ -38,3 +44,5 @@ module.exports = async function handler(req, res) {
         res.status(500).json({ success: false, error: e.message });
     }
 }
+
+module.exports = require('../../lib/backend').endpoint(module.exports);

@@ -1,126 +1,74 @@
 const { test, describe, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-const crypto = require('crypto');
-
-// Generate test keys (64 hex characters each)
+const assert = require('node:assert/strict'),
+    crypto = require('node:crypto');
+const { fakeDb } = require('./support/backend');
+const supabase = require('../lib/supabase');
+const auth = require('../lib/auth');
 const TEST_ARGO_KEY = crypto.randomBytes(32).toString('hex');
-const TEST_SESSION_KEY = crypto.randomBytes(32).toString('hex');
-
-describe('Authentication & Session Token Security (lib/auth.js)', () => {
-    let originalEnv;
-
+describe('Opaque sessions and authenticated encryption', () => {
+    let original, originalGet, rows;
     beforeEach(() => {
-        originalEnv = { ...process.env };
+        original = { ...process.env };
         process.env.ARGO_ENCRYPTION_KEY = TEST_ARGO_KEY;
-        process.env.SESSION_HMAC_KEY = TEST_SESSION_KEY;
+        originalGet = supabase.getSupabase;
+        rows = [];
+        supabase.getSupabase = () =>
+            fakeDb((c) => {
+                const matches = rows.filter((r) => c.filters.every(([, key, v]) => r[key] === v));
+                if (c.op === 'insert') rows.push(c.payload);
+                if (c.op === 'update') matches.forEach((r) => Object.assign(r, c.payload));
+                return { data: c.op === 'select' ? matches[0] || null : null, error: null };
+            });
     });
-
     afterEach(() => {
-        process.env = originalEnv;
+        process.env = original;
+        supabase.getSupabase = originalGet;
     });
-
-    test('generateSessionToken generates a 64-character hex HMAC', () => {
-        const { generateSessionToken } = require('../lib/auth');
-        const token = generateSessionToken('sg12345_mariorossi_0');
-        assert.ok(token);
-        assert.strictEqual(typeof token, 'string');
-        assert.strictEqual(token.length, 64);
-        assert.match(token, /^[0-9a-fA-F]{64}$/);
+    test('per-device random tokens, only digests persisted', async () => {
+        const a = await auth.generateSessionToken('Alice'),
+            b = await auth.generateSessionToken('Alice');
+        assert.match(a, /^[0-9a-f]{64}$/);
+        assert.notEqual(a, b);
+        assert.equal(rows[0].user_id, 'alice');
+        assert.notEqual(rows[0].token_hash, a);
+        assert.equal(await auth.verifySessionToken({ headers: { 'x-session-token': a } }, 'alice'), true);
+        assert.equal(await auth.verifySessionToken({ headers: { 'x-session-token': a } }, 'bob'), false);
     });
-
-    test('generateSessionToken produces deterministic tokens within the same time window', () => {
-        const { generateSessionToken } = require('../lib/auth');
-        const token1 = generateSessionToken('sg12345_mariorossi_0');
-        const token2 = generateSessionToken('sg12345_mariorossi_0');
-        assert.strictEqual(token1, token2);
+    test('logout revokes one device and all-devices logout revokes remaining credentials', async () => {
+        const a = await auth.generateSessionToken('alice'),
+            b = await auth.generateSessionToken('alice');
+        const req = { headers: { 'x-session-token': a } };
+        await auth.revokeSession(req, 'alice');
+        assert.equal(await auth.verifySessionToken(req, 'alice', 14), false);
+        assert.equal(await auth.verifySessionToken({ headers: { 'x-session-token': b } }, 'alice'), true);
+        await auth.revokeSession(req, 'alice', true);
+        assert.equal(await auth.verifySessionToken({ headers: { 'x-session-token': b } }, 'alice'), false);
     });
-
-    test('generateSessionToken produces different tokens for different user IDs', () => {
-        const { generateSessionToken } = require('../lib/auth');
-        const tokenA = generateSessionToken('user_a');
-        const tokenB = generateSessionToken('user_b');
-        assert.notStrictEqual(tokenA, tokenB);
+    test('expired access can refresh, but absolute expiry cannot be extended', async () => {
+        const t = await auth.generateSessionToken('alice'),
+            req = { headers: { 'x-session-token': t } };
+        rows[0].expires_at = new Date(Date.now() - 1).toISOString();
+        assert.equal(await auth.verifySessionToken(req, 'alice'), false);
+        assert.equal(await auth.verifySessionToken(req, 'alice', 14), true);
+        rows[0].expires_at = new Date(Date.now() + 86400000).toISOString();
+        rows[0].refresh_expires_at = new Date(Date.now() - 1).toISOString();
+        assert.equal(await auth.verifySessionToken(req, 'alice'), false);
+        assert.equal(await auth.verifySessionToken(req, 'alice', 14), false);
     });
-
-    test('verifySessionToken succeeds with valid token in x-session-token header', () => {
-        const { generateSessionToken, verifySessionToken } = require('../lib/auth');
-        const userId = 'sg12345_mariorossi_0';
-        const token = generateSessionToken(userId);
-        const req = {
-            headers: {
-                'x-session-token': token
-            }
-        };
-        assert.strictEqual(verifySessionToken(req, userId), true);
+    test('malformed or legacy unregistered tokens fail closed', async () => {
+        for (const token of ['', 'a', 'g'.repeat(64), 'ab'.repeat(32)])
+            assert.equal(
+                await auth.verifySessionToken({ headers: { 'x-session-token': token } }, 'alice'),
+                false,
+            );
     });
-
-    test('verifySessionToken rejects invalid or tampered tokens', () => {
-        const { generateSessionToken, verifySessionToken } = require('../lib/auth');
-        const userId = 'sg12345_mariorossi_0';
-        const token = generateSessionToken(userId);
-        // Tamper with the last character
-        const tampered = token.slice(0, -1) + (token.endsWith('0') ? '1' : '0');
-        const req = {
-            headers: {
-                'x-session-token': tampered
-            }
-        };
-        assert.strictEqual(verifySessionToken(req, userId), false);
+    test('database outage is not successful authentication', async () => {
+        supabase.getSupabase = () => fakeDb(() => ({ error: { message: 'unavailable' } }));
+        await assert.rejects(
+            () => auth.verifySessionToken({ headers: { 'x-session-token': 'ab'.repeat(32) } }, 'alice'),
+            { status: 503 },
+        );
     });
-
-    test('verifySessionToken rejects non-hex or invalid-length strings without crashing', () => {
-        const { verifySessionToken } = require('../lib/auth');
-        const req1 = { headers: { 'x-session-token': 'short_token' } };
-        const req2 = { headers: { 'x-session-token': 'g'.repeat(64) } };
-        const req3 = { headers: {} };
-        assert.strictEqual(verifySessionToken(req1, 'user'), false);
-        assert.strictEqual(verifySessionToken(req2, 'user'), false);
-        assert.strictEqual(verifySessionToken(req3, 'user'), false);
-    });
-
-    test('verifySessionToken allows grace period for tokens from previous 24h window', () => {
-        const { verifySessionToken, SESSION_TTL_MS } = require('../lib/auth');
-        const key = Buffer.from(TEST_SESSION_KEY, 'hex');
-        const userId = 'sg12345_mariorossi_0';
-        const previousWindow = Math.floor(Date.now() / SESSION_TTL_MS) - 1;
-        const prevToken = crypto.createHmac('sha256', key)
-            .update('g-connect-session:' + userId + ':' + previousWindow)
-            .digest('hex');
-
-        const req = { headers: { 'x-session-token': prevToken } };
-        assert.strictEqual(verifySessionToken(req, userId), true);
-    });
-
-    test('verifySessionToken rejects expired tokens (older than 48h / 2 windows)', () => {
-        const { verifySessionToken, SESSION_TTL_MS } = require('../lib/auth');
-        const key = Buffer.from(TEST_SESSION_KEY, 'hex');
-        const userId = 'sg12345_mariorossi_0';
-        const expiredWindow = Math.floor(Date.now() / SESSION_TTL_MS) - 2;
-        const expiredToken = crypto.createHmac('sha256', key)
-            .update('g-connect-session:' + userId + ':' + expiredWindow)
-            .digest('hex');
-
-        const req = { headers: { 'x-session-token': expiredToken } };
-        assert.strictEqual(verifySessionToken(req, userId), false);
-    });
-
-    test('verifySessionToken supports custom maxWindows for session refresh', () => {
-        const { verifySessionToken, SESSION_TTL_MS } = require('../lib/auth');
-        const key = Buffer.from(TEST_SESSION_KEY, 'hex');
-        const userId = 'sg12345_mariorossi_0';
-        // Token from 5 days ago (window - 5)
-        const fiveDayOldWindow = Math.floor(Date.now() / SESSION_TTL_MS) - 5;
-        const oldToken = crypto.createHmac('sha256', key)
-            .update('g-connect-session:' + userId + ':' + fiveDayOldWindow)
-            .digest('hex');
-
-        const req = { headers: { 'x-session-token': oldToken } };
-        // Rejected with default 2 windows (48h)
-        assert.strictEqual(verifySessionToken(req, userId), false);
-        // Accepted with 14 windows (14 days)
-        assert.strictEqual(verifySessionToken(req, userId, 14), true);
-    });
-
     test('encryptArgoPassword and decryptArgoPassword round-trip correctly', () => {
         const { encryptArgoPassword, decryptArgoPassword } = require('../lib/auth');
         const original = 'MyS3cr3tP@ssw0rd!#';
@@ -143,7 +91,7 @@ describe('Authentication & Session Token Security (lib/auth.js)', () => {
         const encrypted = encryptArgoPassword('SecretPassword123');
         const parts = encrypted.split(':');
         // Alter ciphertext byte
-        const tamperedCiphertext = parts[3].slice(0, -2) + 'ff';
+        const tamperedCiphertext = parts[3].slice(0, -2) + (parts[3].endsWith('ff') ? '00' : 'ff');
         const tampered = `enc:${parts[1]}:${parts[2]}:${tamperedCiphertext}`;
         const result = decryptArgoPassword(tampered);
         assert.strictEqual(result, null);

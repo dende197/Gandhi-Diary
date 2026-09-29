@@ -126,6 +126,7 @@
             const s = sessionManager.load();
             const headers = { 'Content-Type': 'application/json', ...extra };
             if (s && s.sessionToken) headers['x-session-token'] = s.sessionToken;
+            if (s) headers['x-user-id'] = getUserId();
             return headers;
         }
         window.getSessionHeaders = getSessionHeaders;
@@ -465,23 +466,38 @@
         window.saveTasks = saveTasks;
 
         // Function to push manual tasks and plannedTasks to Supabase
+        let plannerSaveQueue = Promise.resolve();
         async function saveTasksToSupabase() {
-            if (!state.isLoggedIn || !state.user || !state.user.id) return;
-            
-            try {
-                await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(state.user.id)}`, {
-                    method: 'PUT',
-                    headers: getSessionHeaders(),
-                    body: JSON.stringify({
-                        tasks: [],
-                        plannedTasks: state.plannedTasks || {},
-                        plannedDetails: state.plannedDetails || {}
-                    })
+            if (!state.isLoggedIn || !state.user?.id) return;
+            const userId = state.user.id;
+            const key = `gc_planner_sync:${userId}`;
+            const draft = JSON.parse(JSON.stringify({plannedTasks:state.plannedTasks || {},plannedDetails:state.plannedDetails || {}}));
+            const saved = JSON.parse(localStorage.getItem(key) || '{}');
+            localStorage.setItem(key,JSON.stringify({...saved,draft}));
+            plannerSaveQueue = plannerSaveQueue.catch(()=>{}).then(async () => {
+                if (!state.isLoggedIn || state.user?.id !== userId) return;
+                let record = JSON.parse(localStorage.getItem(key) || '{}');
+                if (!Number.isSafeInteger(record.version)) {
+                    const response = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`,{headers:getSessionHeaders()});
+                    if (!response.ok) throw new Error('Lettura planner non riuscita');
+                    const {data} = await response.json();
+                    record.version = data.version;
+                    // Existing cloud data must be loaded before accepting a new local snapshot.
+                    if (data.version > 0) throw new Error('Sincronizza prima il planner. Le modifiche locali sono conservate.');
+                }
+                const response = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`,{
+                    method:'PUT',headers:getSessionHeaders(),body:JSON.stringify({...draft,version:record.version})
                 });
-                console.log("✅ PlannedTasks synced to Supabase");
-            } catch (e) {
-                console.warn("⚠️ Failed to sync to Supabase:", e);
-            }
+                if (response.status === 409) throw new Error('Planner modificato su un altro dispositivo. Le modifiche locali sono conservate: sincronizza per scegliere quale versione usare.');
+                if (!response.ok) throw new Error('Salvataggio planner non riuscito');
+                const {data} = await response.json();
+                const latest = JSON.parse(localStorage.getItem(key) || '{}');
+                localStorage.setItem(key,JSON.stringify({version:data.version,...(JSON.stringify(latest.draft) !== JSON.stringify(draft) ? {draft:latest.draft} : {})}));
+            }).catch(error=>{
+                console.warn('[Planner]',error.message);
+                if (typeof window.showToast === 'function') window.showToast(error.message,'warning');
+            });
+            return plannerSaveQueue;
         }
         window.saveTasksToSupabase = saveTasksToSupabase;
 
@@ -582,11 +598,27 @@
                     
                     // 1. Process Planner Data FIRST (contains remote manual tasks & verifiche)
                     if (data.planner) {
-                        state.plannedTasks = data.planner.plannedTasks || {};
-                        state.plannedDetails = data.planner.plannedDetails || {};
+                        await plannerSaveQueue;
+                        const plannerKey = `gc_planner_sync:${state.user.id}`;
+                        const pending = JSON.parse(localStorage.getItem(plannerKey) || '{}');
+                        // A save may finish while this sync response is in flight.
+                        if (Number.isSafeInteger(pending.version) && pending.version > data.planner.version) {
+                            data.planner = {...data.planner,version:pending.version,plannedTasks:state.plannedTasks,plannedDetails:state.plannedDetails};
+                        }
+                        let localDraft = pending.draft;
+                        if (localDraft && pending.version !== data.planner.version) {
+                            // Keep a recovery copy regardless of the user's choice.
+                            localStorage.setItem(`${plannerKey}:backup`,JSON.stringify(pending));
+                            const keepLocal = window.confirm('Il planner sul server è cambiato. Vuoi mantenere le modifiche di questo dispositivo? Annulla per usare quelle del server. Una copia locale resta salvata.');
+                            if (!keepLocal) localDraft = null;
+                        }
+                        state.plannedTasks = localDraft?.plannedTasks || data.planner.plannedTasks || {};
+                        state.plannedDetails = localDraft?.plannedDetails || data.planner.plannedDetails || {};
+                        localStorage.setItem(plannerKey,JSON.stringify({version:data.planner.version,...(localDraft ? {draft:localDraft} : {})}));
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                         localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails));
-                        
+                        if (localDraft) await saveTasksToSupabase();
+
                         // Handle manual verifiche from dedicated table
                         if (data.planner.manualVerifiche) {
                             state.manualVerifiche = data.planner.manualVerifiche;
@@ -1403,44 +1435,6 @@
                 try { localStorage.setItem('gc_cached_user_class', finalClass); } catch(_) {}
             }
             localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
-
-            // 3. Supabase Auth Bridge
-            try {
-                const school = (data.session.schoolCode || '').toUpperCase();
-                const userName = data.session.userName.toLowerCase();
-                const supabaseEmail = `argo.${school}.${userName.replace(/\./g, '_')}@g-connect.it`;
-                const supabasePassword = await hashPassword(`Argo_${school}_${userName}_${pass}`);
-
-                const sb = await getSupabaseClient();
-                if (!sb) throw new Error('Supabase non disponibile');
-
-                let { data: authData, error: authErr } = await sb.auth.signInWithPassword({
-                    email: supabaseEmail,
-                    password: supabasePassword
-                });
-
-                if (authErr && authErr.message?.includes('Invalid login')) {
-                    const { data: upData, error: upErr } = await sb.auth.signUp({
-                        email: supabaseEmail,
-                        password: supabasePassword,
-                        options: { data: { name: state.user.name, class: state.user.class } }
-                    });
-                    if (!upErr && upData?.user) authData = upData;
-                }
-
-                if (authData?.user) {
-                    await sb.from('profiles').upsert({
-                        id: String(state.user.id).toLowerCase().replace(/\s+/g, ''),
-                        name: state.user.name,
-                        class: state.user.class,
-                        specialization: state.user.specialization,
-                        avatar: state.user.avatar || null,
-                        last_active: new Date().toISOString()
-                    });
-                }
-            } catch (ex) {
-                console.warn("⚠️ Supabase Bridge failed:", ex.message);
-            }
 
             // 4. Planner Sync
             state.syncing = false;

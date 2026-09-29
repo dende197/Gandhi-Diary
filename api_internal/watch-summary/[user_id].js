@@ -1,24 +1,5 @@
-/**
- * api_internal/watch-summary/[user_id].js
- *
- * Compact, low-bandwidth summary endpoint built for the Wear OS companion
- * app (and any other "glanceable" client — KWGT, widgets, etc.).
- *
- * Unlike api_internal/sync.js (which returns the *entire* dashboard payload:
- * tasks, promemoria, activities, planner...), this endpoint returns only the
- * three numbers the watch tile needs:
- *   - media generale (computed server-side, same logic as ui.js:calcolaMedia)
- *   - assenze (ore totali, giorni, ritardi, uscite + percentuale su monte ore annuo)
- *   - prossima verifica (from manual_verifiche only — Argo text-scraping is unreliable)
- *
- * Auth model is identical to every other per-user endpoint in this repo:
- * X-Session-Token header, verified via verifySessionToken() against the
- * stateless HMAC derived from ARGO_ENCRYPTION_KEY. No Argo password ever
- * leaves the server — it's decrypted here (or a cached Argo access/auth
- * token pair is reused, exactly like cron-sync.js) purely to call Argo on
- * the watch's behalf.
- */
-
+const { database, checked, todayRome, endpoint } = require('../../lib/backend');
+const {loadArgoDashboard} = require('../../lib/argo-session');
 const {
     handleCors, verifySessionToken, normalizeUserIdParam, createHeaders,
     decryptArgoPassword, debugLog, generatePid
@@ -31,16 +12,14 @@ const {
 
 const ARGO_TOKEN_TTL_MS = 6 * 60 * 60 * 1000; // 6h — same conservative TTL as cron-sync.js
 
-// Total curricular hours for the school year (~5h/day × ~200 school days, but the
-// user's actual schedule totals approximately 250 hours).  This constant is used to
-// compute the absence percentage shown on the watch tile.
-const ORE_ANNO_SCOLASTICO = 250;
+const configuredAnnualHours = Number(process.env.SCHOOL_ANNUAL_HOURS);
+const ORE_ANNO_SCOLASTICO = Number.isFinite(configuredAnnualHours) && configuredAnnualHours > 0 ? configuredAnnualHours : null;
 
 // Mirrors ui.js:calcolaMedia() exactly — simple arithmetic mean of numeric grades.
 function calcolaMedia(voti) {
     if (!voti || voti.length === 0) return null;
     const validi = voti
-        .map(v => parseFloat((v.valore || v.value || '').toString().replace(',', '.')))
+        .map(v => parseFloat((v.valore ?? v.value ?? '').toString().replace(',', '.')))
         .filter(n => !isNaN(n));
     if (validi.length === 0) return null;
     return validi.reduce((a, b) => a + b, 0) / validi.length;
@@ -55,8 +34,7 @@ function calcolaMedia(voti) {
  * generates phantom tests 200+ days in the future when no real test exists.
  */
 function pickNextVerifica(manualVerifiche) {
-    const todayMidnight = new Date();
-    todayMidnight.setHours(0, 0, 0, 0);
+    const todayMidnight = new Date(`${todayRome()}T00:00:00Z`);
 
     const upcoming = (manualVerifiche || [])
         .filter(v => !v.done) // skip completed entries
@@ -90,7 +68,7 @@ module.exports = async function handler(req, res) {
     const { user_id } = req.query;
     const userId = normalizeUserIdParam(user_id);
 
-    if (!verifySessionToken(req, userId)) {
+    if (!(await verifySessionToken(req, userId))) {
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
     }
 
@@ -98,73 +76,11 @@ module.exports = async function handler(req, res) {
     if (!supabase) return res.status(500).json({ success: false, error: 'Supabase non configurato' });
 
     try {
-        const { data: user, error } = await supabase
-            .from('google_tokens')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-
-        if (error || !user) {
-            return res.status(404).json({ success: false, error: 'Utente non trovato o mai sincronizzato dal telefono' });
-        }
-        if (!user.argo_school_code || !user.argo_username || !user.argo_password) {
-            return res.status(400).json({ success: false, error: 'Credenziali Argo non configurate per questo utente' });
-        }
-
-        let dashboardData = null;
-        let usedCache = false;
-
-        // Attempt 1: reuse cached Argo tokens if still valid (fast path — no re-login)
-        if (user.argo_access_token && user.argo_auth_token) {
-            const expiry = user.argo_tokens_expiry ? new Date(user.argo_tokens_expiry) : null;
-            if (expiry && expiry > new Date()) {
-                try {
-                    const headers = createHeaders(
-                        user.argo_school_code, user.argo_access_token, user.argo_auth_token,
-                        user.argo_id_soggetto || null
-                    );
-                    dashboardData = await getDashboard(headers);
-                    usedCache = true;
-                } catch (cachedErr) {
-                    debugLog('[Watch] cached Argo tokens failed, falling back to rawLogin', cachedErr.message);
-                    dashboardData = null;
-                }
-            }
-        }
-
-        // Attempt 2: full rawLogin with the stored (encrypted) Argo password
-        if (!dashboardData) {
-            const argoPassword = decryptArgoPassword(user.argo_password);
-            if (!argoPassword) return res.status(500).json({ success: false, error: 'Impossibile decifrare le credenziali Argo' });
-
-            const loginRes = await AdvancedArgo.rawLogin(user.argo_school_code, user.argo_username, argoPassword);
-            const accessToken = loginRes.access_token;
-            const profiles = loginRes.profiles || [];
-            const idx = Number.isInteger(user.profile_index) ? user.profile_index : 0;
-            const targetProfile = profiles[idx] || profiles[0];
-            if (!targetProfile) return res.status(500).json({ success: false, error: 'Nessun profilo Argo disponibile' });
-
-            const authToken = targetProfile.token;
-            const headers = createHeaders(user.argo_school_code, accessToken, authToken, targetProfile.idSoggetto || null);
-            dashboardData = await getDashboard(headers);
-
-            // Persist fresh tokens, best-effort (mirrors cron-sync.js)
-            try {
-                await supabase.from('google_tokens').update({
-                    argo_access_token: accessToken,
-                    argo_auth_token: authToken,
-                    argo_id_soggetto: targetProfile.idSoggetto ?? null,
-                    argo_tokens_expiry: new Date(Date.now() + ARGO_TOKEN_TTL_MS).toISOString(),
-                    updated_at: new Date().toISOString()
-                }).eq('user_id', userId);
-            } catch (persistErr) {
-                debugLog('[Watch] token persist failed', persistErr.message);
-            }
-        }
+        const {row:user,dashboard:dashboardData,usedCache} = await loadArgoDashboard(userId);
 
         // ── Extract grades & absences from Argo dashboard ──
         const grades = extractGradesFromDashboard(dashboardData);
-        const assenze = extractAssenzeFromDashboard(dashboardData);
+        const assenze = extractAssenzeFromDashboard(dashboardData,{schedule:user.class_schedule});
 
         const media = calcolaMedia(grades);
 
@@ -173,25 +89,10 @@ module.exports = async function handler(req, res) {
         // (computed by extractAssenzeFromDashboard with assembly-day modifiers).
         // We add the percentage against the total yearly hours so the watch can display it.
         const oreAssenzaTotali = typeof assenze.oreAssenzaTotali === 'number' ? assenze.oreAssenzaTotali : 0;
-        const percentualeAssenze = Math.round((oreAssenzaTotali / ORE_ANNO_SCOLASTICO) * 1000) / 10; // one decimal
+        const percentualeAssenze = ORE_ANNO_SCOLASTICO ? Math.round((oreAssenzaTotali / ORE_ANNO_SCOLASTICO) * 1000) / 10 : null; // one decimal
 
         // ── Fetch manual verifiche from Supabase (same source as the phone) ──
-        const pid = generatePid(
-            user.argo_school_code,
-            user.argo_username,
-            Number.isInteger(user.profile_index) ? user.profile_index : 0
-        );
-
-        let manualVerifiche = [];
-        try {
-            const { data: mv, error: mvError } = await supabase
-                .from('manual_verifiche')
-                .select('*')
-                .eq('user_id', pid);
-            if (!mvError && mv) manualVerifiche = mv;
-        } catch (e) {
-            debugLog('[Watch] manual_verifiche fetch failed', e.message);
-        }
+        const manualVerifiche = await checked(database().from('manual_verifiche').select('*').eq('user_id',userId));
 
         const prossimaVerifica = pickNextVerifica(manualVerifiche);
 
@@ -203,13 +104,12 @@ module.exports = async function handler(req, res) {
         ].map(item => ({
             data: item.data || '',
             tipo: item.tipo || 'assenza',
-            ore: typeof item.numOre === 'number' ? item.numOre : 1,
+            ore: typeof item.oreEffettive === 'number' ? item.oreEffettive : 0,
             giustificata: Boolean(item.giustificata)
         })).sort((a, b) => new Date(b.data) - new Date(a.data));
 
         // Build allVerifiche array for detailed watch screens ({ materia, descrizione, data, giorniMancanti })
-        const todayMidnight = new Date();
-        todayMidnight.setHours(0, 0, 0, 0);
+        const todayMidnight = new Date(`${todayRome()}T00:00:00Z`);
         const allVerifiche = (manualVerifiche || [])
             .filter(v => !v.done)
             .map(v => {
@@ -226,11 +126,6 @@ module.exports = async function handler(req, res) {
             })
             .filter(v => v.giorniMancanti >= 0)
             .sort((a, b) => new Date(a.data) - new Date(b.data));
-
-        // Best-effort: keep last_argo_sync fresh so the phone's "connection status" stays accurate too
-        try {
-            await supabase.from('google_tokens').update({ last_argo_sync: new Date().toISOString() }).eq('user_id', userId);
-        } catch (e) { /* non-fatal */ }
 
         res.setHeader('Cache-Control', 'no-store, max-age=0');
         return res.json({
@@ -259,6 +154,8 @@ module.exports = async function handler(req, res) {
         });
     } catch (e) {
         console.error('[Watch Summary] failed:', e.message);
-        return res.status(500).json({ success: false, error: e.message });
+        throw e;
     }
 };
+
+module.exports = endpoint(module.exports);

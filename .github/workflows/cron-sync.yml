@@ -37,7 +37,7 @@ jobs:
 
           echo "HTTP Status: $HTTP_STATUS"
           echo "Summary:"
-          jq -c '{success: .success, duration: .duration, total: .results.total, processed: .results.processed, successCount: .results.success, failedCount: .results.failed}' /tmp/cron-response.json 2>/dev/null || echo "Response received."
+          jq -c '{success: .success, duration: .duration, total: .results.total, processed: .results.processed, successCount: .results.succeeded, failedCount: .results.failed}' /tmp/cron-response.json 2>/dev/null || echo "Response received."
           rm -f /tmp/cron-response.json
 
           if [ "$HTTP_STATUS" -ne 200 ]; then
