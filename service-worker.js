@@ -1,22 +1,17 @@
-const CACHE_VERSION = '4.1.1';
+const CACHE_VERSION = '4.2.0';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
-const STATIC_DESTINATIONS = new Set(['style', 'script', 'font', 'image']);
-const STATIC_PATH_REGEX = /\.(?:css|js|mjs|png|jpe?g|svg|webp|avif|woff2?|ttf|ico|json)$/i;
 const EXTERNAL_ASSETS = [
-  'https://cdn.tailwindcss.com?plugins=forms,container-queries',
   'https://unpkg.com/@phosphor-icons/web@2.1.1',
   'https://unpkg.com/lucide@0.441.0/dist/umd/lucide.min.js',
   'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
   'https://cdn.jsdelivr.net/npm/marked@14.1.2/marked.min.js',
   'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
   'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js',
-  'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap'
 ];
 const EXTERNAL_ORIGINS = new Set([
-  'https://cdn.tailwindcss.com',
   'https://unpkg.com',
   'https://cdn.jsdelivr.net',
   'https://fonts.googleapis.com',
@@ -25,26 +20,27 @@ const EXTERNAL_ORIGINS = new Set([
 const APP_SHELL = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/style.css?v=4.1.1`,
-  `${BASE_PATH}/animations.css?v=4.1.1`,
-  `${BASE_PATH}/demo-data.js?v=4.1.1`,
-  `${BASE_PATH}/ui.js?v=4.1.1`,
-  `${BASE_PATH}/app-bootstrap.js?v=4.1.1`,
-  `${BASE_PATH}/fluidity-engine-v3.js?v=4.1.1`,
-  `${BASE_PATH}/fluidity-boot-patch.js?v=4.1.1`,
+  `${BASE_PATH}/assets/tailwind.css?v=4.2.0`,
+  `${BASE_PATH}/style.css?v=4.2.0`,
+  `${BASE_PATH}/animations.css?v=4.2.0`,
+  `${BASE_PATH}/assets/demo-cleanup.js?v=4.2.0`,
+  `${BASE_PATH}/assets/frontend-runtime.js?v=4.2.0`,
+  `${BASE_PATH}/assets/ui.js?v=4.2.0`,
+  `${BASE_PATH}/assets/app-bootstrap.js?v=4.2.0`,
+  `${BASE_PATH}/assets/fluidity-engine-v3.js?v=4.2.0`,
+  `${BASE_PATH}/assets/fluidity-boot-patch.js?v=4.2.0`,
   `${BASE_PATH}/manifest.webmanifest`,
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
-  `${BASE_PATH}/gandhi-diary-icon-512.png`,
-  `${BASE_PATH}/gandhi-diary-icon-1024.png`,
 ];
 
 async function precacheExternalAssets() {
   const cache = await caches.open(EXTERNAL_CACHE_NAME);
-  await Promise.all(EXTERNAL_ASSETS.map(async (asset) => {
+  const optional = [...EXTERNAL_ASSETS, `${BASE_PATH}/assets/ui-views.js?v=4.2.0`, `${BASE_PATH}/assets/ui-modals.js?v=4.2.0`];
+  await Promise.all(optional.map(async (asset) => {
     try {
       const response = await fetch(asset, { mode: 'no-cors' });
-      if (response) await cache.put(asset, response.clone());
+      if (isCacheable(response, new URL(asset, self.location.origin).href)) await cache.put(asset, response.clone());
     } catch (err) {
       console.warn('[SW] External asset pre-cache failed:', asset, err?.message || err);
     }
@@ -79,7 +75,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME && k !== EXTERNAL_CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k.startsWith('g-connect-') && k !== CACHE_NAME && k !== EXTERNAL_CACHE_NAME).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -88,103 +84,44 @@ self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
-self.addEventListener('fetch', (event) => {
+function isCacheable(response, url) {
+  if (!response) return false;
+  if (response.type === 'opaque') return new URL(url).origin !== self.location.origin;
+  if (!response.ok) return false;
+  const type = response.headers.get('content-type') || '';
+  const path = new URL(url).pathname;
+  if (/\.(m?js)$/.test(path)) return /javascript|ecmascript/.test(type);
+  if (/\.css$/.test(path)) return type.includes('text/css');
+  return true;
+}
+
+self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  if (EXTERNAL_ORIGINS.has(url.origin)) {
-    event.respondWith(
-      caches.open(EXTERNAL_CACHE_NAME).then(async (cache) => {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
-        try {
-          const response = await fetch(event.request);
-          if (response) await cache.put(event.request, response.clone());
-          return response;
-        } catch (_) {
-          return cached || new Response('', { status: 504, statusText: 'Offline' });
-        }
-      })
-    );
-    return;
-  }
-  if (url.origin !== self.location.origin) return;
+  const external = EXTERNAL_ORIGINS.has(url.origin);
+  if (!external && url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/api_internal/')) return;
-  const normalizedUrl = normalizeSameOriginUrl(event.request.url);
-  const normalizedRequest = new Request(normalizedUrl, { method: 'GET' });
-  const isNavigation =
-    event.request.mode === 'navigate' ||
-    event.request.destination === 'document' ||
+  const navigation = event.request.mode === 'navigate' || event.request.destination === 'document' ||
     event.request.headers.get('accept')?.includes('text/html');
-
-  if (isNavigation) {
-    event.respondWith(
-      caches.match(normalizedRequest).then(async (cached) => {
-        const networkPromise = fetch(normalizedRequest).then(async (response) => {
-          const cloned = response.clone();
-          try {
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(normalizedRequest, cloned);
-          } catch (err) {
-            console.warn('[SW] Navigation cache write failed:', err?.message || err);
-          }
-          return response;
-        }).catch(() => null);
-
-        if (cached) {
-          event.waitUntil(networkPromise);
-          return cached;
-        }
-
-        const networkResponse = await networkPromise;
-        if (networkResponse) return networkResponse;
-        return caches.match(`${BASE_PATH}/index.html`);
-      })
-    );
-    return;
-  }
-
-  const isStaticAsset =
-    STATIC_DESTINATIONS.has(event.request.destination) ||
-    STATIC_PATH_REGEX.test(url.pathname);
-  if (isStaticAsset) {
-    event.respondWith(
-      caches.match(normalizedRequest).then(async (cached) => {
-        const networkPromise = fetch(normalizedRequest).then(async (response) => {
-          const cloned = response.clone();
-          try {
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(normalizedRequest, cloned);
-          } catch (err) {
-            console.warn('[SW] Static cache write failed:', err?.message || err);
-          }
-          return response;
-        }).catch(() => null);
-        if (cached) {
-          event.waitUntil(networkPromise);
-          return cached;
-        }
-        const networkResponse = await networkPromise;
-        if (networkResponse) return networkResponse;
-        return caches.match(`${BASE_PATH}/index.html`);
-      })
-    );
-    return;
-  }
-
-  // Network-first: always fetch fresh from network; fall back to cache when offline.
-  event.respondWith(
-    fetch(normalizedRequest).then(async (response) => {
-      const cloned = response.clone();
-      try {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(normalizedRequest, cloned);
-      } catch (err) {
-        console.warn('[SW] Resource cache write failed:', err?.message || err);
-      }
-      return response;
-    }).catch(async () => {
-      const cached = await caches.match(normalizedRequest);
-      return cached || caches.match(`${BASE_PATH}/index.html`);
-    })
-  );
+  const key = external ? event.request : new Request(normalizeSameOriginUrl(event.request.url));
+  // Register background work synchronously in the fetch event lifetime.
+  const network = fetch(event.request).then(async response => {
+    if (isCacheable(response, url.href)) {
+      try { const cache = await caches.open(external ? EXTERNAL_CACHE_NAME : CACHE_NAME); await cache.put(key, response.clone()); }
+      catch (_) { /* A quota error must not turn a working network response into a failure. */ }
+    }
+    return response;
+  }).catch(() => null);
+  event.waitUntil(network);
+  event.respondWith((async () => {
+    const cached = await caches.match(key);
+    if (cached && isCacheable(cached, url.href)) return cached;
+    const response = await network;
+    if (response?.ok || response?.type === 'opaque') return response;
+    if (navigation) {
+      const shell = await caches.match(`${BASE_PATH}/index.html`);
+      if (shell?.ok) return shell;
+    }
+    return response || new Response('Risorsa non disponibile offline', {status:504, headers:{'Content-Type':'text/plain'}});
+  })());
 });

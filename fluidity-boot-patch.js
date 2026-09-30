@@ -111,6 +111,7 @@
     _suppress(180);
     _focusTimer = setTimeout(function () {
       _suppressUntil = 0;
+      window.scheduleRender?.(0);
     }, 200);
   });
 
@@ -191,8 +192,8 @@
     return !!(
       window.hideBoot           && window.hideBoot.__fluidityBootPatched &&
       window.gsapAnimateView    && window.gsapAnimateView.__fluidityBootPatched &&
-      window.render             && window.render.__fluidityNoGapPatched &&
-      window.scheduleRender     && window.scheduleRender.__fluidityBootPatched &&
+      window.render &&
+      window.scheduleRender &&
       window.alert              && window.alert.__fluidityBootPatched
     );
   }
@@ -260,48 +261,6 @@
     gsap.__fluidityWillChangePatched = true;
   }
 
-  // ── Bypass 400ms render gap after V3 install ─────────────────
-  function installRenderBypassPatch() {
-    if (typeof window.render !== 'function' || window.render.__fluidityNoGapPatched) return;
-    if (!window.render._isV3 && !window.__fluidityRenderBypassForce) return;
-    const patched = function renderNoGapPatched() {
-      if (window.__fluidityIsBfcacheSuppressed()) return;
-      if (window._gRenderRAF || !window.state || window.state.booting || (window.state._loggedOut && window.state.view !== 'login')) return;
-      window._gRenderRAF = requestAnimationFrame(() => {
-        try {
-          if (window.state && window.state._loggedOut && window.state.view !== 'login') return;
-          if (typeof window._renderCore === 'function') window._renderCore();
-        } finally { window._gRenderRAF = null; }
-      });
-    };
-    patched._isV3 = true;
-    patched.__fluidityNoGapPatched = true;
-    window.render = patched;
-  }
-
-  // ── Post-navigate scheduleRender dedup ───────────────────────
-  function installNavigateSchedulePatch() {
-    if (typeof window.navigate === 'function' && !window.navigate.__fluidityBootPatched) {
-      const orig = window.navigate;
-      const p = function (...args) {
-        window.__fluidityLastNavigateAt = performance.now();
-        return orig.apply(this, args);
-      };
-      p._isV3 = !!orig._isV3;
-      window.navigate = markPatched(p, '__fluidityBootPatched');
-    }
-    if (typeof window.scheduleRender === 'function' && !window.scheduleRender.__fluidityBootPatched) {
-      const orig = window.scheduleRender;
-      const p = function (delay = 80) {
-        if (window.__fluidityIsBfcacheSuppressed()) return;
-        const lastNav = window.__fluidityLastNavigateAt || 0;
-        if ((performance.now() - lastNav) < POST_NAV_SCHEDULE_BLOCK_MS && !(window.state && window.state._forceRender)) return;
-        return orig.call(this, delay);
-      };
-      window.scheduleRender = markPatched(p, '__fluidityBootPatched');
-    }
-  }
-
   // ── Convert blocking login alerts to toast ───────────────────
   function installAlertPatch() {
     if (typeof window.alert !== 'function' || window.alert.__fluidityBootPatched) return;
@@ -323,8 +282,6 @@
     installHideBootPatch();
     installGsapAnimateViewPatch();
     installGsapWillChangePatch();
-    installRenderBypassPatch();
-    installNavigateSchedulePatch();
     installAlertPatch();
     return areCorePatchesInstalled();
   }
