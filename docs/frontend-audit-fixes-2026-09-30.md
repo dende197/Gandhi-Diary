@@ -24,7 +24,7 @@ Le correzioni riguardano le 27 segnalazioni dell’audit sulla revisione `35aac9
 | F16 | Una risorsa statica mancante offline riceve un errore esplicito, non il documento HTML. |
 | F17 | Errori HTTP e contenuti incompatibili non sostituiscono file JavaScript/CSS validi nella cache. |
 | F18 | Le chiavi locali usano `studentId`; la migrazione copia una vecchia cache soltanto se il suo utente coincide, senza cancellare l’originale. |
-| F19 | Le operazioni asincrone verificano identità e generazione della sessione. Login/logout invalidano le richieste precedenti; il cambio profilo riparte da uno stato pulito. |
+| F19 | Le operazioni asincrone verificano identità e generazione della sessione. Login/logout invalidano le richieste precedenti; il cambio profilo riparte da uno stato pulito e non eredita campi della sessione precedente. Un login superato da un altro accesso non avvia ulteriori operazioni. |
 | F20 | Un errore nel controllo Google mantiene l’ultima informazione confermata e indica che lo stato va verificato. |
 | F21 | Rimane un solo selettore del tipo di verifica, coerente con i pulsanti del modulo. |
 | F22 | Gli URL delle librerie di icone e dei font corrispondono al precaricamento; le librerie hanno versioni fissate. |
@@ -46,7 +46,7 @@ Ulteriori protezioni: la pulizia dei dati demo riconosce solo identificativi esp
 - Cache dell’agenda limitata e sincronizzazione al focus soggetta all’intervallo minimo.
 - Le icone da 512 e 1024 pixel restano disponibili per installazione/manifest, ma sono escluse dal precaricamento obbligatorio: 1.081.829 byte in meno in quella lista.
 
-Misura locale dei JavaScript dell’app referenziati direttamente dall’HTML, esclusi librerie esterne e moduli secondari: **962.658 → 655.060 byte (-32,0%)**, oppure **207.207 → 149.994 byte** con gzip locale. Il CSS generato occupa 20.571 byte; i moduli secondari 56.703 e 26.352 byte. Non sono misurazioni dei tempi di avvio né del traffico complessivo del service worker.
+Misura locale dei JavaScript dell’app referenziati direttamente dall’HTML, esclusi librerie esterne e moduli secondari: **962.658 → 655.169 byte (-32,0%)**, oppure **207.207 → 150.028 byte** con gzip locale. Il CSS generato occupa 20.571 byte; i moduli secondari 56.703 e 26.352 byte. Non sono misurazioni dei tempi di avvio né del traffico complessivo del service worker.
 
 ## Build e verifiche
 
@@ -61,7 +61,7 @@ npm audit --prefix frontend --audit-level=high
 
 I file in `assets/` sono generati e versionati per GitHub Pages. Modificare i sorgenti alla radice e rigenerare, senza modificare a mano gli asset. CI verifica che la rigenerazione non produca differenze. Il build conserva i nomi globali usati dai gestori HTML; estrae le funzioni delle viste/modali tramite AST, senza riscrivere i template manualmente.
 
-Risultato locale: **168 test superati con Node 20.20.2**, inclusi 27 controlli delle segnalazioni, test di avvio completo dei file generati, caricamento delle viste/modali, bozze, migrazione e timeout. Audit delle dipendenze: zero vulnerabilità dopo gli aggiornamenti compatibili di `brace-expansion` e `undici` nel lockfile.
+Risultato locale: **169 test superati con Node 20.20.2**, inclusi 27 controlli delle segnalazioni, test di avvio completo dei file generati, caricamento delle viste/modali, bozze, migrazione e timeout. Audit delle dipendenze: zero vulnerabilità dopo gli aggiornamenti compatibili di `brace-expansion` e `undici` nel lockfile.
 
 ## Limiti e rilascio
 

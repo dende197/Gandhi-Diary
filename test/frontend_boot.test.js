@@ -39,3 +39,18 @@ test('built frontend hydrates and lazy routes/dialogs load with real script orde
   assert.deepEqual(errors,[]);
  }catch(error){error.message += '\nBrowser errors: '+JSON.stringify(errors)+'\nPage: '+w.document.getElementById('app').textContent.slice(0,800);throw error;}finally{dom.window.close();}
 });
+test('fresh login clears previous account session metadata and state',async()=>{
+ const {dom,w,errors}=app(true);try{
+  await until(()=>w.state?.isLoggedIn&&w.handleLoginSuccess);
+  const oldSession=JSON.parse(w.localStorage.getItem('argo_session'));
+  w.localStorage.setItem('argo_session',JSON.stringify({...oldSession,idSoggetto:'alice-subject',avatar:'alice-avatar',specialization:'alice-course'}));
+  w.state.voti=[{id:'alice-vote',materia:'Matematica',valore:8,data:'2024-10-10'}];
+  await w.handleLoginSuccess({session:{schoolCode:'SECOND',userName:'bob',profileIndex:0},student:{id:'bob',name:'Bob'},sessionToken:'synthetic-bob',tasks:[],voti:[]},'synthetic-password');
+  const session=JSON.parse(w.localStorage.getItem('argo_session'));
+  assert.equal(session.studentId,'bob');
+  for(const key of ['idSoggetto','avatar','specialization','class'])assert.equal(session[key],undefined,key+' leaked from previous account');
+  assert.equal(w.state.user.id,'bob');
+  assert.equal(w.state.voti.some(v=>v.id==='alice-vote'),false);
+  assert.deepEqual(errors,[]);
+ }finally{dom.window.close();}
+});

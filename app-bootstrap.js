@@ -1429,6 +1429,8 @@
                     idSoggetto: data.selectedProfile?.idSoggetto || null,
                     sessionToken: data.sessionToken || null
                 };
+                // A fresh login must not inherit optional fields from another account.
+                localStorage.removeItem('argo_session');
                 sessionManager.save(sessionData);
             }
 
@@ -1514,11 +1516,13 @@
             if (typeof window.checkGoogleStatus === 'function') window.checkGoogleStatus();
             ensureAutomaticSyncScheduler();
 
+            const isCurrentLogin = ClientRuntime.capture();
             await Promise.all([
                 (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e)),
                 performSync(sessionManager.load(), { suppressRender: true }).catch(e => console.error("Post-login sync failed:", e)),
                 loadCircolari().catch(e => console.error("Post-login circolari load failed:", e))
             ]);
+            if (!isCurrentLogin()) return;
             runSilentGoogleSync(sessionManager.load()).catch(() => {});
 
             if (typeof closeModal === 'function') closeModal();
