@@ -1,0 +1,24 @@
+name: Phone notifications
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: phone-notifications
+  cancel-in-progress: false
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check for updates and send notifications
+        env:
+          BACKEND_URL: ${{ vars.VERCEL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$BACKEND_URL" && test -n "$CRON_SECRET" || { echo 'Configure VERCEL_URL and CRON_SECRET'; exit 1; }
+          status=$(curl --max-time 110 --silent --show-error --output /tmp/push-result.json --write-out '%{http_code}' \
+            --header "Authorization: Bearer $CRON_SECRET" "${BACKEND_URL%/}/api/push?op=cron")
+          jq '{success,results,error}' /tmp/push-result.json
+          test "$status" = 200

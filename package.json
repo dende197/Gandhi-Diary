@@ -14,7 +14,8 @@
     "googleapis": "^171.4.0",
     "groq-sdk": "^0.7.0",
     "pdf-parse": "^1.1.1",
-    "tough-cookie": "^4.1.4"
+    "tough-cookie": "^4.1.4",
+    "web-push": "^3.6.7"
   },
   "engines": {
     "node": "20.x"

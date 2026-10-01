@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.2.0';
+const CACHE_VERSION = '4.3.0';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
@@ -20,15 +20,16 @@ const EXTERNAL_ORIGINS = new Set([
 const APP_SHELL = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/assets/tailwind.css?v=4.2.0`,
-  `${BASE_PATH}/style.css?v=4.2.0`,
-  `${BASE_PATH}/animations.css?v=4.2.0`,
-  `${BASE_PATH}/assets/demo-cleanup.js?v=4.2.0`,
-  `${BASE_PATH}/assets/frontend-runtime.js?v=4.2.0`,
-  `${BASE_PATH}/assets/ui.js?v=4.2.0`,
-  `${BASE_PATH}/assets/app-bootstrap.js?v=4.2.0`,
-  `${BASE_PATH}/assets/fluidity-engine-v3.js?v=4.2.0`,
-  `${BASE_PATH}/assets/fluidity-boot-patch.js?v=4.2.0`,
+  `${BASE_PATH}/assets/tailwind.css?v=4.3.0`,
+  `${BASE_PATH}/style.css?v=4.3.0`,
+  `${BASE_PATH}/animations.css?v=4.3.0`,
+  `${BASE_PATH}/assets/demo-cleanup.js?v=4.3.0`,
+  `${BASE_PATH}/assets/frontend-runtime.js?v=4.3.0`,
+  `${BASE_PATH}/assets/ui.js?v=4.3.0`,
+  `${BASE_PATH}/assets/push-settings.js?v=4.3.0`,
+  `${BASE_PATH}/assets/app-bootstrap.js?v=4.3.0`,
+  `${BASE_PATH}/assets/fluidity-engine-v3.js?v=4.3.0`,
+  `${BASE_PATH}/assets/fluidity-boot-patch.js?v=4.3.0`,
   `${BASE_PATH}/manifest.webmanifest`,
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
@@ -36,7 +37,7 @@ const APP_SHELL = [
 
 async function precacheExternalAssets() {
   const cache = await caches.open(EXTERNAL_CACHE_NAME);
-  const optional = [...EXTERNAL_ASSETS, `${BASE_PATH}/assets/ui-views.js?v=4.2.0`, `${BASE_PATH}/assets/ui-modals.js?v=4.2.0`];
+  const optional = [...EXTERNAL_ASSETS, `${BASE_PATH}/assets/ui-views.js?v=4.3.0`, `${BASE_PATH}/assets/ui-modals.js?v=4.3.0`];
   await Promise.all(optional.map(async (asset) => {
     try {
       const response = await fetch(asset, { mode: 'no-cors' });
@@ -123,5 +124,36 @@ self.addEventListener('fetch', event => {
       if (shell?.ok) return shell;
     }
     return response || new Response('Risorsa non disponibile offline', {status:504, headers:{'Content-Type':'text/plain'}});
+  })());
+});
+
+// Web Push is delivered by the operating system even when no app window is open.
+self.addEventListener('push', event => {
+  let payload = {};
+  try { payload = event.data?.json() || {}; } catch { /* Always show a safe, visible fallback. */ }
+  const routes = new Set(['home', 'planner', 'voti', 'circolari', 'profile']);
+  const route = routes.has(payload.route) ? payload.route : 'home';
+  event.waitUntil(self.registration.showNotification(String(payload.title || 'Gandhi Diary').slice(0,100), {
+    body: String(payload.body || 'Hai nuove informazioni nel diario.').slice(0,240),
+    icon: `${BASE_PATH}/gandhi-diary-icon-192.png`,
+    tag: typeof payload.tag === 'string' ? payload.tag.slice(0,64) : 'gandhi-update',
+    data: { route },
+  }));
+});
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const routes = new Set(['home', 'planner', 'voti', 'circolari', 'profile']);
+  const route = routes.has(event.notification.data?.route) ? event.notification.data.route : 'home';
+  const target = new URL(`${BASE_PATH}/#${route}`, self.location.origin).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    for (const client of windows) {
+      const url = new URL(client.url);
+      if (url.origin === self.location.origin && (url.pathname === `${BASE_PATH}/` || url.pathname === `${BASE_PATH}/index.html`)) {
+        await client.navigate(target);
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(target);
   })());
 });

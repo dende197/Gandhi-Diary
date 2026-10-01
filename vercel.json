@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/push",
+      "destination": "/api/main?action=push"
+    },
+    {
       "source": "/health",
       "destination": "/api/main?action=health"
     },

@@ -59,7 +59,7 @@
         if (!loads.has(name)) {
             const pending = new Promise((resolve,reject) => {
                 const script = document.createElement('script');
-                script.src = `assets/ui-${name}.js?v=4.2.0`;
+                script.src = `assets/ui-${name}.js?v=4.3.0`;
                 script.onload = resolve;
                 script.onerror = () => { script.remove(); reject(new Error('Schermata non disponibile. Riprova quando sei online.')); };
                 document.head.appendChild(script);

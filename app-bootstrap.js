@@ -1402,6 +1402,7 @@
             if (!pass) {
                 throw new Error('Password Argo non disponibile nella sessione corrente. Rieffettua il login.');
             }
+            if (window.PushSettings) await window.PushSettings.beforeLogin(data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex));
             ClientRuntime.invalidate();
             clearInterval(window._classPollTimer);
             clearTimeout(_savePlannerTimer);

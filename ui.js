@@ -9551,6 +9551,7 @@ window.logout = async function (skipConfirm = false) {
         if (logoutUser && logoutUser !== 'guest') {
             try {
                 if (window.saveTasksToSupabase) await window.saveTasksToSupabase();
+                if (window.PushSettings) await window.PushSettings.detach();
                 const response = await fetchWithDeadline(`${API_BASE_URL}/api/auth?action=logout`,{
                     method:'POST',headers:getSessionHeaders(),body:JSON.stringify({userId:logoutUser}),signal:AbortSignal.timeout(15000)
                 });
@@ -13157,6 +13158,8 @@ function renderProfile() {
                     </div>
                 </div>
             </div>
+
+            ${window.PushSettings ? window.PushSettings.render() : ''}
 
             <!-- ── SEZIONE: GOOGLE CALENDAR CLOUD ── -->
             <div style="margin-bottom:20px;">

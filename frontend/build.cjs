@@ -21,7 +21,7 @@ async function main(){
  }
  for(const [start,end,code] of replacements.sort((a,b)=>b[0]-a[0]))ui=ui.slice(0,start)+code+ui.slice(end);
  await emit('ui',ui);
- for(const name of ['frontend-runtime','demo-cleanup','app-bootstrap','fluidity-engine-v3','fluidity-boot-patch'])await emit(name,fs.readFileSync(path.join(root,name+'.js'),'utf8'));
+ for(const name of ['frontend-runtime','push-settings','demo-cleanup','app-bootstrap','fluidity-engine-v3','fluidity-boot-patch'])await emit(name,fs.readFileSync(path.join(root,name+'.js'),'utf8'));
  console.log('Generated static CSS, main scripts and lazy views/modals in assets/.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

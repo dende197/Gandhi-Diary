@@ -11,7 +11,7 @@ const { handleCors, USER_AGENT, generateStableId, debugLog } = require('../../li
 const fs = require('fs');
 
 const CACHE_FILE = '/tmp/circolari_cache.json';
-const CACHE_TTL = 3600 * 1000; // 1 ora
+const CACHE_TTL = 15 * 60 * 1000; // Match the notification polling interval.
 
 function loadCache() {
     try {
@@ -74,19 +74,18 @@ function parseDateToIso(raw) {
     return null;
 }
 
-module.exports = async function handler(req, res) {
-    if (handleCors(req, res)) return;
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+async function fetchCircolari() {
 
     // Controlla cache /tmp
     const cached = loadCache();
-    if (cached) return res.json({ success: true, circolari: cached, cached: true });
+    if (cached) return cached;
 
     try {
         const SCHOOL_URL = process.env.SCHOOL_CIRCOLARI_URL || 'https://www.liceogandhi.edu.it/categoria/storico-circolari/';
         const response = await axios.get(SCHOOL_URL, {
             headers: { 'User-Agent': USER_AGENT },
-            timeout: 10000
+            timeout: 10000,
+            signal: require('../../lib/backend').signal()
         });
 
         const $ = cheerio.load(response.data);
@@ -114,10 +113,19 @@ module.exports = async function handler(req, res) {
             }
         });
 
+        if (!circolari.length) throw new Error('Nessuna circolare riconosciuta nella pagina');
         saveCache(circolari);
-        res.json({ success: true, circolari });
+        return circolari;
     } catch (error) {
         console.error('Scraping Error:', error.message);
-        res.json({ success: true, circolari: [], error: 'Scraping fallito' });
+        throw error;
     }
 }
+
+module.exports = async function handler(req, res) {
+    if (handleCors(req, res)) return;
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+    try { return res.json({success:true,circolari:await fetchCircolari()}); }
+    catch { return res.status(502).json({success:false,error:'Circolari temporaneamente non disponibili'}); }
+};
+module.exports.fetchCircolari = fetchCircolari;

@@ -176,6 +176,8 @@ function renderAcademicProfile(){loadAcademicPreferences();const subjects=[...ne
                 </div>
             </div>
 
+            ${window.PushSettings?window.PushSettings.render():""}
+
             <!-- \u2500\u2500 SEZIONE: GOOGLE CALENDAR CLOUD \u2500\u2500 -->
             <div style="margin-bottom:20px;">
                 <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
