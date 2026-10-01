@@ -43,6 +43,8 @@ Non sono state applicate migrazioni di produzione né configurate chiavi private
 
 ## Verifiche automatiche
 
-**190 test superati con Node 20.20.2**; audit delle dipendenze backend e frontend senza vulnerabilità note. `npm run build --prefix frontend` e `npm test` verificano build e suite completa. I test specifici coprono SQL reale (base silenziosa, deduplicazione, preferenze, riassegnazione e RLS), sessioni API, servizi push ammessi, chiavi, promemoria/DST, retry/410, indipendenza da Google, gesto di attivazione iOS, cambio account durante il permesso, revoca, service worker e percorsi al tocco.
+**190 test superati con Node 24.13.1**; audit delle dipendenze backend e frontend senza vulnerabilità note. `npm run build --prefix frontend` e `npm test` verificano build e suite completa. I test specifici coprono SQL reale (base silenziosa, deduplicazione, preferenze, riassegnazione e RLS), sessioni API, servizi push ammessi, chiavi, promemoria/DST, retry/410, indipendenza da Google, gesto di attivazione iOS, cambio account durante il permesso, revoca, service worker e percorsi al tocco.
 
 Fonti: [Web Push Apple](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers), [libreria web-push](https://github.com/web-push-libs/web-push), [limiti dei workflow pianificati GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+Il runtime e la CI usano Node.js 24: il 1 ottobre 2026 Vercel ha rifiutato la precedente configurazione 20.x come non più supportata.
