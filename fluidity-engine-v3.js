@@ -67,8 +67,8 @@
       window.triggerHaptic('light');
       // If we are on a subview, navigate back
       if (typeof state !== 'undefined') {
-        if (state.selectedSubject) {
-          state.selectedSubject = null;
+        if (state.activeSubject) {
+          state.activeSubject = null;
           if (typeof navigate === 'function') navigate('voti');
         } else if (state.view === 'profile' || state.view === 'academic_profile') {
           if (typeof navigate === 'function') navigate('home');
@@ -132,120 +132,7 @@
   // Raised from 80ms → 150ms.  This window is wide enough to absorb
   // the entire PWA boot burst (localStorage + partial server data +
   // hashchange) while still being imperceptible to the user (~3 frames).
-  const RENDER_MIN_GAP = 150;
-  let _lastRenderTime = 0;
-
-  // Boot render lock: in the first BOOT_LOCK_MS after the engine
-  // initialises, only ONE render is allowed to commit to the DOM.
-  // All subsequent calls are coalesced into one deferred render that
-  // fires at BOOT_LOCK_MS.  This prevents the 2-3 rapid screen
-  // flashes visible during PWA cold start.
-  const BOOT_LOCK_MS = 550;
-  let _bootLockActive = true;
-  let _bootLockCount = 0;
-  let _bootLockTimer = null;
-  let _bootRenderPending = false;
-
-  const _installCoreRender = () => {
-    if (typeof window.render !== 'function' || window.render._isV3) return;
-    clearTimeout(window._gRenderTimer);
-    if (window._gRenderRAF) { cancelAnimationFrame(window._gRenderRAF); window._gRenderRAF = null; }
-
-    const _origRenderCore = window._renderCore;
-
-    // Release the boot lock and fire the single deferred render
-    _bootLockTimer = setTimeout(() => {
-      _bootLockActive = false;
-      if (_bootRenderPending) {
-        _bootRenderPending = false;
-        window.render();
-      }
-    }, BOOT_LOCK_MS);
-
-    window.render = function render() {
-      // Respect external suppression (bfcache / visibilitychange / PWA lock)
-      if (typeof window.__fluidityIsBfcacheSuppressed === 'function' &&
-          window.__fluidityIsBfcacheSuppressed()) return;
-
-      // During boot lock, queue subsequent renders, but allow the first one or forced renders
-      if (_bootLockActive) {
-        if (window._fluidityBootRenderConsumed && _bootLockCount === 0) {
-          _bootLockCount = 1;
-          window._fluidityBootRenderConsumed = false;
-        }
-        if (_bootLockCount > 0 && !state._forceRender) {
-          _bootRenderPending = true;
-          return;
-        }
-        _bootLockCount++;
-      }
-
-      if (window._gRenderRAF || state.booting || (state._loggedOut && state.view !== 'login')) return;
-
-      const now = performance.now();
-      if (now - _lastRenderTime < RENDER_MIN_GAP) {
-        clearTimeout(window._gRenderTimer);
-        window._gRenderTimer = setTimeout(window.render, RENDER_MIN_GAP - (now - _lastRenderTime));
-        return;
-      }
-
-      _lastRenderTime = now;
-      window._gRenderRAF = requestAnimationFrame(() => {
-        if (state._loggedOut && state.view !== 'login') { window._gRenderRAF = null; return; }
-        const animateNextRender = !!state._animateOnNextRender;
-        const shouldAnimate = animateNextRender || (_lastAnimatedViewRender !== state.view);
-        if (animateNextRender) state._animateOnNextRender = false;
-        if (typeof _origRenderCore === 'function') _origRenderCore();
-        window._gRenderRAF = null;
-        if (shouldAnimate && state.isLoggedIn && state.view !== 'login') {
-          _lastAnimatedViewRender = state.view;
-          requestAnimationFrame(() => requestAnimationFrame(() => _animateViewEntrance(state.view, 'down')));
-        }
-      });
-    };
-    window.render._isV3 = true;
-
-    window.scheduleRender = function scheduleRender(delay = 80) {
-      if (typeof window.__fluidityIsBfcacheSuppressed === 'function' &&
-          window.__fluidityIsBfcacheSuppressed()) return;
-      clearTimeout(window._gRenderTimer);
-      // During boot lock, just mark pending — don't queue timer
-      if (_bootLockActive) { _bootRenderPending = true; return; }
-      window._gRenderTimer = setTimeout(window.render, delay <= 0 ? 16 : delay);
-    };
-
-    console.log('✅ Fluidity Engine v3.3: Render Lock + Boot Coalescer installed.');
-  };
-
-  // ─── Visibilitychange — soft re-render only on real data change ─
-  //
-  // We track data fingerprint at hide-time and only re-render if
-  // something actually changed while the app was in the background.
-  // This prevents the flash on iOS PWA tab-switching.
-  //
-  let _hiddenFingerprint = null;
-  function _dataFingerprint() {
-    if (!window.state) return null;
-    return [
-      (state.tasks  || []).length,
-      (state.voti   || []).length,
-      state.view,
-      state.isLoggedIn
-    ].join('|');
-  }
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      _hiddenFingerprint = _dataFingerprint();
-      return;
-    }
-    // Visible again — only re-render if data changed
-    if (_hiddenFingerprint !== null && _dataFingerprint() === _hiddenFingerprint) return;
-    _hiddenFingerprint = null;
-    if (typeof window.scheduleRender === 'function' && window.state && window.state.isLoggedIn) {
-      window.scheduleRender(80);
-    }
-  });
+  // Rendering is owned by ui.js. This module only decorates navigation.
 
   // ─── Navigation ───────────────────────────────────────────────
   const _installNavigation = () => {
@@ -309,62 +196,8 @@
   // ─── Direct view render ───────────────────────────────────────
   function _renderViewDirect(view) {
     if (state._loggedOut && view !== 'login') return;
-    const root = document.getElementById('app');
-    if (!root) return;
-    const nav = document.getElementById('nav-container');
-
-    if (!state.isLoggedIn || view === 'login') {
-      document.body.classList.add('logged-out');
-      document.body.classList.remove('is-ai-mode');
-      document.body.style.overflow = ''; document.body.style.height = '';
-      root.style.overflow = 'visible'; root.style.height = '';
-      root.innerHTML = (typeof renderLogin === 'function') ? renderLogin() : '';
-      if (nav) nav.innerHTML = '';
-      return;
-    }
-    document.body.classList.remove('logged-out');
-    document.body.classList.remove('is-ai-mode');
-    document.body.style.overflow = '';
-    document.body.style.height = '';
-    root.style.overflow = 'visible';
-    root.style.height = '';
-
-    let html = '';
-    switch (view) {
-      case 'home':             html = (typeof renderHome === 'function') ? renderHome() : ''; break;
-      case 'planner':          html = (typeof renderPlanner === 'function') ? renderPlanner() : ''; break;
-      case 'voti':             html = (typeof renderGradesView === 'function') ? renderGradesView() : ''; break;
-      case 'academic_profile': html = (typeof renderAcademicProfile === 'function') ? renderAcademicProfile() : ''; break;
-      case 'profile':          html = (typeof renderProfile === 'function') ? renderProfile() : ''; break;
-      case 'circolari':        html = (typeof renderCircolariView === 'function') ? renderCircolariView() : ''; break;
-      default:                 html = (typeof renderHome === 'function') ? renderHome() : ''; break;
-    }
-
-    // NOTE: previously this did a gsap opacity fade on `root` (parent) here,
-    // WHILE _enterView() (called right after by _animateViewEntrance) does its
-    // own independent opacity fade on `viewEl` (child). Two overlapping,
-    // differently-timed opacity tweens on parent+child compound multiplicatively
-    // and produce a visibly uneven/stuttery fade. viewEl's own fromTo() already
-    // starts at opacity:0, so it alone is enough to avoid any white flash —
-    // the root-level fade was pure redundant cost. Just swap the HTML directly.
-    root.innerHTML = html;
-
-    requestAnimationFrame(() => {
-      if (view === 'home') {
-        const mv = parseFloat((typeof calcolaMedia === 'function') ? calcolaMedia(state.voti) : 0) || 0;
-        if (typeof renderMediaGauge === 'function') renderMediaGauge(mv);
-      }
-      if (view === 'planner') {
-        if (typeof renderCustomCalendar === 'function') renderCustomCalendar();
-        if (typeof window._scrollPlannerToActiveWeek === 'function') {
-          window._scrollPlannerToActiveWeek();
-          requestAnimationFrame(() => window._scrollPlannerToActiveWeek());
-          setTimeout(() => window._scrollPlannerToActiveWeek(), 30);
-          setTimeout(() => window._scrollPlannerToActiveWeek(), 120);
-        }
-      }
-      if (view === 'voti'    && typeof initGradesCharts     === 'function') initGradesCharts();
-    });
+    state.view = view;
+    window._renderCore();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -689,7 +522,6 @@
     let elapsed = 0;
     const tryInstall = () => {
       if (_coreReady()) {
-        _installCoreRender();
         _installNavigation();
         _installSubjectTransitions();
         _patchCircolari();

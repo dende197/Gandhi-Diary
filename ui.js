@@ -20,11 +20,23 @@ function escapeJsSingleQuote(str) {
     if (str === null || str === undefined) return '';
     return String(str)
         .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\'")
+        .replace(/'/g, "\\x27")
+        .replace(/"/g, "\\x22")
+        .replace(/&/g, "\\x26")
+        .replace(/</g, "\\x3c")
+        .replace(/>/g, "\\x3e")
         .replace(/\r/g, '\\r')
         .replace(/\n/g, '\\n')
         .replace(/\u2028/g, '\\u2028')
         .replace(/\u2029/g, '\\u2029');
+}
+
+function openExternalLink(value) {
+    try {
+        const url = new URL(value, location.href);
+        if (!['https:', 'http:'].includes(url.protocol)) throw new Error('URL non valido');
+        window.open(url.href, '_blank', 'noopener,noreferrer');
+    } catch (_) { showToast('Collegamento non valido', 'error'); }
 }
 
 // --- THEME ---
@@ -34,13 +46,6 @@ function escapeJsSingleQuote(str) {
 const savedTheme = 'liquid-glass';
 
 // --- AGENDA SEARCH & FILTER HELPERS ---
-setInterval(() => {
-    const clock = document.getElementById('topbar-clock');
-    if (clock) {
-        clock.innerText = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-}, 500);
-
 window.scrollToSearch = function () {
     // If we're not in the agenda view, go there first
     if (state.view !== 'planner' && state.view !== 'home_diary') {
@@ -278,22 +283,12 @@ function getAgendaCacheKey() {
 }
 
 function getCachedWeeklyAgendaHtml() {
-    if (state._weeklyAgendaCacheHtml) return state._weeklyAgendaCacheHtml;
-    try {
-        const cached = localStorage.getItem(getAgendaCacheKey());
-        if (!cached) return '';
-        state._weeklyAgendaCacheHtml = cached;
-        return cached;
-    } catch (_) {
-        return '';
-    }
+    return state._weeklyAgendaCacheKey === getAgendaCacheKey() ? (state._weeklyAgendaCacheHtml || '') : '';
 }
 
 function saveWeeklyAgendaCache(html) {
+    state._weeklyAgendaCacheKey = getAgendaCacheKey();
     state._weeklyAgendaCacheHtml = html || '';
-    try {
-        localStorage.setItem(getAgendaCacheKey(), state._weeklyAgendaCacheHtml);
-    } catch (_) { }
 }
 
 /**
@@ -564,6 +559,7 @@ window.refreshSessionToken = async function () {
     return _refreshSessionPromise;
 };
 async function _doRefreshSession() {
+    const isCurrent = ClientRuntime.capture();
     const s = JSON.parse(localStorage.getItem('argo_session') || '{}');
     if (!s || !s.schoolCode || !(s.userName || s.username)) return false;
 
@@ -571,6 +567,7 @@ async function _doRefreshSession() {
 
     // Helper: apply refreshed session data from server response
     const _applyRefreshedSession = (data) => {
+        if (!isCurrent()) return;
         const sessionData = {
             ...data.session,
             studentId: data.student?.id || s.studentId,
@@ -586,7 +583,7 @@ async function _doRefreshSession() {
     // Strategy 1: use in-memory password (app still in RAM from recent login)
     if (window._argoPasswordRuntime) {
         try {
-            const res = await fetch(`${window.API_BASE_URL}/login`, {
+            const res = await fetchWithDeadline(`${window.API_BASE_URL}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -597,6 +594,7 @@ async function _doRefreshSession() {
                 })
             });
             const data = await res.json().catch(() => ({}));
+            if (!isCurrent()) return false;
             if (res.ok && data?.success && data?.sessionToken) {
                 _applyRefreshedSession(data);
                 console.log('[refreshSessionToken] ✅ Refreshed via in-memory password');
@@ -617,12 +615,13 @@ async function _doRefreshSession() {
                     console.log(`[refreshSessionToken] Strategy 2 retry #${attempt} after 2s delay...`);
                     await new Promise(r => setTimeout(r, 2000));
                 }
-                const res = await fetch(`${window.API_BASE_URL}/api/auth?action=refresh-session`, {
+                const res = await fetchWithDeadline(`${window.API_BASE_URL}/api/auth?action=refresh-session`, {
                     method: 'POST',
                     headers: getSessionHeaders(),
                     body: JSON.stringify({ userId })
                 });
                 const data = await res.json().catch(() => ({}));
+            if (!isCurrent()) return false;
                 if (res.ok && data?.success && data?.sessionToken) {
                     _applyRefreshedSession(data);
                     console.log(`[refreshSessionToken] ✅ Refreshed via server-side credentials (attempt ${attempt})`);
@@ -644,17 +643,20 @@ async function _doRefreshSession() {
 }
 
 window.googleFetchWithAuthRetry = async function (url, options = {}) {
-    let res = await fetch(url, options);
+    const isCurrent = ClientRuntime.capture();
+    let res = await fetchWithDeadline(url, options);
     if (res.status !== 401 && res.status !== 403) return res;
 
     const refreshed = await window.refreshSessionToken().catch(() => false);
+    if (!isCurrent()) throw new Error('Il profilo attivo è cambiato');
     if (!refreshed) return res;
 
     const retryOpts = { ...options, headers: getSessionHeaders(options.headers || {}) };
-    return fetch(url, retryOpts);
+    return fetchWithDeadline(url, retryOpts);
 };
 
 window.connectGoogle = async function () {
+    const isCurrent = ClientRuntime.capture();
     const userId = window.getUserId();
     if (!userId || userId === 'guest') { showToast('Devi essere loggato per collegare Google.', 'error', 'var(--red)'); return; }
 
@@ -665,6 +667,7 @@ window.connectGoogle = async function () {
             body: JSON.stringify({ userId })
         });
         const data = await response.json().catch(() => ({}));
+        if (!isCurrent()) return;
         if (!response.ok || !data?.success || !data?.url) throw new Error(data?.error || 'Autorizzazione Google fallita');
         window.location.href = data.url;
     } catch (err) {
@@ -673,7 +676,8 @@ window.connectGoogle = async function () {
     }
 };
 
-window.syncGoogleCalendar = async function () {
+window.syncGoogleCalendar = async function (event) {
+    const isCurrent = ClientRuntime.capture();
     const btn = event?.currentTarget;
     const originalHtml = btn?.innerHTML || '';
     try {
@@ -691,14 +695,15 @@ window.syncGoogleCalendar = async function () {
             body: JSON.stringify({ userId, session: fullSession })
         });
         const data = await res.json();
+        if (!isCurrent()) return;
         if (data.success) {
             state.googleConnected = true;
-            localStorage.setItem('gc_google_connected_cache', '1');
+            localStorage.setItem(lsKey('google_connected_cache'), '1');
             showToast(`✅ Sincronizzati ${data.added || 0} nuovi compiti su Google Calendar!`, 'success', 'var(--green)');
         } else {
             if (data?.error === 'GOOGLE_AUTH_EXPIRED') {
                 state.googleConnected = false;
-                localStorage.setItem('gc_google_connected_cache', '0');
+                localStorage.setItem(lsKey('google_connected_cache'), '0');
                 // Force a full render because render dedup may otherwise skip profile card refresh.
                 state._forceRender = true;
                 window.scheduleRender(0);
@@ -715,6 +720,7 @@ window.syncGoogleCalendar = async function () {
 };
 
 window.disconnectGoogle = async function () {
+    const isCurrent = ClientRuntime.capture();
     try {
         const userId = window.getUserId();
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=disconnect&userId=${encodeURIComponent(userId)}`, {
@@ -722,9 +728,10 @@ window.disconnectGoogle = async function () {
             headers: getSessionHeaders()
         });
         const data = await res.json();
+        if (!isCurrent()) return;
         if (data.success) {
             state.googleConnected = false;
-            localStorage.setItem('gc_google_connected_cache', '0');
+            localStorage.setItem(lsKey('google_connected_cache'), '0');
             state._forceRender = true;
             showToast('Google Calendar disconnesso.', 'warning', 'var(--orange)');
             window.scheduleRender(0);
@@ -733,33 +740,24 @@ window.disconnectGoogle = async function () {
 };
 
 window.checkGoogleStatus = async function () {
+    const isCurrent = ClientRuntime.capture();
     try {
         const userId = window.getUserId();
         if (!userId || userId === 'guest') return;
-        const prevConnected = !!state.googleConnected;
         const res = await window.googleFetchWithAuthRetry(`${window.API_BASE_URL}/api/google?action=status&userId=${encodeURIComponent(userId)}`, {
-            method: 'GET',
-            headers: getSessionHeaders()
+            method: 'GET', headers: getSessionHeaders()
         });
         const data = await res.json();
-        const nextConnected = !!data.connected;
-        state.googleConnected = nextConnected;
-        localStorage.setItem('gc_google_connected_cache', nextConnected ? '1' : '0');
-        // State updated silently — profile view reads state.googleConnected on navigation
-        // No full re-render needed (eliminates double render on boot)
-        if (prevConnected !== nextConnected && state.view === 'profile') {
-            state._forceRender = true;
-            window.scheduleRender(0);
-        }
+        if (!isCurrent()) return;
+        if (!res.ok || typeof data.connected !== 'boolean') throw new Error(data.error || 'Stato Google non disponibile');
+        state.googleConnected = data.connected;
+        state.googleStatusUnknown = false;
+        localStorage.setItem(lsKey('google_connected_cache'), data.connected ? '1' : '0');
     } catch (e) {
-        const wasConnected = !!state.googleConnected;
-        state.googleConnected = false;
-        localStorage.setItem('gc_google_connected_cache', '0');
-        if (wasConnected && state.view === 'profile') {
-            state._forceRender = true;
-            window.scheduleRender(0);
-        }
+        if (!isCurrent()) return;
+        state.googleStatusUnknown = true;
     }
+    if (state.view === 'profile') window.scheduleRender(0);
 };
 
 window.saveArgoToSupabase = async function () {
@@ -1786,7 +1784,7 @@ function renderHomeTaskListHtml(homeTaskData) {
         const abbr = getSubjectAbbrev(t.subject);
         const key = abbr.toLowerCase();
         return `
-              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid var(--outline-variant); cursor:pointer;" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+              <div style="display:flex; align-items:center; gap:9px; padding:6px 0; border-bottom:1px solid var(--outline-variant); cursor:pointer;" onclick="toggleTask('${escapeJsSingleQuote(t.id)}',event)">
                 <div data-task-toggle="${escapeHtml(t.id)}" style="width:17px; height:17px; border:1.5px solid ${t.done ? 'var(--on-surface)' : 'var(--outline-variant)'}; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:${t.done ? 'var(--on-surface)' : 'var(--surface-container-lowest)'}; transition: background 0.15s ease, border-color 0.15s ease;">
                   ${t.done ? '<svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 2.5L3 4.5L7 1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
                 </div>
@@ -2185,7 +2183,7 @@ function renderCalendarWeekList(weekStart) {
             const abbr = getSubjectAbbrev(t.subject);
             const displayText = (t.text || '').replace(/\*/g, '').trim();
             return `
-                        <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')">
+                        <div class="asw-task-card${t.done ? ' asw-task-done' : ''}${isPast && !t.done ? ' asw-task-past' : ''}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}',event)">
                             <div class="asw-task-stripe" style="background:${t.done ? 'var(--outline-variant)' : subjColor};"></div>
                             <div class="asw-task-body">
                                 <div class="asw-task-meta">
@@ -2753,21 +2751,15 @@ function renderHome() {
     const _mediaColor = media >= 8 ? '#30d158' : media >= 7 ? '#64d2ff' : media >= 6 ? '#ff9f0a' : media > 0 ? '#ff453a' : '#8e909f';
 
     // Calcolo % Ore di Assenza rispetto al monte ore totale annuale (~990h, limite max 25% = 248h)
-    const _monteOreTotale = 990;
-    const _limiteOreMax = Math.round(_monteOreTotale * 0.25);
-    const _assenzePctTotale = ((oreAssenzaTotali / _monteOreTotale) * 100).toFixed(1);
-    const _assenzeStatusColor = oreAssenzaTotali > 180 ? '#ff453a' : (oreAssenzaTotali > 80 ? '#ff9f0a' : '#30d158');
-    const _assenzeStatusBg = oreAssenzaTotali > 180 ? 'rgba(255,69,58,0.15)' : (oreAssenzaTotali > 80 ? 'rgba(255,159,10,0.15)' : 'rgba(48,209,88,0.15)');
+    const _monteOreTotale = Number(assenze.monteOreAnnuale) > 0 ? Number(assenze.monteOreAnnuale) : null;
+    const _limiteOreMax = _monteOreTotale ? Math.round(_monteOreTotale * 0.25) : null;
+    const _assenzePctTotale = _monteOreTotale ? ((oreAssenzaTotali / _monteOreTotale) * 100).toFixed(1) : '—';
+    const _assenzeStatusColor = (_limiteOreMax && oreAssenzaTotali >= _limiteOreMax) ? '#ff453a' : ((_limiteOreMax && oreAssenzaTotali >= _limiteOreMax * 0.75) ? '#ff9f0a' : '#30d158');
+    const _assenzeStatusBg = (_limiteOreMax && oreAssenzaTotali >= _limiteOreMax) ? 'rgba(255,69,58,0.15)' : ((_limiteOreMax && oreAssenzaTotali >= _limiteOreMax * 0.75) ? 'rgba(255,159,10,0.15)' : 'rgba(48,209,88,0.15)');
 
     // Dati per "Quanto Manca A..." (Slide 2)
     const _countdownsData = (typeof window.getSchoolCountdowns === 'function') ? window.getSchoolCountdowns() : null;
-    const _nearestMilestone = _countdownsData ? _countdownsData.nearest : {
-        title: 'Vacanze di Natale',
-        emoji: '🎄',
-        daysLeft: 115,
-        badgeText: '115 giorni',
-        dateFormatted: '23 Dic'
-    };
+    const _nearestMilestone = _countdownsData?.nearest || {title:'Calendario da impostare',emoji:'📅',badgeText:'Imposta le date',dateFormatted:'Date personali'};
 
     // Dati per Mood Giornaliero (Slide 3)
     const _dailyMoodsMap = (typeof window.getDailyMoods === 'function') ? window.getDailyMoods() : {};
@@ -2879,8 +2871,8 @@ function renderHome() {
                                     <div style="font-size:20px;font-weight:900;color:${_assenzeStatusColor};font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.03em;margin:3px 0 1px;">
                                         ${_assenzePctTotale}%
                                     </div>
-                                    <span style="font-size:8.5px;font-weight:700;color:${_assenzeStatusColor};background:${_assenzeStatusBg};padding:1px 5px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:fit-content;" title="Monte ore annuale: 990h (limite 25% = 248h)">
-                                        ${oreAssenzaTotali}h / 990h
+                                    <span style="font-size:8.5px;font-weight:700;color:${_assenzeStatusColor};background:${_assenzeStatusBg};padding:1px 5px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:fit-content;" title="${_monteOreTotale ? `Monte ore annuale: ${_monteOreTotale}h` : 'Monte ore annuale non disponibile'}">
+                                        ${oreAssenzaTotali}h${_monteOreTotale ? ` / ${_monteOreTotale}h` : ''}
                                     </span>
                                 </div>
 
@@ -2965,10 +2957,10 @@ function renderHome() {
                             <div style="display:flex;flex-direction:column;gap:4px;margin-top:2px;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;">
                                     <span style="font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.04em;">Progresso Anno Scolastico</span>
-                                    <span style="font-size:10px;font-weight:800;color:#818cf8;">${_countdownsData ? _countdownsData.schoolYearProgress : 0}%</span>
+                                    <span style="font-size:10px;font-weight:800;color:#818cf8;">${_countdownsData?.schoolYearProgress ?? '—'}%</span>
                                 </div>
                                 <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
-                                    <div style="width:${_countdownsData ? _countdownsData.schoolYearProgress : 0}%;height:100%;background:linear-gradient(90deg,#818cf8,#2997ff);border-radius:999px;"></div>
+                                    <div style="width:${_countdownsData?.schoolYearProgress ?? 0}%;height:100%;background:linear-gradient(90deg,#818cf8,#2997ff);border-radius:999px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -5540,7 +5532,37 @@ function closeTodayNotifications() {
 window.closeTodayNotifications = closeTodayNotifications;
 window.closeNotificationsArchive = closeTodayNotifications;
 
+function loadAcademicPreferences() {
+    if (state._academicKey === lsKey('academic_preferences')) return;
+    state._academicKey = lsKey('academic_preferences');
+    let prefs = {};
+    try { prefs = JSON.parse(localStorage.getItem(state._academicKey) || '{}'); } catch (_) {}
+    state.availability = prefs.availability || {start:'15:00',end:'18:00'};
+    state.difficulty = Array.isArray(prefs.difficulty) ? prefs.difficulty : [];
+}
+function saveAcademicPreferences() {
+    localStorage.setItem(lsKey('academic_preferences'), JSON.stringify({availability:state.availability,difficulty:state.difficulty}));
+}
+function saveAvailability() {
+    loadAcademicPreferences();
+    const start = document.getElementById('studyStart')?.value;
+    const end = document.getElementById('studyEnd')?.value;
+    if (!/^\d{2}:\d{2}$/.test(start || '') || !/^\d{2}:\d{2}$/.test(end || '') || start >= end) {
+        showToast('Scegli un orario di fine successivo all’inizio', 'warning');
+        return;
+    }
+    state.availability = {start,end};
+    saveAcademicPreferences();
+}
+function toggleDifficulty(subject) {
+    loadAcademicPreferences();
+    state.difficulty = state.difficulty.includes(subject) ? state.difficulty.filter(s => s !== subject) : [...state.difficulty,subject];
+    saveAcademicPreferences();
+    scheduleRender(0);
+}
+
 function renderAcademicProfile() {
+    loadAcademicPreferences();
     const subjects = [...new Set(getVotiData().map(v => v.materia || v.subject))];
 
     return `
@@ -5561,12 +5583,12 @@ function renderAcademicProfile() {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-2">
                             <label class="label-sm text-on-surface-variant/40">Inizio</label>
-                            <input type="time" id="studyStart" value="${state.availability.start}" onchange="saveAvailability()" 
+                            <input type="time" id="studyStart" value="${escapeHtml(state.availability.start)}" onchange="saveAvailability()"
                                 class="bg-surface-container-low border border-white/40 rounded-2xl h-14 px-4 font-bold text-on-surface">
                        </div>
                         <div class="flex flex-col gap-2">
                             <label class="label-sm text-on-surface-variant/40">Fine</label>
-                            <input type="time" id="studyEnd" value="${state.availability.end}" onchange="saveAvailability()" 
+                            <input type="time" id="studyEnd" value="${escapeHtml(state.availability.end)}" onchange="saveAvailability()"
                                 class="bg-surface-container-low border border-white/40 rounded-2xl h-14 px-4 font-bold text-on-surface">
                        </div>
                    </div>
@@ -5584,10 +5606,10 @@ function renderAcademicProfile() {
                     <div class="flex flex-wrap gap-2">
                         ${subjects.length > 0 ? subjects.map(s => {
         const active = state.difficulty.includes(s);
-        const safeS = s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeS = escapeJsSingleQuote(s);
         return `
             <button onclick="toggleDifficulty('${safeS}')" class="liquid-pill px-5 py-3 text-[13px] font-bold transition-all border ${active ? 'bg-primary text-on-primary border-primary shadow-lg' : 'bg-white/40 text-on-surface border-white/60'}">
-                ${s}
+                ${escapeHtml(s)}
             </button>`;
     }).join('') : '<div class="body-md text-on-surface-variant/40 p-4">Nessuna materia trovata.</div>'}
                    </div>
@@ -6423,9 +6445,9 @@ function mostraAssenzeModal() {
     
     const countDaGiustificare = daGiustificareList.length;
     const countGiustificate = giustificateList.length;
-    const oreTotali = typeof ad.oreAssenzaTotali === 'number' && ad.oreAssenzaTotali > 0
+    const oreTotali = Number.isFinite(ad.oreAssenzaTotali) && ad.oreAssenzaTotali >= 0
         ? ad.oreAssenzaTotali
-        : (rawAssenze.length * 5 + rawRitardi.length * 1 + rawUscite.length * 2);
+        : 'Non disponibili';
 
     state.assenzeFilter = state.assenzeFilter || 'tutte';
 
@@ -6794,7 +6816,7 @@ async function mostraCircolare(id) {
 
         <!-- Actions -->
         <div style="padding:14px 22px calc(24px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(182,196,255,0.12);">
-            ${c.link ? `<button onclick="window.open('${escapeJsSingleQuote(c.link)}','_blank')" style="width:100%;height:50px;border-radius:15px;background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:0 6px 20px -4px rgba(47,88,205,0.5);">
+            ${c.link ? `<button onclick="openExternalLink('${escapeJsSingleQuote(c.link)}')" style="width:100%;height:50px;border-radius:15px;background:linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%);color:#ffffff;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:0 6px 20px -4px rgba(47,88,205,0.5);">
                 <i class="ph-bold ph-file-arrow-up" style="font-size:18px;"></i> Apri Documento PDF Ufficiale
             </button>` : ''}
             <button id="circ-close-btn-${id}" style="width:100%;height:42px;background:none;border:none;color:#b6c4ff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">Chiudi</button>
@@ -6992,7 +7014,7 @@ function renderDayDetailModal(dateStr) {
 
                 ${tasksForDay.map(t => `
                     <div class="p-5 rounded-[28px] bg-surface-container-low border border-white/40 flex items-center gap-4 ${t.done ? 'opacity-50' : ''}">
-                        <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); renderDayDetailModal('${escapeJsSingleQuote(dateStr)}');" class="w-10 h-10 rounded-xl ${t.done ? 'bg-green/10 text-green' : 'bg-primary/10 text-primary'} flex items-center justify-center border border-white/60">
+                        <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}',event); renderDayDetailModal('${escapeJsSingleQuote(dateStr)}');" class="w-10 h-10 rounded-xl ${t.done ? 'bg-green/10 text-green' : 'bg-primary/10 text-primary'} flex items-center justify-center border border-white/60">
                             <span class="material-symbols-outlined text-[20px]">${t.done ? 'task_alt' : 'circle'}</span>
                         </button>
                         <div class="flex-1 min-width-0">
@@ -7442,7 +7464,7 @@ function renderWeeklyAgenda() {
                         </div>
                         
                         <div class="agenda-task-actions" style="padding:0 16px; display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; border-left: 1px dashed rgba(0,0,0,0.04);">
-                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}')" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? 'var(--on-surface)' : 'var(--outline-variant)'}; background:${t.done ? 'var(--on-surface)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease, border-color 0.18s ease; flex-shrink:0;">
+                            <div class="agenda-task-action-btn" data-task-toggle="${escapeHtml(t.id)}" onclick="toggleTask('${escapeJsSingleQuote(t.id)}',event)" style="width:30px; height:30px; border-radius:8px; border:1.5px solid ${t.done ? 'var(--on-surface)' : 'var(--outline-variant)'}; background:${t.done ? 'var(--on-surface)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: background 0.18s ease, border-color 0.18s ease; flex-shrink:0;">
                                 ${t.done ? '<i class="ph-bold ph-check" style="font-size:14px; color:#fff;"></i>' : ''}
                             </div>
                             ${isUserGeneratedTaskId(t.id) ? `
@@ -7744,7 +7766,7 @@ window.setClassActivitiesExportPeriod = function (period) {
 };
 
 window.togglePlannerMobileDropdown = function (event) {
-    if (event) event.stopPropagation();
+    if (typeof event !== 'undefined') event?.stopPropagation();
     const menu = document.getElementById('planner-mobile-menu');
     const toggle = document.getElementById('planner-menu-toggle');
     if (!menu || !toggle) return;
@@ -7950,7 +7972,6 @@ function togglePlanDay(taskId, dateStr) {
     }
 
     saveTasks();
-    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(500);
 
     // ✅ FIX: Immediate surgical DOM update — border shorthand, background, color
     const isNowPlanned = state.plannedTasks[dateStr] && state.plannedTasks[dateStr].includes(taskId);
@@ -8222,59 +8243,7 @@ function promptSetGoal(type) {
         });
     });
 }
-function renderFocusTimer() {
-    const mins = Math.floor(pomodoroState.timeLeft / 60);
-    const secs = pomodoroState.timeLeft % 60;
-    const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
-    const isFocus = pomodoroState.mode === 'focus';
-    const modeLabel = isFocus ? 'Focus' : 'Pausa';
-    const modeColor = isFocus ? '#7c3aed' : 'var(--green)';
 
-    return `
-        <div class="card glass-panel" style="padding: 24px; border-radius: 28px; margin-bottom: 24px; text-align:center;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <div style="font-size: 15px; font-weight: 800; color:white;">🍅 Timer ${modeLabel}</div>
-                    <div style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; background:${modeColor}; color:white;">${modeLabel}</div>
-                </div>
-                <div style="font-size:48px; font-weight:800; color:white; font-family:monospace; margin:16px 0; letter-spacing:4px;">${display}</div>
-                <div style="display:flex; gap:12px; justify-content:center;">
-                    <button onclick="togglePomodoro()" style="padding:12px 28px; border-radius:14px; border:none; background:${pomodoroState.running ? 'var(--red)' : modeColor}; color:white; font-weight:800; font-size:15px; cursor:pointer; min-width:120px;">
-                        ${pomodoroState.running ? '⏸ Pausa' : '▶ Avvia'}
-                    </button>
-                    <button onclick="resetPomodoro()" style="padding:12px 20px; border-radius:14px; border:1px solid rgba(var(--glass-rgb),0.15); background:rgba(var(--glass-rgb),0.06); color:white; font-weight:700; font-size:14px; cursor:pointer;">
-                        ↺ Reset
-                    </button>
-                </div>
-            </div> `;
-}
-function togglePomodoro() {
-    if (pomodoroState.running) {
-        clearInterval(pomodoroState.interval);
-        pomodoroState.running = false;
-    } else {
-        pomodoroState.running = true;
-        pomodoroState.interval = setInterval(() => {
-            pomodoroState.timeLeft--;
-            if (pomodoroState.timeLeft <= 0) {
-                clearInterval(pomodoroState.interval);
-                pomodoroState.running = false;
-                if (pomodoroState.mode === 'focus') {
-                    pomodoroState.mode = 'break';
-                    pomodoroState.timeLeft = 5 * 60;
-                    showToast('🎉 Sessione completata! Pausa di 5 min.', 'success', 'var(--green)');
-                } else {
-                    pomodoroState.mode = 'focus';
-                    pomodoroState.timeLeft = 25 * 60;
-                    showToast('💪 Pausa finita! Torna a studiare.', 'success', '#7c3aed');
-                }
-            }
-            const container = document.getElementById('pomodoroContainer');
-            if (container) container.innerHTML = renderFocusTimer();
-        }, 1000);
-    }
-    const container = document.getElementById('pomodoroContainer');
-    if (container) container.innerHTML = renderFocusTimer();
-}
 function toggleVoiceInput() {
     // Voice input removed - AI chat functionality has been disabled
 }
@@ -8758,8 +8727,8 @@ function setLoginBtnText(txt) {
     btn.innerText = txt;
     btn.disabled = /\.\.\.|Connessione|Sincronizzazione/.test(txt);
 }
-function toggleTask(id) {
-    if (event) event.stopPropagation();
+function toggleTask(id, event) {
+    event?.stopPropagation();
 
     let t = state.tasks.find(x => x.id === id);
     if (!t) t = state.reminders.find(x => x.id === id);
@@ -8996,10 +8965,13 @@ function showQuickAddTaskModal() {
             };
         });
 
-        function doAdd(subject, text, date, isExam) {
+        async function doAdd(subject, text, date, isExam) {
+            if (doAdd.pending) return false;
+            doAdd.pending = true;
+            try {
             if (!text.trim()) return false;
             if (!date) return false;
-            const r = applyImmediateCalendarAction({type:'add',missing:[],subject,text,date,time:'',isExam});
+            const r = await applyImmediateCalendarAction({type:'add',missing:[],subject,text,date,time:'',isExam,examType:vTipo});
             if (r.ok) {
                 if(typeof closeModal==='function') closeModal();
                 state.selectedDate = date;
@@ -9011,6 +8983,8 @@ function showQuickAddTaskModal() {
             }
             showToast('Errore nell\'aggiunta','error');
             return false;
+            } catch (error) { showToast(error.message || 'Salvataggio non riuscito', 'error'); return false; }
+            finally { doAdd.pending = false; }
         }
 
         // Submit new
@@ -9030,7 +9004,12 @@ function showQuickAddTaskModal() {
             const orig=(state.tasks||[]).find(t=>t.id===pickedTaskId);
             if (!orig) { showToast('Compito non trovato','error'); return; }
             const dt=document.getElementById('qs-existing-date')?.value||getLocalDateString();
-            doAdd(orig.subject||'Generale',orig.text||'',dt,false);
+            if (!Array.isArray(state.plannedTasks[dt])) state.plannedTasks[dt] = [];
+            if (!state.plannedTasks[dt].includes(orig.id)) state.plannedTasks[dt].push(orig.id);
+            saveTasks();
+            closeModal();
+            state.selectedDate = dt;
+            scheduleRender(0);
         };
 
         // Submit verifica
@@ -9048,7 +9027,7 @@ function showQuickAddTaskModal() {
 function showAddRegistroTaskModal() {
     const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
     const subjectOptions = subjects.length > 0
-        ? subjects.map(s => `<option value="${s}">${s}</option>`).join('')
+        ? subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
         : '<option value="Generale">Generale</option>';
 
     showModal(`
@@ -9227,9 +9206,9 @@ function closePlannerDropdown() {
 window.closePlannerDropdown = closePlannerDropdown;
 
 function togglePlannerMenu(event) {
-    if (event) event.stopPropagation();
+    if (typeof event !== 'undefined') event?.stopPropagation();
     const menu = document.getElementById('planner-cloud-menu');
-    const btn = document.getElementById('planner-cloud-btn') || event?.currentTarget || event?.target?.closest('button');
+    const btn = document.getElementById('planner-cloud-btn') || (typeof event !== 'undefined' ? event?.currentTarget || event?.target?.closest('button') : null);
     if (!menu || !btn) return;
 
     const isVisible = menu.classList.contains('active');
@@ -9293,7 +9272,7 @@ function showTasksBySubjectModal() {
         `;
 }
 function togglePlanTask(id) {
-    if (event) event.stopPropagation();
+    if (typeof event !== 'undefined') event?.stopPropagation();
 
     const todayStr = getLocalDateString(getSchoolDate());
     if (!state.plannedTasks[todayStr]) state.plannedTasks[todayStr] = [];
@@ -9420,28 +9399,22 @@ const RENDER_MIN_GAP = 50; // ms
 window._gRenderRAF = null;
 window._gRenderTimer = null;
 
+// One scheduler owns DOM updates; callers may request a redraw during focus suppression.
 window.render = function () {
-    if (window._gRenderRAF || state.booting || state._loggedOut) return;
-    const now = performance.now();
-    if (now - _lastRenderTime < RENDER_MIN_GAP) {
-        clearTimeout(window._gRenderTimer);
-        window._gRenderTimer = setTimeout(window.render, RENDER_MIN_GAP);
+    if (!window.state || state.booting || (state._loggedOut && state.view !== 'login')) return;
+    if (window.__fluidityIsBfcacheSuppressed?.()) {
+        window.scheduleRender(220);
         return;
     }
-    _lastRenderTime = now;
+    if (window._gRenderRAF) return;
     window._gRenderRAF = requestAnimationFrame(() => {
-        window._renderCore();
-        window._gRenderRAF = null;
+        try { window._renderCore(); }
+        finally { window._gRenderRAF = null; }
     });
 };
-
 window.scheduleRender = function (delay = 80) {
     clearTimeout(window._gRenderTimer);
-    if (delay === 0) {
-        window._gRenderTimer = setTimeout(window.render, 16);
-    } else {
-        window._gRenderTimer = setTimeout(window.render, delay);
-    }
+    window._gRenderTimer = setTimeout(window.render, Math.max(0, delay));
 };
 
 // ── Render deduplication: skip if view+login state unchanged ──
@@ -9451,7 +9424,7 @@ let _lastRenderedTaskCount = -1;
 let _lastRenderedVotiCount = -1;
 
 window._renderCore = function () {
-    if (state._loggedOut) return; // Post-logout guard
+    if (state._loggedOut && state.view !== 'login') return;
     const root = document.getElementById('app');
     const nav = document.getElementById('nav-container');
     if (!root || !nav) return;
@@ -9467,26 +9440,8 @@ window._renderCore = function () {
         return;
     }
 
-    // Deduplicate: skip full re-render if same view + same data counts + same AI state
-    const taskCount = (state.tasks || []).length;
-    const votiCount = (state.voti || []).length;
-    const _plannerStateKey = state.view === 'planner'
-        ? [state.selectedDate||'',state.plannerWeekOffset||0,state.plannerMonthView||false,
-           state.plannerMonthViewYear||0,state.plannerMonthViewMonth||0].join('|')
-        : '';
-    if (_lastRenderedLoggedIn === true &&
-        _lastRenderedView === state.view &&
-        _lastRenderedTaskCount === taskCount &&
-        _lastRenderedVotiCount === votiCount &&
-        (window.__lastPlannerKey||'') === _plannerStateKey &&
-        !state._forceRender) {
-        return;
-    }
-    window.__lastPlannerKey = _plannerStateKey;
     _lastRenderedLoggedIn = true;
     _lastRenderedView = state.view;
-    _lastRenderedTaskCount = taskCount;
-    _lastRenderedVotiCount = votiCount;
     state._forceRender = false;
 
     document.body.classList.remove('logged-out');
@@ -9596,7 +9551,8 @@ window.logout = async function (skipConfirm = false) {
         if (logoutUser && logoutUser !== 'guest') {
             try {
                 if (window.saveTasksToSupabase) await window.saveTasksToSupabase();
-                const response = await fetch(`${API_BASE_URL}/api/auth?action=logout`,{
+                if (window.PushSettings) await window.PushSettings.detach();
+                const response = await fetchWithDeadline(`${API_BASE_URL}/api/auth?action=logout`,{
                     method:'POST',headers:getSessionHeaders(),body:JSON.stringify({userId:logoutUser}),signal:AbortSignal.timeout(15000)
                 });
                 if (!response.ok && response.status !== 403) throw new Error('Revoca sessione non riuscita');
@@ -9606,6 +9562,7 @@ window.logout = async function (skipConfirm = false) {
             }
         }
         clearInterval(window._classPollTimer);
+        ClientRuntime.invalidate();
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
         state._loggedOut = true;
         state.isLoggedIn = false;
@@ -9701,19 +9658,15 @@ window.logout = async function (skipConfirm = false) {
 };
 
 window.saveProfileToServer = async function (profileData) {
-    const userId = getUserId();
-    const response = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: 'PUT',
-        headers: getSessionHeaders(),
-        body: JSON.stringify({
-            userId: userId,
-            name: profileData.name || state.user.name,
-            class: profileData.class || state.user.class,
-            specialization: profileData.specialization || state.user.specialization,
-            avatar: null
-        })
+    const isCurrent = ClientRuntime.capture();
+    const response = await fetchWithDeadline(`${API_BASE_URL}/api/profile`, {
+        method: 'PUT', headers: getSessionHeaders(),
+        body: JSON.stringify({userId: getUserId(), ...profileData})
     });
-    return await response.json();
+    const result = await response.json();
+    if (!isCurrent()) throw new Error('Il profilo attivo è cambiato.');
+    if (!response.ok || result.success === false) throw new Error(result.error || 'Salvataggio profilo non riuscito');
+    return result;
 };
 
 window.saveProfileChanges = async function () {
@@ -9825,7 +9778,7 @@ window.refreshDailyQuote = async function (btn) {
 };
 
 window.handleManualOwaResyncClick = function (event) {
-    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (typeof event !== 'undefined' && event && typeof event.stopPropagation === 'function') event.stopPropagation();
     if (!confirm('Eseguire un resync manuale completo dei dati OWA?')) return;
     if (typeof window.runManualOwaResync === 'function') window.runManualOwaResync();
 };
@@ -9892,7 +9845,7 @@ window.loadCircolareSintesi = async function (id, link) {
         if (sessionToken) headers['x-session-token'] = sessionToken;
         if (resolvedUserId) headers['x-user-id'] = resolvedUserId;
 
-        const response = await fetch(`${API_BASE_URL}/api/circolari/sintesi`, {
+        const response = await fetchWithDeadline(`${API_BASE_URL}/api/circolari/sintesi`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ id, link, userId: resolvedUserId })
@@ -10189,8 +10142,22 @@ function extractImmediateCalendarAction(text) {
     };
 }
 
-function applyImmediateCalendarAction(action) {
+async function applyImmediateCalendarAction(action) {
     if (!action || action.type !== 'add' || !Array.isArray(action.missing) || action.missing.length) return { ok: false };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(action.date || '') || !String(action.text || '').trim()) return {ok:false};
+    if (action.isExam) {
+        const isCurrent = ClientRuntime.capture();
+        const res = await fetchWithDeadline(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(getUserId())}`, {
+            method:'POST', headers:getSessionHeaders(),
+            body:JSON.stringify({subject:action.subject || 'Studio', date:action.date, type:action.examType || 'scritta', args:action.text})
+        });
+        const result = await res.json();
+        if (!isCurrent()) return {ok:false};
+        if (!res.ok || !result.success || !result.data) throw new Error(result.error || 'Salvataggio verifica non riuscito');
+        state.manualVerifiche = [...(state.manualVerifiche || []), result.data];
+        localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
+        return {ok:true,id:result.data.id};
+    }
     if (!state.plannedTasks || typeof state.plannedTasks !== 'object') state.plannedTasks = {};
     if (!state.plannedDetails || typeof state.plannedDetails !== 'object') state.plannedDetails = {};
     if (!Array.isArray(state.tasks)) state.tasks = [];
@@ -10208,7 +10175,7 @@ function applyImmediateCalendarAction(action) {
     if (!state.plannedTasks[action.date].includes(id)) state.plannedTasks[action.date].push(id);
     state.plannedDetails[id] = { time: action.time };
     if (typeof saveTasks === 'function') saveTasks();
-    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(200);
+
     return { ok: true, id };
 }
 
@@ -10283,7 +10250,7 @@ function deleteImmediateCalendarAction(action) {
         if (idsToDelete.has(id)) delete state.plannedDetails[id];
     });
     if (typeof saveTasks === 'function') saveTasks();
-    if (typeof debouncedSavePlannerRemote === 'function') debouncedSavePlannerRemote(200);
+
     return { ok: true, count: filtered.length };
 }
 
@@ -10313,6 +10280,7 @@ window.saveGeminiKey = function () {
 // ========================================
 
 function gsapAnimateView() {
+    if (typeof gsap === 'undefined') return;
     const root = document.getElementById('app');
     if (!root) return;
 
@@ -10972,7 +10940,7 @@ window.openTaskDetailModal = function(taskId) {
 
         <!-- Actions -->
         <div style="padding:14px 22px calc(24px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(182,196,255,0.12);">
-            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}'); openTaskDetailModal('${escapeJsSingleQuote(t.id)}'); if(typeof window.updatePlannerSearchModalResults==='function')window.updatePlannerSearchModalResults(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:48px;border-radius:15px;background:${t.done ? 'rgba(110,231,183,0.18)' : 'linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%)'};border:${t.done ? '1px solid rgba(110,231,183,0.35)' : 'none'};color:${t.done ? '#6ee7b7' : '#ffffff'};font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:${t.done ? 'none' : '0 4px 16px rgba(47,88,205,0.45)'};">
+            <button onclick="toggleTask('${escapeJsSingleQuote(t.id)}',event); openTaskDetailModal('${escapeJsSingleQuote(t.id)}'); if(typeof window.updatePlannerSearchModalResults==='function')window.updatePlannerSearchModalResults(); state._forceRender=true; scheduleRender(0);" style="width:100%;height:48px;border-radius:15px;background:${t.done ? 'rgba(110,231,183,0.18)' : 'linear-gradient(135deg,#2f58cd 0%,#3b82f6 100%)'};border:${t.done ? '1px solid rgba(110,231,183,0.35)' : 'none'};color:${t.done ? '#6ee7b7' : '#ffffff'};font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;box-shadow:${t.done ? 'none' : '0 4px 16px rgba(47,88,205,0.45)'};">
                 <i class="ph-bold ${t.done ? 'ph-arrow-counter-clockwise' : 'ph-check'}" style="font-size:18px;"></i>
                 <span>${t.done ? 'Riapri (Segna come Da Svolgere)' : 'Segna come Completato'}</span>
             </button>
@@ -11158,7 +11126,7 @@ function renderPlanner() {
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
                     ${delBtn}
-                    <div onclick="event.stopPropagation();toggleTask('${tid}');${rerender}" style="width:36px;height:36px;border-radius:12px;background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;color:#ffb4ab;cursor:pointer;" title="Segna come completato">
+                    <div onclick="event.stopPropagation();toggleTask('${tid}',event);${rerender}" style="width:36px;height:36px;border-radius:12px;background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;color:#ffb4ab;cursor:pointer;" title="Segna come completato">
                         <i class="ph-bold ${t.done ? 'ph-check-circle' : 'ph-warning'}" style="font-size:18px;"></i>
                     </div>
                 </div>
@@ -11171,7 +11139,7 @@ function renderPlanner() {
 
         if (t.done) return `
         <div class="planner-task-done" onclick="openTaskDetailModal('${tid}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'" style="background:rgba(23,31,51,0.7);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(182,196,255,0.1);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;opacity:0.55;cursor:pointer;transition:transform 0.12s ease;">
-            <div onclick="event.stopPropagation();toggleTask('${tid}');${rerender}" style="width:40px;height:40px;flex-shrink:0;background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.35);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#34d399;cursor:pointer;" title="Riapri compito">
+            <div onclick="event.stopPropagation();toggleTask('${tid}',event);${rerender}" style="width:40px;height:40px;flex-shrink:0;background:rgba(52,211,153,0.18);border:1px solid rgba(52,211,153,0.35);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#34d399;cursor:pointer;" title="Riapri compito">
                 <i class="ph-fill ph-check-circle" style="font-size:20px;"></i>
             </div>
             <div style="flex:1;min-width:0;">
@@ -11185,7 +11153,7 @@ function renderPlanner() {
 
         return `
         <div class="planner-task-todo" onclick="openTaskDetailModal('${tid}')" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'" style="background:${theme.gradient};backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid ${theme.border};border-top:1px solid rgba(255,255,255,0.25);box-shadow:0 8px 24px -8px rgba(6,14,32,0.6), inset 0 1px 0 rgba(255,255,255,0.15);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.12s ease;">
-            <div onclick="event.stopPropagation();toggleTask('${tid}');${rerender}" style="width:40px;height:40px;flex-shrink:0;background:${theme.iconBg};border:1px solid ${theme.border};border-radius:12px;display:flex;align-items:center;justify-content:center;color:${theme.color};cursor:pointer;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'" title="Segna come completato">
+            <div onclick="event.stopPropagation();toggleTask('${tid}',event);${rerender}" style="width:40px;height:40px;flex-shrink:0;background:${theme.iconBg};border:1px solid ${theme.border};border-radius:12px;display:flex;align-items:center;justify-content:center;color:${theme.color};cursor:pointer;transition:transform 0.15s ease;" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'" title="Segna come completato">
                 <i class="ph-fill ${theme.icon}" style="font-size:20px;"></i>
             </div>
             <div style="flex:1;min-width:0;">
@@ -11372,7 +11340,7 @@ function renderPlanner() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function getEffectiveUserClass() {
-    const override = localStorage.getItem('gc_user_class_override');
+    const override = localStorage.getItem(lsKey('user_class_override'));
     if (override) {
         const normOverride = (typeof normalizeClassUi === 'function') ? normalizeClassUi(override) : override;
         if (normOverride && normOverride !== 'N/D' && normOverride !== 'Studente') {
@@ -11384,14 +11352,14 @@ function getEffectiveUserClass() {
         { c: state.user?.class, t: state.user?.specialization },
         { c: state.userData?.class, t: state.userData?.specialization },
         { c: savedSession?.class, t: savedSession?.specialization },
-        { c: localStorage.getItem('gc_cached_user_class'), t: null }
+        { c: localStorage.getItem(lsKey('cached_user_class')), t: null }
     ];
     for (const cand of candidates) {
         if (cand.c && cand.c !== '...' && cand.c !== 'N/D' && cand.c !== 'Studente') {
             const norm = (typeof normalizeClassUi === 'function') ? normalizeClassUi(cand.c, cand.t) : cand.c;
             if (norm && norm !== '...' && norm !== 'N/D' && norm !== 'Studente') {
                 const res = norm.trim().toUpperCase();
-                try { localStorage.setItem('gc_cached_user_class', res); } catch(_) {}
+                try { localStorage.setItem(lsKey('cached_user_class'), res); } catch(_) {}
                 return res;
             }
         }
@@ -11399,12 +11367,18 @@ function getEffectiveUserClass() {
     return '';
 }
 
+function getClassCacheKey(kind, className) {
+    const session = window.sessionManager?.load() || {};
+    const year = typeof getCurrentSchoolYearKey === 'function' ? getCurrentSchoolYearKey() : String(new Date().getFullYear());
+    return lsKey(`class_${kind}:${session.schoolCode || ''}:${year}:${(className || 'DEFAULT').toUpperCase()}`);
+}
+
 function getClassRepresentativeStorageKey(className) {
-    return 'gc_class_reps_' + (className || 'DEFAULT').toUpperCase();
+    return getClassCacheKey('reps', className);
 }
 
 function getClassProposalsStorageKey(className) {
-    return 'gc_class_proposals_' + (className || 'DEFAULT').toUpperCase();
+    return getClassCacheKey('proposals', className);
 }
 
 function getStoredClassRepresentatives(className) {
@@ -11479,14 +11453,16 @@ window._classRealtimeSubscribedClass = null;
 window._isFetchingClassData = false;
 
 window._fetchClassDataSilent = async function(className) {
+    const isCurrent = ClientRuntime.capture();
     const targetClass = className || getEffectiveUserClass();
     if (!targetClass) return;
     if (window._isFetchingClassDataSilent) return;
     window._isFetchingClassDataSilent = true;
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`,{headers:getClassRepAuthInfo().headers});
+        const res = await fetchWithDeadline(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`,{headers:getClassRepAuthInfo().headers});
         const json = await res.json();
+        if (!isCurrent()) return;
         if (json && json.success) {
             let changed = false;
             if (Array.isArray(json.representatives)) {
@@ -11517,6 +11493,7 @@ window._fetchClassDataSilent = async function(className) {
 };
 
 window.fetchRemoteClassData = async function(className, forceRender = false) {
+    const isCurrent = ClientRuntime.capture();
     const targetClass = className || getEffectiveUserClass();
     if (!targetClass) return;
     if (window._isFetchingClassData) return;
@@ -11524,8 +11501,9 @@ window.fetchRemoteClassData = async function(className, forceRender = false) {
 
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        const res = await fetch(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`,{headers:getClassRepAuthInfo().headers});
+        const res = await fetchWithDeadline(`${apiBase}/api/class-representative?class=${encodeURIComponent(targetClass)}`,{headers:getClassRepAuthInfo().headers});
         const json = await res.json();
+        if (!isCurrent()) return;
         if (json && json.success) {
             if (Array.isArray(json.representatives)) {
                 saveStoredClassRepresentatives(targetClass, json.representatives);
@@ -11610,7 +11588,7 @@ window.toggleClassRepresentative = async function(enable) {
     // Sync with remote database and handle backend limit validation
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        const res = await fetch(`${apiBase}/api/class-representative`, {
+        const res = await fetchWithDeadline(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -11687,7 +11665,7 @@ window.promptSetUserClass = function(callback) {
         const normVal = (typeof normalizeClassUi === 'function') ? (normalizeClassUi(val) || val) : val;
         if (!state.user) state.user = {};
         state.user.class = normVal;
-        localStorage.setItem('gc_user_class_override', normVal);
+        localStorage.setItem(lsKey('user_class_override'), normVal);
         showToast(`Classe impostata: ${normVal}`, 'success');
         overlay.remove();
         if (typeof callback === 'function') callback(normVal);
@@ -12073,80 +12051,26 @@ window.openRescheduleExamModal = function() {
 };
 
 window.submitClassProposal = async function(proposalData) {
+    const isCurrent = ClientRuntime.capture();
     const userClass = proposalData.class || getEffectiveUserClass();
-    const { userId, userName, headers } = getClassRepAuthInfo();
-
-    const newProp = {
-        id: 'prop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-        type: proposalData.type,
-        class: userClass,
-        class_id: userClass,
-        subject: proposalData.subject || null,
-        originalDate: proposalData.originalDate || null,
-        targetDate: proposalData.targetDate,
-        duration: proposalData.duration || null,
-        reason: proposalData.reason,
-        authorId: userId,
-        authorName: userName,
-        status: 'pending',
-        votes: {
-            accept: [userId],
-            decline: [],
-            alternatives: []
-        },
-        createdAt: new Date().toISOString()
-    };
-
-    const currentProps = getStoredClassProposals(userClass);
-    currentProps.unshift(newProp);
-    saveStoredClassProposals(userClass, currentProps);
-
-    // Refresh stories and view
-    if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
-    if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
-        window.openTodayNotifications();
-    } else {
-        state._forceRender = true;
-        scheduleRender(0);
-    }
-
-    // Sync in background with backend
+    const {userId, userName, headers} = getClassRepAuthInfo();
     try {
-        const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        const res = await fetch(`${apiBase}/api/class-representative`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                action: 'create_proposal',
-                ...proposalData,
-                class: userClass,
-                authorId: userId,
-                authorName: userName
-            })
+        const res = await fetchWithDeadline(`${window.API_BASE_URL || ''}/api/class-representative`, {
+            method:'POST', headers,
+            body:JSON.stringify({...proposalData,action:'create_proposal',class:userClass,authorId:userId,authorName:userName})
         });
-        const json = await res.json().catch(() => ({}));
-        if (res.ok && json && json.success && json.proposal) {
-            const current = getStoredClassProposals(userClass);
-            const idx = current.findIndex(p => p.id === newProp.id);
-            if (idx >= 0) {
-                current[idx] = json.proposal;
-            } else if (!current.some(p => p.id === json.proposal.id)) {
-                current.unshift(json.proposal);
-            }
-            saveStoredClassProposals(userClass, current);
-            showToast('Richiesta assemblea sincronizzata con i compagni!', 'success');
-            if (typeof window.updateTodayStoriesTray === 'function') window.updateTodayStoriesTray();
-            if (document.getElementById('today-notif-overlay') && typeof window.openTodayNotifications === 'function') {
-                window.openTodayNotifications();
-            }
-            window._fetchClassDataSilent(userClass);
-        } else {
-            console.error('[ClassProposal] Backend returned error:', json);
-            showToast('Attenzione: ' + (json?.error || 'Errore sincronizzazione cloud assemblea'), 'error');
-        }
-    } catch (e) {
-        console.warn('[ClassProposal] Create sync failed:', e.message);
-        showToast('Errore di rete sincronizzazione assemblea', 'error');
+        const json = await res.json();
+        if (!isCurrent()) return false;
+        if (!res.ok || !json.success || !json.proposal) throw new Error(json.error || 'Richiesta non salvata');
+        const current = getStoredClassProposals(userClass).filter(p => p.id !== json.proposal.id);
+        saveStoredClassProposals(userClass, [json.proposal, ...current]);
+        showToast('Proposta salvata', 'success');
+        window.updateTodayStoriesTray?.();
+        scheduleRender(0);
+        return true;
+    } catch (error) {
+        if (isCurrent()) showToast(error.message || 'Invio non riuscito. Riprova.', 'error');
+        return false;
     }
 };
 
@@ -12198,7 +12122,7 @@ window.voteClassProposal = async function(proposalId, voteType, alternativeDate,
     // Sync in background with backend
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        await fetch(`${apiBase}/api/class-representative`, {
+        await fetchWithDeadline(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -12246,7 +12170,7 @@ window.manageClassProposal = async function(proposalId, newStatus) {
     // Sync in background with backend
     try {
         const apiBase = window.API_BASE_URL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
-        await fetch(`${apiBase}/api/class-representative`, {
+        await fetchWithDeadline(`${apiBase}/api/class-representative`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -12731,9 +12655,11 @@ window.closePlannerSearch = function() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 window.getDailyMoods = function() {
-    if (!state.dailyMoods) {
+    const key = lsKey('daily_moods');
+    if (!state.dailyMoods || state._dailyMoodsKey !== key) {
+        state._dailyMoodsKey = key;
         try {
-            state.dailyMoods = JSON.parse(localStorage.getItem('gc_daily_moods') || '{}');
+            state.dailyMoods = JSON.parse(localStorage.getItem(lsKey('daily_moods')) || '{}');
         } catch(e) {
             state.dailyMoods = {};
         }
@@ -12770,7 +12696,7 @@ window.setDailyMood = function(moodIdx) {
     };
     state.dailyMoods = moods;
     try {
-        localStorage.setItem('gc_daily_moods', JSON.stringify(moods));
+        localStorage.setItem(lsKey('daily_moods'), JSON.stringify(moods));
     } catch(e) {}
 
     if (typeof window.triggerHaptic === 'function') window.triggerHaptic('medium');
@@ -12797,124 +12723,56 @@ window.setDailyMood = function(moodIdx) {
 // SCHOOL COUNTDOWNS ("Quanto Manca A..." Traguardi Scolastici)
 // ══════════════════════════════════════════════════════════════════════════════
 
-window.getSchoolCountdowns = function() {
+function getSchoolCalendarConfig() {
+    const now = new Date();
+    const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    const key = lsKey(`school_calendar:${year}`);
+    let dates = {};
+    try { dates = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) {}
+    return {key, year, dates};
+}
+function getSchoolCalendarFields() {
+    return [['inizio','Inizio lezioni'],['natale','Inizio vacanze di Natale'],['quadrimestre','Fine primo quadrimestre'],
+        ['pasqua','Inizio vacanze di Pasqua'],['fine_scuola','Fine delle lezioni'],['maturita','Prima prova di maturità']];
+}
+window.saveSchoolCalendar = function () {
+    const config = getSchoolCalendarConfig();
+    const dates = {};
+    for (const [id] of getSchoolCalendarFields()) {
+        const value = document.getElementById('school-date-' + id)?.value;
+        if (value) dates[id] = value;
+    }
+    if (dates.inizio && dates.fine_scuola && dates.inizio >= dates.fine_scuola) {
+        showToast('La fine delle lezioni deve seguire l’inizio', 'warning'); return;
+    }
+    localStorage.setItem(config.key, JSON.stringify(dates));
+    window.closeSchoolCountdownsModal();
+    window.openSchoolCountdownsModal();
+    scheduleRender(0);
+};
+window.getSchoolCountdowns = function () {
+    const {year, dates} = getSchoolCalendarConfig();
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const curYear = today.getFullYear();
-    const curMonth = today.getMonth(); // 0..11
-
-    const startYear = curMonth >= 8 ? curYear : curYear - 1;
-    const endYear = startYear + 1;
-
-    const milestones = [
-        {
-            id: 'natale',
-            title: 'Vacanze di Natale',
-            desc: 'Pausa natalizia & Capodanno',
-            emoji: '🎄',
-            color: '#30d158',
-            bg: 'rgba(48,209,88,0.15)',
-            border: 'rgba(48,209,88,0.35)',
-            date: new Date(startYear, 11, 23) // 23 Dic
-        },
-        {
-            id: 'quadrimestre',
-            title: 'Fine 1° Quadrimestre',
-            desc: 'Chiusura pagelle e valutazioni',
-            emoji: '📑',
-            color: '#64d2ff',
-            bg: 'rgba(100,210,255,0.15)',
-            border: 'rgba(100,210,255,0.35)',
-            date: new Date(endYear, 0, 31) // 31 Gen
-        },
-        {
-            id: '100giorni',
-            title: '100 Giorni alla Fine',
-            desc: 'Tradizionale conto alla rovescia',
-            emoji: '💯',
-            color: '#bf5af2',
-            bg: 'rgba(191,90,242,0.15)',
-            border: 'rgba(191,90,242,0.35)',
-            date: new Date(endYear, 2, 10) // 10 Mar
-        },
-        {
-            id: 'pasqua',
-            title: 'Vacanze di Pasqua',
-            desc: 'Pausa pasquale di primavera',
-            emoji: '🕊️',
-            color: '#ffd60a',
-            bg: 'rgba(255,214,10,0.15)',
-            border: 'rgba(255,214,10,0.35)',
-            date: new Date(endYear, 3, 16) // ~16 Apr
-        },
-        {
-            id: 'fine_scuola',
-            title: 'Fine della Scuola',
-            desc: 'Inizio vacanze estive!',
-            emoji: '🏖️',
-            color: '#ff9f0a',
-            bg: 'rgba(255,159,10,0.15)',
-            border: 'rgba(255,159,10,0.35)',
-            date: new Date(endYear, 5, 8) // 8 Giu
-        },
-        {
-            id: 'maturita',
-            title: 'Esami di Stato / Maturità',
-            desc: 'Inizio prove d\'esame ufficiali',
-            emoji: '🎓',
-            color: '#2997ff',
-            bg: 'rgba(41,151,255,0.15)',
-            border: 'rgba(41,151,255,0.35)',
-            date: new Date(endYear, 5, 18) // 18 Giu
-        }
-    ];
-
-    const schoolStart = new Date(startYear, 8, 12);
-    const schoolEnd = new Date(endYear, 5, 8);
-    const totalSchoolDays = Math.max(1, (schoolEnd - schoolStart) / 86400000);
-    const daysPassed = Math.max(0, Math.min(totalSchoolDays, (today - schoolStart) / 86400000));
-    const schoolYearProgress = Math.min(100, Math.max(0, Math.round((daysPassed / totalSchoolDays) * 100)));
-
-    const result = milestones.map(m => {
-        const timeDiff = m.date.getTime() - today.getTime();
-        const daysLeft = Math.ceil(timeDiff / 86400000);
-        let badgeText = '';
-        let isPast = false;
-        let isToday = false;
-
-        if (daysLeft < 0) {
-            badgeText = 'Passato';
-            isPast = true;
-        } else if (daysLeft === 0) {
-            badgeText = 'Oggi!';
-            isToday = true;
-        } else if (daysLeft === 1) {
-            badgeText = 'Domani';
-        } else {
-            badgeText = `${daysLeft} giorni`;
-        }
-
-        const dateStr = `${m.date.getDate()} ${['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m.date.getMonth()]} ${m.date.getFullYear()}`;
-
-        return {
-            ...m,
-            daysLeft,
-            badgeText,
-            isPast,
-            isToday,
-            dateFormatted: dateStr
-        };
-    });
-
-    const upcoming = result.filter(m => !m.isPast);
-    const nearest = upcoming.length > 0 ? upcoming[0] : result[result.length - 1];
-
-    return {
-        milestones: result,
-        nearest,
-        schoolYearProgress,
-        schoolYearLabel: `${startYear}/${endYear}`
+    const day = d => Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()) / 86400000;
+    const parse = value => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
+        const [y,m,d] = value.split('-').map(Number);
+        const date = new Date(y,m-1,d);
+        return date.getFullYear() === y && date.getMonth() === m-1 && date.getDate() === d ? date : null;
     };
+    const milestones = getSchoolCalendarFields().filter(([id]) => id !== 'inizio').flatMap(([id,title]) => {
+        const date = parse(dates[id]);
+        if (!date) return [];
+        const daysLeft = day(date)-day(today);
+        return [{id,title,date,daysLeft,emoji:'📅',color:'#64d2ff',bg:'rgba(100,210,255,0.15)',border:'rgba(100,210,255,0.35)',
+            desc:'Data impostata per il tuo calendario',isPast:daysLeft<0,isToday:daysLeft===0,
+            badgeText:daysLeft<0?'Passato':daysLeft===0?'Oggi!':`${daysLeft} giorni`,
+            dateFormatted:date.toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'})}];
+    }).sort((a,b)=>a.date-b.date);
+    const start = parse(dates.inizio), end = parse(dates.fine_scuola);
+    const schoolYearProgress = start && end && end > start ? Math.round(Math.max(0,Math.min(1,(day(today)-day(start))/(day(end)-day(start))))*100) : null;
+    return {milestones,schoolYearProgress,schoolYearLabel:`${year}/${year+1}`,
+        nearest:milestones.find(m=>!m.isPast) || {title:'Calendario da impostare',emoji:'📅',desc:'Inserisci le date comunicate dalla scuola',badgeText:'Imposta le date',dateFormatted:'Date personali',daysLeft:null}};
 };
 
 window.openSchoolCountdownsModal = function() {
@@ -12954,6 +12812,12 @@ window.openSchoolCountdownsModal = function() {
                 <div style="width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,0.25);"></div>
             </div>
 
+            <details style="margin:12px 0;color:white;overflow:auto;flex-shrink:0;max-height:40vh;">
+                <summary style="cursor:pointer;padding:10px;">Imposta le date della tua scuola</summary>
+                <p style="font-size:12px;">Usa le date comunicate dalla scuola. Le impostazioni sono salvate su questo dispositivo per il profilo e l’anno selezionati.</p>
+                ${getSchoolCalendarFields().map(([id,label]) => `<label style="display:flex;justify-content:space-between;gap:8px;padding:6px;font-size:12px;">${label}<input type="date" id="school-date-${id}" value="${escapeHtml(getSchoolCalendarConfig().dates[id] || '')}" style="color:white;background:#17233b;border:1px solid #536078;border-radius:6px;"></label>`).join('')}
+                <button onclick="window.saveSchoolCalendar()" style="padding:10px;border-radius:10px;">Salva calendario</button>
+            </details>
             <!-- Header -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
@@ -12970,10 +12834,10 @@ window.openSchoolCountdownsModal = function() {
             <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:20px;padding:14px 16px;margin-bottom:16px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.05em;">ANNO SCOLASTICO ${data.schoolYearLabel}</span>
-                    <span style="font-size:12px;font-weight:800;color:#2997ff;">${data.schoolYearProgress}% completato</span>
+                    <span style="font-size:12px;font-weight:800;color:#2997ff;">${data.schoolYearProgress === null ? 'Imposta inizio e fine lezioni' : data.schoolYearProgress + '% completato'}</span>
                 </div>
                 <div style="width:100%;height:7px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
-                    <div style="width:${data.schoolYearProgress}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
+                    <div style="width:${data.schoolYearProgress ?? 0}%;height:100%;background:linear-gradient(90deg,#2997ff,#30d158);border-radius:999px;"></div>
                 </div>
             </div>
 
@@ -13142,7 +13006,7 @@ function formatFullDate(dateInput) {
 }
 
 function renderProfile() {
-    const isGoogleConnected = !!(state.googleConnected || localStorage.getItem('gc_google_connected_cache') === '1');
+    const isGoogleConnected = !!(state.googleConnected || localStorage.getItem(lsKey('google_connected_cache')) === '1');
     const rawName = (typeof getSafeUserName === 'function') ? getSafeUserName() : (state.user?.name || 'Utente');
     const userName = escapeHtml((typeof toDisplayName === 'function') ? toDisplayName(rawName) : rawName);
     const effClass = (typeof getEffectiveUserClass === 'function') ? getEffectiveUserClass() : '';
@@ -13295,6 +13159,8 @@ function renderProfile() {
                 </div>
             </div>
 
+            ${window.PushSettings ? window.PushSettings.render() : ''}
+
             <!-- ── SEZIONE: GOOGLE CALENDAR CLOUD ── -->
             <div style="margin-bottom:20px;">
                 <p style="font-size:11px;font-weight:800;color:#8e909f;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:6px;">
@@ -13314,7 +13180,7 @@ function renderProfile() {
                                     <i class="ph-fill ph-google-logo" style="font-size:22px;"></i>
                                 </div>
                                 <div>
-                                    <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">Google Calendar</div>
+                                    <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">Google Calendar${state.googleStatusUnknown ? ' · stato da verificare' : ''}</div>
                                     <div style="font-size:11.5px;font-weight:700;color:#30d158;display:flex;align-items:center;gap:5px;margin-top:2px;">
                                         <span style="width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;"></span>
                                         Sincronizzazione Cloud Attiva
@@ -13369,7 +13235,7 @@ function renderProfile() {
                                 <i class="ph-fill ph-google-logo" style="font-size:22px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">Google Calendar</div>
+                                <div style="font-size:16px;font-weight:800;color:#ffffff;line-height:1.2;">Google Calendar${state.googleStatusUnknown ? ' · stato da verificare' : ''}</div>
                                 <div style="font-size:12px;font-weight:600;color:#8e909f;margin-top:2px;">Non collegato</div>
                             </div>
                         </div>

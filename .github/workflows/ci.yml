@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -26,6 +26,15 @@ jobs:
 
       - name: Run npm security audit
         run: npm audit --audit-level=high
+
+      - name: Install frontend build and test tools
+        run: npm ci --prefix frontend
+
+      - name: Audit frontend build tools
+        run: npm audit --prefix frontend --audit-level=high
+
+      - name: Check generated frontend assets
+        run: npm run build --prefix frontend && git diff --exit-code -- assets
 
       - name: Run automated unit & security tests
         run: npm test

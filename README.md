@@ -13,7 +13,7 @@
 Il backend è basato su **Vercel Serverless Functions** (Node.js).
 
 ### 1. Requisiti
-- Node.js 20.x
+- Node.js 24.x
 - Account Vercel
 
 ### 2. Sviluppo Locale

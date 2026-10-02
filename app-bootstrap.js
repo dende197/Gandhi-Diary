@@ -22,28 +22,6 @@
         window.API_BASE_URL = API_BASE_URL;
         console.log(`[Network] API base resolved (${resolvedApi.source}): ${API_BASE_URL}`);
 
-        // Supabase client is initialised lazily once config is loaded from the backend
-        let supabaseClient = null;
-        async function getSupabaseClient() {
-            if (supabaseClient) return supabaseClient;
-            try {
-                const cfg = await fetch(`${API_BASE_URL}/api/config`).then(r => r.json());
-                const sbUrl = cfg.supabaseUrl;
-                const sbKey = cfg.supabaseAnonKey;
-                if (!sbUrl || !sbKey) {
-                    console.error('[Config] Server did not return Supabase configuration.');
-                    return null;
-                }
-                if (window.supabase && typeof window.supabase.createClient === 'function') {
-                    supabaseClient = window.supabase.createClient(sbUrl, sbKey);
-                }
-            } catch (e) {
-                console.warn('[Config] Could not load Supabase config:', e.message);
-            }
-            return supabaseClient;
-        }
-        window.getSupabaseClient = getSupabaseClient;
-
         // Global Variable Shims for ui.js
         let calendarState = { weekOffset: 0 };
         let __mediaGaugeRAF = null;
@@ -94,7 +72,7 @@
                 localStorage.removeItem('argo_session');
                 localStorage.removeItem('argo_is_logged_in');
                 localStorage.removeItem('argo_password');
-                localStorage.removeItem('gc_user_class_override');
+                localStorage.removeItem(lsKey('user_class_override'));
                 try {
                     Object.keys(localStorage).forEach(k => {
                         if (k.startsWith('gc_class_') || k.startsWith('gc_cached_')) {
@@ -109,7 +87,23 @@
         function getActiveProfileKey() {
             const s = sessionManager.load();
             if (!s || !sessionManager.isLoggedIn()) return 'guest';
-            return `p:${s.schoolCode || '0'}:${(s.userName || '0').toLowerCase()}:${s.profileIndex ?? 0}`;
+            return s.studentId || `p:${s.schoolCode || '0'}:${(s.userName || '0').toLowerCase()}:${s.profileIndex ?? 0}`;
+        }
+        function migrateVerifiedProfileCache() {
+            const session = sessionManager.load();
+            if (!session?.studentId) return;
+            const legacy = `p:${session.schoolCode || '0'}:${(session.userName || '0').toLowerCase()}:${session.profileIndex ?? 0}`;
+            const stable = session.studentId;
+            if (legacy === stable) return;
+            try {
+                const cachedUser = JSON.parse(localStorage.getItem(`${legacy}:user`) || 'null');
+                if (cachedUser?.id !== stable) return;
+                for (const key of Object.keys(localStorage)) {
+                    if (!key.startsWith(legacy + ':')) continue;
+                    const target = stable + key.slice(legacy.length);
+                    if (localStorage.getItem(target) === null) localStorage.setItem(target,localStorage.getItem(key));
+                }
+            } catch (_) { /* Keep legacy copies intact if their owner cannot be verified. */ }
         }
         function lsKey(key) { return `${getActiveProfileKey()}:${key}`; }
         window.lsKey = lsKey;
@@ -167,7 +161,9 @@
             agendaSearchQuery: '',
             agendaSearchSubject: 'all'
         };
+        Object.keys(localStorage).filter(k => k.includes('weekly_agenda_cache')).forEach(k => localStorage.removeItem(k));
         window.state = state;
+        const initialProfileState = JSON.stringify(state);
 
         // Keep local data "fresh enough" for fast relaunches without forcing boot sync.
         const SYNC_TTL_MS = 8 * 60 * 60 * 1000;
@@ -298,14 +294,18 @@
 
         // --- UTILS ---
         function parseArgoDate(dateStr) {
-            if (!dateStr) return new Date(0);
+            const calendarDate = (year, month, day) => {
+                const d = new Date(year,month,day,12,0,0);
+                return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day ? d : new Date(NaN);
+            };
+            if (!dateStr) return new Date(NaN);
             if (dateStr instanceof Date) return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate(), 12, 0, 0);
             if (typeof dateStr === 'string') {
                 const trimmed = dateStr.trim();
                 const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]), 12, 0, 0);
+                if (iso) return calendarDate(Number(iso[1]), Number(iso[2])-1, Number(iso[3]));
                 const ita = trimmed.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
-                if (ita) return new Date(parseInt(ita[3]), parseInt(ita[2])-1, parseInt(ita[1]), 12, 0, 0);
+                if (ita) return calendarDate(Number(ita[3]), Number(ita[2])-1, Number(ita[1]));
                 
                 const textMatch = trimmed.match(/^(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/i);
                 if (textMatch) {
@@ -318,12 +318,12 @@
                     };
                     const m = monthMap[mKey] !== undefined ? monthMap[mKey] : monthMap[mKey.substring(0, 3)];
                     if (m !== undefined) {
-                        return new Date(parseInt(textMatch[3]), m, parseInt(textMatch[1]), 12, 0, 0);
+                        return calendarDate(Number(textMatch[3]), m, Number(textMatch[1]));
                     }
                 }
             }
             const d = new Date(dateStr);
-            return (isNaN(d.getTime()) || d.getTime() <= 86400000) ? new Date(0) : new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+            return (isNaN(d.getTime()) || d.getTime() <= 86400000) ? new Date(NaN) : new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
         }
         window.parseArgoDate = parseArgoDate;
 
@@ -352,29 +352,13 @@
         }
 
         function purgeUserGeneratedTasksAndPlans(syncRemote = false) {
-            const tasks = Array.isArray(state.tasks) ? state.tasks : [];
-            const planned = (state.plannedTasks && typeof state.plannedTasks === 'object') ? state.plannedTasks : {};
-
-            const cleanedTasks = tasks.filter(t => !isUserGeneratedTask(t));
-            const validTaskIds = new Set(cleanedTasks.map(t => t.id).filter(Boolean));
-            const cleanedPlanned = {};
-            Object.entries(planned).forEach(([dateKey, ids]) => {
-                if (!Array.isArray(ids)) return;
-                const kept = ids.filter(id => !isUserGeneratedTaskId(id) && validTaskIds.has(id));
-                if (kept.length > 0) cleanedPlanned[dateKey] = kept;
-            });
-
-            const changed = cleanedTasks.length !== tasks.length || JSON.stringify(cleanedPlanned) !== JSON.stringify(planned);
-            if (!changed) return false;
-
-            state.tasks = cleanedTasks;
-            state.plannedTasks = cleanedPlanned;
-            localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
-            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
-            if (syncRemote && state.isLoggedIn && typeof saveTasksToSupabase === 'function') {
-                saveTasksToSupabase().catch(() => {});
+            const isDemo = id => /^(task-demo-|verif-demo-|demo_)/.test(String(id || ''));
+            state.tasks = (state.tasks || []).filter(t => !isDemo(t.id));
+            for (const [date, ids] of Object.entries(state.plannedTasks || {})) {
+                if (Array.isArray(ids)) state.plannedTasks[date] = ids.filter(id => !isDemo(id));
             }
-            return true;
+            localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
+            localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
         }
 
         // calcolaMedia is defined in ui.js (returns null for empty — correct behavior)
@@ -405,8 +389,9 @@
             // Index local tasks by unique key to preserve 'done' status
             const localIndex = new Map();
             localTasks.forEach(lt => {
-                const key = `${lt.subject}||${lt.text}||${lt.due_date}`;
+                const key = lt.id || `${lt.subject}||${lt.text}||${lt.due_date}`;
                 localIndex.set(key, lt);
+                localIndex.set(`${lt.subject}||${lt.text}||${lt.due_date}`,lt);
             });
             const hasAnyField = (obj, fields) => fields.some((field) => !!obj?.[field]);
             const assignedDateFields = ['assigned_date', 'assignedDate', 'datGiorno', 'dataAssegnazione'];
@@ -414,16 +399,16 @@
 
             const formatted = newTasks.map(t => {
                 const dateObj = parseArgoDate(t.due_date || t.datConsegna);
-                const isoDate = !isNaN(dateObj.getTime()) ? dateObj.toISOString().split('T')[0] : '';
+                const isoDate = !isNaN(dateObj.getTime()) ? getLocalDateString(dateObj) : '';
                 // Canonical hierarchy for assignment date:
                 // assigned_date/assignedDate (new normalized fields) → source payload aliases → due date fallback.
                 const assignedRawDate = t.assigned_date || t.assignedDate || t.datGiorno || t.dataAssegnazione || t.due_date || t.datConsegna;
                 const assignedObj = parseArgoDate(assignedRawDate);
-                const assignedIso = !isNaN(assignedObj.getTime()) ? assignedObj.toISOString().split('T')[0] : isoDate;
+                const assignedIso = !isNaN(assignedObj.getTime()) ? getLocalDateString(assignedObj) : isoDate;
                 const subject = t.subject || t.materia || 'Generico';
                 const text = t.text || t.desCompito || "Nessuna descrizione";
                 const key = `${subject}||${text}||${isoDate}`;
-                const match = localIndex.get(key);
+                const match = localIndex.get(t.id) || localIndex.get(key);
                 const serverAssignedAt = t.assigned_at || t.assignedAt || t.assigned_datetime || t.assignedDateTime || t.datOraIns || t.datOraInserimento || t.dataOraInserimento || null;
                 const hasServerAssignedDate = hasAnyField(t, assignedDateFields);
                 const hasServerAssignedAt = hasAnyField(t, assignedAtFields);
@@ -438,8 +423,8 @@
                 };
             });
 
-            // Keep only assigned tasks from Argo (manual tasks are intentionally discarded)
-            const combined = [...formatted];
+            // Keep personal activities and their completion state across Argo refreshes.
+            const combined = [...formatted, ...localTasks.filter(isUserGeneratedTask)];
             
             // Final Deduplicate (by true ID)
             const unique = [];
@@ -461,7 +446,7 @@
             localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
             localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails || {}));
-            if (typeof saveTasksToSupabase === 'function') saveTasksToSupabase();
+            if (window.debouncedSavePlannerRemote) window.debouncedSavePlannerRemote();
         }
         window.saveTasks = saveTasks;
 
@@ -470,32 +455,36 @@
         async function saveTasksToSupabase() {
             if (!state.isLoggedIn || !state.user?.id) return;
             const userId = state.user.id;
+            const isCurrent = ClientRuntime.capture();
+            const headers = getSessionHeaders();
             const key = `gc_planner_sync:${userId}`;
-            const draft = JSON.parse(JSON.stringify({plannedTasks:state.plannedTasks || {},plannedDetails:state.plannedDetails || {}}));
+            const draft = JSON.parse(JSON.stringify({plannedTasks:state.plannedTasks || {},plannedDetails:state.plannedDetails || {},tasks:state.tasks || []}));
             const saved = JSON.parse(localStorage.getItem(key) || '{}');
             localStorage.setItem(key,JSON.stringify({...saved,draft}));
             plannerSaveQueue = plannerSaveQueue.catch(()=>{}).then(async () => {
-                if (!state.isLoggedIn || state.user?.id !== userId) return;
+                if (!isCurrent() || !state.isLoggedIn) return;
                 let record = JSON.parse(localStorage.getItem(key) || '{}');
                 if (!Number.isSafeInteger(record.version)) {
-                    const response = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`,{headers:getSessionHeaders()});
+                    const response = await fetchWithDeadline(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`,{headers});
                     if (!response.ok) throw new Error('Lettura planner non riuscita');
                     const {data} = await response.json();
+                    if (!isCurrent()) return;
                     record.version = data.version;
                     // Existing cloud data must be loaded before accepting a new local snapshot.
                     if (data.version > 0) throw new Error('Sincronizza prima il planner. Le modifiche locali sono conservate.');
                 }
-                const response = await fetch(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`,{
-                    method:'PUT',headers:getSessionHeaders(),body:JSON.stringify({...draft,version:record.version})
+                const response = await fetchWithDeadline(`${API_BASE_URL}/api/planner/${encodeURIComponent(userId)}`,{
+                    method:'PUT',headers,body:JSON.stringify({...draft,version:record.version})
                 });
                 if (response.status === 409) throw new Error('Planner modificato su un altro dispositivo. Le modifiche locali sono conservate: sincronizza per scegliere quale versione usare.');
                 if (!response.ok) throw new Error('Salvataggio planner non riuscito');
                 const {data} = await response.json();
+                if (!isCurrent()) return;
                 const latest = JSON.parse(localStorage.getItem(key) || '{}');
                 localStorage.setItem(key,JSON.stringify({version:data.version,...(JSON.stringify(latest.draft) !== JSON.stringify(draft) ? {draft:latest.draft} : {})}));
             }).catch(error=>{
                 console.warn('[Planner]',error.message);
-                if (typeof window.showToast === 'function') window.showToast(error.message,'warning');
+                if (isCurrent() && typeof window.showToast === 'function') window.showToast(error.message,'warning');
             });
             return plannerSaveQueue;
         }
@@ -543,12 +532,13 @@
             const allowAuthRetry = options.allowAuthRetry !== false;
             const preserveUiState = options.preserveUiState !== false;
             let uiSnapshot = null;
-            if (state.syncing || state._loggedOut) return;
+            if (state.syncing || state._loggedOut) return false;
+            const isCurrent = ClientRuntime.capture();
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
             if (!suppressHideBoot) updateLoader("Contatto Server...");
             if (!sessionData) sessionData = sessionManager.load();
-            if (!sessionData) { state.syncing = false; return; }
+            if (!sessionData) { state.syncing = false; return false; }
             
             try {
                 // SECURITY: Never persist or restore passwords from sessionStorage.
@@ -571,26 +561,30 @@
                     };
                 };
 
-                const executeSyncRequest = () => fetch(`${API_BASE_URL}/sync`, {
+                const executeSyncRequest = () => fetchWithDeadline(`${API_BASE_URL}/sync`, {
                     method: 'POST',
                     headers: getSessionHeaders(),
                     body: JSON.stringify(getFreshRequestBody())
                 });
 
                 let response = await executeSyncRequest();
+                if (!isCurrent()) return false;
                 if ((response.status === 401 || response.status === 403) && allowAuthRetry && typeof window.refreshSessionToken === 'function') {
                     console.log('[Sync] Auth failed, attempting session refresh...');
                     const refreshed = await window.refreshSessionToken().catch(() => false);
+                    if (!isCurrent()) return false;
                     if (refreshed) {
                         // Crucial: After refresh, executeSyncRequest() will now pick up the NEW tokens
                         // from sessionManager.load() via getFreshRequestBody()
                         response = await executeSyncRequest();
+                        if (!isCurrent()) return false;
                     } else {
                         console.warn('[Sync] Session refresh failed — will retry on next cycle');
                     }
                 }
-                if (!response.ok) throw new Error("Sync failed: " + response.status);
+                if (!response.ok) throw Object.assign(new Error("Sincronizzazione non riuscita: " + response.status), {status: response.status});
                 const data = await response.json();
+                if (!isCurrent()) return false;
                 
                 if (data.success) {
                     if (preserveUiState) uiSnapshot = snapshotUiStateForSync();
@@ -599,11 +593,12 @@
                     // 1. Process Planner Data FIRST (contains remote manual tasks & verifiche)
                     if (data.planner) {
                         await plannerSaveQueue;
+                        if (!isCurrent()) return false;
                         const plannerKey = `gc_planner_sync:${state.user.id}`;
                         const pending = JSON.parse(localStorage.getItem(plannerKey) || '{}');
                         // A save may finish while this sync response is in flight.
                         if (Number.isSafeInteger(pending.version) && pending.version > data.planner.version) {
-                            data.planner = {...data.planner,version:pending.version,plannedTasks:state.plannedTasks,plannedDetails:state.plannedDetails};
+                            data.planner = {...data.planner,version:pending.version,plannedTasks:state.plannedTasks,plannedDetails:state.plannedDetails,tasks:state.tasks};
                         }
                         let localDraft = pending.draft;
                         if (localDraft && pending.version !== data.planner.version) {
@@ -617,7 +612,10 @@
                         localStorage.setItem(plannerKey,JSON.stringify({version:data.planner.version,...(localDraft ? {draft:localDraft} : {})}));
                         localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks));
                         localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails));
+                        state.tasks = localDraft?.tasks || data.planner.tasks || state.tasks || [];
+                        localStorage.setItem(lsKey('tasks'), JSON.stringify(state.tasks));
                         if (localDraft) await saveTasksToSupabase();
+                        if (!isCurrent()) return false;
 
                         // Handle manual verifiche from dedicated table
                         if (data.planner.manualVerifiche) {
@@ -625,7 +623,7 @@
                             localStorage.setItem(lsKey('manual_verifiche'), JSON.stringify(state.manualVerifiche));
                         }
 
-                        // Remote planner.tasks are intentionally ignored: keep only assigned tasks.
+                        // Argo updates below preserve completion and personal tasks from this snapshot.
                     }
 
                     // 2. Process Argo Tasks (merges into state.tasks)
@@ -676,7 +674,7 @@
                             class: normCls || data.student.class || state.user?.class || ''
                         };
                         if (normCls && normCls !== 'N/D' && normCls !== '...' && normCls !== 'Studente') {
-                            try { localStorage.setItem('gc_cached_user_class', normCls); } catch(_) {}
+                            try { localStorage.setItem(lsKey('cached_user_class'), normCls); } catch(_) {}
                         }
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
@@ -713,13 +711,13 @@
                     });
                     console.log('[performSync] ✅ Sync success updated lastSync:', state.lastSync);
                     if (typeof window.warmWeeklyAgendaCache === 'function') {
-                        setTimeout(() => window.warmWeeklyAgendaCache(true), 0);
+                        setTimeout(() => { if (isCurrent()) window.warmWeeklyAgendaCache(true); }, 0);
                     }
 
                     // Show unjustified absence popup
                     if (data.assenzeData && data.assenzeData.daGiustificare > 0) {
                         setTimeout(() => {
-                            if (typeof showToast === 'function') {
+                            if (isCurrent() && typeof showToast === 'function') {
                                 showToast(`⚠️ Hai ${data.assenzeData.daGiustificare} assenz${data.assenzeData.daGiustificare === 1 ? 'a' : 'e'} da giustificare`, 'warning');
                             }
                         }, 2000);
@@ -728,7 +726,9 @@
                     console.warn('[performSync] ⚠️ API returned success:false', data);
                     throw new Error(data.error || 'Il server ha restituito un errore di sincronizzazione.');
                 }
+                return true;
             } catch (e) {
+                if (!isCurrent()) return false;
                 console.error("❌ Sync error:", e);
                 appendSyncDiagnostic({
                     source: 'sync',
@@ -739,15 +739,18 @@
                 state.didup.connected = false;
                 const hasLocalData = (state.tasks && state.tasks.length > 0) || (state.voti && state.voti.length > 0);
                 state.didup.stale = hasLocalData; // stale = we have cached data but can't verify freshness
-                state.isOffline = true;
+                state.isOffline = !navigator.onLine;
+                state.syncError = e.message;
                 // Schedule a retry after 2 minutes if we're online
-                if (navigator.onLine && state.isLoggedIn && !state._loggedOut) {
+                if (navigator.onLine && state.isLoggedIn && !state._loggedOut && ![401,403].includes(e.status)) {
                     setTimeout(() => {
                         console.log('[Sync] Retry after previous failure...');
-                        runAutomaticSyncCycle('retry-after-failure', { force: true });
+                        if (isCurrent()) runAutomaticSyncCycle('retry-after-failure', { force: true });
                     }, 2 * 60 * 1000);
                 }
+                return false;
             } finally {
+                if (!isCurrent()) return false;
                 state.syncing = false;
                 if (!suppressHideBoot) hideBoot();
                 if (state._loggedOut) return; // Don't render after logout
@@ -769,23 +772,29 @@
             }
             const session = sessionManager.load();
             if (!session) return false;
+            const isCurrent = ClientRuntime.capture();
             try {
                 if (showBootOverlay && typeof showBoot === 'function') showBoot('Resync manuale OWA in corso...');
-                await performSync(session, {
+                const synced = await performSync(session, {
                     suppressRender: false,
                     suppressHideBoot: true,
                     allowAuthRetry: true,
                     preserveUiState: true
                 });
+                if (!synced || !isCurrent()) {
+                    if (isCurrent()) showToast(state.syncError || 'Sincronizzazione non riuscita', 'error');
+                    return false;
+                }
                 await runSilentGoogleSync(session);
                 if (typeof loadCircolari === 'function') await loadCircolari();
+                if (!isCurrent()) return false;
                 if (typeof showToast === 'function') showToast('✅ Resync manuale completato');
                 return true;
             } catch (e) {
                 if (typeof showToast === 'function') showToast(e?.message || 'Resync manuale fallito. Verifica la connessione e riprova.', 'error', '#ff453a');
                 return false;
             } finally {
-                if (showBootOverlay && typeof hideBoot === 'function') hideBoot();
+                if (isCurrent() && showBootOverlay && typeof hideBoot === 'function') hideBoot();
             }
         }
         window.runManualOwaResync = runManualOwaResync;
@@ -800,11 +809,12 @@
         let _lastHiddenAt = null;
 
         async function runSilentGoogleSync(sessionData = null) {
+            const isCurrent = ClientRuntime.capture();
             if (!state.isLoggedIn || state._loggedOut) return;
             if (typeof window.checkGoogleStatus === 'function') {
                 await window.checkGoogleStatus().catch(() => {});
             }
-            if (!state.googleConnected) return;
+            if (!isCurrent() || !state.googleConnected) return;
 
             const userId = typeof window.getUserId === 'function' ? window.getUserId() : (state.user?.id || 'guest');
             if (!userId || userId === 'guest') return;
@@ -812,15 +822,17 @@
             const currentSession = sessionData || sessionManager.load();
             if (!currentSession) return;
             const fullSession = { ...currentSession, profileIndex: currentSession.profileIndex ?? 0 };
-            const request = () => fetch(`${API_BASE_URL}/api/google?action=sync`, {
+            const request = () => fetchWithDeadline(`${API_BASE_URL}/api/google?action=sync`, {
                 method: 'POST',
                 headers: getSessionHeaders(),
                 body: JSON.stringify({ userId, session: fullSession })
             });
 
             let res = await request();
+            if (!isCurrent()) return;
             if ((res.status === 401 || res.status === 403) && typeof window.refreshSessionToken === 'function') {
                 const refreshed = await window.refreshSessionToken().catch(() => false);
+                if (!isCurrent()) return;
                 if (refreshed) {
                     res = await request();
                 }
@@ -846,7 +858,8 @@
             _lastAutoSyncAt = now;
             try {
                 // performSync handles auth refresh internally on 403, no pre-refresh needed
-                await performSync(sessionManager.load() || session, { suppressHideBoot: true, suppressRender: false });
+                const synced = await performSync(sessionManager.load() || session, { suppressHideBoot: true, suppressRender: false });
+                if (!synced) return false;
                 // performSync already sets didup.connected = true on success
                 state.isOffline = false;
                 await runSilentGoogleSync(sessionManager.load() || session);
@@ -882,7 +895,7 @@
                 console.log(`[Foreground] Back after ${Math.round(awayMs/1000)}s — triggering resync`);
                 runAutomaticSyncCycle('visible', { force: true });
             });
-            window.addEventListener('focus', () => runAutomaticSyncCycle('focus', { force: true }));
+            window.addEventListener('focus', () => runAutomaticSyncCycle('focus'));
             window.addEventListener('online', () => runAutomaticSyncCycle('online', { force: true }));
             // iOS Safari bfcache fallback: page restored from back-forward cache
             window.addEventListener('pageshow', (e) => {
@@ -896,8 +909,8 @@
         async function loadCircolari() {
             try {
                 const base = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : (window.API_BASE_URL || '');
-                let res = await fetch(`${base}/api/circolari/index`);
-                if (!res.ok) res = await fetch(`${base}/api/circolari`);
+                let res = await fetchWithDeadline(`${base}/api/circolari/index`);
+                if (!res.ok) res = await fetchWithDeadline(`${base}/api/circolari`);
                 const data = await res.json();
                 if (data.success && Array.isArray(data.circolari)) {
                     state.circolari = data.circolari;
@@ -1015,6 +1028,7 @@
             offlineBadge = document.getElementById('offline-badge');
             
             const session = sessionManager.load();
+            migrateVerifiedProfileCache();
             if (session && sessionManager.isLoggedIn()) {
                 state.isLoggedIn = true;
                 state.booting = false;
@@ -1023,11 +1037,11 @@
                 
                 // Hydrate
                 try {
-                    state.user = JSON.parse(localStorage.getItem(lsKey('user'))) || state.user;
+                    state.user = JSON.parse(localStorage.getItem(lsKey('user'))) || {...state.user,id:getUserId(),name:session.name || 'Studente'};
                     
                     // Eagerly resolve and normalize class so profile view never flickers or delays
-                    const cachedCls = localStorage.getItem('gc_cached_user_class');
-                    const overrideCls = localStorage.getItem('gc_user_class_override');
+                    const cachedCls = localStorage.getItem(lsKey('cached_user_class'));
+                    const overrideCls = localStorage.getItem(lsKey('user_class_override'));
                     const sessCls = session?.class;
                     const sessSpec = session?.specialization || state.user?.specialization;
                     const currentCls = state.user?.class;
@@ -1043,7 +1057,7 @@
                             : candidateCls;
                         if (normalizedCandidate && normalizedCandidate !== '...' && normalizedCandidate !== 'N/D' && normalizedCandidate !== 'Studente') {
                             state.user.class = normalizedCandidate;
-                            try { localStorage.setItem('gc_cached_user_class', normalizedCandidate); } catch(_) {}
+                            try { localStorage.setItem(lsKey('cached_user_class'), normalizedCandidate); } catch(_) {}
                         }
                     }
                     if (state.user && state.user.class === '...') {
@@ -1102,9 +1116,12 @@
                 }
 
                 // Check if Google Status is returning from OAuth before render
-                if (window.location.hash.includes('google=success')) {
+                const oauthUrl = new URL(window.location.href);
+                if (oauthUrl.searchParams.get('google') === 'success') {
                     state.googleConnected = true;
-                    history.replaceState(null, '', '/#profile');
+                    oauthUrl.searchParams.delete('google');
+                    oauthUrl.hash = 'profile';
+                    history.replaceState(null, '', oauthUrl.pathname + oauthUrl.search + oauthUrl.hash);
                     state.view = 'profile';
                     setTimeout(() => { if (typeof showToast === 'function') showToast('✅ Google Calendar collegato!', 'var(--green)'); }, 500);
                 }
@@ -1200,7 +1217,7 @@
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
             localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails || {}));
             if (state.isLoggedIn) {
-                if (window.saveTasksToSupabase) window.saveTasksToSupabase();
+                if (window.debouncedSavePlannerRemote) window.debouncedSavePlannerRemote();
             }
         };
 
@@ -1210,10 +1227,16 @@
             // Always persist plannedTasks to localStorage immediately
             localStorage.setItem(lsKey('planned_tasks'), JSON.stringify(state.plannedTasks || {}));
             localStorage.setItem(lsKey('planned_details'), JSON.stringify(state.plannedDetails || {}));
-            // Debounce the Supabase save
+            const isCurrent = ClientRuntime.capture();
+            const userId = state.user?.id;
+            if (!state.isLoggedIn || !userId) return;
+            const key = `gc_planner_sync:${userId}`;
+            const previous = JSON.parse(localStorage.getItem(key) || '{}');
+            localStorage.setItem(key, JSON.stringify({...previous,draft:{tasks:state.tasks || [],plannedTasks:state.plannedTasks || {},plannedDetails:state.plannedDetails || {}}}));
+            // Debounce network only: the recovery draft already survives app termination.
             clearTimeout(_savePlannerTimer);
             _savePlannerTimer = setTimeout(function() {
-                if (window.saveTasksToSupabase) window.saveTasksToSupabase();
+                if (isCurrent() && window.saveTasksToSupabase) window.saveTasksToSupabase();
             }, delay || 500);
         };
         // getLocalDateString is defined in ui.js (uses local timezone — correct)
@@ -1229,17 +1252,6 @@
         // --- TEMPORARY CREDENTIALS STORE ---
         let tempCreds = { school: '', user: '', pass: '' };
 
-        // --- CRYPTO HELPER ---
-        async function hashPassword(password) {
-            if (!password) return '';
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-        window.hashPassword = hashPassword;
-
         // --- SERVER HEALTH CHECK ---
         async function checkServerHealth(attempt = 1) {
             const statusEl = document.getElementById('server-status');
@@ -1247,7 +1259,7 @@
             try {
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), 3500);
-                const res = await fetch(`${API_BASE_URL}/health`, {
+                const res = await fetchWithDeadline(`${API_BASE_URL}/health`, {
                     method: 'GET',
                     signal: controller.signal
                 });
@@ -1341,7 +1353,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-                const response = await fetch(`${API_BASE_URL}/login`, {
+                const response = await fetchWithDeadline(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
@@ -1390,6 +1402,17 @@
             if (!pass) {
                 throw new Error('Password Argo non disponibile nella sessione corrente. Rieffettua il login.');
             }
+            if (window.PushSettings) await window.PushSettings.beforeLogin(data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex));
+            ClientRuntime.invalidate();
+            clearInterval(window._classPollTimer);
+            clearTimeout(_savePlannerTimer);
+            window._isFetchingClassData = false;
+            window._isFetchingClassDataSilent = false;
+            Object.keys(state).forEach(key => delete state[key]);
+            Object.assign(state, JSON.parse(initialProfileState));
+            state.booting = false;
+            state._loggedOut = false;
+            window._plannerDayContentCache = null;
             // Keep password in volatile memory for session refresh (never persisted to localStorage)
             window._argoPasswordRuntime = pass;
             // SECURITY: Never persist passwords to sessionStorage or localStorage.
@@ -1407,8 +1430,12 @@
                     idSoggetto: data.selectedProfile?.idSoggetto || null,
                     sessionToken: data.sessionToken || null
                 };
+                // A fresh login must not inherit optional fields from another account.
+                localStorage.removeItem('argo_session');
                 sessionManager.save(sessionData);
             }
+
+            migrateVerifiedProfileCache();
 
             // 2. Identity Update
             const incoming = data.student || data.selectedProfile || {};
@@ -1432,12 +1459,15 @@
                 avatar: incoming.avatar || state.user?.avatar || null
             };
             if (finalClass && finalClass !== 'N/D' && finalClass !== '...' && finalClass !== 'Studente') {
-                try { localStorage.setItem('gc_cached_user_class', finalClass); } catch(_) {}
+                try { localStorage.setItem(lsKey('cached_user_class'), finalClass); } catch(_) {}
             }
             localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
 
             // 4. Planner Sync
             state.syncing = false;
+            state.tasks = JSON.parse(localStorage.getItem(lsKey('tasks')) || '[]');
+            state.plannedDetails = JSON.parse(localStorage.getItem(lsKey('planned_details')) || '{}');
+            state.manualVerifiche = JSON.parse(localStorage.getItem(lsKey('manual_verifiche')) || '[]');
             state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks')) || '{}');
             state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders')) || '[]');
             if (typeof notifyPlannerChanged === 'function') notifyPlannerChanged();
@@ -1487,11 +1517,13 @@
             if (typeof window.checkGoogleStatus === 'function') window.checkGoogleStatus();
             ensureAutomaticSyncScheduler();
 
+            const isCurrentLogin = ClientRuntime.capture();
             await Promise.all([
                 (typeof loadProfileFromServer === 'function' ? loadProfileFromServer() : Promise.resolve()).catch(e => console.error("Profile load failed:", e)),
                 performSync(sessionManager.load(), { suppressRender: true }).catch(e => console.error("Post-login sync failed:", e)),
                 loadCircolari().catch(e => console.error("Post-login circolari load failed:", e))
             ]);
+            if (!isCurrentLogin()) return;
             runSilentGoogleSync(sessionManager.load()).catch(() => {});
 
             if (typeof closeModal === 'function') closeModal();
@@ -1515,7 +1547,7 @@
             try {
                 await Promise.all(profiles.map(async (p) => {
                     try {
-                        const resp = await fetch(`${API_BASE_URL}/api/resolve-profile`, {
+                        const resp = await fetchWithDeadline(`${API_BASE_URL}/api/resolve-profile`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1563,7 +1595,7 @@
                     const user = stored.userName || stored.username;
                     const pass = window._argoPasswordRuntime || '';
 
-                    const response = await fetch(`${API_BASE_URL}/login`, {
+                    const response = await fetchWithDeadline(`${API_BASE_URL}/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1605,18 +1637,6 @@
         window.submitQuickTask = submitQuickTask;
 
         // --- REGISTRO TASK (verifica/orale/compito) ---
-        function selectRegistroTipo(tipo) {
-            window._registroTipo = tipo;
-            ['tipo-verifica', 'tipo-orale', 'tipo-compito'].forEach(id => {
-                const b = document.getElementById(id);
-                if (b) { b.style.border = '1px solid rgba(255,255,255,0.1)'; b.style.background = 'transparent'; b.style.color = 'var(--text-dim)'; }
-            });
-            const map = { 'Verifica': 'tipo-verifica', 'Interrogazione': 'tipo-orale', 'Compito in classe': 'tipo-compito' };
-            const active = document.getElementById(map[tipo]);
-            if (active) { active.style.border = '1px solid var(--accent)'; active.style.background = 'rgba(99,102,241,0.15)'; active.style.color = 'var(--accent)'; }
-        }
-        window.selectRegistroTipo = selectRegistroTipo;
-
         async function submitRegistroTask() {
             const btn = document.getElementById('submit-registro-btn');
             if (btn) {
@@ -1633,7 +1653,7 @@
             
             if (state.isLoggedIn && userId !== 'guest') {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(userId)}`, {
+                    const res = await fetchWithDeadline(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(userId)}`, {
                         method: 'POST',
                         headers: getSessionHeaders(),
                         body: JSON.stringify({ subject, date: dateVal, type: tipo, args })
@@ -1705,7 +1725,7 @@
             
             if (state.isLoggedIn && state.user && state.user.id && !id.startsWith('manual_')) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(state.user.id)}?id=${id}`, {
+                    const res = await fetchWithDeadline(`${API_BASE_URL}/api/manual-verifiche/${encodeURIComponent(state.user.id)}?id=${id}`, {
                         method: 'DELETE',
                         headers: getSessionHeaders()
                     });

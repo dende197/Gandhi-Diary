@@ -1,0 +1,2 @@
+# Generated browser files preserve whitespace inside HTML template literals.
+assets/* linguist-generated=true whitespace=-blank-at-eol

@@ -7,7 +7,7 @@ function plannerClient(fetch) {
     const values=new Map();
     const state={isLoggedIn:true,user:{id:'alice'},plannedTasks:{a:'2026-10-01'},plannedDetails:{}};
     const window={showToast(){}};
-    vm.runInNewContext(source.slice(start,end),{state,window,fetch,API_BASE_URL:'https://example.test',getSessionHeaders:()=>({}),
+    vm.runInNewContext(source.slice(start,end),{state,window,fetch,fetchWithDeadline:fetch,ClientRuntime:{capture:()=>()=>true},API_BASE_URL:'https://example.test',getSessionHeaders:()=>({}),
         localStorage:{getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)},console:{warn(){}}});
     return {state,values,save:window.saveTasksToSupabase};
 }
