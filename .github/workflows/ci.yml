@@ -34,7 +34,9 @@ jobs:
         run: npm audit --prefix frontend --audit-level=high
 
       - name: Check generated frontend assets
+        if: ${{ !cancelled() }}
         run: npm run build --prefix frontend && git diff --exit-code -- assets
 
       - name: Run automated unit & security tests
+        if: ${{ !cancelled() }}
         run: npm test

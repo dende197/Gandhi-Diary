@@ -14,7 +14,7 @@
         const url=new URL(`${window.API_BASE_URL}/api/push`);
         url.searchParams.set('op',action);
         if(method==='GET'){url.searchParams.set('userId',s.owner);if(s.deviceId)url.searchParams.set('deviceId',s.deviceId);}
-        const response=await window.fetchWithDeadline(url.href,{method,headers:window.getSessionHeaders(),...(method==='GET'?{}:{body:JSON.stringify({userId:s.owner,deviceId:s.deviceId,...data})})});
+        const response=await window.fetchWithDeadline(url.href,{method,headers:window.getSessionHeaders(),...(method==='GET'?{}:{body:JSON.stringify({userId:s.owner,deviceId:s.deviceId,...data})})},action==='subscribe'?30000:undefined);
         const result=await response.json();
         if(!response.ok||!result.success)throw new Error(result.error||'Servizio notifiche non disponibile.');
         if(s!==current||owner()!==s.owner)throw new Error('Il profilo è cambiato. Riapri le impostazioni.');
@@ -63,7 +63,8 @@
             if(s!==current||owner()!==s.owner){await subscription.unsubscribe();return;}
             s.subscription=subscription;s.deviceId=await endpointId(subscription);
             const result=await api(s,'subscribe','POST',{subscription:subscription.toJSON(),preferences:s.preferences});
-            s.deviceId=result.deviceId;s.enabled=true;s.message='Notifiche attive. Il primo controllo prepara le novità senza inviare lo storico.';
+            s.deviceId=result.deviceId;s.enabled=true;s.message=result.initialized?'Notifiche attive. Base iniziale preparata: riceverai i prossimi aggiornamenti.':'Telefono registrato. Il primo controllo non è ancora completo: il servizio riproverà automaticamente.';
+            const status=await api(s,'status');s.poll=status.poll;
         } catch(e){fail(s,Notification.permission==='denied'?new Error('Notifiche bloccate. Consenti le notifiche nelle impostazioni del telefono o del browser.'):e);}
         finally {s.busy=false;redraw();}
     }
@@ -111,11 +112,16 @@
         else if(Notification.permission==='denied')hint='Il telefono ha bloccato le notifiche. Riattivale nelle impostazioni del browser o dell’app per poterle usare.';
         const buttonStyle='min-height:44px;padding:10px 16px;border-radius:12px;border:1px solid #434653;background:#1d4ed8;color:white;font:inherit;cursor:pointer';
         const disabled=s.busy?'disabled':'';
+        const last=s.poll?.last_success && new Date(s.poll.last_success);
+        const lastValid=last && Number.isFinite(last.getTime());
+        const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',hour:'2-digit',hourCycle:'h23'}).format(new Date()));
+        const stale=lastValid && Date.now()-last.getTime()>45*60000 && hour>=8 && hour<22;
         return `<section aria-labelledby="push-title" style="margin-bottom:20px;padding:20px;border-radius:24px;background:rgba(23,31,51,.85);border:1px solid rgba(182,196,255,.2)">
             <h2 id="push-title" style="font-size:18px;margin:0 0 10px">Notifiche sul telefono</h2>
             <p style="font-size:13px;line-height:1.5;color:#c4c5d6">${hint}</p>
             <p role="status" style="font-size:13px;color:#b6c4ff">${s.loading?'Controllo disponibilità…':escape(s.message || (s.enabled?'Attive su questo telefono':'Disattivate su questo telefono'))}</p>
             ${s.ready?`<button id="push-toggle" onclick="PushSettings.${s.enabled?'disable':'enable'}()" style="${buttonStyle}" ${disabled} ${!s.enabled&&Notification.permission==='denied'?'disabled':''}>${s.busy?'Attendi…':s.enabled?'Disattiva notifiche':'Attiva notifiche'}</button>`:!s.loading&&supported()?`<button onclick="PushSettings.retry()" style="${buttonStyle}">Ricontrolla disponibilità</button>`:''}
+            ${s.enabled?`<p style="font-size:13px;color:#c4c5d6">${lastValid?'Ultimo controllo delle novità: '+escape(last.toLocaleString('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+' (ora italiana).':'In attesa del primo controllo delle novità.'}</p>${stale?'<p style="font-size:13px;color:#ffb4ab">Il controllo delle novità è in ritardo. La notifica di prova verifica solo la ricezione del telefono.</p>':''}<button onclick="PushSettings.retry()" style="${buttonStyle}" ${disabled}>Aggiorna stato</button>`:''}
             ${s.enabled?`<fieldset ${disabled} style="border:0;padding:12px 0 0;margin:0"><legend style="padding-top:14px">Quali avvisi ricevere</legend>
             ${Object.entries(labels).map(([key,label])=>`<label style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:14px">${label}<input type="checkbox" ${s.preferences[key]?'checked':''} onchange="PushSettings.save('${key}',this.checked)" style="width:22px;height:22px;accent-color:#3b82f6"></label>`).join('')}
             <label style="display:flex;justify-content:space-between;align-items:center;min-height:48px">Promemoria dalle<select aria-label="Orario promemoria" onchange="PushSettings.save('reminderHour',Number(this.value))" style="background:#171f33;color:white;border-radius:8px">${[16,17,18,19,20,21].map(h=>`<option value="${h}" ${s.preferences.reminderHour===h?'selected':''}>${h}:00</option>`).join('')}</select></label>
