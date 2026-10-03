@@ -1,7 +1,7 @@
 name: Phone notifications
 on:
-  schedule:
-    - cron: '7,22,37,52 * * * *'
+  # Production schedule lives in Supabase pg_cron. GitHub schedules have shown
+  # multi-hour gaps; retain this workflow for an explicit diagnostic run only.
   workflow_dispatch:
 permissions: {}
 concurrency:

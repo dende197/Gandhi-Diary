@@ -17,11 +17,12 @@ function browser(options={}) {
    if(opts.method==='DELETE'&&failDelete)throw Error('Offline');
    let data={success:true};
    if(action==='config')data={...data,configured:true,publicKey:Buffer.alloc(65).toString('base64url')};
-   if(action==='status')data={...data,enabled:!!options.existing,preferences:{grades:false,reminderHour:20}};
-   if(action==='subscribe')data={...data,deviceId:'a'.repeat(64)};
+   if(action==='status')data={...data,enabled:!!options.existing,preferences:{grades:false,reminderHour:20},poll:options.poll};
+   if(action==='subscribe')data={...data,deviceId:'a'.repeat(64),initialized:options.initialized};
    if(action==='preferences')data={...data,preferences:JSON.parse(opts.body).preferences};
    return {ok:true,json:async()=>data};
   }};
+ if(options.now)c.Date=class extends Date{constructor(...args){super(...(args.length?args:[options.now]));}static now(){return new Date(options.now).getTime();}};
  c.window=c;vm.runInNewContext(source,c);
  return {c,requests,setUser(v){user=v;},failDelete(){failDelete=true;},get subscribed(){return subscribed;},get unsubscribed(){return unsubscribed;}};
 }
@@ -54,6 +55,15 @@ test('switching profile while subscription prompt is pending cannot register the
 });
 test('logout unsubscribes even when the server registration cannot be removed',async()=>{
  const b=browser({existing:true});b.c.PushSettings.render();await settle();b.failDelete();await b.c.PushSettings.detach();assert.equal(b.unsubscribed,1);
+});
+test('profile distinguishes successful device registration from a delayed background check',async()=>{
+ const b=browser({existing:true,now:'2026-10-03T12:00:00Z',poll:{last_success:'2026-10-03T06:00:00Z'}});
+ b.c.PushSettings.render();await settle();
+ const html=b.c.PushSettings.render();assert.match(html,/Ultimo controllo delle novità/);assert.match(html,/è in ritardo/);assert.match(html,/verifica solo la ricezione/);
+ const night=browser({existing:true,now:'2026-10-03T22:00:00Z',poll:{last_success:'2026-10-03T18:00:00Z'}});
+ night.c.PushSettings.render();await settle();assert.doesNotMatch(night.c.PushSettings.render(),/è in ritardo/);
+ const fresh=browser({initialized:true});fresh.c.PushSettings.render();await settle();await fresh.c.PushSettings.enable();assert.match(fresh.c.PushSettings.render(),/Base iniziale preparata/);
+ const pending=browser({initialized:false});pending.c.PushSettings.render();await settle();await pending.c.PushSettings.enable();assert.match(pending.c.PushSettings.render(),/primo controllo non è ancora completo/);
 });
 function worker() {
  const events={},notifications=[],opened=[];let windowClient=null;

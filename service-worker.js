@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.3.0';
+const CACHE_VERSION = '4.3.1';
 const CACHE_NAME = `g-connect-static-${CACHE_VERSION}`;
 const EXTERNAL_CACHE_NAME = `g-connect-external-${CACHE_VERSION}`;
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
@@ -20,16 +20,16 @@ const EXTERNAL_ORIGINS = new Set([
 const APP_SHELL = [
   `${BASE_PATH}/`,
   `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/assets/tailwind.css?v=4.3.0`,
-  `${BASE_PATH}/style.css?v=4.3.0`,
-  `${BASE_PATH}/animations.css?v=4.3.0`,
-  `${BASE_PATH}/assets/demo-cleanup.js?v=4.3.0`,
-  `${BASE_PATH}/assets/frontend-runtime.js?v=4.3.0`,
-  `${BASE_PATH}/assets/ui.js?v=4.3.0`,
-  `${BASE_PATH}/assets/push-settings.js?v=4.3.0`,
-  `${BASE_PATH}/assets/app-bootstrap.js?v=4.3.0`,
-  `${BASE_PATH}/assets/fluidity-engine-v3.js?v=4.3.0`,
-  `${BASE_PATH}/assets/fluidity-boot-patch.js?v=4.3.0`,
+  `${BASE_PATH}/assets/tailwind.css?v=4.3.1`,
+  `${BASE_PATH}/style.css?v=4.3.1`,
+  `${BASE_PATH}/animations.css?v=4.3.1`,
+  `${BASE_PATH}/assets/demo-cleanup.js?v=4.3.1`,
+  `${BASE_PATH}/assets/frontend-runtime.js?v=4.3.1`,
+  `${BASE_PATH}/assets/ui.js?v=4.3.1`,
+  `${BASE_PATH}/assets/push-settings.js?v=4.3.1`,
+  `${BASE_PATH}/assets/app-bootstrap.js?v=4.3.1`,
+  `${BASE_PATH}/assets/fluidity-engine-v3.js?v=4.3.1`,
+  `${BASE_PATH}/assets/fluidity-boot-patch.js?v=4.3.1`,
   `${BASE_PATH}/manifest.webmanifest`,
   `${BASE_PATH}/gandhi-diary-icon-180.png`,
   `${BASE_PATH}/gandhi-diary-icon-192.png`,
@@ -37,7 +37,7 @@ const APP_SHELL = [
 
 async function precacheExternalAssets() {
   const cache = await caches.open(EXTERNAL_CACHE_NAME);
-  const optional = [...EXTERNAL_ASSETS, `${BASE_PATH}/assets/ui-views.js?v=4.3.0`, `${BASE_PATH}/assets/ui-modals.js?v=4.3.0`];
+  const optional = [...EXTERNAL_ASSETS, `${BASE_PATH}/assets/ui-views.js?v=4.3.1`, `${BASE_PATH}/assets/ui-modals.js?v=4.3.1`];
   await Promise.all(optional.map(async (asset) => {
     try {
       const response = await fetch(asset, { mode: 'no-cors' });

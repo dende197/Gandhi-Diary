@@ -3,9 +3,10 @@ const {endpoint,database,checked,httpError,quota}=require('../lib/backend');
 const push=require('../lib/web-push');
 const crypto=require('crypto');
 function authorizeCron(req) {
-    const expected=process.env.CRON_SECRET || '';
     const given=String(req.headers.authorization || '').replace(/^Bearer /,'');
-    if(!expected || Buffer.byteLength(given)!==Buffer.byteLength(expected) || !crypto.timingSafeEqual(Buffer.from(given),Buffer.from(expected)))
+    // The database scheduler gets a dedicated, push-only credential.
+    const allowed=[process.env.PUSH_CRON_SECRET,process.env.CRON_SECRET].filter(Boolean);
+    if(!allowed.some(expected=>Buffer.byteLength(given)===Buffer.byteLength(expected) && crypto.timingSafeEqual(Buffer.from(given),Buffer.from(expected))))
         throw httpError(401,'Non autorizzato');
 }
 module.exports=endpoint(async(req,res)=>{
@@ -27,14 +28,15 @@ module.exports=endpoint(async(req,res)=>{
     if(req.method==='GET') {
         const id=String(req.query?.deviceId||'');
         const device=id?await checked(db.from('web_push_devices').select('preferences').eq('id',id).eq('user_id',user).maybeSingle()):null;
-        const poll=await checked(db.from('web_push_poll').select('last_success,last_error').eq('user_id',user).maybeSingle());
+        const poll=await checked(db.from('web_push_poll').select('last_attempt,last_success,last_error').eq('user_id',user).maybeSingle());
         return res.json({success:true,enabled:!!device,preferences:device?.preferences||push.DEFAULTS,poll});
     }
     await quota(`push:${user}`,30,60);
     if(req.method==='POST' && action==='subscribe') {
         const sub=push.validateSubscription(body.subscription), prefs=push.preferences(body.preferences||{}), id=push.digest(sub.endpoint);
         await checked(db.rpc('register_web_push',{p_id:id,p_user:user,p_session:push.digest(req.headers['x-session-token']),p_subscription:sub,p_preferences:prefs}));
-        return res.json({success:true,deviceId:id,preferences:prefs});
+        const initialized=await push.initializeUser(user);
+        return res.json({success:true,deviceId:id,preferences:prefs,initialized});
     }
     const id=String(body.deviceId||'');
     if(!/^[a-f0-9]{64}$/.test(id)) throw httpError(400,'Dispositivo non valido');
