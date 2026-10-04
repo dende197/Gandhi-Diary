@@ -72,7 +72,7 @@ function apiHarness(verified=true,resolve=()=>({data:null,error:null})) {
  const handler=load('api_internal/push.js',{
   '../lib/helpers':{handleCors:()=>false,getRequestBody:r=>r.body||{},normalizeUserId:x=>x,verifySessionToken:async()=>verified},
   '../lib/backend':{endpoint:h=>h,database:()=>db,checked,httpError:(status,message)=>Object.assign(new Error(message),{status}),quota:async()=>{}},
-  '../lib/web-push':{...push,config:()=>({publicKey:'public'}),send:async(...args)=>calls.push(args)}
+  '../lib/web-push':{...push,config:()=>({publicKey:'public'}),initializeUser:async()=>true,runCron:async()=>({processed:0,failed:0}),send:async(...args)=>calls.push(args)}
  });
  return {handler,db,calls};
 }
@@ -112,7 +112,7 @@ test('delivery deletes expired endpoints, retries transient failures and cancels
  const devices={gone:{id:'gone',user_id:'alice',subscription:subscription('https://fcm.googleapis.com/fcm/send/gone'),preferences:{grades:true}},
  retry:{id:'retry',user_id:'alice',subscription:subscription('https://fcm.googleapis.com/fcm/send/retry'),preferences:{grades:true}},
  disabled:{id:'disabled',user_id:'alice',preferences:{grades:false}}};
- const db=fakeDb(c=>({data:c.table==='web_push_outbox'&&c.op==='select'?jobs:c.table==='web_push_devices'&&c.op==='select'?devices[c.filters.find(f=>f[1]==='id')[2]]:null,error:null}));
+ const db=fakeDb(c=>({data:c.table==='pending_web_push_jobs'?jobs:c.table==='web_push_devices'&&c.op==='select'?devices[c.filters.find(f=>f[1]==='id')[2]]:null,error:null}));
  const before={...process.env};const vapid=require('web-push').generateVAPIDKeys();Object.assign(process.env,{VAPID_PUBLIC_KEY:vapid.publicKey,VAPID_PRIVATE_KEY:vapid.privateKey,VAPID_SUBJECT:'https://example.org'});
  try {
   const mod=load('lib/web-push.js',{
@@ -153,4 +153,81 @@ test('public routing keeps push operations inside the existing serverless functi
  let forwarded=false;
  const main=load('api/main.js',{'../api_internal/push':async()=>{forwarded=true;}});
  await main(request({}, {action:'push',op:'config'},'GET'),response());assert.equal(forwarded,true);
+});
+test('database delivery selects newly committed messages and excludes future retries, expired and sent jobs',async()=>{
+ const db=new PGlite();
+ try {
+  await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;');
+  for(const migration of ['202610010001_web_push.sql','202610030001_push_delivery.sql'])
+   await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations',migration),'utf8'));
+  await db.query("SELECT register_web_push('phone','alice','session',$1,'{}')",[JSON.stringify(subscription())]);
+  await db.exec(`INSERT INTO web_push_outbox(device_id,category,event_key,payload,next_attempt,expires_at,sent_at) VALUES
+   ('phone','homework','fresh','{}',now(),now()+interval '1 hour',NULL),
+   ('phone','homework','retry','{}',now()+interval '1 hour',now()+interval '2 hours',NULL),
+   ('phone','homework','expired','{}',now()-interval '2 hours',now()-interval '1 hour',NULL),
+   ('phone','homework','sent','{}',now(),now()+interval '1 hour',now());`);
+  assert.deepEqual((await db.query('SELECT event_key FROM pending_web_push_jobs()')).rows,[{event_key:'fresh'}]);
+  for(const role of ['anon','authenticated']) {
+   await db.exec('SET ROLE '+role);
+   await assert.rejects(()=>db.query('SELECT * FROM pending_web_push_jobs()'),/permission denied/);
+   await db.exec('RESET ROLE');
+  }
+ }finally{await db.close();}
+});
+function vapidEnv(t) {
+ const keys=['VAPID_PUBLIC_KEY','VAPID_PRIVATE_KEY','VAPID_SUBJECT'];
+ const before={...process.env},vapid=require('web-push').generateVAPIDKeys();
+ Object.assign(process.env,{VAPID_PUBLIC_KEY:vapid.publicKey,VAPID_PRIVATE_KEY:vapid.privateKey,VAPID_SUBJECT:'https://example.org'});
+ t.after(()=>{for(const k of keys)if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];});
+}
+test('one worker invocation sends homework queued after polling starts, without a second cron run',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:new Date('2026-10-03T10:00:00Z')});vapidEnv(t);
+ const jobs=[],sent=[];
+ const device={id:'phone',user_id:'alice',subscription:subscription(),preferences:{homework:true,showDetails:false}};
+ const db=fakeDb(c=>{
+  if(c.table==='next_web_push_users')return {data:[{user_id:'alice'}]};
+  if(c.table==='observe_web_push' && c.payload.p_category==='homework') {
+   jobs.push({id:1,device_id:'phone',category:'homework',event_key:'new',payload:{category:'homework'},next_attempt:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString()});
+  }
+  if(c.table==='pending_web_push_jobs')return {data:jobs};
+  if(c.table==='web_push_outbox'&&c.op==='select') {
+   const cutoff=c.filters.find(f=>f[0]==='lte'&&f[1]==='next_attempt')?.[2];
+   return {data:jobs.filter(j=>j.next_attempt<=cutoff)};
+  }
+  if(c.table==='web_push_devices')return {data:device};
+  return {data:null};
+ });
+ const mod=load('lib/web-push.js',{
+  './backend':{...require('../lib/backend'),database:()=>db,checked,withLease:async(k,fn)=>fn(),deadline:async fn=>fn()},
+  './argo-session':{loadArgoDashboard:async()=>{t.mock.timers.tick(5000);return {row:{},dashboard:{data:{dati:[]}}};}},
+  '../api_internal/circolari/index':{fetchCircolari:async()=>[]},
+  'web-push':{...require('web-push'),sendNotification:async(...args)=>sent.push(args)}
+ });
+ const result=await mod.runCron();assert.equal(result.sent,1);assert.equal(sent.length,1);
+ assert.ok(db.calls.some(c=>c.table==='web_push_outbox'&&c.payload?.sent_at));
+});
+test('opt-in initializes all event categories immediately and persists a retryable initialization failure',async t=>{
+ const db=fakeDb(()=>({data:null})),leases=[];let unavailable=false;
+ const mod=load('lib/web-push.js',{
+  './backend':{...require('../lib/backend'),database:()=>db,checked,withLease:async(k,fn)=>{leases.push(k);return fn();},deadline:async fn=>fn()},
+  './argo-session':{loadArgoDashboard:async()=>{if(unavailable)throw Object.assign(new Error('offline'),{status:503});return {row:{},dashboard:{data:{dati:[]}}};}},
+  '../api_internal/circolari/index':{fetchCircolari:async()=>[]}
+ });
+ assert.equal(await mod.initializeUser('alice'),true);
+ assert.equal(db.calls.filter(c=>c.table==='observe_web_push').length,6);
+ assert.equal(leases[0],'push-user:alice');
+ unavailable=true;
+ assert.equal(await mod.initializeUser('alice'),false);
+ assert.ok(db.calls.some(c=>c.payload?.last_error==='SYNC_UNAVAILABLE'));
+});
+test('push scheduler accepts its dedicated token and the manual diagnostic token only',async t=>{
+ const before={...process.env};process.env.PUSH_CRON_SECRET='dedicated-test-token';process.env.CRON_SECRET='manual-test-token';
+ t.after(()=>{for(const k of ['PUSH_CRON_SECRET','CRON_SECRET'])if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];});
+ const {handler}=apiHarness();
+ for(const token of ['dedicated-test-token','manual-test-token']) {
+  const req=request({}, {op:'cron'},'GET');req.headers.authorization='Bearer '+token;
+  const res=response();await handler(req,res);assert.equal(res.code,200);
+ }
+ const req=request({}, {op:'cron'},'GET');req.headers.authorization='Bearer incorrect-test-key';
+ await assert.rejects(()=>handler(req,response()),e=>e.status===401);
 });
