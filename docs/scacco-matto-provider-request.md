@@ -2,6 +2,12 @@
 
 Preparata il 6 ottobre 2026. **Bozza da inviare: nessun messaggio è stato inviato.**
 
+Aggiornamento dell’8 ottobre: l’app è a uso personale e il genitore proverà
+l’accesso esterno nell’app ufficiale. Questa richiesta rimane facoltativa. Il
+discovery OIDC di Argo pubblica il grant `refresh_token`, ma il rilascio per il
+client attuale e il trasferimento della sessione SPID/CIE alla PWA sono ancora
+da verificare; vedere [stato tecnico aggiornato](scacco-matto.md).
+
 ## Messaggio per la scuola e l’assistenza Argo
 
 **Oggetto: Accesso SPID/CIE dal 1° novembre e integrazione autorizzata della PWA Gandhi Diary**

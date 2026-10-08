@@ -1,103 +1,47 @@
 # Scacco matto: preparazione accesso Argo
 
-Stato al 6 ottobre 2026: **preparazione tecnica, non integrazione SPID/CIE operativa**.
-Il ramo mantiene l'accesso esistente. Nessuna modifica di produzione o database
-è necessaria per questa fase. Non esiste una scadenza automatica il 31 ottobre.
+Stato all’8 ottobre 2026: **rinnovo delle sessioni implementato dietro un’opzione disattivata; accesso SPID/CIE alla PWA ancora da verificare e implementare**. Il ramo mantiene l’accesso esistente. Non attiva cambiamenti in produzione né una scadenza automatica il 31 ottobre. La PR rimane in bozza.
 
-## Decisione e dipendenza esterna
+## Scenario personale e verifica necessaria
 
-L'utente non dispone della circolare; riferisce una comunicazione ai docenti che
-potrebbe riguardare soltanto i genitori. Non è confermata la dismissione degli
-account studente. Prima di un cambio globale serve il testo applicabile alle
-diverse utenze della scuola. Se gli studenti conservano le credenziali, mantenere
-quel percorso è la soluzione con il minor impatto, entro le condizioni del fornitore.
+Gandhi Diary viene usata personalmente dallo sviluppatore. Il genitore accederà con la propria identità al proprio profilo genitore. L’utente non dispone della circolare: la dismissione delle credenziali dal 1° novembre potrebbe riguardare soltanto i genitori; non è confermata per gli studenti.
 
-La strada da verificare per SPID/CIE è un collegamento Argo autorizzato, che
-deleghi alla PWA l'accesso ai dati didattici dell'utente. Una propria adesione
-SPID/CIE verifica un'identità ma non concede di per sé accesso al registro Argo.
-Le fonti ufficiali consultate e la richiesta da inoltrare sono in
-[scacco-matto-provider-request.md](scacco-matto-provider-request.md).
-Non sono stati trovati un contratto pubblico di queste API, una registrazione
-client accessibile alla PWA o una politica di rinnovo applicabile. Questo resta
-un requisito esterno da chiarire, non un dettaglio risolvibile inventando endpoint.
+Argo documenta un [login esterno](https://argofamiglia.it/login-esterno/) che restituisce un codice da riportare in didUP Famiglia. La guida descrive l’accesso con scuola, username e password: **non documenta l’uso di quel codice in una PWA esterna né la combinazione con SPID/CIE**. Nella schermata ufficiale Argo è presente anche l’accesso SPID/CIE/EIDAS. Il genitore proverà più avanti il login esterno nell’app ufficiale e riferirà soltanto se appare un codice, si torna nell’app o compare un errore. Non occorre comunicare il codice in chat.
 
-## Modifiche di questa fase
+Il [documento pubblico OIDC di Argo](https://auth.portaleargo.it/.well-known/openid-configuration), consultato il 7 ottobre, pubblica il grant `refresh_token`, PKCE `S256`, gli scope `offline` e `offline_access`, e l’autenticazione token endpoint `none`. Non pubblica un `registration_endpoint`. Questo conferma capacità del server, **non il rilascio di refresh token per il client attualmente usato dalla PWA**, la loro durata o l’accessibilità della callback da una PWA.
 
-- `lib/argo-credentials.js` isola il flusso password preesistente dal codice di
-  lettura del registro. Il client e il callback dell'app ufficiale sono conservati
-  solo per non cambiare il comportamento esistente; non costituiscono un client
-  federato autorizzato per Gandhi Diary. Non estendere questo flusso a SPID/CIE.
-- La scadenza del token usa `expires_in` della risposta Argo quando valido, con
-  il limite prudenziale preesistente di sei ore. In sua assenza resta il vecchio
-  limite. Non si deducono durate o autorizzazioni da un JWT non verificato.
-- `ARGO_LEGACY_AUTH_ENABLED`, assente o `true`, mantiene le credenziali attive.
-  Solo `false` le disabilita. Valori diversi (anche vuoti) restituiscono 503.
-  Il controllo copre login, risoluzione profilo, scambio password, salvataggio
-  e rinnovi in background prima della decifratura della password.
-- `GET /api/auth?action=methods` espone capacità non segrete e non memorizzabili
-  in cache. SPID e CIE rimangono esplicitamente indisponibili. Non esistono
-  pulsanti, callback o risposte di successo che simulino un'integrazione.
-- La disabilitazione riguarda l'uso delle password: non cancella dati o sessioni
-  già valide. Queste possono continuare fino a scadenza/revoca; al rinnovo il
-  server rifiuta le credenziali. Non è una migrazione né una revoca completa.
+Non è stato trovato un protocollo documentato per trasferire la sessione SPID/CIE da Argo a Gandhi Diary. Una callback destinata all’app nativa non torna automaticamente alla PWA; il codice breve della guida non va interpretato come un authorization code OAuth senza verificarne il protocollo. L’uso personale non elimina questa dipendenza tecnica. La [richiesta tecnica preparata](scacco-matto-provider-request.md) resta un’opzione per ottenere chiarimenti, non è stata inviata.
 
-**Non impostare `false` in produzione adesso:** in questo ramo non è ancora
-disponibile un metodo alternativo. È un controllo server preparatorio, non il
-pulsante finale “scacco matto”. L'assenza di una migrazione protegge i dati attuali,
-ma non rende superfluo il lavoro successivo sull'identità e sui token.
+## Cosa implementa il ramo
 
-## Implementazione dopo il contratto Argo
+- `lib/argo-credentials.js` isola il flusso password esistente. Conserva nel risultato interno l’eventuale refresh token restituito da Argo e il client che lo ha ottenuto. Il rinnovo accetta soltanto questo client noto, usa il token endpoint fisso, un timeout di 15 secondi e nessun redirect o cookie.
+- `loadProfilesWithAccessToken` recupera i profili usando un access token, indipendentemente dal login con password. Il profilo selezionato viene cercato per identificativo esatto; non si passa silenziosamente al primo figlio.
+- `argo_token_connections` conserva access token, token profilo e refresh token Argo cifrati con AES-256-GCM. La cifratura è legata all’utente e al campo; la tabella è privata, con RLS e accesso riservato al backend `service_role`. La chiave è l’attuale `ARGO_ENCRYPTION_KEY`. I campi Google non sono riutilizzati.
+- Il rinnovo opera sotto la lease per utente e usa una versione diversa a ogni scrittura: un worker vecchio non può sovrascrivere una connessione più recente. I token ruotati vengono salvati **prima** di recuperare i profili. Se quel recupero fallisce temporaneamente, la richiesta successiva riparte dai token già salvati. Se Argo omette un nuovo refresh token si conserva quello precedente.
+- Prima dello scambio si salva lo stato `refreshing`. In caso di interruzione, timeout ambiguo o token revocato si richiede una nuova autorizzazione invece di riutilizzare un token che potrebbe essere già stato consumato. Un timeout può quindi richiedere un nuovo login.
+- Una connessione nata da credenziali può tornare al login password solo quando quel metodo è ancora abilitato. Le connessioni `interactive` previste dal modello non possono farlo. **Nessun endpoint crea oggi connessioni interactive**: il relativo flusso utente sarà implementato dopo la verifica del passaggio da Argo.
+- `expires_in` limita la durata del token; resta il tetto preesistente di sei ore e il relativo fallback quando manca una durata valida. La cache dashboard può essere servita per 60 secondi; non estende la durata dell’autorizzazione Argo.
+- I refresh token restano interni al backend, senza essere aggiunti alle risposte pubbliche. I vecchi campi access/auth della risposta restano per compatibilità con il frontend esistente.
 
-1. Aggiungere un adapter basato sul protocollo effettivamente autorizzato e un
-   client dedicato. Per OAuth/OIDC: callback HTTPS registrata, PKCE S256, stato
-   monouso breve legato al browser, controllo issuer/audience/nonce quando
-   applicabile; niente credenziali SPID/PIN CIE/OTP nella PWA o sul backend.
-   Non usare il callback custom-scheme dell'app Argo, copiare cookie o chiedere
-   all'utente di incollare token per costruire il nuovo accesso.
-2. Separare la connessione Argo dall'account PWA. Conservare gli attuali `user_id`
-   di planner, Google, notifiche e appartenenze. Aggiungere mapping privati per
-   issuer, account/ruolo e profilo studente verificati. Collegare da una sessione
-   esistente con verifica del medesimo account upstream; non unire account per
-   nome/email o solo per studente (genitore e alunno possono essere distinti).
-   Il PID attuale deriva da scuola, username e indice: sostituire lo username
-   con un subject SPID produrrebbe account duplicati e perdita apparente dei dati.
-3. Salvare i token Argo cifrati in una struttura dedicata con scadenza, revoca e
-   metodo d'accesso. `google_tokens.refresh_token` appartiene a Google e non va
-   riutilizzato. Gestire la rotazione dei token sotto la lease per utente e
-   persistenza atomica; definire un recupero conforme al protocollo per timeout
-   durante la rotazione. Non assumere supporto al rinnovo dal solo scope `offline`.
-4. Distinguere sessione PWA e autorizzazione Argo. In caso di scadenza non
-   rinnovabile, chiedere di ricollegare il registro mantenendo planner e dati
-   locali. Segnalare dati non aggiornati e sospendere i tentativi automatici
-   inutili. Senza delega rinnovabile consentita non si possono garantire notifiche
-   continue ad app chiusa: il requisito va verificato prima di scegliere il flusso.
-5. Aggiornare login, selezione profili, sync, refresh, collegamento Google e
-   frontend: oggi richiedono username e, in alcuni percorsi, una password.
-   Il nuovo percorso deve restituire solo la sessione PWA, non token upstream.
-6. Affiancare i metodi soltanto dopo prove reali nell'ambiente consentito da Argo.
-   Rendere la scelta visibile in base alle capacità del server; non indicare
-   SPID/CIE disponibili solo perché una variabile di configurazione è presente.
+## Opzioni e installazione di prova
 
-## Criteri prima dell'attivazione manuale
+`ARGO_LEGACY_AUTH_ENABLED` assente o `true` mantiene le credenziali attive; `false` blocca login, risoluzione profilo, scambio password, salvataggio e rinnovo tramite password. Non cancella dati, password già salvate o token ancora validi. **Non disabilitarlo ora in produzione:** manca ancora un nuovo accesso interattivo.
 
-- Ambito e data della scuola confermati, incluse utenze studente e minori.
-- Client/API autorizzati e limiti operativi documentati.
-- Login SPID e CIE reali su Android e iOS, ritorno alla PWA installata e browser.
-- Selezione tra più profili; nessuna confusione fra genitore, alunno e fratelli.
-- Planner, impostazioni Google e dispositivi push conservati sullo stesso account.
-- Rinnovo dopo vera scadenza, revoca, sessione IdP scaduta, annullamento login,
-  doppio callback, ripetizione/replay, timeout, due dispositivi contemporanei.
-- Nuovo voto/compito/assenza rilevato con app chiusa e notifica ricevuta realmente;
-  verifica promemoria e sincronizzazione Google senza password.
-- Eliminazione dell'uso password verificata anche nei worker e nel frontend.
-- Backup verificato, procedura di rollback conforme a ciò che la scuola permette.
+`ARGO_TOKEN_REFRESH_ENABLED` è `false` se assente. Con questa impostazione la nuova tabella non viene consultata né scritta e resta il comportamento attuale. Entrambe le opzioni accettano soltanto `true`/`false` minuscoli, con eventuali spazi esterni; valori diversi o vuoti restituiscono 503.
 
-Solo dopo questi esiti e un comando esplicito dell'utente si pubblicherà il
-passaggio finale. Non basta che sia arrivato il 31 ottobre. La cancellazione
-definitiva delle password memorizzate è un'operazione distinta da valutare con
-backup, token attivi e possibilità di rollback: questo ramo non cancella nulla.
+Per una verifica in ambiente di prova:
 
-Se Argo non permette un collegamento delegato, non dichiarare il requisito
-risolto con scraping o token estratti. Sarà necessario concordare la continuità
-delle funzioni indipendenti dal registro e un eventuale import consentito;
-l'automatismo completo dipende dall'accesso ai dati concesso dal fornitore.
+1. Applicare `supabase/migrations/202610080001_argo_token_connections.sql`.
+2. Verificare `ARGO_ENCRYPTION_KEY` e impostare `ARGO_TOKEN_REFRESH_ENABLED=true`.
+3. Effettuare un nuovo login: solo così si registra un nuovo grant, con il refresh token se Argo lo rilascia. Le righe precedenti non vengono convertite inventando token. Una connessione senza refresh token usa la password alla scadenza solo se la politica lo consente.
+4. Verificare un vero rinnovo e una revoca senza registrare token nei log. I test automatici usano risposte simulate: non provano il rinnovo sul fornitore.
+
+Un database o una chiave di cifratura non disponibili generano un errore esplicito, non un ritorno silenzioso alla password. Disattivare l’opzione ripristina il percorso attuale; non elimina la tabella né le connessioni cifrate. Questo rollback è valido solo finché il vecchio login è ancora utilizzabile.
+
+## Lavoro restante prima del passaggio
+
+1. Verificare il flusso reale del genitore e il protocollo di ritorno da Argo. Per OAuth/OIDC servono callback effettivamente accettata, PKCE, stato monouso breve e i controlli OIDC applicabili. La PWA non deve raccogliere password SPID, PIN CIE o OTP. Non sono previsti estrazione di cookie o inserimento manuale di refresh token nell’interfaccia.
+2. Collegare l’identità genitore al profilo studente mantenendo gli attuali `user_id` di planner, Google e notifiche. Il PID attuale deriva da scuola, username e indice: sostituirlo con il subject SPID creerebbe un altro account. Non si possono assumere identici gli identificativi Argo di genitore e studente, né unire account soltanto per nome/email. Questa migrazione non è implementata.
+3. Integrare il nuovo login in selezione profili, sessione PWA, frontend, Google e gestione della riconnessione. `GET /api/auth?action=methods` continua a dichiarare SPID e CIE indisponibili, senza pulsanti che simulano il successo.
+4. Provare Android e iOS: login/annullamento, più figli, ritorno alla PWA, scadenza, revoca, due dispositivi, rinnovo e notifiche effettive ad app chiusa. Senza un grant rinnovabile non sono garantibili sincronizzazione e notifiche continue.
+5. Chiarire la comunicazione della scuola e verificare il backup/rollback prima dell’attivazione manuale. Il comando “scacco matto” potrà disabilitare le credenziali solo dopo aver verificato la nuova modalità completa. Il calendario non attiva nulla automaticamente. L’eliminazione delle password memorizzate è un’operazione distinta, non eseguita da questo ramo.

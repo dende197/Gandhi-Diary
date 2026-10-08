@@ -18,7 +18,7 @@ const row = () => ({ user_id: alice, argo_school_code: 'school', argo_username: 
     argo_tokens_expiry: new Date(Date.now() + 3600000).toISOString() });
 const service = db => ({ ...backend, database: () => db, withLease: async (_, fn) => fn() });
 
-test('credential adapter preserves PKCE, token exchange and provider expiry without returning refresh secrets', async t => {
+test('credential adapter preserves PKCE and keeps refresh metadata available internally', async t => {
     t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-06T10:00:00Z') });
     delete process.env.ARGO_LEGACY_AUTH_ENABLED;
     let challenge, verifier, passwordRequests = 0, tokenRequests = 0;
@@ -45,7 +45,7 @@ test('credential adapter preserves PKCE, token exchange and provider expiry with
             assert.equal(body.get('code'), 'test-code');
             verifier = body.get('code_verifier');
             return { data: { access_token: 'test-token', expires_in: 1800,
-                refresh_token: 'not-an-authorized-refresh-integration' } };
+                refresh_token: 'server-only-refresh-token' } };
         },
     };
     const adapter = load('lib/argo-credentials.js', {
@@ -56,7 +56,7 @@ test('credential adapter preserves PKCE, token exchange and provider expiry with
     assert.equal(tokenRequests, 1);
     assert.equal(crypto.createHash('sha256').update(verifier).digest('base64url'), challenge);
     assert.equal(login.access_token, 'test-token');
-    assert.equal(login.refresh_token, undefined);
+    assert.equal(login.refresh_token, 'server-only-refresh-token');
     assert.equal(Date.parse(login.expires_at), before + 1800000);
     assert.equal(Date.now(), before + 5000);
 });
