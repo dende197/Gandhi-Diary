@@ -9563,6 +9563,7 @@ window.logout = async function (skipConfirm = false) {
         }
         clearInterval(window._classPollTimer);
         ClientRuntime.invalidate();
+        window.stopAutomaticSyncScheduler?.();
         // ── CRITICAL: Set logout flag FIRST to block ALL async renders ──
         state._loggedOut = true;
         state.isLoggedIn = false;
@@ -13016,7 +13017,7 @@ function renderProfile() {
 
     // Last Sync timestamp
     const lastSyncTs = (typeof getPersistedLastSyncAt === 'function') ? getPersistedLastSyncAt() : (state.didup?.lastSuccessTs || null);
-    let lastSyncLabel = 'Recentemente';
+    let lastSyncLabel = 'Mai completata';
     if (lastSyncTs) {
         const syncD = new Date(lastSyncTs);
         if (!isNaN(syncD.getTime())) {
@@ -13288,6 +13289,9 @@ function renderProfile() {
                         <span style="font-size:12.5px;font-weight:700;color:#b6c4ff;background:rgba(37,99,235,0.18);padding:3px 9px;border-radius:8px;">${lastSyncLabel}</span>
                     </div>
 
+                    <p role="status" style="margin:0;padding:0 18px 15px;font-size:12px;color:#b6c4ff;">
+                        ${state.isOffline ? 'Offline: mostriamo gli ultimi dati salvati.' : state.syncError ? 'Ultimo aggiornamento non riuscito. Riproviamo automaticamente; se persiste, accedi di nuovo.' : 'Aggiornamento automatico ogni minuto mentre l’app è aperta.'}
+                    </p>
                     <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
 
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;">
