@@ -22,7 +22,7 @@ module.exports = async function (req, res) {
     assertIdentity(userId, school, username, index);
     if (!(await verifySessionToken(req, userId)))
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
-    const { row, dashboard } = await loadArgoDashboard(userId);
+    const { row, dashboard } = await loadArgoDashboard(userId, { force: body.force === true });
     const db = database();
     const [student, planner, mv] = await Promise.all([
         checked(db.from('profiles').select('*').eq('id', userId).maybeSingle()),

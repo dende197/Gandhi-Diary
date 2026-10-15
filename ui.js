@@ -9780,7 +9780,7 @@ window.refreshDailyQuote = async function (btn) {
 
 window.handleManualOwaResyncClick = function (event) {
     if (typeof event !== 'undefined' && event && typeof event.stopPropagation === 'function') event.stopPropagation();
-    if (!confirm('Eseguire un resync manuale completo dei dati OWA?')) return;
+    if (!confirm('Aggiornare ora i dati da Argo?')) return;
     if (typeof window.runManualOwaResync === 'function') window.runManualOwaResync();
 };
 
@@ -13056,7 +13056,7 @@ function renderProfile() {
                         <h1 class="ios-large-title" style="color:#dae2fd;font-weight:800;font-size:32px;letter-spacing:-0.03em;margin:2px 0 0;">Profilo</h1>
                     </div>
                 </div>
-                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(typeof showToast==='function')showToast('Sincronizzazione DidUP in corso...','info');if(typeof runAutomaticSyncCycle==='function')runAutomaticSyncCycle('manual',{force:true});"
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.runManualOwaResync({showBootOverlay:false});"
                     style="width:40px;height:40px;border-radius:14px;
                            background:rgba(23,31,51,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
                            border:1px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.25);
@@ -13290,7 +13290,7 @@ function renderProfile() {
                     </div>
 
                     <p role="status" style="margin:0;padding:0 18px 15px;font-size:12px;color:#b6c4ff;">
-                        ${state.isOffline ? 'Offline: mostriamo gli ultimi dati salvati.' : state.syncError ? 'Ultimo aggiornamento non riuscito. Riproviamo automaticamente; se persiste, accedi di nuovo.' : 'Aggiornamento automatico ogni minuto mentre l’app è aperta.'}
+                        ${state.isOffline ? 'Offline: mostriamo gli ultimi dati salvati.' : state.syncError ? 'Ultimo aggiornamento non riuscito: ' + escapeHtml(state.syncError) : 'Aggiornamento automatico ogni minuto mentre l’app è aperta.'}
                     </p>
                     <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
 
