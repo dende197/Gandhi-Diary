@@ -21,3 +21,19 @@ La visibilità delle novità dipende dalla loro disponibilità nelle risposte di
 Build degli asset riuscita e 207 test superati. Le nuove regressioni coprono intervalli di un minuto, riapertura dopo sei ore con gli script realmente generati, ciclo offline/online, eventi duplicati, richieste lente, errori Google indipendenti, logout/cambio profilo, timestamp futuri, cache backend, promemoria e conservazione dell'ultimo aggiornamento riuscito. Il test SQL preesistente delle notifiche ora distingue esplicitamente la creazione del nuovo dispositivo dall'osservazione precedente, evitando un esito variabile quando PGlite assegna lo stesso millisecondo a due istruzioni.
 
 Riferimento browser: https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API#policies_in_place_to_aid_background_page_performance
+
+## Recupero delle sincronizzazioni bloccate (15 ottobre, 4.3.3)
+
+Riprodotto con gli asset compilati un caso non coperto dalla verifica iniziale: un profilo locale legacy privo di `id` cambia identità apparente quando arriva `student.id` dal backend. La guardia del runtime scarta il completamento e, prima della correzione, lasciava `state.syncing` attivo per sempre. Ora l'identità iniziale proviene dalla sessione e ogni richiesta rilascia esclusivamente il proprio blocco anche se i metadati del profilo sono cambiati.
+
+Il pulsante del profilo usa il percorso manuale con esito visibile. Il resync e il pull-refresh inviano `force: true`, che il backend applica dopo i controlli di autenticazione e identità per ignorare lo snapshot ancora fresco. Google non blocca il completamento manuale; un errore Argo non viene più trasformato in successo dal pull-refresh. Le cache HTML dell'agenda vengono invalidate all'arrivo dei dati. Gli errori sono mostrati nel profilo, compresa la richiesta di nuovo accesso quando la sessione non può essere rinnovata.
+
+213 test superati. Le nuove verifiche esercitano gli script compilati: polling con risposte complete e modifiche a parità di numero di elementi, profilo legacy, clic sul pulsante, sessione scaduta rinnovabile, Google bloccato e invalidazione cache. Il test backend verifica il bypass esplicito dello snapshot senza bypassare l'autenticazione.
+
+Nei log di produzione sono state osservate risposte 403 prima di un nuovo login, seguito da un `/sync` 200. Questo non dimostra da solo quale dato manchi sui telefoni: serve il confronto indicato dall'utente con il registro ufficiale. Non vengono estese le scadenze di sicurezza delle sessioni.
+
+### Sintesi circolari e rinnovo sessione
+
+La sintesi ora legge il token corrente dal session manager, anziché privilegiare un eventuale token obsoleto nello stato UI. Su 401/403 prova una sola volta il rinnovo condiviso e ripete la richiesta con gli header aggiornati. Se il rinnovo non è consentito, chiede esplicitamente un nuovo accesso. Un risultato arrivato dopo il cambio profilo viene scartato.
+
+Il rinnovo della sessione PWA verifica sempre il refresh credential esistente, ma non scarica più la dashboard Argo: la disponibilità del registro non deve impedire l'accesso alla sintesi. L'access token della PWA conserva durata e scadenza assoluta precedenti; le credenziali revocate o scadute restano rifiutate. Test aggiunti per rinnovo, token UI obsoleto, sessione non rinnovabile, cambio account durante la sintesi e indipendenza da Argo.

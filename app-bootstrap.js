@@ -506,13 +506,15 @@
             if (!session) return false;
             _pullRefreshInFlight = true;
             try {
-                await performSync(session, {
+                const synced = await performSync(session, {
+                    force: true,
                     suppressRender: false,
                     suppressHideBoot: true,
                     allowAuthRetry: true,
                     preserveUiState: true
                 });
-                await runSilentGoogleSync(session);
+                if (!synced) return false;
+                runSilentGoogleSync(session).catch(e => console.warn('[PullSync] Google:', e?.message || e));
                 await loadCircolari();
                 return true;
             } finally {
@@ -534,11 +536,13 @@
             let uiSnapshot = null;
             if (state.syncing || state._loggedOut) return false;
             const isCurrent = ClientRuntime.capture();
+            const syncOwner = {};
+            state._syncOwner = syncOwner;
             state.syncing = true;
             console.log(`[Network] Starting global sync with ${API_BASE_URL}...`);
             if (!suppressHideBoot) updateLoader("Contatto Server...");
             if (!sessionData) sessionData = sessionManager.load();
-            if (!sessionData) { state.syncing = false; return false; }
+            if (!sessionData) { state.syncing = false; delete state._syncOwner; return false; }
             
             try {
                 // SECURITY: Never persist or restore passwords from sessionStorage.
@@ -557,7 +561,8 @@
                         profileIndex: s.profileIndex,
                         accessToken: s.accessToken || '',
                         authToken: s.authToken || '',
-                        subjectId: s.idSoggetto || null
+                        subjectId: s.idSoggetto || null,
+                        force: options.force === true
                     };
                 };
 
@@ -582,7 +587,13 @@
                         console.warn('[Sync] Session refresh failed — will retry on next cycle');
                     }
                 }
-                if (!response.ok) throw Object.assign(new Error("Sincronizzazione non riuscita: " + response.status), {status: response.status});
+                if (!response.ok) {
+                    const failure = await response.json().catch(() => ({}));
+                    const message = response.status === 401 || response.status === 403
+                        ? 'Sessione scaduta o non valida. Accedi di nuovo per aggiornare Argo.'
+                        : (failure.error || `Sincronizzazione non riuscita: ${response.status}`);
+                    throw Object.assign(new Error(message), { status: response.status });
+                }
                 const data = await response.json();
                 if (!isCurrent()) return false;
                 
@@ -683,6 +694,10 @@
                         localStorage.setItem(lsKey('user'), JSON.stringify(state.user));
                     }
                     
+                    state._weeklyAgendaCacheHtml = '';
+                    state._weeklyAgendaCacheKey = null;
+                    window._plannerDayContentCache = null;
+
                     // Sync remote class data & initialize realtime listeners
                     if (typeof window.setupClassRealtimeSubscription === 'function') {
                         window.setupClassRealtimeSubscription();
@@ -753,8 +768,13 @@
                 // The single scheduler retries on the next cycle; no orphan retry timers.
                 return false;
             } finally {
+                // Only the request that owns this lock may release it. Profile
+                // hydration can change cached metadata without changing accounts.
+                if (state._syncOwner === syncOwner) {
+                    state.syncing = false;
+                    delete state._syncOwner;
+                }
                 if (!isCurrent()) return false;
-                state.syncing = false;
                 if (!suppressHideBoot) hideBoot();
                 if (state._loggedOut) return; // Don't render after logout
                 if (!suppressRender) {
@@ -777,21 +797,23 @@
             if (!session) return false;
             const isCurrent = ClientRuntime.capture();
             try {
-                if (showBootOverlay && typeof showBoot === 'function') showBoot('Resync manuale OWA in corso...');
+                if (typeof showToast === 'function') showToast('Sincronizzazione Argo in corso...', 'info');
+                if (showBootOverlay && typeof showBoot === 'function') showBoot('Sincronizzazione Argo in corso...');
                 const synced = await performSync(session, {
                     suppressRender: false,
                     suppressHideBoot: true,
                     allowAuthRetry: true,
-                    preserveUiState: true
+                    preserveUiState: true,
+                    force: true
                 });
                 if (!synced || !isCurrent()) {
                     if (isCurrent()) showToast(state.syncError || 'Sincronizzazione non riuscita', 'error');
                     return false;
                 }
-                await runSilentGoogleSync(session);
+                runSilentGoogleSync(session).catch(e => console.warn('[ManualSync] Google:', e?.message || e));
                 if (typeof loadCircolari === 'function') await loadCircolari();
                 if (!isCurrent()) return false;
-                if (typeof showToast === 'function') showToast('✅ Resync manuale completato');
+                if (typeof showToast === 'function') showToast('✅ Dati Argo aggiornati');
                 return true;
             } catch (e) {
                 if (typeof showToast === 'function') showToast(e?.message || 'Resync manuale fallito. Verifica la connessione e riprova.', 'error', '#ff453a');
@@ -1074,9 +1096,12 @@
 
                 // SECURITY: Never persist or restore passwords from sessionStorage.
                 
+                // Identity comes from the active session, never from an old display cache.
+                state.user.id = getUserId();
                 // Hydrate
                 try {
-                    state.user = JSON.parse(localStorage.getItem(lsKey('user'))) || {...state.user,id:getUserId(),name:session.name || 'Studente'};
+                    const cachedUser = JSON.parse(localStorage.getItem(lsKey('user')));
+                    state.user = { ...state.user, name: session.name || 'Studente', ...cachedUser, id: getUserId() };
                     
                     // Eagerly resolve and normalize class so profile view never flickers or delays
                     const cachedCls = localStorage.getItem(lsKey('cached_user_class'));

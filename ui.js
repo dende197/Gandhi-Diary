@@ -9780,7 +9780,7 @@ window.refreshDailyQuote = async function (btn) {
 
 window.handleManualOwaResyncClick = function (event) {
     if (typeof event !== 'undefined' && event && typeof event.stopPropagation === 'function') event.stopPropagation();
-    if (!confirm('Eseguire un resync manuale completo dei dati OWA?')) return;
+    if (!confirm('Aggiornare ora i dati da Argo?')) return;
     if (typeof window.runManualOwaResync === 'function') window.runManualOwaResync();
 };
 
@@ -9824,43 +9824,41 @@ window.ensureMarked = function() {
 };
 
 window.loadCircolareSintesi = async function (id, link) {
+    const isCurrent = ClientRuntime.capture();
     try {
-        console.log(`[Network] Sintesi Request: ${id}`);
-        let session = null;
-        try {
-            if (typeof sessionManager !== 'undefined' && sessionManager.load) {
-                session = sessionManager.load();
-            } else if (typeof window.sessionManager !== 'undefined' && window.sessionManager.load) {
-                session = window.sessionManager.load();
-            } else {
-                const raw = localStorage.getItem('argo_session');
-                if (raw) session = JSON.parse(raw);
-            }
-        } catch (_) {}
-
-        const sessionToken = (typeof state !== 'undefined' && state.sessionToken) || (session && session.sessionToken) || '';
-        const resolvedUserId = (typeof window.getUserId === 'function')
-            ? window.getUserId()
-            : (session && (session.studentId || session.userId || session.pid)) || (state && state.user && state.user.id) || '';
-        const headers = { 'Content-Type': 'application/json' };
-        if (sessionToken) headers['x-session-token'] = sessionToken;
-        if (resolvedUserId) headers['x-user-id'] = resolvedUserId;
-
-        const response = await fetchWithDeadline(`${API_BASE_URL}/api/circolari/sintesi`, {
+        const userId = window.getUserId();
+        if (!userId || userId === 'guest') {
+            return { success: false, error: 'Accedi per generare la sintesi.' };
+        }
+        // Re-read credentials on retry; a stale state.sessionToken must never
+        // override the active per-device session stored by the session manager.
+        const request = () => fetchWithDeadline(`${API_BASE_URL}/api/circolari/sintesi`, {
             method: 'POST',
-            headers,
-            body: JSON.stringify({ id, link, userId: resolvedUserId })
+            headers: getSessionHeaders(),
+            body: JSON.stringify({ id, link, userId })
         });
+        let response = await request();
+        if (!isCurrent()) return { success: false, error: 'Il profilo attivo è cambiato.' };
+        if (response.status === 401 || response.status === 403) {
+            await response.json().catch(() => ({}));
+            const refreshed = await window.refreshSessionToken().catch(() => false);
+            if (!isCurrent()) return { success: false, error: 'Il profilo attivo è cambiato.' };
+            if (!refreshed) return { success: false, error: 'Sessione scaduta o non valida. Accedi di nuovo per generare la sintesi.' };
+            response = await request();
+        }
         const data = await response.json();
-        if (data.success && data.sintesi) {
-            const circolare = (typeof state !== 'undefined' && state.circolari) ? state.circolari.find(c => c.id === id) : null;
+        if (!isCurrent()) return { success: false, error: 'Il profilo attivo è cambiato.' };
+        if (response.ok && data.success && data.sintesi) {
+            const circolare = state.circolari?.find(c => c.id === id);
             if (circolare) circolare.sintesi = data.sintesi;
             return { success: true, sintesi: data.sintesi };
-        } else {
-            return { success: false, error: data.error || 'Analisi AI non riuscita.' };
         }
+        const error = response.status === 401 || response.status === 403
+            ? 'Sessione scaduta o non valida. Accedi di nuovo per generare la sintesi.'
+            : data.error || 'Analisi AI non riuscita.';
+        return { success: false, error };
     } catch (e) {
-        console.error("Synthesis error:", e);
+        console.error('Synthesis error:', e);
         return { success: false, error: 'Errore di rete durante la richiesta. Riprova più tardi.' };
     }
 };
@@ -13056,7 +13054,7 @@ function renderProfile() {
                         <h1 class="ios-large-title" style="color:#dae2fd;font-weight:800;font-size:32px;letter-spacing:-0.03em;margin:2px 0 0;">Profilo</h1>
                     </div>
                 </div>
-                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');if(typeof showToast==='function')showToast('Sincronizzazione DidUP in corso...','info');if(typeof runAutomaticSyncCycle==='function')runAutomaticSyncCycle('manual',{force:true});"
+                <button onclick="if(typeof window.triggerHaptic==='function')window.triggerHaptic('medium');window.runManualOwaResync({showBootOverlay:false});"
                     style="width:40px;height:40px;border-radius:14px;
                            background:rgba(23,31,51,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
                            border:1px solid rgba(182,196,255,0.16);border-top:1px solid rgba(255,255,255,0.25);
@@ -13290,7 +13288,7 @@ function renderProfile() {
                     </div>
 
                     <p role="status" style="margin:0;padding:0 18px 15px;font-size:12px;color:#b6c4ff;">
-                        ${state.isOffline ? 'Offline: mostriamo gli ultimi dati salvati.' : state.syncError ? 'Ultimo aggiornamento non riuscito. Riproviamo automaticamente; se persiste, accedi di nuovo.' : 'Aggiornamento automatico ogni minuto mentre l’app è aperta.'}
+                        ${state.isOffline ? 'Offline: mostriamo gli ultimi dati salvati.' : state.syncError ? 'Ultimo aggiornamento non riuscito: ' + escapeHtml(state.syncError) : 'Aggiornamento automatico ogni minuto mentre l’app è aperta.'}
                     </p>
                     <div style="height:0.5px;background:rgba(255,255,255,0.08);margin:0 18px;"></div>
 

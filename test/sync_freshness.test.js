@@ -43,4 +43,21 @@ test('one-minute register polls get fresh data without another password login, w
  t.mock.timers.tick(30000);const next=await service.loadArgoDashboard(user);
  assert.equal(reads,2);assert.equal(next.dashboard.revision,2);
  assert.notEqual(next.row.last_argo_sync,first.row.last_argo_sync);
+ const forced=await service.loadArgoDashboard(user,{force:true});
+ assert.equal(reads,3);assert.equal(forced.dashboard.revision,3,'manual refresh must bypass even a just-written snapshot');
+});
+
+test('sync route forwards an explicit manual force only after identity and session checks',async()=>{
+ const calls=[];const user='p:school:alice:0';
+ const handler=load('api_internal/sync.js',{
+  '../lib/helpers':{...require('../lib/helpers'),verifySessionToken:async req=>req.headers['x-session-token']==='valid'},
+  '../lib/backend':{...backend,database:()=>fakeDb(()=>({data:null}))},
+  '../lib/argo-session':{...require('../lib/argo-session'),loadArgoDashboard:async(id,options)=>{calls.push({id,...options});return {row:{},dashboard:{}};}}
+ });
+ for(const force of [true,false,'true']){
+  const out=response();await handler({...request({schoolCode:'school',username:'alice',userId:user,force}),headers:{'x-session-token':'valid'}},out);
+  assert.equal(out.code,200);assert.equal(calls.at(-1).force,force===true);
+ }
+ const denied=response();await handler(request({schoolCode:'school',username:'alice',userId:user,force:true}),denied);
+ assert.equal(denied.code,403);assert.equal(calls.length,3);
 });
