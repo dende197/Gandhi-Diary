@@ -1,3 +1,4 @@
+const { assertLegacyAuthEnabled } = require('../lib/argo-auth-policy');
 const { database, checked, text, httpError, quota } = require('../lib/backend');
 const { persistCredentials } = require('../lib/argo-session');
 const {
@@ -14,6 +15,7 @@ const {
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    assertLegacyAuthEnabled();
     if (!isSessionSecurityConfigured()) {
         return res.status(500).json({
             success: false,

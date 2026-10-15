@@ -46,6 +46,26 @@ test('B05/B35/B38 database policies, atomic planner writes, representative limit
             .filter((f) => f.endsWith('.sql'))
             .sort())
             await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations', file), 'utf8'));
+        const tokenMigration = fs.readFileSync(path.join(__dirname,
+            '../supabase/migrations/202610080001_argo_token_connections.sql'), 'utf8');
+        await db.exec(tokenMigration); // Upgrade can be rerun without dropping connections.
+        for (const role of ['anon', 'authenticated']) {
+            await db.exec(`SET ROLE ${role}`);
+            await assert.rejects(() => db.query('SELECT * FROM argo_token_connections'), /permission denied/);
+            await assert.rejects(() => db.query('DELETE FROM argo_token_connections'), /permission denied/);
+            await db.exec('RESET ROLE');
+        }
+        await db.exec(`SET ROLE service_role;
+            INSERT INTO google_tokens(user_id,refresh_token) VALUES('token-test','google-refresh');
+            INSERT INTO argo_token_connections(user_id,version,source,client_id,school_code,profile_id,
+              access_token_encrypted,expires_at,state)
+            VALUES('token-test','00000000-0000-4000-8000-000000000001','credentials','client','school','student','sealed',now(),'active');`);
+        assert.equal((await db.query('SELECT count(*)::int n FROM argo_token_connections')).rows[0].n, 1);
+        await assert.rejects(() => db.query("UPDATE argo_token_connections SET state='invalid'"), /check constraint/);
+        assert.equal((await db.query("SELECT refresh_token FROM google_tokens WHERE user_id='token-test'")).rows[0].refresh_token, 'google-refresh');
+        await db.exec("DELETE FROM google_tokens WHERE user_id='token-test'");
+        assert.equal((await db.query('SELECT count(*)::int n FROM argo_token_connections')).rows[0].n, 0);
+        await db.exec('RESET ROLE');
         // Idempotent upgrade, and removal of an unexpected permissive policy.
         await db.exec('CREATE POLICY accidental_public ON profiles FOR SELECT USING(true);');
         await db.exec(

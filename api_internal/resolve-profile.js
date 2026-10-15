@@ -1,3 +1,4 @@
+const { assertLegacyAuthEnabled } = require('../lib/argo-auth-policy');
 const {endpoint,text,quota,httpError} = require('../lib/backend');
 const { handleCors, debugLog, normalizeClass, getRequestBody } = require('../lib/helpers');
 const { AdvancedArgo, resolveIdentityForProfile } = require('../lib/argo');
@@ -5,6 +6,7 @@ const { AdvancedArgo, resolveIdentityForProfile } = require('../lib/argo');
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    assertLegacyAuthEnabled();
 
     const body = getRequestBody(req);
     const { schoolCode, username, password, profileIndex } = body;
