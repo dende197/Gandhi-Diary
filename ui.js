@@ -9824,43 +9824,41 @@ window.ensureMarked = function() {
 };
 
 window.loadCircolareSintesi = async function (id, link) {
+    const isCurrent = ClientRuntime.capture();
     try {
-        console.log(`[Network] Sintesi Request: ${id}`);
-        let session = null;
-        try {
-            if (typeof sessionManager !== 'undefined' && sessionManager.load) {
-                session = sessionManager.load();
-            } else if (typeof window.sessionManager !== 'undefined' && window.sessionManager.load) {
-                session = window.sessionManager.load();
-            } else {
-                const raw = localStorage.getItem('argo_session');
-                if (raw) session = JSON.parse(raw);
-            }
-        } catch (_) {}
-
-        const sessionToken = (typeof state !== 'undefined' && state.sessionToken) || (session && session.sessionToken) || '';
-        const resolvedUserId = (typeof window.getUserId === 'function')
-            ? window.getUserId()
-            : (session && (session.studentId || session.userId || session.pid)) || (state && state.user && state.user.id) || '';
-        const headers = { 'Content-Type': 'application/json' };
-        if (sessionToken) headers['x-session-token'] = sessionToken;
-        if (resolvedUserId) headers['x-user-id'] = resolvedUserId;
-
-        const response = await fetchWithDeadline(`${API_BASE_URL}/api/circolari/sintesi`, {
+        const userId = window.getUserId();
+        if (!userId || userId === 'guest') {
+            return { success: false, error: 'Accedi per generare la sintesi.' };
+        }
+        // Re-read credentials on retry; a stale state.sessionToken must never
+        // override the active per-device session stored by the session manager.
+        const request = () => fetchWithDeadline(`${API_BASE_URL}/api/circolari/sintesi`, {
             method: 'POST',
-            headers,
-            body: JSON.stringify({ id, link, userId: resolvedUserId })
+            headers: getSessionHeaders(),
+            body: JSON.stringify({ id, link, userId })
         });
+        let response = await request();
+        if (!isCurrent()) return { success: false, error: 'Il profilo attivo è cambiato.' };
+        if (response.status === 401 || response.status === 403) {
+            await response.json().catch(() => ({}));
+            const refreshed = await window.refreshSessionToken().catch(() => false);
+            if (!isCurrent()) return { success: false, error: 'Il profilo attivo è cambiato.' };
+            if (!refreshed) return { success: false, error: 'Sessione scaduta o non valida. Accedi di nuovo per generare la sintesi.' };
+            response = await request();
+        }
         const data = await response.json();
-        if (data.success && data.sintesi) {
-            const circolare = (typeof state !== 'undefined' && state.circolari) ? state.circolari.find(c => c.id === id) : null;
+        if (!isCurrent()) return { success: false, error: 'Il profilo attivo è cambiato.' };
+        if (response.ok && data.success && data.sintesi) {
+            const circolare = state.circolari?.find(c => c.id === id);
             if (circolare) circolare.sintesi = data.sintesi;
             return { success: true, sintesi: data.sintesi };
-        } else {
-            return { success: false, error: data.error || 'Analisi AI non riuscita.' };
         }
+        const error = response.status === 401 || response.status === 403
+            ? 'Sessione scaduta o non valida. Accedi di nuovo per generare la sintesi.'
+            : data.error || 'Analisi AI non riuscita.';
+        return { success: false, error };
     } catch (e) {
-        console.error("Synthesis error:", e);
+        console.error('Synthesis error:', e);
         return { success: false, error: 'Errore di rete durante la richiesta. Riprova più tardi.' };
     }
 };

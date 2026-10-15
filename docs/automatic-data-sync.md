@@ -31,3 +31,9 @@ Il pulsante del profilo usa il percorso manuale con esito visibile. Il resync e 
 213 test superati. Le nuove verifiche esercitano gli script compilati: polling con risposte complete e modifiche a parità di numero di elementi, profilo legacy, clic sul pulsante, sessione scaduta rinnovabile, Google bloccato e invalidazione cache. Il test backend verifica il bypass esplicito dello snapshot senza bypassare l'autenticazione.
 
 Nei log di produzione sono state osservate risposte 403 prima di un nuovo login, seguito da un `/sync` 200. Questo non dimostra da solo quale dato manchi sui telefoni: serve il confronto indicato dall'utente con il registro ufficiale. Non vengono estese le scadenze di sicurezza delle sessioni.
+
+### Sintesi circolari e rinnovo sessione
+
+La sintesi ora legge il token corrente dal session manager, anziché privilegiare un eventuale token obsoleto nello stato UI. Su 401/403 prova una sola volta il rinnovo condiviso e ripete la richiesta con gli header aggiornati. Se il rinnovo non è consentito, chiede esplicitamente un nuovo accesso. Un risultato arrivato dopo il cambio profilo viene scartato.
+
+Il rinnovo della sessione PWA verifica sempre il refresh credential esistente, ma non scarica più la dashboard Argo: la disponibilità del registro non deve impedire l'accesso alla sintesi. L'access token della PWA conserva durata e scadenza assoluta precedenti; le credenziali revocate o scadute restano rifiutate. Test aggiunti per rinnovo, token UI obsoleto, sessione non rinnovabile, cambio account durante la sintesi e indipendenza da Argo.

@@ -190,3 +190,52 @@ test('manual register refresh completes while Google is stalled and invalidates 
   assert.equal(w.state.tasks[0].text,'Esercizio 1');assert.deepEqual(errors,[]);
  }finally{dom.window.close();}
 });
+
+test('AI circular summaries refresh expired sessions and ignore stale state tokens',async()=>{
+ let summaries=0,refreshes=0;
+ const {dom,w,errors}=app(true,{fetch:async(url,options)=>{
+  const u=new URL(url);
+  if(u.pathname==='/api/circolari/sintesi'){
+   summaries++;
+   assert.equal(options.headers['x-session-token'],summaries===1?'synthetic':'renewed-summary-token');
+   return new Response(JSON.stringify(summaries===1?{success:false,error:'Sessione non valida'}:{success:true,sintesi:'Nuova sintesi'}),{status:summaries===1?403:200});
+  }
+  if(u.pathname==='/api/auth'&&u.searchParams.get('action')==='refresh-session'){
+   refreshes++;return new Response(JSON.stringify({success:true,sessionToken:'renewed-summary-token',student:{id:'alice'}}),{status:200});
+  }
+  return new Response(JSON.stringify({success:true,connected:false,circolari:[]}),{status:200});
+ }});
+ try{
+  await until(()=>w.state?.isLoggedIn);w.state.sessionToken='obsolete-token';
+  w.state.circolari=[{id:'notice',link:'https://www.liceogandhi.edu.it/example'}];
+  const result=await w.loadCircolareSintesi('notice',w.state.circolari[0].link);
+  assert.equal(result.success,true);assert.equal(w.state.circolari[0].sintesi,'Nuova sintesi');
+  assert.equal(refreshes,1);assert.equal(summaries,2);assert.deepEqual(errors,[]);
+ }finally{dom.window.close();}
+});
+test('nonrenewable summary session requests login and does not retry indefinitely',async()=>{
+ let summaries=0;
+ const {dom,w}=app(true,{fetch:async url=>{
+  const u=new URL(url),protectedCall=u.pathname==='/api/circolari/sintesi'||u.pathname==='/api/auth';
+  if(u.pathname==='/api/circolari/sintesi')summaries++;
+  return new Response(JSON.stringify(protectedCall?{success:false,error:'Sessione non valida'}:{success:true,connected:false,circolari:[]}),{status:protectedCall?403:200});
+ }});
+ try{
+  await until(()=>w.state?.isLoggedIn);
+  const result=await w.loadCircolareSintesi('notice','https://www.liceogandhi.edu.it/example');
+  assert.equal(result.success,false);assert.match(result.error,/Accedi di nuovo/);assert.equal(summaries,1);
+ }finally{dom.window.close();}
+});
+test('late AI summary from a previous account cannot populate the new account',async()=>{
+ let finish;
+ const {dom,w}=app(true,{fetch:async url=>new URL(url).pathname==='/api/circolari/sintesi'
+  ? new Promise(resolve=>{finish=resolve;})
+  : new Response(JSON.stringify({success:true,connected:false,circolari:[]}),{status:200})});
+ try{
+  await until(()=>w.state?.isLoggedIn);
+  const pending=w.loadCircolareSintesi('notice','https://www.liceogandhi.edu.it/example');
+  await until(()=>finish);w.ClientRuntime.invalidate();w.state.circolari=[{id:'notice'}];
+  finish(new Response(JSON.stringify({success:true,sintesi:'Old account result'}),{status:200}));
+  assert.equal((await pending).success,false);assert.equal(w.state.circolari[0].sintesi,undefined);
+ }finally{dom.window.close();}
+});

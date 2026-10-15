@@ -1,5 +1,4 @@
 const { handleCors, getRequestBody, normalizeUserId, verifySessionToken } = require('../lib/helpers');
-const { loadArgoDashboard } = require('../lib/argo-session');
 const { database, checked } = require('../lib/backend');
 module.exports = async function (req, res) {
     if (handleCors(req, res)) return;
@@ -7,8 +6,16 @@ module.exports = async function (req, res) {
     const userId = normalizeUserId(getRequestBody(req).userId);
     if (!userId || !(await verifySessionToken(req, userId, 14)))
         return res.status(403).json({ success: false, error: 'Non autorizzato' });
-    const { row } = await loadArgoDashboard(userId);
-    const student = await checked(database().from('profiles').select('*').eq('id', userId).maybeSingle());
+    // App-session renewal is authorized by the existing refresh credential.
+    // It must not depend on Argo being online (AI summaries also use it).
+    const db = database();
+    const [stored, student] = await Promise.all([
+        checked(db.from('google_tokens')
+            .select('argo_school_code,argo_username,profile_index,argo_id_soggetto,argo_access_token,argo_auth_token')
+            .eq('user_id', userId).maybeSingle()),
+        checked(db.from('profiles').select('*').eq('id', userId).maybeSingle()),
+    ]);
+    const row = stored || {};
     // Keep the per-device refresh credential, extending only its access validity.
     // Its absolute 14-day lifetime cannot be extended by repeatedly refreshing it.
     const crypto = require('crypto');
