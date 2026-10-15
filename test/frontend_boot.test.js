@@ -14,13 +14,13 @@ class LocalResources extends ResourceLoader {
 }
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(check){for(let i=0;i<60;i++){if(check())return;await pause(25)}assert.ok(check(),'UI did not reach expected state');}
-function app(loggedIn=false){
+function app(loggedIn=false, options={}){
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>{if(e.type!=='css parsing')errors.push(e.message)});
  const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'https://audit.invalid/Gandhi-Diary/',runScripts:'dangerously',resources:new LocalResources(),pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
   w.scrollTo=()=>{};w.scroll=()=>{};w.matchMedia=()=>({matches:false,addListener(){},addEventListener(){}});w.alert=()=>{};w.confirm=()=>false;
   w.HTMLElement.prototype.scrollTo=function(){};w.HTMLElement.prototype.scrollIntoView=function(){};
-  w.fetch=async()=>new Response(JSON.stringify({success:true,connected:false,data:[],circolari:[]}),{status:200,headers:{'Content-Type':'application/json'}});
-  if(loggedIn){w.localStorage.setItem('argo_session',JSON.stringify({schoolCode:'TEST',userName:'alice',studentId:'alice',sessionToken:'synthetic',name:'Alice',class:'4D'}));w.localStorage.setItem('argo_is_logged_in','true');w.localStorage.setItem('alice:user',JSON.stringify({id:'alice',name:'Alice',class:'4D'}));w.localStorage.setItem('alice:last_sync_at',String(Date.now()));}
+  w.fetch=options.fetch || (async()=>new Response(JSON.stringify({success:true,connected:false,data:[],circolari:[]}),{status:200,headers:{'Content-Type':'application/json'}}));
+  if(loggedIn){w.localStorage.setItem('argo_session',JSON.stringify({schoolCode:'TEST',userName:'alice',studentId:'alice',sessionToken:'synthetic',name:'Alice',class:'4D'}));w.localStorage.setItem('argo_is_logged_in','true');w.localStorage.setItem('alice:user',JSON.stringify({id:'alice',name:'Alice',class:'4D'}));w.localStorage.setItem('alice:last_sync_at',String(options.lastSync ?? Date.now()));}
  }});
  return {dom,w:dom.window,errors};
 }
@@ -51,6 +51,38 @@ test('fresh login clears previous account session metadata and state',async()=>{
   for(const key of ['idSoggetto','avatar','specialization','class'])assert.equal(session[key],undefined,key+' leaked from previous account');
   assert.equal(w.state.user.id,'bob');
   assert.equal(w.state.voti.some(v=>v.id==='alice-vote'),false);
+  assert.deepEqual(errors,[]);
+ }finally{dom.window.close();}
+});
+
+test('built app reopening a six-hour cache refreshes immediately and displays the actual server sync time',async()=>{
+ let syncs=0;
+ const serverTime=new Date(Date.now()-20000).toISOString();
+ const {dom,w,errors}=app(true,{lastSync:Date.now()-6*3600000,fetch:async url=>{
+  const sync=new URL(url).pathname==='/sync'; if(sync)syncs++;
+  return new Response(JSON.stringify(sync ? {success:true,tasks:[],voti:[],promemoria:[{id:'new-notice',titolo:'Nuovo avviso'}],lastArgoSync:serverTime} : {success:true,connected:false,circolari:[]}),{status:200});
+ }});
+ try{
+  await until(()=>syncs>0&&w.state?.promemoria?.some(p=>p.id==='new-notice'));
+  assert.equal(syncs,1);
+  assert.equal(Number(w.localStorage.getItem('alice:last_sync_at')),Date.parse(serverTime));
+  assert.ok(Number(w.localStorage.getItem('alice:last_sync_check_at'))>Date.parse(serverTime));
+  assert.equal(w.state.syncing,false);
+  assert.equal(w.state.didup.connected,true);
+  assert.deepEqual(errors,[]);
+ }finally{dom.window.close();}
+});
+test('built app shows an error after failed automatic sync without advancing last successful update',async()=>{
+ const old=Date.now()-6*3600000;
+ const {dom,w,errors}=app(true,{lastSync:old,fetch:async url=>new Response(JSON.stringify(
+  new URL(url).pathname==='/sync' ? {success:false,error:'Unavailable'} : {success:true,connected:false,circolari:[]}
+ ),{status:new URL(url).pathname==='/sync'?503:200})});
+ try{
+  await until(()=>w.state?.syncError);
+  assert.equal(Number(w.localStorage.getItem('alice:last_sync_at')),old);
+  assert.equal(w.state.syncing,false);
+  w.navigate('profile',true,true);
+  await until(()=>w.document.getElementById('app').textContent.includes('Ultimo aggiornamento non riuscito'));
   assert.deepEqual(errors,[]);
  }finally{dom.window.close();}
 });

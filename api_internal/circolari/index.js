@@ -11,7 +11,7 @@ const { handleCors, USER_AGENT, generateStableId, debugLog } = require('../../li
 const fs = require('fs');
 
 const CACHE_FILE = '/tmp/circolari_cache.json';
-const CACHE_TTL = 15 * 60 * 1000; // Match the notification polling interval.
+const CACHE_TTL = 45 * 1000; // Shared short cache; a one-minute client poll must see fresh circulars.
 
 function loadCache() {
     try {
@@ -124,6 +124,7 @@ async function fetchCircolari() {
 
 module.exports = async function handler(req, res) {
     if (handleCors(req, res)) return;
+    res.setHeader('Cache-Control', 'no-store');
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
     try { return res.json({success:true,circolari:await fetchCircolari()}); }
     catch { return res.status(502).json({success:false,error:'Circolari temporaneamente non disponibili'}); }

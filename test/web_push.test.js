@@ -54,6 +54,9 @@ test('database push pipeline seeds silently, deduplicates partial snapshots and 
   await db.exec("UPDATE web_push_devices SET created_at=now()-interval '1 day'");
   await observe(['another']);assert.equal(await count(),2); // The disabled category on second never receives it.
   await register('new-phone','alice',{grades:true});
+  // PGlite may give separate statements the same millisecond timestamp.
+  // Model a device registered strictly after the preceding observation.
+  await db.exec("UPDATE web_push_devices SET created_at=(SELECT updated_at+interval '1 millisecond' FROM web_push_cursors WHERE user_id='alice' AND category='grades') WHERE id='new-phone'");
   await observe(['third']);assert.equal(await count(),3); // New phone silently skips its first snapshot.
   await register('phone','bob',{grades:true});assert.equal(await count(),0); // Reassignment cancels Alice's old queue.
   for(const role of ['anon','authenticated']){

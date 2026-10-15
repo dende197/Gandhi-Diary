@@ -165,8 +165,8 @@
         window.state = state;
         const initialProfileState = JSON.stringify(state);
 
-        // Keep local data "fresh enough" for fast relaunches without forcing boot sync.
-        const SYNC_TTL_MS = 8 * 60 * 60 * 1000;
+        // Hydrate cached data immediately, then refresh records older than one minute.
+        const SYNC_TTL_MS = 60 * 1000;
         window.SYNC_TTL_MS = SYNC_TTL_MS;
 
         function getPersistedLastSyncAt() {
@@ -183,11 +183,11 @@
             state.didup.lastSuccessTs = safeTs;
         }
 
-        // Sync on boot only when cache is missing/stale (> 8h).
+        // Device clocks can change; a future timestamp must not suppress refresh.
         function shouldSyncOnBoot(lastSyncAt) {
             const ts = Number(lastSyncAt);
             if (!Number.isFinite(ts) || ts <= 0) return true;
-            return (Date.now() - ts) > SYNC_TTL_MS;
+            return ts > Date.now() || (Date.now() - ts) >= SYNC_TTL_MS;
         }
         window.shouldSyncOnBoot = shouldSyncOnBoot;
 
@@ -643,6 +643,10 @@
                         localStorage.setItem(lsKey('voti'), JSON.stringify(state.voti));
                     }
                     if (data.circolari) state.circolari = data.circolari;
+                    if (Array.isArray(data.promemoria)) {
+                        state.promemoria = data.promemoria;
+                        localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
+                    }
                     if (data.assenzeData) {
                         state.assenzeData = data.assenzeData;
                         localStorage.setItem(lsKey('assenzeData'), JSON.stringify(state.assenzeData));
@@ -697,7 +701,12 @@
                         });
                     }
 
-                    const syncCompletedAt = Date.now();
+                    const checkedAt = Date.now();
+                    const serverSyncAt = Date.parse(data.lastArgoSync);
+                    const syncCompletedAt = Number.isFinite(serverSyncAt) && serverSyncAt > 0
+                        ? Math.min(serverSyncAt, checkedAt) : checkedAt;
+                    localStorage.setItem(lsKey('last_sync_check_at'), String(checkedAt));
+                    state.syncError = null;
                     state.lastSync = new Date(syncCompletedAt).toLocaleTimeString();
                     state.didup.connected = true;
                     state.didup.stale = false;
@@ -715,7 +724,7 @@
                     }
 
                     // Show unjustified absence popup
-                    if (data.assenzeData && data.assenzeData.daGiustificare > 0) {
+                    if (!options.quiet && data.assenzeData && data.assenzeData.daGiustificare > 0) {
                         setTimeout(() => {
                             if (isCurrent() && typeof showToast === 'function') {
                                 showToast(`⚠️ Hai ${data.assenzeData.daGiustificare} assenz${data.assenzeData.daGiustificare === 1 ? 'a' : 'e'} da giustificare`, 'warning');
@@ -741,13 +750,7 @@
                 state.didup.stale = hasLocalData; // stale = we have cached data but can't verify freshness
                 state.isOffline = !navigator.onLine;
                 state.syncError = e.message;
-                // Schedule a retry after 2 minutes if we're online
-                if (navigator.onLine && state.isLoggedIn && !state._loggedOut && ![401,403].includes(e.status)) {
-                    setTimeout(() => {
-                        console.log('[Sync] Retry after previous failure...');
-                        if (isCurrent()) runAutomaticSyncCycle('retry-after-failure', { force: true });
-                    }, 2 * 60 * 1000);
-                }
+                // The single scheduler retries on the next cycle; no orphan retry timers.
                 return false;
             } finally {
                 if (!isCurrent()) return false;
@@ -799,14 +802,42 @@
         }
         window.runManualOwaResync = runManualOwaResync;
 
-        const AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour — full sync including DiDUP rescrape
-        const AUTO_SYNC_MIN_GAP_MS = 5 * 60 * 1000;
-        const FOREGROUND_RESYNC_THRESHOLD_MS = 3 * 60 * 1000;
+        const AUTO_SYNC_INTERVAL_MS = 60 * 1000;
+        const GOOGLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
         let _autoSyncTimer = null;
-        let _autoSyncInFlight = false;
+        let _autoSyncRun = null;
         let _lastAutoSyncAt = 0;
         let _autoSyncListenersBound = false;
-        let _lastHiddenAt = null;
+        let _googleSyncRun = null;
+        let _lastGoogleSyncAt = 0;
+
+        function lastAutomaticCheckAt() {
+            const persisted = Number(localStorage.getItem(lsKey('last_sync_check_at'))) || getPersistedLastSyncAt();
+            return persisted > 0 && persisted <= Date.now() ? persisted : 0;
+        }
+        function canAutomaticallySync() {
+            return state.isLoggedIn && !state._loggedOut && document.visibilityState !== 'hidden' && navigator.onLine !== false;
+        }
+        function scheduleNextAutomaticSync(delay) {
+            clearTimeout(_autoSyncTimer);
+            _autoSyncTimer = null;
+            if (!canAutomaticallySync() || _autoSyncRun) return;
+            const attempted = _lastAutoSyncAt <= Date.now() ? _lastAutoSyncAt : 0;
+            const due = Math.max(attempted, lastAutomaticCheckAt()) + AUTO_SYNC_INTERVAL_MS;
+            _autoSyncTimer = setTimeout(() => {
+                _autoSyncTimer = null;
+                runAutomaticSyncCycle('interval');
+            }, delay ?? Math.max(1000, due - Date.now()));
+        }
+        function stopAutomaticSyncScheduler() {
+            clearTimeout(_autoSyncTimer);
+            _autoSyncTimer = null;
+            _autoSyncRun = null;
+            _lastAutoSyncAt = 0;
+            _googleSyncRun = null;
+            _lastGoogleSyncAt = 0;
+        }
+        window.stopAutomaticSyncScheduler = stopAutomaticSyncScheduler;
 
         async function runSilentGoogleSync(sessionData = null) {
             const isCurrent = ClientRuntime.capture();
@@ -844,81 +875,89 @@
         }
 
         async function runAutomaticSyncCycle(reason = 'interval', options = {}) {
-            const force = !!options.force;
-            if (!state.isLoggedIn || state._loggedOut || state.syncing || _autoSyncInFlight) return;
+            if (!canAutomaticallySync() || _autoSyncRun) return false;
+            if (state.syncing) { scheduleNextAutomaticSync(1000); return false; }
             const now = Date.now();
-            if (!force && _lastAutoSyncAt && (now - _lastAutoSyncAt) < AUTO_SYNC_MIN_GAP_MS) return;
-
+            const attempted = _lastAutoSyncAt <= now ? _lastAutoSyncAt : 0;
+            const due = options.force
+                ? attempted + 5000
+                : Math.max(attempted, lastAutomaticCheckAt()) + AUTO_SYNC_INTERVAL_MS;
+            if (now < due) { scheduleNextAutomaticSync(due - now); return false; }
             const session = sessionManager.load();
-            if (!session || !sessionManager.isLoggedIn()) return;
+            if (!session || !sessionManager.isLoggedIn()) return false;
 
-            // SECURITY: Never persist or restore passwords from sessionStorage.
-
-            _autoSyncInFlight = true;
+            clearTimeout(_autoSyncTimer);
+            _autoSyncTimer = null;
+            const run = {};
+            const isCurrent = ClientRuntime.capture();
+            _autoSyncRun = run;
             _lastAutoSyncAt = now;
             try {
-                // performSync handles auth refresh internally on 403, no pre-refresh needed
-                const synced = await performSync(sessionManager.load() || session, { suppressHideBoot: true, suppressRender: false });
-                if (!synced) return false;
-                // performSync already sets didup.connected = true on success
-                state.isOffline = false;
-                await runSilentGoogleSync(sessionManager.load() || session);
+                // Circulars are independent of Argo. Neither Google's latency nor
+                // its errors may block the next register update or mark it offline.
+                const [result] = await Promise.allSettled([
+                    performSync(session, { suppressHideBoot: true, preserveUiState: true, quiet: true }),
+                    loadCircolari()
+                ]);
+                if (!isCurrent()) return false;
+                const synced = result.status === 'fulfilled' && result.value;
+                if (synced && !_googleSyncRun && (!_lastGoogleSyncAt || now - _lastGoogleSyncAt >= GOOGLE_SYNC_INTERVAL_MS)) {
+                    const googleRun = {};
+                    _googleSyncRun = googleRun;
+                    _lastGoogleSyncAt = now;
+                    runSilentGoogleSync(sessionManager.load() || session)
+                        .catch(e => console.warn('[AutoSync] Google:', e?.message || e))
+                        .finally(() => { if (_googleSyncRun === googleRun) _googleSyncRun = null; });
+                }
+                return !!synced;
             } catch (e) {
                 console.warn(`[AutoSync:${reason}] failed:`, e?.message || e);
-                state.didup.connected = false;
-                const hasLocalData = (state.tasks && state.tasks.length > 0) || (state.voti && state.voti.length > 0);
-                state.didup.stale = hasLocalData;
+                return false;
             } finally {
-                _autoSyncInFlight = false;
+                if (_autoSyncRun === run) {
+                    _autoSyncRun = null;
+                    scheduleNextAutomaticSync();
+                }
             }
         }
 
         function ensureAutomaticSyncScheduler() {
-            if (!_autoSyncTimer) {
-                _autoSyncTimer = setInterval(() => {
-                    runAutomaticSyncCycle('interval');
-                }, AUTO_SYNC_INTERVAL_MS);
-            }
+            scheduleNextAutomaticSync();
             if (_autoSyncListenersBound) return;
             _autoSyncListenersBound = true;
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
-                    _lastHiddenAt = Date.now();
-                    return;
-                }
-                // App returned to foreground
-                const awayMs = _lastHiddenAt ? Date.now() - _lastHiddenAt : Infinity;
-                if (awayMs < FOREGROUND_RESYNC_THRESHOLD_MS) {
-                    console.log(`[Foreground] Back after ${Math.round(awayMs/1000)}s — skip resync (< 3min)`);
-                    return;
-                }
-                console.log(`[Foreground] Back after ${Math.round(awayMs/1000)}s — triggering resync`);
-                runAutomaticSyncCycle('visible', { force: true });
+                    clearTimeout(_autoSyncTimer);
+                    _autoSyncTimer = null;
+                } else runAutomaticSyncCycle('visible');
             });
             window.addEventListener('focus', () => runAutomaticSyncCycle('focus'));
             window.addEventListener('online', () => runAutomaticSyncCycle('online', { force: true }));
-            // iOS Safari bfcache fallback: page restored from back-forward cache
-            window.addEventListener('pageshow', (e) => {
-                if (e.persisted) {
-                    console.log('[Foreground] Page restored from bfcache — triggering resync');
-                    runAutomaticSyncCycle('pageshow', { force: true });
-                }
+            window.addEventListener('offline', () => {
+                clearTimeout(_autoSyncTimer);
+                _autoSyncTimer = null;
+            });
+            window.addEventListener('pageshow', e => {
+                if (e.persisted) runAutomaticSyncCycle('pageshow');
             });
         }
 
         async function loadCircolari() {
+            const isCurrent = ClientRuntime.capture();
             try {
                 const base = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : (window.API_BASE_URL || '');
                 let res = await fetchWithDeadline(`${base}/api/circolari/index`);
                 if (!res.ok) res = await fetchWithDeadline(`${base}/api/circolari`);
                 const data = await res.json();
+                if (!isCurrent()) return;
                 if (data.success && Array.isArray(data.circolari)) {
+                    const changed = JSON.stringify(state.circolari) !== JSON.stringify(data.circolari);
                     state.circolari = data.circolari;
                     try {
                         localStorage.setItem(lsKey('circolari'), JSON.stringify(state.circolari));
                     } catch (_) {}
-                    if (state.view === 'circolari' || state.view === 'home') {
-                        if (typeof render === 'function') render();
+                    if (changed && (state.view === 'circolari' || state.view === 'home')) {
+                        window.scheduleRender?.();
                     }
                 }
             } catch (e) { console.warn("Circolari load failed", e); }
@@ -1068,6 +1107,7 @@
                     state.manualVerifiche = JSON.parse(localStorage.getItem(lsKey('manual_verifiche')) || '[]');
                     state.syncing = false;
                     state.voti = JSON.parse(localStorage.getItem(lsKey('voti'))) || [];
+                    state.promemoria = JSON.parse(localStorage.getItem(lsKey('promemoria'))) || [];
                     state.circolari = JSON.parse(localStorage.getItem(lsKey('circolari')) || '[]');
                     state.reminders = JSON.parse(localStorage.getItem(lsKey('reminders'))) || [];
                     state.plannedTasks = JSON.parse(localStorage.getItem(lsKey('planned_tasks'))) || {};
@@ -1138,12 +1178,13 @@
                 const lastSyncAt = getPersistedLastSyncAt();
                 const needsBootSync = shouldSyncOnBoot(lastSyncAt);
                 runWhenIdle(() => {
-                    const jobs = [loadCircolari()];
+                    const jobs = [];
                     if (needsBootSync) {
                         // Stale cache: refresh in background without blocking first paint/navigation state.
-                        jobs.push(performSync(session, { suppressRender: false, suppressHideBoot: true, preserveUiState: true }));
+                        jobs.push(runAutomaticSyncCycle('boot', { force: true }));
                     } else {
-                        console.log(`[Boot] Fresh cache (< ${Math.round(SYNC_TTL_MS / (60 * 60 * 1000))}h) — skipping boot sync`);
+                        jobs.push(loadCircolari());
+                        console.log('[Boot] Register checked less than one minute ago.');
                     }
                     Promise.all(jobs)
                         .then(() => {
@@ -1404,6 +1445,7 @@
             }
             if (window.PushSettings) await window.PushSettings.beforeLogin(data.student?.id || generatePid(data.session.schoolCode, data.session.userName, data.session.profileIndex));
             ClientRuntime.invalidate();
+            stopAutomaticSyncScheduler();
             clearInterval(window._classPollTimer);
             clearTimeout(_savePlannerTimer);
             window._isFetchingClassData = false;
@@ -1491,6 +1533,8 @@
                 state.classActivities = data.activities;
                 localStorage.setItem(lsKey('class_activities'), JSON.stringify(state.classActivities));
             }
+            state.promemoria = Array.isArray(data.promemoria) ? data.promemoria : [];
+            localStorage.setItem(lsKey('promemoria'), JSON.stringify(state.promemoria));
             state.plannedClassActivities = Array.isArray(data.plannedActivities) ? data.plannedActivities : [];
             localStorage.setItem(lsKey('planned_class_activities'), JSON.stringify(state.plannedClassActivities));
             if (typeof purgeAllDemoData === 'function') {
@@ -1504,6 +1548,7 @@
             state.didup.stale = false;
             const loginSyncCompletedAt = Date.now();
             setPersistedLastSyncAt(loginSyncCompletedAt);
+            localStorage.setItem(lsKey('last_sync_check_at'), String(loginSyncCompletedAt));
             state.isOffline = false;
             state.lastSync = new Date(loginSyncCompletedAt).toLocaleTimeString();
             if (typeof updateOfflineBadge === 'function') updateOfflineBadge();
